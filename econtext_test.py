@@ -12,6 +12,16 @@ try:
   ret = localhost.Evaluate(DoStuff)
 except OSError, e:
   
+
+
+Tests
+  - Test Channel objects to destruction.
+  - External contexts sometimes don't appear to die during a crash. This needs
+    tested to destruction.
+  - Test reconnecting to previously idle-killed contexts.
+  - Test remote context longevity to destruction. They should never stay
+    around after parent dies or disconnects.
+
 """
 
 import sys
