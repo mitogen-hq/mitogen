@@ -4,7 +4,7 @@
 Python External Execution Contexts.
 '''
 
-import atexit
+import Queue
 import cPickle
 import cStringIO
 import commands
@@ -124,9 +124,7 @@ class Channel(object):
     def __init__(self, stream, handle):
         self._stream = stream
         self._handle = handle
-        self._wake_event = threading.Event()
-        self._queue_lock = threading.Lock()
-        self._queue = []
+        self._queue = Queue.Queue()
         self._stream.AddHandleCB(self._InternalReceive, handle)
 
     def _InternalReceive(self, killed, data):
@@ -146,12 +144,7 @@ class Channel(object):
             )
         '''
         LOG.debug('%r._InternalReceive(%r, %r)', self, killed, data)
-        self._queue_lock.acquire()
-        try:
-            self._queue.append((killed or data[0], killed or data[1]))
-            self._wake_event.set()
-        finally:
-            self._queue_lock.release()
+        self._queue.put((killed or data[0], killed or data[1]))
 
     def Close(self):
         '''
@@ -179,22 +172,15 @@ class Channel(object):
             object
         '''
         LOG.debug('%r.Receive(%r)', self, timeout)
-        if not self._queue:
-            self._wake_event.wait(timeout)
-            if not self._wake_event.isSet():
-                return
-
-        self._queue_lock.acquire()
         try:
-            self._wake_event.clear()
-            LOG.debug('%r.Receive() queue is %r', self, self._queue)
-            killed, data = self._queue.pop(0)
-            LOG.debug('%r.Receive() got killed=%r, data=%r', self, killed, data)
-            if killed:
-                raise ChannelError('Channel is closed.')
-            return data
-        finally:
-            self._queue_lock.release()
+            killed, data = self._queue.get(True, timeout)
+        except Queue.Empty:
+            return
+
+        LOG.debug('%r.Receive() got killed=%r, data=%r', self, killed, data)
+        if killed:
+            raise ChannelError('Channel is closed.')
+        return data
 
     def __iter__(self):
         '''
@@ -298,6 +284,9 @@ class BasicStream(object):
 
 
 class Stream(BasicStream):
+    _input_buf = ''
+    _output_buf = ''
+
     def __init__(self, context):
         '''
         Initialize a new Stream instance.
@@ -306,19 +295,13 @@ class Stream(BasicStream):
             context: econtext.Context
         '''
         self._context = context
+        self._lock = threading.Lock()
 
-        self._input_buf = self._output_buf = ''
-        self._input_buf_lock = threading.Lock()
-        self._output_buf_lock = threading.Lock()
         self._rhmac = hmac.new(context.key, digestmod=sha.new)
         self._whmac = self._rhmac.copy()
 
         self._last_handle = 1000L
         self._handle_map = {}
-        self._handle_lock = threading.Lock()
-
-        self._func_refs = {}
-        self._func_ref_lock = threading.Lock()
 
         self._pickler_file = cStringIO.StringIO()
         self._pickler = cPickle.Pickler(self._pickler_file, protocol=2)
@@ -367,12 +350,12 @@ class Stream(BasicStream):
         Returns:
             long
         '''
-        self._handle_lock.acquire()
+        self._lock.acquire()
         try:
             self._last_handle += 1L
+            return self._last_handle
         finally:
-            self._handle_lock.release()
-        return self._last_handle
+            self._lock.release()
 
     def AddHandleCB(self, fn, handle, persist=True):
         '''
@@ -385,11 +368,7 @@ class Stream(BasicStream):
         '''
         LOG.debug('%r.AddHandleCB(%r, %r, persist=%r)',
                    self, fn, handle, persist)
-        self._handle_lock.acquire()
-        try:
-            self._handle_map[handle] = persist, fn
-        finally:
-            self._handle_lock.release()
+        self._handle_map[handle] = persist, fn
 
     def Receive(self):
         '''
@@ -465,14 +444,14 @@ class Stream(BasicStream):
         '''
         LOG.debug('%r.Enqueue(%r, %r)', self, handle, obj)
 
-        self._output_buf_lock.acquire()
+        self._lock.acquire()
         try:
             encoded = self.Pickle((handle, obj))
             msg = struct.pack('>L', len(encoded)) + encoded
             self._whmac.update(msg)
             self._output_buf += self._whmac.digest() + msg
         finally:
-            self._output_buf_lock.release()
+            self._lock.release()
         self._context.broker.UpdateStream(self, wake=True)
 
     def Disconnect(self):
@@ -579,7 +558,7 @@ class LocalStream(Stream):
 
     # Hexed and passed to 'python -c'. It forks, dups 0->100, creates a pipe,
     # then execs a new interpreter with a custom argv. CONTEXT_NAME is replaced
-    # with the context name. Optimized for source size.
+    # with the context name. Optimized for size.
     def _FirstStage():
         import os,sys,zlib
         R,W=os.pipe()
@@ -670,26 +649,24 @@ class Context(object):
         reply_handle is the handle on which this function expects its reply.
         '''
         reply_handle = self._stream.AllocHandle()
-        reply_event = threading.Event()
-        container = []
-
         LOG.debug('%r.EnqueueAwaitReply(%r, %r, %r) -> reply handle %d',
                   self, handle, deadline, data, reply_handle)
 
+        queue = Queue.Queue()
+
         def _Receive(killed, data):
             LOG.debug('%r._Receive(%r, %r)', self, killed, data)
-            container.extend([killed, data])
-            reply_event.set()
+            queue.put((killed, data))
 
         self._stream.AddHandleCB(_Receive, reply_handle, persist=False)
         self._stream.Enqueue(handle, (False, (reply_handle,) + data))
 
-        reply_event.wait(deadline)
-        if not reply_event.isSet():
-            self.Disconnect()
+        try:
+            killed, data = queue.get(True, deadline)
+        except Queue.Empty:
+            self._stream.Disconnect()
             raise TimeoutError('deadline exceeded.')
 
-        killed, data = container
         if killed:
             raise StreamError('lost connection during call.')
 
