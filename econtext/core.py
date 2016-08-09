@@ -314,11 +314,11 @@ class Stream(BasicStream):
         """
         Serialize `obj` into a bytestring.
         """
-        self._pickler.dump(obj)
-        data = self._pickler_file.getvalue()
-        self._pickler_file.seek(0)
         self._pickler_file.truncate(0)
-        return data
+        self._pickler_file.seek(0)
+        self._pickler.clear_memo()
+        self._pickler.dump(obj)
+        return self._pickler_file.getvalue()
 
     def Unpickle(self, data):
         """
@@ -807,7 +807,6 @@ class Broker(object):
         except Exception, e:
             LOG.exception('%r crashed', stream)
             stream.Disconnect()
-
         self._UpdateStream(stream)
 
     def _LoopOnce(self):
@@ -924,6 +923,7 @@ class ExternalContext(object):
         self._SetupMaster(key)
         self._SetupImporter()
         #self._SetupStdio()
+        os.dup2(2, 1)
         if 0:
             fd = open('/dev/null', 'w')
             os.dup2(fd.fileno(), 1)
