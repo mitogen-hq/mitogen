@@ -11,6 +11,6 @@ setup(
     author = 'David Wilson',
     license = 'OpenLDAP BSD',
     url = 'http://github.com/dw/econtext/',
-    modules = ['econtext'],
+    py_packages = ['econtext'],
     zip_safe = False
 )

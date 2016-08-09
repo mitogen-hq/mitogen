@@ -898,4 +898,4 @@ def ExternalContextMain(context_name, parent_addr, key):
             stream.Enqueue(reply_to, (False, (e, traceback.extract_stack())))
 
     broker.Finalize()
-    LOG.error('ExternalContextMain exitting')
+    LOG.debug('ExternalContextMain exitting')
