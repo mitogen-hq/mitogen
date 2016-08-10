@@ -1,5 +1,14 @@
 
+import logging
+
 import econtext
+
+
+def log_to_file(path, level=logging.DEBUG):
+    log = logging.getLogger('')
+    fp = open(path, 'w', 1)
+    log.setLevel(level)
+    log.handlers.insert(0, logging.StreamHandler(fp))
 
 
 def run_with_broker(func, *args, **kwargs):

@@ -168,9 +168,13 @@ class SlaveModuleImporter(object):
     """
     def __init__(self, context):
         self._context = context
+        self._absent = set(['econtext.econtext', 'econtext.logging'])
 
     def find_module(self, fullname, path=None):
         LOG.debug('SlaveModuleImporter.find_module(%r)', fullname)
+        if fullname in self._absent:
+            return None
+
         try:
             imp.find_module(fullname)
         except ImportError:
@@ -183,13 +187,14 @@ class SlaveModuleImporter(object):
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        is_pkg, path, data = ret
+        is_pkg, absent, path, data = ret
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = 'master:' + path
         mod.__loader__ = self
         if is_pkg:
             mod.__path__ = []
             mod.__package__ = fullname
+            self._absent.update(absent)
         else:
             mod.__package__ = fullname.rpartition('.')[0]
         exec zlib.decompress(data) in mod.__dict__
@@ -201,14 +206,18 @@ class MasterModuleResponder(object):
         self._context = context
         self._context.AddHandleCB(self.GetModule, handle=GET_MODULE)
 
+    def _GetAbsent(self, module, prefix):
+        return [k for k, v in sys.modules.iteritems()
+                  if v is None and k.startswith(prefix)]
+
     def GetModule(self, data):
         if data == _DEAD:
             return
 
         reply_to, fullname = data
-        LOG.debug('SlaveModuleImporter.GetModule(%r, %r)', reply_to, fullname)
+        LOG.debug('MasterModuleResponder.GetModule(%r, %r)', reply_to, fullname)
         try:
-            module = __import__(fullname, fromlist=['*'])
+            module = __import__(fullname, fromlist=[''])
             is_pkg = getattr(module, '__path__', None) is not None
             path = inspect.getsourcefile(module)
             try:
@@ -217,8 +226,16 @@ class MasterModuleResponder(object):
                 if not is_pkg:
                     raise
                 source = '\n'
+
+            if is_pkg:
+                prefix = module.__name__ + '.'
+                absent = self._GetAbsent(module, prefix)
+            else:
+                absent = []
+
             compressed = zlib.compress(source)
-            self._context.Enqueue(reply_to, (is_pkg, path, compressed))
+            reply = (is_pkg, absent, path, compressed)
+            self._context.Enqueue(reply_to, reply)
         except Exception:
             LOG.exception('While importing %r', fullname)
             self._context.Enqueue(reply_to, None)
@@ -348,7 +365,7 @@ class Stream(BasicStream):
         return True
 
     def _Invoke(self, handle, data):
-        LOG.debug('%r._Invoke(): handle=%r; data=%r', self, handle, data)
+        IOLOG.debug('%r._Invoke(): handle=%r; data=%r', self, handle, data)
         try:
             persist, fn = self._context._handle_map[handle]
         except KeyError:
@@ -578,7 +595,7 @@ class Context(object):
         queue = Queue.Queue()
 
         def _Receive(data):
-            LOG.debug('%r._Receive(%r)', self, data)
+            IOLOG.debug('%r._Receive(%r)', self, data)
             queue.put(data)
 
         self.AddHandleCB(_Receive, reply_to, persist=False)
@@ -593,7 +610,7 @@ class Context(object):
         if data == _DEAD:
             raise StreamError('lost connection during call.')
 
-        LOG.debug('%r._EnqueueAwaitReply(): got reply: %r', self, data)
+        IOLOG.debug('%r._EnqueueAwaitReply(): got reply: %r', self, data)
         return data
 
     def CallWithDeadline(self, deadline, with_context, fn, *args, **kwargs):
@@ -808,10 +825,10 @@ class Broker(object):
 
 class ExternalContext(object):
     def _FixupMainModule(self):
-        global core
-        sys.modules['econtext'] = sys.modules['__main__']
-        sys.modules['econtext.core'] = sys.modules['__main__']
-        core = sys.modules['__main__']
+        main = sys.modules['__main__']
+        main.__path__ = []
+        sys.modules['econtext'] = main
+        sys.modules['econtext.core'] = main
 
         for klass in globals().itervalues():
             if hasattr(klass, '__module__'):
