@@ -183,12 +183,17 @@ class SlaveModuleImporter(object):
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        path, data = ret
-        code = compile(zlib.decompress(data), path, 'exec')
-        module = imp.new_module(fullname)
-        sys.modules[fullname] = module
-        eval(code, vars(module), vars(module))
-        return module
+        is_pkg, path, data = ret
+        mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
+        mod.__file__ = 'master:' + path
+        mod.__loader__ = self
+        if is_pkg:
+            mod.__path__ = []
+            mod.__package__ = fullname
+        else:
+            mod.__package__ = fullname.rpartition('.')[0]
+        exec zlib.decompress(data) in mod.__dict__
+        return mod
 
 
 class MasterModuleResponder(object):
@@ -203,9 +208,17 @@ class MasterModuleResponder(object):
         reply_to, fullname = data
         LOG.debug('SlaveModuleImporter.GetModule(%r, %r)', reply_to, fullname)
         try:
-            module = __import__(fullname)
-            source = zlib.compress(inspect.getsource(module))
-            self._context.Enqueue(reply_to, (module.__file__, source))
+            module = __import__(fullname, fromlist=['*'])
+            is_pkg = getattr(module, '__path__', None) is not None
+            path = inspect.getsourcefile(module)
+            try:
+                source = inspect.getsource(module)
+            except IOError:
+                if not is_pkg:
+                    raise
+                source = '\n'
+            compressed = zlib.compress(source)
+            self._context.Enqueue(reply_to, (is_pkg, path, compressed))
         except Exception:
             LOG.exception('While importing %r', fullname)
             self._context.Enqueue(reply_to, None)
@@ -852,7 +865,7 @@ class ExternalContext(object):
                 args = (self,) + args
 
             try:
-                obj = __import__(modname)
+                obj = __import__(modname, fromlist=['*'])
                 if klass:
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)
