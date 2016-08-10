@@ -1,1 +1,1 @@
-from econtext.core import *
+from econtext.core import *  # NOQA

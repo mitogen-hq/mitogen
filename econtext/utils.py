@@ -2,6 +2,7 @@
 import logging
 
 import econtext
+import econtext.master
 
 
 def log_to_file(path, level=logging.DEBUG):
@@ -12,7 +13,7 @@ def log_to_file(path, level=logging.DEBUG):
 
 
 def run_with_broker(func, *args, **kwargs):
-    broker = econtext.Broker()
+    broker = econtext.master.Broker()
     try:
         return func(broker, *args, **kwargs)
     finally:
