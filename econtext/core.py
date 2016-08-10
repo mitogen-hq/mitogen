@@ -306,9 +306,10 @@ class Stream(BasicStream):
             return self.Disconnect()
 
         self._input_buf += buf
-        if len(self._input_buf) < 24:
-            return
+        while len(self._input_buf) >= 24:
+            self._ReceiveOne()
 
+    def _ReceiveOne(self):
         msg_mac = self._input_buf[:20]
         msg_len = struct.unpack('>L', self._input_buf[20:24])[0]
         if len(self._input_buf) < msg_len-24:
