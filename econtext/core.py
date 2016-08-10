@@ -63,7 +63,11 @@ class CallError(ContextError):
     """Raised when .Call() fails"""
     def __init__(self, e):
         name = '%s.%s' % (type(e).__module__, type(e).__name__)
-        stack = ''.join(traceback.format_stack(sys.exc_info[2]))
+        tb = sys.exc_info()[2]
+        if tb:
+            stack = ''.join(traceback.format_tb(tb))
+        else:
+            stack = ''
         ContextError.__init__(self, 'Call failed: %s: %s\n%s', name, e, stack)
 
 
