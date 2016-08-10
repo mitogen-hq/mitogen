@@ -474,7 +474,7 @@ class LocalStream(Stream):
         source += '\nExternalContext().main(%r, %r, %r)\n' % (
             self._context.name,
             self._context.key,
-            self._context.broker.log_level,
+            LOG.level or logging.getLogger().level or logging.INFO,
         )
 
         compressed = zlib.compress(source)
@@ -669,9 +669,7 @@ class Broker(object):
     """
     _waker = None
 
-    def __init__(self, log_level=logging.DEBUG):
-        self.log_level = log_level
-
+    def __init__(self):
         self._alive = True
         self._lock = threading.Lock()
         self._contexts = {}
@@ -748,8 +746,8 @@ class Broker(object):
 
     def _LoopOnce(self):
         IOLOG.debug('%r.Loop()', self)
-        IOLOG.debug('readers = %r', [(r.fileno(), r) for r in self._readers])
-        IOLOG.debug('writers = %r', [(w.fileno(), w) for w in self._writers])
+        #IOLOG.debug('readers = %r', [(r.fileno(), r) for r in self._readers])
+        #IOLOG.debug('writers = %r', [(w.fileno(), w) for w in self._writers])
         rsides, wsides, _ = select.select(self._readers, self._writers, ())
         for side in rsides:
             IOLOG.debug('%r: POLLIN for %r', self, side.stream)
@@ -807,12 +805,10 @@ class ExternalContext(object):
         self.context = Context(self.broker, 'parent', key=key,
                                finalize_on_disconnect=True)
         self.channel = Channel(self.context, CALL_FUNCTION)
-        self.stream = Stream(self.context)
-        self.stream.Accept(0, 1)
+        self.context.stream = Stream(self.context)
+        self.context.stream.Accept(0, 1)
 
     def _SetupLogging(self, log_level):
-        logging.basicConfig(level=log_level, stream=open('slave', 'w', 1))
-        return
         logging.basicConfig(level=log_level)
         root = logging.getLogger()
         root.setLevel(log_level)
@@ -836,9 +832,6 @@ class ExternalContext(object):
             fp.close()
 
     def _DispatchCalls(self):
-        #signal.alarm(10)
-        signal.signal(signal.SIGINT, lambda *_: self.broker.Finalize())
-
         for data in self.channel:
             LOG.debug('_DispatchCalls(%r)', data)
             reply_to, with_context, modname, klass, func, args, kwargs = data
@@ -855,7 +848,6 @@ class ExternalContext(object):
                 self.context.Enqueue(reply_to, CallError(e))
 
     def main(self, context_name, key, log_level):
-        import stack
         self._ReapFirstStage()
         self._FixupMainModule()
         self._SetupMaster(key)
@@ -864,7 +856,6 @@ class ExternalContext(object):
         self._SetupStdio()
 
         self.broker.Register(self.context)
-        LOG.info('entering dispatchcalls')
         self._DispatchCalls()
         self.broker.Wait()
         LOG.debug('ExternalContext.main() exitting')
