@@ -453,10 +453,15 @@ class LocalStream(Stream):
             sys.exit(0)
 
     def GetBootCommand(self):
+        name = self._context.remote_name
+        if name is None:
+            name = '%s@%s:%d'
+            name %= (getpass.getuser(), socket.gethostname(), os.getpid())
+
         source = inspect.getsource(self._FirstStage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[1:]))
         source = source.replace('    ', '\t')
-        source = source.replace('CONTEXT_NAME', repr(self._context.name))
+        source = source.replace('CONTEXT_NAME', repr(name))
         encoded = source.encode('base64').replace('\n', '')
         return [self.python_path, '-c',
                 'exec "%s".decode("base64")' % (encoded,)]
@@ -504,6 +509,7 @@ class Context(object):
     Represent a remote context regardless of connection method.
     """
     stream = None
+    remote_name = None
 
     def __init__(self, broker, name=None, hostname=None, username=None,
                  key=None, parent_addr=None, finalize_on_disconnect=False):
@@ -730,8 +736,7 @@ class Broker(object):
     def GetRemote(self, hostname, username, name=None, python_path=None):
         """Get the named remote context, creating it if it does not exist."""
         if name is None:
-            name = '%s@%s:%d'
-            name %= (getpass.getuser(), socket.gethostname(), os.getpid())
+            name = hostname
 
         context = Context(self, name, hostname, username)
         context.stream = SSHStream(context)
