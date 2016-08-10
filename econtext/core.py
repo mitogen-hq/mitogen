@@ -306,15 +306,15 @@ class Stream(BasicStream):
             return self.Disconnect()
 
         self._input_buf += buf
-        while len(self._input_buf) >= 24:
-            self._ReceiveOne()
+        while len(self._input_buf) >= 24 and self._ReceiveOne():
+            pass
 
     def _ReceiveOne(self):
         msg_mac = self._input_buf[:20]
         msg_len = struct.unpack('>L', self._input_buf[20:24])[0]
         if len(self._input_buf) < msg_len-24:
             IOLOG.debug('Input too short')
-            return
+            return False
 
         self._rhmac.update(self._input_buf[20:msg_len+24])
         expected_mac = self._rhmac.digest()
@@ -330,6 +330,7 @@ class Stream(BasicStream):
 
         self._input_buf = self._input_buf[msg_len+24:]
         self._Invoke(handle, data)
+        return True
 
     def _Invoke(self, handle, data):
         LOG.debug('%r._Invoke(): handle=%r; data=%r', self, handle, data)
