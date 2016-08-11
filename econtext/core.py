@@ -675,7 +675,7 @@ class ExternalContext(object):
 
     def _SetupMaster(self, key):
         self.broker = Broker()
-        self.context = Context(self.broker, 'parent', key=key)
+        self.context = Context(self.broker, 'master', key=key)
         self.channel = Channel(self.context, CALL_FUNCTION)
         self.context.stream = Stream(self.context)
         self.context.stream.Accept(0, 1)
