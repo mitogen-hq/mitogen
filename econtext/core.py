@@ -147,11 +147,21 @@ class SlaveModuleImporter(object):
     def __init__(self, context):
         self._context = context
         self._lock = threading.RLock()
+        self._loaded_prefixes = set(['econtext.'])
+        self._present = set(['econtext.utils', 'econtext.master'])
         self._ignore = []
 
     def find_module(self, fullname, path=None):
         LOG.debug('SlaveModuleImporter.find_module(%r)', fullname)
-        if fullname in self._absent or fullname in self._ignore:
+        if fullname in self._ignore:
+            return None
+        if fullname in self._absent:
+            LOG.debug('%r: master indicates %r does not exist', self, fullname)
+            return None
+
+        if any(fullname.startswith(p) for p in self._loaded_prefixes) and \
+           fullname not in self._present:
+            LOG.debug('%r: Skip %r since master doesnt know it', self, fullname)
             return None
 
         self._lock.acquire()
@@ -172,17 +182,19 @@ class SlaveModuleImporter(object):
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        is_pkg, absent, path, data = ret
+        is_pkg, absent, present, path, data = ret
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
-        mod.__file__ = 'master:' + path
         mod.__loader__ = self
         if is_pkg:
             mod.__path__ = []
             mod.__package__ = fullname
             self._absent.update(absent)
+            self._present.update(present)
+            self._loaded_prefixes.add(fullname + '.')
         else:
             mod.__package__ = fullname.rpartition('.')[0]
-        exec zlib.decompress(data) in mod.__dict__
+        code = compile(zlib.decompress(data), 'master:' + path, 'exec')
+        exec code in mod.__dict__
         return mod
 
 
@@ -688,7 +700,7 @@ class ExternalContext(object):
             except Exception, e:
                 self.context.Enqueue(reply_to, CallError(e))
 
-    def main(self, context_name, key, log_level, absent):
+    def main(self, key, log_level, absent):
         self._ReapFirstStage()
         self._FixupMainModule()
         self._SetupMaster(key)
