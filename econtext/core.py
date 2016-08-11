@@ -672,9 +672,8 @@ class ExternalContext(object):
     def _SetupStdio(self):
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
         self.stderr_log = IoLogger(self.broker, 'stderr', 2)
-
         # Reopen with line buffering.
-        sys.stdout = open('/dev/stdout', 'w', 1)
+        sys.stdout = file('/dev/stdout', 'w', 1)
 
         fp = file('/dev/null')
         try:
