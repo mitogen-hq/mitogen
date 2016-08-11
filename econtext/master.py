@@ -128,7 +128,7 @@ class LocalStream(econtext.core.Stream):
     Base for streams capable of starting new slaves.
     """
     #: The path to the remote Python interpreter.
-    python_path = sys.executable
+    python_path = 'python'
 
     def __init__(self, context):
         super(LocalStream, self).__init__(context)
@@ -201,7 +201,9 @@ class LocalStream(econtext.core.Stream):
                   self, self.read_side.fd)
 
         econtext.core.write_all(self.write_side.fd, self.GetPreamble())
-        assert os.read(self.read_side.fd, 3) == 'OK\n'
+        s = os.read(self.read_side.fd, 4096)
+        if s != 'OK\n':
+            raise econtext.core.StreamError('Bootstrap failed; stdout: %r', s)
 
 
 class SSHStream(LocalStream):
