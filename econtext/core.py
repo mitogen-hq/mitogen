@@ -415,7 +415,7 @@ class Context(object):
     def Disconnect(self):
         self.stream = None
         LOG.debug('Parent stream is gone, dying.')
-        self.broker.Finalize(wait=False)
+        self.broker.Finalize()
 
     def AllocHandle(self):
         """Allocate a handle."""
@@ -650,12 +650,10 @@ class Broker(object):
         """Wait for the broker to stop."""
         self._thread.join()
 
-    def Finalize(self, wait=True):
+    def Finalize(self):
         """Disconect all streams and wait for broker to stop."""
         self._alive = False
         self._waker.Wake()
-        if wait:
-            self.Wait()
 
     def __repr__(self):
         return 'Broker()'
@@ -728,13 +726,17 @@ class ExternalContext(object):
         self._ReapFirstStage()
         self._FixupMainModule()
         self._SetupMaster(key)
-        self._SetupLogging(log_level)
-        self._SetupImporter()
-        self._SetupStdio()
+        try:
+            self._SetupLogging(log_level)
+            self._SetupImporter()
+            self._SetupStdio()
 
-        # signal.signal(signal.SIGINT, lambda *_: self.broker.Finalize())
-        self.broker.Register(self.context)
+            # signal.signal(signal.SIGINT, lambda *_: self.broker.Finalize())
+            self.broker.Register(self.context)
 
-        self._DispatchCalls()
-        self.broker.Wait()
-        LOG.debug('ExternalContext.main() exitting')
+            self._DispatchCalls()
+            self.broker.Wait()
+            LOG.debug('ExternalContext.main() exitting')
+        except Exception:
+            raise
+            self.broker.Finalize()
