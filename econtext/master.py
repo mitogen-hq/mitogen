@@ -222,11 +222,13 @@ class Broker(econtext.core.Broker):
         """Listen on `address `for connections from newly spawned contexts."""
         self._listener = Listener(self, address, backlog)
 
-    def GetLocal(self, name='default'):
+    def GetLocal(self, name='default', python_path=None):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         context = Context(self, name)
         context.stream = LocalStream(context)
+        if python_path:
+            context.stream.python_path = python_path
         context.stream.Connect()
         return self.Register(context)
 
