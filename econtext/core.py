@@ -272,18 +272,21 @@ class Stream(BasicStream):
         IOLOG.debug('%r.Receive()', self)
 
         buf = os.read(self.read_side.fd, 4096)
+        self._input_buf += buf
+        while self._ReceiveOne():
+            pass
+
         if not buf:
             return self.Disconnect()
 
-        self._input_buf += buf
-        while len(self._input_buf) >= 24 and self._ReceiveOne():
-            pass
-
     def _ReceiveOne(self):
+        if len(self._input_buf) < 24:
+            return False
+
         msg_mac = self._input_buf[:20]
         msg_len = struct.unpack('>L', self._input_buf[20:24])[0]
         if len(self._input_buf)-24 < msg_len:
-            IOLOG.error('Input too short')
+            IOLOG.debug('Input too short')
             return False
 
         self._rhmac.update(self._input_buf[20:msg_len+24])
