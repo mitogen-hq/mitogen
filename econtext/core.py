@@ -444,11 +444,11 @@ class Context(object):
 
         queue = Queue.Queue()
 
-        def _Receive(data):
-            IOLOG.debug('%r._Receive(%r)', self, data)
+        def _PutReply(data):
+            IOLOG.debug('%r._PutReply(%r)', self, data)
             queue.put(data)
 
-        self.AddHandleCB(_Receive, reply_to, persist=False)
+        self.AddHandleCB(_PutReply, reply_to, persist=False)
         self.stream.Enqueue(handle, (reply_to,) + data)
 
         try:
