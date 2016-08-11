@@ -158,7 +158,7 @@ class SlaveModuleImporter(object):
             return None
 
         pkgname, _, _ = fullname.rpartition('.')
-        if fullname not in self._present.get(pkgname, ()):
+        if fullname not in self._present.get(pkgname, (fullname,)):
             LOG.debug('%r: Skip %r since master doesnt know it', self, fullname)
             return None
 
