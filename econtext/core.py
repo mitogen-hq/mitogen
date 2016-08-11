@@ -644,7 +644,7 @@ class Broker(object):
             for side in self._readers | self._writers:
                 self._CallAndUpdate(side.stream, side.stream.Shutdown)
 
-            deadline = time.time() + 5.0
+            deadline = time.time() + 1.0
             while (self._readers or self._writers) and time.time() < deadline:
                 self._LoopOnce(1.0)
 
