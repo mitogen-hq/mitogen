@@ -18,6 +18,16 @@ LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
 RLOG = logging.getLogger('econtext.ctx')
 
+DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
+COMMENT_RE = re.compile(r'^\s*#.*$', re.M)
+
+
+def MinimizeSource(source):
+    subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
+    source = DOCSTRING_RE.sub(subber, source)
+    source = COMMENT_RE.sub('\n', source)
+    return source.replace('    ', '\t')
+
 
 def GetChildModules(module, prefix):
     it = pkgutil.iter_modules(module.__path__, prefix)
@@ -105,7 +115,7 @@ class ModuleResponder(object):
             else:
                 present = None
 
-            compressed = zlib.compress(source)
+            compressed = zlib.compress(MinimizeSource(source))
             reply = (is_pkg, present, path, compressed)
             self._context.Enqueue(reply_to, reply)
         except Exception:
@@ -186,7 +196,7 @@ class LocalStream(econtext.core.Stream):
             LOG.level or logging.getLogger().level or logging.INFO,
         ),)
 
-        compressed = zlib.compress(source)
+        compressed = zlib.compress(MinimizeSource(source))
         preamble = str(len(compressed)) + '\n' + compressed
         econtext.core.write_all(self.write_side.fd, preamble)
         assert os.read(self.read_side.fd, 3) == 'OK\n'
