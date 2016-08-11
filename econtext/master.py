@@ -181,6 +181,16 @@ class LocalStream(econtext.core.Stream):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._context)
 
+    def GetPreamble(self):
+        source = inspect.getsource(econtext.core)
+        source += '\nExternalContext().main%r\n' % ((
+            self._context.key,
+            LOG.level or logging.getLogger().level or logging.INFO,
+        ),)
+
+        compressed = zlib.compress(MinimizeSource(source))
+        return str(len(compressed)) + '\n' + compressed
+
     def Connect(self):
         LOG.debug('%r.Connect()', self)
         pid, sock = CreateChild(*self.GetBootCommand())
@@ -190,15 +200,7 @@ class LocalStream(econtext.core.Stream):
         LOG.debug('%r.Connect(): child process stdin/stdout=%r',
                   self, self.read_side.fd)
 
-        source = inspect.getsource(econtext.core)
-        source += '\nExternalContext().main%r\n' % ((
-            self._context.key,
-            LOG.level or logging.getLogger().level or logging.INFO,
-        ),)
-
-        compressed = zlib.compress(MinimizeSource(source))
-        preamble = str(len(compressed)) + '\n' + compressed
-        econtext.core.write_all(self.write_side.fd, preamble)
+        econtext.core.write_all(self.write_side.fd, self.GetPreamble())
         assert os.read(self.read_side.fd, 3) == 'OK\n'
 
 
