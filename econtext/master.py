@@ -22,7 +22,7 @@ DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
 COMMENT_RE = re.compile(r'^\s*#.*$', re.M)
 
 
-def MinimizeSource(source):
+def minimize_source(source):
     """Remove comments and docstrings from Python `source`, preserving line
     numbers and syntax of empty blocks."""
     subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
@@ -31,13 +31,13 @@ def MinimizeSource(source):
     return source.replace('    ', '\t')
 
 
-def GetChildModules(module, prefix):
+def get_child_modules(module, prefix):
     """Return the canonical names of all submodules of a package `module`."""
     it = pkgutil.iter_modules(module.__path__, prefix)
     return [name for _, name, _ in it]
 
 
-def CreateChild(*args):
+def create_child(*args):
     """Create a child process whose stdin/stdout is connected to a socket,
     returning `(pid, socket_obj)`."""
     parentfp, childfp = socket.socketpair()
@@ -51,7 +51,7 @@ def CreateChild(*args):
         raise SystemExit
 
     childfp.close()
-    LOG.debug('CreateChild() child %d fd %d, parent %d, args %r',
+    LOG.debug('create_child() child %d fd %d, parent %d, args %r',
               pid, parentfp.fileno(), os.getpid(), args)
     return pid, parentfp
 
@@ -65,23 +65,23 @@ class Listener(econtext.core.BasicStream):
         econtext.core.set_cloexec(self._sock.fileno())
         self._listen_addr = self._sock.getsockname()
         self.read_side = econtext.core.Side(self, self._sock.fileno())
-        broker.UpdateStream(self)
+        broker.update_stream(self)
 
-    def Receive(self):
+    def on_receive(self):
         sock, addr = self._sock.accept()
         context = Context(self._broker, name=addr)
         stream = econtext.core.Stream(context)
-        stream.Accept(sock.fileno(), sock.fileno())
+        stream.accept(sock.fileno(), sock.fileno())
 
 
 class LogForwarder(object):
     def __init__(self, context):
         self._context = context
-        self._context.AddHandleCB(self.ForwardLog,
-                                  handle=econtext.core.FORWARD_LOG)
+        self._context.add_handle_cb(self.forward_log,
+                                    handle=econtext.core.FORWARD_LOG)
         self._log = RLOG.getChild(self._context.name)
 
-    def ForwardLog(self, data):
+    def forward_log(self, data):
         if data == econtext.core._DEAD:
             return
 
@@ -92,15 +92,15 @@ class LogForwarder(object):
 class ModuleResponder(object):
     def __init__(self, context):
         self._context = context
-        self._context.AddHandleCB(self.GetModule,
-                                  handle=econtext.core.GET_MODULE)
+        self._context.add_handle_cb(self.get_module,
+                                    handle=econtext.core.GET_MODULE)
 
-    def GetModule(self, data):
+    def get_module(self, data):
         if data == econtext.core._DEAD:
             return
 
         reply_to, fullname = data
-        LOG.debug('GetModule(%r, %r)', reply_to, fullname)
+        LOG.debug('get_module(%r, %r)', reply_to, fullname)
         try:
             module = __import__(fullname, fromlist=[''])
             is_pkg = getattr(module, '__path__', None) is not None
@@ -114,16 +114,16 @@ class ModuleResponder(object):
 
             if is_pkg:
                 prefix = module.__name__ + '.'
-                present = GetChildModules(module, prefix)
+                present = get_child_modules(module, prefix)
             else:
                 present = None
 
-            compressed = zlib.compress(MinimizeSource(source))
+            compressed = zlib.compress(minimize_source(source))
             reply = (is_pkg, present, path, compressed)
-            self._context.Enqueue(reply_to, reply)
+            self._context.enqueue(reply_to, reply)
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
-            self._context.Enqueue(reply_to, None)
+            self._context.enqueue(reply_to, None)
 
 
 class LocalStream(econtext.core.Stream):
@@ -137,12 +137,12 @@ class LocalStream(econtext.core.Stream):
         super(LocalStream, self).__init__(context)
         self._permitted_classes = set([('econtext.core', 'CallError')])
 
-    def Shutdown(self):
+    def shutdown(self):
         """Requesting the slave gracefully shut itself down."""
         LOG.debug('%r enqueuing SHUTDOWN', self)
-        self.Enqueue(econtext.core.SHUTDOWN, None)
+        self.enqueue(econtext.core.SHUTDOWN, None)
 
-    def _FindGlobal(self, module_name, class_name):
+    def _find_global(self, module_name, class_name):
         """Return the class implementing `module_name.class_name` or raise
         `StreamError` if the module is not whitelisted."""
         if (module_name, class_name) not in self._permitted_classes:
@@ -151,14 +151,14 @@ class LocalStream(econtext.core.Stream):
                 self._context, class_name, module_name)
         return getattr(sys.modules[module_name], class_name)
 
-    def AllowClass(self, module_name, class_name):
+    def allow_class(self, module_name, class_name):
         """Add `module_name` to the list of permitted modules."""
         self._permitted_modules.add((module_name, class_name))
 
     # base64'd and passed to 'python -c'. It forks, dups 0->100, creates a
     # pipe, then execs a new interpreter with a custom argv. CONTEXT_NAME is
     # replaced with the context name. Optimized for size.
-    def _FirstStage():
+    def _first_stage():
         import os,sys,zlib
         R,W=os.pipe()
         if os.fork():
@@ -172,13 +172,13 @@ class LocalStream(econtext.core.Stream):
             print 'OK'
             sys.exit(0)
 
-    def GetBootCommand(self):
+    def get_boot_command(self):
         name = self._context.remote_name
         if name is None:
             name = '%s@%s:%d'
             name %= (getpass.getuser(), socket.gethostname(), os.getpid())
 
-        source = inspect.getsource(self._FirstStage)
+        source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[1:]))
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', repr(name))
@@ -189,26 +189,26 @@ class LocalStream(econtext.core.Stream):
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._context)
 
-    def GetPreamble(self):
+    def get_preamble(self):
         source = inspect.getsource(econtext.core)
         source += '\nExternalContext().main%r\n' % ((
             self._context.key,
             LOG.level or logging.getLogger().level or logging.INFO,
         ),)
 
-        compressed = zlib.compress(MinimizeSource(source))
+        compressed = zlib.compress(minimize_source(source))
         return str(len(compressed)) + '\n' + compressed
 
-    def Connect(self):
-        LOG.debug('%r.Connect()', self)
-        pid, sock = CreateChild(*self.GetBootCommand())
+    def connect(self):
+        LOG.debug('%r.connect()', self)
+        pid, sock = create_child(*self.get_boot_command())
         self.read_side = econtext.core.Side(self, os.dup(sock.fileno()))
         self.write_side = econtext.core.Side(self, os.dup(sock.fileno()))
         sock.close()
-        LOG.debug('%r.Connect(): child process stdin/stdout=%r',
+        LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.read_side.fd)
 
-        econtext.core.write_all(self.write_side.fd, self.GetPreamble())
+        econtext.core.write_all(self.write_side.fd, self.get_preamble())
         s = os.read(self.read_side.fd, 4096)
         if s != 'OK\n':
             raise econtext.core.StreamError('Bootstrap failed; stdout: %r', s)
@@ -218,12 +218,12 @@ class SSHStream(LocalStream):
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
-    def GetBootCommand(self):
+    def get_boot_command(self):
         bits = [self.ssh_path]
         if self._context.username:
             bits += ['-l', self._context.username]
         bits.append(self._context.hostname)
-        base = super(SSHStream, self).GetBootCommand()
+        base = super(SSHStream, self).get_boot_command()
         return bits + map(commands.mkarg, base)
 
 
@@ -231,21 +231,21 @@ class Broker(econtext.core.Broker):
     #: Always allow time for slaves to drain.
     graceful_count = 1
 
-    def CreateListener(self, address=None, backlog=30):
+    def create_listener(self, address=None, backlog=30):
         """Listen on `address `for connections from newly spawned contexts."""
         self._listener = Listener(self, address, backlog)
 
-    def GetLocal(self, name='default', python_path=None):
+    def get_local(self, name='default', python_path=None):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         context = Context(self, name)
         context.stream = LocalStream(context)
         if python_path:
             context.stream.python_path = python_path
-        context.stream.Connect()
-        return self.Register(context)
+        context.stream.connect()
+        return self.register(context)
 
-    def GetRemote(self, hostname, username, name=None, python_path=None):
+    def get_remote(self, hostname, username, name=None, python_path=None):
         """Get the named remote context, creating it if it does not exist."""
         if name is None:
             name = hostname
@@ -254,8 +254,8 @@ class Broker(econtext.core.Broker):
         context.stream = SSHStream(context)
         if python_path:
             context.stream.python_path = python_path
-        context.stream.Connect()
-        return self.Register(context)
+        context.stream.connect()
+        return self.register(context)
 
 
 class Context(econtext.core.Context):
@@ -264,5 +264,5 @@ class Context(econtext.core.Context):
         self.responder = ModuleResponder(self)
         self.log_forwarder = LogForwarder(self)
 
-    def Disconnect(self):
+    def on_disconnect(self):
         self.stream = None

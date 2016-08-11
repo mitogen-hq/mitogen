@@ -56,7 +56,7 @@ class TimeoutError(StreamError):
 
 
 class CallError(ContextError):
-    """Raised when .Call() fails"""
+    """Raised when .call() fails"""
     def __init__(self, e):
         name = '%s.%s' % (type(e).__module__, type(e).__name__)
         tb = sys.exc_info()[2]
@@ -64,7 +64,7 @@ class CallError(ContextError):
             stack = ''.join(traceback.format_tb(tb))
         else:
             stack = ''
-        ContextError.__init__(self, 'Call failed: %s: %s\n%s', name, e, stack)
+        ContextError.__init__(self, 'call failed: %s: %s\n%s', name, e, stack)
 
 
 class Dead(object):
@@ -98,33 +98,33 @@ class Channel(object):
         self._context = context
         self._handle = handle
         self._queue = Queue.Queue()
-        self._context.AddHandleCB(self._Receive, handle)
+        self._context.add_handle_cb(self._receive, handle)
 
-    def _Receive(self, data):
+    def _receive(self, data):
         """Callback from the Stream; appends data to the internal queue."""
-        IOLOG.debug('%r._Receive(%r)', self, data)
+        IOLOG.debug('%r._receive(%r)', self, data)
         self._queue.put(data)
 
-    def Close(self):
+    def close(self):
         """Indicate this channel is closed to the remote side."""
-        IOLOG.debug('%r.Close()', self)
-        self._context.Enqueue(self._handle, _DEAD)
+        IOLOG.debug('%r.close()', self)
+        self._context.enqueue(self._handle, _DEAD)
 
-    def Send(self, data):
+    def send(self, data):
         """Send `data` to the remote."""
-        IOLOG.debug('%r.Send(%r)', self, data)
-        self._context.Enqueue(self._handle, data)
+        IOLOG.debug('%r.send(%r)', self, data)
+        self._context.enqueue(self._handle, data)
 
-    def Receive(self, timeout=None):
-        """Receive an object from the remote, or return ``None`` if `timeout`
+    def on_receive(self, timeout=None):
+        """on_receive an object from the remote, or return ``None`` if `timeout`
         is reached."""
-        IOLOG.debug('%r.Receive(timeout=%r)', self, timeout)
+        IOLOG.debug('%r.on_receive(timeout=%r)', self, timeout)
         try:
             data = self._queue.get(True, timeout)
         except Queue.Empty:
             return
 
-        IOLOG.debug('%r.Receive() got %r', self, data)
+        IOLOG.debug('%r.on_receive() got %r', self, data)
         if data == _DEAD:
             raise ChannelError('Channel is closed.')
         return data
@@ -134,7 +134,7 @@ class Channel(object):
         is closed."""
         while True:
             try:
-                yield self.Receive()
+                yield self.on_receive()
             except ChannelError:
                 return
 
@@ -179,7 +179,7 @@ class SlaveModuleImporter(object):
 
     def load_module(self, fullname):
         LOG.debug('SlaveModuleImporter.load_module(%r)', fullname)
-        ret = self._context.EnqueueAwaitReply(GET_MODULE, None, (fullname,))
+        ret = self._context.enqueue_await_reply(GET_MODULE, None, (fullname,))
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
@@ -211,7 +211,7 @@ class LogHandler(logging.Handler):
         self.local.in_emit = True
         try:
             msg = self.format(rec)
-            self.context.Enqueue(FORWARD_LOG, (rec.name, rec.levelno, msg))
+            self.context.enqueue(FORWARD_LOG, (rec.name, rec.levelno, msg))
         finally:
             self.local.in_emit = False
 
@@ -244,17 +244,17 @@ class BasicStream(object):
     read_side = None
     write_side = None
 
-    def Disconnect(self):
-        LOG.debug('%r.Disconnect()', self)
+    def on_disconnect(self):
+        LOG.debug('%r.on_disconnect()', self)
         self.read_side.close()
         self.write_side.close()
 
-    def Shutdown(self):
-        LOG.debug('%r.Shutdown()', self)
+    def shutdown(self):
+        LOG.debug('%r.shutdown()', self)
         self.read_side.close()
         self.write_side.close()
 
-    def WriteMore(self):
+    def has_output(self):
         return False
 
 
@@ -273,31 +273,31 @@ class Stream(BasicStream):
         self._rhmac = hmac.new(context.key, digestmod=sha.new)
         self._whmac = self._rhmac.copy()
 
-    _FindGlobal = None
+    _find_global = None
 
-    def Unpickle(self, data):
+    def unpickle(self, data):
         """Deserialize `data` into an object."""
-        IOLOG.debug('%r.Unpickle(%r)', self, data)
+        IOLOG.debug('%r.unpickle(%r)', self, data)
         fp = cStringIO.StringIO(data)
         unpickler = cPickle.Unpickler(fp)
-        if self._FindGlobal:
-            unpickler.find_global = self._FindGlobal
+        if self._find_global:
+            unpickler.find_global = self._find_global
         return unpickler.load()
 
-    def Receive(self):
+    def on_receive(self):
         """Handle the next complete message on the stream. Raise
         CorruptMessageError or IOError on failure."""
-        IOLOG.debug('%r.Receive()', self)
+        IOLOG.debug('%r.on_receive()', self)
 
         buf = os.read(self.read_side.fd, 4096)
         self._input_buf += buf
-        while self._ReceiveOne():
+        while self._receive_one():
             pass
 
         if not buf:
-            return self.Disconnect()
+            return self.on_disconnect()
 
-    def _ReceiveOne(self):
+    def _receive_one(self):
         if len(self._input_buf) < 24:
             return False
 
@@ -316,16 +316,16 @@ class Stream(BasicStream):
                                       self._input_buf[24:msg_len+24])
 
         try:
-            handle, data = self.Unpickle(self._input_buf[24:msg_len+24])
+            handle, data = self.unpickle(self._input_buf[24:msg_len+24])
         except (TypeError, ValueError), ex:
             raise CorruptMessageError('invalid message: %s', ex)
 
         self._input_buf = self._input_buf[msg_len+24:]
-        self._Invoke(handle, data)
+        self._invoke(handle, data)
         return True
 
-    def _Invoke(self, handle, data):
-        IOLOG.debug('%r._Invoke(): handle=%r; data=%r', self, handle, data)
+    def _invoke(self, handle, data):
+        IOLOG.debug('%r._invoke(): handle=%r; data=%r', self, handle, data)
         try:
             persist, fn = self._context._handle_map[handle]
         except KeyError:
@@ -335,20 +335,20 @@ class Stream(BasicStream):
             del self._context._handle_map[handle]
         fn(data)
 
-    def Transmit(self):
-        """Transmit buffered messages."""
-        IOLOG.debug('%r.Transmit()', self)
+    def on_transmit(self):
+        """on_transmit buffered messages."""
+        IOLOG.debug('%r.on_transmit()', self)
         written = os.write(self.write_side.fd, self._output_buf[:4096])
         self._output_buf = self._output_buf[written:]
         if (not self._output_buf) and not self._context.broker.graceful_count:
-            self.Disconnect()
+            self.on_disconnect()
 
-    def WriteMore(self):
+    def has_output(self):
         return bool(self._output_buf)
 
-    def Enqueue(self, handle, obj):
-        """Enqueue `obj` to `handle`, and tell the broker we have output."""
-        IOLOG.debug('%r.Enqueue(%r, %r)', self, handle, obj)
+    def enqueue(self, handle, obj):
+        """enqueue `obj` to `handle`, and tell the broker we have output."""
+        IOLOG.debug('%r.enqueue(%r, %r)', self, handle, obj)
         self._lock.acquire()
         try:
             encoded = cPickle.dumps((handle, obj), protocol=2)
@@ -357,38 +357,38 @@ class Stream(BasicStream):
             self._output_buf += self._whmac.digest() + msg
         finally:
             self._lock.release()
-        self._context.broker.UpdateStream(self)
+        self._context.broker.update_stream(self)
 
-    def Disconnect(self):
-        """Close our associated file descriptor and tell registered callbacks
+    def on_disconnect(self):
+        """close our associated file descriptor and tell registered callbacks
         the connection has been destroyed."""
-        super(Stream, self).Disconnect()
+        super(Stream, self).on_disconnect()
         if self._context.stream is self:
-            self._context.Disconnect()
+            self._context.on_disconnect()
 
         for handle, (persist, fn) in self._context._handle_map.iteritems():
-            LOG.debug('%r.Disconnect(): killing %r: %r', self, handle, fn)
+            LOG.debug('%r.on_disconnect(): killing %r: %r', self, handle, fn)
             fn(_DEAD)
 
-    def Shutdown(self):
+    def shutdown(self):
         """Override BasicStream behaviour of immediately disconnecting."""
 
-    def Accept(self, rfd, wfd):
+    def accept(self, rfd, wfd):
         self.read_side = Side(self, os.dup(rfd))
         self.write_side = Side(self, os.dup(wfd))
         set_cloexec(self.read_side.fd)
         set_cloexec(self.write_side.fd)
         self._context.stream = self
 
-    def Connect(self):
-        """Connect to a Broker at the address specified in our associated
+    def connect(self):
+        """connect to a Broker at the address specified in our associated
         Context."""
-        LOG.debug('%r.Connect()', self)
+        LOG.debug('%r.connect()', self)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.read_side = Side(self, sock.fileno())
         self.write_side = Side(self, sock.fileno())
         sock.connect(self._context.parent_addr)
-        self.Enqueue(0, self._context.name)
+        self.enqueue(0, self._context.name)
 
     def __repr__(self):
         return '%s(<context=%r>)' % (self.__class__.__name__, self._context)
@@ -413,22 +413,22 @@ class Context(object):
         self._last_handle = 1000L
         self._handle_map = {}
         self._lock = threading.Lock()
-        self.AddHandleCB(self._Shutdown, SHUTDOWN)
+        self.add_handle_cb(self._shutdown, SHUTDOWN)
 
-    def Shutdown(self):
-        """Slave does nothing, _BrokerMain() will .Shutdown its streams."""
+    def shutdown(self):
+        """Slave does nothing, _broker_main() will .shutdown its streams."""
 
-    def _Shutdown(self, data):
+    def _shutdown(self, data):
         if data != _DEAD and self.stream:
             LOG.debug('Received SHUTDOWN')
-            self.broker.Shutdown()
+            self.broker.shutdown()
 
-    def Disconnect(self):
+    def on_disconnect(self):
         self.stream = None
         LOG.debug('Parent stream is gone, dying.')
-        self.broker.Shutdown()
+        self.broker.shutdown()
 
-    def AllocHandle(self):
+    def alloc_handle(self):
         """Allocate a handle."""
         self._lock.acquire()
         try:
@@ -437,48 +437,48 @@ class Context(object):
         finally:
             self._lock.release()
 
-    def AddHandleCB(self, fn, handle, persist=True):
-        """Register `fn(obj)` to run for each `obj` sent to `handle`. If
+    def add_handle_cb(self, fn, handle, persist=True):
+        """register `fn(obj)` to run for each `obj` sent to `handle`. If
         `persist` is ``False`` then unregister after one delivery."""
-        IOLOG.debug('%r.AddHandleCB(%r, %r, persist=%r)',
+        IOLOG.debug('%r.add_handle_cb(%r, %r, persist=%r)',
                     self, fn, handle, persist)
         self._handle_map[handle] = persist, fn
 
-    def Enqueue(self, handle, obj):
+    def enqueue(self, handle, obj):
         if self.stream:
-            self.stream.Enqueue(handle, obj)
+            self.stream.enqueue(handle, obj)
 
-    def EnqueueAwaitReply(self, handle, deadline, data):
+    def enqueue_await_reply(self, handle, deadline, data):
         """Send `data` to `handle` and wait for a response with an optional
         timeout. The message contains `(reply_to, data)`, where `reply_to` is
         the handle on which this function expects its reply."""
-        reply_to = self.AllocHandle()
-        LOG.debug('%r.EnqueueAwaitReply(%r, %r, %r) -> reply handle %d',
+        reply_to = self.alloc_handle()
+        LOG.debug('%r.enqueue_await_reply(%r, %r, %r) -> reply handle %d',
                   self, handle, deadline, data, reply_to)
 
         queue = Queue.Queue()
 
-        def _PutReply(data):
-            IOLOG.debug('%r._PutReply(%r)', self, data)
+        def _put_reply(data):
+            IOLOG.debug('%r._put_reply(%r)', self, data)
             queue.put(data)
 
-        self.AddHandleCB(_PutReply, reply_to, persist=False)
-        self.stream.Enqueue(handle, (reply_to,) + data)
+        self.add_handle_cb(_put_reply, reply_to, persist=False)
+        self.stream.enqueue(handle, (reply_to,) + data)
 
         try:
             data = queue.get(True, deadline)
         except Queue.Empty:
-            self.stream.Disconnect()
+            self.stream.on_disconnect()
             raise TimeoutError('deadline exceeded.')
 
         if data == _DEAD:
             raise StreamError('lost connection during call.')
 
-        IOLOG.debug('%r._EnqueueAwaitReply(): got reply: %r', self, data)
+        IOLOG.debug('%r._enqueue_await_reply(): got reply: %r', self, data)
         return data
 
-    def CallWithDeadline(self, deadline, with_context, fn, *args, **kwargs):
-        LOG.debug('%r.CallWithDeadline(%r, %r, %r, *%r, **%r)',
+    def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
+        LOG.debug('%r.call_with_deadline(%r, %r, %r, *%r, **%r)',
                   self, deadline, with_context, fn, args, kwargs)
 
         if isinstance(fn, types.MethodType) and \
@@ -488,13 +488,13 @@ class Context(object):
             klass = None
 
         call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
-        result = self.EnqueueAwaitReply(CALL_FUNCTION, deadline, call)
+        result = self.enqueue_await_reply(CALL_FUNCTION, deadline, call)
         if isinstance(result, CallError):
             raise result
         return result
 
-    def Call(self, fn, *args, **kwargs):
-        return self.CallWithDeadline(None, False, fn, *args, **kwargs)
+    def call(self, fn, *args, **kwargs):
+        return self.call_with_deadline(None, False, fn, *args, **kwargs)
 
     def __repr__(self):
         bits = filter(None, (self.name, self.hostname, self.username))
@@ -509,16 +509,16 @@ class Waker(BasicStream):
         set_cloexec(wfd)
         self.read_side = Side(self, rfd)
         self.write_side = Side(self, wfd)
-        broker.UpdateStream(self)
+        broker.update_stream(self)
 
     def __repr__(self):
         return '<Waker>'
 
-    def Wake(self):
+    def wake(self):
         if self.write_side.fd:
             os.write(self.write_side.fd, ' ')
 
-    def Receive(self):
+    def on_receive(self):
         os.read(self.read_side.fd, 1)
 
 
@@ -538,31 +538,31 @@ class IoLogger(BasicStream):
         self.read_side = Side(self, self._rsock.fileno())
         self.write_side = Side(self, dest_fd)
         broker.graceful_count += 1
-        self._broker.UpdateStream(self)
+        self._broker.update_stream(self)
 
     def __repr__(self):
         return '<IoLogger %s fd %d>' % (self._name, self.read_side.fd)
 
-    def _LogLines(self):
+    def _log_lines(self):
         while self._buf.find('\n') != -1:
             line, _, self._buf = self._buf.partition('\n')
             self._log.info('%s', line.rstrip('\n'))
 
-    def Shutdown(self):
-        LOG.debug('%r.Shutdown()', self)
+    def shutdown(self):
+        LOG.debug('%r.shutdown()', self)
         self._wsock.shutdown(socket.SHUT_WR)
         self._wsock.close()
 
-    def Receive(self):
-        LOG.debug('%r.Receive()', self)
+    def on_receive(self):
+        LOG.debug('%r.on_receive()', self)
         buf = os.read(self.read_side.fd, 4096)
         if not buf:
             LOG.debug('%r decrement graceful_count', self)
             self._broker.graceful_count -= 1
-            return self.Disconnect()
+            return self.on_disconnect()
 
         self._buf += buf
-        self._LogLines()
+        self._log_lines()
 
 
 class Broker(object):
@@ -582,12 +582,12 @@ class Broker(object):
         self._writers = set()
         self._waker = Waker(self)
 
-        self._thread = threading.Thread(target=self._BrokerMain,
+        self._thread = threading.Thread(target=self._broker_main,
                                         name='econtext-broker')
         self._thread.start()
 
-    def _UpdateStream(self, stream):
-        IOLOG.debug('_UpdateStream(%r)', stream)
+    def _update_stream(self, stream):
+        IOLOG.debug('_update_stream(%r)', stream)
         self._lock.acquire()
         try:
             if stream.read_side.fd is not None:
@@ -595,91 +595,91 @@ class Broker(object):
             else:
                 self._readers.discard(stream.read_side)
 
-            if stream.write_side.fd is not None and stream.WriteMore():
+            if stream.write_side.fd is not None and stream.has_output():
                 self._writers.add(stream.write_side)
             else:
                 self._writers.discard(stream.write_side)
         finally:
             self._lock.release()
 
-    def UpdateStream(self, stream):
-        self._UpdateStream(stream)
+    def update_stream(self, stream):
+        self._update_stream(stream)
         if self._waker:
-            self._waker.Wake()
+            self._waker.wake()
 
-    def Register(self, context):
+    def register(self, context):
         """Put a context under control of this broker."""
-        LOG.debug('%r.Register(%r) -> r=%r w=%r', self, context,
+        LOG.debug('%r.register(%r) -> r=%r w=%r', self, context,
                   context.stream.read_side,
                   context.stream.write_side)
-        self.UpdateStream(context.stream)
+        self.update_stream(context.stream)
         self._contexts[context.name] = context
         return context
 
-    def _CallAndUpdate(self, stream, func):
+    def _call_and_update(self, stream, func):
         try:
             func()
         except Exception:
             LOG.exception('%r crashed', stream)
-            stream.Disconnect()
-        self._UpdateStream(stream)
+            stream.on_disconnect()
+        self._update_stream(stream)
 
-    def _LoopOnce(self, timeout=None):
-        IOLOG.debug('%r._LoopOnce(%r)', self, timeout)
+    def _loop_once(self, timeout=None):
+        IOLOG.debug('%r._loop_once(%r)', self, timeout)
         #IOLOG.debug('readers = %r', [(r.fileno(), r) for r in self._readers])
         #IOLOG.debug('writers = %r', [(w.fileno(), w) for w in self._writers])
         rsides, wsides, _ = select.select(self._readers, self._writers,
                                           (), timeout)
         for side in rsides:
             IOLOG.debug('%r: POLLIN for %r', self, side.stream)
-            self._CallAndUpdate(side.stream, side.stream.Receive)
+            self._call_and_update(side.stream, side.stream.on_receive)
 
         for side in wsides:
             IOLOG.debug('%r: POLLOUT for %r', self, side.stream)
-            self._CallAndUpdate(side.stream, side.stream.Transmit)
+            self._call_and_update(side.stream, side.stream.on_transmit)
 
-    def _BrokerMain(self):
-        """Handle events until Shutdown() is called."""
+    def _broker_main(self):
+        """Handle events until shutdown() is called."""
         try:
             while self._alive:
-                self._LoopOnce()
+                self._loop_once()
 
             for side in self._readers | self._writers:
-                self._CallAndUpdate(side.stream, side.stream.Shutdown)
+                self._call_and_update(side.stream, side.stream.shutdown)
 
             deadline = time.time() + self.graceful_timeout
             while ((self._readers or self._writers) and
                    (self.graceful_count or time.time() < deadline)):
-                self._LoopOnce(1.0)
+                self._loop_once(1.0)
 
             for context in self._contexts.itervalues():
                 stream = context.stream
                 if stream:
-                    stream.Disconnect()
-                    self._UpdateStream(stream)
+                    stream.on_disconnect()
+                    self._update_stream(stream)
 
             for side in self._readers | self._writers:
-                LOG.error('_BrokerMain() force disconnecting %r', side)
-                side.stream.Disconnect()
+                LOG.error('_broker_main() force disconnecting %r', side)
+                side.stream.on_disconnect()
         except Exception:
-            LOG.exception('_BrokerMain() crashed')
+            LOG.exception('_broker_main() crashed')
 
-    def Wait(self):
-        """Wait for the broker to stop."""
+    def wait(self):
+        """wait for the broker to stop."""
         self._thread.join()
 
-    def Shutdown(self):
+    def shutdown(self):
         """Gracefully disconnect streams and wait for broker to stop."""
-        LOG.debug('%r.Shutdown()', self)
+        LOG.debug('%r.shutdown()', self)
         self._alive = False
-        self._waker.Wake()
+        self._waker.wake()
 
     def __repr__(self):
         return 'Broker()'
 
 
 class ExternalContext(object):
-    def _FixupMainModule(self):
+    def _fixup_main_module(self):
         main = sys.modules['__main__']
         main.__path__ = []
         main.core = main
@@ -690,7 +690,7 @@ class ExternalContext(object):
             if hasattr(klass, '__module__'):
                 klass.__module__ = 'econtext.core'
 
-    def _ReapFirstStage(self):
+    def _reap_first_stage(self):
         os.wait()
         os.dup2(100, 0)
         os.close(100)
@@ -700,20 +700,20 @@ class ExternalContext(object):
         self.context = Context(self.broker, 'master', key=key)
         self.channel = Channel(self.context, CALL_FUNCTION)
         self.context.stream = Stream(self.context)
-        self.context.stream.Accept(0, 1)
+        self.context.stream.accept(0, 1)
 
-    def _SetupLogging(self, log_level):
+    def _setup_logging(self, log_level):
         logging.basicConfig(level=log_level)
         root = logging.getLogger()
         root.setLevel(log_level)
         root.handlers = [LogHandler(self.context)]
         LOG.debug('Connected to %s', self.context)
 
-    def _SetupImporter(self):
+    def _setup_importer(self):
         self.importer = SlaveModuleImporter(self.context)
         sys.meta_path.append(self.importer)
 
-    def _SetupStdio(self):
+    def _setup_stdio(self):
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
         self.stderr_log = IoLogger(self.broker, 'stderr', 2)
         # Reopen with line buffering.
@@ -725,9 +725,9 @@ class ExternalContext(object):
         finally:
             fp.close()
 
-    def _DispatchCalls(self):
+    def _dispatch_calls(self):
         for data in self.channel:
-            LOG.debug('_DispatchCalls(%r)', data)
+            LOG.debug('_dispatch_calls(%r)', data)
             reply_to, with_context, modname, klass, func, args, kwargs = data
             if with_context:
                 args = (self,) + args
@@ -737,22 +737,22 @@ class ExternalContext(object):
                 if klass:
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)
-                self.context.Enqueue(reply_to, fn(*args, **kwargs))
+                self.context.enqueue(reply_to, fn(*args, **kwargs))
             except Exception, e:
-                self.context.Enqueue(reply_to, CallError(e))
+                self.context.enqueue(reply_to, CallError(e))
 
     def main(self, key, log_level):
-        self._ReapFirstStage()
-        self._FixupMainModule()
+        self._reap_first_stage()
+        self._fixup_main_module()
         self._SetupMaster(key)
         try:
-            self._SetupLogging(log_level)
-            self._SetupImporter()
-            self._SetupStdio()
+            self._setup_logging(log_level)
+            self._setup_importer()
+            self._setup_stdio()
 
-            self.broker.Register(self.context)
-            self._DispatchCalls()
-            self.broker.Wait()
+            self.broker.register(self.context)
+            self._dispatch_calls()
+            self.broker.wait()
             LOG.debug('ExternalContext.main() exitting')
         finally:
-            self.broker.Shutdown()
+            self.broker.shutdown()
