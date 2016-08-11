@@ -162,7 +162,7 @@ class SlaveModuleImporter(object):
 
         pkgname, _, _ = fullname.rpartition('.')
         if fullname not in self._present.get(pkgname, (fullname,)):
-            LOG.debug('%r: Skip %r since master doesnt know it', self, fullname)
+            LOG.debug('%r: master doesn\'t know %r', self, fullname)
             return None
 
         self._lock.acquire()
