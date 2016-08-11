@@ -728,9 +728,7 @@ class ExternalContext(object):
             self._SetupImporter()
             self._SetupStdio()
 
-            # signal.signal(signal.SIGINT, lambda *_: self.broker.Finalize())
             self.broker.Register(self.context)
-
             self._DispatchCalls()
             self.broker.Wait()
             LOG.debug('ExternalContext.main() exitting')
