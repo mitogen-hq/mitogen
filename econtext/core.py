@@ -202,15 +202,15 @@ class LogHandler(logging.Handler):
 
     def emit(self, rec):
         if rec.name == 'econtext.io' or \
-           getattr(self.local, 'in_commit', False):
+           getattr(self.local, 'in_emit', False):
             return
 
-        self.local.in_commit = True
+        self.local.in_emit = True
         try:
             msg = self.format(rec)
             self.context.Enqueue(FORWARD_LOG, (rec.name, rec.levelno, msg))
         finally:
-            self.local.in_commit = False
+            self.local.in_emit = False
 
 
 class Side(object):
