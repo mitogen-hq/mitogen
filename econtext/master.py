@@ -139,7 +139,7 @@ class LocalStream(econtext.core.Stream):
 
     def Shutdown(self):
         """Requesting the slave gracefully shut itself down."""
-        LOG.debug('%r enqueing SHUTDOWN')
+        LOG.debug('%r enqueuing SHUTDOWN', self)
         self.Enqueue(econtext.core.SHUTDOWN, None)
 
     def _FindGlobal(self, module_name, class_name):
@@ -228,6 +228,9 @@ class SSHStream(LocalStream):
 
 
 class Broker(econtext.core.Broker):
+    #: Always allow time for slaves to drain.
+    graceful_count = 1
+
     def CreateListener(self, address=None, backlog=30):
         """Listen on `address `for connections from newly spawned contexts."""
         self._listener = Listener(self, address, backlog)
