@@ -145,8 +145,7 @@ class SlaveModuleImporter(object):
     def __init__(self, context):
         self._context = context
         self._lock = threading.RLock()
-        self._loaded_prefixes = set(['econtext.'])
-        self._present = set(['econtext.utils', 'econtext.master'])
+        self._present = {'econtext': ['econtext.utils', 'econtext.master']}
         self._ignore = []
 
     def find_module(self, fullname, path=None):
@@ -157,8 +156,8 @@ class SlaveModuleImporter(object):
             LOG.debug('%r: master indicates %r does not exist', self, fullname)
             return None
 
-        if any(fullname.startswith(p) for p in self._loaded_prefixes) and \
-           fullname not in self._present:
+        pkgname, _, _ = fullname.rpartition('.')
+        if fullname not in self._present.get(pkgname, ()):
             LOG.debug('%r: Skip %r since master doesnt know it', self, fullname)
             return None
 
@@ -187,8 +186,7 @@ class SlaveModuleImporter(object):
             mod.__path__ = []
             mod.__package__ = fullname
             self._absent.update(absent)
-            self._present.update(present)
-            self._loaded_prefixes.add(fullname + '.')
+            self._present[fullname] = present
         else:
             mod.__package__ = fullname.rpartition('.')[0]
         code = compile(zlib.decompress(data), 'master:' + path, 'exec')
@@ -285,7 +283,7 @@ class Stream(BasicStream):
         msg_mac = self._input_buf[:20]
         msg_len = struct.unpack('>L', self._input_buf[20:24])[0]
         if len(self._input_buf) < msg_len-24:
-            IOLOG.debug('Input too short')
+            IOLOG.error('Input too short')
             return False
 
         self._rhmac.update(self._input_buf[20:msg_len+24])
@@ -391,14 +389,13 @@ class Context(object):
     remote_name = None
 
     def __init__(self, broker, name=None, hostname=None, username=None,
-                 key=None, parent_addr=None, finalize_on_disconnect=False):
+                 key=None, parent_addr=None):
         self.broker = broker
         self.name = name
         self.hostname = hostname
         self.username = username
         self.key = key or ('%016x' % random.getrandbits(128))
         self.parent_addr = parent_addr
-        self.finalize_on_disconnect = finalize_on_disconnect
 
         self._last_handle = 1000L
         self._handle_map = {}
@@ -406,9 +403,8 @@ class Context(object):
 
     def Disconnect(self):
         self.stream = None
-        if self.finalize_on_disconnect:
-            LOG.debug('Parent stream is gone, dying.')
-            self.broker.Finalize(wait=False)
+        LOG.debug('Parent stream is gone, dying.')
+        self.broker.Finalize(wait=False)
 
     def AllocHandle(self):
         """Allocate a handle."""
@@ -637,7 +633,6 @@ class ExternalContext(object):
 
         sys.modules['econtext'] = main
         sys.modules['econtext.core'] = main
-
         for klass in globals().itervalues():
             if hasattr(klass, '__module__'):
                 klass.__module__ = 'econtext.core'
@@ -649,8 +644,7 @@ class ExternalContext(object):
 
     def _SetupMaster(self, key):
         self.broker = Broker()
-        self.context = Context(self.broker, 'parent', key=key,
-                               finalize_on_disconnect=True)
+        self.context = Context(self.broker, 'parent', key=key)
         self.channel = Channel(self.context, CALL_FUNCTION)
         self.context.stream = Stream(self.context)
         self.context.stream.Accept(0, 1)
@@ -660,7 +654,7 @@ class ExternalContext(object):
         root = logging.getLogger()
         root.setLevel(log_level)
         root.handlers = [LogHandler(self.context)]
-        LOG.info('Connected to %s', self.context)
+        LOG.debug('Connected to %s', self.context)
 
     def _SetupImporter(self):
         self.importer = SlaveModuleImporter(self.context)
