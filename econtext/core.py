@@ -251,9 +251,6 @@ class BasicStream(object):
         self.read_side.close()
         self.write_side.close()
 
-    def ReadMore(self):
-        return True
-
     def WriteMore(self):
         return False
 
@@ -573,7 +570,7 @@ class Broker(object):
         IOLOG.debug('_UpdateStream(%r)', stream)
         self._lock.acquire()
         try:
-            if stream.read_side.fd is not None and stream.ReadMore():
+            if stream.read_side.fd is not None:
                 self._readers.add(stream.read_side)
             else:
                 self._readers.discard(stream.read_side)
