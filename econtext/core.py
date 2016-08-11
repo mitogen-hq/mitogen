@@ -140,8 +140,6 @@ class SlaveModuleImporter(object):
 
     :param context: Context to communicate via.
     """
-    _absent = None
-
     def __init__(self, context):
         self._context = context
         self._lock = threading.RLock()
@@ -151,9 +149,6 @@ class SlaveModuleImporter(object):
     def find_module(self, fullname, path=None):
         LOG.debug('SlaveModuleImporter.find_module(%r)', fullname)
         if fullname in self._ignore:
-            return None
-        if fullname in self._absent:
-            LOG.debug('%r: master indicates %r does not exist', self, fullname)
             return None
 
         pkgname, _, _ = fullname.rpartition('.')
@@ -179,13 +174,12 @@ class SlaveModuleImporter(object):
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        is_pkg, absent, present, path, data = ret
+        is_pkg, present, path, data = ret
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__loader__ = self
         if is_pkg:
             mod.__path__ = []
             mod.__package__ = fullname
-            self._absent.update(absent)
             self._present[fullname] = present
         else:
             mod.__package__ = fullname.rpartition('.')[0]
@@ -692,7 +686,7 @@ class ExternalContext(object):
             except Exception, e:
                 self.context.Enqueue(reply_to, CallError(e))
 
-    def main(self, key, log_level, absent):
+    def main(self, key, log_level):
         self._ReapFirstStage()
         self._FixupMainModule()
         self._SetupMaster(key)
@@ -701,7 +695,6 @@ class ExternalContext(object):
         self._SetupStdio()
 
         # signal.signal(signal.SIGINT, lambda *_: self.broker.Finalize())
-        SlaveModuleImporter._absent = set(absent)
         self.broker.Register(self.context)
 
         self._DispatchCalls()
