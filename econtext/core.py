@@ -376,6 +376,8 @@ class Stream(BasicStream):
     def Accept(self, rfd, wfd):
         self.read_side = Side(self, os.dup(rfd))
         self.write_side = Side(self, os.dup(wfd))
+        set_cloexec(self.read_side.fd)
+        set_cloexec(self.write_side.fd)
         self._context.stream = self
 
     def Connect(self):
