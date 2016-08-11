@@ -276,7 +276,7 @@ class Stream(BasicStream):
     def _ReceiveOne(self):
         msg_mac = self._input_buf[:20]
         msg_len = struct.unpack('>L', self._input_buf[20:24])[0]
-        if len(self._input_buf) < msg_len-24:
+        if len(self._input_buf)-24 < msg_len:
             IOLOG.error('Input too short')
             return False
 
