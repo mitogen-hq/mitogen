@@ -19,7 +19,8 @@ def run_with_broker(func, *args, **kwargs):
     try:
         return func(broker, *args, **kwargs)
     finally:
-        broker.Finalize()
+        broker.Shutdown()
+        broker.Wait()
 
 
 def with_broker(func):

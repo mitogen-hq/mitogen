@@ -23,6 +23,8 @@ COMMENT_RE = re.compile(r'^\s*#.*$', re.M)
 
 
 def MinimizeSource(source):
+    """Remove comments and docstrings from Python `source`, preserving line
+    numbers and syntax of empty blocks."""
     subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
     source = DOCSTRING_RE.sub(subber, source)
     source = COMMENT_RE.sub('\n', source)
@@ -30,6 +32,7 @@ def MinimizeSource(source):
 
 
 def GetChildModules(module, prefix):
+    """Return the canonical names of all submodules of a package `module`."""
     it = pkgutil.iter_modules(module.__path__, prefix)
     return [name for _, name, _ in it]
 
@@ -134,6 +137,11 @@ class LocalStream(econtext.core.Stream):
         super(LocalStream, self).__init__(context)
         self._permitted_classes = set([('econtext.core', 'CallError')])
 
+    def Shutdown(self):
+        """Requesting the slave gracefully shut itself down."""
+        LOG.debug('%r enqueing SHUTDOWN')
+        self.Enqueue(econtext.core.SHUTDOWN, None)
+
     def _FindGlobal(self, module_name, class_name):
         """Return the class implementing `module_name.class_name` or raise
         `StreamError` if the module is not whitelisted."""
@@ -195,7 +203,7 @@ class LocalStream(econtext.core.Stream):
         LOG.debug('%r.Connect()', self)
         pid, sock = CreateChild(*self.GetBootCommand())
         self.read_side = econtext.core.Side(self, os.dup(sock.fileno()))
-        self.write_side = self.read_side
+        self.write_side = econtext.core.Side(self, os.dup(sock.fileno()))
         sock.close()
         LOG.debug('%r.Connect(): child process stdin/stdout=%r',
                   self, self.read_side.fd)
