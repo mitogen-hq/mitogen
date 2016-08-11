@@ -5,6 +5,7 @@ Python external execution contexts.
 import Queue
 import cPickle
 import cStringIO
+import fcntl
 import hmac
 import imp
 import logging
@@ -72,6 +73,11 @@ class Dead(object):
 
 
 _DEAD = Dead()
+
+
+def set_cloexec(fd):
+    flags = fcntl.fcntl(fd, fcntl.F_GETFD)
+    fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
 def write_all(fd, s):
@@ -477,6 +483,8 @@ class Waker(BasicStream):
     def __init__(self, broker):
         self._broker = broker
         rfd, wfd = os.pipe()
+        set_cloexec(rfd)
+        set_cloexec(wfd)
         self.read_side = Side(self, rfd)
         self.write_side = Side(self, wfd)
         broker.UpdateStream(self)
@@ -494,14 +502,18 @@ class Waker(BasicStream):
 class IoLogger(BasicStream):
     _buf = ''
 
-    def __init__(self, broker, name):
+    def __init__(self, broker, name, dest_fd):
         self._broker = broker
         self._name = name
         self._log = logging.getLogger(name)
         rfd, wfd = os.pipe()
 
+        set_cloexec(rfd)
+        os.dup2(wfd, dest_fd)
+        os.close(wfd)
+
         self.read_side = Side(self, rfd)
-        self.write_side = Side(self, wfd)
+        self.write_side = Side(self, dest_fd)
         self._broker.UpdateStream(self)
 
     def __repr__(self):
@@ -655,14 +667,11 @@ class ExternalContext(object):
         sys.meta_path.append(self.importer)
 
     def _SetupStdio(self):
-        self.stdout_log = IoLogger(self.broker, 'stdout')
-        self.stderr_log = IoLogger(self.broker, 'stderr')
-        os.dup2(self.stdout_log.write_side.fd, 1)
-        os.dup2(self.stderr_log.write_side.fd, 2)
+        self.stdout_log = IoLogger(self.broker, 'stdout', 1)
+        self.stderr_log = IoLogger(self.broker, 'stderr', 2)
 
-        # Why is this necessary?
-        sys.stdout = os.fdopen(self.stdout_log.write_side.fd, 'w', 0)
-        sys.stderr = os.fdopen(self.stderr_log.write_side.fd, 'w', 0)
+        # Reopen with line buffering.
+        sys.stdout = open('/dev/stdout', 'w', 1)
 
         fp = file('/dev/null')
         try:

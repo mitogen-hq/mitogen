@@ -49,6 +49,7 @@ class Listener(econtext.core.BasicStream):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._sock.bind(address or ('0.0.0.0', 0))
         self._sock.listen(backlog)
+        econtext.core.set_cloexec(self._sock.fileno())
         self._listen_addr = self._sock.getsockname()
         self.read_side = econtext.core.Side(self, self._sock.fileno())
         broker.UpdateStream(self)
