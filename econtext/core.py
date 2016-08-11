@@ -1,5 +1,3 @@
-#!/usr/bin/env python2.5
-
 """
 Python external execution contexts.
 """
