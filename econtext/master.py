@@ -119,7 +119,7 @@ class ModuleResponder(object):
             reply = (is_pkg, present, path, compressed)
             self._context.Enqueue(reply_to, reply)
         except Exception:
-            LOG.exception('While importing %r', fullname)
+            LOG.debug('While importing %r', fullname, exc_info=True)
             self._context.Enqueue(reply_to, None)
 
 
