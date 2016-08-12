@@ -26,7 +26,7 @@ to the remote machine**. Due to the origins of econtext for use in managing
 potentially damaged infrastructure, the remote machine need not even have a
 writeable filesystem.
 
-It is not intended as a generic RPC framework, the goal is to provide a robust
+It is not intended as a generic RPC framework; the goal is to provide a robust
 and efficient low-level API on which tools like **Salt** or **Ansible** can be
 built, and while the API is quite friendly and similar in scope to **Fabric**,
 ultimately it should not be used directly by consumer software.
