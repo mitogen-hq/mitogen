@@ -115,9 +115,8 @@ class Channel(object):
         IOLOG.debug('%r.send(%r)', self, data)
         self._context.enqueue(self._handle, data)
 
-    def on_receive(self, timeout=None):
-        """on_receive an object from the remote, or return ``None`` if `timeout`
-        is reached."""
+    def receive(self, timeout=None):
+        """Receive an object, or ``None`` if `timeout` is reached."""
         IOLOG.debug('%r.on_receive(timeout=%r)', self, timeout)
         try:
             data = self._queue.get(True, timeout)
@@ -130,11 +129,10 @@ class Channel(object):
         return data
 
     def __iter__(self):
-        """Iterate objects arriving on this channel, until the channel dies or
-        is closed."""
+        """Yield objects from this channel until it is closed."""
         while True:
             try:
-                yield self.on_receive()
+                yield self.receive()
             except ChannelError:
                 return
 
@@ -245,14 +243,15 @@ class BasicStream(object):
     write_side = None
 
     def on_disconnect(self):
+        """Close our associated descriptors."""
         LOG.debug('%r.on_disconnect()', self)
         self.read_side.close()
         self.write_side.close()
 
     def shutdown(self):
+        """Disconnect gracefully. Base implementation calls on_disconnect()."""
         LOG.debug('%r.shutdown()', self)
-        self.read_side.close()
-        self.write_side.close()
+        self.on_disconnect()
 
     def has_output(self):
         return False
@@ -336,7 +335,7 @@ class Stream(BasicStream):
         fn(data)
 
     def on_transmit(self):
-        """on_transmit buffered messages."""
+        """Transmit buffered messages."""
         IOLOG.debug('%r.on_transmit()', self)
         written = os.write(self.write_side.fd, self._output_buf[:4096])
         self._output_buf = self._output_buf[written:]
@@ -347,7 +346,7 @@ class Stream(BasicStream):
         return bool(self._output_buf)
 
     def enqueue(self, handle, obj):
-        """enqueue `obj` to `handle`, and tell the broker we have output."""
+        """Enqueue `obj` to `handle`, and tell the broker we have output."""
         IOLOG.debug('%r.enqueue(%r, %r)', self, handle, obj)
         self._lock.acquire()
         try:
@@ -360,8 +359,6 @@ class Stream(BasicStream):
         self._context.broker.update_stream(self)
 
     def on_disconnect(self):
-        """close our associated file descriptor and tell registered callbacks
-        the connection has been destroyed."""
         super(Stream, self).on_disconnect()
         if self._context.stream is self:
             self._context.on_disconnect()
@@ -381,7 +378,7 @@ class Stream(BasicStream):
         self._context.stream = self
 
     def connect(self):
-        """connect to a Broker at the address specified in our associated
+        """Connect to a Broker at the address specified in our associated
         Context."""
         LOG.debug('%r.connect()', self)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -438,8 +435,8 @@ class Context(object):
             self._lock.release()
 
     def add_handle_cb(self, fn, handle, persist=True):
-        """register `fn(obj)` to run for each `obj` sent to `handle`. If
-        `persist` is ``False`` then unregister after one delivery."""
+        """Invoke `fn(obj)` for each `obj` sent to `handle`. Unregister after
+        one invocation if `persist` is ``False``."""
         IOLOG.debug('%r.add_handle_cb(%r, %r, persist=%r)',
                     self, fn, handle, persist)
         self._handle_map[handle] = persist, fn
@@ -665,7 +662,7 @@ class Broker(object):
             LOG.exception('_broker_main() crashed')
 
     def wait(self):
-        """wait for the broker to stop."""
+        """Wait for the broker to stop."""
         self._thread.join()
 
     def shutdown(self):
