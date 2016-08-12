@@ -437,8 +437,7 @@ class Context(object):
     def add_handle_cb(self, fn, handle, persist=True):
         """Invoke `fn(obj)` for each `obj` sent to `handle`. Unregister after
         one invocation if `persist` is ``False``."""
-        IOLOG.debug('%r.add_handle_cb(%r, %r, persist=%r)',
-                    self, fn, handle, persist)
+        IOLOG.debug('%r.add_handle_cb(%r, %r, %r)', self, fn, handle, persist)
         self._handle_map[handle] = persist, fn
 
     def enqueue(self, handle, obj):
@@ -564,8 +563,8 @@ class IoLogger(BasicStream):
 
 class Broker(object):
     """
-    Context broker: this is responsible for keeping track of contexts, any
-    stream that is associated with them, and for I/O multiplexing.
+    Broker: responsible for tracking contexts, associated streams, and I/O
+    multiplexing.
     """
     _waker = None
     graceful_count = 0
@@ -676,7 +675,7 @@ class Broker(object):
 
 
 class ExternalContext(object):
-    def _fixup_package(self):
+    def _setup_package(self):
         econtext = imp.new_module('econtext')
         econtext.__package__ = 'econtext'
         econtext.__path__ = []
@@ -743,7 +742,7 @@ class ExternalContext(object):
 
     def main(self, key, log_level):
         self._reap_first_stage()
-        self._fixup_package()
+        self._setup_package()
         self._setup_master(key)
         try:
             self._setup_logging(log_level)
