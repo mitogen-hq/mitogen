@@ -691,17 +691,15 @@ class ExternalContext(object):
             if hasattr(klass, '__module__'):
                 klass.__module__ = 'econtext.core'
 
-    def _reap_first_stage(self):
-        os.wait()
-        os.dup2(100, 0)
-        os.close(100)
-
     def _setup_master(self, key):
+        os.wait()  # Reap first stage.
+
         self.broker = Broker()
         self.context = Context(self.broker, 'master', key=key)
         self.channel = Channel(self.context, CALL_FUNCTION)
         self.context.stream = Stream(self.context)
-        self.context.stream.accept(0, 1)
+        self.context.stream.accept(100, 1)
+        os.close(100)
 
     def _setup_logging(self, log_level):
         logging.basicConfig(level=log_level)
@@ -743,7 +741,6 @@ class ExternalContext(object):
                 self.context.enqueue(reply_to, CallError(e))
 
     def main(self, key, log_level):
-        self._reap_first_stage()
         self._setup_package()
         self._setup_master(key)
         try:
