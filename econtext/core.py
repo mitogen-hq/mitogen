@@ -191,7 +191,7 @@ class SlaveModuleImporter(object):
         else:
             mod.__package__ = fullname.rpartition('.')[0]
         code = compile(zlib.decompress(data), 'master:' + path, 'exec')
-        exec code in mod.__dict__
+        exec code in vars(mod)
         return mod
 
 
@@ -636,7 +636,7 @@ class Broker(object):
             self._call_and_update(side.stream, side.stream.on_transmit)
 
     def _broker_main(self):
-        """Handle events until shutdown() is called."""
+        """Handle events until shutdown()."""
         try:
             while self._alive:
                 self._loop_once()
