@@ -1,5 +1,7 @@
 """
-Python external execution contexts.
+This module implements most package functionality, but remains separate from
+non-essential code in order to reduce its size, as it is also implements the
+bootstrap code.
 """
 
 import Queue
