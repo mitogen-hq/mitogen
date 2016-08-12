@@ -207,7 +207,7 @@ Compatibility
 The package is written using syntax compatible all the way back to **Python
 2.4** released November 2004, making it suitable for managing a fleet of
 potentially ancient corporate hardware. For example econtext can be used out of
-the box against Red Hat Enterprise Linux 5, which was released in 2007.
+the box against Red Hat Enterprise Linux 5, released in 2007.
 
 There is currently no support for Python 3, and no solid plan for supporting it
 any time soon. Due to constraints on implementation size and desire for
