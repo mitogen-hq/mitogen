@@ -245,7 +245,7 @@ class Broker(econtext.core.Broker):
         context.stream.connect()
         return self.register(context)
 
-    def get_remote(self, hostname, username, name=None, python_path=None):
+    def get_remote(self, hostname, username=None, name=None, python_path=None):
         """Get the named remote context, creating it if it does not exist."""
         if name is None:
             name = hostname

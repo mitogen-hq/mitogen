@@ -679,14 +679,17 @@ class Broker(object):
 
 
 class ExternalContext(object):
-    def _fixup_main_module(self):
-        main = sys.modules['__main__']
-        main.__path__ = []
-        main.core = main
+    def _fixup_package(self):
+        econtext = imp.new_module('econtext')
+        econtext.__package__ = 'econtext'
+        econtext.__path__ = []
+        econtext.core = sys.modules['__main__']
 
-        sys.modules['econtext'] = main
-        sys.modules['econtext.core'] = main
-        for klass in globals().itervalues():
+        sys.modules['econtext'] = econtext
+        sys.modules['econtext.core'] = econtext.core
+        exec 'from econtext.core import *' in vars(econtext)
+
+        for klass in vars(econtext.core).itervalues():
             if hasattr(klass, '__module__'):
                 klass.__module__ = 'econtext.core'
 
@@ -695,7 +698,7 @@ class ExternalContext(object):
         os.dup2(100, 0)
         os.close(100)
 
-    def _SetupMaster(self, key):
+    def _setup_master(self, key):
         self.broker = Broker()
         self.context = Context(self.broker, 'master', key=key)
         self.channel = Channel(self.context, CALL_FUNCTION)
@@ -743,8 +746,8 @@ class ExternalContext(object):
 
     def main(self, key, log_level):
         self._reap_first_stage()
-        self._fixup_main_module()
-        self._SetupMaster(key)
+        self._fixup_package()
+        self._setup_master(key)
         try:
             self._setup_logging(log_level)
             self._setup_importer()
