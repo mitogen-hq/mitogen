@@ -11,6 +11,7 @@ Python Execution Contexts
    howitworks
    getting_started
    api
+   history
 
 
 Introduction
@@ -22,9 +23,9 @@ process, even on a remote machine.
 
 **There is no requirement for installing packages, copying files around,
 writing shell scripts, upfront configuration, or providing any secondary link
-to the remote machine**. Due to the origins of econtext for use in managing
-potentially damaged infrastructure, the remote machine need not even have a
-writeable filesystem.
+to the remote machine**. Due to its origins for use in managing potentially
+damaged infrastructure, the remote machine need not even have a writeable
+filesystem.
 
 It is not intended as a generic RPC framework; the goal is to provide a robust
 and efficient low-level API on which tools like **Salt** or **Ansible** can be
@@ -207,3 +208,8 @@ The package is written using syntax compatible all the way back to **Python
 2.4** released November 2004, making it suitable for managing a fleet of
 potentially ancient corporate hardware. For example econtext can be used out of
 the box against Red Hat Enterprise Linux 5, which was released in 2007.
+
+There is currently no support for Python 3, and no solid plan for supporting it
+any time soon. Due to constraints on implementation size and desire for
+compatibility with ancient Python versions, conventional porting methods such
+as ``six.py`` are likely to be unsuitable.
