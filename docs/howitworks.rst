@@ -156,8 +156,9 @@ off-the-shelf implementations are for the most part entirely inappropriate. For
 example, a minimal copy of Twisted weighs in at around 440KiB and is composed
 of approximately 115 files. Even if we could arrange for an entire Python
 package to be transferred during bootstrap, this minimal configuration is
-massive in comparison to econtext's solution, and would require manually
-splitting up the parts of Twisted that we would like to use.
+massive in comparison to econtext's solution, multiplies quickly in the
+presence of many machines, and would require manually splitting up the parts of
+Twisted that we would like to use.
 
 
 Differences Between Master And Slave Brokers
@@ -168,6 +169,10 @@ Differences Between Master And Slave Brokers
 
 The Module Importer
 -------------------
+
+Minimizing Roundtrips
+#####################
+
 
 Child Package Enumeration
 #########################
