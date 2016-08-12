@@ -74,11 +74,11 @@ IO Multiplexer
 
 The bootstrap includes a compact IO multiplexer (like Twisted or asyncio) that
 allows it to perform work in the background while executing your program's
-code. For example, the remote context can be used to connect to a new user on
-the remote machine using **sudo**, or as an intermediary for extending the
+code. For example, the remote context can be used to **connect to a new user on
+the remote machine using sudo**, or as an intermediary for extending the
 program's domain of control outward to other machines, enabling your program to
-manipulate machines behind a firewall, or to allow its data plane to match your
-network topology.
+**manipulate machines behind a firewall**, or enable its **data plane to cohere
+to your network topology**.
 
 The multiplexer also ensures the remote process is terminated if your Python
 program crashes, communication is lost, or the application code running in the
