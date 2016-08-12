@@ -137,8 +137,8 @@ class LocalStream(econtext.core.Stream):
         super(LocalStream, self).__init__(context)
         self._permitted_classes = set([('econtext.core', 'CallError')])
 
-    def shutdown(self):
-        """Requesting the slave gracefully shut itself down."""
+    def on_shutdown(self):
+        """Request the slave gracefully shut itself down."""
         LOG.debug('%r enqueuing SHUTDOWN', self)
         self.enqueue(econtext.core.SHUTDOWN, None)
 
