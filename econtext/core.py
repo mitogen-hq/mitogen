@@ -750,7 +750,7 @@ class ExternalContext(object):
 
             self.broker.register(self.context)
             self._dispatch_calls()
-            self.broker.wait()
             LOG.debug('ExternalContext.main() exitting')
         finally:
             self.broker.shutdown()
+            self.broker.wait()
