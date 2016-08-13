@@ -5,7 +5,7 @@ Python Execution Contexts
 **4.98KiB of sugar and no fat!**
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    self
    howitworks
@@ -32,8 +32,8 @@ and efficient low-level API on which tools like **Salt** or **Ansible** can be
 built, and while the API is quite friendly and similar in scope to **Fabric**,
 ultimately it should not be used directly by consumer software.
 
-The primary focus is to centralize and perfect the intricate dance required to
-run Python code safely and efficiently on a remote machine, while avoiding
+The focus is to centralize and perfect the intricate dance required to run
+Python code safely and efficiently on a remote machine, while avoiding
 temporary files or large chunks of error-prone shell scripts.
 
 
@@ -45,7 +45,8 @@ communicate with new Python programs under its control running on remote
 machines, **using only an existing installed Python interpreter and SSH
 client**, something that by default can be found on almost all contemporary
 machines in the wild. To accomplish bootstrap, econtext uses a single 500 byte
-SSH command line and 5KB of data sent to stdin of the remote SSH connection.
+SSH command line and 5KB of its own source code sent to stdin of the remote SSH
+connection.
 
 .. code::
 
@@ -107,9 +108,9 @@ configuration.
 Logging Forwarder
 #################
 
-The 5KB bootstrap configures the remote process's Python logging package to
-forward all logs back to the local process, enabling management of program logs
-in one location.
+The bootstrap configures the remote process's Python logging package to forward
+all logs back to the local process, enabling management of program logs in one
+location.
 
 .. code::
 
@@ -120,7 +121,7 @@ in one location.
 Stdio Forwarder
 ###############
 
-To ease porting of crusty old infrastructure code to pure Python, the bootstrap
+To ease porting of crusty old infrastructure scripts to Python, the bootstrap
 redirects stdio for itself and any child processes back into the logging
 framework. This allows use of functions as basic as **os.system('hostname;
 uptime')** without further need to capture or manage output.

@@ -93,29 +93,59 @@ bootstrap.
 
 After the script source code is prepared, it is passed through
 :py:func:`econtext.master.minimize_source` to strip it of docstrings and
-comments, while preserving original line numbers. This reduces the compressed
-payload size by around 20%.
+comments, while preserving line numbers. This reduces the compressed payload
+by around 20%.
 
 
 
 Signalling Success
 ##################
 
+Once the first stage has decompressed and written the bootstrap source code to
+its parent Python interpreter, it writes the string ``OK\n`` to ``stdout``
+before exitting. The master process waits for this string before considering
+bootstrap successful and the child's ``stdio`` ready to receive messages.
 
-ExternalContext main()
+
+ExternalContext.main()
 ----------------------
 
-
-Reaping The First Stage
-#######################
+.. automethod:: econtext.core.ExternalContext.main
 
 
 Generating A Synthetic `econtext` Package
 #########################################
 
+Since the bootstrap consists of the :py:mod:`econtext.core` source code, and
+this code is loaded by Python by way of its main script (``__main__`` module),
+initially the module layout in the slave will be incorrect.
+
+The first step taken after bootstrap is to rearrange ``sys.modules`` slightly
+so that :py:mod:`econtext.core` appears in the correct location, and all
+classes defined in that module have their ``__module__`` attribute fixed up
+such that :py:mod:`cPickle` correctly serializes instance module names.
+
+Once a synthetic :py:mod:`econtext` package and :py:mod:`econtext.core` module
+have been generated, the bootstrap **deletes** `sys.modules['__main__']`, so
+that any attempt to import it (by :py:mod:`cPickle`) will cause the import to
+be satisfied by fetching the econtext master's actual ``__main__`` module. This
+is necessary to allow master programs to be written as a self-contained Python
+script.
+
 
 Setup The Broker And Master Context
 ###################################
+
+
+Reaping The First Stage
+#######################
+
+After the bootstrap has called :py:func:`os.dup` on the copy of the ``stdin``
+file descriptor saved by the first stage, it is closed.
+
+Additionally, since the first stage was forked prior to re-executing the Python
+interpreter, it will exist as a zombie process until the parent process reaps
+it. Therefore the bootstrap must call :py:func:`os.wait` soon after startup.
 
 
 Setup Logging
@@ -133,10 +163,20 @@ Standard IO Redirection
 Function Call Dispatch
 ######################
 
+After all initialization is complete, the slave's main thread sits in a loop
+reading from a :py:class:`Channel <econtext.core.Channel>` connected to the
+``CALL_FUNCTION`` handle. This handle is written to by
+:py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>` and
+:py:meth:`call() <econtext.master.Context.call>`.
+
 
 
 Stream Protocol
 ---------------
+
+
+Use of Pickle
+#############
 
 
 Use of HMAC

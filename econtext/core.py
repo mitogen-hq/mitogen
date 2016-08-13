@@ -42,7 +42,7 @@ class Error(Exception):
 
 
 class CallError(Error):
-    """Raised when .call() fails"""
+    """Raised when .call() fails."""
     def __init__(self, e):
         name = '%s.%s' % (type(e).__module__, type(e).__name__)
         tb = sys.exc_info()[2]
