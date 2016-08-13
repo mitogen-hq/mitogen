@@ -681,7 +681,9 @@ class ExternalContext(object):
         econtext = imp.new_module('econtext')
         econtext.__package__ = 'econtext'
         econtext.__path__ = []
+        econtext.slave = True
         econtext.core = sys.modules['__main__']
+        del sys.modules['__main__']
 
         sys.modules['econtext'] = econtext
         sys.modules['econtext.core'] = econtext.core
@@ -692,13 +694,13 @@ class ExternalContext(object):
                 klass.__module__ = 'econtext.core'
 
     def _setup_master(self, key):
-        os.wait()  # Reap first stage.
-
         self.broker = Broker()
         self.context = Context(self.broker, 'master', key=key)
         self.channel = Channel(self.context, CALL_FUNCTION)
         self.context.stream = Stream(self.context)
         self.context.stream.accept(100, 1)
+
+        os.wait()  # Reap first stage.
         os.close(100)
 
     def _setup_logging(self, log_level):
