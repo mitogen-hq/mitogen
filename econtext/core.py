@@ -35,17 +35,17 @@ FORWARD_LOG = 102L
 SHUTDOWN = 103L
 
 
-class ContextError(Exception):
+class Error(Exception):
     """Raised when a problem occurs with a context."""
     def __init__(self, fmt, *args):
         Exception.__init__(self, fmt % args)
 
 
-class ChannelError(ContextError):
+class ChannelError(Error):
     """Raised when a channel dies or has been closed."""
 
 
-class StreamError(ContextError):
+class StreamError(Error):
     """Raised when a stream cannot be established."""
 
 
@@ -57,7 +57,7 @@ class TimeoutError(StreamError):
     """Raised when a timeout occurs on a stream."""
 
 
-class CallError(ContextError):
+class CallError(Error):
     """Raised when .call() fails"""
     def __init__(self, e):
         name = '%s.%s' % (type(e).__module__, type(e).__name__)
@@ -66,7 +66,7 @@ class CallError(ContextError):
             stack = ''.join(traceback.format_tb(tb))
         else:
             stack = ''
-        ContextError.__init__(self, 'call failed: %s: %s\n%s', name, e, stack)
+        Error.__init__(self, 'call failed: %s: %s\n%s', name, e, stack)
 
 
 class Dead(object):
