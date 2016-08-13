@@ -138,7 +138,7 @@ Blocking Code Friendly
 Within each process, a private thread runs the I/O multiplexer, leaving the
 main thread and any additional application threads free to perform useful work.
 
-While econtext is internally asynchronous, it hides this asynchrony from
+While econtext is internally asynchronous it hides this asynchrony from
 consumer code. This is since writing asynchronous code is mostly a foreign
 concept to the target application of managing infrastructure. It should be
 possible to rewrite a shell script in Python without significant restructuring,
