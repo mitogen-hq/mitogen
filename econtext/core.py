@@ -41,22 +41,6 @@ class Error(Exception):
         Exception.__init__(self, fmt % args)
 
 
-class ChannelError(Error):
-    """Raised when a channel dies or has been closed."""
-
-
-class StreamError(Error):
-    """Raised when a stream cannot be established."""
-
-
-class CorruptMessageError(StreamError):
-    """Raised when a corrupt message is received on a stream."""
-
-
-class TimeoutError(StreamError):
-    """Raised when a timeout occurs on a stream."""
-
-
 class CallError(Error):
     """Raised when .call() fails"""
     def __init__(self, e):
@@ -67,6 +51,18 @@ class CallError(Error):
         else:
             stack = ''
         Error.__init__(self, 'call failed: %s: %s\n%s', name, e, stack)
+
+
+class ChannelError(Error):
+    """Raised when a channel dies or has been closed."""
+
+
+class StreamError(Error):
+    """Raised when a stream cannot be established."""
+
+
+class TimeoutError(StreamError):
+    """Raised when a timeout occurs on a stream."""
 
 
 class Dead(object):
@@ -287,7 +283,7 @@ class Stream(BasicStream):
 
     def on_receive(self):
         """Handle the next complete message on the stream. Raise
-        CorruptMessageError or IOError on failure."""
+        StreamError or IOError on failure."""
         IOLOG.debug('%r.on_receive()', self)
 
         buf = os.read(self.read_side.fd, 4096)
@@ -311,15 +307,15 @@ class Stream(BasicStream):
         self._rhmac.update(self._input_buf[20:msg_len+24])
         expected_mac = self._rhmac.digest()
         if msg_mac != expected_mac:
-            raise CorruptMessageError('bad MAC: %r != got %r; %r',
-                                      msg_mac.encode('hex'),
-                                      expected_mac.encode('hex'),
-                                      self._input_buf[24:msg_len+24])
+            raise StreamError('bad MAC: %r != got %r; %r',
+                              msg_mac.encode('hex'),
+                              expected_mac.encode('hex'),
+                              self._input_buf[24:msg_len+24])
 
         try:
             handle, data = self.unpickle(self._input_buf[24:msg_len+24])
         except (TypeError, ValueError), ex:
-            raise CorruptMessageError('invalid message: %s', ex)
+            raise StreamError('invalid message: %s', ex)
 
         self._input_buf = self._input_buf[msg_len+24:]
         self._invoke(handle, data)
@@ -330,7 +326,7 @@ class Stream(BasicStream):
         try:
             persist, fn = self._context._handle_map[handle]
         except KeyError:
-            raise CorruptMessageError('%r: invalid handle: %r', self, handle)
+            raise StreamError('%r: invalid handle: %r', self, handle)
 
         if not persist:
             del self._context._handle_map[handle]
