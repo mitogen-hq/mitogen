@@ -1,5 +1,5 @@
 import sys
-import os
+sys.path.append('..')
 
 author = u'David Wilson'
 copyright = u'2016, David Wilson'
