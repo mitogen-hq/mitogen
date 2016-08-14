@@ -164,7 +164,7 @@ class Importer(object):
         try:
             self._ignore.append(fullname)
             try:
-                __import__(fullname, fromlist=['*'])
+                __import__(fullname, {}, {}, ['*'])
             except ImportError:
                 LOG.debug('find_module(%r) returning self', fullname)
                 return self
@@ -266,7 +266,7 @@ class Stream(BasicStream):
     def __init__(self, context):
         self._context = context
         self._lock = threading.Lock()
-        self._rhmac = hmac.new(context.key, digestmod=sha.new)
+        self._rhmac = hmac.new(context.key, digestmod=sha)
         self._whmac = self._rhmac.copy()
 
     _find_global = None
@@ -702,7 +702,7 @@ class ExternalContext(object):
                 args = (self,) + args
 
             try:
-                obj = __import__(modname, fromlist=['*'])
+                obj = __import__(modname, {}, {}, ['*'])
                 if klass:
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)

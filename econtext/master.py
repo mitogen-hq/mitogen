@@ -109,7 +109,7 @@ class ModuleResponder(object):
         reply_to, fullname = data
         LOG.debug('get_module(%r, %r)', reply_to, fullname)
         try:
-            module = __import__(fullname, fromlist=[''])
+            module = __import__(fullname, {}, {}, [''])
             is_pkg = getattr(module, '__path__', None) is not None
             path = inspect.getsourcefile(module)
             try:
