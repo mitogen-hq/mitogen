@@ -146,7 +146,6 @@ class Importer(object):
     """
     def __init__(self, context):
         self._context = context
-        self._lock = threading.RLock()
         self._present = {'econtext': ['econtext.utils', 'econtext.master']}
         self._ignore = []
 
@@ -160,7 +159,7 @@ class Importer(object):
             LOG.debug('%r: master doesn\'t know %r', self, fullname)
             return None
 
-        self._lock.acquire()
+        imp.acquire_lock()
         try:
             self._ignore.append(fullname)
             try:
@@ -170,7 +169,7 @@ class Importer(object):
                 return self
         finally:
             self._ignore.pop()
-            self._lock.release()
+            imp.release_lock()
 
     def load_module(self, fullname):
         LOG.debug('Importer.load_module(%r)', fullname)
