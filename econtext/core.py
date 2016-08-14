@@ -31,7 +31,6 @@ IOLOG = logging.getLogger('econtext.io')
 GET_MODULE = 100L
 CALL_FUNCTION = 101L
 FORWARD_LOG = 102L
-SHUTDOWN = 103L
 
 
 class Error(Exception):
@@ -407,15 +406,9 @@ class Context(object):
         self._last_handle = 1000L
         self._handle_map = {}
         self._lock = threading.Lock()
-        self.add_handle_cb(self._shutdown, SHUTDOWN)
 
     def on_shutdown(self):
         """Slave does nothing, _broker_main() will shutdown its streams."""
-
-    def _shutdown(self, data):
-        if data != _DEAD and self.stream:
-            LOG.debug('Received SHUTDOWN')
-            self.broker.shutdown()
 
     def on_disconnect(self):
         self.stream = None
