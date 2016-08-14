@@ -28,9 +28,13 @@ damaged infrastructure, the remote machine need not even have a writeable
 filesystem.
 
 It is not intended as a generic RPC framework; the goal is to provide a robust
-and efficient low-level API on which tools like **Salt** or **Ansible** can be
-built, and while the API is quite friendly and similar in scope to **Fabric**,
+and efficient low-level API on which tools like `Salt`_ or `Ansible`_ can be
+built, and while the API is quite friendly and similar in scope to `Fabric`_,
 ultimately it should not be used directly by consumer software.
+
+.. _Salt: https://docs.saltstack.com/en/latest/
+.. _Ansible: http://docs.ansible.com/
+.. _Fabric: http://docs.fabfile.org/en/
 
 The focus is to centralize and perfect the intricate dance required to run
 Python code safely and efficiently on a remote machine, while avoiding
