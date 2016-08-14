@@ -12,13 +12,13 @@ necessary for pushing my little design from concept to a working
 implementation. I tired of it when I couldn't find a way to combine every
 communication style (*blocking execute function, asynchronous execute function,
 proxy slave-of-slave context*) into one neat abstraction. That unification
-still has not happened, but I'm no longer as burdened by such simple problems.
+still has not happened, but I'm no longer as burdened by the problem.
 
 Every few years I would pick through the source code, especially after periods
 of working commercially with some contemporary management systems, none of
 which in the meantime had anything close to as neat an approach to running
 Python code on remote machines, and suffered from shockingly beginner-level
-bugs such as failing to even report SSH diagnostic messages.
+bugs such as failing to report SSH diagnostic messages.
 
 And every few years I'd put that code down again, especially since moving to an
 OS X laptop where :py:func:`select.poll` was not available, the struggle to get
