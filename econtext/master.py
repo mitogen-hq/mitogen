@@ -85,7 +85,8 @@ class LogForwarder(object):
         self._context = context
         self._context.add_handle_cb(self.forward_log,
                                     handle=econtext.core.FORWARD_LOG)
-        self._log = RLOG.getChild(self._context.name)
+        name = '%s.%s' % (RLOG.name, self._context.name)
+        self._log = logging.getLogger(name)
 
     def forward_log(self, data):
         if data == econtext.core._DEAD:
