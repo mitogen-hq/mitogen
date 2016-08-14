@@ -71,6 +71,7 @@ class Dead(object):
         return '<Dead>'
 
 
+#: Sentinel value used to represent Channel disconnection.
 _DEAD = Dead()
 
 
@@ -656,8 +657,6 @@ class ExternalContext(object):
 
         sys.modules['econtext'] = econtext
         sys.modules['econtext.core'] = econtext.core
-        exec 'from econtext.core import *' in vars(econtext)
-
         for klass in vars(econtext.core).itervalues():
             if hasattr(klass, '__module__'):
                 klass.__module__ = 'econtext.core'

@@ -18,8 +18,8 @@ Introduction
 ------------
 
 The Python ``econtext`` package implements external *execution contexts*: an
-execution context is somewhere you can run Python code external to your main
-process, even on a remote machine.
+execution context is somewhere you can run Python functions external to your
+main process, even on a remote machine.
 
 There is **no requirement for installing packages, copying files around,
 writing shell scripts, upfront configuration, or providing any secondary link

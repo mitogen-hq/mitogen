@@ -1,9 +1,6 @@
 """
 On the econtext master, this is imported from ``econtext/__init__.py`` as would
 be expected. On the slave, it is built dynamically during startup.
-
-As a convenience, the econtext package exports all of the functions and
-variables from :py:mod:`econtext.core`.
 """
 
 #: This is ``True`` in slave contexts. It is used in single-file Python
@@ -24,5 +21,3 @@ variables from :py:mod:`econtext.core`.
 #:              econtext.utils.run_with_broker(main)
 #:
 slave = False
-
-from econtext.core import *  # NOQA

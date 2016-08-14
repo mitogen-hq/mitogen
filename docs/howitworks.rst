@@ -195,6 +195,26 @@ written to by
 and :py:meth:`call() <econtext.master.Context.call>`.
 
 
+Shutdown
+########
+
+When the master signals the :py:data:`CALL_FUNCTION
+<econtext.core.CALL_FUNCTION>` :py:class:`Channel <econtext.core.Channel>` is
+closed, the slave calls :py:meth:`shutdown() <econtext.core.Broker.shutdown>`
+followed by :py:meth:`wait() <econtext.core.Broker.wait>` on its own broker,
+triggering graceful shutdown.
+
+During shutdown, the master will wait a few seconds for slaves to disconnect
+gracefully before force disconnecting them, while the slaves will use that time
+to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on their
+:py:class:`IoLogger <econtext.core.IoLogger>` socket's write ends before
+draining any remaining data buffered on the read ends.
+
+If the main thread (responsible for function call dispatch) fails to trigger
+shutdown (because some user function is hanging), then the eventual force
+disconnection by the master will cause the IO multiplexer thread to enter
+shutdown by itself.
+
 
 Stream Protocol
 ---------------
@@ -239,15 +259,20 @@ Slaves listen on the following handles:
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
-.. data:: econtext.core.SHUTDOWN
-
-    Triggers :py:meth:`econtext.core.Broker.shutdown` remotely, causing the
-    slave to drain its :py:class:`IoLoggers <econtext.core.IoLogger>` and
-    output stream buffer before disconnecting from the master and terminating
-    the process.
-
 Additional handles are created to receive the result of every function call
 triggered by :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`.
+
+
+Sentinel Value
+##############
+
+.. autodata:: econtext.core._DEAD
+
+The special value :py:data:`econtext.core._DEAD` is used to signal
+disconnection or closure of the remote end. It is used internally by
+:py:class:`Channel <econtext.core.Channel>` and also passed to any function
+still registered with :py:meth:`add_handle_cb()
+<econtext.core.Context.add_handle_cb>` during Broker shutdown.
 
 
 Use of Pickle
@@ -261,13 +286,14 @@ serialization code in the bootstrap.
 
 The pickler active in slave contexts will instantiate any class, however in the
 master it is initially restricted to only permitting
-:py:class:`econtext.core.CallError`. While not recommended, it is possible to
-register more using :py:meth:`econtext.master.LocalStream.allow_class`.
+:py:class:`CallError <econtext.core.CallError>` and :py:data:`_DEAD
+<econtext.core._DEAD>`. While not recommended, it is possible to register more
+using :py:meth:`econtext.master.LocalStream.allow_class`.
 
-The choice of pickle is one area to be revisited later. All accounts suggest it
-cannot be used securely, however few of those accounts appear to be expert
-opinions, and none mention any additional attacks that would not be prevented
-by using a restrictive class whitelist.
+The choice of Pickle is one area to be revisited later. All accounts suggest it
+cannot be used securely, however few of those accounts appear to be expert, and
+none mention any additional attacks that would not be prevented by using a
+restrictive class whitelist.
 
 
 Use of HMAC
@@ -348,15 +374,15 @@ package.
 Child Module Enumeration
 ########################
 
-Package children are enumerated using the :py:mod:`pkgutil` module.
+Package children are enumerated using :py:func:`pkgutil.iter_modules`.
 
 
 Use Of Threads
 --------------
 
-The package mandatorily runs the IO multiplexer in a thread. This is so the
-multiplexer always retains control flow in order to shut down gracefully, say,
-if the user's code has hung and the master context has disconnected.
+The package always runs the IO multiplexer in a thread. This is so the
+multiplexer retains control flow in order to shut down gracefully, say, if the
+user's code has hung and the master context has disconnected.
 
 While it is possible for the IO multiplexer to recover control of a hung
 function call on UNIX using for example :py:mod:`signal.SIGALRM <signal>`, this
