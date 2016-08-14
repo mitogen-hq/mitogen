@@ -133,10 +133,6 @@ is necessary to allow master programs to be written as a self-contained Python
 script.
 
 
-Setup The Broker And Master Context
-###################################
-
-
 Reaping The First Stage
 #######################
 
@@ -164,7 +160,7 @@ they reach the master.
 The Module Importer
 ###################
 
-An instance of :py:class:`econtext.core.SlaveModuleImporter` is installed in
+An instance of :py:class:`econtext.core.Importer` is installed in
 `sys.meta_path`, where Python's ``import`` statement will execute it before
 attempting to find a module locally.
 
@@ -293,23 +289,60 @@ Twisted that we would like to use.
 Differences Between Master And Slave Brokers
 ############################################
 
-* Self destruct.
+The main difference between :py:class:`econtext.core.Broker` and
+:py:class:`econtext.master.Broker` is that when the stream connection to the
+parent is lost in a slave, the broker will trigger its own shutdown.
 
 
 The Module Importer
 -------------------
 
+:py:class:`econtext.core.Importer` is still a work in progress, as there
+are a variety of approaches to implementing it, and the present implementation
+is not pefectly efficient in every case.
+
+It operates by intercepting ``import`` statements via `sys.meta_path`, asking
+Python if it can satisfy the import by itself, and if not, indicating to Python
+that it is capable of loading the module.
+
+In :py:meth:`load_module() <econtext.core.Importer.load_module>` an RPC is
+started to the master, requesting the module source code. Once the source is
+fetched, the method builds a new module object using the best practice
+documented in PEP-302.
+
+
 Minimizing Roundtrips
 #####################
 
+In Python 2.x where relative imports are the default, a large number of import
+requests will be made for modules that do not exist. For example:
 
-Child Package Enumeration
-#########################
+.. code-block:: python
+
+    # mypkg/__init__.py
+
+    import sys
+    import os
+
+In Python 2.x, Python will first try to load ``mypkg.sys`` and ``mypkg.os``,
+which do not exist, before falling back on :py:mod:`sys` and :py:mod:`os`.
+
+These negative imports present a challenge, as they introduce a large number of
+pointless network roundtrips. Therefore in addition to the zlib-compressed
+source, for packages the master sends along a list of child modules known to
+exist.
+
+Before indicating it can satisfy an import request,
+:py:class:`econtext.core.Importer` first checks to see if the module belongs to
+a package it has previously imported, and if so, ignores the request if the
+module does not appear in the enumeration of child modules belonging to the
+package.
 
 
-Negative Cache Hits
-###################
+Child Module Enumeration
+########################
 
+Package children are enumerated using the :py:mod:`pkgutil` module.
 
 
 Use Of Threads

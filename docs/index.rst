@@ -114,7 +114,7 @@ location.
 
 .. code::
 
-    18:15:29 D econtext.ctx.k3: econtext: SlaveModuleImporter.find_module('econtext.zlib')
+    18:15:29 D econtext.ctx.k3: econtext: Importer.find_module('econtext.zlib')
     18:15:29 D econtext.ctx.k3: econtext: _dispatch_calls((1002L, False, 'posix', None, 'system', ('ls -l /proc/self/fd',), {}))
 
 

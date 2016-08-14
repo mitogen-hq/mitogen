@@ -138,7 +138,7 @@ class Channel(object):
         return 'Channel(%r, %r)' % (self._context, self._handle)
 
 
-class SlaveModuleImporter(object):
+class Importer(object):
     """
     Import protocol implementation that fetches modules from the parent
     process.
@@ -152,7 +152,7 @@ class SlaveModuleImporter(object):
         self._ignore = []
 
     def find_module(self, fullname, path=None):
-        LOG.debug('SlaveModuleImporter.find_module(%r)', fullname)
+        LOG.debug('Importer.find_module(%r)', fullname)
         if fullname in self._ignore:
             return None
 
@@ -174,7 +174,7 @@ class SlaveModuleImporter(object):
             self._lock.release()
 
     def load_module(self, fullname):
-        LOG.debug('SlaveModuleImporter.load_module(%r)', fullname)
+        LOG.debug('Importer.load_module(%r)', fullname)
         ret = self._context.enqueue_await_reply(GET_MODULE, None, (fullname,))
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
@@ -707,7 +707,7 @@ class ExternalContext(object):
         LOG.debug('Connected to %s', self.context)
 
     def _setup_importer(self):
-        self.importer = SlaveModuleImporter(self.context)
+        self.importer = Importer(self.context)
         sys.meta_path.append(self.importer)
 
     def _setup_stdio(self):
