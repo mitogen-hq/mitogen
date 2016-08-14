@@ -151,13 +151,41 @@ it. Therefore the bootstrap must call :py:func:`os.wait` soon after startup.
 Setup Logging
 #############
 
+The slave's :py:mod:`logging` package root logger is configured to have the
+same log level as the root logger in the master, and
+:py:class:`econtext.core.LogHandler` is installed to forward logs to the master
+context's ``FORWARD_LOG`` handle.
+
+The log level is copied into the slave to avoid generating a potentially large
+amount of network IO forwarding logs that will simply be filtered away once
+they reach the master.
+
 
 The Module Importer
 ###################
 
+An instance of :py:class:`econtext.core.SlaveModuleImporter` is installed in
+`sys.meta_path`, where Python's ``import`` statement will execute it before
+attempting to find a module locally.
+
 
 Standard IO Redirection
 #######################
+
+Two instances of :py:class:`econtext.core.IoLogger` are created, one for
+``stdout`` and one for ``stderr``. This class creates a UNIX pipe whose read
+end is added to the IO multiplexer, and whose write end is used to overwrite
+the handles inherited during process creation.
+
+Even without IO redirection, something must replace ``stdin`` and ``stdout``,
+otherwise it is possible for the stream used for communication between the
+master and slave to be accidentally corrupted by subprocesses run by user code.
+
+The inherited ``stdin`` is replaced by a file descriptor pointing to
+``/dev/null``.
+
+Finally Python's `sys.stdout` is reopened to ensure line buffering is active,
+so that ``print`` statements and suchlike promptly appear in the logs.
 
 
 Function Call Dispatch
@@ -174,18 +202,79 @@ reading from a :py:class:`Channel <econtext.core.Channel>` connected to the
 Stream Protocol
 ---------------
 
+Once connected, a basic framing protocol is used to communicate between
+master and slave:
+
++------------+-------+-----------------------------------------------------+
+| Field      | Size  | Description                                         |
++============+=======+=====================================================+
+| ``hmac``   | 20    | SHA-1 MAC over (``length || data``)                 |
++------------+-------+-----------------------------------------------------+
+| ``length`` | 4     | Message length                                      |
++------------+-------+-----------------------------------------------------+
+| ``data``   | n/a   | Pickled message data.                               |
++------------+-------+-----------------------------------------------------+
+
+The ``data`` component always consists of a 2-tuple, `(handle, data)`, where
+``handle`` is an integer describing the message target and ``data`` is the
+value to be delivered to the target.
+
+Masters listen on the following handles:
+
+``econtext.core.FORWARD_LOG``
+    Receives `(logger_name, level, msg)` 3-tuples and writes them to the
+    master's ``econtext.ctx.<context_name>`` logger.
+
+``econtext.core.GET_MODULE``
+    Receives `(reply_to, fullname)` 2-tuples, looks up the source code for the
+    module named ``fullname``, and writes the source along with some metadata
+    back to the handle ``reply_to``. If lookup fails, ``None`` is sent instead.
+
+Slaves listen on the following handles:
+
+``econtext.core.CALL_FUNCTION``:
+    Receives `(with_context, mod_name, class_name, func_name, args, kwargs)`
+    5-tuples from :py:meth:`econtext.master.Context.call_with_deadline`,
+    imports ``mod_name``, then attempts to execute `class_name.func_name(*args,
+    **kwargs)`.
+
+``econtext.core.SHUTDOWN``:
+    Triggers :py:meth:`econtext.core.Broker.shutdown` remotely, causing the
+    slave to drain its :py:class:`IoLoggers <econtext.core.IoLogger>` and
+    output stream buffer before disconnecting from the master and terminating
+    the process.
+
+Additional handles are created to receive the result of every function call
+triggered by :py:meth:`econtext.master.Context.call_with_deadline`.
+
 
 Use of Pickle
 #############
+
+The current implementation uses the Python :py:mod:`cPickle` module, with
+mitigations to prevent untrusted slaves from triggering code excution in the
+master. The primary reason for using :py:mod:`cPickle` is that it is
+computationally efficient, and avoids including a potentially large body of
+serialization code in the bootstrap.
+
+The pickler active in slave contexts will instantiate any class, however in the
+master it is initially restricted to only permitting
+:py:class:`econtext.core.CallError`. While not recommended, it is possible to
+register more using :py:meth:`econtext.master.LocalStream.allow_class`.
+
+The choice of pickle is one area to be revisited later. All accounts suggest it
+cannot be used securely, however few of those accounts appear to be expert
+opinions, and none mention any additional attacks that would not be prevented
+by using a restrictive class whitelist.
 
 
 Use of HMAC
 ###########
 
-In the current version of econtext, the use of HMAC signatures over data frames
-is mostly redundant, since all communication occurs over SSH, however in order
-to reduce resource usage, it is planned to support connecting back to the
-master via plain TCP, at which point the signatures become important.
+In the current implementation the use of HMAC signatures over data frames is
+mostly redundant since all communication occurs over SSH, however in order to
+reduce resource usage, it is planned to support connecting back to the master
+via plain TCP, at which point the signatures become important.
 
 
 The IO Multiplexer
