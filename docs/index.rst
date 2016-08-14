@@ -21,11 +21,11 @@ The Python ``econtext`` package implements external *execution contexts*: an
 execution context is somewhere you can run Python code external to your main
 process, even on a remote machine.
 
-**There is no requirement for installing packages, copying files around,
+There is **no requirement for installing packages, copying files around,
 writing shell scripts, upfront configuration, or providing any secondary link
 to the remote machine**. Due to its origins for use in managing potentially
-damaged infrastructure, the remote machine need not even have a writeable
-filesystem.
+damaged infrastructure, the **remote machine need not even have a writeable
+filesystem**.
 
 It is not intended as a generic RPC framework; the goal is to provide a robust
 and efficient low-level API on which tools like `Salt`_ or `Ansible`_ can be
