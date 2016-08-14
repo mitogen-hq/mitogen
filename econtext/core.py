@@ -27,6 +27,7 @@ import zlib
 
 LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
+IOLOG.setLevel(logging.INFO)
 
 GET_MODULE = 100L
 CALL_FUNCTION = 101L
@@ -147,29 +148,37 @@ class Importer(object):
     def __init__(self, context):
         self._context = context
         self._present = {'econtext': ['econtext.utils', 'econtext.master']}
-        self._ignore = []
+        self.tls = threading.local()
+
+    def __repr__(self):
+        return 'Importer()'
 
     def find_module(self, fullname, path=None):
-        LOG.debug('Importer.find_module(%r)', fullname)
-        if fullname in self._ignore:
+        if hasattr(self.tls, 'running'):
             return None
 
-        pkgname, _, _ = fullname.rpartition('.')
-        if fullname not in self._present.get(pkgname, (fullname,)):
-            LOG.debug('%r: master doesn\'t know %r', self, fullname)
-            return None
-
-        imp.acquire_lock()
+        self.tls.running = True
         try:
-            self._ignore.append(fullname)
+            pkgname, _, _ = fullname.rpartition('.')
+            LOG.debug('%r.find_module(%r)', self, fullname)
+            if fullname not in self._present.get(pkgname, (fullname,)):
+                LOG.debug('%r: master doesn\'t know %r', self, fullname)
+                return None
+
+            pkg = sys.modules.get(pkgname)
+            if pkg and getattr(pkg, '__loader__', None) is not self:
+                LOG.debug('%r: %r is submodule of a package we did not load',
+                          self, fullname)
+                return None
+
             try:
-                __import__(fullname, {}, {}, ['*'])
+                __import__(fullname, {}, {}, [''])
+                LOG.debug('%r: %r is available locally', self, fullname)
             except ImportError:
                 LOG.debug('find_module(%r) returning self', fullname)
                 return self
         finally:
-            self._ignore.pop()
-            imp.release_lock()
+            del self.tls.running
 
     def load_module(self, fullname):
         LOG.debug('Importer.load_module(%r)', fullname)
@@ -646,20 +655,6 @@ class Broker(object):
 
 
 class ExternalContext(object):
-    def _setup_package(self):
-        econtext = imp.new_module('econtext')
-        econtext.__package__ = 'econtext'
-        econtext.__path__ = []
-        econtext.slave = True
-        econtext.core = sys.modules['__main__']
-        del sys.modules['__main__']
-
-        sys.modules['econtext'] = econtext
-        sys.modules['econtext.core'] = econtext.core
-        for klass in vars(econtext.core).itervalues():
-            if hasattr(klass, '__module__'):
-                klass.__module__ = 'econtext.core'
-
     def _setup_master(self, key):
         self.broker = Broker()
         self.context = Context(self.broker, 'master', key=key)
@@ -681,6 +676,21 @@ class ExternalContext(object):
         self.importer = Importer(self.context)
         sys.meta_path.append(self.importer)
 
+    def _setup_package(self):
+        econtext = imp.new_module('econtext')
+        econtext.__package__ = 'econtext'
+        econtext.__path__ = []
+        econtext.__loader__ = self.importer
+        econtext.slave = True
+        econtext.core = sys.modules['__main__']
+        del sys.modules['__main__']
+
+        sys.modules['econtext'] = econtext
+        sys.modules['econtext.core'] = econtext.core
+        for klass in vars(econtext.core).itervalues():
+            if hasattr(klass, '__module__'):
+                klass.__module__ = 'econtext.core'
+
     def _setup_stdio(self):
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
         self.stderr_log = IoLogger(self.broker, 'stderr', 2)
@@ -701,7 +711,7 @@ class ExternalContext(object):
                 args = (self,) + args
 
             try:
-                obj = __import__(modname, {}, {}, ['*'])
+                obj = __import__(modname, {}, {}, [''])
                 if klass:
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)
@@ -710,11 +720,11 @@ class ExternalContext(object):
                 self.context.enqueue(reply_to, CallError(e))
 
     def main(self, key, log_level):
-        self._setup_package()
         self._setup_master(key)
         try:
             self._setup_logging(log_level)
             self._setup_importer()
+            self._setup_package()
             self._setup_stdio()
 
             self.broker.register(self.context)
