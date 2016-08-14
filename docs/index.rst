@@ -2,10 +2,10 @@
 Python Execution Contexts
 =========================
 
-**4.98KiB of sugar and no fat!**
+**5KiB of sugar and no fat!**
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    self
    howitworks
@@ -52,7 +52,7 @@ connection.
 
     $ python preamble_size.py
     SSH command size: 411
-    Preamble size: 5098 (4.98KiB)
+    Preamble size: 5085 (4.96KiB)
     econtext.master size: 2403 (2.35KiB)
 
 Once bootstrapped, the remote process is configured with a customizable
@@ -169,6 +169,49 @@ After:
 Exceptions raised by function calls are propagated back to the parent program,
 and timeouts can be configured to ensure failed calls do not block progress of
 the parent.
+
+
+Support For Single File Programs
+################################
+
+Programs that are self-contained within a single Python script are supported.
+External contexts are configured such that any attempt to execute a function
+from the main Python script will correctly cause that script to be imported as
+usual into the slave process.
+
+.. code-block:: python
+
+    #!/usr/bin/env python
+    """
+    Install our application on a remote machine.
+
+    Usage:
+        install_app.py <hostname>
+
+    Where:
+        <hostname>  Hostname to install to.
+    """
+    import os
+    import sys
+
+    import econtext
+
+
+    def install_app():
+        os.system('tar zxvf my_app.tar.gz')
+
+
+    def main(broker):
+        if len(sys.argv) != 2:
+            print __doc__
+            sys.exit(1)
+
+        context = broker.get_remote(sys.argv[1])
+        context.call(install_app)
+
+    if __name__ == '__main__' and not econtext.slave:
+        import econtext.utils
+        econtext.utils.run_with_broker(main)
 
 
 Event-driven IO

@@ -219,7 +219,7 @@ class LocalStream(econtext.core.Stream):
             raise econtext.core.StreamError('Bootstrap failed; stdout: %r', s)
 
 
-class SSHStream(LocalStream):
+class SshStream(LocalStream):
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
@@ -228,7 +228,7 @@ class SSHStream(LocalStream):
         if self._context.username:
             bits += ['-l', self._context.username]
         bits.append(self._context.hostname)
-        base = super(SSHStream, self).get_boot_command()
+        base = super(SshStream, self).get_boot_command()
         return bits + map(commands.mkarg, base)
 
 
@@ -237,7 +237,7 @@ class Broker(econtext.core.Broker):
     graceful_count = 1
 
     def create_listener(self, address=None, backlog=30):
-        """Listen on `address `for connections from newly spawned contexts."""
+        """Listen on `address` for connections from newly spawned contexts."""
         self._listener = Listener(self, address, backlog)
 
     def get_local(self, name='default', python_path=None):
@@ -256,7 +256,7 @@ class Broker(econtext.core.Broker):
             name = hostname
 
         context = Context(self, name, hostname, username)
-        context.stream = SSHStream(context)
+        context.stream = SshStream(context)
         if python_path:
             context.stream.python_path = python_path
         context.stream.connect()

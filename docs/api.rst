@@ -55,10 +55,10 @@ Helper Functions
 .. autofunction:: econtext.master.minimize_source
 
 
-Context Class
--------------
+Broker Class
+------------
 
-.. autoclass:: econtext.master.Context
+.. autoclass:: econtext.master.Broker
    :members:
 
 
@@ -68,7 +68,7 @@ Stream Classes
 .. autoclass:: econtext.master.LocalStream
    :members:
 
-.. autoclass:: econtext.master.SSHStream
+.. autoclass:: econtext.master.SshStream
    :members:
 
 
