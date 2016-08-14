@@ -329,7 +329,7 @@ class Stream(BasicStream):
         return True
 
     def _invoke(self, handle, data):
-        IOLOG.debug('%r._invoke(): handle=%r; data=%r', self, handle, data)
+        IOLOG.debug('%r._invoke(%r, %r)', self, handle, data)
         try:
             persist, fn = self._context._handle_map[handle]
         except KeyError:
@@ -337,7 +337,11 @@ class Stream(BasicStream):
 
         if not persist:
             del self._context._handle_map[handle]
-        fn(data)
+
+        try:
+            fn(data)
+        except Exception:
+            LOG.debug('%r._invoke(%r, %r): %r crashed', self, handle, data, fn)
 
     def on_transmit(self):
         """Transmit buffered messages."""
