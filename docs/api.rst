@@ -41,6 +41,43 @@ Channel Class
    :members:
 
 
+ExternalContext Class
+---------------------
+
+.. class:: econtext.core.ExternalContext
+
+    External context implementation.
+
+    .. attribute:: broker
+
+        The :py:class:`econtext.core.Broker` instance.
+
+    .. attribute:: context
+
+            The :py:class:`econtext.core.Context` instance.
+
+    .. attribute:: channel
+
+            The :py:class:`econtext.core.Channel` over which
+            :py:data:`CALL_FUNCTION` requests are received.
+
+    .. attribute:: stdout_log
+
+        The :py:class:`econtext.core.IoLogger` connected to ``stdout``.
+
+    .. attribute:: importer
+
+        The :py:class:`econtext.core.Importer` instance.
+
+    .. attribute:: stdout_log
+
+        The :py:class:`IoLogger` connected to ``stdout``.
+
+    .. attribute:: stderr_log
+
+        The :py:class:`IoLogger` connected to ``stderr``.
+
+
 econtext.master
 ===============
 
@@ -53,6 +90,13 @@ Helper Functions
 .. autofunction:: econtext.master.create_child
 .. autofunction:: econtext.master.get_child_modules
 .. autofunction:: econtext.master.minimize_source
+
+
+Context Class
+-------------
+
+.. autoclass:: econtext.master.Context
+   :members:
 
 
 Broker Class

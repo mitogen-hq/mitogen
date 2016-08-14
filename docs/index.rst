@@ -56,8 +56,8 @@ connection.
 
     $ python preamble_size.py
     SSH command size: 411
-    Preamble size: 5085 (4.96KiB)
-    econtext.master size: 2403 (2.35KiB)
+    Preamble size: 4892 (4.78KiB)
+    econtext.master size: 2627 (2.57KiB)
 
 Once bootstrapped, the remote process is configured with a customizable
 **argv[0]**, readily visible to system administrators of the remote machine

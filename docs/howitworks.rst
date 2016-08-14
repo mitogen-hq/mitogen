@@ -120,7 +120,7 @@ Since the bootstrap consists of the :py:mod:`econtext.core` source code, and
 this code is loaded by Python by way of its main script (``__main__`` module),
 initially the module layout in the slave will be incorrect.
 
-The first step taken after bootstrap is to rearrange ``sys.modules`` slightly
+The first step taken after bootstrap is to rearrange :py:data:`sys.modules` slightly
 so that :py:mod:`econtext.core` appears in the correct location, and all
 classes defined in that module have their ``__module__`` attribute fixed up
 such that :py:mod:`cPickle` correctly serializes instance module names.

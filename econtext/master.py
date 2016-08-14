@@ -14,6 +14,7 @@ import re
 import socket
 import sys
 import textwrap
+import types
 import zlib
 
 import econtext.core
@@ -271,3 +272,32 @@ class Context(econtext.core.Context):
 
     def on_disconnect(self):
         self.stream = None
+
+    def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
+        """Invoke `fn([context,] *args, **kwargs)` in the external context.
+
+        If `with_context` is True, pass its
+        :py:class:`econtext.core.ExternalContext` instance as first parameter.
+
+        If `deadline` is not ``None``, expire the call after `deadline`
+        seconds. If `deadline` is ``None``, the invocation may block
+        indefinitely."""
+        LOG.debug('%r.call_with_deadline(%r, %r, %r, *%r, **%r)',
+                  self, deadline, with_context, fn, args, kwargs)
+
+        if isinstance(fn, types.MethodType) and \
+           isinstance(fn.im_self, (type, types.ClassType)):
+            klass = fn.im_self.__name__
+        else:
+            klass = None
+
+        call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
+        result = self.enqueue_await_reply(econtext.core.CALL_FUNCTION,
+                                          deadline, call)
+        if isinstance(result, econtext.core.CallError):
+            raise result
+        return result
+
+    def call(self, fn, *args, **kwargs):
+        """Invoke `fn(*args, **kwargs)` in the external context."""
+        return self.call_with_deadline(None, False, fn, *args, **kwargs)

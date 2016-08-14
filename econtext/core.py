@@ -22,7 +22,6 @@ import sys
 import threading
 import time
 import traceback
-import types
 import zlib
 
 
@@ -470,25 +469,6 @@ class Context(object):
 
         IOLOG.debug('%r._enqueue_await_reply(): got reply: %r', self, data)
         return data
-
-    def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
-        LOG.debug('%r.call_with_deadline(%r, %r, %r, *%r, **%r)',
-                  self, deadline, with_context, fn, args, kwargs)
-
-        if isinstance(fn, types.MethodType) and \
-           isinstance(fn.im_self, (type, types.ClassType)):
-            klass = fn.im_self.__name__
-        else:
-            klass = None
-
-        call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
-        result = self.enqueue_await_reply(CALL_FUNCTION, deadline, call)
-        if isinstance(result, CallError):
-            raise result
-        return result
-
-    def call(self, fn, *args, **kwargs):
-        return self.call_with_deadline(None, False, fn, *args, **kwargs)
 
     def __repr__(self):
         bits = filter(None, (self.name, self.hostname, self.username))
