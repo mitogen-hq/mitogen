@@ -28,7 +28,7 @@ def run_with_broker(func, *args, **kwargs):
         return func(broker, *args, **kwargs)
     finally:
         broker.shutdown()
-        broker.wait()
+        broker.join()
 
 
 def with_broker(func):

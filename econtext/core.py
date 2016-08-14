@@ -650,7 +650,7 @@ class Broker(object):
         self._alive = False
         self._waker.wake()
 
-    def wait(self):
+    def join(self):
         """Wait for the broker to stop."""
         self._thread.join()
 
@@ -736,4 +736,4 @@ class ExternalContext(object):
             LOG.debug('ExternalContext.main() exitting')
         finally:
             self.broker.shutdown()
-            self.broker.wait()
+            self.broker.join()
