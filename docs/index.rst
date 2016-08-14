@@ -56,8 +56,8 @@ connection.
 
     $ python preamble_size.py
     SSH command size: 411
-    Preamble size: 4892 (4.78KiB)
-    econtext.master size: 2627 (2.57KiB)
+    Preamble size: 4845 (4.73KiB)
+    econtext.master size: 2640 (2.58KiB)
 
 Once bootstrapped, the remote process is configured with a customizable
 **argv[0]**, readily visible to system administrators of the remote machine
@@ -94,11 +94,13 @@ Module Forwarder
 ################
 
 In addition to an IO multiplexer, the external context is configured with a
-custom **PEP-302 importer** that forwards requests for unknown Python modules
+custom `PEP-302 importer`_ that forwards requests for unknown Python modules
 back to the host machine. When your program asks an external context to execute
 code from an unknown module, all requisite modules are transferred
 automatically and imported entirely in RAM without need for further
 configuration.
+
+.. _PEP-302 importer: https://www.python.org/dev/peps/pep-0302/
 
 .. code-block:: python
 
@@ -169,6 +171,12 @@ After:
         os.system('tar zxvf app.tar.gz')
 
     context.call(install_app)
+
+Or even:
+
+.. code-block:: python
+
+    context.call(os.system, 'tar zxvf app.tar.gz')
 
 Exceptions raised by function calls are propagated back to the parent program,
 and timeouts can be configured to ensure failed calls do not block progress of

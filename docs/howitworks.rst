@@ -12,13 +12,13 @@ document them thoroughly below.
 The UNIX First Stage
 --------------------
 
-To allow delivery of the bootstrap compressed using ``zlib``, it is necessary
-for something on the remote to be prepared to decompress the payload and feed
-it to a Python interpreter. Since we would like to avoid writing an error-prone
-shell fragment to implement this, and since we must avoid writing to the remote
-machine's disk in case it is read-only, the Python process started on the
-remote machine by ``econtext`` immediately forks in order to implement the
-decompression.
+To allow delivery of the bootstrap compressed using :py:mod:`zlib`, it is
+necessary for something on the remote to be prepared to decompress the payload
+and feed it to a Python interpreter. Since we would like to avoid writing an
+error-prone shell fragment to implement this, and since we must avoid writing
+to the remote machine's disk in case it is read-only, the Python process
+started on the remote machine by ``econtext`` immediately forks in order to
+implement the decompression.
 
 
 Python Command Line
@@ -49,15 +49,15 @@ can be recovered by the bootstrapped process later. It then forks into a new
 process.
 
 After fork, the parent half overwrites its ``stdin`` with the read end of the
-pipe, and the child half begins reading the ``zlib``-compressed payload
+pipe, and the child half begins reading the :py:mod:`zlib`-compressed payload
 supplied on ``stdin`` by the econtext master, and writing the decompressed
 result to the write-end of the UNIX pipe.
 
 To allow recovery of ``stdin`` for reuse by the bootstrapped process for
 master<->slave communication, it is necessary for the first stage to avoid
 closing ``stdin`` or reading from it until until EOF. Therefore, the master
-sends the zlib-compressed payload prefixed with an integer size, allowing
-reading by the first stage of exactly the required bytes.
+sends the :py:mod:`zlib`-compressed payload prefixed with an integer size,
+allowing reading by the first stage of exactly the required bytes.
 
 
 Configuring argv[0]
@@ -80,8 +80,8 @@ connected to ``stdin``.
 Bootstrap Preparation
 #####################
 
-Now we have the mechanism in place to send a zlib-compressed script to the
-remote Python interpreter, it is time to choose what to send.
+Now we have the mechanism in place to send a :py:mod:`zlib`-compressed script
+to the remote Python interpreter, it is time to choose what to send.
 
 The script sent is simply the source code for :py:mod:`econtext.core`, with a
 single line suffixed to trigger execution of the
@@ -150,7 +150,7 @@ Setup Logging
 The slave's :py:mod:`logging` package root logger is configured to have the
 same log level as the root logger in the master, and
 :py:class:`econtext.core.LogHandler` is installed to forward logs to the master
-context's ``FORWARD_LOG`` handle.
+context's :py:data:`FORWARD_LOG <econtext.core.FORWARD_LOG>` handle.
 
 The log level is copied into the slave to avoid generating a potentially large
 amount of network IO forwarding logs that will simply be filtered away once
@@ -161,8 +161,8 @@ The Module Importer
 ###################
 
 An instance of :py:class:`econtext.core.Importer` is installed in
-`sys.meta_path`, where Python's ``import`` statement will execute it before
-attempting to find a module locally.
+:py:data:`sys.meta_path`, where Python's ``import`` statement will execute it
+before attempting to find a module locally.
 
 
 Standard IO Redirection
@@ -180,8 +180,8 @@ master and slave to be accidentally corrupted by subprocesses run by user code.
 The inherited ``stdin`` is replaced by a file descriptor pointing to
 ``/dev/null``.
 
-Finally Python's `sys.stdout` is reopened to ensure line buffering is active,
-so that ``print`` statements and suchlike promptly appear in the logs.
+Finally Python's :py:data:`sys.stdout` is reopened to ensure line buffering is
+active, so that ``print`` statements and suchlike promptly appear in the logs.
 
 
 Function Call Dispatch
@@ -189,9 +189,10 @@ Function Call Dispatch
 
 After all initialization is complete, the slave's main thread sits in a loop
 reading from a :py:class:`Channel <econtext.core.Channel>` connected to the
-``CALL_FUNCTION`` handle. This handle is written to by
-:py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>` and
-:py:meth:`call() <econtext.master.Context.call>`.
+:py:data:`CALL_FUNCTION <econtext.core.CALL_FUNCTION>` handle. This handle is
+written to by
+:py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`
+and :py:meth:`call() <econtext.master.Context.call>`.
 
 
 
@@ -217,31 +218,36 @@ value to be delivered to the target.
 
 Masters listen on the following handles:
 
-``econtext.core.FORWARD_LOG``
+.. data:: econtext.core.FORWARD_LOG
+
     Receives `(logger_name, level, msg)` 3-tuples and writes them to the
     master's ``econtext.ctx.<context_name>`` logger.
 
-``econtext.core.GET_MODULE``
+.. data:: econtext.core.GET_MODULE
+
     Receives `(reply_to, fullname)` 2-tuples, looks up the source code for the
     module named ``fullname``, and writes the source along with some metadata
     back to the handle ``reply_to``. If lookup fails, ``None`` is sent instead.
 
 Slaves listen on the following handles:
 
-``econtext.core.CALL_FUNCTION``:
-    Receives `(with_context, mod_name, class_name, func_name, args, kwargs)`
-    5-tuples from :py:meth:`econtext.master.Context.call_with_deadline`,
-    imports ``mod_name``, then attempts to execute `class_name.func_name(*args,
-    **kwargs)`.
+.. data:: econtext.core.CALL_FUNCTION
 
-``econtext.core.SHUTDOWN``:
+    Receives `(with_context, mod_name, class_name, func_name, args, kwargs)`
+    5-tuples from
+    :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`,
+    imports ``mod_name``, then attempts to execute
+    `class_name.func_name(\*args, \**kwargs)`.
+
+.. data:: econtext.core.SHUTDOWN
+
     Triggers :py:meth:`econtext.core.Broker.shutdown` remotely, causing the
     slave to drain its :py:class:`IoLoggers <econtext.core.IoLogger>` and
     output stream buffer before disconnecting from the master and terminating
     the process.
 
 Additional handles are created to receive the result of every function call
-triggered by :py:meth:`econtext.master.Context.call_with_deadline`.
+triggered by :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`.
 
 
 Use of Pickle
@@ -328,9 +334,9 @@ In Python 2.x, Python will first try to load ``mypkg.sys`` and ``mypkg.os``,
 which do not exist, before falling back on :py:mod:`sys` and :py:mod:`os`.
 
 These negative imports present a challenge, as they introduce a large number of
-pointless network roundtrips. Therefore in addition to the zlib-compressed
-source, for packages the master sends along a list of child modules known to
-exist.
+pointless network roundtrips. Therefore in addition to the
+:py:mod:`zlib`-compressed source, for packages the master sends along a list of
+child modules known to exist.
 
 Before indicating it can satisfy an import request,
 :py:class:`econtext.core.Importer` first checks to see if the module belongs to
@@ -353,10 +359,10 @@ multiplexer always retains control flow in order to shut down gracefully, say,
 if the user's code has hung and the master context has disconnected.
 
 While it is possible for the IO multiplexer to recover control of a hung
-function call on UNIX using for example ``signal.SIGALRM``, this mechanism is
-not portable to non-UNIX operating systems, and does not work in every case,
-for example when Python blocks signals during a variety of :py:mod:`threading`
-package operations.
+function call on UNIX using for example :py:mod:`signal.SIGALRM <signal>`, this
+mechanism is not portable to non-UNIX operating systems, and does not work in
+every case, for example when Python blocks signals during a variety of
+:py:mod:`threading` package operations.
 
 At some point it is likely econtext will be extended to support starting slaves
 running on Windows. When that happens, it would be nice if the process model on

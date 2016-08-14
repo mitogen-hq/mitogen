@@ -146,8 +146,8 @@ class LocalStream(econtext.core.Stream):
 
     def on_shutdown(self):
         """Request the slave gracefully shut itself down."""
-        LOG.debug('%r enqueuing SHUTDOWN', self)
-        self.enqueue(econtext.core.SHUTDOWN, None)
+        LOG.debug('%r closing CALL_FUNCTION channel', self)
+        self.enqueue(econtext.core.CALL_FUNCTION, econtext.core._DEAD)
 
     def _find_global(self, module_name, class_name):
         """Return the class implementing `module_name.class_name` or raise
