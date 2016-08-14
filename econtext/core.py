@@ -1,7 +1,7 @@
 """
 This module implements most package functionality, but remains separate from
-non-essential code in order to reduce its size, as it is also implements the
-bootstrap code.
+non-essential code in order to reduce its size, since it is also serves as the
+bootstrap implementation sent to every new slave context.
 """
 
 import Queue

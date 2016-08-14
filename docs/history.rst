@@ -31,7 +31,9 @@ LAN feel like I were configuring a host on Mars. Poking through what Ansible
 was doing, I was shocked to discover it writing temporary files everywhere, and
 uploading a 56KiB zip file apparently for every playbook step.
 
-.. image:: _static/wtf.gif
+.. figure:: _static/wtf.gif
+
+    All contemporary Devops tooling
 
 Searching around for something to play with, I came across my forgotten
 ``src/econtext`` directory and somehow in a few hours managed to squash most of
@@ -44,8 +46,8 @@ So there you have it. As of writing :py:mod:`econtext.core` consists of 550
 source lines, and those 550 lines have taken me almost a decade to write. I
 have long had a preference for avoiding infrastructure work commercially, not
 least for the inescapable depression induced by considering the wasted effort
-across the world caused by universally horrific tooling. This is my tiny
-contribution to the solution, I hope you find it useful.
+across the world caused by universally horrific tooling. This is my small
+contribution to a solution, I hope you find it useful.
 
 
 Future
