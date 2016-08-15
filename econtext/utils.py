@@ -17,6 +17,7 @@ def log_to_file(path, level=logging.DEBUG):
     econtext.core.set_cloexec(fp.fileno())
     log.setLevel(level)
     log.handlers.insert(0, logging.StreamHandler(fp))
+    logging.getLogger('econtext.io').setLevel(level)
 
 
 def run_with_broker(func, *args, **kwargs):
