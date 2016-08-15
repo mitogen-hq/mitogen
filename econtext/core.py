@@ -454,12 +454,7 @@ class Context(object):
                   self, handle, deadline, data, reply_to)
 
         queue = Queue.Queue()
-
-        def _put_reply(data):
-            IOLOG.debug('%r._put_reply(%r)', self, data)
-            queue.put(data)
-
-        self.add_handle_cb(_put_reply, reply_to, persist=False)
+        self.add_handle_cb(queue.put, reply_to, persist=False)
         self.stream.enqueue(handle, (reply_to,) + data)
 
         try:
