@@ -236,11 +236,7 @@ class Side(object):
     def close(self):
         if self.fd is not None:
             IOLOG.debug('%r.close()', self)
-            try:
-                os.close(self.fd)
-            except OSError, e:
-                if e.errno != errno.EBADF:
-                    LOG.error('%r: close failed', self, e)
+            os.close(self.fd)
             self.fd = None
 
 
