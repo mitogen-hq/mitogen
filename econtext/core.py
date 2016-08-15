@@ -29,9 +29,9 @@ LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
 IOLOG.setLevel(logging.INFO)
 
-GET_MODULE = 100L
-CALL_FUNCTION = 101L
-FORWARD_LOG = 102L
+GET_MODULE = 100
+CALL_FUNCTION = 101
+FORWARD_LOG = 102
 
 
 class Error(Exception):
@@ -416,7 +416,7 @@ class Context(object):
         self.key = key or ('%016x' % random.getrandbits(128))
         self.parent_addr = parent_addr
 
-        self._last_handle = 1000L
+        self._last_handle = 1000
         self._handle_map = {}
         self._lock = threading.Lock()
 
@@ -432,7 +432,7 @@ class Context(object):
         """Allocate a handle."""
         self._lock.acquire()
         try:
-            self._last_handle += 1L
+            self._last_handle += 1
             return self._last_handle
         finally:
             self._lock.release()
