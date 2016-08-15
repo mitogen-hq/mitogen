@@ -11,6 +11,7 @@ import errno
 import fcntl
 import hmac
 import imp
+import itertools
 import logging
 import os
 import random
@@ -419,10 +420,8 @@ class Context(object):
         self.username = username
         self.key = key or ('%016x' % random.getrandbits(128))
         self.parent_addr = parent_addr
-
-        self._last_handle = 1000
+        self._last_handle = itertools.count(1000)
         self._handle_map = {}
-        self._lock = threading.Lock()
 
     def on_shutdown(self):
         """Slave does nothing, _broker_main() will shutdown its streams."""
@@ -434,12 +433,7 @@ class Context(object):
 
     def alloc_handle(self):
         """Allocate a handle."""
-        self._lock.acquire()
-        try:
-            self._last_handle += 1
-            return self._last_handle
-        finally:
-            self._lock.release()
+        return self._last_handle.next()
 
     def add_handle_cb(self, fn, handle, persist=True):
         """Invoke `fn(obj)` for each `obj` sent to `handle`. Unregister after
