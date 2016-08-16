@@ -11,6 +11,7 @@ Python Execution Contexts
    howitworks
    getting_started
    api
+   internals
    history
 
 

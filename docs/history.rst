@@ -8,17 +8,17 @@ History
 
 The first version of econtext was written in late 2006 for use in an
 infrastructure management program, however at the time I lacked the pragmatism
-necessary for pushing my little design from concept to a working
-implementation. I tired of it when no way could be found to combine every
-communication style (*blocking execute function, asynchronous execute function,
-proxy slave-of-slave context*) into one neat abstraction. That unification
-still has not happened, but I'm no longer as burdened by it.
+necessary for pushing my little design from concept to finished implementation.
+I tired of it when no way could be found to unify every communication style
+(*blocking execute function, asynchronous execute function, proxy
+slave-of-slave context*) into one neat abstraction. That unification never
+happened, but I'm no longer worried by it.
 
 Every few years I would pick through the source code, especially after periods
-of working commercially with some contemporary infrastructure management
-systems, none of which had anything close to as neat an approach to running
-Python code on remote machines, and suffered from shockingly beginner-level
-bugs such as failing to report SSH diagnostic messages.
+of commercial work involving some contemporary infrastructure management
+systems, none of which had nearly as neat an approach to running Python code
+remotely, and suffered from shockingly beginner-level bugs such as failing to
+report SSH diagnostic messages.
 
 And every few years I'd put that code down again, especially since moving to an
 OS X laptop where :py:func:`select.poll` was not available, the struggle to get

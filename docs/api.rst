@@ -27,6 +27,20 @@ Exceptions
 .. autoclass:: econtext.core.TimeoutError
 
 
+Stream Classes
+--------------
+
+.. autoclass:: econtext.core.Stream
+   :members:
+
+
+Broker Class
+------------
+
+.. autoclass:: econtext.core.Broker
+   :members:
+
+
 Context Class
 -------------
 
@@ -84,21 +98,6 @@ econtext.master
 .. automodule:: econtext.master
 
 
-Helper Functions
-----------------
-
-.. autofunction:: econtext.master.create_child
-.. autofunction:: econtext.master.get_child_modules
-.. autofunction:: econtext.master.minimize_source
-
-
-Context Class
--------------
-
-.. autoclass:: econtext.master.Context
-   :members:
-
-
 Broker Class
 ------------
 
@@ -106,13 +105,10 @@ Broker Class
    :members:
 
 
-Stream Classes
---------------
+Context Class
+-------------
 
-.. autoclass:: econtext.master.LocalStream
-   :members:
-
-.. autoclass:: econtext.master.SshStream
+.. autoclass:: econtext.master.Context
    :members:
 
 

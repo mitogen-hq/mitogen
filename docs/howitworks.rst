@@ -216,6 +216,8 @@ disconnection by the master will cause the IO multiplexer thread to enter
 shutdown by itself.
 
 
+.. _stream-protocol:
+
 Stream Protocol
 ---------------
 

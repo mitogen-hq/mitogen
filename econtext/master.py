@@ -70,10 +70,10 @@ class Listener(econtext.core.BasicStream):
         self._sock.listen(backlog)
         econtext.core.set_cloexec(self._sock.fileno())
         self._listen_addr = self._sock.getsockname()
-        self.read_side = econtext.core.Side(self, self._sock.fileno())
+        self.receive_side = econtext.core.Side(self, self._sock.fileno())
         broker.update_stream(self)
 
-    def on_receive(self):
+    def on_receive(self, broker):
         sock, addr = self._sock.accept()
         context = Context(self._broker, name=addr)
         stream = econtext.core.Stream(context)
@@ -144,7 +144,7 @@ class LocalStream(econtext.core.Stream):
         super(LocalStream, self).__init__(context)
         self._permitted_classes = set([('econtext.core', 'CallError')])
 
-    def on_shutdown(self):
+    def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
         self.enqueue(econtext.core.CALL_FUNCTION, econtext.core._DEAD)
@@ -209,14 +209,14 @@ class LocalStream(econtext.core.Stream):
     def connect(self):
         LOG.debug('%r.connect()', self)
         pid, sock = create_child(*self.get_boot_command())
-        self.read_side = econtext.core.Side(self, os.dup(sock.fileno()))
-        self.write_side = econtext.core.Side(self, os.dup(sock.fileno()))
+        self.receive_side = econtext.core.Side(self, os.dup(sock.fileno()))
+        self.transmit_side = econtext.core.Side(self, os.dup(sock.fileno()))
         sock.close()
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
-                  self, self.read_side.fd)
+                  self, self.receive_side.fd)
 
-        econtext.core.write_all(self.write_side.fd, self.get_preamble())
-        s = os.read(self.read_side.fd, 4096)
+        econtext.core.write_all(self.transmit_side.fd, self.get_preamble())
+        s = os.read(self.receive_side.fd, 4096)
         if s != 'OK\n':
             raise econtext.core.StreamError('Bootstrap failed; stdout: %r', s)
 
@@ -235,8 +235,7 @@ class SshStream(LocalStream):
 
 
 class Broker(econtext.core.Broker):
-    #: Always allow time for slaves to drain.
-    graceful_count = 1
+    shutdown_timeout = 5.0
 
     def create_listener(self, address=None, backlog=30):
         """Listen on `address` for connections from newly spawned contexts."""
@@ -271,7 +270,7 @@ class Context(econtext.core.Context):
         self.responder = ModuleResponder(self)
         self.log_forwarder = LogForwarder(self)
 
-    def on_disconnect(self):
+    def on_disconnect(self, broker):
         self.stream = None
 
     def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
