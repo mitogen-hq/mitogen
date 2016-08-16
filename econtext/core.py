@@ -154,7 +154,12 @@ class Importer(object):
     """
     def __init__(self, context):
         self._context = context
-        self._present = {'econtext': ['econtext.utils', 'econtext.master']}
+        self._present = {'econtext': [
+            'econtext.compat',
+            'econtext.compat.pkgutil',
+            'econtext.master',
+            'econtext.utils',
+        ]}
         self.tls = threading.local()
 
     def __repr__(self):
@@ -193,13 +198,13 @@ class Importer(object):
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        is_pkg, present, path, data = ret
+        pkg_present, path, data = ret
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__loader__ = self
-        if is_pkg:
+        if pkg_present is not None:  # it's a package.
             mod.__path__ = []
             mod.__package__ = fullname
-            self._present[fullname] = present
+            self._present[fullname] = pkg_present
         else:
             mod.__package__ = fullname.rpartition('.')[0]
         code = compile(zlib.decompress(data), 'master:' + path, 'exec')

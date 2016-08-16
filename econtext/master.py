@@ -17,6 +17,11 @@ import textwrap
 import types
 import zlib
 
+if not hasattr(pkgutil, 'find_loader'):
+     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
+     # been kept intentionally 2.3 compatible so we can reuse it.
+    from econtext.compat import pkgutil
+
 import econtext.core
 
 
@@ -38,10 +43,10 @@ def minimize_source(source):
     return source.replace('    ', '\t')
 
 
-def get_child_modules(module, prefix):
+def get_child_modules(path, fullname):
     """Return the canonical names of all submodules of a package `module`."""
-    it = pkgutil.iter_modules(module.__path__, prefix)
-    return [name for _, name, _ in it]
+    it = pkgutil.iter_modules([os.path.dirname(path)])
+    return ['%s.%s' % (fullname, name) for _, name, _ in it]
 
 
 def create_child(*args):
@@ -103,31 +108,43 @@ class ModuleResponder(object):
         self._context.add_handle_cb(self.get_module,
                                     handle=econtext.core.GET_MODULE)
 
+    def __repr__(self):
+        return 'ModuleResponder(%r)' % (self._context,)
+
     def get_module(self, data):
         if data == econtext.core._DEAD:
             return
 
         reply_to, fullname = data
-        LOG.debug('get_module(%r, %r)', reply_to, fullname)
+        LOG.debug('%r.get_module(%r, %r)', self, reply_to, fullname)
         try:
-            module = __import__(fullname, {}, {}, [''])
-            is_pkg = getattr(module, '__path__', None) is not None
-            path = inspect.getsourcefile(module)
-            try:
-                source = inspect.getsource(module)
-            except IOError:
-                if not is_pkg:
-                    raise
-                source = '\n'
+            loader = pkgutil.find_loader(fullname)
+            LOG.debug('pkgutil.find_loader(%r) -> %r', fullname, loader)
+            if loader is None:
+                raise ImportError('pkgutil provides no loader for %r' %
+                                  (fullname,))
+
+            path = loader.get_filename(fullname)
+            LOG.debug('%r.get_filename(%r) -> %r', loader, fullname, path)
+
+            # Handle __main__ specially.
+            if path is None and fullname in sys.modules:
+                path = sys.modules[fullname].__file__.rstrip('co')
+                source = inspect.getsource(sys.modules[fullname])
+                is_pkg = hasattr(sys.modules[fullname], '__path__')
+            else:
+                source = loader.get_source(fullname)
+                is_pkg = loader.is_package(fullname)
 
             if is_pkg:
-                prefix = module.__name__ + '.'
-                present = get_child_modules(module, prefix)
+                pkg_present = get_child_modules(path, fullname)
+                LOG.debug('get_child_modules(%r, %r) -> %r',
+                          path, fullname, pkg_present)
             else:
-                present = None
+                pkg_present = None
 
             compressed = zlib.compress(minimize_source(source))
-            reply = (is_pkg, present, path, compressed)
+            reply = (pkg_present, path, compressed)
             self._context.enqueue(reply_to, reply)
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
