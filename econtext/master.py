@@ -25,7 +25,8 @@ IOLOG = logging.getLogger('econtext.io')
 RLOG = logging.getLogger('econtext.ctx')
 
 DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
-COMMENT_RE = re.compile(r'^[ \t]*#[^\n]*$', re.M)
+COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
+IOLOG_RE = re.compile(r'^[ ]*IOLOG.debug\(.+?\)$', re.M)
 
 
 def minimize_source(source):
