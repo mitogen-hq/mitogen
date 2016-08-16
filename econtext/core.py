@@ -464,6 +464,7 @@ class Context(object):
     def on_shutdown(self, broker):
         """Called during :py:meth:`Broker.shutdown`, informs callbacks
         registered with :py:meth:`add_handle_cb` the connection is dead."""
+        LOG.debug('%r.on_shutdown(%r)', self, broker)
         for handle, (persist, fn) in self._handle_map.iteritems():
             LOG.debug('%r.on_disconnect(): killing %r: %r', self, handle, fn)
             fn(_DEAD)
@@ -668,12 +669,19 @@ class Broker(object):
             LOG.exception('%r crashed', stream)
             stream.on_disconnect(self)
 
-    def _loop_once(self, timeout=None):
-        IOLOG.debug('%r._loop_once(%r)', self, timeout)
-
+    def _run_on_thread(self):
         while not self._queue.empty():
             func, args, kwargs = self._queue.get()
-            func(*args, **kwargs)
+            try:
+                func(*args, **kwargs)
+            except Exception:
+                LOG.exception('on_thread() crashed: %r(*%r, **%r)',
+                              func, args, kwargs)
+                self.shutdown()
+
+    def _loop_once(self, timeout=None):
+        IOLOG.debug('%r._loop_once(%r)', self, timeout)
+        self._run_on_thread()
 
         #IOLOG.debug('readers = %r', self._readers)
         #IOLOG.debug('writers = %r', self._writers)
