@@ -160,7 +160,10 @@ class LocalStream(econtext.core.Stream):
 
     def __init__(self, context):
         super(LocalStream, self).__init__(context)
-        self._permitted_classes = set([('econtext.core', 'CallError')])
+        self._permitted_classes = set([
+            ('econtext.core', 'CallError'),
+            ('econtext.core', 'Dead'),
+        ])
 
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
