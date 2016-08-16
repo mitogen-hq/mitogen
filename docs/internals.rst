@@ -17,14 +17,15 @@ Side Class
 Stream Classes
 --------------
 
-.. class:: foo
-
-.. class:: foo
-
-
-:py:class:`foo`
-
 .. autoclass:: econtext.core.BasicStream
+   :members:
+
+
+.. autoclass:: econtext.core.IoLogger
+   :members:
+
+
+.. autoclass:: econtext.core.Waker
    :members:
 
 

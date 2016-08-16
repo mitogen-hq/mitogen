@@ -210,6 +210,12 @@ to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on their
 :py:class:`IoLogger <econtext.core.IoLogger>` socket's write ends before
 draining any remaining data buffered on the read ends.
 
+An alternative approach is to wait until the socket is completely closed, with
+some hard timeout, but this necessitates greater discipline than is common in
+infrastructure code (how often have you forgotten to redirect stderr to
+``/dev/null``?), so needless irritating delays would often be experienced
+during program termination.
+
 If the main thread (responsible for function call dispatch) fails to trigger
 shutdown (because some user function is hanging), then the eventual force
 disconnection by the master will cause the IO multiplexer thread to enter

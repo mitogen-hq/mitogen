@@ -517,6 +517,13 @@ class Context(object):
 
 
 class Waker(BasicStream):
+    """
+    :py:class:`BasicStream` subclass implementing the
+    `UNIX self-pipe trick`_. Used internally to wake the IO multiplexer when
+    some of its state has been changed by another thread.
+
+    .. _UNIX self-pipe trick: https://cr.yp.to/docs/selfpipe.html
+    """
     def __init__(self, broker):
         self._broker = broker
         rfd, wfd = os.pipe()
@@ -530,15 +537,26 @@ class Waker(BasicStream):
         return '<Waker>'
 
     def wake(self):
+        """
+        Write a byte to the self-pipe, causing the IO multiplexer to wake up.
+        Nothing is written if the current thread is the IO multiplexer thread.
+        """
         if threading.currentThread() != self._broker._thread and \
            self.transmit_side.fd:
             os.write(self.transmit_side.fd, ' ')
 
     def on_receive(self, broker):
+        """
+        Read a byte from the self-pipe.
+        """
         os.read(self.receive_side.fd, 1)
 
 
 class IoLogger(BasicStream):
+    """
+    :py:class:`BasicStream` subclass that sets up redirection of a standard
+    UNIX file descriptor back into the Python :py:mod:`logging` package.
+    """
     _buf = ''
 
     def __init__(self, broker, name, dest_fd):
@@ -564,6 +582,7 @@ class IoLogger(BasicStream):
             self._log.info('%s', line.rstrip('\n'))
 
     def on_shutdown(self, broker):
+        """Shut down the write end of the logging socket."""
         LOG.debug('%r.on_shutdown()', self)
         self._wsock.shutdown(socket.SHUT_WR)
         self._wsock.close()
