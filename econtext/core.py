@@ -126,9 +126,12 @@ class Channel(object):
             return
 
         IOLOG.debug('%r.on_receive() got %r', self, data)
-        if data == _DEAD:
+        if not isinstance(data, (Dead, CallError)):
+            return data
+        elif data == _DEAD:
             raise ChannelError('Channel is closed.')
-        return data
+        else:
+            raise data
 
     def __iter__(self):
         """Yield objects from this channel until it is closed."""
