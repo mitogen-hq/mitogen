@@ -25,7 +25,7 @@ IOLOG = logging.getLogger('econtext.io')
 RLOG = logging.getLogger('econtext.ctx')
 
 DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
-COMMENT_RE = re.compile(r'^\s*#.*$', re.M)
+COMMENT_RE = re.compile(r'^[ \t]*#[^\n]*$', re.M)
 
 
 def minimize_source(source):
@@ -33,7 +33,7 @@ def minimize_source(source):
     numbers and syntax of empty blocks."""
     subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
     source = DOCSTRING_RE.sub(subber, source)
-    source = COMMENT_RE.sub('\n', source)
+    source = COMMENT_RE.sub('', source)
     return source.replace('    ', '\t')
 
 
