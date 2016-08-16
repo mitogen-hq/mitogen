@@ -56,7 +56,8 @@ Future
 * Connect back using TCP and SSL.
 * Python 3 support.
 * Windows support via psexec or similar.
-* Investigate cPickle safety and potentially replace it.
+* Investigate cPickle safety and potentially replace it, or implement a strict
+  format validator for messages received by master.
 * Predictive import: reduce roundtrips by pipelining modules observed to
   probably be requested in future.
 * Provide a means for waiting on multiple
