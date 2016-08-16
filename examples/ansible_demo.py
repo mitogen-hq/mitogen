@@ -8,9 +8,9 @@ import time
 
 import econtext
 import econtext.utils
-import ansible.module_utils.basic
 
 # Prevent accident import of an Ansible module from hanging on stdin read.
+import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 
 
