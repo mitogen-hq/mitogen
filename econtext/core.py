@@ -542,7 +542,7 @@ class Waker(BasicStream):
         broker.start_receive(self)
 
     def __repr__(self):
-        return '<Waker>'
+        return 'Waker(%r)' % (self._broker,)
 
     def wake(self):
         """
