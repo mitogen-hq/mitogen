@@ -402,7 +402,11 @@ class Stream(BasicStream):
 
     def _enqueue(self, handle, obj):
         IOLOG.debug('%r._enqueue(%r, %r)', self, handle, obj)
-        encoded = cPickle.dumps((handle, obj), protocol=2)
+        try:
+            encoded = cPickle.dumps((handle, obj), protocol=2)
+        except cPickle.PicklingError, e:
+            encoded = cPickle.dumps((handle, CallError(e)), protocol=2)
+
         msg = struct.pack('>L', len(encoded)) + encoded
         self._whmac.update(msg)
         self._output_buf += self._whmac.digest() + msg
