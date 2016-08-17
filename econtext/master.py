@@ -244,7 +244,7 @@ class LocalStream(econtext.core.Stream):
             os.execv(sys.executable,('econtext:'+CONTEXT_NAME,))
         else:
             os.fdopen(W,'wb',0).write(zlib.decompress(sys.stdin.read(input())))
-            print 'OK'
+            print('OK')
             sys.exit(0)
 
     def get_boot_command(self):
@@ -259,7 +259,7 @@ class LocalStream(econtext.core.Stream):
         source = source.replace('CONTEXT_NAME', repr(name))
         encoded = source.encode('base64').replace('\n', '')
         return [self.python_path, '-c',
-                'exec "%s".decode("base64")' % (encoded,)]
+                'import codecs;exec(codecs.decode("%s","base64"))' % (encoded,)]
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._context)
