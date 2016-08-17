@@ -122,7 +122,7 @@ class ModuleResponder(object):
 
         path = loader.get_filename(fullname)
         source = loader.get_source(fullname)
-        if path and source:
+        if path is not None and source is not None:
             return path, source, loader.is_package(fullname)
 
     def _get_module_via_sys_modules(self, fullname):
