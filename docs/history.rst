@@ -63,3 +63,5 @@ Future
 * Provide a means for waiting on multiple
   :py:class:`Channels <econtext.core.Channel>`.
 * Comprehensive integration tests.
+* Make pickler deliver a CallError to the intended recipient when a type is
+  rejected during unpickling.
