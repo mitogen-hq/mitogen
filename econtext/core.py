@@ -200,13 +200,14 @@ class Importer(object):
 
         pkg_present, path, data = ret
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
+        mod.__file__ = path
         mod.__loader__ = self
         if pkg_present is not None:  # it's a package.
             mod.__path__ = []
             mod.__package__ = fullname
             self._present[fullname] = pkg_present
         else:
-            mod.__package__ = fullname.rpartition('.')[0]
+            mod.__package__ = fullname.rpartition('.')[0] or None
         code = compile(zlib.decompress(data), 'master:' + path, 'exec')
         exec code in vars(mod)
         return mod
