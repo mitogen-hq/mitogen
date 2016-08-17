@@ -713,9 +713,9 @@ class Broker(object):
         attribute is ``True``, or any :py:class:`Context` is still registered
         that is not the master. Used to delay shutdown while some important
         work is in progress (e.g. log draining)."""
-        return any(c.stream and c.name != 'master'
+        return sum(c.stream is not None and c.name != 'master'
                    for c in self._contexts.itervalues()) or \
-               any(side.keep_alive for side in self._readers)
+               sum(side.keep_alive for side in self._readers)
 
     def _broker_main(self):
         """Handle events until :py:meth:`shutdown`. On shutdown, invoke
