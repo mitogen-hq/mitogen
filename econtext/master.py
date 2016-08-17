@@ -156,7 +156,7 @@ class LocalStream(econtext.core.Stream):
     Base for streams capable of starting new slaves.
     """
     #: The path to the remote Python interpreter.
-    python_path = 'python'
+    python_path = sys.executable
 
     def __init__(self, context):
         super(LocalStream, self).__init__(context)
@@ -243,6 +243,7 @@ class LocalStream(econtext.core.Stream):
 
 
 class SshStream(LocalStream):
+    python_path = 'python'
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
