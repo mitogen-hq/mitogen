@@ -35,6 +35,20 @@ class GoodModulesTest(testlib.BrokerMixin, unittest.TestCase):
 
 
 class BrokenModulesTest(unittest.TestCase):
+    def test_obviously_missing(self):
+        # Ensure we don't crash in the case of a module legitimately being
+        # unavailable. Should never happen in the real world.
+
+        context = mock.Mock()
+        responder = econtext.master.ModuleResponder(context)
+        responder.get_module((50, 'non_existent_module'))
+        self.assertEquals(1, len(context.enqueue.mock_calls))
+
+        call = context.enqueue.mock_calls[0]
+        reply_to, data = call[1]
+        self.assertEquals(50, reply_to)
+        self.assertTrue(data is None)
+
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
         # __path__ subsequently ends up empty, which prevents pkgutil from
