@@ -143,7 +143,7 @@ class ModuleResponder(object):
             else:
                 pkg_present = None
 
-            compressed = zlib.compress(minimize_source(source))
+            compressed = zlib.compress(source)
             reply = (pkg_present, path, compressed)
             self._context.enqueue(reply_to, reply)
         except Exception:
