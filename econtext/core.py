@@ -161,6 +161,7 @@ class Importer(object):
             'econtext.utils',
         ]}
         self.tls = threading.local()
+        self._cache = {}
 
     def __repr__(self):
         return 'Importer()'
@@ -194,13 +195,18 @@ class Importer(object):
 
     def load_module(self, fullname):
         LOG.debug('Importer.load_module(%r)', fullname)
-        ret = self._context.enqueue_await_reply(GET_MODULE, None, (fullname,))
+        try:
+            ret = self._cache[fullname]
+        except KeyError:
+            ret = self._context.enqueue_await_reply(GET_MODULE, None, (fullname,))
+            self._cache[fullname] = ret
+
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        pkg_present, path, data = ret
+        pkg_present = ret[0]
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
-        mod.__file__ = path
+        mod.__file__ = self.get_filename(fullname)
         mod.__loader__ = self
         if pkg_present is not None:  # it's a package.
             mod.__path__ = []
@@ -208,9 +214,17 @@ class Importer(object):
             self._present[fullname] = pkg_present
         else:
             mod.__package__ = fullname.rpartition('.')[0] or None
-        code = compile(zlib.decompress(data), 'master:' + path, 'exec')
+        code = compile(self.get_source(fullname), mod.__file__, 'exec')
         exec code in vars(mod)
         return mod
+
+    def get_filename(self, fullname):
+        if fullname in self._cache:
+            return 'master:' + self._cache[fullname][1]
+
+    def get_source(self, fullname):
+        if fullname in self._cache:
+            return zlib.decompress(self._cache[fullname][2])
 
 
 class LogHandler(logging.Handler):

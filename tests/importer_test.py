@@ -81,6 +81,18 @@ class LoadModulePackageTest(ImporterMixin, unittest.TestCase):
         mod = self.importer.load_module(self.modname)
         self.assertEquals(mod.__file__, self.path)
 
+    def test_get_filename(self):
+        self.context.enqueue_await_reply.return_value = self.response
+        mod = self.importer.load_module(self.modname)
+        filename = mod.__loader__.get_filename(self.modname)
+        self.assertEquals('master:fake_pkg/__init__.py', filename)
+
+    def test_get_source(self):
+        self.context.enqueue_await_reply.return_value = self.response
+        mod = self.importer.load_module(self.modname)
+        source = mod.__loader__.get_source(self.modname)
+        self.assertEquals(source, zlib.decompress(self.data))
+
     def test_module_loader_set(self):
         self.context.enqueue_await_reply.return_value = self.response
         mod = self.importer.load_module(self.modname)
