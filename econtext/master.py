@@ -19,8 +19,8 @@ import types
 import zlib
 
 if not hasattr(pkgutil, 'find_loader'):
-     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
-     # been kept intentionally 2.3 compatible so we can reuse it.
+    # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
+    # been kept intentionally 2.3 compatible so we can reuse it.
     from econtext.compat import pkgutil
 
 import econtext.core
@@ -231,7 +231,7 @@ class LocalStream(econtext.core.Stream):
         self._permitted_modules.add((module_name, class_name))
 
     # base64'd and passed to 'python -c'. It forks, dups 0->100, creates a
-    # pipe, then execs a new interpreter with a custom argv. CONTEXT_NAME is
+    # pipe, then execs a new interpreter with a custom argv. 'CONTEXT_NAME' is
     # replaced with the context name. Optimized for size.
     def _first_stage():
         import os,sys,zlib
@@ -241,7 +241,7 @@ class LocalStream(econtext.core.Stream):
             os.dup2(R,0)
             os.close(R)
             os.close(W)
-            os.execv(sys.executable,('econtext:'+CONTEXT_NAME,))
+            os.execv(sys.executable,['econtext:CONTEXT_NAME'])
         else:
             os.fdopen(W,'wb',0).write(zlib.decompress(sys.stdin.read(input())))
             print('OK')
@@ -256,10 +256,10 @@ class LocalStream(econtext.core.Stream):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[1:]))
         source = source.replace('    ', '\t')
-        source = source.replace('CONTEXT_NAME', repr(name))
+        source = source.replace('CONTEXT_NAME', name)
         encoded = source.encode('base64').replace('\n', '')
         return [self.python_path, '-c',
-                'import codecs;exec(codecs.decode("%s","base64"))' % (encoded,)]
+                'exec("%s".decode("base64"))' % (encoded,)]
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self._context)
