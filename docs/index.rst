@@ -4,16 +4,6 @@ Python Execution Contexts
 
 **5KiB of sugar and no fat!**
 
-.. toctree::
-   :maxdepth: 1
-
-   self
-   howitworks
-   getting_started
-   api
-   internals
-   history
-
 
 Introduction
 ------------
