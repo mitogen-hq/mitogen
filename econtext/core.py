@@ -832,14 +832,18 @@ class ExternalContext(object):
     def main(self, key, log_level):
         self._setup_master(key)
         try:
-            self._setup_logging(log_level)
-            self._setup_importer()
-            self._setup_package()
-            self._setup_stdio()
+            try:
+                self._setup_logging(log_level)
+                self._setup_importer()
+                self._setup_package()
+                self._setup_stdio()
 
-            self.broker.register(self.context)
-            self._dispatch_calls()
-            LOG.debug('ExternalContext.main() exitting')
+                self.broker.register(self.context)
+                self._dispatch_calls()
+                LOG.debug('ExternalContext.main() normal exit')
+            except Exception:
+                LOG.exception('ExternalContext.main() crashed')
+                raise
         finally:
             self.broker.shutdown()
             self.broker.join()
