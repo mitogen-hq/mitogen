@@ -3,21 +3,35 @@ A random assortment of utility functions useful on masters and slaves.
 """
 
 import logging
+import sys
 
 import econtext
 import econtext.core
 import econtext.master
 
 
-def log_to_file(path, level=logging.DEBUG):
+LOG = logging.getLogger('econtext')
+
+
+def log_to_file(path=None, io=True, level=logging.DEBUG):
     """Install a new :py:class:`logging.Handler` writing applications logs to
     the filesystem. Useful when debugging slave IO problems."""
     log = logging.getLogger('')
-    fp = open(path, 'w', 1)
-    econtext.core.set_cloexec(fp.fileno())
+    if path:
+        fp = open(path, 'w', 1)
+        econtext.core.set_cloexec(fp.fileno())
+    else:
+        fp = sys.stderr
+
     log.setLevel(level)
-    log.handlers.insert(0, logging.StreamHandler(fp))
-    logging.getLogger('econtext.io').setLevel(level)
+    if io:
+        logging.getLogger('econtext.io').setLevel(level)
+
+    fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
+    datefmt = '%H:%M:%S'
+    handler = logging.StreamHandler(fp)
+    handler.formatter = logging.Formatter(fmt, datefmt)
+    log.handlers.insert(0, handler)
 
 
 def run_with_broker(func, *args, **kwargs):
