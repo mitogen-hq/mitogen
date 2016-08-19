@@ -13,7 +13,7 @@ be expected. On the slave, it is built dynamically during startup.
 #:              os.system('hostname')
 #:
 #:          def main(broker):
-#:              context = broker.get_local()
+#:              context = econtext.master.connect(broker)
 #:              context.call(do_work)  # Causes slave to import __main__.
 #:
 #:          if __name__ == '__main__' and not econtext.slave:

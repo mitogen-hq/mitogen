@@ -4,7 +4,6 @@ starting new contexts via SSH. Its size is also restricted, since it must be
 sent to any context that will be used to establish additional child contexts.
 """
 
-import commands
 import getpass
 import imp
 import inspect
@@ -67,24 +66,6 @@ def create_child(*args):
     LOG.debug('create_child() child %d fd %d, parent %d, args %r',
               pid, parentfp.fileno(), os.getpid(), args)
     return pid, parentfp
-
-
-class Listener(econtext.core.BasicStream):
-    def __init__(self, broker, address=None, backlog=30):
-        self._broker = broker
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._sock.bind(address or ('0.0.0.0', 0))
-        self._sock.listen(backlog)
-        econtext.core.set_cloexec(self._sock.fileno())
-        self._listen_addr = self._sock.getsockname()
-        self.receive_side = econtext.core.Side(self, self._sock.fileno())
-        broker.update_stream(self)
-
-    def on_receive(self, broker):
-        sock, addr = self._sock.accept()
-        context = Context(self._broker, name=addr)
-        stream = econtext.core.Stream(context)
-        stream.accept(sock.fileno(), sock.fileno())
 
 
 class LogForwarder(object):
@@ -199,7 +180,7 @@ class ModuleResponder(object):
             self._context.enqueue(reply_to, None)
 
 
-class LocalStream(econtext.core.Stream):
+class Stream(econtext.core.Stream):
     """
     Base for streams capable of starting new slaves.
     """
@@ -207,7 +188,7 @@ class LocalStream(econtext.core.Stream):
     python_path = sys.executable
 
     def __init__(self, context):
-        super(LocalStream, self).__init__(context)
+        super(Stream, self).__init__(context)
         self._permitted_classes = set([
             ('econtext.core', 'CallError'),
             ('econtext.core', 'Dead'),
@@ -290,48 +271,8 @@ class LocalStream(econtext.core.Stream):
             raise econtext.core.StreamError('Bootstrap failed; stdout: %r', s)
 
 
-class SshStream(LocalStream):
-    python_path = 'python'
-    #: The path to the SSH binary.
-    ssh_path = 'ssh'
-
-    def get_boot_command(self):
-        bits = [self.ssh_path]
-        if self._context.username:
-            bits += ['-l', self._context.username]
-        bits.append(self._context.hostname)
-        base = super(SshStream, self).get_boot_command()
-        return bits + map(commands.mkarg, base)
-
-
 class Broker(econtext.core.Broker):
     shutdown_timeout = 5.0
-
-    def create_listener(self, address=None, backlog=30):
-        """Listen on `address` for connections from newly spawned contexts."""
-        self._listener = Listener(self, address, backlog)
-
-    def get_local(self, name='default', python_path=None):
-        """Get the named context running on the local machine, creating it if
-        it does not exist."""
-        context = Context(self, name)
-        context.stream = LocalStream(context)
-        if python_path:
-            context.stream.python_path = python_path
-        context.stream.connect()
-        return self.register(context)
-
-    def get_remote(self, hostname, username=None, name=None, python_path=None):
-        """Get the named remote context, creating it if it does not exist."""
-        if name is None:
-            name = hostname
-
-        context = Context(self, name, hostname, username)
-        context.stream = SshStream(context)
-        if python_path:
-            context.stream.python_path = python_path
-        context.stream.connect()
-        return self.register(context)
 
 
 class Context(econtext.core.Context):
@@ -346,8 +287,9 @@ class Context(econtext.core.Context):
     def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
         """Invoke `fn([context,] *args, **kwargs)` in the external context.
 
-        If `with_context` is True, pass its
-        :py:class:`econtext.core.ExternalContext` instance as first parameter.
+        If `with_context` is ``True``, pass its
+        :py:class:`ExternalContext <econtext.core.ExternalContext>` instance as
+        the first parameter.
 
         If `deadline` is not ``None``, expire the call after `deadline`
         seconds. If `deadline` is ``None``, the invocation may block
@@ -371,3 +313,14 @@ class Context(econtext.core.Context):
     def call(self, fn, *args, **kwargs):
         """Invoke `fn(*args, **kwargs)` in the external context."""
         return self.call_with_deadline(None, False, fn, *args, **kwargs)
+
+
+def connect(broker, name='default', python_path=None):
+    """Get the named context running on the local machine, creating it if
+    it does not exist."""
+    context = Context(broker, name)
+    context.stream = Stream(context)
+    if python_path:
+        context.stream.python_path = python_path
+    context.stream.connect()
+    return broker.register(context)

@@ -16,6 +16,7 @@ Enable it by:
 """
 
 import econtext.master
+import econtext.ssh
 import econtext.utils
 from econtext.ansible import helpers
 
@@ -38,9 +39,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             return
         self.broker = econtext.master.Broker()
         if self._play_context.remote_addr == 'localhost':
-            self.context = self.broker.get_local()
+            self.context = econtext.master.connect(self.broker)
         else:
-            self.context = self.broker.get_remote(self._play_context.remote_addr)
+            self.context = econtext.ssh.connect(broker,
+                self._play_context.remote_addr)
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)

@@ -3,105 +3,56 @@ API Reference
 *************
 
 
+Package Layout
+==============
+
+
 econtext Package
-================
+----------------
 
 .. automodule:: econtext
 
-.. autodata:: econtext.slave
-
 
 econtext.core
-=============
+-------------
 
 .. automodule:: econtext.core
 
 
-Exceptions
-----------
+econtext.master
+---------------
 
-.. autoclass:: econtext.core.Error
-.. autoclass:: econtext.core.CallError
-.. autoclass:: econtext.core.ChannelError
-.. autoclass:: econtext.core.StreamError
-.. autoclass:: econtext.core.TimeoutError
+.. automodule:: econtext.master
 
 
-Stream Classes
---------------
 
-.. autoclass:: econtext.core.Stream
-   :members:
+Context Factories
+=================
+
+.. autofunction:: econtext.master.connect
+.. autofunction:: econtext.ssh.connect
 
 
 Broker Class
-------------
+============
 
-.. autoclass:: econtext.core.Broker
+.. autoclass:: econtext.master.Broker
    :members:
+   :inherited-members:
 
 
 Context Class
--------------
+=============
 
-.. autoclass:: econtext.core.Context
+.. autoclass:: econtext.master.Context
    :members:
+   :inherited-members:
 
 
 Channel Class
 -------------
 
 .. autoclass:: econtext.core.Channel
-   :members:
-
-
-ExternalContext Class
----------------------
-
-.. class:: econtext.core.ExternalContext
-
-    External context implementation.
-
-    .. attribute:: broker
-
-        The :py:class:`econtext.core.Broker` instance.
-
-    .. attribute:: context
-
-            The :py:class:`econtext.core.Context` instance.
-
-    .. attribute:: channel
-
-            The :py:class:`econtext.core.Channel` over which
-            :py:data:`CALL_FUNCTION` requests are received.
-
-    .. attribute:: stdout_log
-
-        The :py:class:`econtext.core.IoLogger` connected to ``stdout``.
-
-    .. attribute:: importer
-
-        The :py:class:`econtext.core.Importer` instance.
-
-    .. attribute:: stdout_log
-
-        The :py:class:`IoLogger` connected to ``stdout``.
-
-    .. attribute:: stderr_log
-
-        The :py:class:`IoLogger` connected to ``stderr``.
-
-
-econtext.master
-===============
-
-.. automodule:: econtext.master
-
-
-Broker Class
-------------
-
-.. autoclass:: econtext.master.Broker
    :members:
 
 
@@ -112,8 +63,24 @@ Context Class
    :members:
 
 
-econtext.utils
-==============
+Detecting A Slave
+=================
+
+.. autodata:: econtext.slave
+
+
+Utility Functions
+=================
 
 .. automodule:: econtext.utils
   :members:
+
+
+Exceptions
+==========
+
+.. autoclass:: econtext.core.Error
+.. autoclass:: econtext.core.CallError
+.. autoclass:: econtext.core.ChannelError
+.. autoclass:: econtext.core.StreamError
+.. autoclass:: econtext.core.TimeoutError

@@ -12,7 +12,7 @@ def repr_stuff():
 def main():
     broker = econtext.master.Broker()
     try:
-        context = broker.get_local()
+        context = econtext.master.connect(broker)
         print context.call(repr_stuff)
     finally:
         broker.shutdown()

@@ -457,16 +457,6 @@ class Stream(BasicStream):
         set_cloexec(self.transmit_side.fd)
         self._context.stream = self
 
-    def connect(self):
-        """Connect to a Broker at the address specified in our associated
-        Context."""
-        LOG.debug('%r.connect()', self)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.receive_side = Side(self, sock.fileno())
-        self.transmit_side = Side(self, sock.fileno())
-        sock.connect(self._context.parent_addr)
-        self.enqueue(0, self._context.name)
-
     def __repr__(self):
         return '%s(%r)' % (self.__class__.__name__, self._context)
 
@@ -780,6 +770,38 @@ class Broker(object):
 
 
 class ExternalContext(object):
+    """
+    External context implementation.
+
+    .. attribute:: broker
+
+        The :py:class:`econtext.core.Broker` instance.
+
+    .. attribute:: context
+
+            The :py:class:`econtext.core.Context` instance.
+
+    .. attribute:: channel
+
+            The :py:class:`econtext.core.Channel` over which
+            :py:data:`CALL_FUNCTION` requests are received.
+
+    .. attribute:: stdout_log
+
+        The :py:class:`econtext.core.IoLogger` connected to ``stdout``.
+
+    .. attribute:: importer
+
+        The :py:class:`econtext.core.Importer` instance.
+
+    .. attribute:: stdout_log
+
+        The :py:class:`IoLogger` connected to ``stdout``.
+
+    .. attribute:: stderr_log
+
+        The :py:class:`IoLogger` connected to ``stderr``.
+    """
     def _setup_master(self, key):
         self.broker = Broker()
         self.context = Context(self.broker, 'master', key=key)

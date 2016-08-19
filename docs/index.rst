@@ -209,7 +209,7 @@ usual into the slave process.
             print __doc__
             sys.exit(1)
 
-        context = broker.get_remote(sys.argv[1])
+        context = econtext.ssh.connect(broker, sys.argv[1])
         context.call(install_app)
 
     if __name__ == '__main__' and not econtext.slave:

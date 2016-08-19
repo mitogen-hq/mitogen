@@ -5,7 +5,6 @@ import unittest
 import sys
 
 import econtext.master
-import econtext.master
 import testlib
 
 import plain_old_module
@@ -16,13 +15,13 @@ class GoodModulesTest(testlib.BrokerMixin, unittest.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
-        context = self.broker.get_local()
+        context = econtext.master.connect(self.broker)
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
         # which imports the other.
-        context = self.broker.get_local()
+        context = econtext.master.connect(self.broker)
         self.assertEquals(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
 

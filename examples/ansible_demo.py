@@ -7,6 +7,7 @@ import logging
 import time
 
 import econtext
+import econtext.master
 import econtext.utils
 
 # Prevent accident import of an Ansible module from hanging on stdin read.
@@ -100,7 +101,7 @@ def main(broker):
     level = logging.INFO
     logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
 
-    context = broker.get_local()
+    context = econtext.master.connect(broker)
     print context.call(run_module, 'ansible.modules.core.system.setup')
     for x in xrange(10):
         print context.call(run_module, 'ansible.modules.core.commands.command', 'hostname')
