@@ -156,8 +156,9 @@ class ModuleResponder(object):
         pkg_path = os.path.dirname(pkg.__file__)
         try:
             fp, path, ext = imp.find_module(modname, [pkg_path])
+            LOG.error('%r', (fp, path, ext))
             return path, fp.read(), False
-        except ImportError:
+        except ImportError, e:
             LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
 
     get_module_methods = [_get_module_via_pkgutil,

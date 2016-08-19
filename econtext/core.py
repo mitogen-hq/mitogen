@@ -856,7 +856,7 @@ class ExternalContext(object):
                 self.broker.register(self.context)
                 self._dispatch_calls()
                 LOG.debug('ExternalContext.main() normal exit')
-            except Exception:
+            except BaseException:
                 LOG.exception('ExternalContext.main() crashed')
                 raise
         finally:
