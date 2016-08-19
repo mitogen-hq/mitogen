@@ -155,6 +155,7 @@ class Importer(object):
     def __init__(self, context):
         self._context = context
         self._present = {'econtext': [
+            'econtext.ansible',
             'econtext.compat',
             'econtext.compat.pkgutil',
             'econtext.master',
