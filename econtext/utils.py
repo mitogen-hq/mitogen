@@ -13,6 +13,15 @@ import econtext.master
 LOG = logging.getLogger('econtext')
 
 
+def disable_site_packages():
+    """Remove all entries mentioning site-packages or Extras from the system
+    path. Used primarily for testing on OS X within a virtualenv, where OS X
+    bundles some ancient version of the 'six' module."""
+    for entry in sys.path[:]:
+        if 'site-packages' in entry or 'Extras' in entry:
+            sys.path.remove(entry)
+
+
 def log_to_file(path=None, io=True, level=logging.DEBUG):
     """Install a new :py:class:`logging.Handler` writing applications logs to
     the filesystem. Useful when debugging slave IO problems."""
