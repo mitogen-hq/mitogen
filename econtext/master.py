@@ -101,10 +101,13 @@ class ModuleResponder(object):
         if not loader:
             return
 
-        path = loader.get_filename(fullname)
-        source = loader.get_source(fullname)
-        if path is not None and source is not None:
-            return path, source, loader.is_package(fullname)
+        try:
+            path = loader.get_filename(fullname)
+            source = loader.get_source(fullname)
+            if path is not None and source is not None:
+                return path, source, loader.is_package(fullname)
+        except AttributeError:
+            return
 
     def _get_module_via_sys_modules(self, fullname):
         """Attempt to fetch source code via sys.modules. This is specifically
