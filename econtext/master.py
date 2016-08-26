@@ -166,8 +166,8 @@ class ModuleResponder(object):
             except TypeError:
                 raise ImportError('could not find %r' % (fullname,))
 
-            LOG.debug('%r returned for %r: (%r, .., %r)',
-                      method, fullname, path, is_pkg)
+            LOG.debug('%s found %r: (%r, .., %r)',
+                      method.__name__, fullname, path, is_pkg)
             if is_pkg:
                 pkg_present = get_child_modules(path, fullname)
                 LOG.debug('get_child_modules(%r, %r) -> %r',
