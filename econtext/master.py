@@ -65,7 +65,7 @@ def create_child(*args):
     childfp.close()
     LOG.debug('create_child() child %d fd %d, parent %d, args %r',
               pid, parentfp.fileno(), os.getpid(), args)
-    return pid, parentfp
+    return pid, os.dup(parentfp.fileno())
 
 
 class LogForwarder(object):
@@ -259,12 +259,13 @@ class Stream(econtext.core.Stream):
         compressed = zlib.compress(minimize_source(source))
         return str(len(compressed)) + '\n' + compressed
 
+    create_child = staticmethod(create_child)
+
     def connect(self):
         LOG.debug('%r.connect()', self)
-        pid, sock = create_child(*self.get_boot_command())
-        self.receive_side = econtext.core.Side(self, os.dup(sock.fileno()))
-        self.transmit_side = econtext.core.Side(self, os.dup(sock.fileno()))
-        sock.close()
+        pid, fd = self.create_child(*self.get_boot_command())
+        self.receive_side = econtext.core.Side(self, fd)
+        self.transmit_side = econtext.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
