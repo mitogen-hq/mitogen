@@ -67,6 +67,6 @@ def with_broker(func):
         do_stuff(blah, 123)
     """
     def wrapper(*args, **kwargs):
-        return run_with_broker(*args, **kwargs)
+        return run_with_broker(func, *args, **kwargs)
     wrapper.func_name = func.func_name
     return wrapper
