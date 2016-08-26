@@ -21,7 +21,8 @@ class Stream(econtext.master.Stream):
         return bits + map(commands.mkarg, base)
 
 
-def connect(broker, hostname, username=None, name=None, python_path=None):
+def connect(broker, hostname, username=None, name=None,
+            ssh_path=None, python_path=None):
     """Get the named remote context, creating it if it does not exist."""
     if name is None:
         name = hostname
@@ -30,5 +31,7 @@ def connect(broker, hostname, username=None, name=None, python_path=None):
     context.stream = Stream(context)
     if python_path:
         context.stream.python_path = python_path
+    if ssh_path:
+        context.stream.ssh_path = ssh_path
     context.stream.connect()
     return broker.register(context)
