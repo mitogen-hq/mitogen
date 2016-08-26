@@ -45,7 +45,7 @@ class LoadModuleTest(ImporterMixin, unittest.TestCase):
     def test_module_file_set(self):
         self.context.enqueue_await_reply.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__file__, self.path)
+        self.assertEquals(mod.__file__, 'master:' + self.path)
 
     def test_module_loader_set(self):
         self.context.enqueue_await_reply.return_value = self.response
@@ -79,7 +79,7 @@ class LoadModulePackageTest(ImporterMixin, unittest.TestCase):
     def test_module_file_set(self):
         self.context.enqueue_await_reply.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__file__, self.path)
+        self.assertEquals(mod.__file__, 'master:' + self.path)
 
     def test_get_filename(self):
         self.context.enqueue_await_reply.return_value = self.response
