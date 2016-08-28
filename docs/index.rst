@@ -86,7 +86,7 @@ Module Forwarder
 
 In addition to an IO multiplexer, the external context is configured with a
 custom `PEP-302 importer`_ that forwards requests for unknown Python modules
-back to the host machine. When your program asks an external context to execute
+back to the host program. When your program asks an external context to execute
 code from an unknown module, all requisite modules are transferred
 automatically and imported entirely in RAM without need for further
 configuration.
@@ -100,6 +100,13 @@ configuration.
     # myapp/__init__.py, myapp/mypkg/__init__.py, and myapp/mypkg/mymodule.py
     # are transferred automatically.
     print context.call(myapp.mymodule.my_function)
+
+As the forwarder reuses the import mechanism, it should integrate cleanly with
+any tool such as `py2exe`_ that correctly implement the protocols in PEP-302,
+allowing truly single file applications to run across multiple machines without
+further effort.
+
+.. _py2exe: http://www.py2exe.org/
 
 
 Logging Forwarder
