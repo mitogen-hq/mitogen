@@ -34,6 +34,10 @@ GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
 
+# When loaded as __main__, ensure classes and functions gain a __module__
+# attribute consistent with the host process, so that pickling succeeds.
+__name__ = 'econtext.core'
+
 
 class Error(Exception):
     """Base for all exceptions raised by this module."""
@@ -831,13 +835,9 @@ class ExternalContext(object):
         econtext.__loader__ = self.importer
         econtext.slave = True
         econtext.core = sys.modules['__main__']
-        del sys.modules['__main__']
-
         sys.modules['econtext'] = econtext
         sys.modules['econtext.core'] = econtext.core
-        for klass in vars(econtext.core).itervalues():
-            if hasattr(klass, '__module__'):
-                klass.__module__ = 'econtext.core'
+        del sys.modules['__main__']
 
     def _setup_stdio(self):
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
