@@ -2,3 +2,8 @@
 div.figure {
     padding: 0;
 }
+
+body {
+    font-family: serif !important;
+}
+
