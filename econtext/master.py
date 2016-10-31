@@ -11,9 +11,11 @@ import logging
 import os
 import pkgutil
 import re
+import select
 import socket
 import sys
 import textwrap
+import time
 import types
 import zlib
 
@@ -68,16 +70,29 @@ def create_child(*args):
     return pid, os.dup(parentfp.fileno())
 
 
-def discard_until(fd, s):
-    buf = ''
-    while not buf.endswith(s):
-        print 'hi'
-        s = os.read(fd, 4096)
-        print ['got', s]
-        if not s:
-            raise econtext.core.StreamError('Expected %r, received %r', s, buf)
+def read_with_deadline(fd, size, deadline):
+    timeout = deadline - time.time()
+    if timeout > 0:
+        rfds, _, _ = select.select([fd], [], [], timeout)
+        if rfds:
+            return os.read(fd, size)
 
+    raise econtext.core.TimeoutError('read timed out')
+
+def iter_read(fd, deadline):
+    buf = ''
+    while True:
+        s = os.read(fd, 4096)
+        if not s:
+            raise econtext.core.StreamError('EOF on stream; received %r', buf)
         buf += s
+        yield buf
+
+
+def discard_until(fd, s, deadline):
+    for buf in iter_read(fd, deadline):
+        if buf.endswith(s):
+            return
 
 
 class LogForwarder(object):
@@ -282,13 +297,27 @@ class Stream(econtext.core.Stream):
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
-        discard_until(self.receive_side.fd, 'EC0\n')
+        self._connect_bootstrap()
+
+    def _ec0_received(self):
+        LOG.debug('%r._ec0_received()', self)
         econtext.core.write_all(self.transmit_side.fd, self.get_preamble())
-        discard_until(self.receive_side.fd, 'EC1\n')
+        discard_until(self.receive_side.fd, 'EC1\n', time.time() + 10.0)
+
+    def _connect_bootstrap(self):
+        discard_until(self.receive_side.fd, 'EC0\n', time.time() + 10.0)
+        return self._ec0_received()
 
 
 class Broker(econtext.core.Broker):
     shutdown_timeout = 5.0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, e_type, e_val, tb):
+        self.shutdown()
+        self.join()
 
 
 class Context(econtext.core.Context):

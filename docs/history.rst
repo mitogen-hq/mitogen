@@ -53,6 +53,7 @@ contribution to a solution, I hope you find it useful.
 Future
 ######
 
+* Move connect() logic to dispatcher thread.
 * Connect back using TCP and SSL.
 * Python 3 support.
 * Windows support via psexec or similar.
