@@ -75,11 +75,6 @@ def tty_create_child(*args):
     return pid, master_fd
 
 
-class StateMachine(object):
-    S_PW_PROMPT, S_SHELL, S_CONNECTED = range(3)
-    state = S_PW_PROMPT
-
-
 class Stream(econtext.master.Stream):
     create_child = staticmethod(tty_create_child)
     sudo_path = 'sudo'
