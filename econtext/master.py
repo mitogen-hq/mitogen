@@ -80,13 +80,11 @@ def read_with_deadline(fd, size, deadline):
     raise econtext.core.TimeoutError('read timed out')
 
 def iter_read(fd, deadline):
-    buf = ''
     while True:
         s = os.read(fd, 4096)
         if not s:
             raise econtext.core.StreamError('EOF on stream; received %r', buf)
-        buf += s
-        yield buf
+        yield s
 
 
 def discard_until(fd, s, deadline):
