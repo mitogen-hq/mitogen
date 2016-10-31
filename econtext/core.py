@@ -371,7 +371,19 @@ class Stream(BasicStream):
         :py:class:`StreamError` on failure."""
         IOLOG.debug('%r.on_receive()', self)
 
-        buf = os.read(self.receive_side.fd, 4096)
+        try:
+            buf = os.read(self.receive_side.fd, 4096)
+        except OSError, e:
+            # When connected over a TTY (i.e. sudo), disconnection of the
+            # remote end is signalled by EIO, rather than an empty read like
+            # sockets or pipes. Ideally this will be replaced later by a
+            # 'goodbye' message to avoid reading from a disconnected endpoint,
+            # allowing for more robust error reporting.
+            if e.errno != errno.EIO:
+                raise
+            LOG.error('%r.on_receive(): %s', self, e)
+            buf = ''
+
         self._input_buf += buf
         while self._receive_one():
             pass
