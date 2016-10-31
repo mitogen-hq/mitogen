@@ -50,7 +50,25 @@ def disable_echo(fd):
     termios.tcsetattr(fd, tcsetattr_flags, new)
 
 
+def close_nonstandard_fds():
+    for fd in xrange(3, 1024):
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
 def tty_create_child(*args):
+    """
+    Return a file descriptor connected to the master end of a pseudo-terminal,
+    whose slave end is connected to stdin/stdout/stderr of a new child process.
+    The child is created such that the pseudo-terminal becomes its controlling
+    TTY, ensuring access to /dev/tty returns a new file descriptor open on the
+    slave end.
+
+    :param args:
+        execl() arguments.
+    """
     master_fd, slave_fd = os.openpty()
     import econtext.core
     #econtext.core.set_nonblocking(master_fd)
@@ -62,9 +80,8 @@ def tty_create_child(*args):
         os.dup2(slave_fd, 0)
         os.dup2(slave_fd, 1)
         os.dup2(slave_fd, 2)
-        os.close(slave_fd)
-        os.close(master_fd)
-        #os.setsid()
+        close_nonstandard_fds()
+        os.setsid()
         os.close(os.open(os.ttyname(1), os.O_RDWR))
         os.execvp(args[0], args)
         raise SystemExit
@@ -81,7 +98,7 @@ class Stream(econtext.master.Stream):
     password = None
 
     def get_boot_command(self):
-        bits = [self.sudo_path, '-S', '-u', self._context.username]
+        bits = [self.sudo_path, '-u', self._context.username]
         return bits + super(Stream, self).get_boot_command()
 
     password_incorrect_msg = 'sudo password is incorrect'
@@ -91,6 +108,7 @@ class Stream(econtext.master.Stream):
         password_sent = False
         for buf in econtext.master.iter_read(self.receive_side.fd,
                                              time.time() + 10.0):
+            LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
                 return self._ec0_received()
             elif PASSWORD_PROMPT in buf.lower():
