@@ -5,11 +5,16 @@ import pty
 import termios
 import time
 
+import econtext.core
 import econtext.master
 
 
 LOG = logging.getLogger(__name__)
 PASSWORD_PROMPT = 'password'
+
+
+class PasswordError(econtext.core.Error):
+    pass
 
 
 def flags(names):
@@ -84,17 +89,20 @@ class Stream(econtext.master.Stream):
         bits = [self.sudo_path, '-S', '-u', self._context.username]
         return bits + super(Stream, self).get_boot_command()
 
+    password_incorrect_msg = 'sudo password is incorrect'
+    password_required_msg = 'sudo password is required'
+
     def _connect_bootstrap(self):
         password_sent = False
-        it = econtext.master.iter_read(self.receive_side.fd,
-                                       time.time() + 10.0)
-
-        for buf in it:
+        for buf in econtext.master.iter_read(self.receive_side.fd,
+                                             time.time() + 10.0):
             if buf.endswith('EC0\n'):
                 return self._ec0_received()
-            elif (not password_sent) and 'password' in buf.lower():
+            elif PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
-                    raise econtext.core.StreamError('password required')
+                    raise PasswordError(self.password_required_msg)
+                if password_sent:
+                    raise PasswordError(self.password_incorrect_msg)
                 LOG.debug('sending password')
                 os.write(self.transmit_side.fd, self.password + '\n')
                 password_sent = True
