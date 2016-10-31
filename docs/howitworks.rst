@@ -49,9 +49,9 @@ can be recovered by the bootstrapped process later. It then forks into a new
 process.
 
 After fork, the parent half overwrites its ``stdin`` with the read end of the
-pipe, and the child half begins reading the :py:mod:`zlib`-compressed payload
-supplied on ``stdin`` by the econtext master, and writing the decompressed
-result to the write-end of the UNIX pipe.
+pipe, and the child half writes the string ``EC0\n``, then begins reading the
+:py:mod:`zlib`-compressed payload supplied on ``stdin`` by the econtext master,
+and writing the decompressed result to the write-end of the UNIX pipe.
 
 To allow recovery of ``stdin`` for reuse by the bootstrapped process for
 master<->slave communication, it is necessary for the first stage to avoid
@@ -97,14 +97,15 @@ comments, while preserving line numbers. This reduces the compressed payload
 by around 20%.
 
 
-
 Signalling Success
 ##################
 
-Once the first stage has decompressed and written the bootstrap source code to
-its parent Python interpreter, it writes the string ``OK\n`` to ``stdout``
-before exitting. The master process waits for this string before considering
-bootstrap successful and the child's ``stdio`` ready to receive messages.
+Once the first stage has signalled ``EC0\n``, the master knows it is ready to
+receive the compressed bootstrap. After decompressing and writing the bootstrap
+source to its parent Python interpreter, the first stage writes the string
+``EC1\n`` to ``stdout`` before exiting. The master process waits for this
+string before considering bootstrap successful and the child's ``stdio`` ready
+to receive messages.
 
 
 ExternalContext.main()

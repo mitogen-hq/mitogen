@@ -68,6 +68,18 @@ def create_child(*args):
     return pid, os.dup(parentfp.fileno())
 
 
+def discard_until(fd, s):
+    buf = ''
+    while not buf.endswith(s):
+        print 'hi'
+        s = os.read(fd, 4096)
+        print ['got', s]
+        if not s:
+            raise econtext.core.StreamError('Expected %r, received %r', s, buf)
+
+        buf += s
+
+
 class LogForwarder(object):
     def __init__(self, context):
         self._context = context
@@ -228,8 +240,9 @@ class Stream(econtext.core.Stream):
             os.close(W)
             os.execv(sys.executable,['econtext:CONTEXT_NAME'])
         else:
+            os.write(1, 'EC0\n')
             os.fdopen(W,'wb',0).write(zlib.decompress(sys.stdin.read(input())))
-            print('OK')
+            os.write(1, 'EC1\n')
             sys.exit(0)
 
     def get_boot_command(self):
@@ -269,10 +282,9 @@ class Stream(econtext.core.Stream):
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
+        discard_until(self.receive_side.fd, 'EC0\n')
         econtext.core.write_all(self.transmit_side.fd, self.get_preamble())
-        s = os.read(self.receive_side.fd, 4096)
-        if s != 'OK\n':
-            raise econtext.core.StreamError('Bootstrap failed; stdout: %r', s)
+        discard_until(self.receive_side.fd, 'EC1\n')
 
 
 class Broker(econtext.core.Broker):
