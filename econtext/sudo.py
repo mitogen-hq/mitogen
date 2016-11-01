@@ -124,7 +124,30 @@ class Stream(econtext.master.Stream):
 
 
 def connect(broker, username=None, sudo_path=None, python_path=None, password=None):
-    """Get the named sudo context, creating it if it does not exist."""
+    """
+    Get the named sudo context, creating it if it does not exist.
+
+    :param econtext.core.Broker broker:
+        The broker that will own the context.
+
+    :param str username:
+        Username to pass to sudo as the ``-u`` parameter, defaults to ``root``.
+
+    :param str sudo_path:
+        Filename or complete path to the sudo binary. ``PATH`` will be searched
+        if given as a filename. Defaults to ``sudo``.
+
+    :param str python_path:
+        Filename or complete path to the Python binary. ``PATH`` will be
+        searched if given as a filename. Defaults to :py:data:`sys.executable`.
+
+    :param str password:
+        The password to use when authenticating to sudo. Depending on the sudo
+        configuration, this is either the current account password or the
+        target account password. :py:class:`econtext.sudo.PasswordError` will
+        be raised if sudo requests a password but none is provided.
+
+    """
     if username is None:
         username = 'root'
 
