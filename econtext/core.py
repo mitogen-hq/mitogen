@@ -154,6 +154,7 @@ class Importer(object):
             'econtext.compat.pkgutil',
             'econtext.master',
             'econtext.ssh',
+            'econtext.sudo',
             'econtext.utils',
         ]}
         self.tls = threading.local()
