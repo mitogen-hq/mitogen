@@ -70,6 +70,16 @@ def create_child(*args):
     return pid, os.dup(parentfp.fileno())
 
 
+def write_all(fd, s):
+    written = 0
+    while written < len(s):
+        rc = os.write(fd, buffer(s, written))
+        if not rc:
+            raise IOError('short write')
+        written += rc
+    return written
+
+
 def read_with_deadline(fd, size, deadline):
     timeout = deadline - time.time()
     if timeout > 0:
@@ -299,7 +309,7 @@ class Stream(econtext.core.Stream):
 
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)
-        econtext.core.write_all(self.transmit_side.fd, self.get_preamble())
+        write_all(self.transmit_side.fd, self.get_preamble())
         discard_until(self.receive_side.fd, 'EC1\n', time.time() + 10.0)
 
     def _connect_bootstrap(self):

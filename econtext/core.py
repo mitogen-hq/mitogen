@@ -89,16 +89,6 @@ def set_cloexec(fd):
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
-def write_all(fd, s):
-    written = 0
-    while written < len(s):
-        rc = os.write(fd, buffer(s, written))
-        if not rc:
-            raise IOError('short write')
-        written += rc
-    return written
-
-
 class Channel(object):
     def __init__(self, context, handle):
         self._context = context
