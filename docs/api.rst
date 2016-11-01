@@ -31,6 +31,7 @@ Context Factories
 
 .. autofunction:: econtext.master.connect
 .. autofunction:: econtext.ssh.connect
+.. autofunction:: econtext.sudo.connect
 
 
 Broker Class
