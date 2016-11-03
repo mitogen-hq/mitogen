@@ -42,12 +42,11 @@ def cfmakeraw((iflag, oflag, cflag, lflag, ispeed, ospeed, cc)):
 def disable_echo(fd):
     old = termios.tcgetattr(fd)
     new = cfmakeraw(old)
-    #new = old[:]
-    #new[3] &= ~flags('ECHO')
-    tcsetattr_flags = termios.TCSAFLUSH
-    if hasattr(termios, 'TCSASOFT'):
-        tcsetattr_flags |= termios.TCSASOFT
-    termios.tcsetattr(fd, tcsetattr_flags, new)
+    flags = (
+        termios.TCSAFLUSH |
+        getattr(termios, 'TCSASOFT', 0)
+    )
+    termios.tcsetattr(fd, flags, new)
 
 
 def close_nonstandard_fds():
@@ -70,8 +69,6 @@ def tty_create_child(*args):
         execl() arguments.
     """
     master_fd, slave_fd = os.openpty()
-    import econtext.core
-    #econtext.core.set_nonblocking(master_fd)
     disable_echo(master_fd)
     disable_echo(slave_fd)
 
@@ -153,7 +150,7 @@ def connect(broker, username=None, sudo_path=None, python_path=None, password=No
 
     context = econtext.master.Context(
         broker=broker,
-        name='sudo:' + username,
+        name='sudo.' + username,
         username=username)
 
     context.stream = Stream(context)
