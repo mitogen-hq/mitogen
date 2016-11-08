@@ -93,7 +93,7 @@ def iter_read(fd, deadline):
     while True:
         s = os.read(fd, 4096)
         if not s:
-            raise econtext.core.StreamError('EOF on stream; received %r', buf)
+            raise econtext.core.StreamError('EOF on stream')
         yield s
 
 
