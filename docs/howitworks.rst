@@ -231,19 +231,19 @@ Stream Protocol
 Once connected, a basic framing protocol is used to communicate between
 master and slave:
 
-+------------+-------+-----------------------------------------------------+
-| Field      | Size  | Description                                         |
-+============+=======+=====================================================+
-| ``hmac``   | 20    | SHA-1 MAC over (``length || data``)                 |
-+------------+-------+-----------------------------------------------------+
-| ``length`` | 4     | Message length                                      |
-+------------+-------+-----------------------------------------------------+
-| ``data``   | n/a   | Pickled message data.                               |
-+------------+-------+-----------------------------------------------------+
-
-The ``data`` component always consists of a 2-tuple, `(handle, data)`, where
-``handle`` is an integer describing the message target and ``data`` is the
-value to be delivered to the target.
++----------------+------+------------------------------------------------------+
+| Field          | Size | Description                                          |
++================+======+======================================================+
+| ``hmac``       | 20   | SHA-1 over (``context_id || handle || len || data``) |
++----------------+------+------------------------------------------------------+
+| ``handle``     | 4    | Integer target handle in recipient.                  |
++----------------+------+------------------------------------------------------+
+| ``reply_to``   | 4    | Integer response target ID.                          |
++----------------+------+------------------------------------------------------+
+| ``length``     | 4    | Message length                                       |
++----------------+------+------------------------------------------------------+
+| ``data``       | n/a  | Pickled message data.                                |
++----------------+------+------------------------------------------------------+
 
 Masters listen on the following handles:
 
@@ -303,6 +303,14 @@ The choice of Pickle is one area to be revisited later. All accounts suggest it
 cannot be used securely, however few of those accounts appear to be expert, and
 none mention any additional attacks that would not be prevented by using a
 restrictive class whitelist.
+
+.. note::
+
+    Since unpickling may trigger module loads, it is not possible to
+    deserialize data on the broker thread, as this will result in recursion
+    leading to a deadlock. Therefore any internal services (module loader,
+    logging forwarder, etc.) must rely on simple string formats, or only
+    perform serialization from within the broker thread.
 
 
 Use of HMAC

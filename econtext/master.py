@@ -35,6 +35,11 @@ DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
 COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 IOLOG_RE = re.compile(r'^[ ]*IOLOG.debug\(.+?\)$', re.M)
 
+PERMITTED_CLASSES = set([
+    ('econtext.core', 'CallError'),
+    ('econtext.core', 'Dead'),
+])
+
 
 def minimize_source(source):
     """Remove comments and docstrings from Python `source`, preserving line
@@ -111,11 +116,11 @@ class LogForwarder(object):
         name = '%s.%s' % (RLOG.name, self._context.name)
         self._log = logging.getLogger(name)
 
-    def forward_log(self, data):
+    def forward_log(self, reply_to, data):
         if data == econtext.core._DEAD:
             return
 
-        name, level, s = data
+        name, level, s = data.split('\x00', 2)
         self._log.log(level, '%s: %s', name, s)
 
 
@@ -184,12 +189,11 @@ class ModuleResponder(object):
                           _get_module_via_sys_modules,
                           _get_module_via_parent_enumeration]
 
-    def get_module(self, data):
-        LOG.debug('%r.get_module(%r)', self, data)
-        if data == econtext.core._DEAD:
+    def get_module(self, reply_to, fullname):
+        LOG.debug('%r.get_module(%r, %r)', self, reply_to, fullname)
+        if fullname == econtext.core._DEAD:
             return
 
-        reply_to, fullname = data
         try:
             for method in self.get_module_methods:
                 tup = method(self, fullname)
@@ -225,30 +229,10 @@ class Stream(econtext.core.Stream):
     #: The path to the remote Python interpreter.
     python_path = sys.executable
 
-    def __init__(self, context):
-        super(Stream, self).__init__(context)
-        self._permitted_classes = set([
-            ('econtext.core', 'CallError'),
-            ('econtext.core', 'Dead'),
-        ])
-
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
         self.enqueue(econtext.core.CALL_FUNCTION, econtext.core._DEAD)
-
-    def _find_global(self, module_name, class_name):
-        """Return the class implementing `module_name.class_name` or raise
-        `StreamError` if the module is not whitelisted."""
-        if (module_name, class_name) not in self._permitted_classes:
-            raise econtext.core.StreamError(
-                '%r attempted to unpickle %r in module %r',
-                self._context, class_name, module_name)
-        return getattr(sys.modules[module_name], class_name)
-
-    def allow_class(self, module_name, class_name):
-        """Add `module_name` to the list of permitted modules."""
-        self._permitted_modules.add((module_name, class_name))
 
     # base64'd and passed to 'python -c'. It forks, dups 0->100, creates a
     # pipe, then execs a new interpreter with a custom argv. 'CONTEXT_NAME' is
@@ -319,6 +303,15 @@ class Stream(econtext.core.Stream):
 
 class Broker(econtext.core.Broker):
     shutdown_timeout = 5.0
+
+    def _find_global(self, module_name, class_name):
+        """Return the class implementing `module_name.class_name` or raise
+        `StreamError` if the module is not whitelisted."""
+        if (module_name, class_name) not in PERMITTED_CLASSES:
+            raise econtext.core.StreamError(
+                '%r attempted to unpickle %r in module %r',
+                self._context, class_name, module_name)
+        return getattr(sys.modules[module_name], class_name)
 
     def __enter__(self):
         return self
