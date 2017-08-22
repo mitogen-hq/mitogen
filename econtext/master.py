@@ -450,7 +450,19 @@ class Router(econtext.core.Router):
         self.register(context, stream)
         return context
 
+    def sudo(self, **kwargs):
+        import econtext.sudo
+        return self.connect(econtext.sudo.Stream, **kwargs)
+
+    def ssh(self, **kwargs):
+        import econtext.ssh
+        return self.connect(econtext.ssh.Stream, **kwargs)
+
     def connect(self, klass, name=None, **kwargs):
+        via = kwargs.pop('via', None)
+        if via is not None:
+            return self.proxy_connect(via, klass, name=name, **kwargs)
+
         context_id = self.alloc_slave_id()
         return self._connect(context_id, klass, name=name, **kwargs)
 

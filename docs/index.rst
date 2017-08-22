@@ -78,22 +78,19 @@ to your network topology**.
 
 .. code::
 
-    bastion_host = router.connect(
-        econtext.ssh.Stream,
+    bastion_host = router.ssh(
         hostname='jump-box.mycorp.com'
     )
 
-    ssh_account = router.proxy_connect(
-        bastion_host,
-        econtext.sudo.Stream,
+    ssh_account = router.sudo(
         username='user_with_magic_ssh_key',
         password='sudo password',
+        via=bastion_host,
     )
 
-    internal_box = router.proxy_connect(
-        ssh_account,
-        econtext.ssh.Stream,
+    internal_box = router.ssh(
         hostname='billing0.internal.mycorp.com'
+        via=ssh_account,
     )
         
     internal_box.call(os.system, './run-nightly-billing.py')
