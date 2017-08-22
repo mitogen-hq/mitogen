@@ -76,6 +76,28 @@ program's domain of control outward to other machines, enabling your program to
 **manipulate machines behind a firewall**, or enable its **data plane to cohere
 to your network topology**.
 
+.. code::
+
+    bastion_host = router.connect(
+        econtext.ssh.Stream,
+        hostname='jump-box.mycorp.com'
+    )
+
+    ssh_account = router.proxy_connect(
+        bastion_host,
+        econtext.sudo.Stream,
+        username='user_with_magic_ssh_key',
+        password='sudo password',
+    )
+
+    internal_box = router.proxy_connect(
+        ssh_account,
+        econtext.ssh.Stream,
+        hostname='billing0.internal.mycorp.com'
+    )
+        
+    internal_box.call(os.system, './run-nightly-billing.py')
+
 The multiplexer also ensures the remote process is terminated if your Python
 program crashes, communication is lost, or the application code running in the
 context has hung.
