@@ -4,6 +4,7 @@ starting new contexts via SSH. Its size is also restricted, since it must be
 sent to any context that will be used to establish additional child contexts.
 """
 
+import errno
 import getpass
 import imp
 import inspect
@@ -94,11 +95,29 @@ def read_with_deadline(fd, size, deadline):
 
     raise econtext.core.TimeoutError('read timed out')
 
+
 def iter_read(fd, deadline):
+    if deadline is not None:
+        LOG.error('Warning: iter_read(.., deadline=...) unimplemented')
+
+    bits = []
     while True:
-        s = os.read(fd, 4096)
+        try:
+            s = os.read(fd, 4096)
+        except OSError, e:
+            IOLOG.debug('iter_read(%r) -> OSError: %s', fd, e)
+            # See econtext.core.on_receive() EIO comment.
+            if e.errno != errno.EIO:
+                raise
+            s = ''
+
         if not s:
-            raise econtext.core.StreamError('EOF on stream')
+            raise econtext.core.StreamError(
+                'EOF on stream; last 100 bytes received: %r' %
+                (''.join(bits)[-100:],)
+            )
+
+        bits.append(s)
         yield s
 
 
@@ -109,26 +128,30 @@ def discard_until(fd, s, deadline):
 
 
 class LogForwarder(object):
+    _log = None
+
     def __init__(self, context):
         self._context = context
-        self._context.add_handle_cb(self.forward_log,
-                                    handle=econtext.core.FORWARD_LOG)
-        name = '%s.%s' % (RLOG.name, self._context.name)
-        self._log = logging.getLogger(name)
+        context.add_handler(self.forward, econtext.core.FORWARD_LOG)
 
-    def forward_log(self, reply_to, data):
-        if data == econtext.core._DEAD:
-            return
+    def forward(self, msg):
+        if not self._log:
+            # Delay initialization so Stream has a chance to set Context's
+            # default name, if one wasn't otherwise specified.
+            name = '%s.%s' % (RLOG.name, self._context.name)
+            self._log = logging.getLogger(name)
+        if msg != econtext.core._DEAD:
+            name, level_s, s = msg.data.split('\x00', 2)
+            self._log.log(int(level_s), '%s: %s', name, s)
 
-        name, level, s = data.split('\x00', 2)
-        self._log.log(level, '%s: %s', name, s)
+    def __repr__(self):
+        return 'LogForwarder(%r)' % (self._context,)
 
 
 class ModuleResponder(object):
     def __init__(self, context):
         self._context = context
-        self._context.add_handle_cb(self.get_module,
-                                    handle=econtext.core.GET_MODULE)
+        context.add_handler(self.get_module, econtext.core.GET_MODULE)
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._context,)
@@ -189,11 +212,12 @@ class ModuleResponder(object):
                           _get_module_via_sys_modules,
                           _get_module_via_parent_enumeration]
 
-    def get_module(self, reply_to, fullname):
-        LOG.debug('%r.get_module(%r, %r)', self, reply_to, fullname)
-        if fullname == econtext.core._DEAD:
+    def get_module(self, msg):
+        LOG.debug('%r.get_module(%r)', self, msg)
+        if msg == econtext.core._DEAD:
             return
 
+        fullname = msg.data
         try:
             for method in self.get_module_methods:
                 tup = method(self, fullname)
@@ -215,24 +239,64 @@ class ModuleResponder(object):
                 pkg_present = None
 
             compressed = zlib.compress(source)
-            reply = (pkg_present, path, compressed)
-            self._context.enqueue(reply_to, reply)
+            self._context.send(
+                econtext.core.Message.pickled(
+                    (pkg_present, path, compressed),
+                    handle=msg.reply_to
+                )
+            )
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
-            self._context.enqueue(reply_to, None)
+            self._context.send(reply_to, None)
+
+
+class Message(econtext.core.Message):
+    """
+    Message subclass that controls unpickling.
+    """
+    def _find_global(self, module_name, class_name):
+        """Return the class implementing `module_name.class_name` or raise
+        `StreamError` if the module is not whitelisted."""
+        if (module_name, class_name) not in PERMITTED_CLASSES:
+            raise econtext.core.StreamError(
+                '%r attempted to unpickle %r in module %r',
+                self._context, class_name, module_name)
+        return getattr(sys.modules[module_name], class_name)
 
 
 class Stream(econtext.core.Stream):
     """
     Base for streams capable of starting new slaves.
     """
+    message_class = Message
+
     #: The path to the remote Python interpreter.
-    python_path = sys.executable
+    python_path = 'python2.7'
+
+    def construct(self, remote_name=None, python_path=None, **kwargs):
+        """Get the named context running on the local machine, creating it if
+        it does not exist."""
+        super(Stream, self).construct(**kwargs)
+        if python_path:
+            self.python_path = python_path
+
+        if remote_name is None:
+            remote_name = '%s@%s:%d'
+            remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
+        self.remote_name = remote_name
+        self.name = 'local.default'
 
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
-        self.enqueue(econtext.core.CALL_FUNCTION, econtext.core._DEAD)
+        self.send(
+            econtext.core.Message.pickled(
+                econtext.core._DEAD,
+                src_id=econtext.context_id,
+                dst_id=self.remote_id,
+                handle=econtext.core.CALL_FUNCTION
+            )
+        )
 
     # base64'd and passed to 'python -c'. It forks, dups 0->100, creates a
     # pipe, then execs a new interpreter with a custom argv. 'CONTEXT_NAME' is
@@ -240,39 +304,36 @@ class Stream(econtext.core.Stream):
     def _first_stage():
         import os,sys,zlib
         R,W=os.pipe()
+        R2,W2=os.pipe()
         if os.fork():
             os.dup2(0,100)
             os.dup2(R,0)
-            os.close(R)
-            os.close(W)
+            os.dup2(R2,101)
+            for f in R,R2,W,W2: os.close(f)
             os.execv(sys.executable,['econtext:CONTEXT_NAME'])
         else:
             os.write(1, 'EC0\n')
-            os.fdopen(W,'wb',0).write(zlib.decompress(sys.stdin.read(input())))
+            C = zlib.decompress(sys.stdin.read(input()))
+            os.fdopen(W,'w',0).write(C)
+            os.fdopen(W2,'w',0).write('%s\n%s' % (len(C),C))
             os.write(1, 'EC1\n')
             sys.exit(0)
 
     def get_boot_command(self):
-        name = self._context.remote_name
-        if name is None:
-            name = '%s@%s:%d'
-            name %= (getpass.getuser(), socket.gethostname(), os.getpid())
-
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[1:]))
         source = source.replace('    ', '\t')
-        source = source.replace('CONTEXT_NAME', name)
+        source = source.replace('CONTEXT_NAME', self.remote_name)
         encoded = source.encode('base64').replace('\n', '')
         return [self.python_path, '-c',
                 'exec("%s".decode("base64"))' % (encoded,)]
 
-    def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self._context)
-
     def get_preamble(self):
         source = inspect.getsource(econtext.core)
         source += '\nExternalContext().main%r\n' % ((
-            self._context.key,
+            econtext.context_id,       # parent_id
+            self.remote_id,            # context_id
+            self.key,
             LOG.level or logging.getLogger().level or logging.INFO,
         ),)
 
@@ -304,22 +365,6 @@ class Stream(econtext.core.Stream):
 class Broker(econtext.core.Broker):
     shutdown_timeout = 5.0
 
-    def _find_global(self, module_name, class_name):
-        """Return the class implementing `module_name.class_name` or raise
-        `StreamError` if the module is not whitelisted."""
-        if (module_name, class_name) not in PERMITTED_CLASSES:
-            raise econtext.core.StreamError(
-                '%r attempted to unpickle %r in module %r',
-                self._context, class_name, module_name)
-        return getattr(sys.modules[module_name], class_name)
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, e_type, e_val, tb):
-        self.shutdown()
-        self.join()
-
 
 class Context(econtext.core.Context):
     def __init__(self, *args, **kwargs):
@@ -328,7 +373,7 @@ class Context(econtext.core.Context):
         self.log_forwarder = LogForwarder(self)
 
     def on_disconnect(self, broker):
-        self.stream = None
+        pass
 
     def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
         """Invoke `fn([context,] *args, **kwargs)` in the external context.
@@ -350,23 +395,68 @@ class Context(econtext.core.Context):
             klass = None
 
         call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
-        result = self.enqueue_await_reply(econtext.core.CALL_FUNCTION,
-                                          deadline, call)
-        if isinstance(result, econtext.core.CallError):
-            raise result
-        return result
+        response = self.send_await(
+            econtext.core.Message.pickled(
+                call,
+                handle=econtext.core.CALL_FUNCTION
+            ),
+            deadline
+        )
+
+        decoded = response.unpickle()
+        if isinstance(decoded, econtext.core.CallError):
+            raise decoded
+        return decoded
 
     def call(self, fn, *args, **kwargs):
         """Invoke `fn(*args, **kwargs)` in the external context."""
         return self.call_with_deadline(None, False, fn, *args, **kwargs)
 
 
-def connect(broker, name='default', python_path=None):
-    """Get the named context running on the local machine, creating it if
-    it does not exist."""
-    context = Context(broker, name)
-    context.stream = Stream(context)
-    if python_path:
-        context.stream.python_path = python_path
-    context.stream.connect()
-    return broker.register(context)
+def _proxy_connect(econtext, name, context_id, klass, kwargs):
+    econtext.router.__class__ = Router  # TODO
+    context = econtext.router._connect(
+        context_id,
+        klass,
+        name=name,
+        **kwargs
+    )
+    return context.name
+
+
+class Router(econtext.core.Router):
+    next_slave_id = 10
+
+    def alloc_slave_id(self):
+        """Allocate a context_id for a slave about to be created."""
+        self.next_slave_id += 1
+        return self.next_slave_id
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, e_type, e_val, tb):
+        self.broker.shutdown()
+        self.broker.join()
+
+    def _connect(self, context_id, klass, name=None, **kwargs):
+        context = Context(self, context_id)
+        stream = klass(self, context.context_id, context.key, **kwargs)
+        context.name = name or stream.name
+        stream.connect()
+        self.register(context, stream)
+        return context
+
+    def connect(self, klass, name=None, **kwargs):
+        context_id = self.alloc_slave_id()
+        return self._connect(context_id, klass, name=name, **kwargs)
+
+    def proxy_connect(self, via_context, klass, name=None, **kwargs):
+        context_id = self.alloc_slave_id()
+        name = via_context.call_with_deadline(3.0, True,
+            _proxy_connect, name, context_id, klass, kwargs
+        )
+        name = '%s.%s' % (via_context.name, name)
+        print ['got name:', name]
+        self.add_route(context_id, via.context_id)
+        return Context(self, context_id, name=name)

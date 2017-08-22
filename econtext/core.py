@@ -25,18 +25,30 @@ import time
 import traceback
 import zlib
 
+#import linetracer
+#linetracer.start()
+
 
 LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
-IOLOG.setLevel(logging.INFO)
+#IOLOG.setLevel(logging.INFO)
 
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
+ADD_ROUTE = 103
 
-# When loaded as __main__, ensure classes and functions gain a __module__
-# attribute consistent with the host process, so that pickling succeeds.
-__name__ = 'econtext.core'
+CHUNK_SIZE = 16384
+
+
+if __name__ == 'econtext.core':
+    # When loaded using import mechanism, ExternalContext.main() will not have
+    # a chance to set the synthetic econtext global, so just import it here.
+    import econtext
+else:
+    # When loaded as __main__, ensure classes and functions gain a __module__
+    # attribute consistent with the host process, so that pickling succeeds.
+    __name__ = 'econtext.core'
 
 
 class Error(Exception):
@@ -89,57 +101,94 @@ def set_cloexec(fd):
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
+class Message(object):
+    dst_id = None
+    src_id = None
+    handle = None
+    reply_to = None
+    data = None
+
+    def __init__(self, **kwargs):
+        self.src_id = econtext.context_id
+        vars(self).update(kwargs)
+
+    _find_global = None
+
+    @classmethod
+    def pickled(cls, obj, **kwargs):
+        self = cls(**kwargs)
+        try:
+            self.data = cPickle.dumps(obj, protocol=2)
+        except cPickle.PicklingError, e:
+            self.data = cPickle.dumps(CallError(str(e)), protocol=2)
+        return self
+
+    def unpickle(self):
+        """Deserialize `data` into an object."""
+        IOLOG.debug('%r.unpickle()', self)
+        fp = cStringIO.StringIO(self.data)
+        unpickler = cPickle.Unpickler(fp)
+        if self._find_global:
+            unpickler.find_global = self._find_global
+        try:
+            return unpickler.load()
+        except (TypeError, ValueError), ex:
+            raise StreamError('invalid message: %s', ex)
+
+    def __repr__(self):
+        return 'Message(%r, %r, %r, %r, %r..)' % (
+            self.dst_id, self.src_id, self.handle, self.reply_to,
+            (self.data or '')[:50]
+        )
+
+
 class Channel(object):
     def __init__(self, context, handle):
         self._context = context
         self._handle = handle
         self._queue = Queue.Queue()
-        self._context.add_handle_cb(self._receive, handle)
+        self._context.add_handler(self._receive, handle)
 
-    def _receive(self, reply_to, data):
+    def _receive(self, msg):
         """Callback from the Stream; appends data to the internal queue."""
-        IOLOG.debug('%r._receive(%r)', self, data)
-        self._queue.put((reply_to, data))
+        IOLOG.debug('%r._receive(%r)', self, msg)
+        self._queue.put(msg)
 
     def close(self):
         """Indicate this channel is closed to the remote side."""
         IOLOG.debug('%r.close()', self)
-        self._context.enqueue(self._handle, _DEAD)
+        self._context.send(self._handle, _DEAD)
 
-    def send(self, data):
+    def put(self, data):
         """Send `data` to the remote."""
         IOLOG.debug('%r.send(%r)', self, data)
-        self._context.enqueue(self._handle, data)
+        self._context.send(self._handle, data)
 
-    def receive(self, timeout=None):
+    def get(self, timeout=None):
         """Receive an object, or ``None`` if `timeout` is reached."""
         IOLOG.debug('%r.on_receive(timeout=%r)', self, timeout)
         try:
-            reply_to, data = self._queue.get(True, timeout)
+            msg = self._queue.get(True, timeout)
         except Queue.Empty:
             return
 
-        IOLOG.debug('%r.on_receive() got %r', self, data)
+        IOLOG.debug('%r.on_receive() got %r', self, msg)
+
+        if msg == _DEAD:
+            raise ChannelError('Channel is closed.')
 
         # Must occur off the broker thread.
-        if not isinstance(data, Dead):
-            try:
-                data = self._context.broker.unpickle(data)
-            except (TypeError, ValueError), ex:
-                raise StreamError('invalid message: %s', ex)
-
-        if not isinstance(data, (Dead, CallError)):
-            return reply_to, data
-        elif data == _DEAD:
-            raise ChannelError('Channel is closed.')
-        else:
+        data = msg.unpickle()
+        if isinstance(data, CallError):
             raise data
+
+        return msg, data
 
     def __iter__(self):
         """Yield objects from this channel until it is closed."""
         while True:
             try:
-                yield self.receive()
+                yield self.get()
             except ChannelError:
                 return
 
@@ -154,20 +203,25 @@ class Importer(object):
 
     :param context: Context to communicate via.
     """
-    def __init__(self, context):
+    def __init__(self, context, core_src):
         self._context = context
         self._present = {'econtext': [
             'econtext.ansible',
             'econtext.compat',
             'econtext.compat.pkgutil',
             'econtext.master',
-            'econtext.proxy',
             'econtext.ssh',
             'econtext.sudo',
             'econtext.utils',
         ]}
         self.tls = threading.local()
-        self._cache = {}
+        self._cache = {
+            'econtext.core': (
+                None,
+                'econtext/core.py',
+                zlib.compress(core_src),
+            )
+        }
 
     def __repr__(self):
         return 'Importer()'
@@ -205,8 +259,10 @@ class Importer(object):
         try:
             ret = self._cache[fullname]
         except KeyError:
-            self._cache[fullname] = ret = cPickle.loads(
-                self._context.enqueue_await_reply_raw(GET_MODULE, None, fullname)
+            self._cache[fullname] = ret = (
+                self._context.send_await(
+                    Message(data=fullname, handle=GET_MODULE)
+                ).unpickle()
             )
 
         if ret is None:
@@ -250,7 +306,7 @@ class LogHandler(logging.Handler):
         try:
             msg = self.format(rec)
             encoded = '%s\x00%s\x00%s' % (rec.name, rec.levelno, msg)
-            self.context.enqueue(FORWARD_LOG, encoded)
+            self.context.send(Message(data=encoded, handle=FORWARD_LOG))
         finally:
             self.local.in_emit = False
 
@@ -352,11 +408,19 @@ class Stream(BasicStream):
     """
     _input_buf = ''
     _output_buf = ''
+    message_class = Message
 
-    def __init__(self, context):
-        self._context = context
-        self._rhmac = hmac.new(context.key, digestmod=sha)
+    def __init__(self, router, remote_id, key, **kwargs):
+        self._router = router
+        self.remote_id = remote_id
+        self.key = key
+        self._rhmac = hmac.new(key, digestmod=sha)
         self._whmac = self._rhmac.copy()
+        self.name = 'default'
+        self.construct(**kwargs)
+
+    def construct(self):
+        pass
 
     def on_receive(self, broker):
         """Handle the next complete message on the stream. Raise
@@ -364,7 +428,7 @@ class Stream(BasicStream):
         IOLOG.debug('%r.on_receive()', self)
 
         try:
-            buf = os.read(self.receive_side.fd, 4096)
+            buf = os.read(self.receive_side.fd, CHUNK_SIZE)
             IOLOG.debug('%r.on_receive() -> len %d', self, len(buf))
         except OSError, e:
             IOLOG.debug('%r.on_receive() -> OSError: %s', self, e)
@@ -373,39 +437,36 @@ class Stream(BasicStream):
             # sockets or pipes. Ideally this will be replaced later by a
             # 'goodbye' message to avoid reading from a disconnected endpoint,
             # allowing for more robust error reporting.
-            if e.errno != errno.EIO:
+            if e.errno not in (errno.EIO, errno.ECONNRESET):
                 raise
             LOG.error('%r.on_receive(): %s', self, e)
             buf = ''
 
         self._input_buf += buf
-        while self._receive_one():
+        while self._receive_one(broker):
             pass
 
         if not buf:
             return self.on_disconnect(broker)
 
-    HEADER_FMT = (
-        '>'
-        '20s'   # msg_mac
-        'L'     # handle
-        'L'     # reply_to
-        'L'     # msg_len
-    )
+    HEADER_FMT = '>20sLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
     MAC_LEN = sha.digest_size
 
-    def _receive_one(self):
+    def _receive_one(self, broker):
         if len(self._input_buf) < self.HEADER_LEN:
             return False
 
-        msg_mac, handle, reply_to, msg_len = struct.unpack(
+        msg = Message()
+        (msg_mac, msg.dst_id, msg.src_id,
+         msg.handle, msg.reply_to, msg_len) = struct.unpack(
             self.HEADER_FMT,
             self._input_buf[:self.HEADER_LEN]
         )
 
         if (len(self._input_buf) - self.HEADER_LEN) < msg_len:
-            IOLOG.debug('Input too short')
+            IOLOG.debug('%r: Input too short (want %d, got %d)',
+                        self, msg_len, len(self._input_buf) - self.HEADER_LEN)
             return False
 
         self._rhmac.update(self._input_buf[
@@ -418,60 +479,34 @@ class Stream(BasicStream):
                               expected_mac.encode('hex'),
                               self._input_buf[24:msg_len+24])
 
-        data = self._input_buf[self.HEADER_LEN:self.HEADER_LEN+msg_len]
+        msg.data = self._input_buf[self.HEADER_LEN:self.HEADER_LEN+msg_len]
         self._input_buf = self._input_buf[self.HEADER_LEN+msg_len:]
-        self._invoke(handle, reply_to, data)
+        self._router.route(msg)
         return True
-
-    def _invoke(self, handle, reply_to, data):
-        IOLOG.debug('%r._invoke(%r, %r, %r)', self, handle, reply_to, data)
-        try:
-            persist, fn = self._context._handle_map[handle]
-        except KeyError:
-            raise StreamError('%r: invalid handle: %r', self, handle)
-
-        if not persist:
-            del self._context._handle_map[handle]
-
-        try:
-            fn(reply_to, data)
-        except Exception:
-            LOG.debug('%r._invoke(%r, %r): %r crashed', self, handle, data, fn)
 
     def on_transmit(self, broker):
         """Transmit buffered messages."""
         IOLOG.debug('%r.on_transmit()', self)
-        written = os.write(self.transmit_side.fd, self._output_buf[:4096])
+        written = os.write(self.transmit_side.fd, self._output_buf[:CHUNK_SIZE])
         IOLOG.debug('%r.on_transmit() -> len %d', self, written)
         self._output_buf = self._output_buf[written:]
         if not self._output_buf:
             broker.stop_transmit(self)
 
-    def _enqueue(self, handle, data, reply_to):
-        IOLOG.debug('%r._enqueue(%r, %r)', self, handle, data)
-        msg = struct.pack('>LLL', handle, reply_to, len(data)) + data
-        self._whmac.update(msg)
-        self._output_buf += self._whmac.digest() + msg
-        self._context.broker.start_transmit(self)
-
-    def enqueue_raw(self, handle, data, reply_to=0):
-        """Enqueue `data` to `handle`, and tell the broker we have output. May
+    def send(self, msg):
+        """Send `data` to `handle`, and tell the broker we have output. May
         be called from any thread."""
-        self._context.broker.on_thread(self._enqueue, handle, data, reply_to)
-
-    def enqueue(self, handle, obj, reply_to=0):
-        """Enqueue `obj` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
-        try:
-            encoded = cPickle.dumps(obj, protocol=2)
-        except cPickle.PicklingError, e:
-            encoded = cPickle.dumps(CallError(e), protocol=2)
-        self.enqueue_raw(handle, encoded, reply_to)
+        IOLOG.debug('%r._send(%r)', self, msg)
+        pkt = struct.pack('>LLLLL', msg.dst_id, msg.src_id,
+                          msg.handle, msg.reply_to or 0, len(msg.data)
+        ) + msg.data
+        self._whmac.update(pkt)
+        self._output_buf += self._whmac.digest() + pkt
+        self._router.broker.start_transmit(self)
 
     def on_disconnect(self, broker):
         super(Stream, self).on_disconnect(broker)
-        if self._context.stream is self:
-            self._context.on_disconnect(broker)
+        self._router.on_disconnect(self, broker)
 
     def on_shutdown(self, broker):
         """Override BasicStream behaviour of immediately disconnecting."""
@@ -482,99 +517,95 @@ class Stream(BasicStream):
         self.transmit_side = Side(self, os.dup(wfd))
         set_cloexec(self.receive_side.fd)
         set_cloexec(self.transmit_side.fd)
-        self._context.stream = self
 
     def __repr__(self):
-        return '%s(%r)' % (self.__class__.__name__, self._context)
+        cls = type(self)
+        return '%s.%s(%r)' % (cls.__module__, cls.__name__, self.name)
 
 
 class Context(object):
     """
     Represent a remote context regardless of connection method.
     """
-    stream = None
     remote_name = None
 
-    def __init__(self, broker, name=None, hostname=None, username=None,
-                 key=None, parent_addr=None):
-        self.broker = broker
+    def __init__(self, router, context_id, name=None, key=None):
+        self.router = router
+        self.context_id = context_id
         self.name = name
-        self.hostname = hostname
-        self.username = username
         self.key = key or ('%016x' % random.getrandbits(128))
-        self.parent_addr = parent_addr
-        self._last_handle = itertools.count(1000)
+        #: handle -> (persistent?, func(msg))
         self._handle_map = {}
+        self._last_handle = itertools.count(1000)
+
+    def add_handler(self, fn, handle=None, persist=True):
+        """Invoke `fn(msg)` for each Message sent to `handle` from this
+        context. Unregister after one invocation if `persist` is ``False``. If
+        `handle` is ``None``, a new handle is allocated and returned."""
+        handle = handle or self._last_handle.next()
+        IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
+        self._handle_map[handle] = persist, fn
+        return handle
 
     def on_shutdown(self, broker):
         """Called during :py:meth:`Broker.shutdown`, informs callbacks
         registered with :py:meth:`add_handle_cb` the connection is dead."""
         LOG.debug('%r.on_shutdown(%r)', self, broker)
         for handle, (persist, fn) in self._handle_map.iteritems():
-            LOG.debug('%r.on_disconnect(): killing %r: %r', self, handle, fn)
+            LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
             fn(0, _DEAD)
 
     def on_disconnect(self, broker):
-        self.stream = None
         LOG.debug('Parent stream is gone, dying.')
         broker.shutdown()
 
-    def alloc_handle(self):
-        """Allocate a handle."""
-        return self._last_handle.next()
+    def send(self, msg):
+        """send `obj` to `handle`, and tell the broker we have output. May
+        be called from any thread."""
+        msg.dst_id = self.context_id
+        msg.src_id = econtext.context_id
+        self.router.route(msg)
 
-    def add_handle_cb(self, fn, handle, persist=True):
-        """Invoke `fn(obj)` for each `obj` sent to `handle`. Unregister after
-        one invocation if `persist` is ``False``."""
-        IOLOG.debug('%r.add_handle_cb(%r, %r, %r)', self, fn, handle, persist)
-        self._handle_map[handle] = persist, fn
-
-    def enqueue(self, handle, obj, reply_to=0):
-        if self.stream:
-            self.stream.enqueue(handle, obj, reply_to)
-
-    def enqueue_await_reply_raw(self, handle, deadline, data):
-        """Send `data` to `handle` and wait for a response with an optional
-        timeout."""
-        if self.broker._thread == threading.currentThread():  # TODO
+    def send_await(self, msg, deadline=None):
+        """Send `msg` and wait for a response with an optional timeout."""
+        if self.router.broker._thread == threading.currentThread():  # TODO
             raise SystemError('Cannot making blocking call on broker thread')
 
-        reply_to = self.alloc_handle()
-        LOG.debug('%r.enqueue_await_reply(%r, %r, %r) -> reply handle %d',
-                  self, handle, deadline, data, reply_to)
-
         queue = Queue.Queue()
-        receiver = lambda _reply_to, data: queue.put(data)
-        self.add_handle_cb(receiver, reply_to, persist=False)
-        self.stream.enqueue_raw(handle, data, reply_to)
+        msg.reply_to = self.add_handler(queue.put, persist=False)
+        LOG.debug('%r.send_await(%r)', self, msg)
 
+        self.send(msg)
         try:
-            data = queue.get(True, deadline)
+            msg = queue.get(True, deadline)
         except Queue.Empty:
             # self.broker.on_thread(self.stream.on_disconnect, self.broker)
             raise TimeoutError('deadline exceeded.')
 
-        if data == _DEAD:
+        if msg == _DEAD:
             raise StreamError('lost connection during call.')
 
-        IOLOG.debug('%r._enqueue_await_reply() -> %r', self, data)
-        return data
+        IOLOG.debug('%r._send_await() -> %r', self, msg)
+        return msg
 
-    def enqueue_await_reply(self, handle, deadline, obj):
-        """Like :py:meth:enqueue_await_reply_raw except that `data` is pickled
-        prior to sending, and the return value is unpickled on reception."""
-        if self.broker._thread == threading.currentThread():  # TODO
-            raise SystemError('Cannot making blocking call on broker thread')
+    def _invoke(self, msg):
+        #IOLOG.debug('%r._invoke(%r)', self, msg)
+        try:
+            persist, fn = self._handle_map[msg.handle]
+        except KeyError:
+            LOG.error('%r: invalid handle: %r', self, msg)
+            return
 
-        encoded = cPickle.dumps(obj, protocol=2)
-        result = self.enqueue_await_reply_raw(handle, deadline, encoded)
-        decoded = self.broker.unpickle(result)
-        IOLOG.debug('%r.enqueue_await_reply() -> %r', self, decoded)
-        return decoded
+        if not persist:
+            del self._handle_map[msg.handle]
+
+        try:
+            fn(msg)
+        except Exception:
+            LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
 
     def __repr__(self):
-        bits = filter(None, (self.name, self.hostname, self.username))
-        return 'Context(%s)' % ', '.join(map(repr, bits))
+        return 'Context(%s, %r)' % (self.context_id, self.name)
 
 
 class Waker(BasicStream):
@@ -651,12 +682,81 @@ class IoLogger(BasicStream):
 
     def on_receive(self, broker):
         LOG.debug('%r.on_receive()', self)
-        buf = os.read(self.receive_side.fd, 4096)
+        buf = os.read(self.receive_side.fd, CHUNK_SIZE)
         if not buf:
             return self.on_disconnect(broker)
 
         self._buf += buf
         self._log_lines()
+
+
+class Router(object):
+    """
+    Route messages between parent and child contexts, and invoke handlers
+    defined on our parent context. Router.route() straddles the Broker and user
+    threads, it is save to call from anywhere.
+    """
+    parent_context = None
+
+    def __init__(self, broker):
+        self.broker = broker
+        #: context ID -> Stream
+        self._stream_by_id = {}
+        #: List of contexts to notify of shutdown.
+        self._context_by_id = {}
+
+    def __repr__(self):
+        return 'Router(%r)' % (self.broker,)
+
+    def set_parent(self, context):
+        self.parent_context = context
+        context.add_handler(self._on_add_route, ADD_ROUTE)
+
+    def on_disconnect(self, stream, broker):
+        """Invoked by Stream.on_disconnect()."""
+        if not self.parent_context:
+            return
+
+        parent_stream = self._stream_by_id[self.parent_context.context_id]
+        if parent_stream is stream and self.parent_context:
+            self.parent_context.on_disconnect(broker)
+
+    def on_shutdown(self):
+        for context in self._context_by_id.itervalues():
+            context.on_shutdown()
+
+    def add_route(self, target_id, via_id):
+        try:
+            self._stream_by_id[target_id] = self._stream_by_id[via_id]
+        except KeyError:
+            LOG.error('%r: cant add route to %r via %r: no such stream',
+                      self, target_id, via_id)
+
+    def _on_add_route(self, msg):
+        target_id, via_id = map(int, msg.data.split('\x00'))
+        self.add_route(target_id, via_id)
+
+    def register(self, context, stream):
+        self._stream_by_id[context.context_id] = stream
+        self._context_by_id[context.context_id] = context
+        self.broker.start_receive(stream)
+
+    def _route(self, msg):
+        #LOG.debug('%r._route(%r)', self, msg)
+        context = self._context_by_id.get(msg.src_id)
+        if msg.dst_id == econtext.context_id and context is not None:
+            context._invoke(msg)
+            return
+
+        stream = self._stream_by_id.get(msg.dst_id)
+        if stream is None:
+            LOG.error('%r: no route for %r', self, msg)
+            return
+
+        stream.send(msg)
+
+    def route(self, msg):
+        self.broker.on_thread(self._route, msg)
 
 
 class Broker(object):
@@ -671,27 +771,16 @@ class Broker(object):
     #: gracefully before force-disconnecting them during :py:meth:`shutdown`.
     shutdown_timeout = 3.0
 
-    def __init__(self):
+    def __init__(self, on_shutdown=[]):
+        self._on_shutdown = on_shutdown
         self._alive = True
         self._queue = Queue.Queue()
-        self._contexts = {}
         self._readers = set()
         self._writers = set()
         self._waker = Waker(self)
         self._thread = threading.Thread(target=self._broker_main,
                                         name='econtext-broker')
         self._thread.start()
-
-    _find_global = None
-
-    def unpickle(self, data):
-        """Deserialize `data` into an object."""
-        IOLOG.debug('%r.unpickle(%r)', self, data)
-        fp = cStringIO.StringIO(data)
-        unpickler = cPickle.Unpickler(fp)
-        if self._find_global:
-            unpickler.find_global = self._find_global
-        return unpickler.load()
 
     def on_thread(self, func, *args, **kwargs):
         if threading.currentThread() == self._thread:
@@ -715,23 +804,12 @@ class Broker(object):
 
     def start_transmit(self, stream):
         IOLOG.debug('%r.start_transmit(%r)', self, stream)
+        assert stream.transmit_side
         self.on_thread(self._writers.add, stream.transmit_side)
 
     def stop_transmit(self, stream):
         IOLOG.debug('%r.stop_transmit(%r)', self, stream)
         self.on_thread(self._writers.discard, stream.transmit_side)
-
-    def register(self, context):
-        """Register `context` with this broker. Registration simply calls
-        :py:meth:`start_receive` on the context's :py:class:`Stream`, and records
-        a reference to it so that :py:meth:`Context.on_shutdown` can be
-        called during :py:meth:`shutdown`."""
-        LOG.debug('%r.register(%r) -> r=%r w=%r', self, context,
-                  context.stream.receive_side,
-                  context.stream.transmit_side)
-        self.start_receive(context.stream)
-        self._contexts[context.name] = context
-        return context
 
     def _call(self, stream, func):
         try:
@@ -771,9 +849,7 @@ class Broker(object):
         attribute is ``True``, or any :py:class:`Context` is still registered
         that is not the master. Used to delay shutdown while some important
         work is in progress (e.g. log draining)."""
-        return sum(c.stream is not None and c.name != 'master'
-                   for c in self._contexts.itervalues()) or \
-               sum(side.keep_alive for side in self._readers)
+        return sum(side.keep_alive for side in self._readers)
 
     def _broker_main(self):
         """Handle events until :py:meth:`shutdown`. On shutdown, invoke
@@ -797,9 +873,6 @@ class Broker(object):
                           'The most likely cause for this is one or '
                           'more child processes still connected to '
                           'our stdout/stderr pipes.', self)
-
-            for context in self._contexts.itervalues():
-                context.on_shutdown(self)
 
             for side in self._readers | self._writers:
                 LOG.error('_broker_main() force disconnecting %r', side)
@@ -855,34 +928,47 @@ class ExternalContext(object):
 
         The :py:class:`IoLogger` connected to ``stderr``.
     """
-    def _setup_master(self, key):
+    def _setup_master(self, parent_id, context_id, key):
         self.broker = Broker()
-        self.context = Context(self.broker, 'master', key=key)
+        self.router = Router(self.broker)
+        self.context = Context(self.router, parent_id, 'master', key=key)
+        self.router.set_parent(self.context)
         self.channel = Channel(self.context, CALL_FUNCTION)
-        self.context.stream = Stream(self.context)
-        self.context.stream.accept(100, 1)
+        self.stream = Stream(self.router, parent_id, key)
+        self.stream.accept(100, 1)
 
         os.wait()  # Reap first stage.
         os.close(100)
 
     def _setup_logging(self, log_level):
+        return
         logging.basicConfig(level=log_level)
         root = logging.getLogger()
         root.setLevel(log_level)
         root.handlers = [LogHandler(self.context)]
-        LOG.debug('Connected to %s', self.context)
 
     def _setup_importer(self):
-        self.importer = Importer(self.context)
+        with os.fdopen(101, 'r', 1) as fp:
+            core_size = int(fp.readline())
+            core_src = fp.read(core_size)
+            # Strip "ExternalContext.main()" call from last line.
+            core_src = '\n'.join(core_src.splitlines()[:-1])
+            fp.close()
+
+        self.importer = Importer(self.context, core_src)
         sys.meta_path.append(self.importer)
 
-    def _setup_package(self):
+    def _setup_package(self, context_id):
+        global econtext
         econtext = imp.new_module('econtext')
         econtext.__package__ = 'econtext'
         econtext.__path__ = []
         econtext.__loader__ = self.importer
         econtext.slave = True
+        econtext.context_id = context_id
         econtext.core = sys.modules['__main__']
+        econtext.core.__file__ = 'x/econtext/core.py'  # For inspect.getsource()
+        econtext.core.__loader__ = self.importer
         sys.modules['econtext'] = econtext
         sys.modules['econtext.core'] = econtext.core
         del sys.modules['__main__']
@@ -900,9 +986,8 @@ class ExternalContext(object):
             fp.close()
 
     def _dispatch_calls(self):
-        for data in self.channel:
-            LOG.debug('_dispatch_calls(%r)', data)
-            reply_to, data = data
+        for msg, data in self.channel:
+            LOG.debug('_dispatch_calls(%r)', msg)
             with_context, modname, klass, func, args, kwargs = data
             if with_context:
                 args = (self,) + args
@@ -912,20 +997,23 @@ class ExternalContext(object):
                 if klass:
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)
-                self.context.enqueue(reply_to, fn(*args, **kwargs))
+                ret = fn(*args, **kwargs)
+                self.context.send(Message.pickled(ret, handle=msg.reply_to))
             except Exception, e:
-                self.context.enqueue(reply_to, CallError(e))
+                e = CallError(str(e))
+                self.context.send(Message.pickled(e, handle=msg.reply_to))
 
-    def main(self, key, log_level):
-        self._setup_master(key)
+    def main(self, parent_id, context_id, key, log_level):
+        self._setup_master(parent_id, context_id, key)
         try:
             try:
                 self._setup_logging(log_level)
                 self._setup_importer()
-                self._setup_package()
+                self._setup_package(context_id)
                 self._setup_stdio()
+                LOG.debug('Connected to %s', self.context)
 
-                self.broker.register(self.context)
+                self.router.register(self.context, self.stream)
                 self._dispatch_calls()
                 LOG.debug('ExternalContext.main() normal exit')
             except BaseException:

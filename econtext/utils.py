@@ -22,6 +22,11 @@ def disable_site_packages():
             sys.path.remove(entry)
 
 
+def log_to_tmp():
+    import os
+    log_to_file(path='/tmp/econtext.%s.log' % (os.getpid(),))
+
+
 def log_to_file(path=None, io=True, level=logging.DEBUG):
     """Install a new :py:class:`logging.Handler` writing applications logs to
     the filesystem. Useful when debugging slave IO problems."""
@@ -43,19 +48,20 @@ def log_to_file(path=None, io=True, level=logging.DEBUG):
     log.handlers.insert(0, handler)
 
 
-def run_with_broker(func, *args, **kwargs):
+def run_with_router(func, *args, **kwargs):
     """Arrange for `func(broker, *args, **kwargs)` to run with a temporary
-    :py:class:`econtext.master.Broker`, ensuring the broker is correctly
-    shut down during normal or exceptional return."""
+    :py:class:`econtext.master.Router`, ensuring the Router and Broker are
+    correctly shut down during normal or exceptional return."""
     broker = econtext.master.Broker()
+    router = econtext.master.Router(broker)
     try:
-        return func(broker, *args, **kwargs)
+        return func(router, *args, **kwargs)
     finally:
         broker.shutdown()
         broker.join()
 
 
-def with_broker(func):
+def with_router(func):
     """Decorator version of :py:func:`run_with_broker`. Example:
 
     .. code-block:: python
@@ -67,6 +73,6 @@ def with_broker(func):
         do_stuff(blah, 123)
     """
     def wrapper(*args, **kwargs):
-        return run_with_broker(func, *args, **kwargs)
+        return run_with_router(func, *args, **kwargs)
     wrapper.func_name = func.func_name
     return wrapper

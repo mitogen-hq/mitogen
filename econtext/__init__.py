@@ -21,3 +21,8 @@ be expected. On the slave, it is built dynamically during startup.
 #:              econtext.utils.run_with_broker(main)
 #:
 slave = False
+
+
+#: This is ``0`` in a master, otherwise it is a master-generated ID unique to
+#: the slave context.
+context_id = 0

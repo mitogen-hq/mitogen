@@ -97,6 +97,17 @@ comments, while preserving line numbers. This reduces the compressed payload
 by around 20%.
 
 
+Preserving The `econtext.core` Source
+#####################################
+
+One final trick is implemented in the first stage: after bootstrapping the new
+slave, it writes a duplicate copy of the `econtext.core` source it just used to
+bootstrap it back into another pipe connected to the slave. The slave's module
+importer cache is initialized with a copy of the source, so that subsequent
+bootstraps of slave-of-slaves do not require the source to be fetched from the
+master a second time.
+
+
 Signalling Success
 ##################
 
@@ -231,19 +242,23 @@ Stream Protocol
 Once connected, a basic framing protocol is used to communicate between
 master and slave:
 
-+----------------+------+------------------------------------------------------+
-| Field          | Size | Description                                          |
-+================+======+======================================================+
-| ``hmac``       | 20   | SHA-1 over (``context_id || handle || len || data``) |
-+----------------+------+------------------------------------------------------+
-| ``handle``     | 4    | Integer target handle in recipient.                  |
-+----------------+------+------------------------------------------------------+
-| ``reply_to``   | 4    | Integer response target ID.                          |
-+----------------+------+------------------------------------------------------+
-| ``length``     | 4    | Message length                                       |
-+----------------+------+------------------------------------------------------+
-| ``data``       | n/a  | Pickled message data.                                |
-+----------------+------+------------------------------------------------------+
++--------------------+------+------------------------------------------------------+
+| Field              | Size | Description                                          |
++====================+======+======================================================+
+| ``hmac``           | 20   | SHA-1 over remaining fields.                         |
++--------------------+------+------------------------------------------------------+
+| ``dst_id``         | 4    | Integer source context ID.                           |
++--------------------+------+------------------------------------------------------+
+| ``src_id``         | 4    | Integer source context ID.                           |
++--------------------+------+------------------------------------------------------+
+| ``handle``         | 4    | Integer target handle in recipient.                  |
++--------------------+------+------------------------------------------------------+
+| ``reply_to``       | 4    | Integer response target ID.                          |
++--------------------+------+------------------------------------------------------+
+| ``length``         | 4    | Message length                                       |
++--------------------+------+------------------------------------------------------+
+| ``data``           | n/a  | Pickled message data.                                |
++--------------------+------+------------------------------------------------------+
 
 Masters listen on the following handles:
 
@@ -267,6 +282,29 @@ Slaves listen on the following handles:
     :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`,
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
+
+.. data:: econtext.core.ADD_ROUTE
+
+    Receives `(target_id, via_id)` integer tuples, describing how messages
+    arriving at this context on any Stream should be forwarded on the stream
+    associated with the Context `via_id` such that they are eventually
+    delivered to the target Context.
+
+    This message is necessary to inform intermediary contexts of the existence
+    of a downstream Context, as they do not otherwise parse traffic they are
+    fowarding to their downstream contexts that may cause new contexts to be
+    established.
+
+    Given a chain `master -> ssh1 -> sudo1`, no `ADD_ROUTE` message is
+    necessary, since :py:class:`econtext.core.Router` in the `ssh` context can
+    arrange to update its routes while setting up the new slave during
+    `proxy_connect()`.
+
+    However, given a chain like `master -> ssh1 -> sudo1 -> ssh2 -> sudo2`,
+    `ssh1` requires an `ADD_ROUTE` for `ssh2`, and both `ssh1` and `sudo1`
+    require an `ADD_ROUTE` for `sudo2`, as neither directly dealt with its
+    establishment.
+
 
 Additional handles are created to receive the result of every function call
 triggered by :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`.

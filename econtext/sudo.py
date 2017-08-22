@@ -94,9 +94,44 @@ class Stream(econtext.master.Stream):
     sudo_path = 'sudo'
     password = None
 
+    def construct(self, username=None, sudo_path=None, password=None, **kwargs):
+        """
+        Get the named sudo context, creating it if it does not exist.
+
+        :param econtext.core.Broker broker:
+            The broker that will own the context.
+
+        :param str username:
+            Username to pass to sudo as the ``-u`` parameter, defaults to ``root``.
+
+        :param str sudo_path:
+            Filename or complete path to the sudo binary. ``PATH`` will be searched
+            if given as a filename. Defaults to ``sudo``.
+
+        :param str python_path:
+            Filename or complete path to the Python binary. ``PATH`` will be
+            searched if given as a filename. Defaults to :py:data:`sys.executable`.
+
+        :param str password:
+            The password to use when authenticating to sudo. Depending on the sudo
+            configuration, this is either the current account password or the
+            target account password. :py:class:`econtext.sudo.PasswordError` will
+            be raised if sudo requests a password but none is provided.
+
+        """
+        super(Stream, self).construct(**kwargs)
+        self.username = username or 'root'
+        if sudo_path:
+            self.sudo_path = sudo_path
+        if password:
+            self.password = password
+        self.name = 'sudo.' + self.username
+
     def get_boot_command(self):
-        bits = [self.sudo_path, '-u', self._context.username]
-        return bits + super(Stream, self).get_boot_command()
+        bits = [self.sudo_path, '-u', self.username]
+        bits = bits + super(Stream, self).get_boot_command()
+        LOG.debug('sudo command line: %r', bits)
+        return bits
 
     password_incorrect_msg = 'sudo password is incorrect'
     password_required_msg = 'sudo password is required'
@@ -118,47 +153,3 @@ class Stream(econtext.master.Stream):
                 password_sent = True
         else:
             raise econtext.core.StreamError('bootstrap failed')
-
-
-def connect(broker, username=None, sudo_path=None, python_path=None, password=None):
-    """
-    Get the named sudo context, creating it if it does not exist.
-
-    :param econtext.core.Broker broker:
-        The broker that will own the context.
-
-    :param str username:
-        Username to pass to sudo as the ``-u`` parameter, defaults to ``root``.
-
-    :param str sudo_path:
-        Filename or complete path to the sudo binary. ``PATH`` will be searched
-        if given as a filename. Defaults to ``sudo``.
-
-    :param str python_path:
-        Filename or complete path to the Python binary. ``PATH`` will be
-        searched if given as a filename. Defaults to :py:data:`sys.executable`.
-
-    :param str password:
-        The password to use when authenticating to sudo. Depending on the sudo
-        configuration, this is either the current account password or the
-        target account password. :py:class:`econtext.sudo.PasswordError` will
-        be raised if sudo requests a password but none is provided.
-
-    """
-    if username is None:
-        username = 'root'
-
-    context = econtext.master.Context(
-        broker=broker,
-        name='sudo.' + username,
-        username=username)
-
-    context.stream = Stream(context)
-    if sudo_path:
-        context.stream.sudo_path = sudo_path
-    if password:
-        context.stream.password = password
-    if python_path:
-        context.stream.python_path = python_path
-    context.stream.connect()
-    return broker.register(context)

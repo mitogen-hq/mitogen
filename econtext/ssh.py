@@ -9,29 +9,25 @@ import econtext.master
 
 class Stream(econtext.master.Stream):
     python_path = 'python'
+
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
+    def construct(self, hostname, username=None, ssh_path=None, **kwargs):
+        super(Stream, self).construct(**kwargs)
+        self.hostname = hostname
+        self.username = username
+        if ssh_path:
+            self.ssh_path = ssh_path
+        self.name = 'ssh.' + hostname
+
+    def default_name(self):
+        return self.hostname
+
     def get_boot_command(self):
         bits = [self.ssh_path]
-        if self._context.username:
-            bits += ['-l', self._context.username]
-        bits.append(self._context.hostname)
+        if self.username:
+            bits += ['-l', self.username]
+        bits.append(self.hostname)
         base = super(Stream, self).get_boot_command()
         return bits + map(commands.mkarg, base)
-
-
-def connect(broker, hostname, username=None, name=None,
-            ssh_path=None, python_path=None):
-    """Get the named remote context, creating it if it does not exist."""
-    if name is None:
-        name = hostname
-
-    context = econtext.master.Context(broker, name, hostname, username)
-    context.stream = Stream(context)
-    if python_path:
-        context.stream.python_path = python_path
-    if ssh_path:
-        context.stream.ssh_path = ssh_path
-    context.stream.connect()
-    return broker.register(context)
