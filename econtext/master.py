@@ -456,7 +456,7 @@ class Router(econtext.core.Router):
 
     def proxy_connect(self, via_context, klass, name=None, **kwargs):
         context_id = self.alloc_slave_id()
-        name = via_context.call_with_deadline(3.0, True,
+        name = via_context.call_with_deadline(None, True,
             _proxy_connect, name, context_id, klass, kwargs
         )
         name = '%s.%s' % (via_context.name, name)

@@ -31,7 +31,7 @@ import zlib
 
 LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
-#IOLOG.setLevel(logging.INFO)
+IOLOG.setLevel(logging.INFO)
 
 GET_MODULE = 100
 CALL_FUNCTION = 101
@@ -682,7 +682,7 @@ class IoLogger(BasicStream):
         self.transmit_side.close()
 
     def on_receive(self, broker):
-        LOG.debug('%r.on_receive()', self)
+        IOLOG.debug('%r.on_receive()', self)
         buf = os.read(self.receive_side.fd, CHUNK_SIZE)
         if not buf:
             return self.on_disconnect(broker)
@@ -727,7 +727,7 @@ class Router(object):
             context.on_shutdown()
 
     def add_route(self, target_id, via_id):
-        LOG.info('add_route(%r, %r)', target_id, via_id)
+        LOG.debug('%r.add_route(%r, %r)', self, target_id, via_id)
         try:
             self._stream_by_id[target_id] = self._stream_by_id[via_id]
         except KeyError:
@@ -754,7 +754,7 @@ class Router(object):
 
         stream = self._stream_by_id.get(msg.dst_id)
         if stream is None:
-            LOG.error('%r: no route for %r', self, msg)
+            LOG.error('%r: no route for %r, my ID is %r', self, msg, econtext.context_id)
             return
 
         stream.send(msg)
