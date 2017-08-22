@@ -331,7 +331,8 @@ class Stream(econtext.core.Stream):
     def get_preamble(self):
         source = inspect.getsource(econtext.core)
         source += '\nExternalContext().main%r\n' % ((
-            econtext.context_id,       # parent_id
+            # econtext.context_id,       # parent_id
+            0,
             self.remote_id,            # context_id
             self.key,
             LOG.level or logging.getLogger().level or logging.INFO,
@@ -367,6 +368,8 @@ class Broker(econtext.core.Broker):
 
 
 class Context(econtext.core.Context):
+    via = None
+
     def __init__(self, *args, **kwargs):
         super(Context, self).__init__(*args, **kwargs)
         self.responder = ModuleResponder(self)
@@ -457,6 +460,20 @@ class Router(econtext.core.Router):
             _proxy_connect, name, context_id, klass, kwargs
         )
         name = '%s.%s' % (via_context.name, name)
-        print ['got name:', name]
-        self.add_route(context_id, via.context_id)
-        return Context(self, context_id, name=name)
+        context = Context(self, context_id, name=name)
+        context.via = via_context
+
+        child = via_context
+        parent = via_context.via
+        while parent is not None:
+            LOG.info('Adding route to %r for %r via %r', parent, context, child)
+            parent.send(
+                econtext.core.Message(
+                    data='%s\x00%s' % (context_id, child.context_id),
+                    handle=econtext.core.ADD_ROUTE,
+                )
+            )
+
+        self.add_route(context_id, via_context.context_id)
+        self._context_by_id[context.context_id] = context
+        return context

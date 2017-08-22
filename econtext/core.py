@@ -563,7 +563,8 @@ class Context(object):
         """send `obj` to `handle`, and tell the broker we have output. May
         be called from any thread."""
         msg.dst_id = self.context_id
-        msg.src_id = econtext.context_id
+        if msg.src_id is None:
+            msg.src_id = econtext.context_id
         self.router.route(msg)
 
     def send_await(self, msg, deadline=None):
@@ -726,6 +727,7 @@ class Router(object):
             context.on_shutdown()
 
     def add_route(self, target_id, via_id):
+        LOG.info('add_route(%r, %r)', target_id, via_id)
         try:
             self._stream_by_id[target_id] = self._stream_by_id[via_id]
         except KeyError:
@@ -733,10 +735,12 @@ class Router(object):
                       self, target_id, via_id)
 
     def _on_add_route(self, msg):
-        target_id, via_id = map(int, msg.data.split('\x00'))
-        self.add_route(target_id, via_id)
+        if msg != _DEAD:
+            target_id, via_id = map(int, msg.data.split('\x00'))
+            self.add_route(target_id, via_id)
 
     def register(self, context, stream):
+        LOG.debug('register(%r, %r)', context, stream)
         self._stream_by_id[context.context_id] = stream
         self._context_by_id[context.context_id] = context
         self.broker.start_receive(stream)
@@ -941,7 +945,6 @@ class ExternalContext(object):
         os.close(100)
 
     def _setup_logging(self, log_level):
-        return
         logging.basicConfig(level=log_level)
         root = logging.getLogger()
         root.setLevel(log_level)
@@ -1011,7 +1014,7 @@ class ExternalContext(object):
                 self._setup_importer()
                 self._setup_package(context_id)
                 self._setup_stdio()
-                LOG.debug('Connected to %s', self.context)
+                LOG.debug('Connected to %s; my ID is %r', self.context, context_id)
 
                 self.router.register(self.context, self.stream)
                 self._dispatch_calls()
