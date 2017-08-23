@@ -99,7 +99,7 @@ def read_with_deadline(fd, size, deadline):
 
 def iter_read(fd, deadline):
     if deadline is not None:
-        LOG.error('Warning: iter_read(.., deadline=...) unimplemented')
+        LOG.debug('Warning: iter_read(.., deadline=...) unimplemented')
 
     bits = []
     while True:
