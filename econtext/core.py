@@ -173,12 +173,14 @@ class Channel(object):
             return
 
         IOLOG.debug('%r.on_receive() got %r', self, msg)
-
         if msg == _DEAD:
-            raise ChannelError('Channel is closed.')
+            raise ChannelError('Channel closed by local end.')
 
         # Must occur off the broker thread.
         data = msg.unpickle()
+        if data == _DEAD:
+            raise ChannelError('Channel closed by remote end.')
+
         if isinstance(data, CallError):
             raise data
 
@@ -553,7 +555,7 @@ class Context(object):
         LOG.debug('%r.on_shutdown(%r)', self, broker)
         for handle, (persist, fn) in self._handle_map.iteritems():
             LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
-            fn(0, _DEAD)
+            fn(_DEAD)
 
     def on_disconnect(self, broker):
         LOG.debug('Parent stream is gone, dying.')
