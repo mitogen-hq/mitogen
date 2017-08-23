@@ -8,6 +8,7 @@ import errno
 import getpass
 import imp
 import inspect
+import itertools
 import logging
 import os
 import pkgutil
@@ -428,12 +429,7 @@ def _proxy_connect(econtext, name, context_id, klass, kwargs):
 
 
 class Router(econtext.core.Router):
-    next_slave_id = 10
-
-    def alloc_slave_id(self):
-        """Allocate a context_id for a slave about to be created."""
-        self.next_slave_id += 1
-        return self.next_slave_id
+    context_id_counter = itertools.count(1)
 
     def __enter__(self):
         return self
@@ -463,11 +459,13 @@ class Router(econtext.core.Router):
         if via is not None:
             return self.proxy_connect(via, klass, name=name, **kwargs)
 
-        context_id = self.alloc_slave_id()
+        context_id = self.context_id_counter.next()
         return self._connect(context_id, klass, name=name, **kwargs)
 
     def proxy_connect(self, via_context, klass, name=None, **kwargs):
-        context_id = self.alloc_slave_id()
+        context_id = self.context_id_counter.next()
+        # Must be added prior to _proxy_connect() to avoid a race.
+        self.add_route(context_id, via_context.context_id)
         name = via_context.call_with_deadline(None, True,
             _proxy_connect, name, context_id, klass, kwargs
         )
@@ -486,6 +484,5 @@ class Router(econtext.core.Router):
                 )
             )
 
-        self.add_route(context_id, via_context.context_id)
         self._context_by_id[context.context_id] = context
         return context
