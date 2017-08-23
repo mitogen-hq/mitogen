@@ -717,12 +717,10 @@ class Router(object):
 
     def on_disconnect(self, stream, broker):
         """Invoked by Stream.on_disconnect()."""
-        if not self.parent_context:
-            return
-
-        parent_stream = self._stream_by_id[self.parent_context.context_id]
-        if parent_stream is stream and self.parent_context:
-            self.parent_context.on_disconnect(broker)
+        for context in self._context_by_id.itervalues():
+            if self._stream_by_id[context.context_id] is stream:
+                del self._stream_by_id[context.context_id]
+                context.on_disconnect(broker)
 
     def on_shutdown(self):
         for context in self._context_by_id.itervalues():
