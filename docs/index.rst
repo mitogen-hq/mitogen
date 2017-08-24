@@ -83,16 +83,16 @@ to your network topology**.
     )
 
     ssh_account = router.sudo(
+        via=bastion_host,
         username='user_with_magic_ssh_key',
         password='sudo password',
-        via=bastion_host,
     )
 
     internal_box = router.ssh(
-        hostname='billing0.internal.mycorp.com'
         via=ssh_account,
+        hostname='billing0.internal.mycorp.com'
     )
-        
+
     internal_box.call(os.system, './run-nightly-billing.py')
 
 The multiplexer also ensures the remote process is terminated if your Python
