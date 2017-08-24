@@ -383,8 +383,7 @@ class Stream(econtext.core.Stream):
     def get_preamble(self):
         source = inspect.getsource(econtext.core)
         source += '\nExternalContext().main%r\n' % ((
-            # econtext.context_id,       # parent_id
-            0,
+            econtext.context_id,       # parent_id
             self.remote_id,            # context_id
             self.key,
             self.debug,
