@@ -955,8 +955,6 @@ class ExternalContext(object):
 
         The :py:class:`IoLogger` connected to ``stderr``.
     """
-    forwarder = None
-
     def _setup_master(self, parent_id, context_id, key):
         self.broker = Broker()
         self.router = Router(self.broker)
@@ -989,7 +987,7 @@ class ExternalContext(object):
             core_src = '\n'.join(core_src.splitlines()[:-1])
             fp.close()
 
-        self.importer = Importer(self.master, core_src)
+        self.importer = Importer(self.parent, core_src)
         sys.meta_path.append(self.importer)
 
     def _setup_package(self, context_id):

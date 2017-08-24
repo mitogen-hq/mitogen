@@ -261,7 +261,7 @@ class ModuleForwarder(object):
         return 'ModuleForwarder(%r)' % (self.context,)
 
     def _on_get_module(self, msg):
-        LOG.debug('%r._on_get_module(%r, %r)', self, msg)
+        LOG.debug('%r._on_get_module(%r)', self, msg)
         if msg == econtext.core._DEAD:
             return
 
@@ -289,7 +289,7 @@ class ModuleForwarder(object):
     def _on_got_source(self, msg, original_msg):
         LOG.debug('%r._on_got_source(%r, %r)', self, msg, original_msg)
         fullname = original_msg.data
-        self.importer._cache[fullname] = msg.unpickled()
+        self.importer._cache[fullname] = msg.unpickle()
         self.context.send(
             econtext.core.Message(
                 data=msg.data,
@@ -470,12 +470,16 @@ class Context(econtext.core.Context):
 
 def _proxy_connect(econtext, name, context_id, klass, kwargs):
     econtext.router.__class__ = Router  # TODO
+
     context = econtext.router._connect(
         context_id,
         klass,
         name=name,
         **kwargs
     )
+
+    LOG.debug('_proxy_connect(): constructing ModuleForwarder for %r', context)
+    ModuleForwarder(context, econtext.parent, econtext.importer)
     return context.name
 
 
