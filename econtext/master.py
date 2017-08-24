@@ -103,13 +103,8 @@ def iter_read(fd, deadline):
 
     bits = []
     while True:
-        try:
-            s = os.read(fd, 4096)
-        except OSError, e:
-            IOLOG.debug('iter_read(%r) -> OSError: %s', fd, e)
-            # See econtext.core.on_receive() EIO comment.
-            if e.errno != errno.EIO:
-                raise
+        s, disconnected = econtext.core.io_op(os.read, fd, 4096)
+        if disconnected:
             s = ''
 
         if not s:
