@@ -313,7 +313,7 @@ listen on the following handles:
 .. data:: econtext.core.GET_MODULE
 
     As with master's ``GET_MODULE``, except this implementation
-    (`:py:class:econtext.master.ModuleForwarder`) serves responses using
+    (:py:class:`econtext.master.ModuleForwarder`) serves responses using
     :py:class:`econtext.core.Importer`'s cache before forwarding the request to
     its parent context. The response is cached by each context in turn before
     being forwarded on to the slave context that originally made the request.
