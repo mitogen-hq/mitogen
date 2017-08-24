@@ -101,6 +101,20 @@ def set_cloexec(fd):
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
+def enable_debug_logging():
+    root = logging.getLogger()
+    root.setLevel(logging.DEBUG)
+    IOLOG.setLevel(logging.DEBUG)
+    fp = open('/tmp/econtext.%s.log' % (os.getpid(),), 'w', 1)
+    set_cloexec(fp.fileno())
+    handler = logging.StreamHandler(fp)
+    handler.formatter = logging.Formatter(
+        '%(asctime)s %(levelname).1s %(name)s: %(message)s',
+        '%H:%M:%S'
+    )
+    root.handlers.insert(0, handler)
+
+
 class Message(object):
     dst_id = None
     src_id = None
@@ -946,11 +960,12 @@ class ExternalContext(object):
         os.wait()  # Reap first stage.
         os.close(100)
 
-    def _setup_logging(self, log_level):
-        logging.basicConfig(level=log_level)
+    def _setup_logging(self, debug, log_level):
         root = logging.getLogger()
         root.setLevel(log_level)
         root.handlers = [LogHandler(self.context)]
+        if debug:
+            enable_debug_logging()
 
     def _setup_importer(self):
         with os.fdopen(101, 'r', 1) as fp:
@@ -1008,15 +1023,16 @@ class ExternalContext(object):
                 e = CallError(str(e))
                 self.context.send(Message.pickled(e, handle=msg.reply_to))
 
-    def main(self, parent_id, context_id, key, log_level):
+    def main(self, parent_id, context_id, key, debug, log_level):
         self._setup_master(parent_id, context_id, key)
         try:
             try:
-                self._setup_logging(log_level)
+                self._setup_logging(debug, log_level)
                 self._setup_importer()
                 self._setup_package(context_id)
                 self._setup_stdio()
-                LOG.debug('Connected to %s; my ID is %r', self.context, context_id)
+                LOG.debug('Connected to %s; my ID is %r, PID is %r',
+                          self.context, context_id, os.getpid())
 
                 self.router.register(self.context, self.stream)
                 self._dispatch_calls()

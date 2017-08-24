@@ -326,7 +326,10 @@ class Stream(econtext.core.Stream):
     #: The path to the remote Python interpreter.
     python_path = 'python2.7'
 
-    def construct(self, remote_name=None, python_path=None, **kwargs):
+    #: True to cause context to write verbose /tmp/econtext.<pid>.log.
+    debug = False
+
+    def construct(self, remote_name=None, python_path=None, debug=False, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
@@ -338,6 +341,7 @@ class Stream(econtext.core.Stream):
             remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
         self.remote_name = remote_name
         self.name = 'local.default'
+        self.debug = debug
 
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
@@ -388,6 +392,7 @@ class Stream(econtext.core.Stream):
             0,
             self.remote_id,            # context_id
             self.key,
+            self.debug,
             LOG.level or logging.getLogger().level or logging.INFO,
         ),)
 
@@ -506,7 +511,19 @@ class Router(econtext.core.Router):
         import econtext.ssh
         return self.connect(econtext.ssh.Stream, **kwargs)
 
+    debug = False
+
+    def enable_debug(self):
+        """
+        Cause this context and any descendant child contexts to write debug
+        logs to /tmp/econtext.<pid>.log.
+        """
+        econtext.core.enable_debug_logging()
+        self.debug = True
+
     def connect(self, klass, name=None, **kwargs):
+        kwargs.setdefault('debug', self.debug)
+
         via = kwargs.pop('via', None)
         if via is not None:
             return self.proxy_connect(via, klass, name=name, **kwargs)
