@@ -251,6 +251,58 @@ class ModuleResponder(object):
             self._context.send(reply_to, None)
 
 
+class ModuleForwarder(object):
+    """
+    Respond to GET_MODULE requests in a slave by forwarding the request to our
+    parent context, or satisfying the request from our local Importer cache.
+    """
+    def __init__(self, context, parent_context, importer):
+        self.context = context
+        self.parent_context = parent_context
+        self.importer = importer
+        context.add_handler(self._on_get_module, econtext.core.GET_MODULE)
+
+    def __repr__(self):
+        return 'ModuleForwarder(%r)' % (self.context,)
+
+    def _on_get_module(self, msg):
+        LOG.debug('%r._on_get_module(%r, %r)', self, msg)
+        if msg == econtext.core._DEAD:
+            return
+
+        fullname = msg.data
+        cached = self.importer._cache.get(fullname)
+        if cached:
+            self.context.send(
+                econtext.core.Message.pickled(
+                    data=cached,
+                    handle=msg.reply_to
+                )
+            )
+        else:
+            self.parent_context.send(
+                econtext.core.Message(
+                    data=msg.data,
+                    handle=econtext.core.GET_MODULE,
+                    reply_to=self.parent_context.add_handler(
+                        lambda m: self._on_got_source(m, msg),
+                        persist=False
+                    )
+                )
+            )
+
+    def _on_got_source(self, msg, original_msg):
+        LOG.debug('%r._on_got_source(%r, %r)', self, msg, original_msg)
+        fullname = original_msg.data
+        self.importer._cache[fullname] = msg.unpickled()
+        self.context.send(
+            econtext.core.Message(
+                data=msg.data,
+                handle=original_msg.reply_to
+            )
+        )
+
+
 class Message(econtext.core.Message):
     """
     Message subclass that controls unpickling.
