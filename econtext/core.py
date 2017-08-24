@@ -670,7 +670,7 @@ class Waker(BasicStream):
         """
         Read a byte from the self-pipe.
         """
-        os.read(self.receive_side.fd, 1)
+        os.read(self.receive_side.fd, 256)
 
 
 class IoLogger(BasicStream):
