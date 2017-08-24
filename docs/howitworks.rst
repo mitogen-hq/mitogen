@@ -273,6 +273,7 @@ Masters listen on the following handles:
     module named ``fullname``, and writes the source along with some metadata
     back to the handle ``reply_to``. If lookup fails, ``None`` is sent instead.
 
+
 Slaves listen on the following handles:
 
 .. data:: econtext.core.CALL_FUNCTION
@@ -304,6 +305,20 @@ Slaves listen on the following handles:
     `ssh1` requires an `ADD_ROUTE` for `ssh2`, and both `ssh1` and `sudo1`
     require an `ADD_ROUTE` for `sudo2`, as neither directly dealt with its
     establishment.
+
+
+Slaves that have ever been used to create a descendent child context also
+listen on the following handles:
+
+.. data:: econtext.core.GET_MODULE
+
+    As with master's ``GET_MODULE``, except this implementation
+    (`:py:class:econtext.master.ModuleForwarder`) serves responses using
+    :py:class:`econtext.core.Importer`'s cache before forwarding the request to
+    its parent context. The response is cached by each context in turn before
+    being forwarded on to the slave context that originally made the request.
+    In this way, the master need never re-send a module it has already sent to
+    a direct descendant.
 
 
 Additional handles are created to receive the result of every function call
