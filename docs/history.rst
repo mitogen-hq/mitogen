@@ -42,12 +42,12 @@ write the IO and log forwarders, rewrite the module importer, move from
 :py:func:`select.poll` to :py:func:`select.select`, and even refactor the
 special cases out of the main loop.
 
-So there you have it. As of writing :py:mod:`econtext.core` consists of 528
-source lines, and those 528 lines have taken me almost a decade to write. I
-have long had a preference for avoiding infrastructure work commercially, not
-least for the inescapable depression induced by considering the wasted effort
-across the world caused by universally horrific tooling. This is my small
-contribution to a solution, I hope you find it useful.
+So there you have it. As of writing :py:mod:`econtext.core` consists of 681
+source lines, and those 681 lines have taken over a decade to write. I have
+long had a preference for avoiding infrastructure work commercially, not least
+for the inescapable depression induced by considering the wasted effort across
+the world caused by universally horrific tooling. This is my small contribution
+to a solution, I hope you find it useful.
 
 
 Future

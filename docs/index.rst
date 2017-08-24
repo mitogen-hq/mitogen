@@ -2,7 +2,7 @@
 Python Execution Contexts
 =========================
 
-**5KiB of sugar and no fat!**
+**6KiB of sugar and no fat!**
 
 
 Introduction
@@ -39,16 +39,18 @@ The package's main feature is enabling your Python program to bootstrap and
 communicate with new copies of itself under its control running on remote
 machines, **using only an existing installed Python interpreter and SSH
 client**, something that by default can be found on almost all contemporary
-machines in the wild. To accomplish bootstrap, econtext uses a single 500 byte
-SSH command line and 5KB of its own source code sent to stdin of the remote SSH
+machines in the wild. To accomplish bootstrap, econtext uses a single 600 byte
+SSH command line and 6KB of its own source code sent to stdin of the remote SSH
 connection.
 
 .. code::
 
     $ python preamble_size.py
-    SSH command size: 411
-    Preamble size: 4845 (4.73KiB)
-    econtext.master size: 2640 (2.58KiB)
+    SSH command size: 576
+    Preamble size: 6360 (6.21KiB)
+    econtext.master size: 4104 (4.01KiB)
+    econtext.ssh size: 295 (0.29KiB)
+    econtext.sudo size: 1210 (1.18KiB)
 
 Once bootstrapped, the remote process is configured with a customizable
 **argv[0]**, readily visible to system administrators of the remote machine
