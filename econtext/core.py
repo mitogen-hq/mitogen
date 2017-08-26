@@ -1049,8 +1049,11 @@ class ExternalContext(object):
 
                 self.router.register(self.parent, self.stream)
                 self.router.register(self.master, self.stream)
+
+                sys.executable, = eval(os.environ.pop('ARGV0'))
                 LOG.debug('Connected to %s; my ID is %r, PID is %r',
                           self.parent, context_id, os.getpid())
+                LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 self._dispatch_calls()
                 LOG.debug('ExternalContext.main() normal exit')
