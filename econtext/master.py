@@ -335,7 +335,6 @@ class Stream(econtext.core.Stream):
             remote_name = '%s@%s:%d'
             remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
         self.remote_name = remote_name
-        self.name = 'local.default'
         self.debug = debug
 
     def on_shutdown(self, broker):
@@ -398,6 +397,7 @@ class Stream(econtext.core.Stream):
     def connect(self):
         LOG.debug('%r.connect()', self)
         pid, fd = self.create_child(*self.get_boot_command())
+        self.name = 'local.%s' % (pid,)
         self.receive_side = econtext.core.Side(self, fd)
         self.transmit_side = econtext.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
@@ -412,7 +412,7 @@ class Stream(econtext.core.Stream):
 
     def _connect_bootstrap(self):
         discard_until(self.receive_side.fd, 'EC0\n', time.time() + 10.0)
-        return self._ec0_received()
+        self._ec0_received()
 
 
 class Broker(econtext.core.Broker):
@@ -486,29 +486,6 @@ def _proxy_connect(econtext, name, context_id, klass, kwargs):
 class Router(econtext.core.Router):
     context_id_counter = itertools.count(1)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, e_type, e_val, tb):
-        self.broker.shutdown()
-        self.broker.join()
-
-    def _connect(self, context_id, klass, name=None, **kwargs):
-        context = Context(self, context_id)
-        stream = klass(self, context.context_id, context.key, **kwargs)
-        context.name = name or stream.name
-        stream.connect()
-        self.register(context, stream)
-        return context
-
-    def sudo(self, **kwargs):
-        import econtext.sudo
-        return self.connect(econtext.sudo.Stream, **kwargs)
-
-    def ssh(self, **kwargs):
-        import econtext.ssh
-        return self.connect(econtext.ssh.Stream, **kwargs)
-
     debug = False
 
     def enable_debug(self):
@@ -518,6 +495,29 @@ class Router(econtext.core.Router):
         """
         econtext.core.enable_debug_logging()
         self.debug = True
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, e_type, e_val, tb):
+        self.broker.shutdown()
+        self.broker.join()
+
+    def sudo(self, **kwargs):
+        import econtext.sudo
+        return self.connect(econtext.sudo.Stream, **kwargs)
+
+    def ssh(self, **kwargs):
+        import econtext.ssh
+        return self.connect(econtext.ssh.Stream, **kwargs)
+
+    def _connect(self, context_id, klass, name=None, **kwargs):
+        context = Context(self, context_id)
+        stream = klass(self, context.context_id, context.key, **kwargs)
+        stream.connect()
+        context.name = name or stream.name
+        self.register(context, stream)
+        return context
 
     def connect(self, klass, name=None, **kwargs):
         kwargs.setdefault('debug', self.debug)
