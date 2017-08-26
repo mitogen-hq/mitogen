@@ -473,7 +473,7 @@ class Stream(BasicStream):
         if not buf:
             return self.on_disconnect(broker)
 
-    HEADER_FMT = '>20sLLLLL'
+    HEADER_FMT = '>20shhLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
     MAC_LEN = sha.digest_size
 
@@ -528,7 +528,7 @@ class Stream(BasicStream):
         """Send `data` to `handle`, and tell the broker we have output. May
         be called from any thread."""
         IOLOG.debug('%r._send(%r)', self, msg)
-        pkt = struct.pack('>LLLLL', msg.dst_id, msg.src_id,
+        pkt = struct.pack('>hhLLL', msg.dst_id, msg.src_id,
                           msg.handle, msg.reply_to or 0, len(msg.data)
         ) + msg.data
         self._whmac.update(pkt)
