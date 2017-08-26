@@ -107,6 +107,9 @@ def io_op(func, *args):
     signalled by EIO, rather than an empty read like sockets or pipes. Ideally
     this will be replaced later by a 'goodbye' message to avoid reading from a
     disconnected endpoint, allowing for more robust error reporting.
+
+    When connected over a socket (e.g. econtext.master.create_child()),
+    ECONNRESET may be triggered by any read or write.
     """
     try:
         return func(*args), False
