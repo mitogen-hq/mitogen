@@ -255,13 +255,13 @@ class Importer(object):
             'econtext.utils',
         ]}
         self.tls = threading.local()
-        self._cache = {
-            'econtext.core': (
+        self._cache = {}
+        if core_src:
+            self._cache['econtext.core'] = (
                 None,
                 'econtext/core.py',
                 zlib.compress(core_src),
             )
-        }
 
     def __repr__(self):
         return 'Importer()'
@@ -963,7 +963,7 @@ class ExternalContext(object):
 
         The :py:class:`IoLogger` connected to ``stderr``.
     """
-    def _setup_master(self, parent_id, context_id, key):
+    def _setup_master(self, parent_id, context_id, key, in_fd, out_fd):
         self.broker = Broker()
         self.router = Router(self.broker)
         self.master = Context(self.router, 0, 'master')
@@ -975,10 +975,13 @@ class ExternalContext(object):
         self.channel = Channel(self.master, CALL_FUNCTION)
         self.stream = Stream(self.router, parent_id, key)
         self.stream.name = 'parent'
-        self.stream.accept(100, 1)
+        self.stream.accept(in_fd, out_fd)
 
-        os.wait()  # Reap first stage.
-        os.close(100)
+        os.close(in_fd)
+        try:
+            os.wait()  # Reap first stage.
+        except OSError:
+            pass  # No first stage exists (e.g. fakessh)
 
     def _setup_logging(self, debug, log_level):
         root = logging.getLogger()
@@ -987,13 +990,16 @@ class ExternalContext(object):
         if debug:
             enable_debug_logging()
 
-    def _setup_importer(self):
-        with os.fdopen(101, 'r', 1) as fp:
-            core_size = int(fp.readline())
-            core_src = fp.read(core_size)
-            # Strip "ExternalContext.main()" call from last line.
-            core_src = '\n'.join(core_src.splitlines()[:-1])
-            fp.close()
+    def _setup_importer(self, core_src_fd):
+        if core_src_fd:
+            with os.fdopen(101, 'r', 1) as fp:
+                core_size = int(fp.readline())
+                core_src = fp.read(core_size)
+                # Strip "ExternalContext.main()" call from last line.
+                core_src = '\n'.join(core_src.splitlines()[:-1])
+                fp.close()
+        else:
+            core_src = None
 
         self.importer = Importer(self.parent, core_src)
         sys.meta_path.append(self.importer)
@@ -1040,17 +1046,20 @@ class ExternalContext(object):
                 ret = fn(*args, **kwargs)
                 self.master.send(Message.pickled(ret, handle=msg.reply_to))
             except Exception, e:
+                LOG.debug('_dispatch_calls: %s', e)
                 e = CallError(str(e))
                 self.master.send(Message.pickled(e, handle=msg.reply_to))
 
-    def main(self, parent_id, context_id, key, debug, log_level):
-        self._setup_master(parent_id, context_id, key)
+    def main(self, parent_id, context_id, key, debug, log_level,
+             in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True):
+        self._setup_master(parent_id, context_id, key, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
-                self._setup_importer()
+                self._setup_importer(core_src_fd)
                 self._setup_package(context_id)
-                self._setup_stdio()
+                if setup_stdio:
+                    self._setup_stdio()
 
                 self.router.register(self.parent, self.stream)
                 self.router.register(self.master, self.stream)
