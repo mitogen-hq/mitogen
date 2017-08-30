@@ -25,9 +25,6 @@ import time
 import traceback
 import zlib
 
-#import linetracer
-#linetracer.start()
-
 
 LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
