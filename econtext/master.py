@@ -431,6 +431,35 @@ class Context(econtext.core.Context):
     def on_disconnect(self, broker):
         pass
 
+    def _discard_result(self, msg):
+        data = msg.unpickle()
+        if isinstance(data, Exception):
+            try:
+                raise data
+            except Exception:
+                LOG.exception('_discard_result')
+        else:
+            LOG.debug('_discard_result: %r', data)
+
+    def call_async(self, with_context, fn, *args, **kwargs):
+        LOG.debug('%r.call_async(%r, %r, *%r, **%r)',
+                  self, with_context, fn, args, kwargs)
+
+        if isinstance(fn, types.MethodType) and \
+           isinstance(fn.im_self, (type, types.ClassType)):
+            klass = fn.im_self.__name__
+        else:
+            klass = None
+
+        call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
+        self.send(
+            econtext.core.Message.pickled(
+                call,
+                handle=econtext.core.CALL_FUNCTION,
+                reply_to=self.add_handler(self._discard_result),
+            )
+        )
+
     def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
         """Invoke `fn([context,] *args, **kwargs)` in the external context.
 
