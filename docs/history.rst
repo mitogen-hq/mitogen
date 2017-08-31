@@ -66,3 +66,4 @@ Future
 * Comprehensive integration tests.
 * Make pickler deliver a CallError to the intended recipient when a type is
   rejected during unpickling.
+* Secure and granular SSH agent forwarding.
