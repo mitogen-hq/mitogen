@@ -2,7 +2,7 @@
 Python Execution Contexts
 =========================
 
-**6KiB of sugar and no fat!**
+**6KiB of sugar and no fat**
 
 
 Introduction
@@ -288,3 +288,10 @@ There is currently no support for Python 3, and no solid plan for supporting it
 any time soon. Due to constraints on implementation size and desire for
 compatibility with ancient Python versions, conventional porting methods such
 as ``six.py`` are likely to be unsuitable.
+
+
+Zero Dependencies
+#################
+
+Econtext is implemented entirely using the standard library functionality and
+interfaces that were available in Python 2.4.
