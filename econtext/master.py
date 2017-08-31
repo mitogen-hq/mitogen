@@ -31,7 +31,7 @@ import econtext.core
 
 LOG = logging.getLogger('econtext')
 IOLOG = logging.getLogger('econtext.io')
-RLOG = logging.getLogger('econtext.ctx')
+RLOG = logging.getLogger('ctx')
 
 DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
 COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
