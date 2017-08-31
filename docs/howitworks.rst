@@ -284,6 +284,13 @@ Slaves listen on the following handles:
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
+    When this channel is closed (by way of sending ``_DEAD`` to it), the
+    slave's main thread begins graceful shutdown of its own `Broker` and
+    `Router`. Each slave is responsible for sending ``_DEAD`` to each of its
+    directly connected slaves in response to the master sending ``_DEAD`` to
+    it, and arranging for the connection to its parent context to be closed
+    shortly thereafter.
+
 .. data:: econtext.core.ADD_ROUTE
 
     Receives `(target_id, via_id)` integer tuples, describing how messages
@@ -408,9 +415,9 @@ Python if it can satisfy the import by itself, and if not, indicating to Python
 that it is capable of loading the module.
 
 In :py:meth:`load_module() <econtext.core.Importer.load_module>` an RPC is
-started to the master, requesting the module source code. Once the source is
-fetched, the method builds a new module object using the best practice
-documented in PEP-302.
+started to the parent context, requesting the module source code. Once the
+source is fetched, the method builds a new module object using the best
+practice documented in PEP-302.
 
 
 Minimizing Roundtrips
