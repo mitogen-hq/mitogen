@@ -27,7 +27,7 @@ def log_to_tmp():
     log_to_file(path='/tmp/econtext.%s.log' % (os.getpid(),))
 
 
-def log_to_file(path=None, io=True, level=logging.DEBUG):
+def log_to_file(path=None, io=True, level=logging.INFO):
     """Install a new :py:class:`logging.Handler` writing applications logs to
     the filesystem. Useful when debugging slave IO problems."""
     log = logging.getLogger('')
