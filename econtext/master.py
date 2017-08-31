@@ -533,6 +533,12 @@ class Router(econtext.core.Router):
         self.broker.shutdown()
         self.broker.join()
 
+    def context_by_id(self, context_id):
+        return self._context_by_id.get(context_id)
+
+    def local(self, **kwargs):
+        return self.connect(Stream, **kwargs)
+
     def sudo(self, **kwargs):
         import econtext.sudo
         return self.connect(econtext.sudo.Stream, **kwargs)
