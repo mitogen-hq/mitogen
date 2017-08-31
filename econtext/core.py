@@ -173,15 +173,16 @@ class Message(object):
 
 
 class Channel(object):
-    def __init__(self, context, handle=None):
-        self._context = context
+    def __init__(self, router, dst_id=None, handle=None):
+        self._router = router
         self._queue = Queue.Queue()
+        self._dst_id = dst_id
         self.handle = handle  # Avoid __repr__ crash in add_handler()
-        self.handle = context.add_handler(self._receive, handle)
+        self.handle = router.add_handler(self._on_receive, handle)
 
-    def _receive(self, msg):
+    def _on_receive(self, msg):
         """Callback from the Stream; appends data to the internal queue."""
-        IOLOG.debug('%r._receive(%r)', self, msg)
+        IOLOG.debug('%r._on_receive(%r)', self, msg)
         self._queue.put(msg)
 
     def close(self):
@@ -192,7 +193,13 @@ class Channel(object):
     def put(self, data):
         """Send `data` to the remote."""
         IOLOG.debug('%r.send(%r)', self, data)
-        self._context.send(self.handle, data)
+        self._router.send(
+            Message.pickled(
+                data,
+                dst_id=self._dst_id,
+                handle=self.handle
+            )
+        )
 
     def get(self, timeout=None):
         """Receive an object, or ``None`` if `timeout` is reached."""
@@ -233,7 +240,7 @@ class Channel(object):
                 return
 
     def __repr__(self):
-        return 'Channel(%r, %r)' % (self._context, self.handle)
+        return 'Channel(%r, %r)' % (self._router, self.handle)
 
 
 class Importer(object):
@@ -580,26 +587,6 @@ class Context(object):
         self.context_id = context_id
         self.name = name
         self.key = key or ('%016x' % random.getrandbits(128))
-        #: handle -> (persistent?, func(msg))
-        self._handle_map = {}
-        self._last_handle = itertools.count(1000)
-
-    def add_handler(self, fn, handle=None, persist=True):
-        """Invoke `fn(msg)` for each Message sent to `handle` from this
-        context. Unregister after one invocation if `persist` is ``False``. If
-        `handle` is ``None``, a new handle is allocated and returned."""
-        handle = handle or self._last_handle.next()
-        IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
-        self._handle_map[handle] = persist, fn
-        return handle
-
-    def on_shutdown(self, broker):
-        """Called during :py:meth:`Broker.shutdown`, informs callbacks
-        registered with :py:meth:`add_handle_cb` the connection is dead."""
-        LOG.debug('%r.on_shutdown(%r)', self, broker)
-        for handle, (persist, fn) in self._handle_map.iteritems():
-            LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
-            fn(_DEAD)
 
     def on_disconnect(self, broker):
         LOG.debug('Parent stream is gone, dying.')
@@ -619,7 +606,7 @@ class Context(object):
             raise SystemError('Cannot making blocking call on broker thread')
 
         queue = Queue.Queue()
-        msg.reply_to = self.add_handler(queue.put, persist=False)
+        msg.reply_to = self.router.add_handler(queue.put, persist=False)
         LOG.debug('%r.send_await(%r)', self, msg)
 
         self.send(msg)
@@ -634,22 +621,6 @@ class Context(object):
 
         IOLOG.debug('%r._send_await() -> %r', self, msg)
         return msg
-
-    def _invoke(self, msg):
-        #IOLOG.debug('%r._invoke(%r)', self, msg)
-        try:
-            persist, fn = self._handle_map[msg.handle]
-        except KeyError:
-            LOG.error('%r: invalid handle: %r', self, msg)
-            return
-
-        if not persist:
-            del self._handle_map[msg.handle]
-
-        try:
-            fn(msg)
-        except Exception:
-            LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
 
     def __repr__(self):
         return 'Context(%s, %r)' % (self.context_id, self.name)
@@ -743,14 +714,17 @@ class Router(object):
     defined on our parent context. Router.route() straddles the Broker and user
     threads, it is save to call from anywhere.
     """
-    parent_context = None
-
     def __init__(self, broker):
         self.broker = broker
         #: context ID -> Stream
         self._stream_by_id = {}
         #: List of contexts to notify of shutdown.
         self._context_by_id = {}
+        self._last_handle = itertools.count(1000)
+        #: handle -> (persistent?, func(msg))
+        self._handle_map = {
+            ADD_ROUTE: (True, self._on_add_route)
+        }
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
@@ -786,12 +760,43 @@ class Router(object):
         self._context_by_id[context.context_id] = context
         self.broker.start_receive(stream)
 
+    def add_handler(self, fn, handle=None, persist=True):
+        """Invoke `fn(msg)` for each Message sent to `handle` from this
+        context. Unregister after one invocation if `persist` is ``False``. If
+        `handle` is ``None``, a new handle is allocated and returned."""
+        handle = handle or self._last_handle.next()
+        IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
+        self._handle_map[handle] = persist, fn
+        return handle
+
+    def on_shutdown(self, broker):
+        """Called during :py:meth:`Broker.shutdown`, informs callbacks
+        registered with :py:meth:`add_handle_cb` the connection is dead."""
+        LOG.debug('%r.on_shutdown(%r)', self, broker)
+        for handle, (persist, fn) in self._handle_map.iteritems():
+            LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
+            fn(_DEAD)
+
+    def _invoke(self, msg):
+        #IOLOG.debug('%r._invoke(%r)', self, msg)
+        try:
+            persist, fn = self._handle_map[msg.handle]
+        except KeyError:
+            LOG.error('%r: invalid handle: %r', self, msg)
+            return
+
+        if not persist:
+            del self._handle_map[msg.handle]
+
+        try:
+            fn(msg)
+        except Exception:
+            LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
+
     def _route(self, msg):
         IOLOG.debug('%r._route(%r)', self, msg)
-        context = self._context_by_id.get(msg.src_id)
-        if context and msg.dst_id == econtext.context_id:
-            context._invoke(msg)
-            return
+        if msg.dst_id == econtext.context_id:
+            return self._invoke(msg)
 
         stream = self._stream_by_id.get(msg.dst_id)
         if stream is None:
@@ -987,7 +992,7 @@ class ExternalContext(object):
         else:
             self.parent = Context(self.router, parent_id, 'parent')
 
-        self.channel = Channel(self.master, CALL_FUNCTION)
+        self.channel = Channel(self.router, handle=CALL_FUNCTION)
         self.stream = Stream(self.router, parent_id, key)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)

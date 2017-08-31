@@ -124,33 +124,39 @@ def discard_until(fd, s, deadline):
 
 
 class LogForwarder(object):
-    _log = None
+    def __init__(self, router):
+        self._router = router
+        self._cache = {}
+        router.add_handler(self._on_forward_log, econtext.core.FORWARD_LOG)
 
-    def __init__(self, context):
-        self._context = context
-        context.add_handler(self.forward, econtext.core.FORWARD_LOG)
+    def _on_forward_log(self, msg):
+        if msg == econtext.core._DEAD:
+            return
 
-    def forward(self, msg):
-        if not self._log:
-            # Delay initialization so Stream has a chance to set Context's
-            # default name, if one wasn't otherwise specified.
-            name = '%s.%s' % (RLOG.name, self._context.name)
-            self._log = logging.getLogger(name)
-        if msg != econtext.core._DEAD:
-            name, level_s, s = msg.data.split('\x00', 2)
-            self._log.log(int(level_s), '%s: %s', name, s)
+        logger = self._cache.get(msg.src_id)
+        if logger is None:
+            context = self._router.context_by_id(msg.src_id)
+            if context is None:
+                LOG.error('FORWARD_LOG received from src_id %d', msg.src_id)
+                return
+
+            name = '%s.%s' % (RLOG.name, context.name)
+            self._cache[msg.src_id] = logger = logging.getLogger(name)
+
+        name, level_s, s = msg.data.split('\x00', 2)
+        logger.log(int(level_s), '%s: %s', name, s)
 
     def __repr__(self):
-        return 'LogForwarder(%r)' % (self._context,)
+        return 'LogForwarder(%r)' % (self._router,)
 
 
 class ModuleResponder(object):
-    def __init__(self, context):
-        self._context = context
-        context.add_handler(self.get_module, econtext.core.GET_MODULE)
+    def __init__(self, router):
+        self._router = router
+        router.add_handler(self._on_get_module, econtext.core.GET_MODULE)
 
     def __repr__(self):
-        return 'ModuleResponder(%r)' % (self._context,)
+        return 'ModuleResponder(%r)' % (self._router,)
 
     def _get_module_via_pkgutil(self, fullname):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
@@ -208,7 +214,7 @@ class ModuleResponder(object):
                           _get_module_via_sys_modules,
                           _get_module_via_parent_enumeration]
 
-    def get_module(self, msg):
+    def _on_get_module(self, msg):
         LOG.debug('%r.get_module(%r)', self, msg)
         if msg == econtext.core._DEAD:
             return
@@ -235,15 +241,22 @@ class ModuleResponder(object):
                 pkg_present = None
 
             compressed = zlib.compress(source)
-            self._context.send(
+            self._router.route(
                 econtext.core.Message.pickled(
                     (pkg_present, path, compressed),
-                    handle=msg.reply_to
+                    dst_id=msg.src_id,
+                    handle=msg.reply_to,
                 )
             )
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
-            self._context.send(reply_to, None)
+            self._router.route(
+                econtext.core.Message.pickled(
+                    None,
+                    dst_id=msg.src_id,
+                    handle=msg.reply_to,
+                )
+            )
 
 
 class ModuleForwarder(object):
@@ -251,14 +264,14 @@ class ModuleForwarder(object):
     Respond to GET_MODULE requests in a slave by forwarding the request to our
     parent context, or satisfying the request from our local Importer cache.
     """
-    def __init__(self, context, parent_context, importer):
-        self.context = context
+    def __init__(self, router, parent_context, importer):
+        self.router = router
         self.parent_context = parent_context
         self.importer = importer
-        context.add_handler(self._on_get_module, econtext.core.GET_MODULE)
+        router.add_handler(self._on_get_module, econtext.core.GET_MODULE)
 
     def __repr__(self):
-        return 'ModuleForwarder(%r)' % (self.context,)
+        return 'ModuleForwarder(%r)' % (self.router,)
 
     def _on_get_module(self, msg):
         LOG.debug('%r._on_get_module(%r)', self, msg)
@@ -268,10 +281,11 @@ class ModuleForwarder(object):
         fullname = msg.data
         cached = self.importer._cache.get(fullname)
         if cached:
-            self.context.send(
+            self.router.route(
                 econtext.core.Message.pickled(
-                    data=cached,
-                    handle=msg.reply_to
+                    cached,
+                    dst_id=msg.src_id,
+                    handle=msg.reply_to,
                 )
             )
         else:
@@ -290,10 +304,11 @@ class ModuleForwarder(object):
         LOG.debug('%r._on_got_source(%r, %r)', self, msg, original_msg)
         fullname = original_msg.data
         self.importer._cache[fullname] = msg.unpickle()
-        self.context.send(
+        self.router.route(
             econtext.core.Message(
                 data=msg.data,
-                handle=original_msg.reply_to
+                dst_id=original_msg.src_id,
+                handle=original_msg.reply_to,
             )
         )
 
@@ -423,11 +438,6 @@ class Broker(econtext.core.Broker):
 class Context(econtext.core.Context):
     via = None
 
-    def __init__(self, *args, **kwargs):
-        super(Context, self).__init__(*args, **kwargs)
-        self.responder = ModuleResponder(self)
-        self.log_forwarder = LogForwarder(self)
-
     def on_disconnect(self, broker):
         pass
 
@@ -499,7 +509,10 @@ class Context(econtext.core.Context):
 
 
 def _proxy_connect(econtext, name, context_id, klass, kwargs):
-    econtext.router.__class__ = Router  # TODO
+    if not isinstance(econtext.router, Router):  # TODO
+        econtext.router.__class__ = Router  # TODO
+        LOG.debug('_proxy_connect(): constructing ModuleForwarder')
+        ModuleForwarder(econtext.router, econtext.parent, econtext.importer)
 
     context = econtext.router._connect(
         context_id,
@@ -507,9 +520,6 @@ def _proxy_connect(econtext, name, context_id, klass, kwargs):
         name=name,
         **kwargs
     )
-
-    LOG.debug('_proxy_connect(): constructing ModuleForwarder for %r', context)
-    ModuleForwarder(context, econtext.parent, econtext.importer)
     return context.name
 
 
@@ -517,6 +527,11 @@ class Router(econtext.core.Router):
     context_id_counter = itertools.count(1)
 
     debug = False
+
+    def __init__(self, *args, **kwargs):
+        super(Router, self).__init__(*args, **kwargs)
+        self.responder = ModuleResponder(self)
+        self.log_forwarder = LogForwarder(self)
 
     def enable_debug(self):
         """
@@ -572,20 +587,22 @@ class Router(econtext.core.Router):
         name = via_context.call_with_deadline(None, True,
             _proxy_connect, name, context_id, klass, kwargs
         )
-        name = '%s.%s' % (via_context.name, name)
+        # name = '%s.%s' % (via_context.name, name)
         context = Context(self, context_id, name=name)
         context.via = via_context
 
         child = via_context
         parent = via_context.via
         while parent is not None:
-            LOG.info('Adding route to %r for %r via %r', parent, context, child)
+            LOG.debug('Adding route to %r for %r via %r', parent, context, child)
             parent.send(
                 econtext.core.Message(
                     data='%s\x00%s' % (context_id, child.context_id),
                     handle=econtext.core.ADD_ROUTE,
                 )
             )
+            child = parent
+            parent = parent.via
 
         self._context_by_id[context.context_id] = context
         return context
