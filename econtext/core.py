@@ -915,11 +915,11 @@ class Broker(object):
         rsides, wsides, _ = select.select(self._readers, self._writers,
                                           (), timeout)
         for side in rsides:
-            IOLOG.debug('%r: POLLIN for %r', self, side.stream)
+            IOLOG.debug('%r: POLLIN for %r', self, side)
             self._call(side.stream, side.stream.on_receive)
 
         for side in wsides:
-            IOLOG.debug('%r: POLLOUT for %r', self, side.stream)
+            IOLOG.debug('%r: POLLOUT for %r', self, side)
             self._call(side.stream, side.stream.on_transmit)
 
     def keep_alive(self):
