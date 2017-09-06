@@ -1093,11 +1093,15 @@ class ExternalContext(object):
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)
                 ret = fn(*args, **kwargs)
-                self.master.send(Message.pickled(ret, handle=msg.reply_to))
+                self.router.route(
+                    Message.pickled(ret, dst_id=msg.src_id, handle=msg.reply_to)
+                )
             except Exception, e:
                 LOG.debug('_dispatch_calls: %s', e)
                 e = CallError(str(e))
-                self.master.send(Message.pickled(e, handle=msg.reply_to))
+                self.router.route(
+                    Message.pickled(e, dst_id=msg.src_id, handle=msg.reply_to)
+                )
 
     def main(self, parent_id, context_id, key, debug, log_level,
              in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True):
