@@ -824,6 +824,9 @@ class Router(object):
 
         stream = self._stream_by_id.get(msg.dst_id)
         if stream is None:
+            stream = self._stream_by_id.get(econtext.parent_id)
+
+        if stream is None:
             LOG.error('%r: no route for %r, my ID is %r',
                       self, msg, econtext.context_id)
             return
