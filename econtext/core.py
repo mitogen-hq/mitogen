@@ -280,6 +280,7 @@ class Importer(object):
             'econtext.ansible',
             'econtext.compat',
             'econtext.compat.pkgutil',
+            'econtext.fakessh',
             'econtext.master',
             'econtext.ssh',
             'econtext.sudo',

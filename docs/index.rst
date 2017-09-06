@@ -102,6 +102,41 @@ program crashes, communication is lost, or the application code running in the
 context has hung.
 
 
+SSH Client Emulation
+####################
+
+Support is included for starting subprocesses with a modified environment, that
+cause their attempt to use SSH to be redirected back into the host program. In
+this way tools like `rsync`, `sftp`, and `scp` can efficiently reuse the host
+program's existing connection to the remote machine, including any
+firewall/user account hopping in use, with zero additional configuration.
+
+Scenarios that were not previously possible with these tools are enabled, such
+as running sftp and rsync over a sudo session, to an account the user cannot
+otherwise directly log into, including in restrictive environments that for
+example enforce an interactive sudo TTY and account password.
+
+.. code-block:: python
+
+    bastion = router.ssh(
+        hostname='bastion.mycorp.com'
+    )
+
+    appserver = router.ssh(
+        via=bastion,
+        hostname='appserver1.internal.mycorp.com'
+    )
+
+    appuser = router.sudo(
+        via=appserver
+        username='appuser',
+    )
+
+    appuser.call(my_diagnostic_function)
+    # Transparently tunnelled over bastion -> appserver -> appuser link.
+    econtext.fakessh.run(appuser, ['rsync', 'appdata', 'appserver:appdata'])
+
+
 Module Forwarder
 ################
 
