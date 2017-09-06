@@ -26,3 +26,8 @@ slave = False
 #: This is ``0`` in a master, otherwise it is a master-generated ID unique to
 #: the slave context.
 context_id = 0
+
+
+#: This is ``None`` in a master, otherwise it is the master-generated ID unique
+#: to the slave's parent context.
+parent_id = None

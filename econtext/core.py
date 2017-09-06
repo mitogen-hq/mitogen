@@ -1025,7 +1025,7 @@ class ExternalContext(object):
         self.importer = Importer(self.parent, core_src)
         sys.meta_path.append(self.importer)
 
-    def _setup_package(self, context_id):
+    def _setup_package(self, context_id, parent_id):
         global econtext
         econtext = imp.new_module('econtext')
         econtext.__package__ = 'econtext'
@@ -1033,6 +1033,7 @@ class ExternalContext(object):
         econtext.__loader__ = self.importer
         econtext.slave = True
         econtext.context_id = context_id
+        econtext.parent_id = parent_id
         econtext.core = sys.modules['__main__']
         econtext.core.__file__ = 'x/econtext/core.py'  # For inspect.getsource()
         econtext.core.__loader__ = self.importer
@@ -1054,7 +1055,7 @@ class ExternalContext(object):
 
     def _dispatch_calls(self):
         for msg, data in self.channel:
-            LOG.debug('_dispatch_calls(%r)', msg)
+            LOG.debug('_dispatch_calls(%r)', data)
             with_context, modname, klass, func, args, kwargs = data
             if with_context:
                 args = (self,) + args
@@ -1078,7 +1079,7 @@ class ExternalContext(object):
             try:
                 self._setup_logging(debug, log_level)
                 self._setup_importer(core_src_fd)
-                self._setup_package(context_id)
+                self._setup_package(context_id, parent_id)
                 if setup_stdio:
                     self._setup_stdio()
 
