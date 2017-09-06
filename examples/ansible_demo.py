@@ -94,7 +94,7 @@ def run_module(module, raw_params=None, args=None):
         return e.dct
 
 
-def main(broker):
+def main(router):
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     datefmt = '%H:%M:%S'
     level = logging.DEBUG
@@ -107,4 +107,4 @@ def main(broker):
         print context.call(run_module, 'ansible.modules.core.commands.command', 'hostname')
 
 if __name__ == '__main__' and not econtext.slave:
-    econtext.utils.run_with_broker(main)
+    econtext.utils.run_with_router(main)
