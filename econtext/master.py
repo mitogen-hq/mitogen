@@ -466,7 +466,7 @@ class Context(econtext.core.Context):
             econtext.core.Message.pickled(
                 call,
                 handle=econtext.core.CALL_FUNCTION,
-                reply_to=self.add_handler(self._discard_result),
+                reply_to=self.router.add_handler(self._discard_result),
             )
         )
 
