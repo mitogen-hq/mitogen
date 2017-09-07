@@ -395,6 +395,58 @@ presence of many machines, and would require manually splitting up the parts of
 Twisted that we would like to use.
 
 
+Message Routing
+---------------
+
+At present routing is very simple, and assumes that it is impossible for a tree
+of contexts to be constructed such that at least one of a context's indirect
+parents will not know the ID of a target the context is attempting to
+communicate with.
+
+When :py:class:`econtext.core.Router` receives a message, it first checks the
+IDs associated with its directly connected streams for a potential route for
+the message. If one of the streams matches, either because the stream directly
+connects to the target ID, or the master has sent an ``ADD_ROUTE`` message
+associating that stream with the target ID, then the message will be forwarded
+down the tree using that stream.
+
+If the message does not match any ``ADD_ROUTE`` message or directly connected
+stream, instead it is forwarded upstream, first to the context's parent, and
+recursively by the each parent context in turn, until some tree node is reached
+that knows how to forward the message back down the tree.
+
+When the master establishes a new context via an existing child context, it
+takes care to send corresponding ``ADD_ROUTE`` messages to each indirect parent
+up the tree.
+
+
+Example
+#######
+
+.. image:: images/context-tree.png
+
+In the diagram, when ``master`` is establishing a connection to
+``sudo:node12b:webapp``, it must send ``ADD_ROUTE`` messages to ``rack12``,
+``dc1``, and ``bastion``; `node12b` does not require an ``ADD_ROUTE`` message
+since it has a stream directly connected to the new context.
+
+When ``sudo:node22a:webapp`` wants to send a message to
+``sudo:node12b:webapp``, the message will be routed as follows:
+
+``sudo:node22a:webapp -> node22a -> rack22 -> dc2 -> bastion -> dc1 -> rack12 -> node12b -> sudo:node12b:webapp``
+
+.. image:: images/route.png
+
+
+Future
+######
+
+The current routing approach is incomplete, since routes to downstream contexts
+are not propagated upwards when a descendant of the master context establishes
+a new child context, but that is okay for now, since child contexts cannot
+currently allocate new context IDs anyway.
+
+
 Differences Between Master And Slave Brokers
 ############################################
 
