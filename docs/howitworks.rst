@@ -101,11 +101,11 @@ Preserving The `econtext.core` Source
 #####################################
 
 One final trick is implemented in the first stage: after bootstrapping the new
-slave, it writes a duplicate copy of the `econtext.core` source it just used to
-bootstrap it back into another pipe connected to the slave. The slave's module
-importer cache is initialized with a copy of the source, so that subsequent
-bootstraps of slave-of-slaves do not require the source to be fetched from the
-master a second time.
+slave, it writes a duplicate copy of the :py:mod:`econtext.core` source it just
+used to bootstrap it back into another pipe connected to the slave. The slave's
+module importer cache is initialized with a copy of the source, so that
+subsequent bootstraps of slave-of-slaves do not require the source to be
+fetched from the master a second time.
 
 
 Signalling Success

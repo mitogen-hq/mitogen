@@ -12,6 +12,10 @@ econtext Package
 
 .. automodule:: econtext
 
+.. autodata:: econtext.slave
+.. autodata:: econtext.context_id
+.. autodata:: econtext.parent_id
+
 
 econtext.core
 -------------
@@ -25,13 +29,20 @@ econtext.master
 .. automodule:: econtext.master
 
 
+econtext.fakessh
+---------------
 
-Context Factories
-=================
+.. automodule:: econtext.fakessh
 
-.. autofunction:: econtext.master.connect
-.. autofunction:: econtext.ssh.connect
-.. autofunction:: econtext.sudo.connect
+.. autofunction:: econtext.fakessh.run_with_fake_ssh
+
+
+Router Class
+============
+
+.. autoclass:: econtext.master.Router
+   :members:
+   :inherited-members:
 
 
 Broker Class
@@ -62,12 +73,6 @@ Context Class
 
 .. autoclass:: econtext.master.Context
    :members:
-
-
-Detecting A Slave
-=================
-
-.. autodata:: econtext.slave
 
 
 Utility Functions

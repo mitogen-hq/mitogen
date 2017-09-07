@@ -835,6 +835,13 @@ class Router(object):
         stream.send(msg)
 
     def route(self, msg):
+        """
+        Arrange for the :py:class:`Message` `msg` to be delivered to its
+        destination using any relevant downstream context, or if none is found,
+        by forwarding the message upstream towards the master context. If `msg`
+        is destined for the local context, it is dispatched using the handles
+        registered with :py:meth:`add_handler`.
+        """
         self.broker.on_thread(self._route, msg)
 
 

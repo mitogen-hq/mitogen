@@ -24,7 +24,7 @@ slave = False
 
 
 #: This is ``0`` in a master, otherwise it is a master-generated ID unique to
-#: the slave context.
+#: the slave context used for message routing.
 context_id = 0
 
 

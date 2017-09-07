@@ -293,7 +293,7 @@ class ModuleForwarder(object):
                 econtext.core.Message(
                     data=msg.data,
                     handle=econtext.core.GET_MODULE,
-                    reply_to=self.parent_context.add_handler(
+                    reply_to=self.router.add_handler(
                         lambda m: self._on_got_source(m, msg),
                         persist=False
                     )
