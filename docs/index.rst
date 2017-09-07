@@ -8,15 +8,14 @@ Python Execution Contexts
 Introduction
 ------------
 
-The Python ``econtext`` package implements external *execution contexts*: an
-execution context is somewhere you can run Python functions external to your
-main process, even on a remote machine.
+``econtext`` is a library for building distributed self-replicating programs in
+Python.
 
-There is **no requirement for installing packages, copying files around,
-writing shell scripts, upfront configuration, or providing any secondary link
-to the remote machine**. Due to its origins for use in managing potentially
-damaged infrastructure, the **remote machine need not even have free disk space
-or a writeable filesystem**.
+There is no requirement for installing packages, copying files around, writing
+shell snippets, upfront configuration, or providing any secondary link to the
+remote machine aside from an SSH connection. Due to its origins for use in
+managing potentially damaged infrastructure, the **remote machine need not even
+have free disk space or a writeable filesystem**.
 
 It is not intended as a generic RPC framework; the goal is to provide a robust
 and efficient low-level API on which tools like `Salt`_ or `Ansible`_ can be
@@ -29,7 +28,9 @@ ultimately it should not be used directly by consumer software.
 
 The focus is to centralize and perfect the intricate dance required to run
 Python code safely and efficiently on a remote machine, while avoiding
-temporary files or large chunks of error-prone shell scripts.
+temporary files or large chunks of error-prone shell scripts, and supporting
+common privilege escalation techniques like `sudo`, potentially in combination
+with exotic connection methods such as WMI, `telnet`, or console-over-IPMI.
 
 
 Automatic Bootstrap
