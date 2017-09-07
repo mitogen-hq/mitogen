@@ -27,8 +27,8 @@ ultimately it should not be used directly by consumer software.
 .. _Fabric: http://docs.fabfile.org/en/
 
 The focus is to centralize and perfect the intricate dance required to run
-Python code safely and efficiently on a remote machine, while avoiding
-temporary files or large chunks of error-prone shell scripts, and supporting
+Python code safely and efficiently on a remote machine, while **avoiding
+temporary files or large chunks of error-prone shell scripts**, and supporting
 common privilege escalation techniques like `sudo`, potentially in combination
 with exotic connection methods such as WMI, `telnet`, or console-over-IPMI.
 
