@@ -87,9 +87,9 @@ The script sent is simply the source code for :py:mod:`econtext.core`, with a
 single line suffixed to trigger execution of the
 :py:meth:`econtext.core.ExternalContext.main` function. The encoded arguments
 to the main function include some additional details, such as the logging package
-level that was active in the parent process, and a random secret key used to
-generate HMAC signatures over the data frames that will be exchanged after
-bootstrap.
+level that was active in the parent process, and a random secret key that may
+later be used to generate HMAC signatures over the data frames that will be
+exchanged after bootstrap.
 
 After the script source code is prepared, it is passed through
 :py:func:`econtext.master.minimize_source` to strip it of docstrings and
@@ -245,8 +245,6 @@ master and slave:
 +--------------------+------+------------------------------------------------------+
 | Field              | Size | Description                                          |
 +====================+======+======================================================+
-| ``hmac``           | 20   | SHA-1 over remaining fields.                         |
-+--------------------+------+------------------------------------------------------+
 | ``dst_id``         | 2    | Integer target context ID.                           |
 +--------------------+------+------------------------------------------------------+
 | ``src_id``         | 2    | Integer source context ID.                           |
@@ -371,15 +369,6 @@ restrictive class whitelist.
     leading to a deadlock. Therefore any internal services (module loader,
     logging forwarder, etc.) must rely on simple string formats, or only
     perform serialization from within the broker thread.
-
-
-Use of HMAC
-###########
-
-In the current implementation the use of HMAC signatures over data frames is
-mostly redundant since all communication occurs over SSH, however in order to
-reduce resource usage, it is planned to support connecting back to the master
-via plain TCP, at which point the signatures become important.
 
 
 The IO Multiplexer
