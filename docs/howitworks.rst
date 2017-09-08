@@ -426,9 +426,9 @@ Example
 .. image:: images/context-tree.png
 
 In the diagram, when ``master`` is creating the ``sudo:node12b:webapp``
-context, it must send ``ADD_ROUTE`` messages to ``rack12``, ``dc1``, and
-``bastion``; `node12b` does not require an ``ADD_ROUTE`` message since it has a
-stream directly connected to the new context.
+context, it must send ``ADD_ROUTE`` messages to ``rack12``, ``dc1``,
+``bastion``, and itself; ``node12b`` does not require an ``ADD_ROUTE`` message
+since it has a stream directly connected to the new context.
 
 When ``sudo:node22a:webapp`` wants to send a message to
 ``sudo:node12b:webapp``, the message will be routed as follows:

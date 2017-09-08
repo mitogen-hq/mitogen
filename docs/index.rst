@@ -33,6 +33,28 @@ common privilege escalation techniques like `sudo`, potentially in combination
 with exotic connection methods such as WMI, `telnet`, or console-over-IPMI.
 
 
+.. raw:: html
+
+    <style>
+        .warning code {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+    </style>
+
+.. warning::
+
+    econtext is alpha-quality software. If intend to you use it, you should be
+    aware how little real world testing it has received, the total absence of
+    any tests, and the nightmare-level difficulty of debugging hangs in a tree
+    of processes running identical code straddling multiple thread and machine
+    boundaries! ``router.enable_debug()`` is your friend.
+
+    If you think you have a use for this software, please `drop me an e-mail`_
+    so that expectations and bugfixes can be managed sensibly.
+
+    .. _drop me an e-mail: dw@botanicus.net
+
+
 Automatic Bootstrap
 ###################
 
