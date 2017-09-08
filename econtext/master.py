@@ -439,7 +439,11 @@ class Context(econtext.core.Context):
     via = None
 
     def on_disconnect(self, broker):
-        pass
+        """
+        Override base behaviour of triggering Broker shutdown on parent stream
+        disconnection.
+        """
+        econtext.core.fire(self, 'disconnect')
 
     def _discard_result(self, msg):
         data = msg.unpickle()
