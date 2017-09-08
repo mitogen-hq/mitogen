@@ -614,6 +614,9 @@ class Context(object):
         fire(self, 'disconnect')
         broker.shutdown()
 
+    def on_shutdown(self, broker):
+        pass
+
     def send(self, msg):
         """send `obj` to `handle`, and tell the broker we have output. May
         be called from any thread."""
@@ -763,9 +766,9 @@ class Router(object):
                 del self._stream_by_id[context.context_id]
                 context.on_disconnect(broker)
 
-    def on_broker_shutdown(self, broker):
+    def on_broker_shutdown(self):
         for context in self._context_by_id.itervalues():
-            context.on_shutdown(broker)
+            context.on_shutdown(self.broker)
 
     def add_route(self, target_id, via_id):
         LOG.debug('%r.add_route(%r, %r)', self, target_id, via_id)
