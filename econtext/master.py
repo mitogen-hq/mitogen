@@ -569,8 +569,10 @@ class Router(econtext.core.Router):
     def _connect(self, context_id, klass, name=None, **kwargs):
         context = Context(self, context_id)
         stream = klass(self, context.context_id, context.key, **kwargs)
+        if name is not None:
+            stream.name = name
         stream.connect()
-        context.name = name or stream.name
+        context.name = stream.name
         self.register(context, stream)
         return context
 
