@@ -96,9 +96,9 @@ def listen(obj, name, func):
     signals.setdefault(name, []).append(func)
 
 
-def fire(obj, name, **kwargs):
+def fire(obj, name, *args, **kwargs):
     signals = vars(obj).get('_signals', {})
-    return [func(**kwargs) for func in signals.get(name, ())]
+    return [func(*args, **kwargs) for func in signals.get(name, ())]
 
 
 def set_cloexec(fd):
