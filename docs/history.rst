@@ -55,4 +55,4 @@ Future
 
 `View the issue list on GitHub`_
 
-.. _View the issue list on GitHub: https://github.com/dw/econtext/issues/
+.. _View the issue list on GitHub: https://github.com/dw/econtext/issues?q=is%3Aopen%20is%3Aissue%20-label%3Abug
