@@ -1123,7 +1123,6 @@ class ExternalContext(object):
                     self._setup_stdio()
 
                 self.router.register(self.parent, self.stream)
-                self.router.register(self.master, self.stream)
 
                 sys.executable, = eval(os.environ.pop('ARGV0'))
                 LOG.debug('Connected to %s; my ID is %r, PID is %r',
