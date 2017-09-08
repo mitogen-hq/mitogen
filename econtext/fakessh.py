@@ -48,14 +48,6 @@ Sequence:
         a. registers remote's stdin_handle with local IoPump
         b. registers local IoPump with Broker
         c. loops waiting for 'local stdout closed && remote stdout closed'
-
-Future:
-
-1. Allow multiple invocations of fake SSH command.
-2. Name the fakessh context after its PID (dep: 1)
-3. Allow originating context to abort the pipeline gracefully
-4. Investigate alternative approach of embedding econtext bootstrap command as
-   an explicit parameter to rsync/scp/sftp, allowing temp file to be avoided.
 """
 
 import getopt

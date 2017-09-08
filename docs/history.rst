@@ -53,17 +53,6 @@ to a solution, I hope you find it useful.
 Future
 ######
 
-* Move connect() logic to dispatcher thread.
-* Connect back using TCP and SSL.
-* Python 3 support.
-* Windows support via psexec or similar.
-* Investigate cPickle safety and potentially replace it, or implement a strict
-  format validator for messages received by master.
-* Predictive import: reduce roundtrips by pipelining modules observed to
-  probably be requested in future.
-* Provide a means for waiting on multiple
-  :py:class:`Channels <econtext.core.Channel>`.
-* Comprehensive integration tests.
-* Make pickler deliver a CallError to the intended recipient when a type is
-  rejected during unpickling.
-* Secure and granular SSH agent forwarding.
+`View the issue list on GitHub`_
+
+.. _View the issue list on GitHub: https://github.com/dw/econtext/issues/
