@@ -50,6 +50,8 @@ ExternalContext Class
 econtext.master
 ===============
 
+.. autoclass:: econtext.master.ProcessMonitor
+
 
 Helper Functions
 ----------------

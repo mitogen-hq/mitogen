@@ -14,6 +14,7 @@ import os
 import pkgutil
 import re
 import select
+import signal
 import socket
 import sys
 import textwrap
@@ -612,3 +613,28 @@ class Router(econtext.core.Router):
 
         self._context_by_id[context.context_id] = context
         return context
+
+
+class ProcessMonitor(object):
+    def __init__(self):
+        # pid -> callback()
+        self.callback_by_pid = {}
+        signal.signal(signal.SIGCHLD, self._on_sigchld)
+
+    def _on_sigchld(self, _signum, _frame):
+        for pid, callback in self.callback_by_pid.items():
+            pid, status = os.waitpid(pid, os.WNOHANG)
+            if pid:
+                callback(status)
+                del self.callback_by_pid[pid]
+
+    def add(self, pid, callback):
+        self.callback_by_pid[pid] = callback
+
+    _instance = None
+
+    @classmethod
+    def instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance

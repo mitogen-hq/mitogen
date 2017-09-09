@@ -8,19 +8,19 @@ Python Execution Contexts
 Introduction
 ------------
 
-``econtext`` is a library for building distributed self-replicating programs in
+``econtext`` is a library for writing distributed self-replicating programs in
 Python.
 
 There is no requirement for installing packages, copying files around, writing
-shell snippets, upfront configuration, or providing any secondary link to the
+shell snippets, upfront configuration, or providing any secondary link to a
 remote machine aside from an SSH connection. Due to its origins for use in
 managing potentially damaged infrastructure, the **remote machine need not even
 have free disk space or a writeable filesystem**.
 
 It is not intended as a generic RPC framework; the goal is to provide a robust
-and efficient low-level API on which tools like `Salt`_ or `Ansible`_ can be
-built, and while the API is quite friendly and similar in scope to `Fabric`_,
-ultimately it should not be used directly by consumer software.
+and efficient low-level API on which tools like `Salt`_, `Ansible`_, or
+`Fabric`_ can be built, and while the API is quite friendly and comparable to
+`Fabric`_, ultimately it is not intended for direct use by consumer software.
 
 .. _Salt: https://docs.saltstack.com/en/latest/
 .. _Ansible: http://docs.ansible.com/
@@ -43,14 +43,14 @@ with exotic connection methods such as WMI, `telnet`, or console-over-IPMI.
 
 .. warning::
 
-    econtext is alpha-quality software. If intend to you use it, you should be
-    aware how little real world testing it has received, the total absence of
-    any tests, and the nightmare-level difficulty of debugging hangs in a tree
-    of processes running identical code straddling multiple thread and machine
+    This is alpha-quality code. If you intend to use it, be aware of how little
+    real world testing it has received, the total absence of any systematic
+    tests, and the nightmare-level difficulty of debugging hangs in a tree of
+    processes running identical code straddling multiple thread and machine
     boundaries! ``router.enable_debug()`` is your friend.
 
     If you think you have a use for this software, please `drop me an e-mail`_
-    so that expectations and bugfixes can be managed sensibly.
+    so that expectations and bug fixes can be managed sensibly.
 
     .. _drop me an e-mail: dw@botanicus.net
 
