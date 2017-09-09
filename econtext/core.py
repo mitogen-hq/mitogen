@@ -551,7 +551,7 @@ class Stream(BasicStream):
 
         msg.data = self._input_buf[self.HEADER_LEN:self.HEADER_LEN+msg_len]
         self._input_buf = self._input_buf[self.HEADER_LEN+msg_len:]
-        self._router.route(msg)
+        self._router._async_route(msg)
         return True
 
     def on_transmit(self, broker):
@@ -831,8 +831,8 @@ class Router(object):
         except Exception:
             LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
 
-    def _route(self, msg):
-        IOLOG.debug('%r._route(%r)', self, msg)
+    def _async_route(self, msg):
+        IOLOG.debug('%r._async_route(%r)', self, msg)
         if msg.dst_id == econtext.context_id:
             return self._invoke(msg)
 
@@ -855,7 +855,7 @@ class Router(object):
         is destined for the local context, it is dispatched using the handles
         registered with :py:meth:`add_handler`.
         """
-        self.broker.defer(self._route, msg)
+        self.broker.defer(self._async_route, msg)
 
 
 class Broker(object):
