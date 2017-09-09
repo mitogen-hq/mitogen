@@ -668,7 +668,6 @@ class Waker(BasicStream):
         set_cloexec(wfd)
         self.receive_side = Side(self, rfd)
         self.transmit_side = Side(self, wfd)
-        broker.start_receive(self)
 
     def __repr__(self):
         return 'Waker(%r)' % (self._broker,)
@@ -878,6 +877,7 @@ class Broker(object):
         self._readers = set()
         self._writers = set()
         self._waker = Waker(self)
+        self.start_receive(self._waker)
         self._thread = threading.Thread(target=self._broker_main,
                                         name='econtext-broker')
         self._thread.start()
@@ -887,8 +887,7 @@ class Broker(object):
             func(*args, **kwargs)
         else:
             self._queue.put((func, args, kwargs))
-            if self._waker:
-                self._waker.wake()
+            self._waker.wake()
 
     def start_receive(self, stream):
         """Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
