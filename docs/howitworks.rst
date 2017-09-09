@@ -338,8 +338,8 @@ Sentinel Value
 The special value :py:data:`econtext.core._DEAD` is used to signal
 disconnection or closure of the remote end. It is used internally by
 :py:class:`Channel <econtext.core.Channel>` and also passed to any function
-still registered with :py:meth:`add_handle_cb()
-<econtext.core.Context.add_handle_cb>` during Broker shutdown.
+still registered with :py:meth:`add_handler()
+<econtext.core.Router.add_handler>` during Broker shutdown.
 
 
 Use of Pickle
@@ -387,26 +387,23 @@ Twisted that we would like to use.
 Message Routing
 ---------------
 
-At present routing is very simple, and assumes that it is impossible for a tree
-of contexts to be constructed such that at least one of a context's indirect
-parents will not know the ID of a target the context is attempting to
+Routing assumes it is impossible to construct a tree such that one of a
+context's parents will not know the ID of a target the context is attempting to
 communicate with.
 
-When :py:class:`econtext.core.Router` receives a message, it first checks the
-IDs associated with its directly connected streams for a potential route for
-the message. If one of the streams matches, either because the stream directly
-connects to the target ID, or the master has sent an ``ADD_ROUTE`` message
-associating that stream with the target ID, then the message will be forwarded
-down the tree using that stream.
+When :py:class:`econtext.core.Router` receives a message, it checks the IDs
+associated with its directly connected streams for a potential route. If any
+stream matches, either because it directly connects to the target ID, or
+because the master sent an ``ADD_ROUTE`` message associating it, then the
+message will be forwarded down the tree using that stream.
 
-If the message does not match any ``ADD_ROUTE`` message or directly connected
-stream, instead it is forwarded upstream, first to the context's parent, and
-recursively by the each parent context in turn, until some tree node is reached
-that knows how to forward the message back down the tree.
+If the message does not match any ``ADD_ROUTE`` message or stream, instead it
+is forwarded upwards to the immediate parent, and recursively by each parent in
+turn until one is reached that knows how to forward the message down the tree.
 
 When the master establishes a new context via an existing child context, it
-takes care to send corresponding ``ADD_ROUTE`` messages to each indirect parent
-up the tree.
+sends corresponding ``ADD_ROUTE`` messages to each indirect parent between the
+context and the root.
 
 
 Example
