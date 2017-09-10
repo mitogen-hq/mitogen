@@ -34,7 +34,7 @@ econtext.fakessh
 
 .. automodule:: econtext.fakessh
 
-.. autofunction:: econtext.fakessh.run_with_fake_ssh
+.. autofunction:: econtext.fakessh.run
 
 
 Router Class

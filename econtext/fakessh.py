@@ -311,7 +311,7 @@ def _fakessh_main(econtext_, dest_context_id):
 # Public API.
 #
 
-def run_with_fake_ssh(dest, router, args, deadline=None):
+def run(dest, router, args, deadline=None):
     """
     Run the command specified by the argument vector `args` such that ``PATH``
     searches for SSH by the command will cause its attempt to use SSH to
