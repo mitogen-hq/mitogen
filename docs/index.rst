@@ -128,6 +128,9 @@ context has hung.
 SSH Client Emulation
 ####################
 
+.. image:: images/fakessh.png
+    :align: right
+
 Support is included for starting subprocesses with a modified environment, that
 cause their attempt to use SSH to be redirected back into the host program. In
 this way tools like `rsync`, `sftp`, and `scp` can efficiently reuse the host
@@ -141,23 +144,14 @@ example enforce an interactive sudo TTY and account password.
 
 .. code-block:: python
 
-    bastion = router.ssh(
-        hostname='bastion.mycorp.com'
-    )
+    bastion = router.ssh(hostname='bastion.mycorp.com')
+    webserver = router.ssh(via=bastion, hostname='webserver')
+    fileserver = router.ssh(via=bastion, hostname='fileserver')
+    webapp = router.sudo(via=webserver, username='webapp')
 
-    appserver = router.ssh(
-        via=bastion,
-        hostname='appserver1.internal.mycorp.com'
-    )
-
-    appuser = router.sudo(
-        via=appserver
-        username='appuser',
-    )
-
-    appuser.call(my_diagnostic_function)
-    # Transparently tunnelled over bastion -> appserver -> appuser link.
-    econtext.fakessh.run(appuser, ['rsync', 'appdata', 'appserver:appdata'])
+    # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
+    fileserver.call(econtext.fakessh.run, webapp,
+                   ['rsync', 'appdata', 'appserver:appdata'])
 
 
 Module Forwarder
