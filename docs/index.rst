@@ -150,8 +150,9 @@ example enforce an interactive sudo TTY and account password.
     webapp = router.sudo(via=webserver, username='webapp')
 
     # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
-    fileserver.call(econtext.fakessh.run, webapp,
-                   ['rsync', 'appdata', 'appserver:appdata'])
+    fileserver.call(econtext.fakessh.run, webapp, [
+        'rsync', 'appdata', 'appserver:appdata'
+    ])
 
 
 Module Forwarder
