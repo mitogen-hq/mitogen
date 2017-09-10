@@ -193,18 +193,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e3" source="n4" target="n3">
-      <data key="d9"/>
-      <data key="d10">
-        <y:PolyLineEdge>
-          <y:Path sx="0.0" sy="15.0" tx="0.0" ty="-15.0"/>
-          <y:LineStyle color="#000000" type="line" width="1.0"/>
-          <y:Arrows source="none" target="standard"/>
-          <y:BendStyle smoothed="false"/>
-        </y:PolyLineEdge>
-      </data>
-    </edge>
-    <edge id="e4" source="n3" target="n6">
+    <edge id="e3" source="n3" target="n6">
       <data key="d9"/>
       <data key="d10">
         <y:ArcEdge>
@@ -217,18 +206,7 @@
         </y:ArcEdge>
       </data>
     </edge>
-    <edge id="e5" source="n2" target="n5">
-      <data key="d9"/>
-      <data key="d10">
-        <y:PolyLineEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="0.0"/>
-          <y:LineStyle color="#000000" type="line" width="1.0"/>
-          <y:Arrows source="none" target="standard"/>
-          <y:BendStyle smoothed="false"/>
-        </y:PolyLineEdge>
-      </data>
-    </edge>
-    <edge id="e6" source="n0" target="n1">
+    <edge id="e4" source="n0" target="n1">
       <data key="d9"/>
       <data key="d10">
         <y:ArcEdge>
@@ -241,7 +219,7 @@
         </y:ArcEdge>
       </data>
     </edge>
-    <edge id="e7" source="n1" target="n2">
+    <edge id="e5" source="n1" target="n2">
       <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
@@ -252,18 +230,18 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e8" source="n2" target="n5">
+    <edge id="e6" source="n2" target="n5">
       <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
-          <y:Path sx="43.38854988834085" sy="14.984379490846408" tx="43.38854988834085" ty="-14.9765625"/>
+          <y:Path sx="0.0" sy="15.0" tx="0.0" ty="-15.0"/>
           <y:LineStyle color="#3366FF" type="dotted" width="1.0"/>
           <y:Arrows source="standard" target="standard"/>
           <y:BendStyle smoothed="false"/>
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e9" source="n6" target="n4">
+    <edge id="e7" source="n6" target="n4">
       <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
@@ -274,7 +252,7 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e10" source="n6" target="n0">
+    <edge id="e8" source="n6" target="n0">
       <data key="d9"/>
       <data key="d10">
         <y:ArcEdge>
@@ -287,7 +265,7 @@
         </y:ArcEdge>
       </data>
     </edge>
-    <edge id="e11" source="n0" target="n0">
+    <edge id="e9" source="n0" target="n0">
       <data key="d9"/>
       <data key="d10">
         <y:ArcEdge>
@@ -300,7 +278,7 @@
         </y:ArcEdge>
       </data>
     </edge>
-    <edge id="e12" source="n7" target="n7">
+    <edge id="e10" source="n7" target="n7">
       <data key="d9"/>
       <data key="d10">
         <y:ArcEdge>
@@ -313,7 +291,7 @@
         </y:ArcEdge>
       </data>
     </edge>
-    <edge id="e13" source="n7" target="n0">
+    <edge id="e11" source="n7" target="n0">
       <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
@@ -324,11 +302,11 @@
         </y:PolyLineEdge>
       </data>
     </edge>
-    <edge id="e14" source="n4" target="n3">
+    <edge id="e12" source="n4" target="n3">
       <data key="d9"/>
       <data key="d10">
         <y:PolyLineEdge>
-          <y:Path sx="38.822456422919345" sy="15.001824081037114" tx="38.822456422919345" ty="-15.0390625"/>
+          <y:Path sx="0.0" sy="15.0" tx="0.0" ty="-15.0"/>
           <y:LineStyle color="#3366FF" type="dotted" width="1.0"/>
           <y:Arrows source="standard" target="standard"/>
           <y:BendStyle smoothed="false"/>
