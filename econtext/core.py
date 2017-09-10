@@ -788,7 +788,6 @@ class Router(object):
         self._context_by_id[context.context_id] = context
         self.broker.start_receive(stream)
 
-
     def add_handler(self, fn, handle=None, persist=True, respondent=None):
         """Invoke `fn(msg)` for each Message sent to `handle` from this
         context. Unregister after one invocation if `persist` is ``False``. If
@@ -895,6 +894,7 @@ class Broker(object):
         file descriptor becomes ready for reading,
         :py:meth:`BasicStream.on_transmit` will be called."""
         IOLOG.debug('%r.start_receive(%r)', self, stream)
+        assert stream.receive_side and stream.receive_side.fd is not None
         self.defer(self._readers.add, stream.receive_side)
 
     def stop_receive(self, stream):
@@ -903,7 +903,7 @@ class Broker(object):
 
     def start_transmit(self, stream):
         IOLOG.debug('%r.start_transmit(%r)', self, stream)
-        assert stream.transmit_side
+        assert stream.transmit_side and stream.transmit_side.fd is not None
         self.defer(self._writers.add, stream.transmit_side)
 
     def stop_transmit(self, stream):
