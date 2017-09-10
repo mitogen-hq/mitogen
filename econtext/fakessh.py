@@ -92,7 +92,10 @@ class IoPump(econtext.core.BasicStream):
 
     def close(self):
         self._closed = True
-        self._broker.start_transmit(self)
+        # If local process hasn't exitted yet, ensure its write buffer is
+        # drained before lazily triggering disconnect in on_transmit.
+        if self.transmit_side.fd is not None:
+            self._broker.start_transmit(self)
 
     def on_shutdown(self, broker):
         self.close()
@@ -107,8 +110,8 @@ class IoPump(econtext.core.BasicStream):
 
         if not self._output_buf:
             broker.stop_transmit(self)
-        if self._closed:
-            self.on_disconnect(broker)
+            if self._closed:
+                self.on_disconnect(broker)
 
     def on_receive(self, broker):
         s = self.receive_side.read()
@@ -185,7 +188,7 @@ class Process(object):
         self.router.broker.start_receive(self.pump)
 
     def _on_exit(self, msg, arg):
-        LOG.info('on_exit: proc = %r', self.proc)
+        LOG.debug('on_exit: proc = %r', self.proc)
         if self.proc:
             self.proc.terminate()
         else:
@@ -232,7 +235,6 @@ def _start_slave(econtext_, src_id, args):
         proc,
     )
 
-    #process.control.put(('exit', None))
     return process.control_handle, process.stdin_handle
 
 
