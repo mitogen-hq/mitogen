@@ -146,8 +146,8 @@ example enforce an interactive sudo TTY and account password.
 
     bastion = router.ssh(hostname='bastion.mycorp.com')
     webserver = router.ssh(via=bastion, hostname='webserver')
-    fileserver = router.ssh(via=bastion, hostname='fileserver')
     webapp = router.sudo(via=webserver, username='webapp')
+    fileserver = router.ssh(via=bastion, hostname='fileserver')
 
     # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
     fileserver.call(econtext.fakessh.run, webapp, [
