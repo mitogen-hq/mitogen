@@ -199,7 +199,7 @@ class Process(object):
         self.stdin.put(s)
 
     def _on_pump_disconnect(self):
-        LOG.info('%r._on_pump_disconnect()', self)
+        LOG.debug('%r._on_pump_disconnect()', self)
         econtext.core.fire(self, 'disconnect')
         self.stdin.close()
         self.wake_event.set()
