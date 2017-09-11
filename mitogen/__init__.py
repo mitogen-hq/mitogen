@@ -1,5 +1,5 @@
 """
-On the econtext master, this is imported from ``econtext/__init__.py`` as would
+On the Mitogen master, this is imported from ``mitogen/__init__.py`` as would
 be expected. On the slave, it is built dynamically during startup.
 """
 
@@ -13,12 +13,12 @@ be expected. On the slave, it is built dynamically during startup.
 #:              os.system('hostname')
 #:
 #:          def main(broker):
-#:              context = econtext.master.connect(broker)
+#:              context = mitogen.master.connect(broker)
 #:              context.call(do_work)  # Causes slave to import __main__.
 #:
-#:          if __name__ == '__main__' and not econtext.slave:
-#:              import econtext.utils
-#:              econtext.utils.run_with_broker(main)
+#:          if __name__ == '__main__' and not mitogen.slave:
+#:              import mitogen.utils
+#:              mitogen.utils.run_with_broker(main)
 #:
 slave = False
 

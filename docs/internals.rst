@@ -3,40 +3,40 @@ Internal API Reference
 **********************
 
 
-econtext.core
-=============
+mitogen.core
+============
 
 
 Side Class
 ----------
 
-.. autoclass:: econtext.core.Side
+.. autoclass:: mitogen.core.Side
    :members:
 
 
 Stream Classes
 --------------
 
-.. autoclass:: econtext.core.BasicStream
+.. autoclass:: mitogen.core.BasicStream
    :members:
 
-.. autoclass:: econtext.core.Stream
+.. autoclass:: mitogen.core.Stream
    :members:
 
-.. autoclass:: econtext.master.Stream
+.. autoclass:: mitogen.master.Stream
    :members:
 
-.. autoclass:: econtext.ssh.Stream
+.. autoclass:: mitogen.ssh.Stream
    :members:
 
 
 Other Stream Subclasses
 -----------------------
 
-.. autoclass:: econtext.core.IoLogger
+.. autoclass:: mitogen.core.IoLogger
    :members:
 
-.. autoclass:: econtext.core.Waker
+.. autoclass:: mitogen.core.Waker
    :members:
 
 
@@ -44,18 +44,18 @@ Other Stream Subclasses
 ExternalContext Class
 ---------------------
 
-.. autoclass:: econtext.core.ExternalContext
+.. autoclass:: mitogen.core.ExternalContext
 
 
-econtext.master
+mitogen.master
 ===============
 
-.. autoclass:: econtext.master.ProcessMonitor
+.. autoclass:: mitogen.master.ProcessMonitor
 
 
 Helper Functions
 ----------------
 
-.. autofunction:: econtext.master.create_child
-.. autofunction:: econtext.master.get_child_modules
-.. autofunction:: econtext.master.minimize_source
+.. autofunction:: mitogen.master.create_child
+.. autofunction:: mitogen.master.get_child_modules
+.. autofunction:: mitogen.master.minimize_source

@@ -6,7 +6,6 @@ Examples
 Recursively Nested Bootstrap
 ----------------------------
 
-
 This demonstrates the library's ability to use slave contexts to recursively
 proxy connections to additional slave contexts, with a uniform API to any
 slave, and all features (function calls, import forwarding, stdio forwarding,
@@ -20,18 +19,18 @@ nested.py:
 .. code-block:: python
 
     import os
-    import econtext.utils
+    import mitogen.utils
 
-    @econtext.utils.run_with_router
+    @mitogen.utils.run_with_router
     def main(router):
-        econtext.utils.log_to_file()
+        mitogen.utils.log_to_file()
 
         context = None
         for x in range(1, 11):
             print 'Connect local%d via %s' % (x, context)
             context = router.local(via=context, name='local%d' % x)
 
-        context.call(os.system, 'pstree -s python -s econtext')
+        context.call(os.system, 'pstree -s python -s mitogen')
 
 
 Output:
@@ -54,15 +53,15 @@ Output:
     18:14:07 I ctx.local10: stdout:    \-+= 10638 dmw /Applications/iTerm.app/Contents/MacOS/iTerm2 --server bash --login
     18:14:07 I ctx.local10: stdout:      \-+= 10639 dmw bash --login
     18:14:07 I ctx.local10: stdout:        \-+= 13632 dmw python nested.py
-    18:14:07 I ctx.local10: stdout:          \-+- 13633 dmw econtext:dmw@Eldil.local:13632
-    18:14:07 I ctx.local10: stdout:            \-+- 13635 dmw econtext:dmw@Eldil.local:13633
-    18:14:07 I ctx.local10: stdout:              \-+- 13637 dmw econtext:dmw@Eldil.local:13635
-    18:14:07 I ctx.local10: stdout:                \-+- 13639 dmw econtext:dmw@Eldil.local:13637
-    18:14:07 I ctx.local10: stdout:                  \-+- 13641 dmw econtext:dmw@Eldil.local:13639
-    18:14:07 I ctx.local10: stdout:                    \-+- 13643 dmw econtext:dmw@Eldil.local:13641
-    18:14:07 I ctx.local10: stdout:                      \-+- 13645 dmw econtext:dmw@Eldil.local:13643
-    18:14:07 I ctx.local10: stdout:                        \-+- 13647 dmw econtext:dmw@Eldil.local:13645
-    18:14:07 I ctx.local10: stdout:                          \-+- 13649 dmw econtext:dmw@Eldil.local:13647
-    18:14:07 I ctx.local10: stdout:                            \-+- 13651 dmw econtext:dmw@Eldil.local:13649
-    18:14:07 I ctx.local10: stdout:                              \-+- 13653 dmw pstree -s python -s econtext
+    18:14:07 I ctx.local10: stdout:          \-+- 13633 dmw mitogen:dmw@Eldil.local:13632
+    18:14:07 I ctx.local10: stdout:            \-+- 13635 dmw mitogen:dmw@Eldil.local:13633
+    18:14:07 I ctx.local10: stdout:              \-+- 13637 dmw mitogen:dmw@Eldil.local:13635
+    18:14:07 I ctx.local10: stdout:                \-+- 13639 dmw mitogen:dmw@Eldil.local:13637
+    18:14:07 I ctx.local10: stdout:                  \-+- 13641 dmw mitogen:dmw@Eldil.local:13639
+    18:14:07 I ctx.local10: stdout:                    \-+- 13643 dmw mitogen:dmw@Eldil.local:13641
+    18:14:07 I ctx.local10: stdout:                      \-+- 13645 dmw mitogen:dmw@Eldil.local:13643
+    18:14:07 I ctx.local10: stdout:                        \-+- 13647 dmw mitogen:dmw@Eldil.local:13645
+    18:14:07 I ctx.local10: stdout:                          \-+- 13649 dmw mitogen:dmw@Eldil.local:13647
+    18:14:07 I ctx.local10: stdout:                            \-+- 13651 dmw mitogen:dmw@Eldil.local:13649
+    18:14:07 I ctx.local10: stdout:                              \-+- 13653 dmw pstree -s python -s mitogen
     18:14:07 I ctx.local10: stdout:                                \--- 13654 root ps -axwwo user,pid,ppid,pgid,command

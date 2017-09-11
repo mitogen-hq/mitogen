@@ -25,13 +25,13 @@ import zlib
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
     # been kept intentionally 2.3 compatible so we can reuse it.
-    from econtext.compat import pkgutil
+    from mitogen.compat import pkgutil
 
-import econtext.core
+import mitogen.core
 
 
-LOG = logging.getLogger('econtext')
-IOLOG = logging.getLogger('econtext.io')
+LOG = logging.getLogger('mitogen')
+IOLOG = logging.getLogger('mitogen.io')
 RLOG = logging.getLogger('ctx')
 
 DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
@@ -39,8 +39,8 @@ COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 IOLOG_RE = re.compile(r'^[ ]*IOLOG.debug\(.+?\)$', re.M)
 
 PERMITTED_CLASSES = set([
-    ('econtext.core', 'CallError'),
-    ('econtext.core', 'Dead'),
+    ('mitogen.core', 'CallError'),
+    ('mitogen.core', 'Dead'),
 ])
 
 
@@ -95,7 +95,7 @@ def read_with_deadline(fd, size, deadline):
         if rfds:
             return os.read(fd, size)
 
-    raise econtext.core.TimeoutError('read timed out')
+    raise mitogen.core.TimeoutError('read timed out')
 
 
 def iter_read(fd, deadline):
@@ -104,12 +104,12 @@ def iter_read(fd, deadline):
 
     bits = []
     while True:
-        s, disconnected = econtext.core.io_op(os.read, fd, 4096)
+        s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
         if disconnected:
             s = ''
 
         if not s:
-            raise econtext.core.StreamError(
+            raise mitogen.core.StreamError(
                 'EOF on stream; last 100 bytes received: %r' %
                 (''.join(bits)[-100:],)
             )
@@ -128,10 +128,10 @@ class LogForwarder(object):
     def __init__(self, router):
         self._router = router
         self._cache = {}
-        router.add_handler(self._on_forward_log, econtext.core.FORWARD_LOG)
+        router.add_handler(self._on_forward_log, mitogen.core.FORWARD_LOG)
 
     def _on_forward_log(self, msg):
-        if msg == econtext.core._DEAD:
+        if msg == mitogen.core._DEAD:
             return
 
         logger = self._cache.get(msg.src_id)
@@ -154,7 +154,7 @@ class LogForwarder(object):
 class ModuleResponder(object):
     def __init__(self, router):
         self._router = router
-        router.add_handler(self._on_get_module, econtext.core.GET_MODULE)
+        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
@@ -217,7 +217,7 @@ class ModuleResponder(object):
 
     def _on_get_module(self, msg):
         LOG.debug('%r.get_module(%r)', self, msg)
-        if msg == econtext.core._DEAD:
+        if msg == mitogen.core._DEAD:
             return
 
         fullname = msg.data
@@ -243,7 +243,7 @@ class ModuleResponder(object):
 
             compressed = zlib.compress(source)
             self._router.route(
-                econtext.core.Message.pickled(
+                mitogen.core.Message.pickled(
                     (pkg_present, path, compressed),
                     dst_id=msg.src_id,
                     handle=msg.reply_to,
@@ -252,7 +252,7 @@ class ModuleResponder(object):
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
             self._router.route(
-                econtext.core.Message.pickled(
+                mitogen.core.Message.pickled(
                     None,
                     dst_id=msg.src_id,
                     handle=msg.reply_to,
@@ -269,14 +269,14 @@ class ModuleForwarder(object):
         self.router = router
         self.parent_context = parent_context
         self.importer = importer
-        router.add_handler(self._on_get_module, econtext.core.GET_MODULE)
+        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
 
     def __repr__(self):
         return 'ModuleForwarder(%r)' % (self.router,)
 
     def _on_get_module(self, msg):
         LOG.debug('%r._on_get_module(%r)', self, msg)
-        if msg == econtext.core._DEAD:
+        if msg == mitogen.core._DEAD:
             return
 
         fullname = msg.data
@@ -284,7 +284,7 @@ class ModuleForwarder(object):
         if cached:
             LOG.debug('%r._on_get_module(): using cached %r', self, fullname)
             self.router.route(
-                econtext.core.Message.pickled(
+                mitogen.core.Message.pickled(
                     cached,
                     dst_id=msg.src_id,
                     handle=msg.reply_to,
@@ -293,9 +293,9 @@ class ModuleForwarder(object):
         else:
             LOG.debug('%r._on_get_module(): requesting %r', self, fullname)
             self.parent_context.send(
-                econtext.core.Message(
+                mitogen.core.Message(
                     data=msg.data,
-                    handle=econtext.core.GET_MODULE,
+                    handle=mitogen.core.GET_MODULE,
                     reply_to=self.router.add_handler(
                         lambda m: self._on_got_source(m, msg),
                         persist=False
@@ -308,7 +308,7 @@ class ModuleForwarder(object):
         fullname = original_msg.data
         self.importer._cache[fullname] = msg.unpickle()
         self.router.route(
-            econtext.core.Message(
+            mitogen.core.Message(
                 data=msg.data,
                 dst_id=original_msg.src_id,
                 handle=original_msg.reply_to,
@@ -316,7 +316,7 @@ class ModuleForwarder(object):
         )
 
 
-class Message(econtext.core.Message):
+class Message(mitogen.core.Message):
     """
     Message subclass that controls unpickling.
     """
@@ -324,13 +324,13 @@ class Message(econtext.core.Message):
         """Return the class implementing `module_name.class_name` or raise
         `StreamError` if the module is not whitelisted."""
         if (module_name, class_name) not in PERMITTED_CLASSES:
-            raise econtext.core.StreamError(
+            raise mitogen.core.StreamError(
                 '%r attempted to unpickle %r in module %r',
                 self._context, class_name, module_name)
         return getattr(sys.modules[module_name], class_name)
 
 
-class Stream(econtext.core.Stream):
+class Stream(mitogen.core.Stream):
     """
     Base for streams capable of starting new slaves.
     """
@@ -339,7 +339,7 @@ class Stream(econtext.core.Stream):
     #: The path to the remote Python interpreter.
     python_path = 'python2.7'
 
-    #: True to cause context to write verbose /tmp/econtext.<pid>.log.
+    #: True to cause context to write verbose /tmp/mitogen.<pid>.log.
     debug = False
 
     def construct(self, remote_name=None, python_path=None, debug=False, **kwargs):
@@ -359,11 +359,11 @@ class Stream(econtext.core.Stream):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
         self.send(
-            econtext.core.Message.pickled(
-                econtext.core._DEAD,
-                src_id=econtext.context_id,
+            mitogen.core.Message.pickled(
+                mitogen.core._DEAD,
+                src_id=mitogen.context_id,
                 dst_id=self.remote_id,
-                handle=econtext.core.CALL_FUNCTION
+                handle=mitogen.core.CALL_FUNCTION
             )
         )
 
@@ -380,7 +380,7 @@ class Stream(econtext.core.Stream):
             os.dup2(R2,101)
             for f in R,R2,W,W2: os.close(f)
             os.environ['ARGV0'] = `[sys.executable]`
-            os.execv(sys.executable,['econtext:CONTEXT_NAME'])
+            os.execv(sys.executable,['mitogen:CONTEXT_NAME'])
         else:
             os.write(1, 'EC0\n')
             C = zlib.decompress(sys.stdin.read(input()))
@@ -399,9 +399,9 @@ class Stream(econtext.core.Stream):
                 'exec("%s".decode("base64"))' % (encoded,)]
 
     def get_preamble(self):
-        source = inspect.getsource(econtext.core)
+        source = inspect.getsource(mitogen.core)
         source += '\nExternalContext().main%r\n' % ((
-            econtext.context_id,       # parent_id
+            mitogen.context_id,       # parent_id
             self.remote_id,            # context_id
             self.key,
             self.debug,
@@ -417,8 +417,8 @@ class Stream(econtext.core.Stream):
         LOG.debug('%r.connect()', self)
         pid, fd = self.create_child(*self.get_boot_command())
         self.name = 'local.%s' % (pid,)
-        self.receive_side = econtext.core.Side(self, fd)
-        self.transmit_side = econtext.core.Side(self, os.dup(fd))
+        self.receive_side = mitogen.core.Side(self, fd)
+        self.transmit_side = mitogen.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
@@ -434,11 +434,11 @@ class Stream(econtext.core.Stream):
         self._ec0_received()
 
 
-class Broker(econtext.core.Broker):
+class Broker(mitogen.core.Broker):
     shutdown_timeout = 5.0
 
 
-class Context(econtext.core.Context):
+class Context(mitogen.core.Context):
     via = None
 
     def on_disconnect(self, broker):
@@ -446,7 +446,7 @@ class Context(econtext.core.Context):
         Override base behaviour of triggering Broker shutdown on parent stream
         disconnection.
         """
-        econtext.core.fire(self, 'disconnect')
+        mitogen.core.fire(self, 'disconnect')
 
     def _discard_result(self, msg):
         data = msg.unpickle()
@@ -470,9 +470,9 @@ class Context(econtext.core.Context):
 
         call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
         self.send(
-            econtext.core.Message.pickled(
+            mitogen.core.Message.pickled(
                 call,
-                handle=econtext.core.CALL_FUNCTION,
+                handle=mitogen.core.CALL_FUNCTION,
                 reply_to=self.router.add_handler(self._discard_result),
             )
         )
@@ -481,7 +481,7 @@ class Context(econtext.core.Context):
         """Invoke `fn([context,] *args, **kwargs)` in the external context.
 
         If `with_context` is ``True``, pass its
-        :py:class:`ExternalContext <econtext.core.ExternalContext>` instance as
+        :py:class:`ExternalContext <mitogen.core.ExternalContext>` instance as
         the first parameter.
 
         If `deadline` is not ``None``, expire the call after `deadline`
@@ -498,15 +498,15 @@ class Context(econtext.core.Context):
 
         call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
         response = self.send_await(
-            econtext.core.Message.pickled(
+            mitogen.core.Message.pickled(
                 call,
-                handle=econtext.core.CALL_FUNCTION
+                handle=mitogen.core.CALL_FUNCTION
             ),
             deadline
         )
 
         decoded = response.unpickle()
-        if isinstance(decoded, econtext.core.CallError):
+        if isinstance(decoded, mitogen.core.CallError):
             raise decoded
         return decoded
 
@@ -515,13 +515,13 @@ class Context(econtext.core.Context):
         return self.call_with_deadline(None, False, fn, *args, **kwargs)
 
 
-def _proxy_connect(econtext, name, context_id, klass, kwargs):
-    if not isinstance(econtext.router, Router):  # TODO
-        econtext.router.__class__ = Router  # TODO
+def _proxy_connect(mitogen, name, context_id, klass, kwargs):
+    if not isinstance(mitogen.router, Router):  # TODO
+        mitogen.router.__class__ = Router  # TODO
         LOG.debug('_proxy_connect(): constructing ModuleForwarder')
-        ModuleForwarder(econtext.router, econtext.parent, econtext.importer)
+        ModuleForwarder(mitogen.router, mitogen.parent, mitogen.importer)
 
-    context = econtext.router._connect(
+    context = mitogen.router._connect(
         context_id,
         klass,
         name=name,
@@ -530,7 +530,7 @@ def _proxy_connect(econtext, name, context_id, klass, kwargs):
     return context.name
 
 
-class Router(econtext.core.Router):
+class Router(mitogen.core.Router):
     context_id_counter = itertools.count(1)
 
     debug = False
@@ -543,9 +543,9 @@ class Router(econtext.core.Router):
     def enable_debug(self):
         """
         Cause this context and any descendant child contexts to write debug
-        logs to /tmp/econtext.<pid>.log.
+        logs to /tmp/mitogen.<pid>.log.
         """
-        econtext.core.enable_debug_logging()
+        mitogen.core.enable_debug_logging()
         self.debug = True
 
     def __enter__(self):
@@ -562,12 +562,12 @@ class Router(econtext.core.Router):
         return self.connect(Stream, **kwargs)
 
     def sudo(self, **kwargs):
-        import econtext.sudo
-        return self.connect(econtext.sudo.Stream, **kwargs)
+        import mitogen.sudo
+        return self.connect(mitogen.sudo.Stream, **kwargs)
 
     def ssh(self, **kwargs):
-        import econtext.ssh
-        return self.connect(econtext.ssh.Stream, **kwargs)
+        import mitogen.ssh
+        return self.connect(mitogen.ssh.Stream, **kwargs)
 
     def _connect(self, context_id, klass, name=None, **kwargs):
         context = Context(self, context_id)
@@ -605,9 +605,9 @@ class Router(econtext.core.Router):
         while parent is not None:
             LOG.debug('Adding route to %r for %r via %r', parent, context, child)
             parent.send(
-                econtext.core.Message(
+                mitogen.core.Message(
                     data='%s\x00%s' % (context_id, child.context_id),
-                    handle=econtext.core.ADD_ROUTE,
+                    handle=mitogen.core.ADD_ROUTE,
                 )
             )
             child = parent

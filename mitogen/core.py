@@ -24,8 +24,8 @@ import traceback
 import zlib
 
 
-LOG = logging.getLogger('econtext')
-IOLOG = logging.getLogger('econtext.io')
+LOG = logging.getLogger('mitogen')
+IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
 GET_MODULE = 100
@@ -36,14 +36,14 @@ ADD_ROUTE = 103
 CHUNK_SIZE = 16384
 
 
-if __name__ == 'econtext.core':
+if __name__ == 'mitogen.core':
     # When loaded using import mechanism, ExternalContext.main() will not have
-    # a chance to set the synthetic econtext global, so just import it here.
-    import econtext
+    # a chance to set the synthetic mitogen global, so just import it here.
+    import mitogen
 else:
     # When loaded as __main__, ensure classes and functions gain a __module__
     # attribute consistent with the host process, so that pickling succeeds.
-    __name__ = 'econtext.core'
+    __name__ = 'mitogen.core'
 
 
 class Error(Exception):
@@ -53,7 +53,7 @@ class Error(Exception):
 
 
 class CallError(Error):
-    """Raised when :py:meth:`Context.call() <econtext.master.Context.call>`
+    """Raised when :py:meth:`Context.call() <mitogen.master.Context.call>`
     fails. A copy of the traceback from the external context is appended to the
     exception message.
     """
@@ -113,7 +113,7 @@ def io_op(func, *args):
     this will be replaced later by a 'goodbye' message to avoid reading from a
     disconnected endpoint, allowing for more robust error reporting.
 
-    When connected over a socket (e.g. econtext.master.create_child()),
+    When connected over a socket (e.g. mitogen.master.create_child()),
     ECONNRESET may be triggered by any read or write.
     """
     try:
@@ -129,7 +129,7 @@ def enable_debug_logging():
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
     IOLOG.setLevel(logging.DEBUG)
-    fp = open('/tmp/econtext.%s.log' % (os.getpid(),), 'w', 1)
+    fp = open('/tmp/mitogen.%s.log' % (os.getpid(),), 'w', 1)
     set_cloexec(fp.fileno())
     handler = logging.StreamHandler(fp)
     handler.formatter = logging.Formatter(
@@ -147,7 +147,7 @@ class Message(object):
     data = None
 
     def __init__(self, **kwargs):
-        self.src_id = econtext.context_id
+        self.src_id = mitogen.context_id
         vars(self).update(kwargs)
 
     _find_global = None
@@ -287,22 +287,22 @@ class Importer(object):
     """
     def __init__(self, context, core_src):
         self._context = context
-        self._present = {'econtext': [
-            'econtext.ansible',
-            'econtext.compat',
-            'econtext.compat.pkgutil',
-            'econtext.fakessh',
-            'econtext.master',
-            'econtext.ssh',
-            'econtext.sudo',
-            'econtext.utils',
+        self._present = {'mitogen': [
+            'mitogen.ansible',
+            'mitogen.compat',
+            'mitogen.compat.pkgutil',
+            'mitogen.fakessh',
+            'mitogen.master',
+            'mitogen.ssh',
+            'mitogen.sudo',
+            'mitogen.utils',
         ]}
         self.tls = threading.local()
         self._cache = {}
         if core_src:
-            self._cache['econtext.core'] = (
+            self._cache['mitogen.core'] = (
                 None,
-                'econtext/core.py',
+                'mitogen/core.py',
                 zlib.compress(core_src),
             )
 
@@ -381,7 +381,7 @@ class LogHandler(logging.Handler):
         self.local = threading.local()
 
     def emit(self, rec):
-        if rec.name == 'econtext.io' or \
+        if rec.name == 'mitogen.io' or \
            getattr(self.local, 'in_emit', False):
             return
 
@@ -500,7 +500,7 @@ class BasicStream(object):
 
 class Stream(BasicStream):
     """
-    :py:class:`BasicStream` subclass implementing econtext's :ref:`stream
+    :py:class:`BasicStream` subclass implementing mitogen's :ref:`stream
     protocol <stream-protocol>`.
     """
     _input_buf = ''
@@ -625,7 +625,7 @@ class Context(object):
         be called from any thread."""
         msg.dst_id = self.context_id
         if msg.src_id is None:
-            msg.src_id = econtext.context_id
+            msg.src_id = mitogen.context_id
         self.router.route(msg)
 
     def send_await(self, msg, deadline=None):
@@ -835,16 +835,16 @@ class Router(object):
 
     def _async_route(self, msg):
         IOLOG.debug('%r._async_route(%r)', self, msg)
-        if msg.dst_id == econtext.context_id:
+        if msg.dst_id == mitogen.context_id:
             return self._invoke(msg)
 
         stream = self._stream_by_id.get(msg.dst_id)
         if stream is None:
-            stream = self._stream_by_id.get(econtext.parent_id)
+            stream = self._stream_by_id.get(mitogen.parent_id)
 
         if stream is None:
             LOG.error('%r: no route for %r, my ID is %r',
-                      self, msg, econtext.context_id)
+                      self, msg, mitogen.context_id)
             return
 
         stream.send(msg)
@@ -881,7 +881,7 @@ class Broker(object):
         self._waker = Waker(self)
         self.start_receive(self._waker)
         self._thread = threading.Thread(target=self._broker_main,
-                                        name='econtext-broker')
+                                        name='mitogen-broker')
         self._thread.start()
 
     def defer(self, func, *args, **kwargs):
@@ -1005,24 +1005,24 @@ class ExternalContext(object):
 
     .. attribute:: broker
 
-        The :py:class:`econtext.core.Broker` instance.
+        The :py:class:`mitogen.core.Broker` instance.
 
     .. attribute:: context
 
-            The :py:class:`econtext.core.Context` instance.
+            The :py:class:`mitogen.core.Context` instance.
 
     .. attribute:: channel
 
-            The :py:class:`econtext.core.Channel` over which
+            The :py:class:`mitogen.core.Channel` over which
             :py:data:`CALL_FUNCTION` requests are received.
 
     .. attribute:: stdout_log
 
-        The :py:class:`econtext.core.IoLogger` connected to ``stdout``.
+        The :py:class:`mitogen.core.IoLogger` connected to ``stdout``.
 
     .. attribute:: importer
 
-        The :py:class:`econtext.core.Importer` instance.
+        The :py:class:`mitogen.core.Importer` instance.
 
     .. attribute:: stdout_log
 
@@ -1080,19 +1080,19 @@ class ExternalContext(object):
         sys.meta_path.append(self.importer)
 
     def _setup_package(self, context_id, parent_id):
-        global econtext
-        econtext = imp.new_module('econtext')
-        econtext.__package__ = 'econtext'
-        econtext.__path__ = []
-        econtext.__loader__ = self.importer
-        econtext.slave = True
-        econtext.context_id = context_id
-        econtext.parent_id = parent_id
-        econtext.core = sys.modules['__main__']
-        econtext.core.__file__ = 'x/econtext/core.py'  # For inspect.getsource()
-        econtext.core.__loader__ = self.importer
-        sys.modules['econtext'] = econtext
-        sys.modules['econtext.core'] = econtext.core
+        global mitogen
+        mitogen = imp.new_module('mitogen')
+        mitogen.__package__ = 'mitogen'
+        mitogen.__path__ = []
+        mitogen.__loader__ = self.importer
+        mitogen.slave = True
+        mitogen.context_id = context_id
+        mitogen.parent_id = parent_id
+        mitogen.core = sys.modules['__main__']
+        mitogen.core.__file__ = 'x/mitogen/core.py'  # For inspect.getsource()
+        mitogen.core.__loader__ = self.importer
+        sys.modules['mitogen'] = mitogen
+        sys.modules['mitogen.core'] = mitogen.core
         del sys.modules['__main__']
 
     def _setup_stdio(self):

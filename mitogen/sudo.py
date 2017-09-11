@@ -5,15 +5,15 @@ import pty
 import termios
 import time
 
-import econtext.core
-import econtext.master
+import mitogen.core
+import mitogen.master
 
 
 LOG = logging.getLogger(__name__)
 PASSWORD_PROMPT = 'password'
 
 
-class PasswordError(econtext.core.Error):
+class PasswordError(mitogen.core.Error):
     pass
 
 
@@ -89,7 +89,7 @@ def tty_create_child(*args):
     return pid, master_fd
 
 
-class Stream(econtext.master.Stream):
+class Stream(mitogen.master.Stream):
     create_child = staticmethod(tty_create_child)
     sudo_path = 'sudo'
     password = None
@@ -98,7 +98,7 @@ class Stream(econtext.master.Stream):
         """
         Get the named sudo context, creating it if it does not exist.
 
-        :param econtext.core.Broker broker:
+        :param mitogen.core.Broker broker:
             The broker that will own the context.
 
         :param str username:
@@ -115,7 +115,7 @@ class Stream(econtext.master.Stream):
         :param str password:
             The password to use when authenticating to sudo. Depending on the sudo
             configuration, this is either the current account password or the
-            target account password. :py:class:`econtext.sudo.PasswordError` will
+            target account password. :py:class:`mitogen.sudo.PasswordError` will
             be raised if sudo requests a password but none is provided.
 
         """
@@ -138,7 +138,7 @@ class Stream(econtext.master.Stream):
 
     def _connect_bootstrap(self):
         password_sent = False
-        for buf in econtext.master.iter_read(self.receive_side.fd,
+        for buf in mitogen.master.iter_read(self.receive_side.fd,
                                              time.time() + 10.0):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
@@ -152,4 +152,4 @@ class Stream(econtext.master.Stream):
                 os.write(self.transmit_side.fd, self.password + '\n')
                 password_sent = True
         else:
-            raise econtext.core.StreamError('bootstrap failed')
+            raise mitogen.core.StreamError('bootstrap failed')

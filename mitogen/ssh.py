@@ -4,10 +4,10 @@ Functionality to allow establishing new slave contexts over an SSH connection.
 
 import commands
 
-import econtext.master
+import mitogen.master
 
 
-class Stream(econtext.master.Stream):
+class Stream(mitogen.master.Stream):
     python_path = 'python'
 
     #: The path to the SSH binary.

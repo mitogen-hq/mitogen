@@ -7,40 +7,40 @@ Package Layout
 ==============
 
 
-econtext Package
-----------------
-
-.. automodule:: econtext
-
-.. autodata:: econtext.slave
-.. autodata:: econtext.context_id
-.. autodata:: econtext.parent_id
-
-
-econtext.core
--------------
-
-.. automodule:: econtext.core
-
-
-econtext.master
+mitogen Package
 ---------------
 
-.. automodule:: econtext.master
+.. automodule:: mitogen
+
+.. autodata:: mitogen.slave
+.. autodata:: mitogen.context_id
+.. autodata:: mitogen.parent_id
 
 
-econtext.fakessh
+mitogen.core
+------------
+
+.. automodule:: mitogen.core
+
+
+mitogen.master
+--------------
+
+.. automodule:: mitogen.master
+
+
+mitogen.fakessh
 ---------------
 
-.. automodule:: econtext.fakessh
+.. automodule:: mitogen.fakessh
 
-.. autofunction:: econtext.fakessh.run
+.. autofunction:: mitogen.fakessh.run
 
 
 Router Class
 ============
 
-.. autoclass:: econtext.master.Router
+.. autoclass:: mitogen.master.Router
    :members:
    :inherited-members:
 
@@ -48,7 +48,7 @@ Router Class
 Broker Class
 ============
 
-.. autoclass:: econtext.master.Broker
+.. autoclass:: mitogen.master.Broker
    :members:
    :inherited-members:
 
@@ -56,7 +56,7 @@ Broker Class
 Context Class
 =============
 
-.. autoclass:: econtext.master.Context
+.. autoclass:: mitogen.master.Context
    :members:
    :inherited-members:
 
@@ -64,29 +64,29 @@ Context Class
 Channel Class
 -------------
 
-.. autoclass:: econtext.core.Channel
+.. autoclass:: mitogen.core.Channel
    :members:
 
 
 Context Class
 -------------
 
-.. autoclass:: econtext.master.Context
+.. autoclass:: mitogen.master.Context
    :members:
 
 
 Utility Functions
 =================
 
-.. automodule:: econtext.utils
+.. automodule:: mitogen.utils
   :members:
 
 
 Exceptions
 ==========
 
-.. autoclass:: econtext.core.Error
-.. autoclass:: econtext.core.CallError
-.. autoclass:: econtext.core.ChannelError
-.. autoclass:: econtext.core.StreamError
-.. autoclass:: econtext.core.TimeoutError
+.. autoclass:: mitogen.core.Error
+.. autoclass:: mitogen.core.CallError
+.. autoclass:: mitogen.core.ChannelError
+.. autoclass:: mitogen.core.StreamError
+.. autoclass:: mitogen.core.TimeoutError

@@ -6,7 +6,7 @@ History And Future
 History
 #######
 
-The first version of econtext was written in late 2006 for use in an
+The first version of Mitogen was written in late 2006 for use in an
 infrastructure management program, however at the time I lacked the pragmatism
 necessary for pushing my little design from concept to finished implementation.
 I tired of it when no way could be found to unify every communication style
@@ -35,14 +35,14 @@ shocked to discover it writing temporary files everywhere, and uploading a
 
     All contemporary Devops tooling
 
-Searching around for something to play with, I came across my forgotten
-``src/econtext`` directory and somehow in a few hours managed to squash most of
-the race conditions and logic bugs that were preventing reliable operation,
-write the IO and log forwarders, rewrite the module importer, move from
+Searching around for something to play with, I came across my forgotten project
+directory and somehow in a few hours managed to squash most of the race
+conditions and logic bugs that were preventing reliable operation, write the IO
+and log forwarders, rewrite the module importer, move from
 :py:func:`select.poll` to :py:func:`select.select`, and even refactor the
 special cases out of the main loop.
 
-So there you have it. As of writing :py:mod:`econtext.core` consists of 681
+So there you have it. As of writing :py:mod:`mitogen.core` consists of 681
 source lines, and those 681 lines have taken over a decade to write. I have
 long had a preference for avoiding infrastructure work commercially, not least
 for the inescapable depression induced by considering the wasted effort across
@@ -55,4 +55,4 @@ Future
 
 `View the issue list on GitHub`_
 
-.. _View the issue list on GitHub: https://github.com/dw/econtext/issues?q=is%3Aopen%20is%3Aissue%20-label%3Abug
+.. _View the issue list on GitHub: https://github.com/dw/mitogen/issues?q=is%3Aopen%20is%3Aissue%20-label%3Abug

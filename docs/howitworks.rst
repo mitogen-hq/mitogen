@@ -1,6 +1,6 @@
 
-How econtext Works
-==================
+How Mitogen Works
+=================
 
 Some effort is required to accomplish the seemingly magical feat of
 bootstrapping a remote Python process without any software installed on the
@@ -17,7 +17,7 @@ necessary for something on the remote to be prepared to decompress the payload
 and feed it to a Python interpreter. Since we would like to avoid writing an
 error-prone shell fragment to implement this, and since we must avoid writing
 to the remote machine's disk in case it is read-only, the Python process
-started on the remote machine by ``econtext`` immediately forks in order to
+started on the remote machine by Mitogen immediately forks in order to
 implement the decompression.
 
 
@@ -25,7 +25,7 @@ Python Command Line
 ###################
 
 The Python command line sent to the host is a base64-encoded copy of the
-:py:meth:`econtext.master.LocalStream._first_stage` function, which has been
+:py:meth:`mitogen.master.LocalStream._first_stage` function, which has been
 carefully optimized to reduce its size. Prior to base64 encoding,
 ``CONTEXT_NAME`` is replaced with the desired context name in the function's
 source code.
@@ -50,8 +50,8 @@ process.
 
 After fork, the parent half overwrites its ``stdin`` with the read end of the
 pipe, and the child half writes the string ``EC0\n``, then begins reading the
-:py:mod:`zlib`-compressed payload supplied on ``stdin`` by the econtext master,
-and writing the decompressed result to the write-end of the UNIX pipe.
+:py:mod:`zlib`-compressed payload supplied on ``stdin`` by the master, and
+writing the decompressed result to the write-end of the UNIX pipe.
 
 To allow recovery of ``stdin`` for reuse by the bootstrapped process for
 master<->slave communication, it is necessary for the first stage to avoid
@@ -83,25 +83,25 @@ Bootstrap Preparation
 Now we have the mechanism in place to send a :py:mod:`zlib`-compressed script
 to the remote Python interpreter, it is time to choose what to send.
 
-The script sent is simply the source code for :py:mod:`econtext.core`, with a
+The script sent is simply the source code for :py:mod:`mitogen.core`, with a
 single line suffixed to trigger execution of the
-:py:meth:`econtext.core.ExternalContext.main` function. The encoded arguments
+:py:meth:`mitogen.core.ExternalContext.main` function. The encoded arguments
 to the main function include some additional details, such as the logging package
 level that was active in the parent process, and a random secret key that may
 later be used to generate HMAC signatures over the data frames that will be
 exchanged after bootstrap.
 
 After the script source code is prepared, it is passed through
-:py:func:`econtext.master.minimize_source` to strip it of docstrings and
+:py:func:`mitogen.master.minimize_source` to strip it of docstrings and
 comments, while preserving line numbers. This reduces the compressed payload
 by around 20%.
 
 
-Preserving The `econtext.core` Source
-#####################################
+Preserving The `mitogen.core` Source
+####################################
 
 One final trick is implemented in the first stage: after bootstrapping the new
-slave, it writes a duplicate copy of the :py:mod:`econtext.core` source it just
+slave, it writes a duplicate copy of the :py:mod:`mitogen.core` source it just
 used to bootstrap it back into another pipe connected to the slave. The slave's
 module importer cache is initialized with a copy of the source, so that
 subsequent bootstraps of slave-of-slaves do not require the source to be
@@ -122,26 +122,26 @@ to receive messages.
 ExternalContext.main()
 ----------------------
 
-.. automethod:: econtext.core.ExternalContext.main
+.. automethod:: mitogen.core.ExternalContext.main
 
 
-Generating A Synthetic `econtext` Package
-#########################################
+Generating A Synthetic `mitogen` Package
+########################################
 
-Since the bootstrap consists of the :py:mod:`econtext.core` source code, and
+Since the bootstrap consists of the :py:mod:`mitogen.core` source code, and
 this code is loaded by Python by way of its main script (``__main__`` module),
 initially the module layout in the slave will be incorrect.
 
 The first step taken after bootstrap is to rearrange :py:data:`sys.modules` slightly
-so that :py:mod:`econtext.core` appears in the correct location, and all
+so that :py:mod:`mitogen.core` appears in the correct location, and all
 classes defined in that module have their ``__module__`` attribute fixed up
 such that :py:mod:`cPickle` correctly serializes instance module names.
 
-Once a synthetic :py:mod:`econtext` package and :py:mod:`econtext.core` module
+Once a synthetic :py:mod:`mitogen` package and :py:mod:`mitogen.core` module
 have been generated, the bootstrap **deletes** `sys.modules['__main__']`, so
 that any attempt to import it (by :py:mod:`cPickle`) will cause the import to
-be satisfied by fetching the econtext master's actual ``__main__`` module. This
-is necessary to allow master programs to be written as a self-contained Python
+be satisfied by fetching the master's actual ``__main__`` module. This is
+necessary to allow master programs to be written as a self-contained Python
 script.
 
 
@@ -161,8 +161,8 @@ Setup Logging
 
 The slave's :py:mod:`logging` package root logger is configured to have the
 same log level as the root logger in the master, and
-:py:class:`econtext.core.LogHandler` is installed to forward logs to the master
-context's :py:data:`FORWARD_LOG <econtext.core.FORWARD_LOG>` handle.
+:py:class:`mitogen.core.LogHandler` is installed to forward logs to the master
+context's :py:data:`FORWARD_LOG <mitogen.core.FORWARD_LOG>` handle.
 
 The log level is copied into the slave to avoid generating a potentially large
 amount of network IO forwarding logs that will simply be filtered away once
@@ -172,7 +172,7 @@ they reach the master.
 The Module Importer
 ###################
 
-An instance of :py:class:`econtext.core.Importer` is installed in
+An instance of :py:class:`mitogen.core.Importer` is installed in
 :py:data:`sys.meta_path`, where Python's ``import`` statement will execute it
 before attempting to find a module locally.
 
@@ -180,7 +180,7 @@ before attempting to find a module locally.
 Standard IO Redirection
 #######################
 
-Two instances of :py:class:`econtext.core.IoLogger` are created, one for
+Two instances of :py:class:`mitogen.core.IoLogger` are created, one for
 ``stdout`` and one for ``stderr``. This class creates a UNIX pipe whose read
 end is added to the IO multiplexer, and whose write end is used to overwrite
 the handles inherited during process creation.
@@ -200,26 +200,26 @@ Function Call Dispatch
 ######################
 
 After all initialization is complete, the slave's main thread sits in a loop
-reading from a :py:class:`Channel <econtext.core.Channel>` connected to the
-:py:data:`CALL_FUNCTION <econtext.core.CALL_FUNCTION>` handle. This handle is
+reading from a :py:class:`Channel <mitogen.core.Channel>` connected to the
+:py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` handle. This handle is
 written to by
-:py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`
-and :py:meth:`call() <econtext.master.Context.call>`.
+:py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`
+and :py:meth:`call() <mitogen.master.Context.call>`.
 
 
 Shutdown
 ########
 
 When the master signals the :py:data:`CALL_FUNCTION
-<econtext.core.CALL_FUNCTION>` :py:class:`Channel <econtext.core.Channel>` is
-closed, the slave calls :py:meth:`shutdown() <econtext.core.Broker.shutdown>`
-followed by :py:meth:`wait() <econtext.core.Broker.wait>` on its own broker,
+<mitogen.core.CALL_FUNCTION>` :py:class:`Channel <mitogen.core.Channel>` is
+closed, the slave calls :py:meth:`shutdown() <mitogen.core.Broker.shutdown>`
+followed by :py:meth:`wait() <mitogen.core.Broker.wait>` on its own broker,
 triggering graceful shutdown.
 
 During shutdown, the master will wait a few seconds for slaves to disconnect
 gracefully before force disconnecting them, while the slaves will use that time
 to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on their
-:py:class:`IoLogger <econtext.core.IoLogger>` socket's write ends before
+:py:class:`IoLogger <mitogen.core.IoLogger>` socket's write ends before
 draining any remaining data buffered on the read ends.
 
 An alternative approach is to wait until the socket is completely closed, with
@@ -260,12 +260,12 @@ master and slave:
 
 Masters listen on the following handles:
 
-.. data:: econtext.core.FORWARD_LOG
+.. data:: mitogen.core.FORWARD_LOG
 
     Receives `(logger_name, level, msg)` 3-tuples and writes them to the
-    master's ``econtext.ctx.<context_name>`` logger.
+    master's ``mitogen.ctx.<context_name>`` logger.
 
-.. data:: econtext.core.GET_MODULE
+.. data:: mitogen.core.GET_MODULE
 
     Receives `(reply_to, fullname)` 2-tuples, looks up the source code for the
     module named ``fullname``, and writes the source along with some metadata
@@ -274,11 +274,11 @@ Masters listen on the following handles:
 
 Slaves listen on the following handles:
 
-.. data:: econtext.core.CALL_FUNCTION
+.. data:: mitogen.core.CALL_FUNCTION
 
     Receives `(with_context, mod_name, class_name, func_name, args, kwargs)`
     5-tuples from
-    :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`,
+    :py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`,
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
@@ -289,7 +289,7 @@ Slaves listen on the following handles:
     it, and arranging for the connection to its parent context to be closed
     shortly thereafter.
 
-.. data:: econtext.core.ADD_ROUTE
+.. data:: mitogen.core.ADD_ROUTE
 
     Receives `(target_id, via_id)` integer tuples, describing how messages
     arriving at this context on any Stream should be forwarded on the stream
@@ -302,7 +302,7 @@ Slaves listen on the following handles:
     established.
 
     Given a chain `master -> ssh1 -> sudo1`, no `ADD_ROUTE` message is
-    necessary, since :py:class:`econtext.core.Router` in the `ssh` context can
+    necessary, since :py:class:`mitogen.core.Router` in the `ssh` context can
     arrange to update its routes while setting up the new slave during
     `proxy_connect()`.
 
@@ -315,11 +315,11 @@ Slaves listen on the following handles:
 Slaves that have ever been used to create a descendent child context also
 listen on the following handles:
 
-.. data:: econtext.core.GET_MODULE
+.. data:: mitogen.core.GET_MODULE
 
     As with master's ``GET_MODULE``, except this implementation
-    (:py:class:`econtext.master.ModuleForwarder`) serves responses using
-    :py:class:`econtext.core.Importer`'s cache before forwarding the request to
+    (:py:class:`mitogen.master.ModuleForwarder`) serves responses using
+    :py:class:`mitogen.core.Importer`'s cache before forwarding the request to
     its parent context. The response is cached by each context in turn before
     being forwarded on to the slave context that originally made the request.
     In this way, the master need never re-send a module it has already sent to
@@ -327,19 +327,19 @@ listen on the following handles:
 
 
 Additional handles are created to receive the result of every function call
-triggered by :py:meth:`call_with_deadline() <econtext.master.Context.call_with_deadline>`.
+triggered by :py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`.
 
 
 Sentinel Value
 ##############
 
-.. autodata:: econtext.core._DEAD
+.. autodata:: mitogen.core._DEAD
 
-The special value :py:data:`econtext.core._DEAD` is used to signal
+The special value :py:data:`mitogen.core._DEAD` is used to signal
 disconnection or closure of the remote end. It is used internally by
-:py:class:`Channel <econtext.core.Channel>` and also passed to any function
+:py:class:`Channel <mitogen.core.Channel>` and also passed to any function
 still registered with :py:meth:`add_handler()
-<econtext.core.Router.add_handler>` during Broker shutdown.
+<mitogen.core.Router.add_handler>` during Broker shutdown.
 
 
 Use of Pickle
@@ -353,9 +353,9 @@ serialization code in the bootstrap.
 
 The pickler active in slave contexts will instantiate any class, however in the
 master it is initially restricted to only permitting
-:py:class:`CallError <econtext.core.CallError>` and :py:data:`_DEAD
-<econtext.core._DEAD>`. While not recommended, it is possible to register more
-using :py:meth:`econtext.master.LocalStream.allow_class`.
+:py:class:`CallError <mitogen.core.CallError>` and :py:data:`_DEAD
+<mitogen.core._DEAD>`. While not recommended, it is possible to register more
+using :py:meth:`mitogen.master.LocalStream.allow_class`.
 
 The choice of Pickle is one area to be revisited later. All accounts suggest it
 cannot be used securely, however few of those accounts appear to be expert, and
@@ -379,7 +379,7 @@ off-the-shelf implementations are for the most part entirely inappropriate. For
 example, a minimal copy of Twisted weighs in at around 440KiB and is composed
 of approximately 115 files. Even if we could arrange for an entire Python
 package to be transferred during bootstrap, this minimal configuration is
-massive in comparison to econtext's solution, multiplies quickly in the
+massive in comparison to Mitogen's solution, multiplies quickly in the
 presence of many machines, and would require manually splitting up the parts of
 Twisted that we would like to use.
 
@@ -391,7 +391,7 @@ Routing assumes it is impossible to construct a tree such that one of a
 context's parents will not know the ID of a target the context is attempting to
 communicate with.
 
-When :py:class:`econtext.core.Router` receives a message, it checks the IDs
+When :py:class:`mitogen.core.Router` receives a message, it checks the IDs
 associated with its directly connected streams for a potential route. If any
 stream matches, either because it directly connects to the target ID, or
 because the master sent an ``ADD_ROUTE`` message associating it, then the
@@ -436,15 +436,15 @@ currently allocate new context IDs anyway.
 Differences Between Master And Slave Brokers
 ############################################
 
-The main difference between :py:class:`econtext.core.Broker` and
-:py:class:`econtext.master.Broker` is that when the stream connection to the
+The main difference between :py:class:`mitogen.core.Broker` and
+:py:class:`mitogen.master.Broker` is that when the stream connection to the
 parent is lost in a slave, the broker will trigger its own shutdown.
 
 
 The Module Importer
 -------------------
 
-:py:class:`econtext.core.Importer` is still a work in progress, as there
+:py:class:`mitogen.core.Importer` is still a work in progress, as there
 are a variety of approaches to implementing it, and the present implementation
 is not pefectly efficient in every case.
 
@@ -452,7 +452,7 @@ It operates by intercepting ``import`` statements via `sys.meta_path`, asking
 Python if it can satisfy the import by itself, and if not, indicating to Python
 that it is capable of loading the module.
 
-In :py:meth:`load_module() <econtext.core.Importer.load_module>` an RPC is
+In :py:meth:`load_module() <mitogen.core.Importer.load_module>` an RPC is
 started to the parent context, requesting the module source code. Once the
 source is fetched, the method builds a new module object using the best
 practice documented in PEP-302.
@@ -480,7 +480,7 @@ pointless network roundtrips. Therefore in addition to the
 child modules known to exist.
 
 Before indicating it can satisfy an import request,
-:py:class:`econtext.core.Importer` first checks to see if the module belongs to
+:py:class:`mitogen.core.Importer` first checks to see if the module belongs to
 a package it has previously imported, and if so, ignores the request if the
 module does not appear in the enumeration of child modules belonging to the
 package.
@@ -505,7 +505,7 @@ mechanism is not portable to non-UNIX operating systems, and does not work in
 every case, for example when Python blocks signals during a variety of
 :py:mod:`threading` package operations.
 
-At some point it is likely econtext will be extended to support starting slaves
+At some point it is likely Mitogen will be extended to support starting slaves
 running on Windows. When that happens, it would be nice if the process model on
 Windows and UNIX did not differ, and in fact the code used on both were
 identical.

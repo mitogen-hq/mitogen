@@ -1,6 +1,6 @@
 """
 fakessh is a stream implementation that starts a local subprocess with its
-environment modified such that ``PATH`` searches for `ssh` return an econtext
+environment modified such that ``PATH`` searches for `ssh` return an mitogen
 implementation of the SSH command. When invoked, this tool arranges for the
 command line supplied by the calling program to be executed in a context
 already established by the master process, reusing the master's (possibly
@@ -13,7 +13,7 @@ or firewall hopping configurations, and enables these tools to be used in
 impossible scenarios, such as over `sudo` with ``requiretty`` enabled.
 
 The fake `ssh` command source is written to a temporary file on disk, and
-consists of a copy of the :py:mod:`econtext.core` source code (just like any
+consists of a copy of the :py:mod:`mitogen.core` source code (just like any
 other child context), with a line appended to cause it to connect back to the
 host process over an FD it inherits. As there is no reliance on an existing
 filesystem file, it is possible for child contexts to use fakessh.
@@ -28,15 +28,15 @@ Sequence:
        buffer has a `_fakessh_main()` ``CALL_FUNCTION`` enqueued.
     2. Target program (`rsync/scp/sftp`) invoked, which internally executes
        `ssh` from ``PATH``.
-    3. :py:mod:`econtext.core` bootstrap begins, recovers the stream FD
+    3. :py:mod:`mitogen.core` bootstrap begins, recovers the stream FD
        inherited via the target program, established itself as the fakessh
        context.
     4. `_fakessh_main()` ``CALL_FUNCTION`` is read by fakessh context,
-        a. sets up :py:class:`econtext.fakessh.IoPump` for stdio, registers
+        a. sets up :py:class:`mitogen.fakessh.IoPump` for stdio, registers
            stdin_handle for local context.
         b. Enqueues ``CALL_FUNCTION`` for `_start_slave()` invoked in target context,
             i. the program from the `ssh` command line is started
-            ii. sets up :py:class:`econtext.fakessh.IoPump` for `ssh` command
+            ii. sets up :py:class:`mitogen.fakessh.IoPump` for `ssh` command
                 line process's stdio pipes
             iii. returns `(control_handle, stdin_handle)` to `_fakessh_main()`
     5. `_fakessh_main()` receives control/stdin handles from from `_start_slave()`,
@@ -62,10 +62,10 @@ import sys
 import tempfile
 import threading
 
-import econtext.core
-import econtext.master
+import mitogen.core
+import mitogen.master
 
-from econtext.core import LOG, IOLOG
+from mitogen.core import LOG, IOLOG
 
 
 SSH_GETOPTS = (
@@ -73,18 +73,18 @@ SSH_GETOPTS = (
     "ACD:E:F:I:KL:MNO:PQ:R:S:TVw:W:XYy"
 )
 
-_econtext = None
+_mitogen = None
 
 
-class IoPump(econtext.core.BasicStream):
+class IoPump(mitogen.core.BasicStream):
     _output_buf = ''
     _closed = False
 
     def __init__(self, process, broker, stdin_fd, stdout_fd):
         self.process = process
         self._broker = broker
-        self.receive_side = econtext.core.Side(self, stdout_fd)
-        self.transmit_side = econtext.core.Side(self, stdin_fd)
+        self.receive_side = mitogen.core.Side(self, stdout_fd)
+        self.transmit_side = mitogen.core.Side(self, stdin_fd)
 
     def write(self, s):
         self._output_buf += s
@@ -117,7 +117,7 @@ class IoPump(econtext.core.BasicStream):
         s = self.receive_side.read()
         IOLOG.debug('%r.on_receive() -> len %r', self, len(s))
         if s:
-            econtext.core.fire(self, 'receive', s)
+            mitogen.core.fire(self, 'receive', s)
         else:
             self.on_disconnect(broker)
 
@@ -144,11 +144,11 @@ class Process(object):
         self.control = None
         self.wake_event = threading.Event()
 
-        econtext.core.listen(self.pump, 'disconnect', self._on_pump_disconnect)
-        econtext.core.listen(self.pump, 'receive', self._on_pump_receive)
+        mitogen.core.listen(self.pump, 'disconnect', self._on_pump_disconnect)
+        mitogen.core.listen(self.pump, 'receive', self._on_pump_receive)
 
         if proc:
-            pmon = econtext.master.ProcessMonitor.instance()
+            pmon = mitogen.master.ProcessMonitor.instance()
             pmon.add(proc.pid, self._on_proc_exit)
 
     def __repr__(self):
@@ -159,19 +159,19 @@ class Process(object):
         self.control.put(('exit', status))
 
     def _on_stdin(self, msg):
-        if msg == econtext.core._DEAD:
+        if msg == mitogen.core._DEAD:
             return
 
         data = msg.unpickle()
         IOLOG.debug('%r._on_stdin(%r)', self, data)
 
-        if data == econtext.core._DEAD:
+        if data == mitogen.core._DEAD:
             self.pump.close()
         else:
             self.pump.write(data)
 
     def _on_control(self, msg):
-        if msg != econtext.core._DEAD:
+        if msg != mitogen.core._DEAD:
             command, arg = msg.unpickle()
             LOG.debug('%r._on_control(%r, %s)', self, command, arg)
 
@@ -182,9 +182,9 @@ class Process(object):
             LOG.warning('%r: unknown command %r', self, command)
 
     def _on_start(self, msg, arg):
-        dest = econtext.core.Context(self.router, msg.src_id)
-        self.control = econtext.core.Sender(dest, arg[0])
-        self.stdin = econtext.core.Sender(dest, arg[1])
+        dest = mitogen.core.Context(self.router, msg.src_id)
+        self.control = mitogen.core.Sender(dest, arg[0])
+        self.stdin = mitogen.core.Sender(dest, arg[1])
         self.router.broker.start_receive(self.pump)
 
     def _on_exit(self, msg, arg):
@@ -200,7 +200,7 @@ class Process(object):
 
     def _on_pump_disconnect(self):
         LOG.debug('%r._on_pump_disconnect()', self)
-        econtext.core.fire(self, 'disconnect')
+        mitogen.core.fire(self, 'disconnect')
         self.stdin.close()
         self.wake_event.set()
 
@@ -215,21 +215,21 @@ class Process(object):
             pass
 
 
-def _start_slave(econtext_, src_id, args):
+def _start_slave(mitogen_, src_id, args):
     """
     This runs in the target context, it is invoked by _fakessh_main running in
     the fakessh context immediately after startup. It starts the slave process
     (the the point where it has a stdin_handle to target but not stdout_chan to
     write to), and waits for main to.
     """
-    LOG.debug('_start_slave(%r, %r)', econtext_, args)
+    LOG.debug('_start_slave(%r, %r)', mitogen_, args)
 
     proc = subprocess.Popen(args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
 
-    process = Process(econtext_.router,
+    process = Process(mitogen_.router,
         proc.stdin.fileno(),
         proc.stdout.fileno(),
         proc,
@@ -244,7 +244,7 @@ def _start_slave(econtext_, src_id, args):
 
 
 def exit():
-    _econtext.broker.shutdown()
+    _mitogen.broker.shutdown()
 
 
 def die(msg, *args):
@@ -276,7 +276,7 @@ def parse_args():
     return hostname, allopts, args
 
 
-def _fakessh_main(econtext_, dest_context_id):
+def _fakessh_main(mitogen_, dest_context_id):
     hostname, opts, args = parse_args()
     if not hostname:
         die('Missing hostname')
@@ -291,17 +291,17 @@ def _fakessh_main(econtext_, dest_context_id):
     LOG.debug('opts: %r', opts)
     LOG.debug('args: %r', args)
 
-    dest = econtext.master.Context(econtext_.router, dest_context_id)
+    dest = mitogen.master.Context(mitogen_.router, dest_context_id)
     control_handle, stdin_handle = dest.call_with_deadline(None, True,
-        _start_slave, econtext.context_id, args)
+        _start_slave, mitogen.context_id, args)
 
     LOG.debug('_fakessh_main: received control_handle=%r, stdin_handle=%r',
               control_handle, stdin_handle)
 
-    process = Process(econtext_.router, 1, 0)
+    process = Process(mitogen_.router, 1, 0)
     process.start_master(
-        stdin=econtext.core.Sender(dest, stdin_handle),
-        control=econtext.core.Sender(dest, control_handle),
+        stdin=mitogen.core.Sender(dest, stdin_handle),
+        control=mitogen.core.Sender(dest, control_handle),
     )
     process.wait()
     process.control.put(('exit', None))
@@ -315,25 +315,25 @@ def run(dest, router, args, deadline=None):
     """
     Run the command specified by the argument vector `args` such that ``PATH``
     searches for SSH by the command will cause its attempt to use SSH to
-    execute a remote program to be redirected to use econtext to execute that
+    execute a remote program to be redirected to use mitogen to execute that
     program using the context `dest` instead.
 
-    :param econtext.core.Context dest:
+    :param mitogen.core.Context dest:
         The destination context to execute the SSH command line in.
 
-    :param econtext.core.Router router:
+    :param mitogen.core.Router router:
 
     :param list[str] args:
         Command line arguments for local program, e.g. ``['rsync', '/tmp', 'remote:/tmp']``
     """
     context_id = router.context_id_counter.next()
-    fakessh = econtext.master.Context(router, context_id)
+    fakessh = mitogen.master.Context(router, context_id)
     fakessh.name = 'fakessh'
 
     sock1, sock2 = socket.socketpair()
-    econtext.core.set_cloexec(sock1.fileno())
+    mitogen.core.set_cloexec(sock1.fileno())
 
-    stream = econtext.core.Stream(router, context_id, fakessh.key)
+    stream = mitogen.core.Stream(router, context_id, fakessh.key)
     stream.name = 'fakessh'
     stream.accept(sock1.fileno(), sock1.fileno())
     router.register(fakessh, stream)
@@ -341,16 +341,16 @@ def run(dest, router, args, deadline=None):
     # Held in socket buffer until process is booted.
     fakessh.call_async(True, _fakessh_main, dest.context_id)
 
-    tmp_path = tempfile.mkdtemp(prefix='econtext_fakessh')
+    tmp_path = tempfile.mkdtemp(prefix='mitogen_fakessh')
     try:
         ssh_path = os.path.join(tmp_path, 'ssh')
         fp = file(ssh_path, 'w')
         try:
             fp.write('#!/usr/bin/env python\n')
-            fp.write(inspect.getsource(econtext.core))
+            fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext().main%r\n' % ((
-                econtext.context_id,            # parent_id
+                mitogen.context_id,             # parent_id
                 context_id,                     # context_id
                 fakessh.key,                    # key
                 router.debug,                   # debug

@@ -1,15 +1,29 @@
 
-Python Execution Contexts
-=========================
+Mitogen
+=======
 
-**6KiB of sugar and no fat**
+Mitogen is a Python library for writing distributed self-replicating programs.
 
+.. raw:: html
 
-Introduction
-------------
+    <style>
+        .warning code {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+    </style>
 
-``econtext`` is a library for writing distributed self-replicating programs in
-Python.
+.. warning::
+
+    This is alpha-quality code. If you intend to use it, be aware of how little
+    real world testing it has received, the total absence of any systematic
+    tests, and the nightmare-level difficulty of debugging hangs in a tree of
+    processes running identical code straddling multiple thread and machine
+    boundaries! ``router.enable_debug()`` is your friend.
+
+    If you think you have a use for this software, please `drop me an e-mail`_
+    so that expectations and bug fixes can be managed sensibly.
+
+    .. _drop me an e-mail: dw@botanicus.net
 
 There is no requirement for installing packages, copying files around, writing
 shell snippets, upfront configuration, or providing any secondary link to a
@@ -33,36 +47,14 @@ common privilege escalation techniques like `sudo`, potentially in combination
 with exotic connection methods such as WMI, `telnet`, or console-over-IPMI.
 
 
-.. raw:: html
-
-    <style>
-        .warning code {
-            background-color: rgba(0, 0, 0, 0.1);
-        }
-    </style>
-
-.. warning::
-
-    This is alpha-quality code. If you intend to use it, be aware of how little
-    real world testing it has received, the total absence of any systematic
-    tests, and the nightmare-level difficulty of debugging hangs in a tree of
-    processes running identical code straddling multiple thread and machine
-    boundaries! ``router.enable_debug()`` is your friend.
-
-    If you think you have a use for this software, please `drop me an e-mail`_
-    so that expectations and bug fixes can be managed sensibly.
-
-    .. _drop me an e-mail: dw@botanicus.net
-
-
 Automatic Bootstrap
 ###################
 
-The package's main feature is enabling your Python program to bootstrap and
+Mitogen's main feature is enabling your Python program to bootstrap and
 communicate with new copies of itself under its control running on remote
 machines, **using only an existing installed Python interpreter and SSH
 client**, something that by default can be found on almost all contemporary
-machines in the wild. To accomplish bootstrap, econtext uses a single 600 byte
+machines in the wild. To accomplish bootstrap, Mitogen uses a single 600 byte
 SSH command line and 6KB of its own source code sent to stdin of the remote SSH
 connection.
 
@@ -71,9 +63,9 @@ connection.
     $ python preamble_size.py
     SSH command size: 576
     Preamble size: 6360 (6.21KiB)
-    econtext.master size: 4104 (4.01KiB)
-    econtext.ssh size: 295 (0.29KiB)
-    econtext.sudo size: 1210 (1.18KiB)
+    mitogen.master size: 4104 (4.01KiB)
+    mitogen.ssh size: 295 (0.29KiB)
+    mtiogen.sudo size: 1210 (1.18KiB)
 
 Once bootstrapped, the remote process is configured with a customizable
 **argv[0]**, readily visible to system administrators of the remote machine
@@ -83,7 +75,7 @@ using the UNIX **ps** command:
 
     20051 ?        Ss     0:00  \_ sshd: dmw [priv]
     20053 ?        S      0:00  |   \_ sshd: dmw@notty
-    20054 ?        Ssl    0:00  |       \_ econtext:dmw@Eldil.home:22476
+    20054 ?        Ssl    0:00  |       \_ mitogen:dmw@Eldil.home:22476
     20103 ?        S      0:00  |           \_ tar zxvf myapp.tar.gz
 
 The example context was started by UID ``dmw`` on host ``Eldil.home``, process
@@ -125,45 +117,14 @@ program crashes, communication is lost, or the application code running in the
 context has hung.
 
 
-SSH Client Emulation
-####################
-
-.. image:: images/fakessh.png
-    :align: right
-
-Support is included for starting subprocesses with a modified environment, that
-cause their attempt to use SSH to be redirected back into the host program. In
-this way tools like `rsync`, `sftp`, and `scp` can efficiently reuse the host
-program's existing connection to the remote machine, including any
-firewall/user account hopping in use, with zero additional configuration.
-
-Scenarios that were not previously possible with these tools are enabled, such
-as running sftp and rsync over a sudo session, to an account the user cannot
-otherwise directly log into, including in restrictive environments that for
-example enforce an interactive sudo TTY and account password.
-
-.. code-block:: python
-
-    bastion = router.ssh(hostname='bastion.mycorp.com')
-    webserver = router.ssh(via=bastion, hostname='webserver')
-    webapp = router.sudo(via=webserver, username='webapp')
-    fileserver = router.ssh(via=bastion, hostname='fileserver')
-
-    # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
-    fileserver.call(econtext.fakessh.run, webapp, [
-        'rsync', 'appdata', 'appserver:appdata'
-    ])
-
-
 Module Forwarder
 ################
 
-In addition to an IO multiplexer, the external context is configured with a
-custom `PEP-302 importer`_ that forwards requests for unknown Python modules
-back to the host program. When your program asks an external context to execute
-code from an unknown module, all requisite modules are transferred
-automatically and imported entirely in RAM without need for further
-configuration.
+In addition to an IO multiplexer, slaves are configured with a custom `PEP-302
+importer`_ that forwards requests for unknown Python modules back to the host
+program. When your program asks a context to execute code from an unknown
+module, all requisite modules are transferred automatically and imported
+entirely in RAM without need for further configuration.
 
 .. _PEP-302 importer: https://www.python.org/dev/peps/pep-0302/
 
@@ -183,6 +144,36 @@ further effort.
 .. _py2exe: http://www.py2exe.org/
 
 
+SSH Client Emulation
+####################
+
+.. image:: images/fakessh.png
+    :align: right
+
+Support is included for starting subprocesses with a modified environment, that
+cause their attempt to use SSH to be redirected back into the host program. In
+this way tools like `rsync`, `sftp`, and `scp` can efficiently reuse the host
+program's existing connection to the remote machine, including any
+firewall/user account hopping in use, with no additional configuration.
+
+Scenarios that were not previously possible with these tools are enabled, such
+as running `sftp` and `rsync` over a `sudo` session, to an account the user
+cannot otherwise directly log into, including in restrictive environments that
+for example enforce an interactive TTY and account password.
+
+.. code-block:: python
+
+    bastion = router.ssh(hostname='bastion.mycorp.com')
+    webserver = router.ssh(via=bastion, hostname='webserver')
+    webapp = router.sudo(via=webserver, username='webapp')
+    fileserver = router.ssh(via=bastion, hostname='fileserver')
+
+    # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
+    fileserver.call(mitogen.fakessh.run, webapp, [
+        'rsync', 'appdata', 'appserver:appdata'
+    ])
+
+
 Logging Forwarder
 #################
 
@@ -192,8 +183,8 @@ location.
 
 .. code::
 
-    18:15:29 D econtext.ctx.k3: econtext: Importer.find_module('econtext.zlib')
-    18:15:29 D econtext.ctx.k3: econtext: _dispatch_calls((1002L, False, 'posix', None, 'system', ('ls -l /proc/self/fd',), {}))
+    18:15:29 D mitogen.ctx.k3: mitogen: Importer.find_module('mitogen.zlib')
+    18:15:29 D mitogen.ctx.k3: mitogen: _dispatch_calls((1002L, False, 'posix', None, 'system', ('ls -l /proc/self/fd',), {}))
 
 
 Stdio Forwarder
@@ -206,9 +197,9 @@ uptime')** without further need to capture or manage output.
 
 .. code::
 
-   18:17:28 D econtext.ctx.k3: econtext: _dispatch_calls((1002L, False, 'posix', None, 'system', ('hostname; uptime',), {}))
-   18:17:56 I econtext.ctx.k3: stdout: k3
-   18:17:56 I econtext.ctx.k3: stdout: 17:37:10 up 562 days,  2:25,  5 users,  load average: 1.24, 1.13, 1.14
+   18:17:28 D mitogen.ctx.k3: mitogen: _dispatch_calls((1002L, False, 'posix', None, 'system', ('hostname; uptime',), {}))
+   18:17:56 I mitogen.ctx.k3: stdout: k3
+   18:17:56 I mitogen.ctx.k3: stdout: 17:37:10 up 562 days,  2:25,  5 users,  load average: 1.24, 1.13, 1.14
 
 
 Blocking Code Friendly
@@ -217,7 +208,7 @@ Blocking Code Friendly
 Within each process, a private thread runs the I/O multiplexer, leaving the
 main thread and any additional application threads free to perform useful work.
 
-While econtext is internally asynchronous it hides this asynchrony from
+While Mitogen is internally asynchronous, it hides this asynchrony from
 consumer code. This is since writing asynchronous code is mostly a foreign
 concept to the target application of managing infrastructure. It should be
 possible to rewrite a shell script in Python without significant restructuring,
@@ -278,7 +269,7 @@ usual into the slave process.
     import os
     import sys
 
-    import econtext
+    import mitogen
 
 
     def install_app():
@@ -290,12 +281,12 @@ usual into the slave process.
             print __doc__
             sys.exit(1)
 
-        context = econtext.ssh.connect(broker, sys.argv[1])
+        context = mitogen.ssh.connect(broker, sys.argv[1])
         context.call(install_app)
 
-    if __name__ == '__main__' and not econtext.slave:
-        import econtext.utils
-        econtext.utils.run_with_broker(main)
+    if __name__ == '__main__' and not mitogen.slave:
+        import mitogen.utils
+        mitogen.utils.run_with_broker(main)
 
 
 Event-driven IO
@@ -334,7 +325,7 @@ Compatibility
 
 The package is written using syntax compatible all the way back to **Python
 2.4** released November 2004, making it suitable for managing a fleet of
-potentially ancient corporate hardware. For example econtext can be used out of
+potentially ancient corporate hardware. For example Mitogen can be used out of
 the box against Red Hat Enterprise Linux 5, released in 2007.
 
 There is currently no support for Python 3, and no solid plan for supporting it
@@ -346,5 +337,5 @@ as ``six.py`` are likely to be unsuitable.
 Zero Dependencies
 #################
 
-Econtext is implemented entirely using the standard library functionality and
+Mitogen is implemented entirely using the standard library functionality and
 interfaces that were available in Python 2.4.

@@ -1,7 +1,7 @@
 """
 Basic Ansible connection plug-in mostly useful for testing functionality,
 due to Ansible's use of the multiprocessing package a lot more work is required
-to share the econtext SSH connection across tasks.
+to share the mitogen SSH connection across tasks.
 
 Enable it by:
 
@@ -10,15 +10,15 @@ Enable it by:
     connection_plugins = plugins/connection
 
     $ mkdir -p plugins/connection
-    $ cat > plugins/connection/econtext_conn.py <<-EOF
-    from econtext.ansible.connection import Connection
+    $ cat > plugins/connection/mitogen_conn.py <<-EOF
+    from mitogen.ansible.connection import Connection
     EOF
 """
 
-import econtext.master
-import econtext.ssh
-import econtext.utils
-from econtext.ansible import helpers
+import mitogen.master
+import mitogen.ssh
+import mitogen.utils
+from mitogen.ansible import helpers
 
 import ansible.plugins.connection
 
@@ -28,7 +28,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     context = None
 
     become_methods = []
-    transport = 'econtext'
+    transport = 'mitogen'
 
     @property
     def connected(self):
@@ -37,11 +37,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def _connect(self):
         if self.connected:
             return
-        self.broker = econtext.master.Broker()
+        self.broker = mitogen.master.Broker()
         if self._play_context.remote_addr == 'localhost':
-            self.context = econtext.master.connect(self.broker)
+            self.context = mitogen.master.connect(self.broker)
         else:
-            self.context = econtext.ssh.connect(broker,
+            self.context = mitogen.ssh.connect(broker,
                 self._play_context.remote_addr)
 
     def exec_command(self, cmd, in_data=None, sudoable=True):

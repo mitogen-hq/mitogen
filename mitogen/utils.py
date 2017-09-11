@@ -5,12 +5,12 @@ A random assortment of utility functions useful on masters and slaves.
 import logging
 import sys
 
-import econtext
-import econtext.core
-import econtext.master
+import mitogen
+import mitogen.core
+import mitogen.master
 
 
-LOG = logging.getLogger('econtext')
+LOG = logging.getLogger('mitogen')
 
 
 def disable_site_packages():
@@ -24,7 +24,7 @@ def disable_site_packages():
 
 def log_to_tmp():
     import os
-    log_to_file(path='/tmp/econtext.%s.log' % (os.getpid(),))
+    log_to_file(path='/tmp/mitogen.%s.log' % (os.getpid(),))
 
 
 def log_to_file(path=None, io=True, level=logging.INFO):
@@ -33,13 +33,13 @@ def log_to_file(path=None, io=True, level=logging.INFO):
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
-        econtext.core.set_cloexec(fp.fileno())
+        mitogen.core.set_cloexec(fp.fileno())
     else:
         fp = sys.stderr
 
     log.setLevel(level)
     if io:
-        logging.getLogger('econtext.io').setLevel(level)
+        logging.getLogger('mitogen.io').setLevel(level)
 
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     datefmt = '%H:%M:%S'
@@ -50,10 +50,10 @@ def log_to_file(path=None, io=True, level=logging.INFO):
 
 def run_with_router(func, *args, **kwargs):
     """Arrange for `func(broker, *args, **kwargs)` to run with a temporary
-    :py:class:`econtext.master.Router`, ensuring the Router and Broker are
+    :py:class:`mitogen.master.Router`, ensuring the Router and Broker are
     correctly shut down during normal or exceptional return."""
-    broker = econtext.master.Broker()
-    router = econtext.master.Router(broker)
+    broker = mitogen.master.Broker()
+    router = mitogen.master.Router(broker)
     try:
         return func(router, *args, **kwargs)
     finally:
