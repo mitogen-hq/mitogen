@@ -282,6 +282,7 @@ class ModuleForwarder(object):
         fullname = msg.data
         cached = self.importer._cache.get(fullname)
         if cached:
+            LOG.debug('%r._on_get_module(): using cached %r', self, fullname)
             self.router.route(
                 econtext.core.Message.pickled(
                     cached,
@@ -290,6 +291,7 @@ class ModuleForwarder(object):
                 )
             )
         else:
+            LOG.debug('%r._on_get_module(): requesting %r', self, fullname)
             self.parent_context.send(
                 econtext.core.Message(
                     data=msg.data,
