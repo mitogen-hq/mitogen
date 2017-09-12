@@ -25,6 +25,9 @@ Mitogen is a Python library for writing distributed self-replicating programs.
 
     .. _drop me an e-mail: dw@botanicus.net
 
+.. image:: images/cell_division.png
+    :align: right
+
 There is no requirement for installing packages, copying files around, writing
 shell snippets, upfront configuration, or providing any secondary link to a
 remote machine aside from an SSH connection. Due to its origins for use in
@@ -92,6 +95,9 @@ the remote machine using sudo**, or as an intermediary for extending the
 program's domain of control outward to other machines, enabling your program to
 **manipulate machines behind a firewall**, or enable its **data plane to cohere
 to your network topology**.
+
+.. image:: images/billing.png
+    :align: right
 
 .. code::
 
@@ -172,6 +178,16 @@ for example enforce an interactive TTY and account password.
     fileserver.call(mitogen.fakessh.run, webapp, [
         'rsync', 'appdata', 'appserver:appdata'
     ])
+
+
+Inter-slave Message Routing
+###########################
+
+.. image:: images/route.png
+
+Slaves may communicate autonomously without direct interaction with the master,
+allowing a wide variety of complex data and control flows to be expressed using
+the links between the processes.
 
 
 Logging Forwarder
