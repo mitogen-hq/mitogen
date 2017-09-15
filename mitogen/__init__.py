@@ -3,7 +3,7 @@ On the Mitogen master, this is imported from ``mitogen/__init__.py`` as would
 be expected. On the slave, it is built dynamically during startup.
 """
 
-#: This is ``True`` in slave contexts. It is used in single-file Python
+#: This is ``False`` in slave contexts. It is used in single-file Python
 #: programs to avoid reexecuting the program's :py:func:`main` function in the
 #: slave. For example:
 #:
@@ -16,11 +16,11 @@ be expected. On the slave, it is built dynamically during startup.
 #:              context = mitogen.master.connect(broker)
 #:              context.call(do_work)  # Causes slave to import __main__.
 #:
-#:          if __name__ == '__main__' and not mitogen.slave:
+#:          if __name__ == '__main__' and mitogen.master:
 #:              import mitogen.utils
 #:              mitogen.utils.run_with_broker(main)
 #:
-slave = False
+master = True
 
 
 #: This is ``0`` in a master, otherwise it is a master-generated ID unique to

@@ -1085,7 +1085,7 @@ class ExternalContext(object):
         mitogen.__package__ = 'mitogen'
         mitogen.__path__ = []
         mitogen.__loader__ = self.importer
-        mitogen.slave = True
+        mitogen.master = False
         mitogen.context_id = context_id
         mitogen.parent_id = parent_id
         mitogen.core = sys.modules['__main__']
