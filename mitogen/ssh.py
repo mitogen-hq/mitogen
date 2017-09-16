@@ -13,10 +13,14 @@ class Stream(mitogen.master.Stream):
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
-    def construct(self, hostname, username=None, ssh_path=None, **kwargs):
+    port = None
+
+    def construct(self, hostname, username=None, ssh_path=None, port=None,
+                 **kwargs):
         super(Stream, self).construct(**kwargs)
         self.hostname = hostname
         self.username = username
+        self.port = port
         if ssh_path:
             self.ssh_path = ssh_path
 
@@ -24,6 +28,8 @@ class Stream(mitogen.master.Stream):
         bits = [self.ssh_path]
         if self.username:
             bits += ['-l', self.username]
+        if self.port is not None:
+            bits += ['-p', str(self.port)]
         bits.append(self.hostname)
         base = super(Stream, self).get_boot_command()
         return bits + map(commands.mkarg, base)
@@ -31,3 +37,5 @@ class Stream(mitogen.master.Stream):
     def connect(self):
         super(Stream, self).connect()
         self.name = 'ssh.' + self.hostname
+        if self.port:
+            self.name += ':%s' % (self.port,)
