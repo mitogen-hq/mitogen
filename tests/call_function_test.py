@@ -34,7 +34,7 @@ class CallFunctionTest(unittest.TestCase):
         cls.broker.shutdown()
         cls.broker.join()
 
-    def test_call_crashes(self):
+    def test_crashes(self):
         try:
             self.local.call(function_that_fails)
             assert 0, 'call didnt fail'
@@ -63,5 +63,15 @@ class CallFunctionTest(unittest.TestCase):
             "in module 'call_function_test'"
         )
 
-    def test_call_returns_dead(self):
+    def test_returns_dead(self):
         assert mitogen.core._DEAD == self.local.call(func_returns_dead)
+
+    def test_aborted_on_context_disconnect(self):
+        assert 0, 'todo'
+
+    def test_aborted_on_context_hang_deadline(self):
+        # related: how to treat context after a function call hangs
+        assert 0, 'todo'
+
+    def test_aborted_on_local_broker_shutdown(self):
+        assert 0, 'todo'
