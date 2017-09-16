@@ -49,6 +49,8 @@ else:
 class Error(Exception):
     """Base for all exceptions raised by this module."""
     def __init__(self, fmt, *args):
+        if args:
+            fmt %= args
         Exception.__init__(self, fmt % args)
 
 
@@ -58,13 +60,15 @@ class CallError(Error):
     exception message.
     """
     def __init__(self, e):
-        name = '%s.%s' % (type(e).__module__, type(e).__name__)
+        s = ''
+        if not isinstance(e, basestring):
+            s += '%s.%s: ' % (type(e).__module__, type(e).__name__)
+        s += str(e)
         tb = sys.exc_info()[2]
         if tb:
-            stack = ''.join(traceback.format_tb(tb))
-        else:
-            stack = ''
-        Error.__init__(self, 'call failed: %s: %s\n%s', name, e, stack)
+            s += '\n'
+            s += ''.join(traceback.format_tb(tb))
+        Error.__init__(self, s)
 
 
 class ChannelError(Error):
@@ -158,7 +162,7 @@ class Message(object):
         try:
             self.data = cPickle.dumps(obj, protocol=2)
         except cPickle.PicklingError, e:
-            self.data = cPickle.dumps(CallError(str(e)), protocol=2)
+            self.data = cPickle.dumps(CallError(e), protocol=2)
         return self
 
     def unpickle(self):
@@ -1125,7 +1129,7 @@ class ExternalContext(object):
                 )
             except Exception, e:
                 LOG.debug('_dispatch_calls: %s', e)
-                e = CallError(str(e))
+                e = CallError(e)
                 self.router.route(
                     Message.pickled(e, dst_id=msg.src_id, handle=msg.reply_to)
                 )
