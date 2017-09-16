@@ -106,5 +106,5 @@ def main(router):
     for x in xrange(10):
         print context.call(run_module, 'ansible.modules.core.commands.command', 'hostname')
 
-if __name__ == '__main__' and not mitogen.slave:
+if __name__ == '__main__' and mitogen.master:
     mitogen.utils.run_with_router(main)
