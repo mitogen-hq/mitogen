@@ -12,7 +12,7 @@ mitogen Package
 
 .. automodule:: mitogen
 
-.. autodata:: mitogen.slave
+.. autodata:: mitogen.master
 .. autodata:: mitogen.context_id
 .. autodata:: mitogen.parent_id
 
