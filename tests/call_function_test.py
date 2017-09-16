@@ -20,6 +20,10 @@ def func_returns_dead():
     return mitogen.core._DEAD
 
 
+def func_accepts_returns_context(context):
+    return context
+
+
 class CallFunctionTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -59,8 +63,7 @@ class CallFunctionTest(unittest.TestCase):
             pass
 
         assert e[0] == (
-            "attempted to unpickle 'CrazyType' "
-            "in module 'call_function_test'"
+            "attempted unpickle from 'call_function_test'"
         )
 
     def test_returns_dead(self):
@@ -75,3 +78,9 @@ class CallFunctionTest(unittest.TestCase):
 
     def test_aborted_on_local_broker_shutdown(self):
         assert 0, 'todo'
+
+    def test_accepts_returns_context(self):
+        context = self.local.call(func_accepts_returns_context, self.local)
+        assert context is not self.local
+        assert context.context_id == self.local.context_id
+        assert context.name == self.local.name
