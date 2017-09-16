@@ -16,11 +16,11 @@ be expected. On the slave, it is built dynamically during startup.
 #:              context = mitogen.master.connect(broker)
 #:              context.call(do_work)  # Causes slave to import __main__.
 #:
-#:          if __name__ == '__main__' and mitogen.master:
+#:          if __name__ == '__main__' and mitogen.is_master:
 #:              import mitogen.utils
 #:              mitogen.utils.run_with_broker(main)
 #:
-master = True
+is_master = True
 
 
 #: This is ``0`` in a master, otherwise it is a master-generated ID unique to

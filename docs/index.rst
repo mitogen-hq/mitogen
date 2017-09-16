@@ -300,7 +300,7 @@ usual into the slave process.
         context = mitogen.ssh.connect(broker, sys.argv[1])
         context.call(install_app)
 
-    if __name__ == '__main__' and mitogen.master:
+    if __name__ == '__main__' and mitogen.is_master:
         import mitogen.utils
         mitogen.utils.run_with_broker(main)
 
