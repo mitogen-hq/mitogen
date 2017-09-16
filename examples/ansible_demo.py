@@ -3,12 +3,9 @@ Minimal demo of running an Ansible module via mitogen.
 """
 
 import json
-import logging
 import time
 
 import mitogen
-import mitogen.master
-import mitogen.utils
 
 # Prevent accident import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
@@ -95,16 +92,11 @@ def run_module(module, raw_params=None, args=None):
 
 
 def main(router):
-    fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
-    datefmt = '%H:%M:%S'
-    level = logging.DEBUG
-    level = logging.INFO
-    logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
-
-    context = mitogen.master.connect(broker)
-    print context.call(run_module, 'ansible.modules.core.system.setup')
+    context = router.local()
+    print context.call(run_module, 'ansible.modules.system.setup')
     for x in xrange(10):
-        print context.call(run_module, 'ansible.modules.core.commands.command', 'hostname')
+        print context.call(run_module, 'ansible.modules.commands.command', 'hostname')
 
-if __name__ == '__main__' and mitogen.master:
+if __name__ == '__main__' and mitogen.is_master:
+    import mitogen.utils
     mitogen.utils.run_with_router(main)
