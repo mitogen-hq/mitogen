@@ -62,9 +62,7 @@ class CallFunctionTest(unittest.TestCase):
         except mitogen.core.StreamError, e:
             pass
 
-        assert e[0] == (
-            "attempted unpickle from 'call_function_test'"
-        )
+        assert e[0] == "attempted unpickle from 'call_function_test'"
 
     def test_returns_dead(self):
         assert mitogen.core._DEAD == self.local.call(func_returns_dead)
