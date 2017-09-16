@@ -2,9 +2,9 @@
 import os
 import sys
 
-import econtext
-import econtext.master
-import econtext.utils
+import mitogen
+import mitogen.master
+import mitogen.utils
 
 
 import sys
@@ -27,11 +27,11 @@ def serve_django_app(settings_name):
 
 def main(broker):
     import logging
-    econtext.utils.log_to_file(level=logging.INFO, io=False)
-    context = econtext.master.connect(broker)
+    mitogen.utils.log_to_file(level=logging.INFO, io=False)
+    context = mitogen.master.connect(broker)
     context.call(os.chdir, '/')
-    #context.call(econtext.utils.log_to_file, '/tmp/log')
+    #context.call(mitogen.utils.log_to_file, '/tmp/log')
     context.call(serve_django_app, 'webproject.settings')
 
-if __name__ == '__main__' and not econtext.slave:
-    econtext.utils.run_with_broker(main)
+if __name__ == '__main__' and not mitogen.slave:
+    mitogen.utils.run_with_broker(main)

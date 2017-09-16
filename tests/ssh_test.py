@@ -1,10 +1,10 @@
 
 import unittest
 
-import econtext
-import econtext.master
-import econtext.ssh
-import econtext.utils
+import mitogen
+import mitogen.master
+import mitogen.ssh
+import mitogen.utils
 
 import testlib
 
@@ -15,11 +15,11 @@ def add(x, y):
 
 class SshTest(unittest.TestCase):
     def test_okay(self):
-        @econtext.utils.run_with_broker
+        @mitogen.utils.run_with_broker
         def test(broker):
-            context = econtext.ssh.connect(broker,
+            context = mitogen.ssh.connect(broker,
                 hostname='hostname',
                 ssh_path=testlib.data_path('fakessh.py'))
-            context.call(econtext.utils.log_to_file, '/tmp/log')
-            context.call(econtext.utils.disable_site_packages)
+            context.call(mitogen.utils.log_to_file, '/tmp/log')
+            context.call(mitogen.utils.disable_site_packages)
             self.assertEquals(3, context.call(add, 1, 2))

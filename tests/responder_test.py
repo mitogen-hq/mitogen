@@ -4,7 +4,7 @@ import subprocess
 import unittest
 import sys
 
-import econtext.master
+import mitogen.master
 import testlib
 
 import plain_old_module
@@ -15,13 +15,13 @@ class GoodModulesTest(testlib.BrokerMixin, unittest.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
-        context = econtext.master.connect(self.broker)
+        context = mitogen.master.connect(self.broker)
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
         # which imports the other.
-        context = econtext.master.connect(self.broker)
+        context = mitogen.master.connect(self.broker)
         self.assertEquals(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
 
@@ -39,7 +39,7 @@ class BrokenModulesTest(unittest.TestCase):
         # unavailable. Should never happen in the real world.
 
         context = mock.Mock()
-        responder = econtext.master.ModuleResponder(context)
+        responder = mitogen.master.ModuleResponder(context)
         responder.get_module((50, 'non_existent_module'))
         self.assertEquals(1, len(context.enqueue.mock_calls))
 
@@ -57,7 +57,7 @@ class BrokenModulesTest(unittest.TestCase):
         import six_brokenpkg
 
         context = mock.Mock()
-        responder = econtext.master.ModuleResponder(context)
+        responder = mitogen.master.ModuleResponder(context)
         responder.get_module((50, 'six_brokenpkg._six'))
         self.assertEquals(1, len(context.enqueue.mock_calls))
 

@@ -8,7 +8,7 @@ import zlib
 import mock
 import pytest
 
-import econtext.core
+import mitogen.core
 import testlib
 
 
@@ -18,7 +18,7 @@ class ImporterMixin(object):
     def setUp(self):
         super(ImporterMixin, self).setUp()
         self.context = mock.Mock()
-        self.importer = econtext.core.Importer(self.context)
+        self.importer = mitogen.core.Importer(self.context)
 
     def tearDown(self):
         sys.modules.pop(self.modname, None)

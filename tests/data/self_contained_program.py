@@ -2,7 +2,7 @@
 I am a self-contained program!
 """
 
-import econtext.master
+import mitogen.master
 
 
 def repr_stuff():
@@ -10,13 +10,13 @@ def repr_stuff():
 
 
 def main():
-    broker = econtext.master.Broker()
+    broker = mitogen.master.Broker()
     try:
-        context = econtext.master.connect(broker)
+        context = mitogen.master.connect(broker)
         print context.call(repr_stuff)
     finally:
         broker.shutdown()
         broker.join()
 
-if __name__ == '__main__' and not econtext.slave:
+if __name__ == '__main__' and not mitogen.slave:
     main()

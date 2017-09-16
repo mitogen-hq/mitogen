@@ -5,7 +5,7 @@ import unittest
 
 import mock
 
-import econtext.master
+import mitogen.master
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -14,7 +14,7 @@ sys.path.append(DATA_DIR)
 
 def set_debug():
     import logging
-    logging.getLogger('econtext').setLevel(logging.DEBUG)
+    logging.getLogger('mitogen').setLevel(logging.DEBUG)
 
 
 def data_path(suffix):
@@ -22,7 +22,7 @@ def data_path(suffix):
 
 
 class BrokerMixin(object):
-    broker_class = econtext.master.Broker
+    broker_class = mitogen.master.Broker
 
     def setUp(self):
         super(BrokerMixin, self).setUp()

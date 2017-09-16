@@ -4,13 +4,13 @@ import socket
 import time
 import unittest
 
-import econtext.master
-import econtext.utils
+import mitogen.master
+import mitogen.utils
 
 
-@econtext.utils.with_broker
+@mitogen.utils.with_broker
 def do_stuff(broker):
-    context = econtext.master.connect(broker)
+    context = mitogen.master.connect(broker)
     t0 = time.time()
     ncalls = 1000
     for x in xrange(ncalls):
