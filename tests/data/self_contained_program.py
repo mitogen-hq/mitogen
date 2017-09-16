@@ -18,5 +18,5 @@ def main():
         broker.shutdown()
         broker.join()
 
-if __name__ == '__main__' and mitogen.master:
+if __name__ == '__main__' and mitogen.is_master:
     main()

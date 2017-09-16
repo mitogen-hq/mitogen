@@ -33,5 +33,5 @@ def main(broker):
     #context.call(mitogen.utils.log_to_file, '/tmp/log')
     context.call(serve_django_app, 'webproject.settings')
 
-if __name__ == '__main__' and mitogen.master:
+if __name__ == '__main__' and mitogen.is_master:
     mitogen.utils.run_with_broker(main)
