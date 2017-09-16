@@ -158,8 +158,8 @@ SSH Client Emulation
 
 Support is included for starting subprocesses with a modified environment, that
 cause their attempt to use SSH to be redirected back into the host program. In
-this way tools like `rsync`, `sftp`, and `scp` can efficiently reuse the host
-program's existing connection to the remote machine, including any
+this way tools like `rsync`, `git`, `sftp`, and `scp` can efficiently reuse the
+host program's existing connection to the remote machine, including any
 firewall/user account hopping in use, with no additional configuration.
 
 Scenarios that were not previously possible with these tools are enabled, such
