@@ -38,11 +38,6 @@ DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
 COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 IOLOG_RE = re.compile(r'^[ ]*IOLOG.debug\(.+?\)$', re.M)
 
-PERMITTED_CLASSES = set([
-    ('mitogen.core', '_unpickle_call_error'),
-    ('mitogen.core', '_unpickle_dead'),
-])
-
 
 def minimize_source(source):
     """Remove comments and docstrings from Python `source`, preserving line
@@ -316,27 +311,10 @@ class ModuleForwarder(object):
         )
 
 
-class Message(mitogen.core.Message):
-    """
-    Message subclass that controls unpickling.
-    """
-    def _find_global(self, module_name, class_name):
-        """Return the class implementing `module_name.class_name` or raise
-        `StreamError` if the module is not whitelisted."""
-        if (module_name, class_name) not in PERMITTED_CLASSES:
-            raise mitogen.core.StreamError(
-                'attempted to unpickle %r in module %r',
-                class_name, module_name
-            )
-        return getattr(sys.modules[module_name], class_name)
-
-
 class Stream(mitogen.core.Stream):
     """
     Base for streams capable of starting new slaves.
     """
-    message_class = Message
-
     #: The path to the remote Python interpreter.
     python_path = 'python2.7'
 
