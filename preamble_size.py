@@ -6,15 +6,15 @@ contexts.
 import inspect
 import zlib
 
-import econtext.master
-import econtext.ssh
-import econtext.sudo
+import mitogen.master
+import mitogen.ssh
+import mitogen.sudo
 
-broker = econtext.master.Broker()
+broker = mitogen.master.Broker()
 
-router = econtext.core.Router(broker)
-context = econtext.master.Context(router, 0)
-stream = econtext.ssh.Stream(router, 0, context.key, hostname='foo')
+router = mitogen.core.Router(broker)
+context = mitogen.master.Context(router, 0)
+stream = mitogen.ssh.Stream(router, 0, context.key, hostname='foo')
 broker.shutdown()
 
 print 'SSH command size: %s' % (len(' '.join(stream.get_boot_command())),)
@@ -24,9 +24,9 @@ print 'Preamble size: %s (%.2fKiB)' % (
 )
 
 for mod in (
-        econtext.master,
-        econtext.ssh,
-        econtext.sudo,
+        mitogen.master,
+        mitogen.ssh,
+        mitogen.sudo,
         ):
-    sz = len(zlib.compress(econtext.master.minimize_source(inspect.getsource(mod))))
+    sz = len(zlib.compress(mitogen.master.minimize_source(inspect.getsource(mod))))
     print '%s size: %s (%.2fKiB)' % (mod.__name__, sz, sz / 1024.0)

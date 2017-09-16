@@ -1,14 +1,14 @@
 """
-Minimal demo of running an Ansible module via econtext.
+Minimal demo of running an Ansible module via mitogen.
 """
 
 import json
 import logging
 import time
 
-import econtext
-import econtext.master
-import econtext.utils
+import mitogen
+import mitogen.master
+import mitogen.utils
 
 # Prevent accident import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
@@ -101,10 +101,10 @@ def main(router):
     level = logging.INFO
     logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
 
-    context = econtext.master.connect(broker)
+    context = mitogen.master.connect(broker)
     print context.call(run_module, 'ansible.modules.core.system.setup')
     for x in xrange(10):
         print context.call(run_module, 'ansible.modules.core.commands.command', 'hostname')
 
-if __name__ == '__main__' and not econtext.slave:
-    econtext.utils.run_with_router(main)
+if __name__ == '__main__' and not mitogen.slave:
+    mitogen.utils.run_with_router(main)
