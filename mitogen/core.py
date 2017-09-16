@@ -60,15 +60,21 @@ class CallError(Error):
     exception message.
     """
     def __init__(self, e):
-        s = ''
-        if not isinstance(e, basestring):
-            s += '%s.%s: ' % (type(e).__module__, type(e).__name__)
-        s += str(e)
+        s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
         tb = sys.exc_info()[2]
         if tb:
             s += '\n'
             s += ''.join(traceback.format_tb(tb))
         Error.__init__(self, s)
+
+    def __reduce__(self):
+        return (_unpickle_call_error, (self[0],))
+
+def _unpickle_call_error(s):
+    assert type(s) is str and len(s) < 10000
+    inst = CallError.__new__(CallError)
+    Exception.__init__(inst, s)
+    return inst
 
 
 class ChannelError(Error):
@@ -87,8 +93,14 @@ class Dead(object):
     def __eq__(self, other):
         return type(other) is Dead
 
+    def __reduce__(self):
+        return (_unpickle_dead, ())
+
     def __repr__(self):
         return '<Dead>'
+
+def _unpickle_dead():
+    return _DEAD
 
 
 #: Sentinel value used to represent :py:class:`Channel` disconnection.

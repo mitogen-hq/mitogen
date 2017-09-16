@@ -39,8 +39,8 @@ COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 IOLOG_RE = re.compile(r'^[ ]*IOLOG.debug\(.+?\)$', re.M)
 
 PERMITTED_CLASSES = set([
-    ('mitogen.core', 'CallError'),
-    ('mitogen.core', 'Dead'),
+    ('mitogen.core', '_unpickle_call_error'),
+    ('mitogen.core', '_unpickle_dead'),
 ])
 
 
