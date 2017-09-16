@@ -51,7 +51,7 @@ class Error(Exception):
     def __init__(self, fmt, *args):
         if args:
             fmt %= args
-        Exception.__init__(self, fmt % args)
+        Exception.__init__(self, fmt)
 
 
 class CallError(Error):
@@ -544,7 +544,7 @@ class Stream(BasicStream):
         if len(self._input_buf) < self.HEADER_LEN:
             return False
 
-        msg = Message()
+        msg = self.message_class()
         (msg.dst_id, msg.src_id,
          msg.handle, msg.reply_to, msg_len) = struct.unpack(
             self.HEADER_FMT,

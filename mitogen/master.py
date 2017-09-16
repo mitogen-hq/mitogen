@@ -325,8 +325,9 @@ class Message(mitogen.core.Message):
         `StreamError` if the module is not whitelisted."""
         if (module_name, class_name) not in PERMITTED_CLASSES:
             raise mitogen.core.StreamError(
-                '%r attempted to unpickle %r in module %r',
-                self._context, class_name, module_name)
+                'attempted to unpickle %r in module %r',
+                class_name, module_name
+            )
         return getattr(sys.modules[module_name], class_name)
 
 
