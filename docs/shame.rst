@@ -66,7 +66,10 @@ module), but also Mitogen. Newer versions of ``six`` improve things somewhat,
 but there are still outstanding issues preventing Mitogen from working with
 ``six``.
 
-This package is sufficiently popular that it must eventually be supported.
+This package is sufficiently popular that it must eventually be supported. See
+`here for an example issue`_.
+
+.. _here for an example issue: https://github.com/dw/mitogen/issues/31
 
 **What could it do instead?**
 
