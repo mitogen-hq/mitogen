@@ -311,6 +311,7 @@ def _fakessh_main(mitogen_, dest_context_id):
 # Public API.
 #
 
+@mitogen.core.takes_router
 def run(dest, router, args, deadline=None):
     """
     Run the command specified by the argument vector `args` such that ``PATH``

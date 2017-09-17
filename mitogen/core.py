@@ -117,6 +117,16 @@ def fire(obj, name, *args, **kwargs):
     return [func(*args, **kwargs) for func in signals.get(name, ())]
 
 
+def takes_econtext(func):
+    func.mitogen_takes_econtext = True
+    return func
+
+
+def takes_router(func):
+    func.mitogen_takes_router = True
+    return func
+
+
 def set_cloexec(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
@@ -1185,6 +1195,10 @@ class ExternalContext(object):
                 if klass:
                     obj = getattr(obj, klass)
                 fn = getattr(obj, func)
+                if getattr(fn, 'mitogen_takes_econtext', None):
+                    kwargs.setdefault('econtext', self)
+                if getattr(fn, 'mitogen_takes_router', None):
+                    kwargs.setdefault('router', self.router)
                 ret = fn(*args, **kwargs)
                 self.router.route(
                     Message.pickled(ret, dst_id=msg.src_id, handle=msg.reply_to)
