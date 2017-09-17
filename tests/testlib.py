@@ -21,7 +21,11 @@ def set_debug():
 
 
 def data_path(suffix):
-    return os.path.join(DATA_DIR, suffix)
+    path = os.path.join(DATA_DIR, suffix)
+    if path.endswith('.key'):
+        # SSH is funny about private key permissions.
+        os.chmod(path, 0600)
+    return path
 
 
 class DockerizedSshDaemon(object):

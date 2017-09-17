@@ -9,14 +9,10 @@ def repr_stuff():
     return repr([__name__, 50])
 
 
-def main():
-    broker = mitogen.master.Broker()
-    try:
-        context = mitogen.master.connect(broker)
-        print context.call(repr_stuff)
-    finally:
-        broker.shutdown()
-        broker.join()
+def main(router):
+    context = router.local()
+    print context.call(repr_stuff)
 
 if __name__ == '__main__' and mitogen.is_master:
-    main()
+    import mitogen.utils
+    mitogen.utils.run_with_router(main)
