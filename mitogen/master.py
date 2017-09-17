@@ -219,13 +219,42 @@ class LogForwarder(object):
         return 'LogForwarder(%r)' % (self._router,)
 
 
-class ModuleResponder(object):
-    def __init__(self, router):
-        self._router = router
-        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
+class ModuleFinder(object):
+    STDLIB_DIRS = [
+        # virtualenv on OS X does some weird half-ass job of symlinking the
+        # stdlib into the virtualenv directory. So pick two modules at random
+        # that represent both places the stdlib seems to come from.
+        os.path.dirname(os.path.dirname(logging.__file__)),
+        os.path.dirname(os.path.dirname(os.__file__)),
+    ]
+
+    def __init__(self):
+        #: Import machinery is expensive, keep :py:meth`:get_module_source`
+        #: results around.
+        self._found_cache = {}
+
+        #: Avoid repeated AST parsing, which is extremely expensive with
+        #: py:mod:`compiler` module.
+        self._related_cache = {}
 
     def __repr__(self):
-        return 'ModuleResponder(%r)' % (self._router,)
+        return 'ModuleFinder()'
+
+    def is_stdlib_name(self, modname):
+        """Return ``True`` if `modname` appears to come from the standard
+        library."""
+        if imp.is_builtin(modname) != 0:
+            return True
+
+        module = sys.modules[modname]
+        if module is None:
+            return False
+
+        for dirname in self.STDLIB_DIRS:
+            if os.path.commonprefix((dirname, module.__file__)) == dirname:
+                return True
+
+        return False
 
     def _get_module_via_pkgutil(self, fullname):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
@@ -283,6 +312,123 @@ class ModuleResponder(object):
                           _get_module_via_sys_modules,
                           _get_module_via_parent_enumeration]
 
+    def get_module_source(self, fullname):
+        """Given the name of a loaded module `fullname`, attempt to find its
+        source code.
+
+        :returns:
+            Tuple of `(module path, source text, is package?)`, or ``None`` if
+            the source cannot be found.
+        """
+        tup = self._found_cache.get(fullname)
+        if tup:
+            return tup
+
+        for method in self.get_module_methods:
+            tup = method(self, fullname)
+            if tup:
+                return tup
+
+        return None, None, None
+
+    def resolve_relpath(self, fullname, level):
+        """Given an ImportFrom AST node, guess the prefix that should be tacked
+        on to an alias name to produce a canonical name. `fullname` is the name
+        of the module in which the ImportFrom appears."""
+        if level == 0:
+            return ''
+
+        bits = fullname.split('.')
+        if len(bits) < level:
+            # This would be an ImportError in real code.
+            return ''
+
+        return '.'.join(bits[:-level]) + '.'
+
+    def _ast_walk(self, fullname, src):
+        for node in ast.walk(ast.parse(src)):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    yield alias.name
+            elif isinstance(node, ast.ImportFrom):
+                prefix = self.resolve_relpath(fullname, node.level)
+                for alias in node.names:
+                    yield prefix + alias.name
+
+    def _compiler_visit(self, tree):
+        # TODO: this is insanely slow, need to prune the tree somehow, but it's
+        # only for Mitogen masters on ancient Pythons anyway.
+        stack = [tree]
+        while stack:
+            node = stack.pop(0)
+            yield node
+            stack.extend(node.getChildNodes())
+
+    def _compiler_walk(self, fullname, src):
+        for node in self._compiler_visit(compiler.parse(src)):
+            if isinstance(node, compiler.ast.Import):
+                for name, _ in node.names:
+                    yield name
+            elif isinstance(node, compiler.ast.From):
+                prefix = self.resolve_relpath(fullname, node.level)
+                for name, _ in node.names:
+                    yield prefix + name
+
+    def find_related_imports(self, fullname):
+        """
+        Given the `fullname` of a currently loaded module, and a copy of its
+        source code, examine :py:data:`sys.modules` to determine which of the
+        ``import`` statements from the source code caused a corresponding
+        module to be loaded that is not part of the standard library.
+        """
+        related = self._related_cache.get(fullname)
+        if related is None:
+            return related
+
+        _, src, _ = self.get_module_source(fullname)
+        if src is None:
+            LOG.warning('%r: cannot find source for %r', self, fullname)
+            return []
+
+        prefixes = ['']
+        if '.' in fullname:
+            prefixes.append(fullname.rsplit('.', 1)[0] + '.')
+
+        if ast:
+            walker = self._ast_walk
+        else:
+            walker = self._compiler_walk
+
+        return self._related_cache.setdefault(fullname, [
+            prefix + name
+            for prefix in prefixes
+            for name in walker(fullname, src)
+            if sys.modules.get(prefix + name) is not None
+            and not self.is_stdlib_name(prefix + name)
+        ])
+
+    def find_related(self, fullname):
+        stack = [fullname]
+        found = set()
+
+        while stack:
+            fullname = stack.pop(0)
+            fullnames = self.find_related_imports(fullname)
+            stack.extend(set(fullnames).difference(found, stack, [fullname]))
+            found.update(fullnames)
+
+        return found
+
+
+class ModuleResponder(object):
+    def __init__(self, router):
+        self._router = router
+        self._finder = ModuleFinder()
+        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
+
+    def __repr__(self):
+        return 'ModuleResponder(%r)' % (self._router,)
+
     def _on_get_module(self, msg):
         LOG.debug('%r.get_module(%r)', self, msg)
         if msg == mitogen.core._DEAD:
@@ -290,18 +436,10 @@ class ModuleResponder(object):
 
         fullname = msg.data
         try:
-            for method in self.get_module_methods:
-                tup = method(self, fullname)
-                if tup:
-                    break
-
-            try:
-                path, source, is_pkg = tup
-            except TypeError:
+            path, source, is_pkg = self._finder.get_module_source(fullname)
+            if source is None:
                 raise ImportError('could not find %r' % (fullname,))
 
-            LOG.debug('%s found %r: (%r, .., %r)',
-                      method.__name__, fullname, path, is_pkg)
             if is_pkg:
                 pkg_present = get_child_modules(path, fullname)
                 LOG.debug('get_child_modules(%r, %r) -> %r',
