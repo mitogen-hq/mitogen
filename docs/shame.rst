@@ -25,13 +25,17 @@ installed base of existing old software versions, so hacks are needed anyway.
 It claims to use ``pkg_resources`` to read version information
 (``_get_version_from_pkg_metadata()``), which would result in PEP-302 being
 reused and everything just working wonderfully, but instead it actually does
-direct filesystem access. So we smodge the environment with a ``PBR_VERSION``
-environment variable to override any version that was defined. This will
-probably break code I haven't seen yet.
+direct filesystem access.
 
 **What could it do instead?**
 
 * ``pkg_resources.get_resource_stream()``
+
+**What Mitogen is forced to do**
+
+When it sees ``pbr`` being loaded, it smodges the process environment with a
+``PBR_VERSION`` variable to override any attempt to auto-detect the version.
+This will probably break code I haven't seen yet.
 
 
 ``pkg_resources``
@@ -55,6 +59,11 @@ issues like these.
 * Use ``get("__main__")`` on :py:data:`sys.modules` rather than ``import``, but
   this method isn't general enough, it only really helps tools like Mitogen.
 
+**What Mitogen is forced to do**
+
+Examine the stack during every attempt to import ``__main__`` and check if the
+requestee module is named ``pkg_resources``, if so then refuse the import.
+
 
 ``six``
 =======
@@ -75,3 +84,7 @@ This package is sufficiently popular that it must eventually be supported. See
 
 * Any custom hacks installed into :py:data:`sys.modules` should support the
   protocols laid out in PEP-302.
+
+**What Mitogen is forced to do**
+
+Vendored versions of ``six`` currently don't work at all.
