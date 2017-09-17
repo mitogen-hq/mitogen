@@ -26,10 +26,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
 
     def test_password_required(self):
         try:
-            context = self.router.ssh(
-                hostname=self.dockerized_ssh.host,
-                port=self.dockerized_ssh.port,
-                check_host_keys=False,
+            context = self.docker_ssh(
                 username='has-sudo',
             )
             assert 0, 'exception not thrown'
@@ -40,10 +37,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
 
     def test_password_incorrect(self):
         try:
-            context = self.router.ssh(
-                hostname=self.dockerized_ssh.host,
-                port=self.dockerized_ssh.port,
-                check_host_keys=False,
+            context = self.docker_ssh(
                 username='has-sudo',
                 password='badpw',
             )
@@ -54,10 +48,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         assert e[0] == self.stream_class.password_incorrect_msg
 
     def test_password_specified(self):
-        context = self.router.ssh(
-            hostname=self.dockerized_ssh.host,
-            port=self.dockerized_ssh.port,
-            check_host_keys=False,
+        context = self.docker_ssh(
             username='has-sudo',
             password='y',
         )
@@ -67,10 +58,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
 
     def test_pubkey_required(self):
         try:
-            context = self.router.ssh(
-                hostname=self.dockerized_ssh.host,
-                port=self.dockerized_ssh.port,
-                check_host_keys=False,
+            context = self.docker_ssh(
                 username='has-sudo-pubkey',
             )
             assert 0, 'exception not thrown'
@@ -80,13 +68,9 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         assert e[0] == self.stream_class.password_required_msg
 
     def test_pubkey_specified(self):
-        context = self.router.ssh(
-            hostname=self.dockerized_ssh.host,
-            port=self.dockerized_ssh.port,
-            check_host_keys=False,
+        context = self.docker_ssh(
             username='has-sudo-pubkey',
             identity_file=testlib.data_path('docker/has-sudo-pubkey.key'),
         )
-
         sentinel = 'i-am-mitogen-test-docker-image\n'
         assert sentinel == context.call(plain_old_module.get_sentinel_value)
