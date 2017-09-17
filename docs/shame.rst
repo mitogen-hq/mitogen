@@ -1,19 +1,22 @@
 
-Module Import Wall Of Shame
----------------------------
+Importer Wall Of Shame
+----------------------
 
 The following modules and packages run magic during ``__init.py__`` that makes
 life hard for Mitogen. Executing code during module import is always bad, and
 Mitogen is a concrete benchmark for why it's bad.
 
+Bugs will probably be filed for these in time, but it does not address the huge
+installed base of existing old software versions, so hacks are needed anyway.
+
 
 ``pkg_resources``
 =================
 
-Anything that imports ``pkg_resources`` will eventually cause
-pkg_resources to try and import and scan ``__main__`` for its ``__requires__``
-attribute (``pkg_resources/__init__.py::_build_master()``). This breaks any app
-that is not expecting its ``__main__`` to suddenly be sucked over a network and
+Anything that imports ``pkg_resources`` will eventually cause ``pkg_resources``
+to try and import and scan ``__main__`` for its ``__requires__`` attribute
+(``pkg_resources/__init__.py::_build_master()``). This breaks any app that is
+not expecting its ``__main__`` to suddenly be sucked over a network and
 injected into a remote process, like py.test.
 
 A future version of Mitogen might have a more general hack that doesn't import
@@ -25,7 +28,7 @@ issues like these.
 * Explicit is better than implicit: wait until the magical behaviour is
   explicitly requested (i.e. an API call).
 
-* Use ``get("__main__")`` on :py:attr:`sys.modules` rather than ``import``, but
+* Use ``get("__main__")`` on :py:data:`sys.modules` rather than ``import``, but
   this method isn't general enough, it only really helps tools like Mitogen.
 
 
