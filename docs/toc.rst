@@ -11,3 +11,4 @@ Table Of Contents
    getting_started
    api
    internals
+   shame

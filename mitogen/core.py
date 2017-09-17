@@ -368,8 +368,31 @@ class Importer(object):
         finally:
             del self.tls.running
 
+    def _load_module_hacks(self, fullname):
+        f = sys._getframe(2)
+        requestee = f.f_globals['__name__']
+
+        if fullname == '__main__' and requestee == 'pkg_resources':
+            # Anything that imports pkg_resources will eventually cause
+            # pkg_resources to try and scan __main__ for its __requires__
+            # attribute (pkg_resources/__init__.py::_build_master()). This
+            # breaks any app that is not expecting its __main__ to suddenly be
+            # sucked over a network and injected into a remote process, like
+            # py.test.
+            raise ImportError('Refused')
+
+        if fullname == 'pbr':
+            # It claims to use pkg_resources to read version information, which
+            # would result in PEP-302 being used, but it actually does direct
+            # filesystem access. So instead smodge the environment to override
+            # any version that was defined. This will probably break something
+            # later.
+            os.environ['PBR_VERSION'] = '0.0.0'
+
     def load_module(self, fullname):
         LOG.debug('Importer.load_module(%r)', fullname)
+        self._load_module_hacks(fullname)
+
         try:
             ret = self._cache[fullname]
         except KeyError:
