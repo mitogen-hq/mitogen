@@ -11,7 +11,7 @@ DOCKERFILE = r"""
 FROM debian:stable
 RUN apt-get update
 RUN \
-    apt-get install -y python2.7 openssh-server sudo && \
+    apt-get install -y python2.7 openssh-server sudo rsync git && \
     apt-get clean
 RUN \
     mkdir /var/run/sshd && \
@@ -27,7 +27,7 @@ RUN \
     ( echo 'has-sudo-nopw:y' | chpasswd; ) && \
     mkdir ~has-sudo-pubkey/.ssh
 
-COPY data/docker/has-sudo-pubkey.key /home/has-sudo-pubkey/.ssh/authorized_keys
+COPY data/docker/has-sudo-pubkey.key.pub /home/has-sudo-pubkey/.ssh/authorized_keys
 RUN \
     chown -R has-sudo-pubkey ~has-sudo-pubkey && \
     chmod -R go= ~has-sudo-pubkey
