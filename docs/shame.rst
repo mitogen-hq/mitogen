@@ -2,12 +2,36 @@
 Importer Wall Of Shame
 ----------------------
 
-The following modules and packages run magic during ``__init.py__`` that makes
-life hard for Mitogen. Executing code during module import is always bad, and
-Mitogen is a concrete benchmark for why it's bad.
+The following modules and packages violate protocol or best practice in some way:
+
+* They run magic during ``__init.py__`` that makes life hard for Mitogen.
+  Executing code during module import is always bad, and Mitogen is a concrete
+  benchmark for why it's bad.
+
+* They install crap in :py:data:`py.modules` that completely ignore or
+  partially implement the protocols laid out in PEP-302.
+
+* They "vendor" a third party package, either incompletely, using hacks visible
+  through the runtime's standard interfaces, or with ancient versions of code
+  that in turn mess with :py:data:`sys.modules` in some horrible way.
 
 Bugs will probably be filed for these in time, but it does not address the huge
 installed base of existing old software versions, so hacks are needed anyway.
+
+
+``pbr``
+=======
+
+It claims to use ``pkg_resources`` to read version information
+(``_get_version_from_pkg_metadata()``), which would result in PEP-302 being
+reused and everything just working wonderfully, but instead it actually does
+direct filesystem access. So we smodge the environment with a ``PBR_VERSION``
+environment variable to override any version that was defined. This will
+probably break code I haven't seen yet.
+
+**What could it do instead?**
+
+* ``pkg_resources.get_resource_stream()``
 
 
 ``pkg_resources``
@@ -32,16 +56,19 @@ issues like these.
   this method isn't general enough, it only really helps tools like Mitogen.
 
 
-``pbr``
+``six``
 =======
 
-It claims to use ``pkg_resources`` to read version information
-(``_get_version_from_pkg_metadata()``), which would result in PEP-302 being
-reused and everything just working wonderfully, but instead it actually does
-direct filesystem access. So we smodge the environment with a ``PBR_VERSION``
-environment variable to override any version that was defined. This will
-probably break code I haven't seen yet.
+The ``six`` module makes some effort to conform to PEP-302, but it is missing
+several critical pieces, e.g. the ``__loader__`` attribute. This not only
+breaks the Python standard library tooling (such as the :py:mod:`inspect`
+module), but also Mitogen. Newer versions of ``six`` improve things somewhat,
+but there are still outstanding issues preventing Mitogen from working with
+``six``.
+
+This package is sufficiently popular that it must eventually be supported.
 
 **What could it do instead?**
 
-* ``pkg_resources.get_resource_stream()``
+* Any custom hacks installed into :py:data:`sys.modules` should support the
+  protocols laid out in PEP-302.
