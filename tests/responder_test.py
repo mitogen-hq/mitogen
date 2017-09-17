@@ -11,17 +11,17 @@ import plain_old_module
 import simple_pkg.a
 
 
-class GoodModulesTest(testlib.BrokerMixin, unittest.TestCase):
+class GoodModulesTest(testlib.RouterMixin, unittest.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
-        context = mitogen.master.connect(self.broker)
+        context = self.router.local()
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
         # which imports the other.
-        context = mitogen.master.connect(self.broker)
+        context = self.router.local()
         self.assertEquals(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
 
@@ -38,15 +38,20 @@ class BrokenModulesTest(unittest.TestCase):
         # Ensure we don't crash in the case of a module legitimately being
         # unavailable. Should never happen in the real world.
 
-        context = mock.Mock()
-        responder = mitogen.master.ModuleResponder(context)
-        responder.get_module((50, 'non_existent_module'))
-        self.assertEquals(1, len(context.enqueue.mock_calls))
+        router = mock.Mock()
+        responder = mitogen.master.ModuleResponder(router)
+        responder._on_get_module(
+            mitogen.core.Message(
+                data='non_existent_module',
+                reply_to=50,
+            )
+        )
+        self.assertEquals(1, len(router.route.mock_calls))
 
-        call = context.enqueue.mock_calls[0]
-        reply_to, data = call[1]
-        self.assertEquals(50, reply_to)
-        self.assertTrue(data is None)
+        call = router.route.mock_calls[0]
+        msg, = call[1]
+        self.assertEquals(50, msg.handle)
+        self.assertTrue(msg.unpickle() is None)
 
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
@@ -56,12 +61,17 @@ class BrokenModulesTest(unittest.TestCase):
         # cause an attempt to request ansible.compat.six._six from the master.
         import six_brokenpkg
 
-        context = mock.Mock()
-        responder = mitogen.master.ModuleResponder(context)
-        responder.get_module((50, 'six_brokenpkg._six'))
-        self.assertEquals(1, len(context.enqueue.mock_calls))
+        router = mock.Mock()
+        responder = mitogen.master.ModuleResponder(router)
+        responder._on_get_module(
+            mitogen.core.Message(
+                data='six_brokenpkg._six',
+                reply_to=50,
+            )
+        )
+        self.assertEquals(1, len(router.route.mock_calls))
 
-        call = context.enqueue.mock_calls[0]
-        reply_to, data = call[1]
-        self.assertEquals(50, reply_to)
-        self.assertTrue(isinstance(data, tuple))
+        call = router.route.mock_calls[0]
+        msg, = call[1]
+        self.assertEquals(50, msg.handle)
+        self.assertTrue(isinstance(msg.unpickle(), tuple))
