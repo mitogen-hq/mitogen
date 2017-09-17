@@ -22,6 +22,28 @@ mitogen.core
 
 .. automodule:: mitogen.core
 
+.. function:: mitogen.core.takes_econtext
+
+    Decorator that marks a function or class method to automatically receive a
+    kwarg named `econtext`, referencing the
+    :py:class:`econtext.core.ExternalContext` active in the context in which
+    the function is being invoked in. The decorator is only meaningful when the
+    function is invoked via :py:data:`econtext.core.CALL_FUNCTION`.
+
+    When the function is invoked directly, `econtext` must still be passed to it
+    explicitly.
+
+.. function:: mitogen.core.takes_router
+
+    Decorator that marks a function or class method to automatically receive a
+    kwarg named `router`, referencing the :py:class:`econtext.core.Router`
+    active in the context in which the function is being invoked in. The
+    decorator is only meaningful when the function is invoked via
+    :py:data:`econtext.core.CALL_FUNCTION`.
+
+    When the function is invoked directly, `router` must still be passed to it
+    explicitly.
+
 
 mitogen.master
 --------------
