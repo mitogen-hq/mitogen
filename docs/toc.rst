@@ -12,3 +12,4 @@ Table Of Contents
    api
    internals
    history
+   shame
