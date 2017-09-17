@@ -8,7 +8,7 @@ The following modules and packages violate protocol or best practice in some way
   Executing code during module import is always bad, and Mitogen is a concrete
   benchmark for why it's bad.
 
-* They install crap in :py:data:`py.modules` that completely ignore or
+* They install crap in :py:data:`sys.modules` that completely ignore or
   partially implement the protocols laid out in PEP-302.
 
 * They "vendor" a third party package, either incompletely, using hacks visible
