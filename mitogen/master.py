@@ -12,11 +12,13 @@ import itertools
 import logging
 import os
 import pkgutil
+import pty
 import re
 import select
 import signal
 import socket
 import sys
+import termios
 import textwrap
 import time
 import types
@@ -73,6 +75,78 @@ def create_child(*args):
     return pid, os.dup(parentfp.fileno())
 
 
+def flags(names):
+    """Return the result of ORing a set of (space separated) :py:mod:`termios`
+    module constants together."""
+    return sum(getattr(termios, name) for name in names.split())
+
+
+def cfmakeraw((iflag, oflag, cflag, lflag, ispeed, ospeed, cc)):
+    """Given a list returned by :py:func:`termios.tcgetattr`, return a list
+    that has been modified in the same manner as the `cfmakeraw()` C library
+    function."""
+    iflag &= ~flags('IGNBRK BRKINT PARMRK ISTRIP INLCR IGNCR ICRNL IXON')
+    oflag &= ~flags('OPOST IXOFF')
+    lflag &= ~flags('ECHO ECHOE ECHONL ICANON ISIG IEXTEN')
+    cflag &= ~flags('CSIZE PARENB')
+    cflag |= flags('CS8')
+
+    iflag = 0
+    oflag = 0
+    lflag = 0
+    return [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
+
+
+def disable_echo(fd):
+    old = termios.tcgetattr(fd)
+    new = cfmakeraw(old)
+    flags = (
+        termios.TCSAFLUSH |
+        getattr(termios, 'TCSASOFT', 0)
+    )
+    termios.tcsetattr(fd, flags, new)
+
+
+def close_nonstandard_fds():
+    for fd in xrange(3, 1024):
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+
+
+def tty_create_child(*args):
+    """
+    Return a file descriptor connected to the master end of a pseudo-terminal,
+    whose slave end is connected to stdin/stdout/stderr of a new child process.
+    The child is created such that the pseudo-terminal becomes its controlling
+    TTY, ensuring access to /dev/tty returns a new file descriptor open on the
+    slave end.
+
+    :param args:
+        execl() arguments.
+    """
+    master_fd, slave_fd = os.openpty()
+    disable_echo(master_fd)
+    disable_echo(slave_fd)
+
+    pid = os.fork()
+    if not pid:
+        os.dup2(slave_fd, 0)
+        os.dup2(slave_fd, 1)
+        os.dup2(slave_fd, 2)
+        close_nonstandard_fds()
+        os.setsid()
+        os.close(os.open(os.ttyname(1), os.O_RDWR))
+        os.execvp(args[0], args)
+        raise SystemExit
+
+    os.close(slave_fd)
+    LOG.debug('tty_create_child() child %d fd %d, parent %d, args %r',
+              pid, master_fd, os.getpid(), args)
+    return pid, master_fd
+
+
 def write_all(fd, s):
     written = 0
     while written < len(s):
@@ -105,8 +179,8 @@ def iter_read(fd, deadline):
 
         if not s:
             raise mitogen.core.StreamError(
-                'EOF on stream; last 100 bytes received: %r' %
-                (''.join(bits)[-100:],)
+                'EOF on stream; last 300 bytes received: %r' %
+                (''.join(bits)[-300:],)
             )
 
         bits.append(s)
