@@ -4,6 +4,7 @@ starting new contexts via SSH. Its size is also restricted, since it must be
 sent to any context that will be used to establish additional child contexts.
 """
 
+import commands
 import errno
 import getpass
 import imp
@@ -55,6 +56,15 @@ def get_child_modules(path, fullname):
     return ['%s.%s' % (fullname, name) for _, name, _ in it]
 
 
+def format_cmdline(args):
+    return ' '.join(
+            commands.mkarg(arg).strip()
+        if any(s in arg for s in (" '\"$")) else
+            arg
+        for arg in args
+    )
+
+
 def create_child(*args):
     """Create a child process whose stdin/stdout is connected to a socket,
     returning `(pid, socket_obj)`."""
@@ -69,8 +79,8 @@ def create_child(*args):
         raise SystemExit
 
     childfp.close()
-    LOG.debug('create_child() child %d fd %d, parent %d, args %r',
-              pid, parentfp.fileno(), os.getpid(), args)
+    LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
+              pid, parentfp.fileno(), os.getpid(), format_cmdline(args))
     return pid, os.dup(parentfp.fileno())
 
 
@@ -141,8 +151,8 @@ def tty_create_child(*args):
         raise SystemExit
 
     os.close(slave_fd)
-    LOG.debug('tty_create_child() child %d fd %d, parent %d, args %r',
-              pid, master_fd, os.getpid(), args)
+    LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
+              pid, master_fd, os.getpid(), format_cmdline(args))
     return pid, master_fd
 
 

@@ -62,7 +62,7 @@ class Stream(mitogen.master.Stream):
             ]
         bits.append(self.hostname)
         base = super(Stream, self).get_boot_command()
-        return bits + map(commands.mkarg, base)
+        return bits + [commands.mkarg(s).strip() for s in base]
 
     def connect(self):
         super(Stream, self).connect()
