@@ -153,7 +153,7 @@ class Message(object):
     src_id = None
     handle = None
     reply_to = None
-    data = None
+    data = ''
 
     router = None
 
