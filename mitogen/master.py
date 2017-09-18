@@ -775,7 +775,7 @@ class IdAllocator(object):
 
     def on_allocate_id(self, msg):
         id_ = self.allocate()
-        LOG.debug('%r: allocating ID %d to context %r', id_, msg.src_id)
+        LOG.debug('%r: allocating ID %d to context %r', self, id_, msg.src_id)
         self.router.route(
             mitogen.core.Message.pickled(
                 id_,
