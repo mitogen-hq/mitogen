@@ -21,6 +21,7 @@ import socket
 import sys
 import termios
 import textwrap
+import threading
 import time
 import types
 import zlib
@@ -753,13 +754,43 @@ def _proxy_connect(econtext, name, context_id, method_name, kwargs):
     return context.name
 
 
-class Router(mitogen.core.Router):
-    context_id_counter = itertools.count(1)
+class IdAllocator(object):
+    def __init__(self, router):
+        self.router = router
+        self.next_id = 1
+        self.lock = threading.Lock()
+        router.add_handler(self.on_allocate_id, mitogen.core.ALLOCATE_ID)
 
+    def __repr__(self):
+        return 'IdAllocator(%r)' % (self.router,)
+
+    def allocate(self):
+        self.lock.acquire()
+        try:
+            id_ = self.next_id
+            self.next_id += 1
+            return id_
+        finally:
+            self.lock.release()
+
+    def on_allocate_id(self, msg):
+        id_ = self.allocate()
+        LOG.debug('%r: allocating ID %d to context %r', id_, msg.src_id)
+        self.router.route(
+            mitogen.core.Message.pickled(
+                id_,
+                dst_id=msg.src_id,
+                handle=msg.reply_to,
+            )
+        )
+
+
+class Router(mitogen.core.Router):
     debug = False
 
     def __init__(self, *args, **kwargs):
         super(Router, self).__init__(*args, **kwargs)
+        self.id_allocator = IdAllocator(self)
         self.responder = ModuleResponder(self)
         self.log_forwarder = LogForwarder(self)
 
@@ -777,6 +808,9 @@ class Router(mitogen.core.Router):
     def __exit__(self, e_type, e_val, tb):
         self.broker.shutdown()
         self.broker.join()
+
+    def allocate_id(self):
+        return self.id_allocator.allocate()
 
     def context_by_id(self, context_id):
         return self._context_by_id.get(context_id)
@@ -807,11 +841,11 @@ class Router(mitogen.core.Router):
         via = kwargs.pop('via', None)
         if via is not None:
             return self.proxy_connect(via, method_name, name=name, **kwargs)
-        context_id = self.context_id_counter.next()
+        context_id = self.allocate_id()
         return self._connect(context_id, klass, name=name, **kwargs)
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
-        context_id = self.context_id_counter.next()
+        context_id = self.allocate_id()
         # Must be added prior to _proxy_connect() to avoid a race.
         self.add_route(context_id, via_context.context_id)
         name = via_context.call_with_deadline(None, True,
