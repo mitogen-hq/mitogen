@@ -1,8 +1,3 @@
-"""
-This module implements most package functionality, but remains separate from
-non-essential code in order to reduce its size, since it is also serves as the
-bootstrap implementation sent to every new slave context.
-"""
 
 import Queue
 import cPickle
@@ -47,7 +42,6 @@ else:
 
 
 class Error(Exception):
-    """Base for all exceptions raised by this module."""
     def __init__(self, fmt, *args):
         if args:
             fmt %= args
@@ -55,10 +49,6 @@ class Error(Exception):
 
 
 class CallError(Error):
-    """Raised when :py:meth:`Context.call() <mitogen.master.Context.call>`
-    fails. A copy of the traceback from the external context is appended to the
-    exception message.
-    """
     def __init__(self, e):
         s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
         tb = sys.exc_info()[2]
@@ -70,6 +60,7 @@ class CallError(Error):
     def __reduce__(self):
         return (_unpickle_call_error, (self[0],))
 
+
 def _unpickle_call_error(s):
     assert type(s) is str and len(s) < 10000
     inst = CallError.__new__(CallError)
@@ -78,15 +69,15 @@ def _unpickle_call_error(s):
 
 
 class ChannelError(Error):
-    """Raised when a channel dies or has been closed."""
+    pass
 
 
 class StreamError(Error):
-    """Raised when a stream cannot be established."""
+    pass
 
 
 class TimeoutError(StreamError):
-    """Raised when a timeout occurs on a stream."""
+    pass
 
 
 class Dead(object):
@@ -98,6 +89,7 @@ class Dead(object):
 
     def __repr__(self):
         return '<Dead>'
+
 
 def _unpickle_dead():
     return _DEAD
@@ -133,15 +125,6 @@ def set_cloexec(fd):
 
 
 def io_op(func, *args):
-    """
-    When connected over a TTY (i.e. sudo), disconnection of the remote end is
-    signalled by EIO, rather than an empty read like sockets or pipes. Ideally
-    this will be replaced later by a 'goodbye' message to avoid reading from a
-    disconnected endpoint, allowing for more robust error reporting.
-
-    When connected over a socket (e.g. mitogen.master.create_child()),
-    ECONNRESET may be triggered by any read or write.
-    """
     try:
         return func(*args), False
     except OSError, e:
@@ -1076,38 +1059,6 @@ class Broker(object):
 
 
 class ExternalContext(object):
-    """
-    External context implementation.
-
-    .. attribute:: broker
-
-        The :py:class:`mitogen.core.Broker` instance.
-
-    .. attribute:: context
-
-            The :py:class:`mitogen.core.Context` instance.
-
-    .. attribute:: channel
-
-            The :py:class:`mitogen.core.Channel` over which
-            :py:data:`CALL_FUNCTION` requests are received.
-
-    .. attribute:: stdout_log
-
-        The :py:class:`mitogen.core.IoLogger` connected to ``stdout``.
-
-    .. attribute:: importer
-
-        The :py:class:`mitogen.core.Importer` instance.
-
-    .. attribute:: stdout_log
-
-        The :py:class:`IoLogger` connected to ``stdout``.
-
-    .. attribute:: stderr_log
-
-        The :py:class:`IoLogger` connected to ``stderr``.
-    """
     def _on_broker_shutdown(self):
         self.channel.close()
 
