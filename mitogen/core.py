@@ -868,11 +868,6 @@ class Router(object):
 
         return handle
 
-    def allocate_id(self):
-        master = Context(self, 0)
-        reply = master.send_await(Message(dst_id=0, handle=ALLOCATE_ID))
-        return reply.unpickle()
-
     def on_shutdown(self, broker):
         """Called during :py:meth:`Broker.shutdown`, informs callbacks
         registered with :py:meth:`add_handle_cb` the connection is dead."""
