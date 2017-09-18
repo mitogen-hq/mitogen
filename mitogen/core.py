@@ -29,7 +29,7 @@ FORWARD_LOG = 102
 ADD_ROUTE = 103
 ALLOCATE_ID = 104
 
-CHUNK_SIZE = 16384
+CHUNK_SIZE = 4096  # TODO: this was 16384, but that triggers an unfixed hang.
 
 
 if __name__ == 'mitogen.core':
@@ -225,7 +225,7 @@ class Sender(object):
 
     def put(self, data):
         """Send `data` to the remote."""
-        IOLOG.debug('%r.send(%r)', self, data)
+        IOLOG.debug('%r.put(%r..)', self, data[:100])
         self.context.send(
             Message.pickled(
                 data,
