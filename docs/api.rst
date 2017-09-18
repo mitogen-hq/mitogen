@@ -20,7 +20,11 @@ mitogen Package
 mitogen.core
 ------------
 
-.. automodule:: mitogen.core
+.. module:: mitogen.core
+
+This module implements most package functionality, but remains separate from
+non-essential code in order to reduce its size, since it is also serves as the
+bootstrap implementation sent to every new slave context.
 
 .. function:: mitogen.core.takes_econtext
 
@@ -107,8 +111,24 @@ Utility Functions
 Exceptions
 ==========
 
-.. autoclass:: mitogen.core.Error
-.. autoclass:: mitogen.core.CallError
-.. autoclass:: mitogen.core.ChannelError
-.. autoclass:: mitogen.core.StreamError
-.. autoclass:: mitogen.core.TimeoutError
+.. class:: mitogen.core.Error (fmt, \*args)
+
+    Base for all exceptions raised by Mitogen.
+
+.. class:: mitogen.core.CallError (e)
+
+    Raised when :py:meth:`Context.call() <mitogen.master.Context.call>` fails.
+    A copy of the traceback from the external context is appended to the
+    exception message.
+
+.. class:: mitogen.core.ChannelError (fmt, \*args)
+
+    Raised when a channel dies or has been closed.
+
+.. class:: mitogen.core.StreamError (fmt, \*args)
+
+    Raised when a stream cannot be established.
+
+.. autoclass:: mitogen.core.TimeoutError (fmt, \*args)
+
+    Raised when a timeout occurs on a stream.
