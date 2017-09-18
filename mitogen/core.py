@@ -308,8 +308,8 @@ class Receiver(object):
 
 
 class Channel(Sender, Receiver):
-    def __init__(self, router, context, dst_id, handle=None):
-        Sender.__init_(self, context, dst_id)
+    def __init__(self, router, context, dst_handle, handle=None):
+        Sender.__init__(self, context, dst_handle)
         Receiver.__init__(self, router, handle)
 
     def __repr__(self):
