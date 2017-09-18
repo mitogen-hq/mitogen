@@ -644,7 +644,7 @@ class Stream(BasicStream):
         pkt = struct.pack('>hhLLL', msg.dst_id, msg.src_id,
                           msg.handle, msg.reply_to or 0, len(msg.data)
         ) + msg.data
-        self._output_buf += pkt
+        self._output_buf += pkt  # TODO: It's actually possible for this to race
         self._router.broker.start_transmit(self)
 
     def on_disconnect(self, broker):
