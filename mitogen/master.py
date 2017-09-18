@@ -739,6 +739,7 @@ METHOD_NAMES = {
 def upgrade_router(econtext):
     if not isinstance(econtext.router, Router):  # TODO
         econtext.router.__class__ = Router  # TODO
+        econtext.router.id_allocator = ChildIdAllocator(econtext.router)
         LOG.debug('_proxy_connect(): constructing ModuleForwarder')
         ModuleForwarder(econtext.router, econtext.parent, econtext.importer)
 
@@ -783,6 +784,18 @@ class IdAllocator(object):
                 handle=msg.reply_to,
             )
         )
+
+
+class ChildIdAllocator(object):
+    def __init__(self, router):
+        self.router = router
+
+    def allocate(self):
+        master = Context(self.router, 0)
+        reply = master.send_await(
+            mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
+        )
+        return reply.unpickle()
 
 
 class Router(mitogen.core.Router):
