@@ -271,6 +271,14 @@ Masters listen on the following handles:
     module named ``fullname``, and writes the source along with some metadata
     back to the handle ``reply_to``. If lookup fails, ``None`` is sent instead.
 
+.. data:: mitogen.core.ALLOCATE_ID
+
+    Replies to any message sent to it with a newly allocated unique context ID,
+    to allow slaves to safely start their own contexts. In future this is
+    likely to be replaced by 32-bit context IDs and random allocation, with an
+    improved ``ADD_ROUTE`` message sent upstream rather than downstream that
+    generates NACKs if any ancestor already knows the ID.
+
 
 Slaves listen on the following handles:
 

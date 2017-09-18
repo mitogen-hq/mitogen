@@ -27,6 +27,7 @@ GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
 ADD_ROUTE = 103
+ALLOCATE_ID = 104
 
 CHUNK_SIZE = 16384
 
@@ -866,6 +867,11 @@ class Router(object):
             listen(respondent, 'disconnect', on_disconnect)
 
         return handle
+
+    def allocate_id(self):
+        master = Context(self, 0)
+        reply = master.send_await(Message(dst_id=0, handle=ALLOCATE_ID))
+        return reply.unpickle()
 
     def on_shutdown(self, broker):
         """Called during :py:meth:`Broker.shutdown`, informs callbacks
