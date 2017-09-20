@@ -282,7 +282,7 @@ def _fakessh_main(mitogen_, dest_context_id):
         die('Missing hostname')
 
     for opt, optarg in opts:
-        if 0 and opt == '-s':
+        if opt == '-s':
             subsystem = True
         else:
             LOG.debug('Warning option %s %s is ignored.', opt, optarg)
@@ -290,6 +290,9 @@ def _fakessh_main(mitogen_, dest_context_id):
     LOG.debug('hostname: %r', hostname)
     LOG.debug('opts: %r', opts)
     LOG.debug('args: %r', args)
+
+    if subsystem:
+        die('-s <subsystem> is not yet supported')
 
     dest = mitogen.master.Context(mitogen_.router, dest_context_id)
     control_handle, stdin_handle = dest.call_with_deadline(None, True,
