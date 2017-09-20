@@ -483,6 +483,9 @@ class Side(object):
         return s
 
     def write(self, s):
+        if self.fd is None:
+            return None
+
         written, disconnected = io_op(os.write, self.fd, s[:CHUNK_SIZE])
         if disconnected:
             return None
@@ -613,7 +616,7 @@ class Stream(BasicStream):
         written = self.transmit_side.write(self._output_buf)
         if written is None:
             LOG.debug('%r.on_transmit(): disconnection detected', self)
-            self.on_disconnect()
+            self.on_disconnect(broker)
             return
 
         IOLOG.debug('%r.on_transmit() -> len %d', self, written)
