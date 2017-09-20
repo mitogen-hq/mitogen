@@ -350,7 +350,7 @@ def run(dest, router, args, deadline=None):
         ssh_path = os.path.join(tmp_path, 'ssh')
         fp = file(ssh_path, 'w')
         try:
-            fp.write('#!/usr/bin/env python\n')
+            fp.write('#!%s\n' % (sys.executable,))
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext().main%r\n' % ((
