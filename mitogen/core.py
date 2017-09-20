@@ -624,15 +624,18 @@ class Stream(BasicStream):
         if not self._output_buf:
             broker.stop_transmit(self)
 
-    def send(self, msg):
-        """Send `data` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
+    def _send(self, msg):
         IOLOG.debug('%r._send(%r)', self, msg)
         pkt = struct.pack('>hhLLL', msg.dst_id, msg.src_id,
                           msg.handle, msg.reply_to or 0, len(msg.data)
         ) + msg.data
-        self._output_buf += pkt  # TODO: It's actually possible for this to race
+        self._output_buf += pkt
         self._router.broker.start_transmit(self)
+
+    def send(self, msg):
+        """Send `data` to `handle`, and tell the broker we have output. May
+        be called from any thread."""
+        self._router.broker.defer(self._send, msg)
 
     def on_disconnect(self, broker):
         super(Stream, self).on_disconnect(broker)
