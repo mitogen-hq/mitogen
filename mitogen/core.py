@@ -199,9 +199,9 @@ class Message(object):
             raise StreamError('invalid message: %s', ex)
 
     def __repr__(self):
-        return 'Message(%r, %r, %r, %r, %r..)' % (
+        return 'Message(%r, %r, %r, %r, %r..%d)' % (
             self.dst_id, self.src_id, self.handle, self.reply_to,
-            (self.data or '')[:50]
+            (self.data or '')[:50], len(self.data)
         )
 
 
