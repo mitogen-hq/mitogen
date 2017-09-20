@@ -315,8 +315,9 @@ def _fakessh_main(mitogen_, dest_context_id):
 # Public API.
 #
 
+@mitogen.core.takes_econtext
 @mitogen.core.takes_router
-def run(dest, router, args, deadline=None):
+def run(dest, router, args, deadline=None, econtext=None):
     """
     Run the command specified by the argument vector `args` such that ``PATH``
     searches for SSH by the command will cause its attempt to use SSH to
@@ -335,9 +336,12 @@ def run(dest, router, args, deadline=None):
     :returns:
         Exit status of the child process.
     """
-    context_id = router.context_id_counter.next()
+    if econtext is not None:
+        mitogen.master.upgrade_router(econtext)
+
+    context_id = router.allocate_id()
     fakessh = mitogen.master.Context(router, context_id)
-    fakessh.name = 'fakessh'
+    fakessh.name = 'fakessh.%d' % (context_id,)
 
     sock1, sock2 = socket.socketpair()
     mitogen.core.set_cloexec(sock1.fileno())
