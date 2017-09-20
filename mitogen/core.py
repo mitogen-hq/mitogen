@@ -1138,9 +1138,7 @@ class ExternalContext(object):
     def _dispatch_calls(self):
         for msg, data in self.channel:
             LOG.debug('_dispatch_calls(%r)', data)
-            with_context, modname, klass, func, args, kwargs = data
-            if with_context:
-                args = (self,) + args
+            modname, klass, func, args, kwargs = data
 
             try:
                 obj = __import__(modname, {}, {}, [''])

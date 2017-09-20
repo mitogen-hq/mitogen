@@ -659,9 +659,9 @@ class Context(mitogen.core.Context):
         else:
             LOG.debug('_discard_result: %r', data)
 
-    def call_async(self, with_context, fn, *args, **kwargs):
-        LOG.debug('%r.call_async(%r, %r, *%r, **%r)',
-                  self, with_context, fn, args, kwargs)
+    def call_async(self, fn, *args, **kwargs):
+        LOG.debug('%r.call_async(%r, *%r, **%r)',
+                  self, fn, args, kwargs)
 
         if isinstance(fn, types.MethodType) and \
            isinstance(fn.im_self, (type, types.ClassType)):
@@ -669,27 +669,22 @@ class Context(mitogen.core.Context):
         else:
             klass = None
 
-        call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
         self.send(
             mitogen.core.Message.pickled(
-                call,
+                (fn.__module__, klass, fn.__name__, args, kwargs),
                 handle=mitogen.core.CALL_FUNCTION,
                 reply_to=self.router.add_handler(self._discard_result),
             )
         )
 
-    def call_with_deadline(self, deadline, with_context, fn, *args, **kwargs):
+    def call_with_deadline(self, deadline, fn, *args, **kwargs):
         """Invoke `fn([context,] *args, **kwargs)` in the external context.
-
-        If `with_context` is ``True``, pass its
-        :py:class:`ExternalContext <mitogen.core.ExternalContext>` instance as
-        the first parameter.
 
         If `deadline` is not ``None``, expire the call after `deadline`
         seconds. If `deadline` is ``None``, the invocation may block
         indefinitely."""
-        LOG.debug('%r.call_with_deadline(%r, %r, %r, *%r, **%r)',
-                  self, deadline, with_context, fn, args, kwargs)
+        LOG.debug('%r.call_with_deadline(%r, %r, *%r, **%r)',
+                  self, deadline, fn, args, kwargs)
 
         if isinstance(fn, types.MethodType) and \
            isinstance(fn.im_self, (type, types.ClassType)):
@@ -697,10 +692,9 @@ class Context(mitogen.core.Context):
         else:
             klass = None
 
-        call = (with_context, fn.__module__, klass, fn.__name__, args, kwargs)
         response = self.send_await(
             mitogen.core.Message.pickled(
-                call,
+                (fn.__module__, klass, fn.__name__, args, kwargs),
                 handle=mitogen.core.CALL_FUNCTION
             ),
             deadline
@@ -713,7 +707,7 @@ class Context(mitogen.core.Context):
 
     def call(self, fn, *args, **kwargs):
         """Invoke `fn(*args, **kwargs)` in the external context."""
-        return self.call_with_deadline(None, False, fn, *args, **kwargs)
+        return self.call_with_deadline(None, fn, *args, **kwargs)
 
 
 
