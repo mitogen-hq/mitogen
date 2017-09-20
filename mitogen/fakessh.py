@@ -215,21 +215,22 @@ class Process(object):
             pass
 
 
-def _start_slave(mitogen_, src_id, args):
+@mitogen.core.takes_router
+def _start_slave(src_id, args, router):
     """
     This runs in the target context, it is invoked by _fakessh_main running in
     the fakessh context immediately after startup. It starts the slave process
     (the the point where it has a stdin_handle to target but not stdout_chan to
     write to), and waits for main to.
     """
-    LOG.debug('_start_slave(%r, %r)', mitogen_, args)
+    LOG.debug('_start_slave(%r, %r)', router, args)
 
     proc = subprocess.Popen(args,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
 
-    process = Process(mitogen_.router,
+    process = Process(router,
         proc.stdin.fileno(),
         proc.stdout.fileno(),
         proc,
@@ -276,7 +277,8 @@ def parse_args():
     return hostname, allopts, args
 
 
-def _fakessh_main(mitogen_, dest_context_id):
+@mitogen.core.takes_econtext
+def _fakessh_main(dest_context_id, econtext):
     hostname, opts, args = parse_args()
     if not hostname:
         die('Missing hostname')
@@ -295,14 +297,15 @@ def _fakessh_main(mitogen_, dest_context_id):
     if subsystem:
         die('-s <subsystem> is not yet supported')
 
-    dest = mitogen.master.Context(mitogen_.router, dest_context_id)
-    control_handle, stdin_handle = dest.call_with_deadline(None, True,
-        _start_slave, mitogen.context_id, args)
+    dest = mitogen.master.Context(econtext.router, dest_context_id)
+
+    control_handle, stdin_handle = dest.call(_start_slave,
+        mitogen.context_id, args)
 
     LOG.debug('_fakessh_main: received control_handle=%r, stdin_handle=%r',
               control_handle, stdin_handle)
 
-    process = Process(mitogen_.router, 1, 0)
+    process = Process(econtext.router, 1, 0)
     process.start_master(
         stdin=mitogen.core.Sender(dest, stdin_handle),
         control=mitogen.core.Sender(dest, control_handle),
@@ -352,7 +355,7 @@ def run(dest, router, args, deadline=None, econtext=None):
     router.register(fakessh, stream)
 
     # Held in socket buffer until process is booted.
-    fakessh.call_async(True, _fakessh_main, dest.context_id)
+    fakessh.call_async(_fakessh_main, dest.context_id)
 
     tmp_path = tempfile.mkdtemp(prefix='mitogen_fakessh')
     try:
