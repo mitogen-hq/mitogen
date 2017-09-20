@@ -328,7 +328,11 @@ def run(dest, router, args, deadline=None):
     :param mitogen.core.Router router:
 
     :param list[str] args:
-        Command line arguments for local program, e.g. ``['rsync', '/tmp', 'remote:/tmp']``
+        Command line arguments for local program, e.g.
+        ``['rsync', '/tmp', 'remote:/tmp']``
+
+    :returns:
+        Exit status of the child process.
     """
     context_id = router.context_id_counter.next()
     fakessh = mitogen.master.Context(router, context_id)
@@ -376,6 +380,6 @@ def run(dest, router, args, deadline=None):
         })
 
         proc = subprocess.Popen(args, env=env)
-        proc.wait()
+        return proc.wait()
     finally:
         shutil.rmtree(tmp_path)
