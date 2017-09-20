@@ -80,8 +80,7 @@ class IoPump(mitogen.core.BasicStream):
     _output_buf = ''
     _closed = False
 
-    def __init__(self, process, broker, stdin_fd, stdout_fd):
-        self.process = process
+    def __init__(self, broker, stdin_fd, stdout_fd):
         self._broker = broker
         self.receive_side = mitogen.core.Side(self, stdout_fd)
         self.transmit_side = mitogen.core.Side(self, stdin_fd)
@@ -122,8 +121,9 @@ class IoPump(mitogen.core.BasicStream):
             self.on_disconnect(broker)
 
     def __repr__(self):
-        return 'IoPump(%r)' % (
-            self.process,
+        return 'IoPump(%r, %r)' % (
+            self.receive_side.fd,
+            self.transmit_side.fd,
         )
 
 
@@ -139,7 +139,7 @@ class Process(object):
         self.proc = proc
         self.control_handle = router.add_handler(self._on_control)
         self.stdin_handle = router.add_handler(self._on_stdin)
-        self.pump = IoPump(self, router.broker, stdin_fd, stdout_fd)
+        self.pump = IoPump(router.broker, stdin_fd, stdout_fd)
         self.stdin = None
         self.control = None
         self.wake_event = threading.Event()
