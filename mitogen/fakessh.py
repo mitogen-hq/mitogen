@@ -281,6 +281,7 @@ def _fakessh_main(mitogen_, dest_context_id):
     if not hostname:
         die('Missing hostname')
 
+    subsystem = False
     for opt, optarg in opts:
         if opt == '-s':
             subsystem = True
