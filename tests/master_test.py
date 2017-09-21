@@ -12,7 +12,9 @@ class IterReadTest(unittest.TestCase):
 
     def make_proc(self):
         args = [testlib.data_path('iter_read_generator.sh')]
-        return subprocess.Popen(args, stdout=subprocess.PIPE)
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
+        mitogen.core.set_nonblock(proc.stdout.fileno())
+        return proc
 
     def test_no_deadline(self):
         proc = self.make_proc()
@@ -52,5 +54,45 @@ class IterReadTest(unittest.TestCase):
                 # Give a little wiggle room in case of imperfect scheduling.
                 # Ideal number should be 9.
                 assert 3 < len(got) < 5
+        finally:
+            proc.terminate()
+
+
+class WriteAllTest(unittest.TestCase):
+    func = staticmethod(mitogen.master.write_all)
+
+    def make_proc(self):
+        args = [testlib.data_path('write_all_consumer.sh')]
+        proc = subprocess.Popen(args, stdin=subprocess.PIPE)
+        mitogen.core.set_nonblock(proc.stdin.fileno())
+        return proc
+
+    ten_ms_chunk = ('x' * 65535)
+
+    def test_no_deadline(self):
+        proc = self.make_proc()
+        try:
+            self.func(proc.stdin.fileno(), self.ten_ms_chunk)
+        finally:
+            proc.terminate()
+
+    def test_deadline_exceeded_before_call(self):
+        proc = self.make_proc()
+        try:
+            self.assertRaises(mitogen.core.TimeoutError, (
+                lambda: self.func(proc.stdin.fileno(), self.ten_ms_chunk, 0)
+            ))
+        finally:
+            proc.terminate()
+
+    def test_deadline_exceeded_during_call(self):
+        proc = self.make_proc()
+        try:
+            deadline = time.time() + 0.1   # 100ms deadline
+            self.assertRaises(mitogen.core.TimeoutError, (
+                lambda: self.func(proc.stdin.fileno(),
+                                  self.ten_ms_chunk * 100,  # 1s of data
+                                  deadline)
+            ))
         finally:
             proc.terminate()
