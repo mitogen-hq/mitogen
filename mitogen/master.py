@@ -167,27 +167,22 @@ def write_all(fd, s):
     return written
 
 
-def read_with_deadline(fd, size, deadline):
-    timeout = deadline - time.time()
-    if timeout > 0:
-        rfds, _, _ = select.select([fd], [], [], timeout)
-        if rfds:
-            return os.read(fd, size)
-
-    raise mitogen.core.TimeoutError('read timed out')
-
-
-def iter_read(fd, deadline):
-    if deadline is not None:
-        LOG.debug('Warning: iter_read(.., deadline=...) unimplemented')
-
+def iter_read(fd, deadline=None):
     bits = []
+    timeout = None
+
     while True:
+        if deadline is not None:
+            timeout = max(0, deadline - time.time())
+            if timeout == 0:
+                break
+
+        rfds, _, _ = select.select([fd], [], [], timeout)
+        if not rfds:
+            continue
+
         s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
         if disconnected:
-            s = ''
-
-        if not s:
             raise mitogen.core.StreamError(
                 'EOF on stream; last 300 bytes received: %r' %
                 (''.join(bits)[-300:],)
@@ -195,6 +190,8 @@ def iter_read(fd, deadline):
 
         bits.append(s)
         yield s
+
+    raise mitogen.core.TimeoutError('read timed out')
 
 
 def discard_until(fd, s, deadline):
