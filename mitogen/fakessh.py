@@ -217,16 +217,21 @@ class Process(object):
 
 
 @mitogen.core.takes_router
-def _start_slave(src_id, args, router):
+def _start_slave(src_id, cmdline, router):
     """
     This runs in the target context, it is invoked by _fakessh_main running in
     the fakessh context immediately after startup. It starts the slave process
     (the the point where it has a stdin_handle to target but not stdout_chan to
     write to), and waits for main to.
     """
-    LOG.debug('_start_slave(%r, %r)', router, args)
+    LOG.debug('_start_slave(%r, %r)', router, cmdline)
 
-    proc = subprocess.Popen(args,
+    proc = subprocess.Popen(cmdline,
+        # SSH server always uses user's shell.
+        shell=True,
+        # SSH server always executes new commands in the user's HOME.
+        cwd=os.path.expanduser('~'),
+
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
@@ -298,10 +303,16 @@ def _fakessh_main(dest_context_id, econtext):
     if subsystem:
         die('-s <subsystem> is not yet supported')
 
+    if not args:
+        die('fakessh: login mode not supported and no command specified')
+
     dest = mitogen.master.Context(econtext.router, dest_context_id)
 
+    # Even though SSH receives an argument vector, it still cats the vector
+    # together before sending to the server, the server just uses /bin/sh -c to
+    # run the command. We must remain puke-for-puke compatible.
     control_handle, stdin_handle = dest.call(_start_slave,
-        mitogen.context_id, args)
+        mitogen.context_id, ' '.join(args))
 
     LOG.debug('_fakessh_main: received control_handle=%r, stdin_handle=%r',
               control_handle, stdin_handle)
