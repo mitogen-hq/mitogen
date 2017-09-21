@@ -22,11 +22,6 @@ def disable_site_packages():
             sys.path.remove(entry)
 
 
-def log_to_tmp():
-    import os
-    log_to_file(path='/tmp/mitogen.%s.log' % (os.getpid(),))
-
-
 def log_to_file(path=None, io=True, level='INFO'):
     """Install a new :py:class:`logging.Handler` writing applications logs to
     the filesystem. Useful when debugging slave IO problems."""
