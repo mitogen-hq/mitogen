@@ -27,7 +27,7 @@ def serve_django_app(settings_name):
 
 def main(broker):
     import logging
-    mitogen.utils.log_to_file(level=logging.INFO, io=False)
+    mitogen.utils.log_to_file(io=False)
     context = mitogen.master.connect(broker)
     context.call(os.chdir, '/')
     #context.call(mitogen.utils.log_to_file, '/tmp/log')
