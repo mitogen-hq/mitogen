@@ -1,3 +1,4 @@
+-r docs/docs-requirements.txt
 docker==2.5.1
 docker[tls]==2.5.1
 pytest-capturelog==0.7
