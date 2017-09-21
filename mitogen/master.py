@@ -565,6 +565,7 @@ class Stream(mitogen.core.Stream):
     # base64'd and passed to 'python -c'. It forks, dups 0->100, creates a
     # pipe, then execs a new interpreter with a custom argv. 'CONTEXT_NAME' is
     # replaced with the context name. Optimized for size.
+    @staticmethod
     def _first_stage():
         import os,sys,zlib
         R,W=os.pipe()
