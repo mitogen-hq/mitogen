@@ -361,7 +361,7 @@ def run(dest, router, args, deadline=None, econtext=None):
     sock1, sock2 = socket.socketpair()
     mitogen.core.set_cloexec(sock1.fileno())
 
-    stream = mitogen.core.Stream(router, context_id, fakessh.key)
+    stream = mitogen.core.Stream(router, context_id)
     stream.name = 'fakessh'
     stream.accept(sock1.fileno(), sock1.fileno())
     router.register(fakessh, stream)
@@ -380,7 +380,6 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write('ExternalContext().main%r\n' % ((
                 mitogen.context_id,             # parent_id
                 context_id,                     # context_id
-                fakessh.key,                    # key
                 router.debug,                   # debug
                 router.profiling,               # profiling
                 logging.getLogger().level,      # log_level

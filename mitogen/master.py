@@ -596,7 +596,6 @@ class Stream(mitogen.core.Stream):
         source += '\nExternalContext().main%r\n' % ((
             mitogen.context_id,        # parent_id
             self.remote_id,            # context_id
-            self.key,
             self.debug,
             self.profiling,
             LOG.level or logging.getLogger().level or logging.INFO,
@@ -800,7 +799,7 @@ class Router(mitogen.core.Router):
 
     def _connect(self, context_id, klass, name=None, **kwargs):
         context = Context(self, context_id)
-        stream = klass(self, context.context_id, context.key, **kwargs)
+        stream = klass(self, context.context_id, **kwargs)
         if name is not None:
             stream.name = name
         stream.connect()

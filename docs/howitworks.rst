@@ -87,9 +87,8 @@ The script sent is simply the source code for :py:mod:`mitogen.core`, with a
 single line suffixed to trigger execution of the
 :py:meth:`mitogen.core.ExternalContext.main` function. The encoded arguments
 to the main function include some additional details, such as the logging package
-level that was active in the parent process, and a random secret key that may
-later be used to generate HMAC signatures over the data frames that will be
-exchanged after bootstrap.
+level that was active in the parent process, and whether debugging or profiling
+are enabled.
 
 After the script source code is prepared, it is passed through
 :py:func:`mitogen.master.minimize_source` to strip it of docstrings and
