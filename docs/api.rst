@@ -52,7 +52,12 @@ bootstrap implementation sent to every new slave context.
 mitogen.master
 --------------
 
-.. automodule:: mitogen.master
+.. module:: mitogen.master
+
+This module implements functionality required by master processes, such as
+starting new contexts via SSH. Its size is also restricted, since it must
+be sent to any context that will be used to establish additional child
+contexts.
 
 
 mitogen.fakessh

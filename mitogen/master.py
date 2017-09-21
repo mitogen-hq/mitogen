@@ -1,9 +1,3 @@
-"""
-This module implements functionality required by master processes, such as
-starting new contexts via SSH. Its size is also restricted, since it must be
-sent to any context that will be used to establish additional child contexts.
-"""
-
 import commands
 import errno
 import getpass
@@ -43,8 +37,6 @@ IOLOG_RE = re.compile(r'^[ ]*IOLOG.debug\(.+?\)$', re.M)
 
 
 def minimize_source(source):
-    """Remove comments and docstrings from Python `source`, preserving line
-    numbers and syntax of empty blocks."""
     subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
     source = DOCSTRING_RE.sub(subber, source)
     source = COMMENT_RE.sub('', source)
@@ -52,7 +44,6 @@ def minimize_source(source):
 
 
 def get_child_modules(path, fullname):
-    """Return the canonical names of all submodules of a package `module`."""
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return ['%s.%s' % (fullname, name) for _, name, _ in it]
 
@@ -67,8 +58,6 @@ def format_cmdline(args):
 
 
 def create_child(*args):
-    """Create a child process whose stdin/stdout is connected to a socket,
-    returning `(pid, socket_obj)`."""
     parentfp, childfp = socket.socketpair()
     pid = os.fork()
     if not pid:
@@ -126,16 +115,6 @@ def close_nonstandard_fds():
 
 
 def tty_create_child(*args):
-    """
-    Return a file descriptor connected to the master end of a pseudo-terminal,
-    whose slave end is connected to stdin/stdout/stderr of a new child process.
-    The child is created such that the pseudo-terminal becomes its controlling
-    TTY, ensuring access to /dev/tty returns a new file descriptor open on the
-    slave end.
-
-    :param args:
-        execl() arguments.
-    """
     master_fd, slave_fd = os.openpty()
     disable_echo(master_fd)
     disable_echo(slave_fd)
