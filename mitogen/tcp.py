@@ -21,7 +21,7 @@ class Listener(mitogen.core.BasicStream):
 
     def on_receive(self, broker):
         sock, addr = self._sock.accept()
-        context = Context(self._broker, name=addr)
+        context = mitogen.core.Context(self._broker, name=addr)
         stream = mitogen.core.Stream(context)
         stream.accept(sock.fileno(), sock.fileno())
 
