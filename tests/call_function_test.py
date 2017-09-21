@@ -8,6 +8,10 @@ class CrazyType(object):
     pass
 
 
+def function_that_adds_numbers(x, y):
+    return x + y
+
+
 def function_that_fails():
     raise ValueError('exception text')
 
@@ -38,6 +42,9 @@ class CallFunctionTest(unittest.TestCase):
         cls.broker.shutdown()
         cls.broker.join()
 
+    def test_succeeds(self):
+        assert 3 == self.local.call(function_that_adds_numbers, 1, 2)
+
     def test_crashes(self):
         try:
             self.local.call(function_that_fails)
@@ -62,7 +69,7 @@ class CallFunctionTest(unittest.TestCase):
         except mitogen.core.StreamError, e:
             pass
 
-        assert e[0] == "attempted unpickle from 'call_function_test'"
+        assert e[0] == "cannot unpickle 'call_function_test'/'CrazyType'"
 
     def test_returns_dead(self):
         assert mitogen.core._DEAD == self.local.call(func_returns_dead)
