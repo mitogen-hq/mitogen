@@ -29,7 +29,7 @@ FORWARD_LOG = 102
 ADD_ROUTE = 103
 ALLOCATE_ID = 104
 
-CHUNK_SIZE = 4096  # TODO: this was 16384, but that triggers an unfixed hang.
+CHUNK_SIZE = 16384
 
 
 if __name__ == 'mitogen.core':
@@ -123,6 +123,11 @@ def takes_router(func):
 def set_cloexec(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
+
+
+def set_nonblock(fd):
+    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
 def io_op(func, *args):
@@ -460,6 +465,8 @@ class Side(object):
         #: If ``True``, causes presence of this side in :py:class:`Broker`'s
         #: active reader set to defer shutdown until the side is disconnected.
         self.keep_alive = keep_alive
+
+        set_nonblock(fd)
 
     def __repr__(self):
         return '<Side of %r fd %s>' % (self.stream, self.fd)
