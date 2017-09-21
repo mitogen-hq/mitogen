@@ -8,9 +8,9 @@ import mitogen.master
 import mitogen.utils
 
 
-@mitogen.utils.with_broker
-def do_stuff(broker):
-    context = mitogen.master.connect(broker)
+@mitogen.utils.with_router
+def do_stuff(router):
+    context = router.connect(mitogen.master.Stream)
     t0 = time.time()
     ncalls = 1000
     for x in xrange(ncalls):
