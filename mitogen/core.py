@@ -134,7 +134,7 @@ def io_op(func, *args):
         return func(*args), False
     except OSError, e:
         IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
-        if e.errno not in (errno.EIO, errno.ECONNRESET):
+        if e.errno not in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
             raise
         return None, True
 
