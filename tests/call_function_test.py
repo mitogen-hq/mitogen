@@ -89,3 +89,7 @@ class CallFunctionTest(unittest.TestCase):
         assert context is not self.local
         assert context.context_id == self.local.context_id
         assert context.name == self.local.name
+
+
+if __name__ = '__main__':
+    unittest.main()
