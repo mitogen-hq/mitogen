@@ -530,7 +530,11 @@ class Stream(mitogen.core.Stream):
     #: True to cause context to write verbose /tmp/mitogen.<pid>.log.
     debug = False
 
-    def construct(self, remote_name=None, python_path=None, debug=False, **kwargs):
+    #: True to cause context to write /tmp/mitogen.stats.<pid>.<thread>.log.
+    profiling = False
+
+    def construct(self, remote_name=None, python_path=None, debug=False,
+                  profiling=False, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
@@ -542,6 +546,7 @@ class Stream(mitogen.core.Stream):
             remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
         self.remote_name = remote_name
         self.debug = debug
+        self.profiling = profiling
 
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
@@ -589,10 +594,11 @@ class Stream(mitogen.core.Stream):
     def get_preamble(self):
         source = inspect.getsource(mitogen.core)
         source += '\nExternalContext().main%r\n' % ((
-            mitogen.context_id,       # parent_id
+            mitogen.context_id,        # parent_id
             self.remote_id,            # context_id
             self.key,
             self.debug,
+            self.profiling,
             LOG.level or logging.getLogger().level or logging.INFO,
         ),)
 
@@ -748,6 +754,7 @@ class ChildIdAllocator(object):
 
 class Router(mitogen.core.Router):
     debug = False
+    profiling = False
 
     def __init__(self, *args, **kwargs):
         super(Router, self).__init__(*args, **kwargs)
@@ -804,6 +811,7 @@ class Router(mitogen.core.Router):
     def connect(self, method_name, name=None, **kwargs):
         klass = METHOD_NAMES[method_name]()
         kwargs.setdefault('debug', self.debug)
+        kwargs.setdefault('profiling', self.profiling)
 
         via = kwargs.pop('via', None)
         if via is not None:

@@ -154,6 +154,27 @@ def enable_debug_logging():
     root.handlers.insert(0, handler)
 
 
+_profile_hook = lambda name, func, *args: func(*args)
+
+def enable_profiling():
+    global _profile_hook
+    import cProfile, pstats
+    def _profile_hook(name, func, *args):
+        profiler = cProfile.Profile()
+        profiler.enable()
+        try:
+            return func(*args)
+        finally:
+            profiler.create_stats()
+            fp = open('/tmp/mitogen.stats.%d.%s.log' % (os.getpid(), name), 'w')
+            try:
+                stats = pstats.Stats(profiler, stream=fp)
+                stats.sort_stats('cumulative')
+                stats.print_stats()
+            finally:
+                fp.close()
+
+
 class Message(object):
     dst_id = None
     src_id = None
@@ -952,8 +973,11 @@ class Broker(object):
         self._writers = set()
         self._waker = Waker(self)
         self.start_receive(self._waker)
-        self._thread = threading.Thread(target=self._broker_main,
-                                        name='mitogen-broker')
+        self._thread = threading.Thread(
+            target=_profile_hook,
+            args=('broker', self._broker_main),
+            name='mitogen-broker'
+        )
         self._thread.start()
 
     def defer(self, func, *args, **kwargs):
@@ -1075,7 +1099,9 @@ class ExternalContext(object):
     def _on_broker_shutdown(self):
         self.channel.close()
 
-    def _setup_master(self, parent_id, context_id, key, in_fd, out_fd):
+    def _setup_master(self, profiling, parent_id, context_id, key, in_fd, out_fd):
+        if profiling:
+            enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
         self.master = Context(self.router, 0, 'master')
@@ -1172,9 +1198,9 @@ class ExternalContext(object):
                     Message.pickled(e, dst_id=msg.src_id, handle=msg.reply_to)
                 )
 
-    def main(self, parent_id, context_id, key, debug, log_level,
+    def main(self, parent_id, context_id, key, debug, profiling, log_level,
              in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True):
-        self._setup_master(parent_id, context_id, key, in_fd, out_fd)
+        self._setup_master(profiling, parent_id, context_id, key, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
@@ -1190,7 +1216,7 @@ class ExternalContext(object):
                           self.parent, context_id, os.getpid())
                 LOG.debug('Recovered sys.executable: %r', sys.executable)
 
-                self._dispatch_calls()
+                _profile_hook('main', self._dispatch_calls)
                 LOG.debug('ExternalContext.main() normal exit')
             except BaseException:
                 LOG.exception('ExternalContext.main() crashed')
