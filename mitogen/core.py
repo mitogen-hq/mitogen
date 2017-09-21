@@ -235,10 +235,11 @@ class Sender(object):
 
 
 class Receiver(object):
-    def __init__(self, router, handle=None):
+    def __init__(self, router, handle=None, persist=True, respondent=None):
         self.router = router
         self.handle = handle  # Avoid __repr__ crash in add_handler()
-        self.handle = router.add_handler(self._on_receive, handle)
+        self.handle = router.add_handler(self._on_receive, handle,
+                                         persist, respondent)
         self._queue = Queue.Queue()
 
     def __repr__(self):
@@ -266,7 +267,7 @@ class Receiver(object):
                 continue
 
         if msg is None:
-            return
+            raise TimeoutError('deadline exceeded.')
 
         IOLOG.debug('%r.on_receive() got %r', self, msg)
         if msg == _DEAD:
@@ -281,6 +282,9 @@ class Receiver(object):
             raise data
 
         return msg, data
+
+    def get_data(self, timeout=None):
+        return self.get(timeout)[1]
 
     def __iter__(self):
         """Yield objects from this channel until it is closed."""
@@ -393,7 +397,7 @@ class Importer(object):
             self._cache[fullname] = ret = (
                 self._context.send_await(
                     Message(data=fullname, handle=GET_MODULE)
-                ).unpickle()
+                )
             )
 
         if ret is None:
@@ -687,29 +691,23 @@ class Context(object):
             msg.src_id = mitogen.context_id
         self.router.route(msg)
 
-    def send_await(self, msg, deadline=None):
-        """Send `msg` and wait for a response with an optional timeout."""
+    def send_async(self, msg, persist=False):
         if self.router.broker._thread == threading.currentThread():  # TODO
             raise SystemError('Cannot making blocking call on broker thread')
 
-        queue = Queue.Queue()
-        msg.reply_to = self.router.add_handler(queue.put,
-            persist=False,
-            respondent=self)
-        LOG.debug('%r.send_await(%r)', self, msg)
+        receiver = Receiver(self.router, persist=persist, respondent=self)
+        msg.reply_to = receiver.handle
 
+        LOG.debug('%r.send_async(%r)', self, msg)
         self.send(msg)
-        try:
-            msg = queue.get(True, deadline)
-        except Queue.Empty:
-            # self.broker.defer(self.stream.on_disconnect, self.broker)
-            raise TimeoutError('deadline exceeded.')
+        return receiver
 
-        if msg == _DEAD:
-            raise StreamError('lost connection during call.')
-
-        IOLOG.debug('%r._send_await() -> %r', self, msg)
-        return msg
+    def send_await(self, msg, deadline=None):
+        """Send `msg` and wait for a response with an optional timeout."""
+        receiver = self.send_async(msg)
+        response = receiver.get_data(deadline)
+        IOLOG.debug('%r._send_await() -> %r', self, response)
+        return response
 
     def __repr__(self):
         return 'Context(%s, %r)' % (self.context_id, self.name)
