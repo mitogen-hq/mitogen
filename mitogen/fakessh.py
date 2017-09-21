@@ -163,12 +163,13 @@ class Process(object):
             return
 
         data = msg.unpickle()
-        IOLOG.debug('%r._on_stdin(%r)', self, data)
-
         if data == mitogen.core._DEAD:
+            IOLOG.debug('%r._on_stdin() -> %r', self, data)
             self.pump.close()
-        else:
-            self.pump.write(data)
+            return
+
+        IOLOG.debug('%r._on_stdin() -> len %d', self, len(data))
+        self.pump.write(data)
 
     def _on_control(self, msg):
         if msg != mitogen.core._DEAD:
@@ -195,7 +196,7 @@ class Process(object):
             self.router.broker.shutdown()
 
     def _on_pump_receive(self, s):
-        IOLOG.info('%r._on_pump_receive()', self)
+        IOLOG.info('%r._on_pump_receive(len %d)', self, len(s))
         self.stdin.put(s)
 
     def _on_pump_disconnect(self):
