@@ -20,6 +20,7 @@ import mitogen.ssh
 import mitogen.utils
 from mitogen.ansible import helpers
 
+import ansible.errors
 import ansible.plugins.connection
 
 
@@ -47,7 +48,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def exec_command(self, cmd, in_data=None, sudoable=True):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
         if in_data:
-            raise AnsibleError("does not support module pipelining")
+            raise ansible.errors.AnsibleError("does not support module pipelining")
 
         return self.context.call(helpers.exec_command, cmd, in_data)
 
