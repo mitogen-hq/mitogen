@@ -7,6 +7,8 @@ import socket
 
 import mitogen.core
 
+from mitogen.core import LOG
+
 
 class Listener(mitogen.core.BasicStream):
     def __init__(self, broker, address=None, backlog=30):
