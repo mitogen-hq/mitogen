@@ -70,6 +70,7 @@ class Stream(mitogen.master.Stream):
         if self.port:
             self.name += ':%s' % (self.port,)
 
+    auth_incorrect_msg = 'SSH authentication is incorrect'
     password_incorrect_msg = 'SSH password is incorrect'
     password_required_msg = 'SSH password was requested, but none specified'
 

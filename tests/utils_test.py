@@ -6,27 +6,27 @@ import mitogen.master
 import mitogen.utils
 
 
-def func0(broker):
-    return broker
+def func0(router):
+    return router
 
 
-@mitogen.utils.with_broker
-def func(broker):
-    return broker
+@mitogen.utils.with_router
+def func(router):
+    return router
 
 
-class RunWithBrokerTest(unittest.TestCase):
+class RunWithRouterTest(unittest.TestCase):
     # test_shutdown_on_exception
     # test_shutdown_on_success
 
     def test_run_with_broker(self):
-        broker = mitogen.utils.run_with_broker(func0)
-        self.assertTrue(isinstance(broker, mitogen.master.Broker))
-        self.assertFalse(broker._thread.isAlive())
+        router = mitogen.utils.run_with_router(func0)
+        self.assertTrue(isinstance(router, mitogen.master.Router))
+        self.assertFalse(router.broker._thread.isAlive())
 
 
-class WithBrokerTest(unittest.TestCase):
+class WithRouterTest(unittest.TestCase):
     def test_with_broker(self):
-        broker = func()
-        self.assertTrue(isinstance(broker, mitogen.master.Broker))
-        self.assertFalse(broker._thread.isAlive())
+        router = func()
+        self.assertTrue(isinstance(router, mitogen.master.Router))
+        self.assertFalse(router.broker._thread.isAlive())

@@ -20,6 +20,7 @@ import mitogen.ssh
 import mitogen.utils
 from mitogen.ansible import helpers
 
+import ansible.errors
 import ansible.plugins.connection
 
 
@@ -38,16 +39,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self.connected:
             return
         self.broker = mitogen.master.Broker()
+        self.router = mitogen.master.Router(self.broker)
         if self._play_context.remote_addr == 'localhost':
-            self.context = mitogen.master.connect(self.broker)
+            self.context = self.router.connect(mitogen.master.Stream)
         else:
-            self.context = mitogen.ssh.connect(broker,
-                self._play_context.remote_addr)
+            self.context = self.router.connect(mitogen.ssh.Stream,
+                hostname=self._play_context.remote_addr,
+            )
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
         if in_data:
-            raise AnsibleError("does not support module pipelining")
+            raise ansible.errors.AnsibleError("does not support module pipelining")
 
         return self.context.call(helpers.exec_command, cmd, in_data)
 

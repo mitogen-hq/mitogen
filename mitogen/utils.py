@@ -45,7 +45,7 @@ def log_to_file(path=None, io=True, level='INFO'):
 
 
 def run_with_router(func, *args, **kwargs):
-    """Arrange for `func(broker, *args, **kwargs)` to run with a temporary
+    """Arrange for `func(router, *args, **kwargs)` to run with a temporary
     :py:class:`mitogen.master.Router`, ensuring the Router and Broker are
     correctly shut down during normal or exceptional return."""
     broker = mitogen.master.Broker()
@@ -58,12 +58,12 @@ def run_with_router(func, *args, **kwargs):
 
 
 def with_router(func):
-    """Decorator version of :py:func:`run_with_broker`. Example:
+    """Decorator version of :py:func:`run_with_router`. Example:
 
     .. code-block:: python
 
-        @with_broker
-        def do_stuff(broker, arg):
+        @with_router
+        def do_stuff(router, arg):
             pass
 
         do_stuff(blah, 123)
