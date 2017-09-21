@@ -738,7 +738,8 @@ def upgrade_router(econtext):
         ModuleForwarder(econtext.router, econtext.parent, econtext.importer)
 
 
-def _proxy_connect(econtext, name, context_id, method_name, kwargs):
+@mitogen.core.takes_econtext
+def _proxy_connect(name, context_id, method_name, kwargs, econtext):
     upgrade_router(econtext)
     context = econtext.router._connect(
         context_id,
@@ -855,8 +856,8 @@ class Router(mitogen.core.Router):
         context_id = self.allocate_id()
         # Must be added prior to _proxy_connect() to avoid a race.
         self.add_route(context_id, via_context.context_id)
-        name = via_context.call_with_deadline(None, True,
-            _proxy_connect, name, context_id, method_name, kwargs
+        name = via_context.call(_proxy_connect,
+            name, context_id, method_name, kwargs
         )
         # name = '%s.%s' % (via_context.name, name)
         context = Context(self, context_id, name=name)
