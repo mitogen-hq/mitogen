@@ -649,16 +649,6 @@ class Context(mitogen.core.Context):
         """
         mitogen.core.fire(self, 'disconnect')
 
-    def _discard_result(self, msg):
-        data = msg.unpickle()
-        if isinstance(data, Exception):
-            try:
-                raise data
-            except Exception:
-                LOG.exception('_discard_result')
-        else:
-            LOG.debug('_discard_result: %r', data)
-
     def call_async(self, fn, *args, **kwargs):
         LOG.debug('%r.call_async(%r, *%r, **%r)',
                   self, fn, args, kwargs)
@@ -669,46 +659,16 @@ class Context(mitogen.core.Context):
         else:
             klass = None
 
-        self.send(
+        return self.send_async(
             mitogen.core.Message.pickled(
                 (fn.__module__, klass, fn.__name__, args, kwargs),
                 handle=mitogen.core.CALL_FUNCTION,
-                reply_to=self.router.add_handler(self._discard_result),
             )
         )
 
-    def call_with_deadline(self, deadline, fn, *args, **kwargs):
-        """Invoke `fn([context,] *args, **kwargs)` in the external context.
-
-        If `deadline` is not ``None``, expire the call after `deadline`
-        seconds. If `deadline` is ``None``, the invocation may block
-        indefinitely."""
-        LOG.debug('%r.call_with_deadline(%r, %r, *%r, **%r)',
-                  self, deadline, fn, args, kwargs)
-
-        if isinstance(fn, types.MethodType) and \
-           isinstance(fn.im_self, (type, types.ClassType)):
-            klass = fn.im_self.__name__
-        else:
-            klass = None
-
-        response = self.send_await(
-            mitogen.core.Message.pickled(
-                (fn.__module__, klass, fn.__name__, args, kwargs),
-                handle=mitogen.core.CALL_FUNCTION
-            ),
-            deadline
-        )
-
-        decoded = response.unpickle()
-        if isinstance(decoded, mitogen.core.CallError):
-            raise decoded
-        return decoded
-
     def call(self, fn, *args, **kwargs):
         """Invoke `fn(*args, **kwargs)` in the external context."""
-        return self.call_with_deadline(None, fn, *args, **kwargs)
-
+        return self.call_async(fn, *args, **kwargs).get_data()
 
 
 def _local_method():
