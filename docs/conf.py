@@ -4,7 +4,7 @@ sys.path.append('..')
 author = u'David Wilson'
 copyright = u'2016, David Wilson'
 exclude_patterns = ['_build']
-extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
+extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.programoutput']
 html_show_sourcelink = False
 html_show_sphinx = False
 html_sidebars = {'**': ['globaltoc.html', 'github.html']}

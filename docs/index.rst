@@ -61,15 +61,7 @@ machines in the wild. To accomplish bootstrap, Mitogen uses a single 600 byte
 SSH command line and 8KB of its own source code sent to stdin of the remote SSH
 connection.
 
-.. code::
-
-    $ python preamble_size.py
-    SSH command size: 624
-    Preamble size: 7599 (7.42KiB)
-    mitogen.master size: 5989 (5.85KiB)
-    mitogen.ssh size: 953 (0.93KiB)
-    mitogen.sudo size: 652 (0.64KiB)
-    mitogen.fakessh size: 2516 (2.46KiB)
+.. command-output:: python ../preamble_size.py
 
 Once bootstrapped, the remote process is configured with a customizable
 **argv[0]**, readily visible to system administrators of the remote machine
