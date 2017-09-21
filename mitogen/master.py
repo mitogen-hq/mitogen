@@ -157,14 +157,25 @@ def tty_create_child(*args):
     return pid, master_fd
 
 
-def write_all(fd, s):
+def write_all(fd, s, deadline=None):
+    timeout = None
     written = 0
+
     while written < len(s):
-        rc = os.write(fd, buffer(s, written))
-        if not rc:
-            raise IOError('short write')
-        written += rc
-    return written
+        if deadline is not None:
+            timeout = max(0, deadline - time.time())
+        if timeout == 0:
+            raise mitogen.core.TimeoutError('write timed out')
+
+        _, wfds, _ = select.select([], [fd], [], timeout)
+        if not wfds:
+            continue
+
+        n, disconnected = mitogen.core.io_op(os.write, fd, buffer(s, written))
+        if disconnected:
+            raise mitogen.core.StreamError('EOF on stream during write')
+
+        written += n
 
 
 def iter_read(fd, deadline=None):
