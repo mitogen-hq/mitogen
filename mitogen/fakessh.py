@@ -382,6 +382,7 @@ def run(dest, router, args, deadline=None, econtext=None):
                 context_id,                     # context_id
                 fakessh.key,                    # key
                 router.debug,                   # debug
+                router.profiling,               # profiling
                 logging.getLogger().level,      # log_level
                 sock2.fileno(),                 # in_fd
                 sock2.fileno(),                 # out_fd
