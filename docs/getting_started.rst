@@ -12,6 +12,8 @@ The following built-in types may be used as parameters or return values in
 remote procedure calls:
 
 * bool
+* bytearray
+* bytes
 * dict
 * int
 * list
