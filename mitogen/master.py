@@ -1,4 +1,9 @@
-import ast
+try:
+    import ast
+except ImportError:
+    # ast module is not available in Python 2.4.x, instead we shall use the
+    # the compiler module as a fallback
+    ast = None
 import commands
 import compiler
 import errno
