@@ -8,7 +8,6 @@ import imp
 import itertools
 import logging
 import os
-import random
 import select
 import socket
 import struct
@@ -589,10 +588,9 @@ class Stream(BasicStream):
     _input_buf = ''
     _output_buf = ''
 
-    def __init__(self, router, remote_id, key, **kwargs):
+    def __init__(self, router, remote_id, **kwargs):
         self._router = router
         self.remote_id = remote_id
-        self.key = key
         self.name = 'default'
         self.construct(**kwargs)
 
@@ -695,11 +693,10 @@ class Context(object):
     """
     remote_name = None
 
-    def __init__(self, router, context_id, name=None, key=None):
+    def __init__(self, router, context_id, name=None):
         self.router = router
         self.context_id = context_id
         self.name = name
-        self.key = key or ('%016x' % random.getrandbits(128))
 
     def __reduce__(self):
         return _unpickle_context, (self.context_id, self.name)
@@ -1099,7 +1096,7 @@ class ExternalContext(object):
     def _on_broker_shutdown(self):
         self.channel.close()
 
-    def _setup_master(self, profiling, parent_id, context_id, key, in_fd, out_fd):
+    def _setup_master(self, profiling, parent_id, context_id, in_fd, out_fd):
         if profiling:
             enable_profiling()
         self.broker = Broker()
@@ -1111,7 +1108,7 @@ class ExternalContext(object):
             self.parent = Context(self.router, parent_id, 'parent')
 
         self.channel = Receiver(self.router, CALL_FUNCTION)
-        self.stream = Stream(self.router, parent_id, key)
+        self.stream = Stream(self.router, parent_id)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)
         self.stream.receive_side.keep_alive = False
@@ -1198,9 +1195,9 @@ class ExternalContext(object):
                     Message.pickled(e, dst_id=msg.src_id, handle=msg.reply_to)
                 )
 
-    def main(self, parent_id, context_id, key, debug, profiling, log_level,
+    def main(self, parent_id, context_id, debug, profiling, log_level,
              in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True):
-        self._setup_master(profiling, parent_id, context_id, key, in_fd, out_fd)
+        self._setup_master(profiling, parent_id, context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
