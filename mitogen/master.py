@@ -588,7 +588,7 @@ class Stream(mitogen.core.Stream):
             os.dup2(R,0)
             os.dup2(R2,101)
             for f in R,R2,W,W2: os.close(f)
-            os.environ['ARGV0'] = `[sys.executable]`
+            os.environ['ARGV0'] = sys.executable
             os.execv(sys.executable,['mitogen:CONTEXT_NAME'])
         else:
             os.write(1, 'EC0\n')

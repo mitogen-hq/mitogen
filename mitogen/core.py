@@ -657,6 +657,7 @@ class Stream(BasicStream):
         LOG.debug('%r.on_shutdown(%r)', self, broker)
 
     def accept(self, rfd, wfd):
+        # TODO: what is this os.dup for?
         self.receive_side = Side(self, os.dup(rfd))
         self.transmit_side = Side(self, os.dup(wfd))
         set_cloexec(self.receive_side.fd)
@@ -1184,7 +1185,7 @@ class ExternalContext(object):
 
                 self.router.register(self.parent, self.stream)
 
-                sys.executable, = eval(os.environ.pop('ARGV0'))
+                sys.executable = os.environ.pop('ARGV0', sys.executable)
                 LOG.debug('Connected to %s; my ID is %r, PID is %r',
                           self.parent, context_id, os.getpid())
                 LOG.debug('Recovered sys.executable: %r', sys.executable)
