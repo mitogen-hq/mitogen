@@ -744,10 +744,9 @@ class ChildIdAllocator(object):
 
     def allocate(self):
         master = Context(self.router, 0)
-        reply = master.send_await(
+        return master.send_await(
             mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
         )
-        return reply.unpickle()
 
 
 class Router(mitogen.core.Router):
