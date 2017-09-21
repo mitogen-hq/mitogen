@@ -7,9 +7,9 @@ Table Of Contents
 
    index
    howitworks
-   examples
    getting_started
    api
+   examples
    internals
    history
    shame
