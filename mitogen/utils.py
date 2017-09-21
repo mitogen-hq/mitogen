@@ -27,7 +27,7 @@ def log_to_tmp():
     log_to_file(path='/tmp/mitogen.%s.log' % (os.getpid(),))
 
 
-def log_to_file(path=None, io=True, level=logging.INFO):
+def log_to_file(path=None, io=True, level='INFO'):
     """Install a new :py:class:`logging.Handler` writing applications logs to
     the filesystem. Useful when debugging slave IO problems."""
     log = logging.getLogger('')
@@ -37,6 +37,7 @@ def log_to_file(path=None, io=True, level=logging.INFO):
     else:
         fp = sys.stderr
 
+    level = getattr(logging, level, logging.INFO)
     log.setLevel(level)
     if io:
         logging.getLogger('mitogen.io').setLevel(level)

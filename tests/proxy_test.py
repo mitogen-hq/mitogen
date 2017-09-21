@@ -7,7 +7,7 @@ import mitogen.utils
 
 @mitogen.utils.run_with_router
 def main(router):
-    mitogen.utils.log_to_file(io=False, level=logging.INFO)
+    mitogen.utils.log_to_file(io=False)
     child1 = router.ssh(name='u', hostname='u')
     child2 = router.sudo(
         username='sudo_pw_test',
