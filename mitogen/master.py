@@ -1,4 +1,6 @@
+import ast
 import commands
+import compiler
 import errno
 import getpass
 import imp
