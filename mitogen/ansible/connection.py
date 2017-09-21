@@ -39,11 +39,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self.connected:
             return
         self.broker = mitogen.master.Broker()
+        self.router = mitogen.master.Router(self.broker)
         if self._play_context.remote_addr == 'localhost':
-            self.context = mitogen.master.connect(self.broker)
+            self.context = self.router.connect(mitogen.master.Stream)
         else:
-            self.context = mitogen.ssh.connect(broker,
-                self._play_context.remote_addr)
+            self.context = self.router.connect(mitogen.ssh.Stream,
+                hostname=self._play_context.remote_addr,
+            )
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
