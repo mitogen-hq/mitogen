@@ -91,5 +91,5 @@ class CallFunctionTest(unittest.TestCase):
         assert context.name == self.local.name
 
 
-if __name__ = '__main__':
+if __name__ == '__main__':
     unittest.main()
