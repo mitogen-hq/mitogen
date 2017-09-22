@@ -1,11 +1,4 @@
-try:
-    import ast
-except ImportError:
-    # ast module is not available in Python 2.4.x, instead we shall use the
-    # the compiler module as a fallback
-    ast = None
 import commands
-import compiler
 import errno
 import getpass
 import imp
@@ -26,6 +19,14 @@ import threading
 import time
 import types
 import zlib
+
+try:
+    import ast
+except ImportError:
+    # ast module is not available in Python 2.4.x, instead we shall use the the
+    # compiler module as a fallback
+    ast = None
+    import compiler
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
