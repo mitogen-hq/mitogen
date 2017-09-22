@@ -388,7 +388,7 @@ class ModuleFinder(object):
         module to be loaded that is not part of the standard library.
         """
         related = self._related_cache.get(fullname)
-        if related is None:
+        if related is not None:
             return related
 
         _, src, _ = self.get_module_source(fullname)
