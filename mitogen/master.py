@@ -1,4 +1,5 @@
 import commands
+import dis
 import errno
 import getpass
 import imp
@@ -19,14 +20,6 @@ import threading
 import time
 import types
 import zlib
-
-try:
-    import ast
-except ImportError:
-    # ast module is not available in Python 2.4.x, instead we shall use the the
-    # compiler module as a fallback
-    ast = None
-    import compiler
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
@@ -198,6 +191,42 @@ def discard_until(fd, s, deadline):
             return
 
 
+def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
+                          IMPORT_NAME=dis.opname.index('IMPORT_NAME')):
+    """Given a code object `co`, scan its bytecode yielding any
+    ``IMPORT_NAME`` and associated prior ``LOAD_CONST`` instructions
+    representing an `Import` statement or `ImportFrom` statement.
+
+    :return:
+        Generator producing `(level, modname, namelist)` tuples, where:
+
+        * `level`: -1 for normal import, 0, for absolute import, and >0 for
+          relative import.
+        * `modname`: Name of module to import, or from where `namelist` names
+          are imported.
+        * `namelist`: for `ImportFrom`, the list of names to be imported from
+          `modname`.
+    """
+    # Yield `(op, oparg)` tuples from the code object `co`.
+    ordit = itertools.imap(ord, co.co_code)
+    nextb = ordit.next
+    opit = ((c, (None
+                 if c < dis.HAVE_ARGUMENT else
+                (nextb() | (nextb() << 8))))
+            for c in ordit)
+
+    for oparg1, oparg2, (op3, arg3) in itertools.izip(opit, opit, opit):
+        if op3 == IMPORT_NAME:
+            op2, arg2 = oparg2
+            op1, arg1 = oparg1
+            if op1 == op2 == LOAD_CONST:
+                yield (
+                    co.co_consts[arg1],
+                    co.co_names[arg3],
+                    co.co_consts[arg2] or (),
+                )
+
+
 class LogForwarder(object):
     def __init__(self, router):
         self._router = router
@@ -239,8 +268,7 @@ class ModuleFinder(object):
         #: results around.
         self._found_cache = {}
 
-        #: Avoid repeated AST parsing, which is extremely expensive with
-        #: py:mod:`compiler` module.
+        #: Avoid repeated dependency scanning, which is expensive.
         self._related_cache = {}
 
     def __repr__(self):
@@ -252,12 +280,17 @@ class ModuleFinder(object):
         if imp.is_builtin(modname) != 0:
             return True
 
-        module = sys.modules[modname]
+        module = sys.modules.get(modname)
         if module is None:
             return False
 
+        # six installs crap with no __file__
+        modpath = getattr(module, '__file__', '')
+        if 'site-packages' in modpath:
+            return False
+
         for dirname in self.STDLIB_DIRS:
-            if os.path.commonprefix((dirname, module.__file__)) == dirname:
+            if os.path.commonprefix((dirname, modpath)) == dirname:
                 return True
 
         return False
@@ -283,6 +316,10 @@ class ModuleFinder(object):
         to support __main__, but it may catch a few more cases."""
         if fullname not in sys.modules:
             LOG.debug('%r does not appear in sys.modules', fullname)
+            return
+
+        if 'six.moves' in fullname:
+            # TODO: causes inspect.getsource() to explode.
             return
 
         is_pkg = hasattr(sys.modules[fullname], '__path__')
@@ -351,34 +388,10 @@ class ModuleFinder(object):
 
         return '.'.join(bits[:-level]) + '.'
 
-    def _ast_walk(self, fullname, src):
-        for node in ast.walk(ast.parse(src)):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    yield alias.name
-            elif isinstance(node, ast.ImportFrom):
-                prefix = self.resolve_relpath(fullname, node.level)
-                for alias in node.names:
-                    yield prefix + alias.name
-
-    def _compiler_visit(self, tree):
-        # TODO: this is insanely slow, need to prune the tree somehow, but it's
-        # only for Mitogen masters on ancient Pythons anyway.
-        stack = [tree]
-        while stack:
-            node = stack.pop(0)
-            yield node
-            stack.extend(node.getChildNodes())
-
-    def _compiler_walk(self, fullname, src):
-        for node in self._compiler_visit(compiler.parse(src)):
-            if isinstance(node, compiler.ast.Import):
-                for name, _ in node.names:
-                    yield name
-            elif isinstance(node, compiler.ast.From):
-                prefix = self.resolve_relpath(fullname, node.level)
-                for name, _ in node.names:
-                    yield prefix + name
+    def generate_parent_names(self, fullname):
+        while '.' in fullname:
+            fullname = fullname[:fullname.rindex('.')]
+            yield fullname
 
     def find_related_imports(self, fullname):
         """
@@ -391,26 +404,33 @@ class ModuleFinder(object):
         if related is not None:
             return related
 
-        _, src, _ = self.get_module_source(fullname)
+        modpath, src, _ = self.get_module_source(fullname)
         if src is None:
             LOG.warning('%r: cannot find source for %r', self, fullname)
             return []
 
-        prefixes = ['']
-        if '.' in fullname:
-            prefixes.append(fullname.rsplit('.', 1)[0] + '.')
+        maybe_names = list(self.generate_parent_names(fullname))
 
-        if ast:
-            walker = self._ast_walk
-        else:
-            walker = self._compiler_walk
+        co = compile(src, modpath, 'exec')
+        for level, modname, namelist in scan_code_imports(co):
+            if level == -1:
+                modnames = [modname, '%s.%s' % (fullname, modname)]
+            else:
+                modnames = [self.resolve_relpath(fullname, level) + modname]
+
+            maybe_names.extend(modnames)
+            maybe_names.extend(
+                '%s.%s' % (mname, name)
+                for mname in modnames
+                for name in namelist
+            )
 
         return self._related_cache.setdefault(fullname, [
-            prefix + name
-            for prefix in prefixes
-            for name in walker(fullname, src)
-            if sys.modules.get(prefix + name) is not None
-            and not self.is_stdlib_name(prefix + name)
+            name
+            for name in maybe_names
+            if sys.modules.get(name) is not None
+            and not self.is_stdlib_name(name)
+            and 'six.moves' not in name  # TODO: crap
         ])
 
     def find_related(self, fullname):
