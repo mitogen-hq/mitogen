@@ -210,21 +210,25 @@ def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
     # Yield `(op, oparg)` tuples from the code object `co`.
     ordit = itertools.imap(ord, co.co_code)
     nextb = ordit.next
+
     opit = ((c, (None
                  if c < dis.HAVE_ARGUMENT else
-                (nextb() | (nextb() << 8))))
+                 (nextb() | (nextb() << 8))))
             for c in ordit)
 
-    for oparg1, oparg2, (op3, arg3) in itertools.izip(opit, opit, opit):
+    opit, opit2, opit3 = itertools.tee(opit, 3)
+    next(opit2)
+    next(opit3)
+    next(opit3)
+
+    for oparg1, oparg2, (op3, arg3) in itertools.izip(opit, opit2, opit3):
         if op3 == IMPORT_NAME:
             op2, arg2 = oparg2
             op1, arg1 = oparg1
             if op1 == op2 == LOAD_CONST:
-                yield (
-                    co.co_consts[arg1],
-                    co.co_names[arg3],
-                    co.co_consts[arg2] or (),
-                )
+                yield (co.co_consts[arg1],
+                       co.co_names[arg3],
+                       co.co_consts[arg2] or ())
 
 
 class LogForwarder(object):
