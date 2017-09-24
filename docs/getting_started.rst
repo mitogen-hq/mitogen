@@ -18,7 +18,6 @@ remote procedure calls:
 * int
 * list
 * long
-* set
 * str
 * tuple
 * unicode
