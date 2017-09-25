@@ -625,9 +625,11 @@ class Stream(mitogen.core.Stream):
                 'exec("%s".decode("base64"))' % (encoded,)]
 
     def get_preamble(self):
+        parent_ids = mitogen.parent_ids[:]
+        parent_ids.insert(0, mitogen.context_id)
         source = inspect.getsource(mitogen.core)
         source += '\nExternalContext().main%r\n' % ((
-            mitogen.context_id,        # parent_id
+            parent_ids,                # parent_ids
             self.remote_id,            # context_id
             self.debug,
             self.profiling,

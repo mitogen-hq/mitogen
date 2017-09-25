@@ -31,3 +31,8 @@ context_id = 0
 #: This is ``None`` in a master, otherwise it is the master-generated ID unique
 #: to the slave's parent context.
 parent_id = None
+
+
+#: This is an empty list in a master, otherwise it is a list of parent context
+#: IDs ordered from most direct to least direct.
+parent_ids = []
