@@ -369,6 +369,9 @@ def run(dest, router, args, deadline=None, econtext=None):
     # Held in socket buffer until process is booted.
     fakessh.call_async(_fakessh_main, dest.context_id)
 
+    parent_ids = mitogen.parent_ids[:]
+    parent_ids.insert(0, mitogen.context_id)
+
     tmp_path = tempfile.mkdtemp(prefix='mitogen_fakessh')
     try:
         ssh_path = os.path.join(tmp_path, 'ssh')
@@ -378,7 +381,7 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext().main%r\n' % ((
-                mitogen.context_id,             # parent_id
+                parent_ids,                     # parent_ids
                 context_id,                     # context_id
                 router.debug,                   # debug
                 router.profiling,               # profiling

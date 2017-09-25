@@ -49,6 +49,10 @@ class Error(Exception):
         Exception.__init__(self, fmt)
 
 
+class SecurityError(Error):
+    pass
+
+
 class CallError(Error):
     def __init__(self, e):
         s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
@@ -1156,7 +1160,7 @@ class ExternalContext(object):
         self.importer = Importer(self.parent, core_src)
         sys.meta_path.append(self.importer)
 
-    def _setup_package(self, context_id, parent_id):
+    def _setup_package(self, context_id, parent_ids):
         global mitogen
         mitogen = imp.new_module('mitogen')
         mitogen.__package__ = 'mitogen'
@@ -1164,7 +1168,8 @@ class ExternalContext(object):
         mitogen.__loader__ = self.importer
         mitogen.is_master = False
         mitogen.context_id = context_id
-        mitogen.parent_id = parent_id
+        mitogen.parent_ids = parent_ids
+        mitogen.parent_id = parent_ids[0]
         mitogen.core = sys.modules['__main__']
         mitogen.core.__file__ = 'x/mitogen/core.py'  # For inspect.getsource()
         mitogen.core.__loader__ = self.importer
@@ -1187,8 +1192,10 @@ class ExternalContext(object):
     def _dispatch_calls(self):
         for msg, data in self.channel:
             LOG.debug('_dispatch_calls(%r)', data)
-            modname, klass, func, args, kwargs = data
+            if msg.src_id not in mitogen.parent_ids:
+                LOG.warning('CALL_FUNCTION from non-parent %r', msg.src_id)
 
+            modname, klass, func, args, kwargs = data
             try:
                 obj = __import__(modname, {}, {}, [''])
                 if klass:
@@ -1209,14 +1216,14 @@ class ExternalContext(object):
                     Message.pickled(e, dst_id=msg.src_id, handle=msg.reply_to)
                 )
 
-    def main(self, parent_id, context_id, debug, profiling, log_level,
+    def main(self, parent_ids, context_id, debug, profiling, log_level,
              in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True):
-        self._setup_master(profiling, parent_id, context_id, in_fd, out_fd)
+        self._setup_master(profiling, parent_ids[0], context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
                 self._setup_importer(core_src_fd)
-                self._setup_package(context_id, parent_id)
+                self._setup_package(context_id, parent_ids)
                 if setup_stdio:
                     self._setup_stdio()
 
