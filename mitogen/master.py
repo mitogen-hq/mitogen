@@ -617,7 +617,7 @@ class Stream(mitogen.core.Stream):
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
-        source = textwrap.dedent('\n'.join(source.strip().split('\n')[1:]))
+        source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', self.remote_name)
         encoded = source.encode('base64').replace('\n', '')
