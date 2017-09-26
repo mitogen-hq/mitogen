@@ -231,6 +231,66 @@ def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
                        co.co_consts[arg2] or ())
 
 
+class Select(object):
+    def __init__(self, receivers=(), oneshot=True):
+        self._receivers = []
+        self._oneshot = oneshot
+        self._queue = Queue.Queue()
+        self._notify = []
+        for recv in receivers:
+            self.add(recv)
+
+    def _put(self, value):
+        self._queue.put(value)
+        for func in self._notify:
+            func(self)
+
+    def __bool__(self):
+        return bool(self._receivers)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, e_type, e_val, e_tb):
+        self.close()
+
+    def __iter__(self):
+        while self._receivers:
+            recv, msg = self.get()
+            if self._oneshot:
+                self.remove(recv)
+            yield recv, msg
+
+    def add(self, recv):
+        self._receivers.append(recv)
+        recv.notify.append(self._put)
+        # Avoid race by polling once after installation.
+        if not recv.empty():
+            self._put(recv)
+
+    def remove(self, recv):
+        recv.notify.remove(self._put)
+
+    def close(self):
+        for recv in self._receivers[:]:
+            self.remove(recv)
+
+    def empty(self):
+        return self._queue.empty()
+
+    def get(self, timeout=None):
+        while True:
+            recv = mitogen.core._queue_interruptible_get(queue, timeout)
+            try:
+                return recv, recv.get(block=False)
+            except mitogen.core.TimeoutError:
+                # A receiver may have been queued with no result if another
+                # thread drained it before we woke up, or because another
+                # thread drained it between add() calling recv.empty() and
+                # self._put(). In this case just sleep again.
+                continue
+
+
 class LogForwarder(object):
     def __init__(self, router):
         self._router = router

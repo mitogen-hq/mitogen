@@ -298,6 +298,33 @@ usual into the slave process.
         mitogen.utils.run_with_broker(main)
 
 
+Scatter/Gather Function Calls
+#############################
+
+Functions may be invoked asynchronously, with results returned as they become
+available.
+
+.. code-block:: python
+
+    def disk_usage(path):
+        return sum((os.path.getsize(os.path.join(dirpath, name))
+                    for dirpath, dirnames, filenames in os.walk(path)
+                    for name in dirnames + filenames), 0)
+
+
+    if __name__ == '__main__' and mitogen.is_master:
+        contexts = connect_contexts(...)
+        receivers = [c.call_async(disk_usage, '/tmp') for c in contexts]
+        total = 0
+
+        for recv, msg in mitogen.master.Select(receivers):
+            value = result.unpickle()
+            print 'Context %s /tmp usage: %d' % (recv.context, value)
+            total += value
+
+        print 'Total /tmp usage across all contexts: %d' % (total,)
+
+
 Event-driven IO
 ###############
 
