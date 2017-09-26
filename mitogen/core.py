@@ -264,9 +264,28 @@ class Sender(object):
         )
 
 
+def _queue_interruptible_get(queue, timeout=None, block=True):
+    if timeout:
+        timeout += time.time()
+
+    msg = None
+    while msg is None and (timeout is None or timeout < time.time()):
+        try:
+            msg = queue.get(True, 0.5, block=block)
+        except Queue.Empty:
+            if block:
+                break
+
+    if msg is None:
+        raise TimeoutError('deadline exceeded.')
+
+    return msg
+
+
 class Receiver(object):
     def __init__(self, router, handle=None, persist=True, respondent=None):
         self.router = router
+        self.notify = []
         self.handle = handle  # Avoid __repr__ crash in add_handler()
         self.handle = router.add_handler(self._on_receive, handle,
                                          persist, respondent)
@@ -279,27 +298,22 @@ class Receiver(object):
         """Callback from the Stream; appends data to the internal queue."""
         IOLOG.debug('%r._on_receive(%r)', self, msg)
         self._queue.put(msg)
+        for func in self.notify:
+            func(self)
 
     def close(self):
         self._queue.put(_DEAD)
 
+    def empty(self):
+        return self._queue.empty()
+
     def get(self, timeout=None):
         """Receive an object, or ``None`` if `timeout` is reached."""
         IOLOG.debug('%r.on_receive(timeout=%r)', self, timeout)
-        if timeout:
-            timeout += time.time()
 
-        msg = None
-        while msg is None and (timeout is None or timeout < time.time()):
-            try:
-                msg = self._queue.get(True, 0.5)
-            except Queue.Empty:
-                continue
-
-        if msg is None:
-            raise TimeoutError('deadline exceeded.')
-
+        msg = _queue_interruptible_get(self._queue, timeout)
         IOLOG.debug('%r.on_receive() got %r', self, msg)
+
         if msg == _DEAD:
             raise ChannelError('Channel closed by local end.')
 
