@@ -97,13 +97,17 @@ contexts.
                 for context, workfunc in get_new_work():
                     select.add(context.call_async(workfunc))
 
-    :py:class:`Select` may be nested:
+    :py:class:`Select` may be arbitrarily nested:
 
     .. code-block:: python
 
         subselects = [
             mitogen.master.Select(get_some_work()),
-            mitogen.master.Select(get_some_work())
+            mitogen.master.Select(get_some_work()),
+            mitogen.master.Select([
+                mitogen.master.Select(get_some_work()),
+                mitogen.master.Select(get_some_work())
+            ])
         ]
 
         with mitogen.master.Select(selects, oneshot=False) as select:
@@ -134,9 +138,17 @@ contexts.
 
     .. py:method:: empty ()
 
-        Return ``True`` if no items appear to be queued on this receiver. Like
-        :py:class:`Queue.Queue`, this function's return value cannot be relied
-        upon.
+        Return ``True`` if no items appear to be queued on this receiver.
+
+        As with :py:class:`Queue.Queue`, this function may return ``False``
+        even though a subsequent call to :py:meth:`get` will succeed, since a
+        message may be posted at any moment between the call to
+        :py:meth:`empty` and :py:meth:`get`.
+
+        :py:meth:`empty` may additionally return ``True`` when :py:meth:`get`
+        would block if another thread has drained a receiver added to this
+        select. This can be avoided by only consuming each receiver from a
+        single thread.
 
     .. py:method:: __iter__ (self)
 
