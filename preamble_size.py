@@ -15,7 +15,7 @@ broker = mitogen.master.Broker()
 
 router = mitogen.core.Router(broker)
 context = mitogen.master.Context(router, 0)
-stream = mitogen.ssh.Stream(router, 0, context.key, hostname='foo')
+stream = mitogen.ssh.Stream(router, 0, hostname='foo')
 broker.shutdown()
 
 print 'SSH command size: %s' % (len(' '.join(stream.get_boot_command())),)
