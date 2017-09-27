@@ -1,3 +1,4 @@
+import Queue
 import commands
 import dis
 import errno
@@ -231,18 +232,22 @@ def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
                        co.co_consts[arg2] or ())
 
 
+class SelectError(mitogen.core.Error):
+    pass
+
+
 class Select(object):
     def __init__(self, receivers=(), oneshot=True):
         self._receivers = []
         self._oneshot = oneshot
         self._queue = Queue.Queue()
-        self._notify = []
+        self.notify = []
         for recv in receivers:
             self.add(recv)
 
     def _put(self, value):
         self._queue.put(value)
-        for func in self._notify:
+        for func in self.notify:
             func(self)
 
     def __bool__(self):
@@ -257,19 +262,38 @@ class Select(object):
     def __iter__(self):
         while self._receivers:
             recv, msg = self.get()
-            if self._oneshot:
-                self.remove(recv)
             yield recv, msg
 
+    loop_msg = 'Adding this Select instance would create a Select cycle'
+
+    def _check_no_loop(self, recv):
+        if recv is self:
+            raise SelectError(self.loop_msg)
+
+        for recv_ in self._receivers:
+            if recv_ == recv:
+                raise SelectError(self.loop_msg)
+            if isinstance(recv_, Select):
+                recv_._check_no_loop(recv)
+
     def add(self, recv):
+        if isinstance(recv, Select):
+            recv._check_no_loop(self)
+
         self._receivers.append(recv)
         recv.notify.append(self._put)
         # Avoid race by polling once after installation.
         if not recv.empty():
             self._put(recv)
 
+    not_present_msg = 'Instance is not a member of this Select'
+
     def remove(self, recv):
-        recv.notify.remove(self._put)
+        try:
+            self._receivers.remove(recv)
+            recv.notify.remove(self._put)
+        except (IndexError, ValueError):
+            raise SelectError(self.not_present_msg)
 
     def close(self):
         for recv in self._receivers[:]:
@@ -278,11 +302,19 @@ class Select(object):
     def empty(self):
         return self._queue.empty()
 
+    empty_msg = 'Cannot got(), Select instance is empty'
+
     def get(self, timeout=None):
+        if not self._receivers:
+            raise SelectError(self.empty_msg)
+
         while True:
-            recv = mitogen.core._queue_interruptible_get(queue, timeout)
+            recv = mitogen.core._queue_interruptible_get(self._queue, timeout)
             try:
-                return recv, recv.get(block=False)
+                msg = recv.get(False)
+                if self._oneshot:
+                    self.remove(recv)
+                return recv, msg
             except mitogen.core.TimeoutError:
                 # A receiver may have been queued with no result if another
                 # thread drained it before we woke up, or because another
