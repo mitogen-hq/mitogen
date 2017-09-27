@@ -119,11 +119,11 @@ context has hung.
 Module Forwarder
 ################
 
-In addition to an IO multiplexer, slaves are configured with a custom `PEP-302
-importer`_ that forwards requests for unknown Python modules back to the host
-program. When your program asks a context to execute code from an unknown
-module, all requisite modules are transferred automatically and imported
-entirely in RAM without need for further configuration.
+Slaves are configured with a custom `PEP-302 importer`_ that forwards requests
+for unknown Python modules back to the host program. When your program asks a
+context to execute code from an unknown module, all requisite modules are
+transferred automatically and imported entirely in RAM without need for further
+configuration.
 
 .. _PEP-302 importer: https://www.python.org/dev/peps/pep-0302/
 
