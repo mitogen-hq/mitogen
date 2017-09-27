@@ -271,7 +271,7 @@ def _queue_interruptible_get(queue, timeout=None, block=True):
     msg = None
     while msg is None and (timeout is None or timeout < time.time()):
         try:
-            msg = queue.get(True, 0.5, block=block)
+            msg = queue.get(block, 0.5)
         except Queue.Empty:
             if block:
                 break
