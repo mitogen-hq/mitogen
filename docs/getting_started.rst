@@ -24,6 +24,6 @@ remote procedure calls:
 
 User-defined types may not be used, except for:
 
-* :py:class:`econtext.core.CallError`
-* :py:class:`econtext.core.Context`
-* :py:class:`econtext.core._Dead`
+* :py:class:`mitogen.core.CallError`
+* :py:class:`mitogen.core.Context`
+* :py:class:`mitogen.core._Dead`
