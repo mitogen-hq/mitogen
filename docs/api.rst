@@ -124,7 +124,7 @@ contexts.
             Timeout in seconds.
 
         :return:
-            `(receiver, msg)`
+            `(receiver, (msg, data))`
 
     .. py:method:: __bool__ ()
 
