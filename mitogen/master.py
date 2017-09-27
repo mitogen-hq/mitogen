@@ -416,7 +416,12 @@ class ModuleFinder(object):
 
         if 'six.moves' in fullname:
             # TODO: causes inspect.getsource() to explode.
-            return
+            return None, None, None
+
+        modpath = getattr(sys.modules[fullname], '__file__', '')
+        if not modpath.rstrip('co').endswith('.py'):
+            # Probably a native module.
+            return None, None, None
 
         is_pkg = hasattr(sys.modules[fullname], '__path__')
         try:
