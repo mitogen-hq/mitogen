@@ -28,6 +28,19 @@ def data_path(suffix):
     return path
 
 
+class TestCase(unittest.TestCase):
+    def assertRaises(self, exc, func, *args, **kwargs):
+        """Like regular assertRaises, except return the exception that was
+        raised. Can't use context manager because tests must run on Python2.4"""
+        try:
+            func(*args, **kwargs)
+        except exc, e:
+            return e
+        except BaseException, e:
+            assert 0, '%r raised %r, not %r' % (func, e, exc)
+        assert 0, '%r did not raise %r' % (func, exc)
+
+
 class DockerizedSshDaemon(object):
     def __init__(self):
         self.docker = docker.from_env()
