@@ -2,3 +2,7 @@
 div.figure {
     padding: 0;
 }
+
+div.body li {
+    margin-bottom: 0.5em;
+}
