@@ -14,8 +14,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         select.add(recv)
         self.assertEquals(1, len(select._receivers))
         self.assertEquals(recv, select._receivers[0])
-        self.assertEquals(1, len(recv.notify))
-        self.assertEquals(select._put, recv.notify[0])
+        self.assertEquals(select._put, recv.notify)
 
     def test_channel(self):
         context = self.router.local()
@@ -24,8 +23,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         select.add(chan)
         self.assertEquals(1, len(select._receivers))
         self.assertEquals(chan, select._receivers[0])
-        self.assertEquals(1, len(chan.notify))
-        self.assertEquals(select._put, chan.notify[0])
+        self.assertEquals(select._put, chan.notify)
 
     def test_subselect_empty(self):
         select = self.klass()
@@ -33,8 +31,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         select.add(subselect)
         self.assertEquals(1, len(select._receivers))
         self.assertEquals(subselect, select._receivers[0])
-        self.assertEquals(1, len(subselect.notify))
-        self.assertEquals(select._put, subselect.notify[0])
+        self.assertEquals(select._put, subselect.notify)
 
     def test_subselect_nonempty(self):
         recv = mitogen.core.Receiver(self.router)
@@ -45,8 +42,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         select.add(subselect)
         self.assertEquals(1, len(select._receivers))
         self.assertEquals(subselect, select._receivers[0])
-        self.assertEquals(1, len(subselect.notify))
-        self.assertEquals(select._put, subselect.notify[0])
+        self.assertEquals(select._put, subselect.notify)
 
     def test_subselect_loop_direct(self):
         select = self.klass()
@@ -64,6 +60,22 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         exc = self.assertRaises(mitogen.master.SelectError,
             lambda: s2.add(s0))
         self.assertEquals(str(exc), self.klass.loop_msg)
+
+    def test_double_add_receiver(self):
+        select = self.klass()
+        recv = mitogen.core.Receiver(self.router)
+        select.add(recv)
+        exc = self.assertRaises(mitogen.master.SelectError,
+            lambda: select.add(recv))
+        self.assertEquals(str(exc), self.klass.owned_msg)
+
+    def test_double_add_subselect(self):
+        select = self.klass()
+        select2 = self.klass()
+        select.add(select2)
+        exc = self.assertRaises(mitogen.master.SelectError,
+            lambda: select.add(select2))
+        self.assertEquals(str(exc), self.klass.owned_msg)
 
 
 class RemoveTest(testlib.RouterMixin, testlib.TestCase):
@@ -91,7 +103,7 @@ class RemoveTest(testlib.RouterMixin, testlib.TestCase):
         select.add(recv)
         select.remove(recv)
         self.assertEquals(0, len(select._receivers))
-        self.assertEquals(0, len(recv.notify))
+        self.assertEquals(None, recv.notify)
 
 
 class CloseTest(testlib.RouterMixin, testlib.TestCase):
@@ -107,12 +119,11 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
         select.add(recv)
 
         self.assertEquals(1, len(select._receivers))
-        self.assertEquals(1, len(recv.notify))
-        self.assertEquals(select._put, recv.notify[0])
+        self.assertEquals(select._put, recv.notify)
 
         select.close()
         self.assertEquals(0, len(select._receivers))
-        self.assertEquals(0, len(recv.notify))
+        self.assertEquals(None, recv.notify)
 
     def test_one_subselect(self):
         select = self.klass()
@@ -123,16 +134,15 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
         subselect.add(recv)
 
         self.assertEquals(1, len(select._receivers))
-        self.assertEquals(1, len(recv.notify))
-        self.assertEquals(subselect._put, recv.notify[0])
+        self.assertEquals(subselect._put, recv.notify)
 
         select.close()
 
         self.assertEquals(0, len(select._receivers))
-        self.assertEquals(1, len(recv.notify))
+        self.assertEquals(subselect._put, recv.notify)
 
         subselect.close()
-        self.assertEquals(0, len(recv.notify))
+        self.assertEquals(None, recv.notify)
 
 
 class EmptyTest(testlib.RouterMixin, testlib.TestCase):
@@ -186,7 +196,7 @@ class OneShotTest(testlib.RouterMixin, testlib.TestCase):
         recv, (msg_, data) = select.get()
         self.assertEquals(msg, msg_)
         self.assertEquals(0, len(select._receivers))
-        self.assertEquals(0, len(recv.notify))
+        self.assertEquals(None, recv.notify)
 
     def test_false_persists_after_get(self):
         recv = mitogen.core.Receiver(self.router)
@@ -196,8 +206,7 @@ class OneShotTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals((recv, (msg, '123')), select.get())
         self.assertEquals(1, len(select._receivers))
         self.assertEquals(recv, select._receivers[0])
-        self.assertEquals(1, len(recv.notify))
-        self.assertEquals(select._put, recv.notify[0])
+        self.assertEquals(select._put, recv.notify)
 
 
 class GetTest(testlib.RouterMixin, testlib.TestCase):

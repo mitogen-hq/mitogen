@@ -283,9 +283,10 @@ def _queue_interruptible_get(queue, timeout=None, block=True):
 
 
 class Receiver(object):
+    notify = None
+
     def __init__(self, router, handle=None, persist=True, respondent=None):
         self.router = router
-        self.notify = []
         self.handle = handle  # Avoid __repr__ crash in add_handler()
         self.handle = router.add_handler(self._on_receive, handle,
                                          persist, respondent)
@@ -298,8 +299,8 @@ class Receiver(object):
         """Callback from the Stream; appends data to the internal queue."""
         IOLOG.debug('%r._on_receive(%r)', self, msg)
         self._queue.put(msg)
-        for func in self.notify:
-            func(self)
+        if self.notify:
+            self.notify(self)
 
     def close(self):
         self._queue.put(_DEAD)
