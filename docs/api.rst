@@ -15,6 +15,7 @@ mitogen Package
 .. autodata:: mitogen.is_master
 .. autodata:: mitogen.context_id
 .. autodata:: mitogen.parent_id
+.. autodata:: mitogen.parent_ids
 
 
 mitogen.core
@@ -250,7 +251,7 @@ Receiver Class
 
             # It is guaranteed the receiver was empty after the notification
             # function was installed, or that it was non-empty and the
-            # notification function was invoked.
+            # notification function was invoked at least once.
 
     .. py:method:: close ()
 
