@@ -192,24 +192,129 @@ Broker Class
 
 
 Context Class
-=============
+-------------
 
 .. autoclass:: mitogen.master.Context
    :members:
    :inherited-members:
 
 
+Receiver Class
+--------------
+
+.. class:: mitogen.core.Receiver (router, handle=None, persist=True, respondent=None)
+
+    Receivers are used to wait for pickled responses from another context to be
+    sent to a handle registered in this context. A receiver may be single-use
+    (as in the case of :py:meth:`mitogen.master.Context.call_async`) or
+    multiple use.
+
+    :param mitogen.core.Router router:
+        Router to register the handler on.
+
+    :param int handle:
+        If not ``None``, an explicit handle to register, otherwise an unused
+        handle is chosen.
+
+    :param bool persist:
+        If ``True``, do not unregister the receiver's handler after the first
+        message.
+
+    :param mitogen.core.Context respondent:
+        Reference to the context this receiver is receiving from. If not
+        ``None``, arranges for the receiver to receive
+        :py:data:`mitogen.core._DEAD` if messages can no longer be routed to
+        the context, due to disconnection or exit.
+
+    .. attribute:: notify = None
+
+        If not ``None``, a reference to a function invoked as
+        `notify(receiver)` when a new message is delivered to this receiver.
+        Used by :py:class:`mitogen.master.Select` to implement waiting on
+        multiple receivers.
+
+    .. py:method:: empty ()
+
+        Return ``True`` if calling :py:meth:`get` would block.
+
+        As with :py:class:`Queue.Queue`, ``True`` may be returned even though a
+        subsequent call to :py:meth:`get` will succeed, since a message may be
+        posted at any moment between :py:meth:`empty` and :py:meth:`get`.
+
+        :py:meth:`empty` is only useful to avoid a race while installing
+        :py:attr:`notify`:
+
+        .. code-block:: python
+
+            recv.notify = _my_notify_function
+            if not recv.empty():
+                _my_notify_function(recv)
+
+            # It is guaranteed the receiver was empty after the notification
+            # function was installed, or that it was non-empty and the
+            # notification function was invoked.
+
+    .. py:method:: close ()
+
+        Cause :py:class:`mitogen.core.ChannelError` to be raised in any thread
+        waiting in :py:meth:`get` on this receiver.
+
+    .. py:method:: get (timeout=None)
+
+        Sleep waiting for a message to arrive on this receiver.
+
+        :param float timeout:
+            If not ``None``, specifies a timeout in seconds.
+
+        :raises mitogen.core.ChannelError:
+            The remote end indicated the channel should be closed, or
+            communication with its parent context was lost.
+
+        :raises mitogen.core.TimeoutError:
+            Timeout was reached.
+
+        :returns:
+            `(msg, data)` tuple, where `msg` is the
+            :py:class:`mitogen.core.Message` that was received, and `data` is
+            its unpickled data part.
+
+    .. py:method:: get_data (timeout=None)
+
+        Like :py:meth:`get`, except only return the data part.
+
+    .. py:method:: __iter__ ()
+
+        Block and yield `(msg, data)` pairs delivered to this receiver until
+        :py:class:`mitogen.core.ChannelError` is raised.
+
+
+Sender Class
+------------
+
+.. class:: mitogen.core.Sender (context, dst_handle)
+
+    Senders are used to send pickled messages to a handle in another context,
+    it is the inverse of :py:class:`mitogen.core.Sender`.
+
+    :param mitogen.core.Context context:
+        Context to send messages to.
+    :param int dst_handle:
+        Destination handle to send messages to.
+
+    .. py:method:: close ()
+
+        Send :py:data:`mitogen.core._DEAD` to the remote end, causing
+        :py:meth:`ChannelError` to be raised in any waiting thread.
+
+    .. py:method:: put (data)
+
+        Send `data` to the remote end.
+
+
 Channel Class
 -------------
 
 .. autoclass:: mitogen.core.Channel
-   :members:
-
-
-Context Class
--------------
-
-.. autoclass:: mitogen.master.Context
    :members:
 
 

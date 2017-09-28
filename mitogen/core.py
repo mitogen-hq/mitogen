@@ -309,7 +309,6 @@ class Receiver(object):
         return self._queue.empty()
 
     def get(self, timeout=None):
-        """Receive an object, or ``None`` if `timeout` is reached."""
         IOLOG.debug('%r.on_receive(timeout=%r)', self, timeout)
 
         msg = _queue_interruptible_get(self._queue, timeout)
@@ -332,7 +331,6 @@ class Receiver(object):
         return self.get(timeout)[1]
 
     def __iter__(self):
-        """Yield objects from this channel until it is closed."""
         while True:
             try:
                 yield self.get()
