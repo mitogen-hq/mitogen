@@ -76,10 +76,9 @@ contexts.
         total = 0
         recvs = [c.call_async(long_running_operation) for c in contexts]
 
-        with mitogen.master.Select(recvs) as select:
-            for recv, (msg, data) in select:
-                print 'Got %s from %s' % (data, recv)
-                total += data
+        for recv, (msg, data) in mitogen.master.Select(recvs):
+            print 'Got %s from %s' % (data, recv)
+            total += data
 
         # Iteration ends when last Receiver yields a result.
         print 'Received total %s from %s receivers' % (total, len(recvs))
@@ -108,9 +107,8 @@ contexts.
             ])
         ]
 
-        with mitogen.master.Select(selects) as select:
-            for _, (msg, data) in select:
-                print data
+        for recv, (msg, data) in mitogen.master.Select(selects):
+            print data
 
     .. py:method:: get (timeout=None)
 
