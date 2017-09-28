@@ -237,18 +237,19 @@ class SelectError(mitogen.core.Error):
 
 
 class Select(object):
+    notify = None
+
     def __init__(self, receivers=(), oneshot=True):
         self._receivers = []
         self._oneshot = oneshot
         self._queue = Queue.Queue()
-        self.notify = []
         for recv in receivers:
             self.add(recv)
 
     def _put(self, value):
         self._queue.put(value)
-        for func in self.notify:
-            func(self)
+        if self.notify:
+            self.notify(self)
 
     def __bool__(self):
         return bool(self._receivers)
@@ -276,12 +277,17 @@ class Select(object):
             if isinstance(recv_, Select):
                 recv_._check_no_loop(recv)
 
+    owned_msg = 'Cannot add: Receiver is already owned by another Select'
+
     def add(self, recv):
         if isinstance(recv, Select):
             recv._check_no_loop(self)
 
         self._receivers.append(recv)
-        recv.notify.append(self._put)
+        if recv.notify is not None:
+            raise SelectError(self.owned_msg)
+
+        recv.notify = self._put
         # Avoid race by polling once after installation.
         if not recv.empty():
             self._put(recv)
@@ -290,8 +296,10 @@ class Select(object):
 
     def remove(self, recv):
         try:
+            if recv.notify != self._put:
+                raise ValueError
             self._receivers.remove(recv)
-            recv.notify.remove(self._put)
+            recv.notify = None
         except (IndexError, ValueError):
             raise SelectError(self.not_present_msg)
 
