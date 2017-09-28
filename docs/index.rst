@@ -173,8 +173,8 @@ for example enforce an interactive TTY and account password.
     ])
 
 
-Inter-slave Message Routing
-###########################
+Message Routing
+###############
 
 .. image:: images/route.png
 
@@ -255,8 +255,30 @@ and timeouts can be configured to ensure failed calls do not block progress of
 the parent.
 
 
-Support For Single File Programs
-################################
+Scatter/Gather Calls
+####################
+
+Functions may be invoked asynchronously, with results returned as they become
+available.
+
+.. code-block:: python
+
+    def usage(path):
+        return sum((os.path.getsize(os.path.join(dirpath, name))
+                    for dirpath, dirnames, filenames in os.walk(path)
+                    for name in dirnames + filenames), 0)
+
+    total = 0
+    for recv, msg in Select(c.call_async(usage, '/tmp') for c in contexts):
+        value = result.unpickle()
+        print 'Context %s /tmp usage: %d' % (recv.context, value)
+        total += value
+
+    print 'Total /tmp usage across all contexts: %d' % (total,)
+
+
+Single File Programs
+####################
 
 Programs that are self-contained within a single Python script are supported.
 External contexts are configured such that any attempt to execute a function
@@ -296,33 +318,6 @@ usual into the slave process.
     if __name__ == '__main__' and mitogen.is_master:
         import mitogen.utils
         mitogen.utils.run_with_broker(main)
-
-
-Scatter/Gather Function Calls
-#############################
-
-Functions may be invoked asynchronously, with results returned as they become
-available.
-
-.. code-block:: python
-
-    def disk_usage(path):
-        return sum((os.path.getsize(os.path.join(dirpath, name))
-                    for dirpath, dirnames, filenames in os.walk(path)
-                    for name in dirnames + filenames), 0)
-
-
-    if __name__ == '__main__' and mitogen.is_master:
-        contexts = connect_contexts(...)
-        receivers = [c.call_async(disk_usage, '/tmp') for c in contexts]
-        total = 0
-
-        for recv, msg in mitogen.master.Select(receivers):
-            value = result.unpickle()
-            print 'Context %s /tmp usage: %d' % (recv.context, value)
-            total += value
-
-        print 'Total /tmp usage across all contexts: %d' % (total,)
 
 
 Event-driven IO
