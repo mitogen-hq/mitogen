@@ -314,8 +314,16 @@ Sender Class
 Channel Class
 -------------
 
-.. autoclass:: mitogen.core.Channel
-   :members:
+.. class:: mitogen.core.Channel (router, context, dst_handle, handle=None)
+
+    A channel inherits from :py:class:`mitogen.core.Sender` and
+    `mitogen.core.Receiver` to provide bidirectional functionality.
+
+    Since all handles aren't known until after both ends are constructed, for
+    both ends to communicate through a channel, it is necessary for one end to
+    retrieve the handle allocated to the other and reconfigure its own channel
+    to match. Currently this is a manual task.
+
 
 
 Utility Functions
