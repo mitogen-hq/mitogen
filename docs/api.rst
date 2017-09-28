@@ -68,9 +68,8 @@ contexts.
     instances and returns the first value posted to any receiver or select.
 
     If `oneshot` is ``True``, then remove each receiver as it yields a result;
-    since :py:meth:`__iter__` terminates once the final receiver is removed
-    from the select, this makes it convenient to respond to several call
-    results with minimal effort:
+    since :py:meth:`__iter__` terminates once the final receiver is removed,
+    this makes it convenient to respond to calls made in parallel:
 
     .. code-block:: python
 
@@ -78,26 +77,25 @@ contexts.
         recvs = [c.call_async(long_running_operation) for c in contexts]
 
         with mitogen.master.Select(recvs) as select:
-            for recv, msg in select:
-                value = msg.unpickle()
-                print 'Got %s from %s' % (value, recv)
-                total += value
+            for recv, (msg, data) in select:
+                print 'Got %s from %s' % (data, recv)
+                total += data
 
         # Iteration ends when last Receiver yields a result.
         print 'Received total %s from %s receivers' % (total, len(recvs))
 
-    :py:class:`Select` may also be used to drive a long-running scheduler:
+    :py:class:`Select` may drive a long-running scheduler:
 
     .. code-block:: python
 
-        with mitogen.master.Select() as select:
+        with mitogen.master.Select(oneshot=False) as select:
             while running():
-                for recv, msg in select:
+                for recv, (msg, data) in select:
                     process_result(recv.context, msg.unpickle())
                 for context, workfunc in get_new_work():
                     select.add(context.call_async(workfunc))
 
-    :py:class:`Select` may be arbitrarily nested:
+    :py:class:`Select` may be nested:
 
     .. code-block:: python
 
@@ -110,9 +108,9 @@ contexts.
             ])
         ]
 
-        with mitogen.master.Select(selects, oneshot=False) as select:
-            while subselects and any(subselects):  # Calls __bool__()
-                print select.get()
+        with mitogen.master.Select(selects) as select:
+            for _, (msg, data) in select:
+                print data
 
     .. py:method:: get (timeout=None)
 
@@ -138,17 +136,16 @@ contexts.
 
     .. py:method:: empty ()
 
-        Return ``True`` if no items appear to be queued on this receiver.
+        Return ``True`` if calling :py:meth:`get` would block.
 
-        As with :py:class:`Queue.Queue`, this function may return ``False``
-        even though a subsequent call to :py:meth:`get` will succeed, since a
-        message may be posted at any moment between the call to
-        :py:meth:`empty` and :py:meth:`get`.
+        As with :py:class:`Queue.Queue`, ``True`` may be returned even though a
+        subsequent call to :py:meth:`get` will succeed, since a message may be
+        posted at any moment between :py:meth:`empty` and :py:meth:`get`.
 
-        :py:meth:`empty` may additionally return ``True`` when :py:meth:`get`
-        would block if another thread has drained a receiver added to this
-        select. This can be avoided by only consuming each receiver from a
-        single thread.
+        :py:meth:`empty` may return ``False`` even when :py:meth:`get` would
+        block if another thread has drained a receiver added to this select.
+        This can be avoided by only consuming each receiver from a single
+        thread.
 
     .. py:method:: __iter__ (self)
 
