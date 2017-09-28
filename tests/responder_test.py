@@ -75,3 +75,9 @@ class BrokenModulesTest(unittest.TestCase):
         msg, = call[1]
         self.assertEquals(50, msg.handle)
         self.assertTrue(isinstance(msg.unpickle(), tuple))
+
+
+if __name__ == '__main__':
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    unittest.main()
