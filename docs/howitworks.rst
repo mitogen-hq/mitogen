@@ -25,7 +25,7 @@ Python Command Line
 ###################
 
 The Python command line sent to the host is a base64-encoded copy of the
-:py:meth:`mitogen.master.LocalStream._first_stage` function, which has been
+:py:meth:`mitogen.master.Stream._first_stage` function, which has been
 carefully optimized to reduce its size. Prior to base64 encoding,
 ``CONTEXT_NAME`` is replaced with the desired context name in the function's
 source code.
