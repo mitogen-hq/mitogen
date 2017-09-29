@@ -422,9 +422,9 @@ Context Class
         :param mitogen.core.Message msg:
             The message.
 
-        :return mitogen.core.Receiver:
-            Receiver configured to receive any replies sent to the message's
-            `reply_to` handle.
+        :returns:
+            :py:class:`mitogen.core.Receiver` configured to receive any replies
+            sent to the message's `reply_to` handle.
 
     .. method:: send_await (msg, deadline=None)
 
@@ -487,8 +487,9 @@ Context Class
         :param dict kwargs:
             Function keyword arguments, if any. See :ref:`serialization-rules`
             for permitted types.
-        :return mitogen.core.Receiver:
-            A receiver configured to receive the result of the invocation:
+        :returns:
+            :py:class:`mitogen.core.Receiver` configured to receive the result
+            of the invocation:
 
             .. code-block:: python
 
@@ -503,7 +504,7 @@ Context Class
         Equivalent to :py:meth:`call_async(fn, \*args, \**kwargs).get_data()
         <call_async>`.
 
-        :return:
+        :returns:
             The function's return value.
 
         :raises mitogen.core.CallError:
