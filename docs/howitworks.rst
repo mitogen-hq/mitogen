@@ -368,14 +368,6 @@ cannot be used securely, however few of those accounts appear to be expert, and
 none mention any additional attacks that would not be prevented by using a
 restrictive class whitelist.
 
-.. note::
-
-    Since unpickling may trigger module loads, it is not possible to
-    deserialize data on the broker thread, as this will result in recursion
-    leading to a deadlock. Therefore any internal services (module loader,
-    logging forwarder, etc.) must rely on simple string formats, or only
-    perform serialization from within the broker thread.
-
 
 The IO Multiplexer
 ------------------
