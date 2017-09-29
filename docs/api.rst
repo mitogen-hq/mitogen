@@ -471,7 +471,7 @@ Context Class
 
                     @classmethod
                     def my_classmethod(cls):
-                        """Reachable as mymodule.MyClass.my_staticmethod"""
+                        """Reachable as mymodule.MyClass.my_classmethod"""
 
                     def my_instancemethod(self):
                         """Unreachable: requires a class instance!"""
