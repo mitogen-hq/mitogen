@@ -283,7 +283,7 @@ Slaves listen on the following handles:
 
 .. data:: mitogen.core.CALL_FUNCTION
 
-    Receives `(with_context, mod_name, class_name, func_name, args, kwargs)`
+    Receives `(mod_name, class_name, func_name, args, kwargs)`
     5-tuples from
     :py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`,
     imports ``mod_name``, then attempts to execute
