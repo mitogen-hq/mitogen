@@ -54,7 +54,7 @@ pipe, and the child half writes the string ``EC0\n``, then begins reading the
 writing the decompressed result to the write-end of the UNIX pipe.
 
 To allow recovery of ``stdin`` for reuse by the bootstrapped process for
-master<->slave communication, it is necessary for the first stage to avoid
+parent<->child communication, it is necessary for the first stage to avoid
 closing ``stdin`` or reading from it until until EOF. Therefore, the master
 sends the :py:mod:`zlib`-compressed payload prefixed with an integer size,
 allowing reading by the first stage of exactly the required bytes.
@@ -100,10 +100,10 @@ Preserving The `mitogen.core` Source
 ####################################
 
 One final trick is implemented in the first stage: after bootstrapping the new
-slave, it writes a duplicate copy of the :py:mod:`mitogen.core` source it just
-used to bootstrap it back into another pipe connected to the slave. The slave's
+child, it writes a duplicate copy of the :py:mod:`mitogen.core` source it just
+used to bootstrap it back into another pipe connected to the child. The child's
 module importer cache is initialized with a copy of the source, so that
-subsequent bootstraps of slave-of-slaves do not require the source to be
+subsequent bootstraps of children-of-children do not require the source to be
 fetched from the master a second time.
 
 
@@ -129,7 +129,7 @@ Generating A Synthetic `mitogen` Package
 
 Since the bootstrap consists of the :py:mod:`mitogen.core` source code, and
 this code is loaded by Python by way of its main script (``__main__`` module),
-initially the module layout in the slave will be incorrect.
+initially the module layout in the child will be incorrect.
 
 The first step taken after bootstrap is to rearrange :py:data:`sys.modules` slightly
 so that :py:mod:`mitogen.core` appears in the correct location, and all
@@ -158,12 +158,12 @@ it. Therefore the bootstrap must call :py:func:`os.wait` soon after startup.
 Setup Logging
 #############
 
-The slave's :py:mod:`logging` package root logger is configured to have the
+The child's :py:mod:`logging` package root logger is configured to have the
 same log level as the root logger in the master, and
 :py:class:`mitogen.core.LogHandler` is installed to forward logs to the master
 context's :py:data:`FORWARD_LOG <mitogen.core.FORWARD_LOG>` handle.
 
-The log level is copied into the slave to avoid generating a potentially large
+The log level is copied into the child to avoid generating a potentially large
 amount of network IO forwarding logs that will simply be filtered away once
 they reach the master.
 
@@ -185,8 +185,8 @@ end is added to the IO multiplexer, and whose write end is used to overwrite
 the handles inherited during process creation.
 
 Even without IO redirection, something must replace ``stdin`` and ``stdout``,
-otherwise it is possible for the stream used for communication between the
-master and slave to be accidentally corrupted by subprocesses run by user code.
+otherwise it is possible for the stream used for communication between parent
+and child to be accidentally corrupted by subprocesses run by user code.
 
 The inherited ``stdin`` is replaced by a file descriptor pointing to
 ``/dev/null``.
@@ -198,7 +198,7 @@ active, so that ``print`` statements and suchlike promptly appear in the logs.
 Function Call Dispatch
 ######################
 
-After all initialization is complete, the slave's main thread sits in a loop
+After all initialization is complete, the child's main thread sits in a loop
 reading from a :py:class:`Channel <mitogen.core.Channel>` connected to the
 :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` handle. This handle is
 written to by
@@ -211,14 +211,14 @@ Shutdown
 
 When the master signals the :py:data:`CALL_FUNCTION
 <mitogen.core.CALL_FUNCTION>` :py:class:`Channel <mitogen.core.Channel>` is
-closed, the slave calls :py:meth:`shutdown() <mitogen.core.Broker.shutdown>`
+closed, the child calls :py:meth:`shutdown() <mitogen.core.Broker.shutdown>`
 followed by :py:meth:`wait() <mitogen.core.Broker.wait>` on its own broker,
 triggering graceful shutdown.
 
-During shutdown, the master will wait a few seconds for slaves to disconnect
-gracefully before force disconnecting them, while the slaves will use that time
-to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on their
-:py:class:`IoLogger <mitogen.core.IoLogger>` socket's write ends before
+During shutdown, the master will wait a few seconds for children to disconnect
+gracefully before force disconnecting them, while the children will use that
+time to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on
+their :py:class:`IoLogger <mitogen.core.IoLogger>` socket's write ends before
 draining any remaining data buffered on the read ends.
 
 An alternative approach is to wait until the socket is completely closed, with
@@ -239,7 +239,7 @@ Stream Protocol
 ---------------
 
 Once connected, a basic framing protocol is used to communicate between
-master and slave:
+parent and child:
 
 +--------------------+------+------------------------------------------------------+
 | Field              | Size | Description                                          |
@@ -273,13 +273,13 @@ Masters listen on the following handles:
 .. data:: mitogen.core.ALLOCATE_ID
 
     Replies to any message sent to it with a newly allocated unique context ID,
-    to allow slaves to safely start their own contexts. In future this is
+    to allow children to safely start their own contexts. In future this is
     likely to be replaced by 32-bit context IDs and random allocation, with an
     improved ``ADD_ROUTE`` message sent upstream rather than downstream that
     generates NACKs if any ancestor already knows the ID.
 
 
-Slaves listen on the following handles:
+Children listen on the following handles:
 
 .. data:: mitogen.core.CALL_FUNCTION
 
@@ -290,9 +290,9 @@ Slaves listen on the following handles:
     `class_name.func_name(\*args, \**kwargs)`.
 
     When this channel is closed (by way of sending ``_DEAD`` to it), the
-    slave's main thread begins graceful shutdown of its own `Broker` and
-    `Router`. Each slave is responsible for sending ``_DEAD`` to each of its
-    directly connected slaves in response to the master sending ``_DEAD`` to
+    child's main thread begins graceful shutdown of its own `Broker` and
+    `Router`. Each child is responsible for sending ``_DEAD`` to each of its
+    directly connected children in response to the master sending ``_DEAD`` to
     it, and arranging for the connection to its parent context to be closed
     shortly thereafter.
 
@@ -310,7 +310,7 @@ Slaves listen on the following handles:
 
     Given a chain `master -> ssh1 -> sudo1`, no `ADD_ROUTE` message is
     necessary, since :py:class:`mitogen.core.Router` in the `ssh` context can
-    arrange to update its routes while setting up the new slave during
+    arrange to update its routes while setting up the new child during
     `proxy_connect()`.
 
     However, given a chain like `master -> ssh1 -> sudo1 -> ssh2 -> sudo2`,
@@ -319,8 +319,8 @@ Slaves listen on the following handles:
     establishment.
 
 
-Slaves that have ever been used to create a descendent child context also
-listen on the following handles:
+Children that have ever been used to create a descendent child also listen on
+the following handles:
 
 .. data:: mitogen.core.GET_MODULE
 
@@ -328,7 +328,7 @@ listen on the following handles:
     (:py:class:`mitogen.master.ModuleForwarder`) serves responses using
     :py:class:`mitogen.core.Importer`'s cache before forwarding the request to
     its parent context. The response is cached by each context in turn before
-    being forwarded on to the slave context that originally made the request.
+    being forwarded on to the child context that originally made the request.
     In this way, the master need never re-send a module it has already sent to
     a direct descendant.
 
@@ -352,17 +352,16 @@ still registered with :py:meth:`add_handler()
 Use of Pickle
 #############
 
-The current implementation uses the Python :py:mod:`cPickle` module, with
-mitigations to prevent untrusted slaves from triggering code excution in the
-master. The primary reason for using :py:mod:`cPickle` is that it is
-computationally efficient, and avoids including a potentially large body of
-serialization code in the bootstrap.
+The current implementation uses the Python :py:mod:`cPickle` module, with a
+restrictive class whitelist to prevent triggering undesirable code execution.
+The primary reason for using :py:mod:`cPickle` is that it is computationally
+efficient, and avoids including a potentially large body of serialization code
+in the bootstrap.
 
-The pickler active in slave contexts will instantiate any class, however in the
-master it is initially restricted to only permitting
-:py:class:`CallError <mitogen.core.CallError>` and :py:data:`_DEAD
-<mitogen.core._DEAD>`. While not recommended, it is possible to register more
-using :py:meth:`mitogen.master.LocalStream.allow_class`.
+The pickler will instantiate only built-in types and one of 3 constructor
+functions, to support unpickling :py:class:`CallError
+<mitogen.core.CallError>`, :py:data:`_DEAD <mitogen.core._DEAD>`, and
+:py:class:`Context <mitogen.core.Context>`.
 
 The choice of Pickle is one area to be revisited later. All accounts suggest it
 cannot be used securely, however few of those accounts appear to be expert, and
@@ -440,12 +439,12 @@ a new child context, but that is okay for now, since child contexts cannot
 currently allocate new context IDs anyway.
 
 
-Differences Between Master And Slave Brokers
+Differences Between Master And Child Brokers
 ############################################
 
 The main difference between :py:class:`mitogen.core.Broker` and
 :py:class:`mitogen.master.Broker` is that when the stream connection to the
-parent is lost in a slave, the broker will trigger its own shutdown.
+parent is lost in a child, the broker will trigger its own shutdown.
 
 
 The Module Importer
@@ -512,7 +511,6 @@ mechanism is not portable to non-UNIX operating systems, and does not work in
 every case, for example when Python blocks signals during a variety of
 :py:mod:`threading` package operations.
 
-At some point it is likely Mitogen will be extended to support starting slaves
-running on Windows. When that happens, it would be nice if the process model on
-Windows and UNIX did not differ, and in fact the code used on both were
-identical.
+At some point it is likely Mitogen will be extended to support children running
+on Windows. When that happens, it would be nice if the process model on Windows
+and UNIX did not differ, and in fact the code used on both were identical.
