@@ -465,8 +465,8 @@ source is fetched, the method builds a new module object using the best
 practice documented in PEP-302.
 
 
-Minimizing Roundtrips
-#####################
+Avoiding Negative Imports
+#########################
 
 In Python 2.x where relative imports are the default, a large number of import
 requests will be made for modules that do not exist. For example:
@@ -490,7 +490,23 @@ Before indicating it can satisfy an import request,
 :py:class:`mitogen.core.Importer` first checks to see if the module belongs to
 a package it has previously imported, and if so, ignores the request if the
 module does not appear in the enumeration of child modules belonging to the
-package.
+package that was provided by the master.
+
+
+Import Preloading
+#################
+
+
+- guaranteed PRELOAD_MODULE sent for all related_modules before GET_MODULE
+response is sent, therefore:
+
+- 
+
+The method used to detect import statements is similar to the standard library
+:py:mod:`modulefinder` module: rather than analyze module source code,
+``IMPORT_NAME`` opcodes are extracted from the module's bytecode. This is since
+clean source analysis methods (:py:mod:`ast` and :py:mod:`compiler`) are an
+order of magnitude slower.
 
 
 Child Module Enumeration

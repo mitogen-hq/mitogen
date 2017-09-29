@@ -177,9 +177,204 @@ mitogen.fakessh
 Router Class
 ============
 
-.. autoclass:: mitogen.master.Router
-   :members:
-   :inherited-members:
+
+.. class:: mitogen.core.Router
+
+    Route messages between parent and child contexts, and invoke handlers
+    defined on our parent context. Router.route() straddles the Broker and user
+    threads, it is save to call from anywhere.
+
+    **Note:** This is the somewhat limited core version of the Router class
+    used by child contexts. The master subclass is documented below this one.
+
+    .. method:: stream_by_id (dst_id)
+
+        Return the :py:class:`mitogen.core.Stream` that should be used to
+        communicate with `dst_id`. If a specific route for `dst_id` is not
+        known, a reference to the parent context's stream is returned.
+
+    .. method:: add_route (target_id, via_id)
+
+        Arrange for messages whose `dst_id` is `target_id` to be forwarded on
+        the directly connected stream for `via_id`. This method is called
+        automatically in response to ``ADD_ROUTE`` messages, but remains public
+        for now while the design has not yet settled, and situations may arise
+        where routing is not fully automatic.
+
+    .. method:: register (context, stream)
+
+        Register a new context and its associated stream, and add the stream's
+        receive side to the I/O multiplexer. This This method remains public
+        for now while hte design has not yet settled.
+
+    .. method:: add_handler (fn, handle=None, persist=None, respondent=None)
+
+        Invoke `fn(msg)` for each Message sent to `handle` from this context.
+        Unregister after one invocation if `persist` is ``False``. If `handle`
+        is ``None``, a new handle is allocated and returned.
+
+        :param mitogen.core.Context respondent:
+            Context that messages to this handle are expected to be sent from.
+            If specified, arranges for ``_DEAD`` to be delivered to `fn` when
+            disconncetion of the context is detected.
+
+            In future `respondent` will likely also be used to prevent other
+            contexts from sending messages to the handle.
+
+    .. method:: _async_route(msg, stream=None)
+
+        Arrange for `msg` to be forwarded towards its destination. If its
+        destination is the local context, then arrange for it to be dispatched
+        using the local handlers.
+
+        This is a lower overhead version of :py:meth:`route` that may only be
+        called from the I/O multiplexer thread.
+
+        :param mitogen.core.Stream stream:
+            If not ``None``, a reference to the stream the message arrived on.
+            Used for performing source route verification, to ensure sensitive
+            messages such as ``CALL_FUNCTION`` arrive only from trusted
+            contexts.
+
+	.. method:: route(msg)
+
+        Arrange for `msg` to be forwarded towards its destination. If its
+        destination is the local context, then arrange for it to be dispatched
+        using the local handlers.
+
+        This may be called from any thread.
+
+
+.. class:: mitogen.master.Router
+
+    Extend :py:class:`mitogen.core.Router` with functionality useful to
+    masters, and child contexts who later become masters. Currently when this
+    class is required, the target context's router is upgraded at runtime.
+
+    .. data:: profiling
+
+        When enabled, causes the broker thread and any subsequent broker and
+        main threads existing in any child to write
+        ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
+        :py:mod:`cProfile` dump on graceful exit. Must be set prior to any
+        :py:class:`Broker` being constructed, e.g. via:
+
+        .. code::
+
+             mitogen.master.Router.profiling = True
+
+    .. method:: enable_debug
+
+        Cause this context and any descendant child contexts to write debug
+        logs to /tmp/mitogen.<pid>.log.
+
+    .. method:: allocate_id
+
+        Arrange for a unique context ID to be allocated and associated with a
+        route leading to the active context. In masters, the ID is generated
+        directly, in children it is forwarded to the master via an
+        ``ALLOCATE_ID`` message that causes the master to emit matching
+        ``ADD_ROUTE`` messages prior to replying.
+
+    .. method:: context_by_id (context_id, via_id=None)
+
+        Messy factory/lookup function to find a context by its ID, or construct
+        it. In future this will be replaced by a much more sensible interface.
+
+    .. _context-factories:
+
+    **Context Factories**
+
+    .. method:: local (remote_name=None, python_path=None, debug=False, profiling=False, via=None)
+
+        Arrange for a context to be constructed on the local machine, as an
+        immediate subprocess of the current process. The associated stream
+        implementation is :py:class:`mitogen.master.Stream`.
+
+        :param str remote_name:
+            The ``argv[0]`` suffix for the new process. If `remote_name` is
+            ``test``, the new process ``argv[0]`` will be ``mitogen:test``.
+
+            If unspecified, defaults to ``<username>@<hostname>:<pid>``.
+
+        :param str python_path:
+            Path to the Python interpreter to use for bootstrap. Defaults to
+            ``python2.7``. In future this may default to ``sys.executable``.
+
+        :param bool debug:
+            If ``True``, arrange for debug logging (:py:meth:`enable_debug`) to
+            be enabled in the new context. Automatically ``True`` when
+            :py:meth:`enable_debug` has been called, but may be used
+            selectively otherwise.
+
+        :param bool profiling:
+            If ``True``, arrange for profiling (:py:data:`profiling`) to be
+            enabled in the new context. Automatically ``True`` when
+            :py:data:`profiling` is ``True``, but may be used selectively
+            otherwise.
+
+        :param mitogen.core.Context via:
+            If not ``None``, arrange for construction to occur via RPCs made to
+            the context `via`, and for ``ADD_ROUTE`` messages to be generated
+            as appropriate.
+
+            .. code-block:: python
+
+                # SSH to the remote machine.
+                remote_machine = router.ssh(hostname='mybox.com')
+
+                # Use the SSH connection to create a sudo connection.
+                remote_root = router.sudo(username='root', via=remote_machine)
+
+    .. method:: sudo (username=None, sudo_path=None, password=None, \**kwargs)
+
+        Arrange for a context to be constructed over a ``sudo`` invocation. The
+        ``sudo`` process is started in a newly allocated pseudo-terminal, and
+        supports typing interactive passwords.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str username:
+            The ``sudo`` username; defaults to ``root`..
+        :param str sudo_path:
+            Absolute or relative path to ``sudo``. Defaults to ``sudo``.
+        :param str password:
+            Password to type if/when ``sudo`` requests it. If not specified and
+            a password is requested, :py:class:`mitogen.sudo.PasswordError` is
+            raised.
+
+    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, \**kwargs)
+
+        Arrange for a context to be constructed over a ``ssh`` invocation. The
+        ``ssh`` process is started in a newly allocated pseudo-terminal, and
+        supports typing interactive passwords.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str username:
+            The SSH username; default is unspecified, which causes SSH to pick
+            the username to use.
+        :param str ssh_path:
+            Absolute or relative path to ``ssh``. Defaults to ``ssh``.
+        :param int port:
+            Port number to connect to; default is unspecified, which causes SSH
+            to pick the port number.
+        :param bool check_host_keys:
+            If ``False``, arrange for SSH to perform no verification of host
+            keys. If ``True``, cause SSH to pick the default behaviour, which
+            is usually to verify host keys.
+        :param str password:
+            Password to type if/when ``ssh`` requests it. If not specified and
+            a password is requested, :py:class:`mitogen.ssh.PasswordError` is
+            raised.
+        :param str identity_file:
+            Path to an SSH private key file to use for authentication. Default
+            is unspecified, which causes SSH to pick the identity file.
+
+            When this option is specified, only `identity_file` will be used by
+            the SSH client to perform authenticaion; agent authentication is
+            automatically disabled, as is reading the default private key from
+            ``~/.ssh/id_rsa``, or ``~/.ssh/id_dsa``.
 
 
 Broker Class

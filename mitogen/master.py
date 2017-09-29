@@ -894,16 +894,6 @@ class ChildIdAllocator(object):
 class Router(mitogen.core.Router):
     debug = False
 
-    #: When enabled, causes the broker thread and any subsequent broker and
-    #: main threads existing in any child to write
-    #: ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
-    #: :py:mod:`cProfile` dump on graceful exit. Must be set prior to any
-    #: :py:class:`Broker` being constructed, e.g. via:
-    #:
-    #: .. code::
-    #:
-    #:      mitogen.master.Router.profiling = True
-    #:
     profiling = False
 
     def __init__(self, *args, **kwargs):
@@ -913,10 +903,6 @@ class Router(mitogen.core.Router):
         self.log_forwarder = LogForwarder(self)
 
     def enable_debug(self):
-        """
-        Cause this context and any descendant child contexts to write debug
-        logs to /tmp/mitogen.<pid>.log.
-        """
         mitogen.core.enable_debug_logging()
         self.debug = True
 
