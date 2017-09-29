@@ -285,7 +285,7 @@ Slaves listen on the following handles:
 
     Receives `(mod_name, class_name, func_name, args, kwargs)`
     5-tuples from
-    :py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`,
+    :py:meth:`call_async() <mitogen.master.Context.call_async>`,
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
@@ -334,7 +334,7 @@ listen on the following handles:
 
 
 Additional handles are created to receive the result of every function call
-triggered by :py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`.
+triggered by :py:meth:`call_async() <mitogen.master.Context.call_async>`.
 
 
 Sentinel Value
