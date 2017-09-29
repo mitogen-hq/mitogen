@@ -207,11 +207,20 @@ Router Class
         receive side to the I/O multiplexer. This This method remains public
         for now while hte design has not yet settled.
 
-    .. method:: add_handler (fn, handle=None, persist=None, respondent=None)
+    .. method:: add_handler (fn, handle=None, persist=True, respondent=None)
 
         Invoke `fn(msg)` for each Message sent to `handle` from this context.
         Unregister after one invocation if `persist` is ``False``. If `handle`
         is ``None``, a new handle is allocated and returned.
+
+        :param int handle:
+            If not ``None``, an explicit handle to register, usually one of the
+            ``mitogen.core.*`` constants. If unspecified, a new unused handle
+            will be allocated.
+
+        :param bool persist:
+            If ``False``, the handler will be unregistered after a single
+            message has been received.
 
         :param mitogen.core.Context respondent:
             Context that messages to this handle are expected to be sent from.
@@ -220,6 +229,9 @@ Router Class
 
             In future `respondent` will likely also be used to prevent other
             contexts from sending messages to the handle.
+
+        :return:
+            `handle`, or if `handle` was ``None``, the newly allocated handle.
 
     .. method:: _async_route(msg, stream=None)
 
@@ -335,7 +347,8 @@ Router Class
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
         :param str username:
-            The ``sudo`` username; defaults to ``root`..
+            The ``sudo`` username; defaults to ``root``.
+
         :param str sudo_path:
             Absolute or relative path to ``sudo``. Defaults to ``sudo``.
         :param str password:
@@ -377,20 +390,125 @@ Router Class
             ``~/.ssh/id_rsa``, or ``~/.ssh/id_dsa``.
 
 
-Broker Class
-============
-
-.. autoclass:: mitogen.master.Broker
-   :members:
-   :inherited-members:
-
-
 Context Class
--------------
+=============
 
-.. autoclass:: mitogen.master.Context
-   :members:
-   :inherited-members:
+.. class:: mitogen.core.Context
+
+    Represent a remote context regardless of connection method.
+
+    **Note:** This is the somewhat limited core version of the Context class
+    used by child contexts. The master subclass is documented below this one.
+
+    .. method:: send (msg)
+
+        Arrange for `msg` to be delivered to this context. Updates the
+        message's `dst_id` prior to routing it via the associated router.
+
+        :param mitogen.core.Message msg:
+            The message.
+
+    .. method:: send_async (msg, persist=False)
+
+        Arrange for `msg` to be delivered to this context, with replies
+        delivered to a newly constructed Receiver. Updates the message's
+        `dst_id` prior to routing it via the associated router and registers a
+        handle which is placed in the message's `reply_to`.
+
+        :param bool persist:
+            If ``False``, the handler will be unregistered after a single
+            message has been received.
+
+        :param mitogen.core.Message msg:
+            The message.
+
+        :return mitogen.core.Receiver:
+            Receiver configured to receive any replies sent to the message's
+            `reply_to` handle.
+
+    .. method:: send_await (msg, deadline=None)
+
+        As with :py:meth:`send_async`, but expect a single reply
+        (`persist=False`) delivered within `deadline` seconds.
+
+        :param mitogen.core.Message msg:
+            The message.
+
+        :param float deadline:
+            If not ``None``, seconds before timing out waiting for a reply.
+
+        :raises mitogen.core.TimeoutError:
+            No message was received and `deadline` passed.
+
+
+.. class:: mitogen.master.Context
+
+    Extend :py:class:`mitogen.core.Router` with functionality useful to
+    masters, and child contexts who later become masters. Currently when this
+    class is required, the target context's router is upgraded at runtime.
+
+    .. method:: call_async (fn, \*args, \*\*kwargs)
+
+        Arrange for the context's ``CALL_FUNCTION`` handle to receive a
+        message that causes `fn(\*args, \**kwargs)` to be invoked on the
+        context's main thread.
+
+        :param fn:
+            A free function in module scope, or a classmethod or staticmethod
+            of a class directly reachable from module scope:
+
+            .. code-block:: python
+
+                # mymodule.py
+
+                def my_func():
+                    """A free function reachable as mymodule.my_func"""
+
+                class MyClass:
+                    @staticmethod
+                    def my_staticmethod():
+                        """Reachable as mymodule.MyClass.my_staticmethod"""
+
+                    @classmethod
+                    def my_classmethod(cls):
+                        """Reachable as mymodule.MyClass.my_staticmethod"""
+
+                    def my_instancemethod(self):
+                        """Unreachable: requires a class instance!"""
+
+                    class MyEmbeddedClass:
+                        @classmethod
+                        def my_classmethod(cls):
+                            """Not directly reachable from module scope!"""
+
+        :param tuple args:
+            Function arguments, if any. See :ref:`serialization-rules` for
+            permitted types.
+        :param dict kwargs:
+            Function keyword arguments, if any. See :ref:`serialization-rules`
+            for permitted types.
+        :return mitogen.core.Receiver:
+            A receiver configured to receive the result of the invocation:
+
+            .. code-block:: python
+
+                recv = context.call_async(os.check_output, 'ls /tmp/')
+                try:
+                    print recv.get_data()  # Prints output once it is received.
+                except mitogen.core.CallError, e:
+                    print 'Call failed:', str(e)
+
+    .. method:: call (fn, \*args, \*\*kwargs)
+
+        Equivalent to :py:meth:`call_async(fn, \*args, \**kwargs).get_data()
+        <call_async>`.
+
+        :return:
+            The function's return value.
+
+        :raises mitogen.core.CallError:
+            An exception was raised in the remote context during execution.
+
 
 
 Receiver Class
@@ -518,6 +636,13 @@ Channel Class
     retrieve the handle allocated to the other and reconfigure its own channel
     to match. Currently this is a manual task.
 
+
+Broker Class
+============
+
+.. autoclass:: mitogen.master.Broker
+   :members:
+   :inherited-members:
 
 
 Utility Functions

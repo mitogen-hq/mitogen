@@ -711,9 +711,6 @@ class Stream(BasicStream):
 
 
 class Context(object):
-    """
-    Represent a remote context regardless of connection method.
-    """
     remote_name = None
 
     def __init__(self, router, context_id, name=None):
