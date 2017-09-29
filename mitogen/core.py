@@ -851,11 +851,6 @@ class IoLogger(BasicStream):
 
 
 class Router(object):
-    """
-    Route messages between parent and child contexts, and invoke handlers
-    defined on our parent context. Router.route() straddles the Broker and user
-    threads, it is save to call from anywhere.
-    """
     def __init__(self, broker):
         self.broker = broker
         listen(broker, 'shutdown', self.on_broker_shutdown)
@@ -905,9 +900,6 @@ class Router(object):
         self.broker.start_receive(stream)
 
     def add_handler(self, fn, handle=None, persist=True, respondent=None):
-        """Invoke `fn(msg)` for each Message sent to `handle` from this
-        context. Unregister after one invocation if `persist` is ``False``. If
-        `handle` is ``None``, a new handle is allocated and returned."""
         handle = handle or self._last_handle.next()
         IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
         self._handle_map[handle] = persist, fn
