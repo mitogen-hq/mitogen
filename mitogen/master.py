@@ -31,6 +31,7 @@ import mitogen.core
 
 
 LOG = logging.getLogger('mitogen')
+IOLOG = logging.getLogger('mitogen.io')
 RLOG = logging.getLogger('mitogen.ctx')
 
 DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
