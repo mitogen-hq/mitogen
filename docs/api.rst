@@ -182,7 +182,7 @@ Router Class
 
     Route messages between parent and child contexts, and invoke handlers
     defined on our parent context. Router.route() straddles the Broker and user
-    threads, it is save to call from anywhere.
+    threads, it is safe to call anywhere.
 
     **Note:** This is the somewhat limited core version of the Router class
     used by child contexts. The master subclass is documented below this one.
