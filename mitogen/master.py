@@ -585,7 +585,7 @@ class ModuleResponder(object):
                 pkg_present = None
 
             compressed = zlib.compress(source)
-            related = self._finder.find_related(fullname)
+            related = list(self._finder.find_related(fullname))
             self._router.route(
                 mitogen.core.Message.pickled(
                     (pkg_present, path, compressed, related),
