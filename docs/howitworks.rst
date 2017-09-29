@@ -274,9 +274,9 @@ Masters listen on the following handles:
 
     Replies to any message sent to it with a newly allocated unique context ID,
     to allow children to safely start their own contexts. In future this is
-    likely to be replaced by 32-bit context IDs and random allocation, with an
-    improved ``ADD_ROUTE`` message sent upstream rather than downstream that
-    generates NACKs if any ancestor already knows the ID.
+    likely to be replaced by 32-bit context IDs and pseudorandom allocation,
+    with an improved ``ADD_ROUTE`` message sent upstream rather than downstream
+    that generates NACKs if any ancestor detects an ID collision.
 
 
 Children listen on the following handles:
