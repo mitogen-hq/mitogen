@@ -493,22 +493,6 @@ module does not appear in the enumeration of child modules belonging to the
 package that was provided by the master.
 
 
-Import Preloading
-#################
-
-
-- guaranteed PRELOAD_MODULE sent for all related_modules before GET_MODULE
-response is sent, therefore:
-
-- 
-
-The method used to detect import statements is similar to the standard library
-:py:mod:`modulefinder` module: rather than analyze module source code,
-``IMPORT_NAME`` opcodes are extracted from the module's bytecode. This is since
-clean source analysis methods (:py:mod:`ast` and :py:mod:`compiler`) are an
-order of magnitude slower.
-
-
 Child Module Enumeration
 ########################
 
