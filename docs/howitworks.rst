@@ -202,8 +202,8 @@ After all initialization is complete, the slave's main thread sits in a loop
 reading from a :py:class:`Channel <mitogen.core.Channel>` connected to the
 :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` handle. This handle is
 written to by
-:py:meth:`call_with_deadline() <mitogen.master.Context.call_with_deadline>`
-and :py:meth:`call() <mitogen.master.Context.call>`.
+:py:meth:`call() <mitogen.master.Context.call>`
+and :py:meth:`call_async() <mitogen.master.Context.call_async>`.
 
 
 Shutdown

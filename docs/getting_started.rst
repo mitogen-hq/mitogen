@@ -5,6 +5,8 @@ Getting Started
 xxx
 
 
+.. _serialization-rules:
+
 RPC Serialization Rules
 -----------------------
 

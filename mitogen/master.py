@@ -799,7 +799,6 @@ class Context(mitogen.core.Context):
         )
 
     def call(self, fn, *args, **kwargs):
-        """Invoke `fn(*args, **kwargs)` in the external context."""
         return self.call_async(fn, *args, **kwargs).get_data()
 
 
