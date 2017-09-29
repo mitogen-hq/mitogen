@@ -499,6 +499,10 @@ Context Class
                 except mitogen.core.CallError, e:
                     print 'Call failed:', str(e)
 
+            Asynchronous calls may be dispatched in parallel to multiple
+            contexts and consumed as they complete using
+            :py:class:`mitogen.master.Select`.
+
     .. method:: call (fn, \*args, \*\*kwargs)
 
         Equivalent to :py:meth:`call_async(fn, \*args, \**kwargs).get_data()
