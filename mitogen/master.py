@@ -977,8 +977,8 @@ class Router(mitogen.core.Router):
         name = via_context.call(_proxy_connect,
             name, context_id, method_name, kwargs
         )
+        name = '%s.%s' % (via_context.name, name)
 
-        # name = '%s.%s' % (via_context.name, name)
         context = Context(self, context_id, name=name)
         context.via = via_context
         self._context_by_id[context.context_id] = context
