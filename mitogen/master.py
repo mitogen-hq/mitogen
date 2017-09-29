@@ -310,7 +310,7 @@ class Select(object):
     def empty(self):
         return self._queue.empty()
 
-    empty_msg = 'Cannot got(), Select instance is empty'
+    empty_msg = 'Cannot get(), Select instance is empty'
 
     def get(self, timeout=None):
         if not self._receivers:
