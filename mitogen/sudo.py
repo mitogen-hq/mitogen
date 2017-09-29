@@ -51,6 +51,9 @@ class Stream(mitogen.master.Stream):
             self.sudo_path = sudo_path
         if password:
             self.password = password
+
+    def connect(self):
+        super(Stream, self).connect()
         self.name = 'sudo.' + self.username
 
     def get_boot_command(self):

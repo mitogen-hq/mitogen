@@ -24,6 +24,27 @@ class FakeSshTest(testlib.RouterMixin, unittest.TestCase):
 class SshTest(testlib.DockerMixin, unittest.TestCase):
     stream_class = mitogen.ssh.Stream
 
+    def test_stream_name(self):
+        context = self.docker_ssh(
+            username='has-sudo',
+            password='y',
+        )
+        self.assertEquals('ssh.u1704:%s' % (self.dockerized_ssh.port,),
+                          context.name)
+
+    def test_via_stream_name(self):
+        context = self.docker_ssh(
+            username='has-sudo-nopw',
+            password='y',
+        )
+        sudo = self.router.sudo(via=context)
+
+        name = 'ssh.%s:%s.sudo.root' % (
+            self.dockerized_ssh.host,
+            self.dockerized_ssh.port,
+        )
+        self.assertEquals(name, sudo.name)
+
     def test_password_required(self):
         try:
             context = self.docker_ssh(
@@ -74,3 +95,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         )
         sentinel = 'i-am-mitogen-test-docker-image\n'
         assert sentinel == context.call(plain_old_module.get_sentinel_value)
+
+
+if __name__ == '__main__':
+    unittest.main()
