@@ -27,7 +27,9 @@ This module implements most package functionality, but remains separate from
 non-essential code in order to reduce its size, since it is also serves as the
 bootstrap implementation sent to every new slave context.
 
-.. function:: mitogen.core.takes_econtext
+.. currentmodule:: mitogen.core
+
+.. function:: takes_econtext
 
     Decorator that marks a function or class method to automatically receive a
     kwarg named `econtext`, referencing the
@@ -38,7 +40,9 @@ bootstrap implementation sent to every new slave context.
     When the function is invoked directly, `econtext` must still be passed to it
     explicitly.
 
-.. function:: mitogen.core.takes_router
+.. currentmodule:: mitogen.core
+
+.. function:: takes_router
 
     Decorator that marks a function or class method to automatically receive a
     kwarg named `router`, referencing the :py:class:`econtext.core.Router`
@@ -61,7 +65,9 @@ be sent to any context that will be used to establish additional child
 contexts.
 
 
-.. class:: mitogen.master.Select (receivers=(), oneshot=True)
+.. currentmodule:: mitogen.master
+
+.. class:: Select (receivers=(), oneshot=True)
 
     Support scatter/gather asynchronous calls and waiting on multiple
     receivers, channels, and sub-Selects. Accepts a sequence of
@@ -171,14 +177,18 @@ mitogen.fakessh
 
 .. automodule:: mitogen.fakessh
 
-.. autofunction:: mitogen.fakessh.run
+.. currentmodule:: mitogen.fakessh
+
+.. autofunction:: run
 
 
 Router Class
 ============
 
 
-.. class:: mitogen.core.Router
+.. currentmodule:: mitogen.core
+
+.. class:: Router
 
     Route messages between parent and child contexts, and invoke handlers
     defined on our parent context. Router.route() straddles the Broker and user
@@ -257,7 +267,9 @@ Router Class
         This may be called from any thread.
 
 
-.. class:: mitogen.master.Router
+.. currentmodule:: mitogen.master
+
+.. class:: Router
 
     Extend :py:class:`mitogen.core.Router` with functionality useful to
     masters, and child contexts who later become masters. Currently when this
@@ -393,7 +405,9 @@ Router Class
 Context Class
 =============
 
-.. class:: mitogen.core.Context
+.. currentmodule:: mitogen.core
+
+.. class:: Context
 
     Represent a remote context regardless of connection method.
 
@@ -441,7 +455,9 @@ Context Class
             No message was received and `deadline` passed.
 
 
-.. class:: mitogen.master.Context
+.. currentmodule:: mitogen.master
+
+.. class:: Context
 
     Extend :py:class:`mitogen.core.Router` with functionality useful to
     masters, and child contexts who later become masters. Currently when this
@@ -519,7 +535,9 @@ Context Class
 Receiver Class
 --------------
 
-.. class:: mitogen.core.Receiver (router, handle=None, persist=True, respondent=None)
+.. currentmodule:: mitogen.core
+
+.. class:: Receiver (router, handle=None, persist=True, respondent=None)
 
     Receivers are used to wait for pickled responses from another context to be
     sent to a handle registered in this context. A receiver may be single-use
@@ -608,7 +626,9 @@ Receiver Class
 Sender Class
 ------------
 
-.. class:: mitogen.core.Sender (context, dst_handle)
+.. currentmodule:: mitogen.core
+
+.. class:: Sender (context, dst_handle)
 
     Senders are used to send pickled messages to a handle in another context,
     it is the inverse of :py:class:`mitogen.core.Sender`.
@@ -631,7 +651,9 @@ Sender Class
 Channel Class
 -------------
 
-.. class:: mitogen.core.Channel (router, context, dst_handle, handle=None)
+.. currentmodule:: mitogen.core
+
+.. class:: Channel (router, context, dst_handle, handle=None)
 
     A channel inherits from :py:class:`mitogen.core.Sender` and
     `mitogen.core.Receiver` to provide bidirectional functionality.
@@ -645,7 +667,9 @@ Channel Class
 Broker Class
 ============
 
-.. autoclass:: mitogen.master.Broker
+.. currentmodule:: mitogen.master
+
+.. autoclass:: Broker
    :members:
    :inherited-members:
 
@@ -660,24 +684,26 @@ Utility Functions
 Exceptions
 ==========
 
-.. class:: mitogen.core.Error (fmt, \*args)
+.. currentmodule:: mitogen.core
+
+.. class:: Error (fmt, \*args)
 
     Base for all exceptions raised by Mitogen.
 
-.. class:: mitogen.core.CallError (e)
+.. class:: CallError (e)
 
     Raised when :py:meth:`Context.call() <mitogen.master.Context.call>` fails.
     A copy of the traceback from the external context is appended to the
     exception message.
 
-.. class:: mitogen.core.ChannelError (fmt, \*args)
+.. class:: ChannelError (fmt, \*args)
 
     Raised when a channel dies or has been closed.
 
-.. class:: mitogen.core.StreamError (fmt, \*args)
+.. class:: StreamError (fmt, \*args)
 
     Raised when a stream cannot be established.
 
-.. autoclass:: mitogen.core.TimeoutError (fmt, \*args)
+.. class:: TimeoutError (fmt, \*args)
 
     Raised when a timeout occurs on a stream.
