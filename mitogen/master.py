@@ -174,7 +174,8 @@ def iter_read(fd, deadline=None):
             continue
 
         s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
-        if disconnected:
+        IOLOG.debug('iter_read(%r) -> %r', fd, s)
+        if disconnected or not s:
             raise mitogen.core.StreamError(
                 'EOF on stream; last 300 bytes received: %r' %
                 (''.join(bits)[-300:],)
