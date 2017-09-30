@@ -7,6 +7,20 @@ import testlib
 import mitogen.master
 
 
+class ScanCodeImportsTest(unittest.TestCase):
+    func = staticmethod(mitogen.master.scan_code_imports)
+
+    def test_simple(self):
+        co = compile(open(__file__).read(), __file__, 'exec')
+        self.assertEquals(list(self.func(co)), [
+            (-1, 'subprocess', ()),
+            (-1, 'time', ()),
+            (-1, 'unittest', ()),
+            (-1, 'testlib', ()),
+            (-1, 'mitogen.master', ()),
+        ])
+
+
 class IterReadTest(unittest.TestCase):
     func = staticmethod(mitogen.master.iter_read)
 
@@ -96,3 +110,7 @@ class WriteAllTest(unittest.TestCase):
             ))
         finally:
             proc.terminate()
+
+
+if __name__ == '__main__':
+    unittest.main()
