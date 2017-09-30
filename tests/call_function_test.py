@@ -1,7 +1,10 @@
-
+import logging
 import unittest
+
 import mitogen.core
 import mitogen.master
+
+import testlib
 
 
 class CrazyType(object):
@@ -28,7 +31,7 @@ def func_accepts_returns_context(context):
     return context
 
 
-class CallFunctionTest(testlib.RouterMixin, unittest.TestCase):
+class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def setUp(self):
         super(CallFunctionTest, self).setUp()
         self.local = self.router.local()
@@ -37,13 +40,10 @@ class CallFunctionTest(testlib.RouterMixin, unittest.TestCase):
         assert 3 == self.local.call(function_that_adds_numbers, 1, 2)
 
     def test_crashes(self):
-        try:
-            self.local.call(function_that_fails)
-            assert 0, 'call didnt fail'
-        except mitogen.core.CallError, e:
-            pass
+        exc = self.assertRaises(mitogen.core.CallError,
+            lambda: self.local.call(function_that_fails))
 
-        s = str(e)
+        s = str(exc)
         etype, _, s = s.partition(': ')
         assert etype == 'exceptions.ValueError'
 
@@ -54,13 +54,9 @@ class CallFunctionTest(testlib.RouterMixin, unittest.TestCase):
         assert len(s) > 0
 
     def test_bad_return_value(self):
-        try:
-            self.local.call(func_with_bad_return_value)
-            assert 0, 'call didnt fail'
-        except mitogen.core.StreamError, e:
-            pass
-
-        self.assertEquals(e[0], "cannot unpickle '__main__'/'CrazyType'")
+        exc = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.local.call(func_with_bad_return_value))
+        self.assertEquals(exc[0], "cannot unpickle '__main__'/'CrazyType'")
 
     def test_returns_dead(self):
         assert mitogen.core._DEAD == self.local.call(func_returns_dead)
