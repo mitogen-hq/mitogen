@@ -566,6 +566,17 @@ class ModuleResponder(object):
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
 
+    MAIN_RE = re.compile(r'^if\s+__name__\s*==\s*.__main__.\s*:', re.M)
+
+    def neutralize_main(self, src):
+        """Given the source for the __main__ module, try to find where it
+        begins conditional execution based on a "if __name__ == '__main__'"
+        guard, and remove any code after that point."""
+        match = self.MAIN_RE.search(src)
+        if match:
+            return src[:match.start()]
+        return src
+
     def _on_get_module(self, msg):
         LOG.debug('%r.get_module(%r)', self, msg)
         if msg == mitogen.core._DEAD:
@@ -584,6 +595,8 @@ class ModuleResponder(object):
             else:
                 pkg_present = None
 
+            if fullname == '__main__':
+                source = self.neutralize_main(source)
             compressed = zlib.compress(source)
             related = list(self._finder.find_related(fullname))
             self._router.route(
