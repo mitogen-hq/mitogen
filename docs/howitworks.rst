@@ -456,6 +456,24 @@ source is fetched, the method builds a new module object using the best
 practice documented in PEP-302.
 
 
+Neutralizing ``__main__``
+#########################
+
+To avoid accidental execution of the ``__main__`` module's code in a slave
+context, when serving the source of the main module, Mitogen removes any code
+occurring after the first conditional that looks like a standard ``__main__``
+execution guard:
+
+.. code-block:: python
+
+    # Code that looks like this is stripped from __main__.
+    if __name__ == '__main__':
+        run_some_code()
+
+This is a hack, but it's the least annoying hack I've found for the problem
+yet.
+
+
 Avoiding Negative Imports
 #########################
 
