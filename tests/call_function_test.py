@@ -28,19 +28,10 @@ def func_accepts_returns_context(context):
     return context
 
 
-class CallFunctionTest(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super(CallFunctionTest, cls).setUpClass()
-        cls.broker = mitogen.master.Broker()
-        cls.router = mitogen.master.Router(cls.broker)
-        cls.local = cls.router.local()
-
-    @classmethod
-    def tearDownClass(cls):
-        super(CallFunctionTest, cls).tearDownClass()
-        cls.broker.shutdown()
-        cls.broker.join()
+class CallFunctionTest(testlib.RouterMixin, unittest.TestCase):
+    def setUp(self):
+        super(CallFunctionTest, self).setUp()
+        self.local = self.router.local()
 
     def test_succeeds(self):
         assert 3 == self.local.call(function_that_adds_numbers, 1, 2)
@@ -69,7 +60,7 @@ class CallFunctionTest(unittest.TestCase):
         except mitogen.core.StreamError, e:
             pass
 
-        assert e[0] == "cannot unpickle 'call_function_test'/'CrazyType'"
+        self.assertEquals(e[0], "cannot unpickle '__main__'/'CrazyType'")
 
     def test_returns_dead(self):
         assert mitogen.core._DEAD == self.local.call(func_returns_dead)
