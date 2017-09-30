@@ -284,6 +284,7 @@ def _queue_interruptible_get(queue, timeout=None, block=True):
 
 class Receiver(object):
     notify = None
+    raise_channelerror = True
 
     def __init__(self, router, handle=None, persist=True, respondent=None):
         self.router = router
@@ -319,7 +320,7 @@ class Receiver(object):
 
         # Must occur off the broker thread.
         data = msg.unpickle()
-        if data == _DEAD:
+        if data == _DEAD and self.raise_channelerror:
             raise ChannelError('Channel closed by remote end.')
 
         if isinstance(data, CallError):

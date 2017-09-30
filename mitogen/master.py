@@ -807,12 +807,14 @@ class Context(mitogen.core.Context):
         else:
             klass = None
 
-        return self.send_async(
+        recv = self.send_async(
             mitogen.core.Message.pickled(
                 (fn.__module__, klass, fn.__name__, args, kwargs),
                 handle=mitogen.core.CALL_FUNCTION,
             )
         )
+        recv.raise_channelerror = False
+        return recv
 
     def call(self, fn, *args, **kwargs):
         return self.call_async(fn, *args, **kwargs).get_data()
