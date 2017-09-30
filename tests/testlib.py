@@ -5,10 +5,9 @@ import sys
 import unittest
 import urlparse
 
-import mock
-
 import mitogen.master
-import docker
+if mitogen.is_master:  # TODO: shouldn't be necessary.
+    import docker
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
