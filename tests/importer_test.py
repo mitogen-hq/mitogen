@@ -18,14 +18,14 @@ class ImporterMixin(testlib.RouterMixin):
     def setUp(self):
         super(ImporterMixin, self).setUp()
         self.context = mock.Mock()
-        self.importer = mitogen.core.Importer(self.router, self.context, '')
+        self.importer = mitogen.core.Importer(self.context, '')
 
     def tearDown(self):
         sys.modules.pop(self.modname, None)
         super(ImporterMixin, self).tearDown()
 
 
-class LoadModuleTest(ImporterMixin, unittest.TestCase):
+class LoadModuleTest(ImporterMixin, testlib.TestCase):
     data = zlib.compress("data = 1\n\n")
     path = 'fake_module.py'
     modname = 'fake_module'
@@ -58,7 +58,7 @@ class LoadModuleTest(ImporterMixin, unittest.TestCase):
         self.assertTrue(mod.__package__ is None)
 
 
-class LoadSubmoduleTest(ImporterMixin, unittest.TestCase):
+class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
     data = zlib.compress("data = 1\n\n")
     path = 'fake_module.py'
     modname = 'mypkg.fake_module'
@@ -70,7 +70,7 @@ class LoadSubmoduleTest(ImporterMixin, unittest.TestCase):
         self.assertEquals(mod.__package__, 'mypkg')
 
 
-class LoadModulePackageTest(ImporterMixin, unittest.TestCase):
+class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
     data = zlib.compress("func = lambda: 1\n\n")
     path = 'fake_pkg/__init__.py'
     modname = 'fake_pkg'
@@ -115,7 +115,7 @@ class LoadModulePackageTest(ImporterMixin, unittest.TestCase):
         self.assertEquals(mod.func.__module__, self.modname)
 
 
-class EmailParseAddrSysTest(testlib.RouterMixin, unittest.TestCase):
+class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
     @pytest.fixture(autouse=True)
     def initdir(self, caplog):
         self.caplog = caplog
@@ -125,3 +125,7 @@ class EmailParseAddrSysTest(testlib.RouterMixin, unittest.TestCase):
         # while executing email.utils.parseaddr(). Ensure this needless
         # roundtrip has not reappeared.
         pass
+
+
+if __name__ == '__main__':
+    unittest.main()
