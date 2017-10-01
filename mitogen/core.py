@@ -763,7 +763,7 @@ class Context(object):
 def _unpickle_context(router, context_id, name):
     assert isinstance(router, Router)
     assert isinstance(context_id, (int, long)) and context_id > 0
-    assert type(name) is str and len(name) < 100
+    assert isinstance(name, basestring) and len(name) < 100
     return Context(router, context_id, name)
 
 
