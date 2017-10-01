@@ -4,7 +4,7 @@ import mitogen.core
 import testlib
 
 
-class ConstructorTest(testlib.RouterMixin, unittest.TestCase):
+class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
     def test_constructor(self):
         # issue 32
         l1 = self.router.local()
@@ -14,3 +14,7 @@ class ConstructorTest(testlib.RouterMixin, unittest.TestCase):
         assert chan.dst_handle == 123
         assert chan.handle is not None
         assert chan.handle > 0
+
+
+if __name__ == '__main__':
+    unittest.main()
