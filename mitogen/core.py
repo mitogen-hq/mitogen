@@ -265,11 +265,15 @@ class Sender(object):
 
 
 def _queue_interruptible_get(queue, timeout=None, block=True):
-    if timeout:
+    # bool is subclass of int, cannot use isinstance!
+    assert timeout is None or type(timeout) in (int, long, float)
+    assert isinstance(block, bool)
+
+    if timeout is not None:
         timeout += time.time()
 
     msg = None
-    while msg is None and (timeout is None or timeout < time.time()):
+    while msg is None and (timeout is None or timeout > time.time()):
         try:
             msg = queue.get(block, 0.5)
         except Queue.Empty:
@@ -309,11 +313,11 @@ class Receiver(object):
     def empty(self):
         return self._queue.empty()
 
-    def get(self, timeout=None):
-        IOLOG.debug('%r.on_receive(timeout=%r)', self, timeout)
+    def get(self, timeout=None, block=True):
+        IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
 
-        msg = _queue_interruptible_get(self._queue, timeout)
-        IOLOG.debug('%r.on_receive() got %r', self, msg)
+        msg = _queue_interruptible_get(self._queue, timeout, block=block)
+        IOLOG.debug('%r.get() got %r', self, msg)
 
         if msg == _DEAD:
             raise ChannelError('Channel closed by local end.')
