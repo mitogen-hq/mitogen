@@ -30,3 +30,7 @@ class WithRouterTest(unittest.TestCase):
         router = func()
         self.assertTrue(isinstance(router, mitogen.master.Router))
         self.assertFalse(router.broker._thread.isAlive())
+
+
+if __name__ == '__main__':
+    unittest.main()
