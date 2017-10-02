@@ -321,7 +321,7 @@ class Select(object):
         while True:
             recv = mitogen.core._queue_interruptible_get(self._queue, timeout)
             try:
-                msg = recv.get(False)
+                msg = recv.get(block=False)
                 if self._oneshot:
                     self.remove(recv)
                 return recv, msg
