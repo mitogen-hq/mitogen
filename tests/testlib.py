@@ -56,6 +56,9 @@ class DockerizedSshDaemon(object):
         self.host = self.get_host()
 
     def get_host(self):
+        if self.docker.api.base_url == 'http+docker://localunixsocket':
+            return 'localhost'
+
         parsed = urlparse.urlparse(self.docker.api.base_url)
         return parsed.netloc.partition(':')[0]
 
