@@ -405,7 +405,7 @@ class ModuleFinder(object):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
         would be the only required implementation of get_module()."""
         loader = pkgutil.find_loader(fullname)
-        LOG.debug('pkgutil.find_loader(%r) -> %r', fullname, loader)
+        LOG.debug('pkgutil._get_module_via_pkgutil(%r) -> %r', fullname, loader)
         if not loader:
             return
 
@@ -420,51 +420,54 @@ class ModuleFinder(object):
     def _get_module_via_sys_modules(self, fullname):
         """Attempt to fetch source code via sys.modules. This is specifically
         to support __main__, but it may catch a few more cases."""
-        if fullname not in sys.modules:
-            LOG.debug('%r does not appear in sys.modules', fullname)
+        module = sys.modules.get(fullname)
+        if not isinstance(module, types.ModuleType):
+            LOG.debug('sys.modules[%r] absent or not a regular module',
+                      fullname)
             return
 
-        if 'six.moves' in fullname:
-            # TODO: causes inspect.getsource() to explode.
-            return None, None, None
-
-        modpath = getattr(sys.modules[fullname], '__file__', '')
+        modpath = getattr(module, '__file__', '')
         if not modpath.rstrip('co').endswith('.py'):
             # Probably a native module.
-            return None, None, None
+            return
 
-        is_pkg = hasattr(sys.modules[fullname], '__path__')
+        is_pkg = hasattr(module, '__path__')
         try:
-            source = inspect.getsource(sys.modules[fullname])
+            source = inspect.getsource(module)
         except IOError:
             # Work around inspect.getsourcelines() bug.
             if not is_pkg:
                 raise
             source = '\n'
 
-        return (sys.modules[fullname].__file__.rstrip('co'),
+        return (module.__file__.rstrip('co'),
                 source,
-                hasattr(sys.modules[fullname], '__path__'))
+                hasattr(module, '__path__'))
 
-    def _get_module_via_parent_enumeration(self, fullname):
+    def _get_module_via_parent(self, fullname):
         """Attempt to fetch source code by examining the module's (hopefully
         less insane) parent package. Required for ansible.compat.six."""
+        # Need to find the ancient version of Ansible with the ancient
+        # non-package version of six that required this method to exist.
+        # Currently it doesn't seem to be needed at all, and it's broken for
+        # packages.
         pkgname, _, modname = fullname.rpartition('.')
         pkg = sys.modules.get(pkgname)
-        if pkg is None or not hasattr(pkg, '__file__'):
+        if not (isinstance(pkg, types.ModuleType) and hasattr(pkg, '__file__')):
             return
 
         pkg_path = os.path.dirname(pkg.__file__)
         try:
             fp, path, ext = imp.find_module(modname, [pkg_path])
-            LOG.error('%r', (fp, path, ext))
+            if ext and ext[-1] == imp.PKG_DIRECTORY:
+                assert 0, "TODO"
             return path, fp.read(), False
         except ImportError, e:
             LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
 
     get_module_methods = [_get_module_via_pkgutil,
                           _get_module_via_sys_modules,
-                          _get_module_via_parent_enumeration]
+                          _get_module_via_parent]
 
     def get_module_source(self, fullname):
         """Given the name of a loaded module `fullname`, attempt to find its
@@ -489,11 +492,11 @@ class ModuleFinder(object):
         """Given an ImportFrom AST node, guess the prefix that should be tacked
         on to an alias name to produce a canonical name. `fullname` is the name
         of the module in which the ImportFrom appears."""
-        if level == 0:
+        if level == 0 or not fullname:
             return ''
 
         bits = fullname.split('.')
-        if len(bits) < level:
+        if len(bits) <= level:
             # This would be an ImportError in real code.
             return ''
 
@@ -536,13 +539,15 @@ class ModuleFinder(object):
                 for name in namelist
             )
 
-        return self._related_cache.setdefault(fullname, [
-            name
-            for name in maybe_names
-            if sys.modules.get(name) is not None
-            and not self.is_stdlib_name(name)
-            and 'six.moves' not in name  # TODO: crap
-        ])
+        return self._related_cache.setdefault(fullname, sorted(
+            set(
+                name
+                for name in maybe_names
+                if sys.modules.get(name) is not None
+                and not self.is_stdlib_name(name)
+                and 'six.moves' not in name  # TODO: crap
+            )
+        ))
 
     def find_related(self, fullname):
         stack = [fullname]
