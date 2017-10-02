@@ -2,7 +2,7 @@
 
 # Running The Tests
 
-[![Build Status](https://api.travis-ci.org/dw/mitogen.svg?branch=master)](https://api.travis-ci.org/dw/mitogen)
+[![Build Status](https://api.travis-ci.org/dw/mitogen.svg?branch=master)](https://travis-ci.org/dw/mitogen)
 
 Your computer should have an Internet connection, and the ``docker`` command
 line tool should be able to connect to a working Docker daemon (localhost or
