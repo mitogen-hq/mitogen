@@ -74,7 +74,8 @@ def _unpickle_call_error(s):
 
 
 class ChannelError(Error):
-    pass
+    remote_msg = 'Channel closed by remote end.'
+    local_msg = 'Channel closed by local end.'
 
 
 class StreamError(Error):
@@ -320,12 +321,12 @@ class Receiver(object):
         IOLOG.debug('%r.get() got %r', self, msg)
 
         if msg == _DEAD:
-            raise ChannelError('Channel closed by local end.')
+            raise ChannelError(ChannelError.local_msg)
 
         # Must occur off the broker thread.
         data = msg.unpickle()
         if data == _DEAD and self.raise_channelerror:
-            raise ChannelError('Channel closed by remote end.')
+            raise ChannelError(ChannelError.remote_msg)
 
         if isinstance(data, CallError):
             raise data
@@ -795,6 +796,7 @@ class Waker(BasicStream):
         Write a byte to the self-pipe, causing the IO multiplexer to wake up.
         Nothing is written if the current thread is the IO multiplexer thread.
         """
+        IOLOG.debug('%r.wake() [fd=%r]', self, self.transmit_side.fd)
         if threading.currentThread() != self._broker._thread and \
            self.transmit_side.fd:
             os.write(self.transmit_side.fd, ' ')

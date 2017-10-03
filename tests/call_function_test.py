@@ -61,12 +61,14 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def test_returns_dead(self):
         assert mitogen.core._DEAD == self.local.call(func_returns_dead)
 
-    def test_aborted_on_context_disconnect(self):
-        assert 0, 'todo'
-
-    def test_aborted_on_context_hang_deadline(self):
-        # related: how to treat context after a function call hangs
-        assert 0, 'todo'
+    def test_aborted_on_local_context_disconnect(self):
+        stream = self.router._stream_by_id[self.local.context_id]
+        self.broker.stop_receive(stream)
+        recv = self.local.call_async(time.sleep, 120)
+        self.broker.defer(stream.on_disconnect, self.broker)
+        exc = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(exc[0], mitogen.core.ChannelError.local_msg)
 
     def test_aborted_on_local_broker_shutdown(self):
         assert 0, 'todo'
