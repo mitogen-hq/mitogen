@@ -270,9 +270,12 @@ Masters listen on the following handles:
 
 .. data:: mitogen.core.GET_MODULE
 
-    Receives `(reply_to, fullname)` 2-tuples, looks up the source code for the
-    module named ``fullname``, and writes the source along with some metadata
-    back to the handle ``reply_to``. If lookup fails, ``None`` is sent instead.
+    Receives the name of a module to load `fullname`, locates the source code
+    for ``fullname``, and routes one or more ``LOAD_MODULE`` messages back
+    towards the sender of the ``GET_MODULE`` request. See below for a longer
+    discussion of ``GET_MODULE``/``LOAD_MODULE``.
+
+    If lookup fails, ``None`` is sent instead.
 
 .. data:: mitogen.core.ALLOCATE_ID
 
@@ -285,6 +288,25 @@ Masters listen on the following handles:
 
 Children listen on the following handles:
 
+.. _LOAD_MODULE:
+.. data:: mitogen.core.LOAD_MODULE
+
+    Receives `(pkg_present, path, compressed, related)` tuples, composed of:
+
+    * **pkg_present**: Either ``None`` for a plain ``.py`` module, or a list of
+      canonical names of submodules existing witin this package. For example, a
+      ``LOAD_MODULE`` for the ``mitogen`` package would return a list like:
+      `["mitogen.core", "mitogen.fakessh", "mitogen.fakessh", ..]`. This list
+      is used by children to avoid generating useless round-trips due to Python
+      2.x's ``import`` statement behavior.
+    * **path**: Original filesystem where the module was found on the master.
+    * **compressed**: :py:mod:`zlib`-compressed module source code.
+    * **related**: list of canonical module names on which this module appears
+      to depend. Used by children that have ever started any children of their
+      own to preload those children with ``LOAD_MODULE`` messages in response
+      to a ``GET_MODULE`` request.
+
+.. _CALL_FUNCTION:
 .. data:: mitogen.core.CALL_FUNCTION
 
     Receives `(mod_name, class_name, func_name, args, kwargs)`
@@ -312,6 +334,7 @@ Children listen on the following handles:
     to it, and arranging for the connection to its parent to be closed shortly
     thereafter.
 
+.. _ADD_ROUTE:
 .. data:: mitogen.core.ADD_ROUTE
 
     Receives `(target_id, via_id)` integer tuples, describing how messages
@@ -470,9 +493,10 @@ Python if it can satisfy the import by itself, and if not, indicating to Python
 that it is capable of loading the module.
 
 In :py:meth:`load_module() <mitogen.core.Importer.load_module>` an RPC is
-started to the parent context, requesting the module source code. Once the
-source is fetched, the method builds a new module object using the best
-practice documented in PEP-302.
+started to the parent context, requesting the module source code by way of a
+``GET_MODULE``. If the parent context does not have the module available, it
+recursively forwards the request upstream, while avoiding duplicate requests
+for the same module from its own threads and any child contexts.
 
 
 Neutralizing ``__main__``
@@ -510,7 +534,7 @@ In Python 2.x, Python will first try to load ``mypkg.sys`` and ``mypkg.os``,
 which do not exist, before falling back on :py:mod:`sys` and :py:mod:`os`.
 
 These negative imports present a challenge, as they introduce a large number of
-pointless network roundtrips. Therefore in addition to the
+pointless network round-trips. Therefore in addition to the
 :py:mod:`zlib`-compressed source, for packages the master sends along a list of
 child modules known to exist.
 
@@ -519,6 +543,67 @@ Before indicating it can satisfy an import request,
 a package it has previously imported, and if so, ignores the request if the
 module does not appear in the enumeration of child modules belonging to the
 package that was provided by the master.
+
+
+Import Preloading
+#################
+
+To further avoid round-trips, when a module or package is requested by a child,
+its bytecode is scanned in the master to find all the module's ``import``
+statements, and of those, which associated modules appear to have been loaded
+in the master's :py:data:`sys.modules`.
+
+The :py:data:`sys.modules` check is necessary to handle various kinds of
+conditional execution, for example, when a module's code guards an ``import``
+statement based on the active Python runtime version, operating system, or
+optional third party dependencies.
+
+Before replying to a child's request for a module with dependencies:
+
+* If the request is for a package, any dependent modules used by the package
+  that appear within the package itself are known to be missing from the child,
+  since the child requested the top-level package module, therefore they are
+  pre-loaded into the child using ``LOAD_MODULE`` messages before sending the
+  ``LOAD_MODULE`` message for the requested package module itself. In this way,
+  the child will already have dependent modules cached by the time it receives
+  the requested module, avoiding one round-trip for each dependency.
+
+  For example, when a child requests the ``django`` package, and the master
+  determines the ``django`` module code in the master has import statements for
+  ``django.utils``, ``django.utils.lru_cache``, and ``django.utils.version``,
+  and that exceution of the module code on the master caused those modules to
+  appear in the master's :py:data:`sys.modules`, there is high probability
+  execution of the ``django`` module code in the child will cause the same
+  modules to be loaded. Since all those modules exist within the ``django``
+  package, and we already know the child lacks that package, it is safe to
+  assume the child will make follow-up requests for those modules too.
+
+  In the example, this replaces 4 round-trips with 1 round-trip.
+
+For any package module ever requested by a child, the parent keeps a note of
+the name of the package for one final optimization:
+
+* If the request is for a sub-module of a package, and it is known the child
+  loaded the package's implementation from the parent, then any dependent
+  modules of the requested module at any nesting level within the package that
+  is known to be missing are sent using ``LOAD_MODULE`` messages before sending
+  the ``LOAD_MODULE`` message for the requested module, avoiding 1 round-trip
+  for each dependency within the same top-level package.
+
+  For example, when a child has previously requested the ``django`` package,
+  the parent knows it was completely absent on the child. Therefore when the
+  child subsequently requests the ``django.db`` module, it is safe to assume
+  the child will generate subsequent ``GET_MODULE`` requests for the 2
+  ``django.conf``, 3 ``django.core``, 2 ``django.db``, 3 ``django.dispatch``,
+  and 7 ``django.utils`` indirect dependencies for ``django.db``.
+
+  In the example, this replaces 17 round-trips with 1 round-trip.
+
+The method used to detect import statements is similar to the standard library
+:py:mod:`modulefinder` module: rather than analyze module source code,
+``IMPORT_NAME`` opcodes are extracted from the module's bytecode. This is since
+clean source analysis methods (:py:mod:`ast` and :py:mod:`compiler`) are an
+order of magnitude slower, and incompatible across major Python versions.
 
 
 Child Module Enumeration

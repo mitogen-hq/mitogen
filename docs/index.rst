@@ -142,6 +142,26 @@ further effort.
 
 .. _py2exe: http://www.py2exe.org/
 
+Common sources of import latency and bandwidth consumption are mitigated:
+
+* Modules need only be uploaded once per directly connected context. Subsequent
+  requests for modules from children of that context will be served by the
+  child itself.
+
+* Imports by threads within a context triggering a load are deduplicated and
+  joined with any identical requests triggered by other threads in the same
+  context and children in the context's subtree.
+
+* No roundtrip is required for negative responses due to Python 2's import
+  statement semantics: children have a list of submodules belonging to a
+  package, and ignore requests for submodules that did not exist on the master.
+
+* Imports are extracted from each module, compared to those found in memory,
+  and recursively preloaded into children requesting that module, minimizing
+  round-trips to one per package nesting level. For example,
+  :py:mod:`django.db.models` only requires 3 round-trips to transfer 456KiB,
+  representing 1.7MiB of uncompressed source split across 148 modules.
+
 
 SSH Client Emulation
 ####################
