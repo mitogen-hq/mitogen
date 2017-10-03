@@ -33,22 +33,23 @@ bootstrap implementation sent to every new slave context.
 
     Decorator that marks a function or class method to automatically receive a
     kwarg named `econtext`, referencing the
-    :py:class:`econtext.core.ExternalContext` active in the context in which
-    the function is being invoked in. The decorator is only meaningful when the
-    function is invoked via :py:data:`econtext.core.CALL_FUNCTION`.
+    :py:class:`mitogen.core.ExternalContext` active in the context in which the
+    function is being invoked in. The decorator is only meaningful when the
+    function is invoked via :py:data:`CALL_FUNCTION
+    <mitogen.core.CALL_FUNCTION>`.
 
-    When the function is invoked directly, `econtext` must still be passed to it
-    explicitly.
+    When the function is invoked directly, `econtext` must still be passed to
+    it explicitly.
 
 .. currentmodule:: mitogen.core
 
 .. function:: takes_router
 
     Decorator that marks a function or class method to automatically receive a
-    kwarg named `router`, referencing the :py:class:`econtext.core.Router`
+    kwarg named `router`, referencing the :py:class:`mitogen.core.Router`
     active in the context in which the function is being invoked in. The
     decorator is only meaningful when the function is invoked via
-    :py:data:`econtext.core.CALL_FUNCTION`.
+    :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>`.
 
     When the function is invoked directly, `router` must still be passed to it
     explicitly.
@@ -191,8 +192,9 @@ Router Class
 .. class:: Router
 
     Route messages between parent and child contexts, and invoke handlers
-    defined on our parent context. Router.route() straddles the Broker and user
-    threads, it is safe to call anywhere.
+    defined on our parent context. :py:meth:`Router.route() <route>` straddles
+    the :py:class:`Broker <mitogen.core.Broker>` and user threads, it is safe
+    to call anywhere.
 
     **Note:** This is the somewhat limited core version of the Router class
     used by child contexts. The master subclass is documented below this one.
@@ -234,8 +236,8 @@ Router Class
 
         :param mitogen.core.Context respondent:
             Context that messages to this handle are expected to be sent from.
-            If specified, arranges for ``_DEAD`` to be delivered to `fn` when
-            disconncetion of the context is detected.
+            If specified, arranges for :py:data:`_DEAD` to be delivered to `fn`
+            when disconnection of the context is detected.
 
             In future `respondent` will likely also be used to prevent other
             contexts from sending messages to the handle.
@@ -557,9 +559,9 @@ Receiver Class
 
     :param mitogen.core.Context respondent:
         Reference to the context this receiver is receiving from. If not
-        ``None``, arranges for the receiver to receive
-        :py:data:`mitogen.core._DEAD` if messages can no longer be routed to
-        the context, due to disconnection or exit.
+        ``None``, arranges for the receiver to receive :py:data:`_DEAD` if
+        messages can no longer be routed to the context, due to disconnection
+        or exit.
 
     .. attribute:: notify = None
 
@@ -640,7 +642,7 @@ Sender Class
 
     .. py:method:: close ()
 
-        Send :py:data:`mitogen.core._DEAD` to the remote end, causing
+        Send :py:data:`_DEAD` to the remote end, causing
         :py:meth:`ChannelError` to be raised in any waiting thread.
 
     .. py:method:: put (data)
@@ -667,11 +669,14 @@ Channel Class
 Broker Class
 ============
 
-.. currentmodule:: mitogen.master
-
+.. currentmodule:: mitogen.core
 .. autoclass:: Broker
    :members:
    :inherited-members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: Broker
+   :members:
 
 
 Utility Functions
