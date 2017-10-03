@@ -74,7 +74,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def test_aborted_on_local_broker_shutdown(self):
         stream = self.router._stream_by_id[self.local.context_id]
         recv = self.local.call_async(time.sleep, 120)
-        time.sleep(0.1)  # Ensure GIL is released
+        time.sleep(0.05)  # Ensure GIL is released
         self.broker.shutdown()
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
