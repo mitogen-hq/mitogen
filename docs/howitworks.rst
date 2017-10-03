@@ -209,28 +209,32 @@ and :py:meth:`call_async() <mitogen.master.Context.call_async>`.
 Shutdown
 ########
 
-When the master signals the :py:data:`CALL_FUNCTION
-<mitogen.core.CALL_FUNCTION>` :py:class:`Channel <mitogen.core.Channel>` is
-closed, the child calls :py:meth:`shutdown() <mitogen.core.Broker.shutdown>`
-followed by :py:meth:`wait() <mitogen.core.Broker.wait>` on its own broker,
-triggering graceful shutdown.
+When a context receives :py:data:`SHUTDOWN <mitogen.core.SHUTDOWN>` from its
+immediate parent, it closes its own :py:data:`CALL_FUNCTION
+<mitogen.core.CALL_FUNCTION>` :py:class:`Channel <mitogen.core.Channel>` before
+sending ``SHUTDOWN`` to any directly connected children. Closing the channel
+has the effect of causing :py:meth:`ExternalContext._dispatch_calls()
+<mitogen.core.ExternalContext._dispatch_calls>` to exit and begin joining on
+the broker thread.
 
-During shutdown, the master will wait a few seconds for children to disconnect
-gracefully before force disconnecting them, while the children will use that
-time to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on
-their :py:class:`IoLogger <mitogen.core.IoLogger>` socket's write ends before
-draining any remaining data buffered on the read ends.
+During shutdown, the master waits up to 5 seconds for children to disconnect
+gracefully before force disconnecting them, while children will use that time
+to call :py:meth:`socket.shutdown(SHUT_WR) <socket.socket.shutdown>` on their
+:py:class:`IoLogger <mitogen.core.IoLogger>` socket's write ends before
+draining any remaining data buffered on the read ends, and ensuring any
+deferred broker function callbacks have had a chance to complete, necessary to
+capture for example forwarding any remaining :py:mod:`logging` records.
 
-An alternative approach is to wait until the socket is completely closed, with
-some hard timeout, but this necessitates greater discipline than is common in
-infrastructure code (how often have you forgotten to redirect stderr to
-``/dev/null``?), so needless irritating delays would often be experienced
-during program termination.
+An alternative approach is to wait until the IoLogger socket is completely
+closed, with some hard timeout, but this necessitates greater discipline than
+is common in infrastructure code (how often have you forgotten to redirect
+stderr to ``/dev/null`` when starting a daemon process?), so needless
+irritating delays would often be experienced during program termination.
 
-If the main thread (responsible for function call dispatch) fails to trigger
-shutdown (because some user function is hanging), then the eventual force
-disconnection by the master will cause the IO multiplexer thread to enter
-shutdown by itself.
+If the main thread (responsible for function call dispatch) fails to shut down
+gracefully, because some user function is hanging, it will still be cleaned up
+since as the final step in broker shutdown, the broker sends
+:py:data:`signal.SIGTERM` to its own process.
 
 
 .. _stream-protocol:
@@ -291,10 +295,22 @@ Children listen on the following handles:
 
     When this channel is closed (by way of sending ``_DEAD`` to it), the
     child's main thread begins graceful shutdown of its own `Broker` and
-    `Router`. Each child is responsible for sending ``_DEAD`` to each of its
-    directly connected children in response to the master sending ``_DEAD`` to
-    it, and arranging for the connection to its parent context to be closed
-    shortly thereafter.
+    `Router`.
+
+.. data:: mitogen.core.SHUTDOWN
+
+    When received from a child's immediate parent, causes the broker thread to
+    enter graceful shutdown, including writing ``_DEAD`` to the child's main
+    thread, causing it to join on the exit of the broker thread.
+
+    The final step of a child's broker shutdown process sends
+    :py:data:`signal.SIGTERM` to itself, ensuring the process dies even if the
+    main thread was hung executing user code.
+
+    Each context is responsible for sending ``SHUTDOWN`` to each of its
+    directly connected children in response to the master sending ``SHUTDOWN``
+    to it, and arranging for the connection to its parent to be closed shortly
+    thereafter.
 
 .. data:: mitogen.core.ADD_ROUTE
 

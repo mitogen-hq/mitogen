@@ -710,11 +710,10 @@ class Stream(mitogen.core.Stream):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
         self.send(
-            mitogen.core.Message.pickled(
-                mitogen.core._DEAD,
+            mitogen.core.Message(
                 src_id=mitogen.context_id,
                 dst_id=self.remote_id,
-                handle=mitogen.core.CALL_FUNCTION
+                handle=mitogen.core.SHUTDOWN,
             )
         )
 
