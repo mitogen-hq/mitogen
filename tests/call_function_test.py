@@ -1,4 +1,5 @@
 import logging
+import time
 import unittest
 
 import mitogen.core
@@ -71,7 +72,13 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(exc[0], mitogen.core.ChannelError.local_msg)
 
     def test_aborted_on_local_broker_shutdown(self):
-        assert 0, 'todo'
+        stream = self.router._stream_by_id[self.local.context_id]
+        recv = self.local.call_async(time.sleep, 120)
+        time.sleep(0.1)  # Ensure GIL is released
+        self.broker.shutdown()
+        exc = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(exc[0], mitogen.core.ChannelError.local_msg)
 
     def test_accepts_returns_context(self):
         context = self.local.call(func_accepts_returns_context, self.local)
