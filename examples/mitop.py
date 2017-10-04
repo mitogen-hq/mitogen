@@ -152,7 +152,6 @@ def main(router, argv):
 
         host.recv = mitogen.core.Receiver(router)
         host.recv.host = host
-        host.tasks = []
         select.add(host.recv)
 
         call_recv = host.context.call_async(remote_main,
