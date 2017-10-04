@@ -10,14 +10,13 @@ import mitogen.utils
 
 
 class Host(object):
-    # Incremented once for each received ps output, copied to task struct. Used
-    # to find dead tasks.
     name = None
     context = None
     recv = None
 
     def __init__(self):
         self.procs = {}  #: pid -> Process()
+
 
 class Process(object):
     host = None
