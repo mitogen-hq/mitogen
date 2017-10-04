@@ -419,8 +419,8 @@ Router Class
 
         :param mitogen.core.Context via:
             If not ``None``, arrange for construction to occur via RPCs made to
-            the context `via`, and for ``ADD_ROUTE`` messages to be generated
-            as appropriate.
+            the context `via`, and for :py:data:`ADD_ROUTE
+            <mitogen.core.ADD_ROUTE>` messages to be generated as appropriate.
 
             .. code-block:: python
 
