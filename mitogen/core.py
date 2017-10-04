@@ -103,7 +103,6 @@ def _unpickle_dead():
     return _DEAD
 
 
-#: Sentinel value used to represent :py:class:`Channel` disconnection.
 _DEAD = Dead()
 
 

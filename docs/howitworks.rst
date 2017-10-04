@@ -128,8 +128,8 @@ Generating A Synthetic `mitogen` Package
 ########################################
 
 Since the bootstrap consists of the :py:mod:`mitogen.core` source code, and
-this code is loaded by Python by way of its main script (``__main__`` module),
-initially the module layout in the child will be incorrect.
+this code is loaded by Python by way of its main script (:mod:`__main__`
+module), initially the module layout in the child will be incorrect.
 
 The first step taken after bootstrap is to rearrange :py:data:`sys.modules` slightly
 so that :py:mod:`mitogen.core` appears in the correct location, and all
@@ -139,7 +139,7 @@ such that :py:mod:`cPickle` correctly serializes instance module names.
 Once a synthetic :py:mod:`mitogen` package and :py:mod:`mitogen.core` module
 have been generated, the bootstrap **deletes** `sys.modules['__main__']`, so
 that any attempt to import it (by :py:mod:`cPickle`) will cause the import to
-be satisfied by fetching the master's actual ``__main__`` module. This is
+be satisfied by fetching the master's actual :mod:`__main__` module. This is
 necessary to allow master programs to be written as a self-contained Python
 script.
 
@@ -172,8 +172,8 @@ The Module Importer
 ###################
 
 An instance of :py:class:`mitogen.core.Importer` is installed in
-:py:data:`sys.meta_path`, where Python's ``import`` statement will execute it
-before attempting to find a module locally.
+:py:data:`sys.meta_path`, where Python's :keyword:`import` statement will
+execute it before attempting to find a module locally.
 
 
 Standard IO Redirection
@@ -276,23 +276,28 @@ parent and child:
 
 Masters listen on the following handles:
 
-.. data:: mitogen.core.FORWARD_LOG
+.. _FORWARD_LOG:
+.. currentmodule:: mitogen.core
+.. data:: FORWARD_LOG
 
     Receives `(logger_name, level, msg)` 3-tuples and writes them to the
     master's ``mitogen.ctx.<context_name>`` logger.
 
-.. data:: mitogen.core.GET_MODULE
+.. _GET_MODULE:
+.. currentmodule:: mitogen.core
+.. data:: GET_MODULE
 
     Receives the name of a module to load `fullname`, locates the source code
-    for ``fullname``, and routes one or more :py:data:`LOAD_MODULE` messages
-    back towards the sender of the :py:data:`GET_MODULE` request. If lookup
-    fails, ``None`` is sent instead.
+    for `fullname`, and routes one or more :py:data:`LOAD_MODULE` messages back
+    towards the sender of the :py:data:`GET_MODULE` request. If lookup fails,
+    ``None`` is sent instead.
 
     See :ref:`import-preloading` for a deeper discussion of
     :py:data:`GET_MODULE`/:py:data:`LOAD_MODULE`.
 
-
-.. data:: mitogen.core.ALLOCATE_ID
+.. _ALLOCATE_ID:
+.. currentmodule:: mitogen.core
+.. data:: ALLOCATE_ID
 
     Replies to any message sent to it with a newly allocated unique context ID,
     to allow children to safely start their own contexts. In future this is
@@ -304,7 +309,8 @@ Masters listen on the following handles:
 Children listen on the following handles:
 
 .. _LOAD_MODULE:
-.. data:: mitogen.core.LOAD_MODULE
+.. currentmodule:: mitogen.core
+.. data:: LOAD_MODULE
 
     Receives `(pkg_present, path, compressed, related)` tuples, composed of:
 
@@ -313,7 +319,7 @@ Children listen on the following handles:
       :py:data:`LOAD_MODULE` for the :py:mod:`mitogen` package would return a
       list like: `["mitogen.core", "mitogen.fakessh", "mitogen.master", ..]`.
       This list is used by children to avoid generating useless round-trips due
-      to Python 2.x's ``import`` statement behavior.
+      to Python 2.x's :keyword:`import` statement behavior.
     * **path**: Original filesystem where the module was found on the master.
     * **compressed**: :py:mod:`zlib`-compressed module source code.
     * **related**: list of canonical module names on which this module appears
@@ -322,7 +328,8 @@ Children listen on the following handles:
       response to a :py:data:`GET_MODULE` request.
 
 .. _CALL_FUNCTION:
-.. data:: mitogen.core.CALL_FUNCTION
+.. currentmodule:: mitogen.core
+.. data:: CALL_FUNCTION
 
     Receives `(mod_name, class_name, func_name, args, kwargs)`
     5-tuples from
@@ -334,7 +341,9 @@ Children listen on the following handles:
     child's main thread begins graceful shutdown of its own :py:class:`Broker`
     and :py:class:`Router`.
 
-.. data:: mitogen.core.SHUTDOWN
+.. _SHUTDOWN:
+.. currentmodule:: mitogen.core
+.. data:: SHUTDOWN
 
     When received from a child's immediate parent, causes the broker thread to
     enter graceful shutdown, including writing :py:data:`_DEAD` to the child's
@@ -350,7 +359,8 @@ Children listen on the following handles:
     to be closed shortly thereafter.
 
 .. _ADD_ROUTE:
-.. data:: mitogen.core.ADD_ROUTE
+.. currentmodule:: mitogen.core
+.. data:: ADD_ROUTE
 
     Receives `(target_id, via_id)` integer tuples, describing how messages
     arriving at this context on any stream should be forwarded on the stream
@@ -376,6 +386,7 @@ Children listen on the following handles:
 Children that have ever been used to create a descendent child also listen on
 the following handles:
 
+.. currentmodule:: mitogen.core
 .. data:: GET_MODULE
 
     As with master's ``GET_MODULE``, except this implementation
@@ -394,13 +405,15 @@ triggered by :py:meth:`call_async() <mitogen.master.Context.call_async>`.
 Sentinel Value
 ##############
 
-.. autodata:: mitogen.core._DEAD
+.. _DEAD:
+.. currentmodule:: mitogen.core
+.. data:: _DEAD
 
-The special value :py:data:`mitogen.core._DEAD` is used to signal
-disconnection or closure of the remote end. It is used internally by
-:py:class:`Channel <mitogen.core.Channel>` and also passed to any function
-still registered with :py:meth:`add_handler()
-<mitogen.core.Router.add_handler>` during Broker shutdown.
+    This special value is used to signal disconnection or closure of the remote
+    end. It is used internally by :py:class:`Channel <mitogen.core.Channel>`
+    and also passed to any function still registered with
+    :py:meth:`add_handler() <mitogen.core.Router.add_handler>` during Broker
+    shutdown.
 
 
 Use of Pickle
@@ -520,9 +533,9 @@ The Module Importer
 are a variety of approaches to implementing it, and the present implementation
 is not pefectly efficient in every case.
 
-It operates by intercepting ``import`` statements via :py:data:`sys.meta_path`,
-asking Python if it can satisfy the import by itself, and if not, indicating to
-Python that it is capable of loading the module.
+It operates by intercepting :keyword:`import` statements via
+:py:data:`sys.meta_path`, asking Python if it can satisfy the import by itself,
+and if not, indicating to Python that it is capable of loading the module.
 
 In :py:meth:`load_module() <mitogen.core.Importer.load_module>` an RPC is
 started to the parent context, requesting the module source code by way of a
@@ -587,14 +600,14 @@ Import Preloading
 .. currentmodule:: mitogen.core
 
 To further avoid round-trips, when a module or package is requested by a child,
-its bytecode is scanned in the master to find all the module's ``import``
-statements, and of those, which associated modules appear to have been loaded
-in the master's :py:data:`sys.modules`.
+its bytecode is scanned in the master to find all the module's
+:keyword:`import` statements, and of those, which associated modules appear to
+have been loaded in the master's :py:data:`sys.modules`.
 
 The :py:data:`sys.modules` check is necessary to handle various kinds of
-conditional execution, for example, when a module's code guards an ``import``
-statement based on the active Python runtime version, operating system, or
-optional third party dependencies.
+conditional execution, for example, when a module's code guards an
+:keyword:`import` statement based on the active Python runtime version,
+operating system, or optional third party dependencies.
 
 Before replying to a child's request for a module with dependencies:
 
@@ -608,7 +621,7 @@ Before replying to a child's request for a module with dependencies:
   dependency.
 
   For example, when a child requests the :py:mod:`django` package, and the master
-  determines the :py:mod:`django` module code in the master has import
+  determines the :py:mod:`django` module code in the master has :keyword:`import`
   statements for :py:mod:`django.utils`, :py:mod:`django.utils.lru_cache`, and
   :py:mod:`django.utils.version`,
   and that exceution of the module code on the master caused those modules to
@@ -644,9 +657,10 @@ the name of the package for one final optimization:
 
 The method used to detect import statements is similar to the standard library
 :py:mod:`modulefinder` module: rather than analyze module source code,
-``IMPORT_NAME`` opcodes are extracted from the module's bytecode. This is since
-clean source analysis methods (:py:mod:`ast` and :py:mod:`compiler`) are an
-order of magnitude slower, and incompatible across major Python versions.
+:ref:`IMPORT_NAME <python:bytecodes>` opcodes are extracted from the module's
+bytecode. This is since clean source analysis methods (:py:mod:`ast` and
+:py:mod:`compiler`) are an order of magnitude slower, and incompatible across
+major Python versions.
 
 
 Child Module Enumeration
