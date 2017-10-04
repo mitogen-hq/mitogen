@@ -152,17 +152,15 @@ def main(router, argv):
 
         host.recv = mitogen.core.Receiver(router)
         host.recv.host = host
-        host.recv.host_main = False
         host.tasks = []
         select.add(host.recv)
 
         call_recv = host.context.call_async(remote_main,
-            mitogen.context_id,
-            host.recv.handle,
-            delay,
-        )
-        call_recv.host = host
-        call_recv.host_main = True
+            mitogen.context_id, host.recv.handle, delay)
+
+        # Adding call_recv to the select will cause CallError to be thrown by
+        # .get() if startup in the context fails, halt local_main() and cause
+        # the exception to be printed.
         select.add(call_recv)
         hosts.append(host)
 
