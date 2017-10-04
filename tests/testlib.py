@@ -47,7 +47,6 @@ class DockerizedSshDaemon(object):
         self.container = self.docker.containers.run(
             image='d2mw/mitogen-test',
             detach=True,
-            remove=True,
             publish_all_ports=True,
         )
         self.container.reload()
@@ -64,6 +63,7 @@ class DockerizedSshDaemon(object):
 
     def close(self):
         self.container.stop()
+        self.container.remove()
 
 
 class RouterMixin(object):
