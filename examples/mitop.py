@@ -46,11 +46,6 @@ def remote_main(context_id, handle, delay, router):
         send_once(sender)
         time.sleep(delay)
 
-    if sys.platform == 'darwin':
-        darwin_main(sender, delay)
-    elif sys.platform == 'linux':
-        linux_main(sender, delay)
-
 
 def parse_output(host, s):
     prev_pids = set(host.procs)
