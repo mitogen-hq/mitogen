@@ -14,7 +14,7 @@ Liability Waiver
     :align: right
 
 Before proceeding, it is critical you understand what you're involving yourself
-and possibly your team with:
+and possibly your team and its successors with:
 
 * Constructing the most fundamental class, :py:class:`Broker
   <mitogen.master.Broker>`, causes a new thread to be spawned, exposing a huge
@@ -22,8 +22,9 @@ and possibly your team with:
   not suffer from.
 
   While every effort is made to hide this complexity, you should expect
-  threading-related encounters during development, and crucially after your
-  program is in production. See :ref:`troubleshooting` for more information.
+  threading-related encounters during development, and crucially, years after
+  your program reached production. See :ref:`troubleshooting` for more
+  information.
 
 * While high-level abstractions are provided, you must understand how Mitogen
   works before depending on it. Mitogen interacts with many aspects of the
