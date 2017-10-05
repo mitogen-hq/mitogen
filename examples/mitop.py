@@ -30,19 +30,14 @@ class Process(object):
     rss = None
 
 
-def send_once(sender):
-    args = ['ps', '-axwwo', 'user,pid,ppid,pgid,%cpu,rss,command']
-    output = subprocess.check_output(args)
-    sender.put(output)
-
-
 @mitogen.core.takes_router
 def remote_main(context_id, handle, delay, router):
     context = mitogen.core.Context(router, context_id)
     sender = mitogen.core.Sender(context, handle)
 
+    args = ['ps', '-axwwo', 'user,pid,ppid,pgid,%cpu,rss,command']
     while True:
-        send_once(sender)
+        sender.put(subprocess.check_output(args))
         time.sleep(delay)
 
 
@@ -52,6 +47,7 @@ def parse_output(host, s):
     for line in s.splitlines()[1:]:
         bits = line.split(None, 6)
         pid = int(bits[1])
+        new = pid not in prev_pids
         prev_pids.discard(pid)
 
         try:
@@ -60,6 +56,7 @@ def parse_output(host, s):
             host.procs[pid] = proc = Process()
             proc.hostname = host.name
 
+        proc.new = new
         proc.user = bits[0]
         proc.pid = pid
         proc.ppid = int(bits[2])
@@ -76,6 +73,7 @@ def parse_output(host, s):
 class Painter(object):
     def __init__(self, hosts):
         self.stdscr = curses.initscr()
+        curses.start_color()
         self.height, self.width = self.stdscr.getmaxyx()
         curses.cbreak()
         curses.noecho()
@@ -114,6 +112,10 @@ class Painter(object):
         for i, proc in enumerate(all_procs):
             if (i+3) >= self.height:
                 break
+            if proc.new:
+                self.stdscr.attron(curses.A_BOLD)
+            else:
+                self.stdscr.attroff(curses.A_BOLD)
             self.stdscr.addstr(2+i, 0, self.format % vars(proc))
 
         self.stdscr.refresh()
@@ -130,14 +132,12 @@ def local_main(painter, router, select, delay):
 
 
 def main(router, argv):
-    #mitogen.utils.log_to_file(level='DEBUG')
     mitogen.utils.log_to_file()
-
     if not len(argv):
         print 'mitop: Need a list of SSH hosts to connect to.'
         sys.exit(1)
 
-    delay = 1.0
+    delay = 2.0
     select = mitogen.master.Select(oneshot=False)
     hosts = []
 
