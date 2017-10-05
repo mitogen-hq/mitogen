@@ -12,8 +12,75 @@ Side Class
 
 .. currentmodule:: mitogen.core
 
-.. autoclass:: Side
-   :members:
+.. class:: Side (stream, fd, keep_alive=True)
+
+    Represent a single side of a :py:class:`BasicStream`. This exists to allow
+    streams implemented using unidirectional (e.g. UNIX pipe) and bidirectional
+    (e.g. UNIX socket) file descriptors to operate identically.
+
+    :param mitogen.core.Stream stream:
+        The stream this side is associated with.
+
+    :param int fd:
+        Underlying file descriptor.
+
+    :param bool keep_alive:
+        Value for :py:attr:`keep_alive`
+
+    During construction, the file descriptor has its :py:data:`os.O_NONBLOCK`
+    flag enabled using :py:func:`fcntl.fcntl`.
+
+    .. attribute:: stream
+
+        The :py:class:`Stream` for which this is a read or write side.
+
+    .. attribute:: fd
+
+        Integer file descriptor to perform IO on, or ``None`` if
+        :py:meth:`close` has been called.
+
+    .. attribute:: keep_alive
+
+        If ``True``, causes presence of this side in :py:class:`Broker`'s
+        active reader set to defer shutdown until the side is disconnected.
+
+    .. method:: fileno
+
+        Return :py:attr:`fd` if it is not ``None``, otherwise raise
+        :py:class:`StreamError`. This method is implemented so that
+        :py:class:`Side` can be used directly by :py:func:`select.select`.
+
+    .. method:: close
+
+        Call :py:func:`os.close` on :py:attr:`fd` if it is not ``None``, then
+        set it to ``None``.
+
+    .. method:: read (n=CHUNK_SIZE)
+
+        Read up to `n` bytes from the file descriptor, wrapping the underlying
+        :py:func:`os.read` call with :py:func:`io_op` to trap common
+        disconnection conditions.
+
+        :py:meth:`read` always behaves as if it is reading from a regular UNIX
+        file; socket, pipe, and TTY disconnection errors are masked and result
+        in a 0-sized read just like a regular file.
+
+        :returns:
+            Bytes read, or the empty to string to indicate disconnection was
+            detected.
+
+    .. method:: write (s)
+
+        Write as much of the bytes from `s` as possible to the file descriptor,
+        wrapping the underlying :py:func:`os.write` call with :py:func:`io_op`
+        to trap common disconnection connditions.
+
+        :py:meth:`read` always behaves as if it is writing to a regular UNIX
+        file; socket, pipe, and TTY disconnection errors are masked and result
+        in a 0-sized write.
+
+        :returns:
+            Number of bytes written, or ``None`` if disconnection was detected.
 
 
 Stream Classes
@@ -23,11 +90,11 @@ Stream Classes
 
 .. class:: BasicStream
 
-    .. data:: receive_side
+    .. attribute:: receive_side
 
         A :py:class:`Side` representing the stream's receive file descriptor.
 
-    .. data:: transcmit_side
+    .. attribute:: transmit_side
 
         A :py:class:`Side` representing the stream's transmit file descriptor.
 
@@ -216,13 +283,20 @@ Helper Functions
 
 .. function:: io_op (func, \*args)
 
-    When connected over a TTY (i.e. sudo), disconnection of the remote end is
-    signalled by EIO, rather than an empty read like sockets or pipes. Ideally
-    this will be replaced later by a 'goodbye' message to avoid reading from a
-    disconnected endpoint, allowing for more robust error reporting.
+    Wrap a function that may raise :py:class:`OSError`, trapping common error
+    codes relating to disconnection events in various subsystems:
 
-    When connected over a socket (e.g. mitogen.master.create_child()),
-    ECONNRESET may be triggered by any read or write.
+    * When performing IO against a TTY, disconnection of the remote end is
+      signalled by :py:data:`errno.EIO`.
+    * When performing IO against a socket, disconnection of the remote end is
+      signalled by :py:data:`errno.ECONNRESET`.
+    * When performing IO against a pipe, disconnection of the remote end is
+      signalled by :py:data:`errno.EPIPE`.
+
+    :returns:
+        Tuple of `(return_value, disconnected)`, where `return_value` is the
+        return value of `func(\*args)`, and `disconnected` is ``True`` if
+        disconnection was detected, otherwise ``False``.
 
 
 .. currentmodule:: mitogen.master
