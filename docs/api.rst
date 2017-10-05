@@ -28,8 +28,7 @@ non-essential code in order to reduce its size, since it is also serves as the
 bootstrap implementation sent to every new slave context.
 
 .. currentmodule:: mitogen.core
-
-.. function:: takes_econtext
+.. decorator:: takes_econtext
 
     Decorator that marks a function or class method to automatically receive a
     kwarg named `econtext`, referencing the
@@ -41,8 +40,7 @@ bootstrap implementation sent to every new slave context.
     explicitly.
 
 .. currentmodule:: mitogen.core
-
-.. function:: takes_router
+.. decorator:: takes_router
 
     Decorator that marks a function or class method to automatically receive a
     kwarg named `router`, referencing the :py:class:`econtext.core.Router`
