@@ -92,7 +92,7 @@ class Painter(object):
         curses.endwin()
 
     def paint(self):
-        self.stdscr.clear()
+        self.stdscr.erase()
         self.stdscr.addstr(0, 0, time.ctime())
 
         all_procs = []
@@ -116,7 +116,10 @@ class Painter(object):
                 self.stdscr.attron(curses.A_BOLD)
             else:
                 self.stdscr.attroff(curses.A_BOLD)
-            self.stdscr.addstr(2+i, 0, self.format % vars(proc))
+            self.stdscr.addstr(2+i, 0, self.format % dict(
+                vars(proc),
+                command=proc.command[:self.width-36]
+            ))
 
         self.stdscr.refresh()
 
