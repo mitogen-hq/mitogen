@@ -675,8 +675,58 @@ Broker Class
 Utility Functions
 =================
 
-.. automodule:: mitogen.utils
-  :members:
+.. module:: mitogen.utils
+
+A random assortment of utility functions useful on masters and children.
+
+.. currentmodule:: mitogen.utils
+.. function:: disable_site_packages
+
+    Remove all entries mentioning ``site-packages`` or ``Extras`` from the
+    system path. Used primarily for testing on OS X within a virtualenv, where
+    OS X bundles some ancient version of the :py:mod:`six` module.
+
+.. currentmodule:: mitogen.utils
+.. function:: log_to_file (path=None, io=True, level='INFO')
+
+    Install a new :py:class:`logging.Handler` writing applications logs to the
+    filesystem. Useful when debugging slave IO problems.
+
+    :param str path:
+        If not ``None``, a filesystem path to write logs to. Otherwise, logs
+        are written to :py:data:`sys.stderr`.
+
+    :param bool io:
+        If ``True``, include extremely verbose IO logs in the output. Useful
+        for debugging hangs, less useful for debugging application code.
+
+    :param str level:
+        Name of the :py:mod:`logging` package constant that is the minimum
+        level to log at. Useful levels are ``DEBUG``, ``INFO``, ``WARNING``,
+        and ``ERROR``.
+
+.. currentmodule:: mitogen.utils
+.. function:: run_with_router(func, \*args, \**kwargs)
+
+    Arrange for `func(router, \*args, \**kwargs)` to run with a temporary
+    :py:class:`mitogen.master.Router`, ensuring the Router and Broker are
+    correctly shut down during normal or exceptional return.
+
+    :returns:
+        `func`'s return value.
+
+.. currentmodule:: mitogen.utils
+.. decorator:: with_router
+
+    Decorator version of :py:func:`run_with_router`. Example:
+
+    .. code-block:: python
+
+        @with_router
+        def do_stuff(router, arg):
+            pass
+
+        do_stuff(blah, 123)
 
 
 Exceptions
