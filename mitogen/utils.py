@@ -1,6 +1,3 @@
-"""
-A random assortment of utility functions useful on masters and slaves.
-"""
 
 import logging
 import sys
@@ -14,17 +11,12 @@ LOG = logging.getLogger('mitogen')
 
 
 def disable_site_packages():
-    """Remove all entries mentioning site-packages or Extras from the system
-    path. Used primarily for testing on OS X within a virtualenv, where OS X
-    bundles some ancient version of the 'six' module."""
     for entry in sys.path[:]:
         if 'site-packages' in entry or 'Extras' in entry:
             sys.path.remove(entry)
 
 
 def log_to_file(path=None, io=True, level='INFO'):
-    """Install a new :py:class:`logging.Handler` writing applications logs to
-    the filesystem. Useful when debugging slave IO problems."""
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
@@ -45,9 +37,6 @@ def log_to_file(path=None, io=True, level='INFO'):
 
 
 def run_with_router(func, *args, **kwargs):
-    """Arrange for `func(router, *args, **kwargs)` to run with a temporary
-    :py:class:`mitogen.master.Router`, ensuring the Router and Broker are
-    correctly shut down during normal or exceptional return."""
     broker = mitogen.master.Broker()
     router = mitogen.master.Router(broker)
     try:
@@ -58,16 +47,6 @@ def run_with_router(func, *args, **kwargs):
 
 
 def with_router(func):
-    """Decorator version of :py:func:`run_with_router`. Example:
-
-    .. code-block:: python
-
-        @with_router
-        def do_stuff(router, arg):
-            pass
-
-        do_stuff(blah, 123)
-    """
     def wrapper(*args, **kwargs):
         return run_with_router(func, *args, **kwargs)
     wrapper.func_name = func.func_name
