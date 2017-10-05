@@ -938,7 +938,6 @@ class Broker(object):
     shutdown_timeout = 3.0
 
     def __init__(self):
-        self.on_shutdown = []
         self._alive = True
         self._queue = Queue.Queue()
         self._readers = set()
