@@ -135,7 +135,7 @@ contexts.
 
         Remove the select's notifier function from each registered receiver.
         Necessary to prevent memory leaks in long-running receivers. This is
-        called automatically when the Python ``with:`` statement is used.
+        called automatically when the Python :keyword:`with` statement is used.
 
     .. py:method:: empty ()
 
