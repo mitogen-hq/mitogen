@@ -498,36 +498,21 @@ class LogHandler(logging.Handler):
 
 
 class Side(object):
-    """
-    Represent a single side of a :py:class:`BasicStream`. This exists to allow
-    streams implemented using unidirectional (e.g. UNIX pipe) and bidirectional
-    (e.g. UNIX socket) file descriptors to operate identically.
-    """
     def __init__(self, stream, fd, keep_alive=True):
-        #: The :py:class:`Stream` for which this is a read or write side.
         self.stream = stream
-        #: Integer file descriptor to perform IO on.
         self.fd = fd
-        #: If ``True``, causes presence of this side in :py:class:`Broker`'s
-        #: active reader set to defer shutdown until the side is disconnected.
         self.keep_alive = keep_alive
-
         set_nonblock(fd)
 
     def __repr__(self):
         return '<Side of %r fd %s>' % (self.stream, self.fd)
 
     def fileno(self):
-        """Return :py:attr:`fd` if it is not ``None``, otherwise raise
-        ``StreamError``. This method is implemented so that :py:class:`Side`
-        can be used directly by :py:func:`select.select`."""
         if self.fd is None:
             raise StreamError('%r.fileno() called but no FD set', self)
         return self.fd
 
     def close(self):
-        """Call :py:func:`os.close` on :py:attr:`fd` if it is not ``None``,
-        then set it to ``None``."""
         if self.fd is not None:
             IOLOG.debug('%r.close()', self)
             os.close(self.fd)
