@@ -130,9 +130,9 @@ Creating A Context
 ------------------
 
 Contexts are simply external Python programs over which your program has
-control. They can be created as subprocesses on the local machine, in another
-user account via `sudo`, on a remote machine via `ssh`, or any recursive
-combination of the above.
+control, and can execute code within. They can be created as subprocesses on
+the local machine, in another user account via `sudo`, on a remote machine via
+`ssh`, or any recursive combination of the above.
 
 Now a :py:class:`Router` exists, our first :py:class:`contexts <Context>` can
 be created. To demonstrate basic functionality, we will start with some
