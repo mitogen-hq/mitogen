@@ -550,46 +550,7 @@ class Side(object):
 
 
 class BasicStream(object):
-    """
-
-    .. method:: on_disconnect (broker)
-
-        Called by :py:class:`Broker` to force disconnect the stream. The base
-        implementation simply closes :py:attr:`receive_side` and
-        :py:attr:`transmit_side` and unregisters the stream from the broker.
-
-    .. method:: on_receive (broker)
-
-        Called by :py:class:`Broker` when the stream's :py:attr:`receive_side` has
-        been marked readable using :py:meth:`Broker.start_receive` and the
-        broker has detected the associated file descriptor is ready for
-        reading.
-
-        Subclasses must implement this method if
-        :py:meth:`Broker.start_receive` is ever called on them, and the method
-        must call :py:meth:`on_disconect` if reading produces an empty string.
-
-    .. method:: on_transmit (broker)
-
-        Called by :py:class:`Broker` when the stream's :py:attr:`transmit_side`
-        has been marked writeable using :py:meth:`Broker.start_transmit` and
-        the broker has detected the associated file descriptor is ready for
-        writing.
-
-        Subclasses must implement this method if
-        :py:meth:`Broker.start_transmit` is ever called on them.
-
-    .. method:: on_shutdown (broker)
-
-        Called by :py:meth:`Broker.shutdown` to allow the stream time to
-        gracefully shutdown. The base implementation simply called
-        :py:meth:`on_disconnect`.
-
-    """
-    #: A :py:class:`Side` representing the stream's receive file descriptor.
     receive_side = None
-
-    #: A :py:class:`Side` representing the stream's transmit file descriptor.
     transmit_side = None
 
     def on_disconnect(self, broker):
