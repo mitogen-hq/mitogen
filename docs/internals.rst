@@ -162,6 +162,13 @@ Other Stream Subclasses
    :members:
 
 
+Importer Class
+--------------
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Importer
+   :members:
+
 
 ExternalContext Class
 ---------------------
@@ -201,6 +208,9 @@ ExternalContext Class
 
         The :py:class:`IoLogger` connected to ``stderr``.
 
+    .. method:: _dispatch_calls
+
+        Implementation for the main thread in every child context.
 
 mitogen.master
 ==============

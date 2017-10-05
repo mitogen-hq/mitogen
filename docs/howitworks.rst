@@ -128,8 +128,8 @@ Generating A Synthetic `mitogen` Package
 ########################################
 
 Since the bootstrap consists of the :py:mod:`mitogen.core` source code, and
-this code is loaded by Python by way of its main script (``__main__`` module),
-initially the module layout in the child will be incorrect.
+this code is loaded by Python by way of its main script (:mod:`__main__`
+module), initially the module layout in the child will be incorrect.
 
 The first step taken after bootstrap is to rearrange :py:data:`sys.modules` slightly
 so that :py:mod:`mitogen.core` appears in the correct location, and all
@@ -139,7 +139,7 @@ such that :py:mod:`cPickle` correctly serializes instance module names.
 Once a synthetic :py:mod:`mitogen` package and :py:mod:`mitogen.core` module
 have been generated, the bootstrap **deletes** `sys.modules['__main__']`, so
 that any attempt to import it (by :py:mod:`cPickle`) will cause the import to
-be satisfied by fetching the master's actual ``__main__`` module. This is
+be satisfied by fetching the master's actual :mod:`__main__` module. This is
 necessary to allow master programs to be written as a self-contained Python
 script.
 
@@ -172,8 +172,8 @@ The Module Importer
 ###################
 
 An instance of :py:class:`mitogen.core.Importer` is installed in
-:py:data:`sys.meta_path`, where Python's ``import`` statement will execute it
-before attempting to find a module locally.
+:py:data:`sys.meta_path`, where Python's :keyword:`import` statement will
+execute it before attempting to find a module locally.
 
 
 Standard IO Redirection
@@ -198,6 +198,8 @@ active, so that ``print`` statements and suchlike promptly appear in the logs.
 Function Call Dispatch
 ######################
 
+.. currentmodule:: mitogen.core
+
 After all initialization is complete, the child's main thread sits in a loop
 reading from a :py:class:`Channel <mitogen.core.Channel>` connected to the
 :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` handle. This handle is
@@ -205,17 +207,26 @@ written to by
 :py:meth:`call() <mitogen.master.Context.call>`
 and :py:meth:`call_async() <mitogen.master.Context.call_async>`.
 
+:py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` only accepts requests
+from the context IDs listed in :py:data:`mitogen.parent_ids`, forming a chain
+of trust between the master and any intermediate context leading to the
+recipient of the message. In combination with :ref:`source-verification`, this
+is a major contributor to ensuring contexts running on compromised
+infrastructure cannot trigger code execution in siblings or any parent.
+
 
 Shutdown
 ########
 
+.. currentmodule:: mitogen.core
+
 When a context receives :py:data:`SHUTDOWN <mitogen.core.SHUTDOWN>` from its
 immediate parent, it closes its own :py:data:`CALL_FUNCTION
 <mitogen.core.CALL_FUNCTION>` :py:class:`Channel <mitogen.core.Channel>` before
-sending ``SHUTDOWN`` to any directly connected children. Closing the channel
-has the effect of causing :py:meth:`ExternalContext._dispatch_calls()
-<mitogen.core.ExternalContext._dispatch_calls>` to exit and begin joining on
-the broker thread.
+sending :py:data:`SHUTDOWN <mitogen.core.SHUTDOWN>` to any directly connected
+children. Closing the channel has the effect of causing
+:py:meth:`ExternalContext._dispatch_calls` to exit and begin joining on the
+broker thread.
 
 During shutdown, the master waits up to 5 seconds for children to disconnect
 gracefully before force disconnecting them, while children will use that time
@@ -234,13 +245,15 @@ irritating delays would often be experienced during program termination.
 If the main thread (responsible for function call dispatch) fails to shut down
 gracefully, because some user function is hanging, it will still be cleaned up
 since as the final step in broker shutdown, the broker sends
-:py:data:`signal.SIGTERM` to its own process.
+:py:mod:`signal.SIGTERM <signal>` to its own process.
 
 
 .. _stream-protocol:
 
 Stream Protocol
 ---------------
+
+.. currentmodule:: mitogen.core
 
 Once connected, a basic framing protocol is used to communicate between
 parent and child:
@@ -263,29 +276,60 @@ parent and child:
 
 Masters listen on the following handles:
 
-.. data:: mitogen.core.FORWARD_LOG
+.. _FORWARD_LOG:
+.. currentmodule:: mitogen.core
+.. data:: FORWARD_LOG
 
     Receives `(logger_name, level, msg)` 3-tuples and writes them to the
     master's ``mitogen.ctx.<context_name>`` logger.
 
-.. data:: mitogen.core.GET_MODULE
+.. _GET_MODULE:
+.. currentmodule:: mitogen.core
+.. data:: GET_MODULE
 
-    Receives `(reply_to, fullname)` 2-tuples, looks up the source code for the
-    module named ``fullname``, and writes the source along with some metadata
-    back to the handle ``reply_to``. If lookup fails, ``None`` is sent instead.
+    Receives the name of a module to load `fullname`, locates the source code
+    for `fullname`, and routes one or more :py:data:`LOAD_MODULE` messages back
+    towards the sender of the :py:data:`GET_MODULE` request. If lookup fails,
+    ``None`` is sent instead.
 
-.. data:: mitogen.core.ALLOCATE_ID
+    See :ref:`import-preloading` for a deeper discussion of
+    :py:data:`GET_MODULE`/:py:data:`LOAD_MODULE`.
+
+.. _ALLOCATE_ID:
+.. currentmodule:: mitogen.core
+.. data:: ALLOCATE_ID
 
     Replies to any message sent to it with a newly allocated unique context ID,
     to allow children to safely start their own contexts. In future this is
     likely to be replaced by 32-bit context IDs and pseudorandom allocation,
-    with an improved ``ADD_ROUTE`` message sent upstream rather than downstream
-    that generates NACKs if any ancestor detects an ID collision.
+    with an improved :py:data:`ADD_ROUTE` message sent upstream rather than
+    downstream that generates NACKs if any ancestor detects an ID collision.
 
 
 Children listen on the following handles:
 
-.. data:: mitogen.core.CALL_FUNCTION
+.. _LOAD_MODULE:
+.. currentmodule:: mitogen.core
+.. data:: LOAD_MODULE
+
+    Receives `(pkg_present, path, compressed, related)` tuples, composed of:
+
+    * **pkg_present**: Either ``None`` for a plain ``.py`` module, or a list of
+      canonical names of submodules existing witin this package. For example, a
+      :py:data:`LOAD_MODULE` for the :py:mod:`mitogen` package would return a
+      list like: `["mitogen.core", "mitogen.fakessh", "mitogen.master", ..]`.
+      This list is used by children to avoid generating useless round-trips due
+      to Python 2.x's :keyword:`import` statement behavior.
+    * **path**: Original filesystem where the module was found on the master.
+    * **compressed**: :py:mod:`zlib`-compressed module source code.
+    * **related**: list of canonical module names on which this module appears
+      to depend. Used by children that have ever started any children of their
+      own to preload those children with :py:data:`LOAD_MODULE` messages in
+      response to a :py:data:`GET_MODULE` request.
+
+.. _CALL_FUNCTION:
+.. currentmodule:: mitogen.core
+.. data:: CALL_FUNCTION
 
     Receives `(mod_name, class_name, func_name, args, kwargs)`
     5-tuples from
@@ -293,52 +337,57 @@ Children listen on the following handles:
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
-    When this channel is closed (by way of sending ``_DEAD`` to it), the
-    child's main thread begins graceful shutdown of its own `Broker` and
-    `Router`.
+    When this channel is closed (by way of sending :py:data:`_DEAD` to it), the
+    child's main thread begins graceful shutdown of its own :py:class:`Broker`
+    and :py:class:`Router`.
 
-.. data:: mitogen.core.SHUTDOWN
+.. _SHUTDOWN:
+.. currentmodule:: mitogen.core
+.. data:: SHUTDOWN
 
     When received from a child's immediate parent, causes the broker thread to
-    enter graceful shutdown, including writing ``_DEAD`` to the child's main
-    thread, causing it to join on the exit of the broker thread.
+    enter graceful shutdown, including writing :py:data:`_DEAD` to the child's
+    main thread, causing it to join on the exit of the broker thread.
 
     The final step of a child's broker shutdown process sends
-    :py:data:`signal.SIGTERM` to itself, ensuring the process dies even if the
-    main thread was hung executing user code.
+    :py:mod:`signal.SIGTERM <signal>` to itself, ensuring the process dies even
+    if the main thread was hung executing user code.
 
-    Each context is responsible for sending ``SHUTDOWN`` to each of its
-    directly connected children in response to the master sending ``SHUTDOWN``
-    to it, and arranging for the connection to its parent to be closed shortly
-    thereafter.
+    Each context is responsible for sending :py:data:`SHUTDOWN` to each of its
+    directly connected children in response to the master sending
+    :py:data:`SHUTDOWN` to it, and arranging for the connection to its parent
+    to be closed shortly thereafter.
 
-.. data:: mitogen.core.ADD_ROUTE
+.. _ADD_ROUTE:
+.. currentmodule:: mitogen.core
+.. data:: ADD_ROUTE
 
     Receives `(target_id, via_id)` integer tuples, describing how messages
-    arriving at this context on any Stream should be forwarded on the stream
-    associated with the Context `via_id` such that they are eventually
-    delivered to the target Context.
+    arriving at this context on any stream should be forwarded on the stream
+    associated with the context `via_id` such that they are eventually
+    delivered to the target context.
 
     This message is necessary to inform intermediary contexts of the existence
     of a downstream Context, as they do not otherwise parse traffic they are
     fowarding to their downstream contexts that may cause new contexts to be
     established.
 
-    Given a chain `master -> ssh1 -> sudo1`, no `ADD_ROUTE` message is
+    Given a chain `master -> ssh1 -> sudo1`, no :py:data:`ADD_ROUTE` message is
     necessary, since :py:class:`mitogen.core.Router` in the `ssh` context can
     arrange to update its routes while setting up the new child during
-    `proxy_connect()`.
+    :py:meth:`Router.proxy_connect() <mitogen.master.Router.proxy_connect>`.
 
     However, given a chain like `master -> ssh1 -> sudo1 -> ssh2 -> sudo2`,
-    `ssh1` requires an `ADD_ROUTE` for `ssh2`, and both `ssh1` and `sudo1`
-    require an `ADD_ROUTE` for `sudo2`, as neither directly dealt with its
-    establishment.
+    `ssh1` requires an :py:data:`ADD_ROUTE` for `ssh2`, and both `ssh1` and
+    `sudo1` require an :py:data:`ADD_ROUTE` for `sudo2`, as neither directly
+    dealt with its establishment.
 
 
 Children that have ever been used to create a descendent child also listen on
 the following handles:
 
-.. data:: mitogen.core.GET_MODULE
+.. currentmodule:: mitogen.core
+.. data:: GET_MODULE
 
     As with master's ``GET_MODULE``, except this implementation
     (:py:class:`mitogen.master.ModuleForwarder`) serves responses using
@@ -356,13 +405,15 @@ triggered by :py:meth:`call_async() <mitogen.master.Context.call_async>`.
 Sentinel Value
 ##############
 
-.. autodata:: mitogen.core._DEAD
+.. _DEAD:
+.. currentmodule:: mitogen.core
+.. data:: _DEAD
 
-The special value :py:data:`mitogen.core._DEAD` is used to signal
-disconnection or closure of the remote end. It is used internally by
-:py:class:`Channel <mitogen.core.Channel>` and also passed to any function
-still registered with :py:meth:`add_handler()
-<mitogen.core.Router.add_handler>` during Broker shutdown.
+    This special value is used to signal disconnection or closure of the remote
+    end. It is used internally by :py:class:`Channel <mitogen.core.Channel>`
+    and also passed to any function still registered with
+    :py:meth:`add_handler() <mitogen.core.Router.add_handler>` during Broker
+    shutdown.
 
 
 Use of Pickle
@@ -411,16 +462,18 @@ communicate with.
 When :py:class:`mitogen.core.Router` receives a message, it checks the IDs
 associated with its directly connected streams for a potential route. If any
 stream matches, either because it directly connects to the target ID, or
-because the master sent an ``ADD_ROUTE`` message associating it, then the
-message will be forwarded down the tree using that stream.
+because the master sent an :py:data:`ADD_ROUTE <mitogen.core.ADD_ROUTE>`
+message associating it, then the message will be forwarded down the tree using
+that stream.
 
-If the message does not match any ``ADD_ROUTE`` message or stream, instead it
-is forwarded upwards to the immediate parent, and recursively by each parent in
-turn until one is reached that knows how to forward the message down the tree.
+If the message does not match any :py:data:`ADD_ROUTE <mitogen.core.ADD_ROUTE>`
+message or stream, instead it is forwarded upwards to the immediate parent, and
+recursively by each parent in turn until one is reached that knows how to
+forward the message down the tree.
 
 When the master establishes a new context via an existing child context, it
-sends corresponding ``ADD_ROUTE`` messages to each indirect parent between the
-context and the root.
+sends corresponding :py:data:`ADD_ROUTE <mitogen.core.ADD_ROUTE>` messages to
+each indirect parent between the context and the root.
 
 
 Example
@@ -439,6 +492,24 @@ When ``sudo:node22a:webapp`` wants to send a message to
 ``sudo:node22a:webapp -> node22a -> rack22 -> dc2 -> bastion -> dc1 -> rack12 -> node12b -> sudo:node12b:webapp``
 
 .. image:: images/route.png
+
+
+.. _source-verification:
+
+Source Verification
+###################
+
+Before forwarding or dispatching a message it has received,
+:py:class:`mitogen.core.Router` first looks up the corresponding
+:py:class:`mitogen.core.Stream` it would use to send responses towards the
+message source, and if the looked up stream does not match the stream on which
+the message was received, the message is discarded and a warning is logged.
+
+This creates a trust chain leading up to the root of the tree, preventing
+downstream contexts from injecting messages appearing to be from the master or
+any more trustworthy parent. In this way, privileged functionality such as
+:py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` can base trust decisions
+on the accuracy of :py:ref:`src_id <stream-protocol>`.
 
 
 Future
@@ -465,23 +536,25 @@ The Module Importer
 are a variety of approaches to implementing it, and the present implementation
 is not pefectly efficient in every case.
 
-It operates by intercepting ``import`` statements via `sys.meta_path`, asking
-Python if it can satisfy the import by itself, and if not, indicating to Python
-that it is capable of loading the module.
+It operates by intercepting :keyword:`import` statements via
+:py:data:`sys.meta_path`, asking Python if it can satisfy the import by itself,
+and if not, indicating to Python that it is capable of loading the module.
 
 In :py:meth:`load_module() <mitogen.core.Importer.load_module>` an RPC is
-started to the parent context, requesting the module source code. Once the
-source is fetched, the method builds a new module object using the best
-practice documented in PEP-302.
+started to the parent context, requesting the module source code by way of a
+:py:data:`GET_MODULE <mitogen.core.GET_MODULE>`. If the parent context does not
+have the module available, it recursively forwards the request upstream, while
+avoiding duplicate requests for the same module from its own threads and any
+child contexts.
 
 
-Neutralizing ``__main__``
-#########################
+Neutralizing :py:mod:`__main__`
+###############################
 
-To avoid accidental execution of the ``__main__`` module's code in a slave
-context, when serving the source of the main module, Mitogen removes any code
-occurring after the first conditional that looks like a standard ``__main__``
-execution guard:
+To avoid accidental execution of the :py:mod:`__main__` module's code in a
+slave context, when serving the source of the main module, Mitogen removes any
+code occurring after the first conditional that looks like a standard
+:py:mod:`__main__` execution guard:
 
 .. code-block:: python
 
@@ -506,11 +579,12 @@ requests will be made for modules that do not exist. For example:
     import sys
     import os
 
-In Python 2.x, Python will first try to load ``mypkg.sys`` and ``mypkg.os``,
-which do not exist, before falling back on :py:mod:`sys` and :py:mod:`os`.
+In Python 2.x, Python will first try to load :py:mod:`mypkg.sys` and
+:py:mod:`mypkg.os`, which do not exist, before falling back on :py:mod:`sys`
+and :py:mod:`os`.
 
 These negative imports present a challenge, as they introduce a large number of
-pointless network roundtrips. Therefore in addition to the
+pointless network round-trips. Therefore in addition to the
 :py:mod:`zlib`-compressed source, for packages the master sends along a list of
 child modules known to exist.
 
@@ -519,6 +593,77 @@ Before indicating it can satisfy an import request,
 a package it has previously imported, and if so, ignores the request if the
 module does not appear in the enumeration of child modules belonging to the
 package that was provided by the master.
+
+
+.. _import-preloading:
+
+Import Preloading
+#################
+
+.. currentmodule:: mitogen.core
+
+To further avoid round-trips, when a module or package is requested by a child,
+its bytecode is scanned in the master to find all the module's
+:keyword:`import` statements, and of those, which associated modules appear to
+have been loaded in the master's :py:data:`sys.modules`.
+
+The :py:data:`sys.modules` check is necessary to handle various kinds of
+conditional execution, for example, when a module's code guards an
+:keyword:`import` statement based on the active Python runtime version,
+operating system, or optional third party dependencies.
+
+Before replying to a child's request for a module with dependencies:
+
+* If the request is for a package, any dependent modules used by the package
+  that appear within the package itself are known to be missing from the child,
+  since the child requested the top-level package module, therefore they are
+  pre-loaded into the child using :py:data:`LOAD_MODULE` messages before
+  sending the :py:data:`LOAD_MODULE` message for the requested package module
+  itself. In this way, the child will already have dependent modules cached by
+  the time it receives the requested module, avoiding one round-trip for each
+  dependency.
+
+  For example, when a child requests the :py:mod:`django` package, and the master
+  determines the :py:mod:`django` module code in the master has :keyword:`import`
+  statements for :py:mod:`django.utils`, :py:mod:`django.utils.lru_cache`, and
+  :py:mod:`django.utils.version`,
+  and that exceution of the module code on the master caused those modules to
+  appear in the master's :py:data:`sys.modules`, there is high probability
+  execution of the :py:mod:`django` module code in the child will cause the
+  same modules to be loaded. Since all those modules exist within the
+  :py:mod:`django` package, and we already know the child lacks that package,
+  it is safe to assume the child will make follow-up requests for those modules
+  too.
+
+  In the example, this replaces 4 round-trips with 1 round-trip.
+
+For any package module ever requested by a child, the parent keeps a note of
+the name of the package for one final optimization:
+
+* If the request is for a sub-module of a package, and it is known the child
+  loaded the package's implementation from the parent, then any dependent
+  modules of the requested module at any nesting level within the package that
+  is known to be missing are sent using :py:data:`LOAD_MODULE` messages before
+  sending the :py:data:`LOAD_MODULE` message for the requested module, avoiding
+  1 round-trip for each dependency within the same top-level package.
+
+  For example, when a child has previously requested the :py:mod:`django`
+  package module, the parent knows the package was completely absent on the
+  child. Therefore when the child subsequently requests the
+  :py:mod:`django.db` package module, it is safe to assume the child will
+  generate subsequent :py:data:`GET_MODULE` requests for the 2
+  :py:mod:`django.conf`, 3 :py:mod:`django.core`, 2 :py:mod:`django.db`, 3
+  :py:mod:`django.dispatch`, and 7 :py:mod:`django.utils` indirect dependencies
+  for :py:mod:`django.db`.
+
+  In the example, this replaces 17 round-trips with 1 round-trip.
+
+The method used to detect import statements is similar to the standard library
+:py:mod:`modulefinder` module: rather than analyze module source code,
+:ref:`IMPORT_NAME <python:bytecodes>` opcodes are extracted from the module's
+bytecode. This is since clean source analysis methods (:py:mod:`ast` and
+:py:mod:`compiler`) are an order of magnitude slower, and incompatible across
+major Python versions.
 
 
 Child Module Enumeration
