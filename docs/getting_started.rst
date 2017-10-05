@@ -27,11 +27,11 @@ and possibly your team with:
 
 * While high-level abstractions are provided, you must understand how Mitogen
   works before depending on it. Mitogen interacts with many aspects of the
-  operating system, network, SSH, sudo, sockets, TTYs, Python runtime, and
-  timing and ordering uncertainty introduced through interaction with the
+  operating system, network, SSH, sudo, sockets, TTYs, shell, Python runtime,
+  and timing and ordering uncertainty introduced through interaction with the
   network and OS scheduling.
 
-  Knowledge of this domain is typically gained through painful years of ugly
+  Knowledge of this domain is typically gained through painful years of failed
   attempts hacking system-level programs, and learning through continual
   suffering how to debug the messes left behind. If you feel you lack resources
   to diagnose problems independently, Mitogen is not appropriate, prefer a
@@ -56,22 +56,25 @@ them to a callback from the broker thread (registered by
 :py:meth:`add_handler() <mitogen.core.Router.add_handler>`), or forwarding them
 to a :py:class:`Stream <mitogen.core.Stream>`. See :ref:`routing` for an
 in-depth description. :py:class:`Router` also doubles as the entry point to
-Mitogen's public API.
+Mitogen's public API:
 
 .. code-block:: python
 
-    broker = mitogen.master.Broker()
-    router = mitogen.master.Router(broker)
+    >>> import mitogen.master
 
-    try:
-        # Your code here.
-    finally:
-        broker.shutdown()
+    >>> broker = mitogen.master.Broker()
+    >>> router = mitogen.master.Router(broker)
 
-As your program will not exit if threads are still running when the main thread
-exits, it is crucial :py:meth:`Broker.shutdown` is called reliably at exit.
-Helpers are provided by :py:mod:`mitogen.utils` to ensure :py:class:`Broker` is
-reliably destroyed:
+    >>> try:
+    ...     # Your code here.
+    ...     pass
+    ... finally:
+    ...     broker.shutdown()
+
+As Python will not stop if threads still exist after the main thread exits,
+:py:meth:`Broker.shutdown` must be called reliably at exit. Helpers are
+provided by :py:mod:`mitogen.utils` to ensure :py:class:`Broker` is reliably
+destroyed:
 
 .. code-block:: python
 
@@ -82,7 +85,7 @@ reliably destroyed:
 
 If your program cannot live beneath :py:func:`mitogen.utils.run_with_router` on
 the stack, you must must arrange for :py:meth:`Broker.shutdown` to be called
-anywhere exit of the main thread may be triggered.
+anywhere the main thread may exit.
 
 
 Creating A Context
