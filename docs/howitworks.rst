@@ -1,4 +1,6 @@
 
+.. _howitworks:
+
 How Mitogen Works
 =================
 

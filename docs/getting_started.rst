@@ -10,11 +10,11 @@ Getting Started
 Liability Waiver
 ----------------
 
-.. image:: images/pandora.jpg
-    :align: right
-
 Before proceeding, it is critical you understand what you're involving yourself
 and possibly your team and its successors with:
+
+.. image:: images/pandora.jpg
+    :align: right
 
 * Constructing the most fundamental class, :py:class:`Broker
   <mitogen.master.Broker>`, causes a new thread to be spawned, exposing a huge
@@ -26,25 +26,25 @@ and possibly your team and its successors with:
   your program reached production. See :ref:`troubleshooting` for more
   information.
 
-* While high-level abstractions are provided, you must understand how Mitogen
-  works before depending on it. Mitogen interacts with many aspects of the
-  operating system, threading, SSH, sudo, sockets, TTYs, shell, Python runtime,
-  and timing and ordering uncertainty introduced through interaction with the
-  network, GIL and OS scheduling.
+* While high-level abstractions are provided, they are only a convenience, you
+  must still understand :ref:`how Mitogen works <howitworks>` before depending
+  on it. Mitogen interacts with many aspects of the operating system,
+  threading, SSH, sudo, sockets, TTYs, shell, Python runtime, and timing and
+  ordering uncertainty introduced through interaction with the network, GIL and
+  OS scheduling.
 
   Knowledge of this domain is typically attained through painful years of
   failed attempts hacking system-level programs, and learning through continual
   suffering how to debug the atrocities left behind. If you feel you lack
   resources or willpower to diagnose problems independently, Mitogen is not
-  appropriate, prefer a higher level solution instead. Bug reports failing this
-  expectation risk uncharitable treatment.
+  appropriate, prefer a higher level solution instead.
 
 
 Broker And Router
 -----------------
 
 .. image:: images/layout.png
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.core
 
 Execution starts when your program constructs a :py:class:`Broker` and
 associated :py:class:`Router`. The broker is responsible for multiplexing IO to
@@ -56,9 +56,7 @@ is lost.
 to a callback from the broker thread (registered by :py:meth:`add_handler()
 <mitogen.core.Router.add_handler>`), or forwarding them to a :py:class:`Stream
 <mitogen.core.Stream>`. See :ref:`routing` for an in-depth description.
-:py:class:`Router` also doubles as the entry point to Mitogen's public API:
-
-.. code-block:: python
+:py:class:`Router` also doubles as the entry point to Mitogen's public API::
 
     >>> import mitogen.master
 
@@ -74,9 +72,7 @@ to a callback from the broker thread (registered by :py:meth:`add_handler()
 As Python will not stop if threads still exist after the main thread exits,
 :py:meth:`Broker.shutdown` must be called reliably at exit. Helpers are
 provided by :py:mod:`mitogen.utils` to ensure :py:class:`Broker` is reliably
-destroyed:
-
-.. code-block:: python
+destroyed::
 
     def do_mitogen_stuff(router):
         # Your code here.
@@ -84,7 +80,7 @@ destroyed:
     mitogen.utils.run_with_router(do_mitogen_stuff)
 
 If your program cannot live beneath :py:func:`mitogen.utils.run_with_router` on
-the stack, you must must arrange for :py:meth:`Broker.shutdown` to be called
+the stack, you must arrange for :py:meth:`Broker.shutdown` to be called
 anywhere the main thread may exit.
 
 .. note::
@@ -111,9 +107,7 @@ Mitogen makes heavy use of the :py:mod:`logging` package, both for child
 You should always configure the :py:mod:`logging` package in any program that
 integrates Mitogen. If your program does not otherwise use the
 :py:mod:`logging` package, a basic configuration can be performed by calling
-:py:func:`mitogen.utils.log_to_file`:
-
-.. code-block:: python
+:py:func:`mitogen.utils.log_to_file`::
 
     >>> import mitogen.utils
 
@@ -136,9 +130,7 @@ the local machine, in another user account via `sudo`, on a remote machine via
 
 Now a :py:class:`Router` exists, our first :py:class:`contexts <Context>` can
 be created. To demonstrate basic functionality, we will start with some
-:py:meth:`local() <Router.local>` contexts created as subprocesses:
-
-.. code-block:: python
+:py:meth:`local() <Router.local>` contexts created as subprocesses::
 
     >>> local = router.local()
     >>> local_with_name = router.local(remote_name='i-have-a-name')
@@ -167,8 +159,78 @@ started the context, however as shown, this can be overridden.
 Calling A Function
 ------------------
 
-Now that we have some contexts created, it is time to execute some code in
-them.
+.. currentmodule:: mitogen.master
+
+Now that some contexts exist, it is time to execute code in them. Any regular
+function, static method, or class method reachable directly from module scope
+may be used, including built-in functions such as :func:`time.time`.
+
+The :py:meth:`Context.call` method is used to execute a function and block the
+caller until the return value is available or an exception is raised::
+
+    >>> import time
+    >>> import os
+
+    >>> # Returns the current time.
+    >>> print 'Time in remote context:', local.call(time.time)
+
+    >>> try:
+    ...     # Raises OSError.
+    ...     local.call(os.chdir, '/nonexistent')
+    ... except mitogen.core.CallError, e:
+    ...     print 'Call failed:', str(e)
+
+It is a simple wrapper around the more flexible :meth:`Context.call_async`,
+which immediately returns a :class:`Receiver <mitogen.core.Receiver>` wired up
+to receive the return value instead. A receiver may simply be discarded, kept
+around indefinitely without ever reading its result, or used to wait on the
+results from several calls. Here :meth:`get_data() <mitogen.core.Receiver.get>`
+is called to block the thread until the result arrives::
+
+    >>> call = local.call_async(time.time)
+    >>> print call.get_data()
+    1507292737.75547
+
+
+Running User Functions
+----------------------
+
+So far we have used the interactive interpreter to call some standard library
+functions, but if since source code typed at the interpreter cannot be
+recovered, Mitogen is unable to execute functions defined in this way.
+
+We must therefore continue by writing our code as a script::
+
+    # first-script.py
+    import mitogen.utils
+
+    def my_first_function():
+        print 'Hello from remote context!'
+        return 123
+
+    def main(router):
+        local = router.local()
+        print local.call(my_first_function)
+
+    if __name__ == '__main__':
+        mitogen.utils.log_to_file(main)
+        mitogen.utils.run_with_router(main)
+
+Let's try running it:
+
+.. code-block:: bash
+
+    $ python first-script.py
+    19:11:32 I mitogen.ctx.local.32466: stdout: Hello from remote context!
+    123
+
+
+Waiting On Multiple Calls
+-------------------------
+
+
+
+
 
 
 Recursion
