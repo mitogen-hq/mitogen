@@ -83,20 +83,6 @@ If your program cannot live beneath :py:func:`mitogen.utils.run_with_router` on
 the stack, you must arrange for :py:meth:`Broker.shutdown` to be called
 anywhere the main thread may exit.
 
-.. note::
-
-    You may construct as many routers and brokers in a process as desired, and
-    use the same broker for multiple routers, however in the usual case only
-    one broker and router need exist.
-
-    It may be useful to construct multiple routers when a service is dealing
-    with separate trust domains, for example, manipulating infrastructure
-    belonging to separate customers or separate projects.
-
-    It may be useful to construct multiple brokers when a service is dealing
-    with sets of children with differing lifetimes. For example, a subscription
-    service where non-payment results in termination for one customer.
-
 
 Enable Logging
 --------------
