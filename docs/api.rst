@@ -355,6 +355,14 @@ Router Class
     masters, and child contexts who later become masters. Currently when this
     class is required, the target context's router is upgraded at runtime.
 
+    .. note::
+
+        You may construct as many routers as desired, and use the same broker
+        for multiple routers, however usually only one broker and router need
+        exist. Multiple routers may be useful when dealing with separate trust
+        domains, for example, manipulating infrastructure belonging to separate
+        customers or projects.
+
     .. data:: profiling
 
         When enabled, causes the broker thread and any subsequent broker and
@@ -748,13 +756,90 @@ Broker Class
 ============
 
 .. currentmodule:: mitogen.core
-.. autoclass:: Broker
-   :members:
-   :inherited-members:
+.. class:: Broker
+
+    Responsible for handling I/O multiplexing in a private thread.
+
+    **Note:** This is the somewhat limited core version of the Broker class
+    used by child contexts. The master subclass is documented below this one.
+
+    .. attribute:: shutdown_timeout = 3.0
+
+        Seconds grace to allow :py:class:`streams <Stream>` to shutdown
+        gracefully before force-disconnecting them during :py:meth:`shutdown`.
+
+    .. method:: defer (func, \*args, \*kwargs)
+
+        Arrange for `func(\*args, \**kwargs)` to be executed on the broker
+        thread, or immediately if the current thread is the broker thread. Safe
+        to call from any thread.
+
+    .. method:: start_receive (stream)
+
+        Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
+        ready for reading. Safe to call from any thread. When the associated
+        file descriptor becomes ready for reading,
+        :py:meth:`BasicStream.on_receive` will be called.
+
+    .. method:: stop_receive (stream)
+
+        Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
+        not ready for reading. Safe to call from any thread.
+
+    .. method:: start_transmit (stream)
+
+        Mark the :py:attr:`transmit_side <Stream.transmit_side>` on `stream` as
+        ready for writing. Safe to call from any thread. When the associated
+        file descriptor becomes ready for writing,
+        :py:meth:`BasicStream.on_transmit` will be called.
+
+    .. method:: stop_receive (stream)
+
+        Mark the :py:attr:`transmit_side <Stream.receive_side>` on `stream` as
+        not ready for writing. Safe to call from any thread.
+
+    .. method:: shutdown
+
+        Request broker gracefully disconnect streams and stop.
+
+    .. method:: join
+
+        Wait for the broker to stop, expected to be called after
+        :py:meth:`shutdown`.
+
+    .. method:: keep_alive
+
+        Return ``True`` if any reader's :py:attr:`Side.keep_alive` attribute is
+        ``True``, or any :py:class:`Context` is still registered that is not
+        the master. Used to delay shutdown while some important work is in
+        progress (e.g. log draining).
+
+    **Internal Methods**
+
+    .. method:: _broker_main
+
+        Handle events until :py:meth:`shutdown`. On shutdown, invoke
+        :py:meth:`Stream.on_shutdown` for every active stream, then allow up to
+        :py:attr:`shutdown_timeout` seconds for the streams to unregister
+        themselves before forcefully calling
+        :py:meth:`Stream.on_disconnect`.
+
 
 .. currentmodule:: mitogen.master
-.. autoclass:: Broker
-   :members:
+.. class:: Broker
+
+    .. note::
+
+        You may construct as many brokers as desired, and use the same broker
+        for multiple routers, however usually only one broker need exist.
+        Multiple brokers may be useful when dealing with sets of children with
+        differing lifetimes. For example, a subscription service where
+        non-payment results in termination for one customer.
+
+    .. attribute:: shutdown_timeout = 5.0
+
+        Seconds grace to allow :py:class:`streams <Stream>` to shutdown
+        gracefully before force-disconnecting them during :py:meth:`shutdown`.
 
 
 Utility Functions

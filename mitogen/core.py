@@ -925,15 +925,8 @@ class Router(object):
 
 
 class Broker(object):
-    """
-    Responsible for tracking contexts, their associated streams and I/O
-    multiplexing.
-    """
     _waker = None
     _thread = None
-
-    #: Seconds grace to allow :py:class:`Streams <Stream>` to shutdown
-    #: gracefully before force-disconnecting them during :py:meth:`shutdown`.
     shutdown_timeout = 3.0
 
     def __init__(self):
@@ -958,10 +951,6 @@ class Broker(object):
             self._waker.wake()
 
     def start_receive(self, stream):
-        """Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
-        ready for reading. May be called from any thread. When the associated
-        file descriptor becomes ready for reading,
-        :py:meth:`BasicStream.on_transmit` will be called."""
         IOLOG.debug('%r.start_receive(%r)', self, stream)
         assert stream.receive_side and stream.receive_side.fd is not None
         self.defer(self._readers.add, stream.receive_side)
@@ -1013,19 +1002,10 @@ class Broker(object):
             self._call(side.stream, side.stream.on_transmit)
 
     def keep_alive(self):
-        """Return ``True`` if any reader's :py:attr:`Side.keep_alive`
-        attribute is ``True``, or any :py:class:`Context` is still registered
-        that is not the master. Used to delay shutdown while some important
-        work is in progress (e.g. log draining)."""
         return (sum((side.keep_alive for side in self._readers), 0) +
                 (not self._queue.empty()))
 
     def _broker_main(self):
-        """Handle events until :py:meth:`shutdown`. On shutdown, invoke
-        :py:meth:`Stream.on_shutdown` for every active stream, then allow up to
-        :py:attr:`shutdown_timeout` seconds for the streams to unregister
-        themselves before forcefully calling
-        :py:meth:`Stream.on_disconnect`."""
         try:
             while self._alive:
                 self._loop_once()
@@ -1054,14 +1034,11 @@ class Broker(object):
         fire(self, 'exit')
 
     def shutdown(self):
-        """Request broker gracefully disconnect streams and stop."""
         LOG.debug('%r.shutdown()', self)
         self._alive = False
         self._waker.wake()
 
     def join(self):
-        """Wait for the broker to stop, expected to be called after
-        :py:meth:`shutdown`."""
         self._thread.join()
 
     def __repr__(self):
