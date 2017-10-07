@@ -2,5 +2,6 @@
 ansible==2.3.1.0
 docker==2.5.1
 docker[tls]==2.5.1
+mock==2.0.0
 pytest-catchlog==1.2.2
 pytest==3.1.2
