@@ -340,9 +340,11 @@ Router Class
 
 	.. method:: route(msg)
 
-        Arrange for `msg` to be forwarded towards its destination. If its
-        destination is the local context, then arrange for it to be dispatched
-        using the local handlers.
+        Arrange for the :py:class:`Message` `msg` to be delivered to its
+        destination using any relevant downstream context, or if none is found,
+        by forwarding the message upstream towards the master context. If `msg`
+        is destined for the local context, it is dispatched using the handles
+        registered with :py:meth:`add_handler`.
 
         This may be called from any thread.
 
