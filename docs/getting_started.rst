@@ -214,6 +214,17 @@ Let's try running it:
 Waiting On Multiple Calls
 -------------------------
 
+Using :meth:`Context.call_async` it is possible to start multiple function
+calls then sleep waiting for responses as they are available. This makes it
+trivial to run tasks in parallel across processes (including remote processes)
+without the need for writing asynchronous code::
+
+    hostnames = ['host1', 'host2', 'host3', 'host4']
+    contexts = [router.ssh(hostname=hn) for hn in hostnames]
+    calls = [context.call(my_func) for context in contexts]
+
+    for recv, (msg, data) in mitogen.master.Select(calls):
+        print 'Reply from %s: %s' % (recv.context, data)
 
 
 
