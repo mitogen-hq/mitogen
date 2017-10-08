@@ -57,6 +57,4 @@ class RsyncTest(testlib.DockerMixin, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    import mitogen.utils
-    mitogen.utils.log_to_file(level='DEBUG', io=False)
     unittest.main()
