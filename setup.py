@@ -10,5 +10,21 @@ setup(
     license = 'OpenLDAP BSD',
     url = 'http://github.com/dw/mitogen/',
     packages = ['mitogen'],
-    zip_safe = False
+    zip_safe = False,
+    classifiers = [
+        'Development Status :: 3 - Alpha',
+        'Environment :: Console',
+        'Intended Audience :: System Administrators',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: POSIX',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2.4',
+        'Programming Language :: Python :: 2.5',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: Implementation :: CPython',
+        'Topic :: System :: Distributed Computing',
+        'Topic :: System :: Systems Administration',
+    ],
 )
