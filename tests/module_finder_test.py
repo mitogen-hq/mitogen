@@ -103,29 +103,6 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         self.assertEquals(None, tup)
 
 
-class GetModuleViaParentEnumerationTest(testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
-
-    def call(self, fullname):
-        return self.klass()._get_module_via_parent(fullname)
-
-    def test_simple_module(self):
-        import email.utils
-        path, src, is_pkg = self.call('email.utils')
-        self.assertEquals(path, email.utils.__file__.rstrip('co'))
-        self.assertEquals(src, file(email.utils.__file__.rstrip('co')).read())
-        self.assertFalse(is_pkg)
-
-    def test_ansible_compat_six(self):
-        # See comment in _get_module_via_parent
-        raise unittest.SkipTest()
-        import ansible.compat.six
-        path, src, is_pkg = self.call('ansible.compat.six')
-        self.assertEquals(path, __main__.__file__)
-        self.assertEquals(src, file(path).read())
-        self.assertFalse(is_pkg)
-
-
 class ResolveRelPathTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
