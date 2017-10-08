@@ -401,6 +401,11 @@ class ModuleFinder(object):
 
         return False
 
+    def _py_filename(self, path):
+        path = path.rstrip('co')
+        if path.endswith('.py'):
+            return path
+
     def _get_module_via_pkgutil(self, fullname):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
         would be the only required implementation of get_module()."""
@@ -410,7 +415,7 @@ class ModuleFinder(object):
             return
 
         try:
-            path = loader.get_filename(fullname)
+            path = self._py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
             if path is not None and source is not None:
                 return path, source, loader.is_package(fullname)
@@ -426,9 +431,8 @@ class ModuleFinder(object):
                       fullname)
             return
 
-        modpath = getattr(module, '__file__', '')
-        if not modpath.rstrip('co').endswith('.py'):
-            # Probably a native module.
+        modpath = self._py_filename(getattr(module, '__file__', ''))
+        if not modpath:
             return
 
         is_pkg = hasattr(module, '__path__')
@@ -444,30 +448,8 @@ class ModuleFinder(object):
                 source,
                 hasattr(module, '__path__'))
 
-    def _get_module_via_parent(self, fullname):
-        """Attempt to fetch source code by examining the module's (hopefully
-        less insane) parent package. Required for ansible.compat.six."""
-        # Need to find the ancient version of Ansible with the ancient
-        # non-package version of six that required this method to exist.
-        # Currently it doesn't seem to be needed at all, and it's broken for
-        # packages.
-        pkgname, _, modname = fullname.rpartition('.')
-        pkg = sys.modules.get(pkgname)
-        if not (isinstance(pkg, types.ModuleType) and hasattr(pkg, '__file__')):
-            return
-
-        pkg_path = os.path.dirname(pkg.__file__)
-        try:
-            fp, path, ext = imp.find_module(modname, [pkg_path])
-            if ext and ext[-1] == imp.PKG_DIRECTORY:
-                assert 0, "TODO"
-            return path, fp.read(), False
-        except ImportError, e:
-            LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
-
     get_module_methods = [_get_module_via_pkgutil,
-                          _get_module_via_sys_modules,
-                          _get_module_via_parent]
+                          _get_module_via_sys_modules]
 
     def get_module_source(self, fullname):
         """Given the name of a loaded module `fullname`, attempt to find its
