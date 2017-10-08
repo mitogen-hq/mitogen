@@ -8,6 +8,6 @@ setup(
     author = 'David Wilson',
     license = 'OpenLDAP BSD',
     url = 'http://github.com/dw/mitogen/',
-    py_packages = ['Mitogen'],
+    packages = ['mitogen'],
     zip_safe = False
 )
