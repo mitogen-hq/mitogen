@@ -26,20 +26,26 @@ implement the decompression.
 Python Command Line
 ###################
 
-The Python command line sent to the host is a base64-encoded copy of the
-:py:meth:`mitogen.master.Stream._first_stage` function, which has been
-carefully optimized to reduce its size. Prior to base64 encoding,
-``CONTEXT_NAME`` is replaced with the desired context name in the function's
-source code.
+The Python command line sent to the host is a :mod:`zlib`-compressed and
+base64-encoded copy of the :py:meth:`mitogen.master.Stream._first_stage`
+function, which has been carefully optimized to reduce its size. Prior to
+compression and encoding, ``CONTEXT_NAME`` is replaced with the desired context
+name in the function's source code.
 
 .. code::
 
-    python -c 'exec "xxx".decode("base64")'
+    python -c 'exec "xxx".decode("base64").decode("zlib")'
 
 The command-line arranges for the Python interpreter to decode the base64'd
-component and execute it as Python code. Base64 is used since the first stage
-implementation contains newlines, and many special characters that may be
-interpreted by the system shell in use.
+component, decompress it and execute it as Python code. Base64 is used since
+to protect against any special characters that may be interpreted by the system
+shell in use.
+
+Compression may seem redundant, however it is basically free and reducing IO is
+always a good idea. The 33% / 200 byte saving may mean the presence or absence
+of an additional frame on the network, or in real world terms after accounting
+for SSH overhead, up to 2.3% reduced chance of a stall during connection setup
+due to a dropped frame.
 
 
 Forking The First Stage
