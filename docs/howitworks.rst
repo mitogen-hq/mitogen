@@ -26,7 +26,7 @@ implement the decompression.
 Python Command Line
 ###################
 
-The Python command line sent to the host is a :mod:`zlib`-compressed and
+The Python command line sent to the host is a :mod:`zlib`-compressed [#f1]_ and
 base64-encoded copy of the :py:meth:`mitogen.master.Stream._first_stage`
 function, which has been carefully optimized to reduce its size. Prior to
 compression and encoding, ``CONTEXT_NAME`` is replaced with the desired context
@@ -40,12 +40,6 @@ The command-line arranges for the Python interpreter to decode the base64'd
 component, decompress it and execute it as Python code. Base64 is used since
 to protect against any special characters that may be interpreted by the system
 shell in use.
-
-Compression may seem redundant, however it is basically free and reducing IO is
-always a good idea. The 33% / 200 byte saving may mean the presence or absence
-of an additional frame on the network, or in real world terms after accounting
-for SSH overhead, up to 2.3% reduced chance of a stall during connection setup
-due to a dropped frame.
 
 
 Forking The First Stage
@@ -701,3 +695,12 @@ every case, for example when Python blocks signals during a variety of
 At some point it is likely Mitogen will be extended to support children running
 on Windows. When that happens, it would be nice if the process model on Windows
 and UNIX did not differ, and in fact the code used on both were identical.
+
+
+.. rubric:: Footnotes
+
+.. [#f1] Compression may seem redundant, however it is basically free and reducing IO
+   is always a good idea. The 33% / 200 byte saving may mean the presence or
+   absence of an additional frame on the network, or in real world terms after
+   accounting for SSH overhead, around a 2% reduced chance of a stall during
+   connection setup due to a dropped frame.
