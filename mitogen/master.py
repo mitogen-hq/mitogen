@@ -728,8 +728,16 @@ class Stream(mitogen.core.Stream):
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', self.remote_name)
         encoded = source.encode('zlib').encode('base64').replace('\n', '')
-        return [self.python_path, '-c',
-                'exec("%s".decode("base64").decode("zlib"))' % (encoded,)]
+        # We can't use bytes.decode() in 3.x since it was restricted to always
+        # return unicode, so codecs.decode() is used instead. In 3.x
+        # codecs.decode() requires a bytes object. Since we must be compatible
+        # with 2.4 (no bytes literal), an extra .encode() either returns the
+        # same str (2.x) or an equivalent bytes (3.x).
+        return [
+            self.python_path, '-c',
+            'from codecs import decode as _;'
+            'exec(_(_("%s".encode(),"base64"),"zlib"))' % (encoded,)
+        ]
 
     def get_preamble(self):
         parent_ids = mitogen.parent_ids[:]
