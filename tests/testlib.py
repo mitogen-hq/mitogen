@@ -111,6 +111,9 @@ class TestCase(unittest.TestCase):
             assert 0, '%r raised %r, not %r' % (func, e, exc)
         assert 0, '%r did not raise %r' % (func, exc)
 
+    def assertContains(self, needle, hay):
+        assert needle in hay, "%r not found in %r" % (needle, hay)
+
 
 class DockerizedSshDaemon(object):
     def __init__(self):
