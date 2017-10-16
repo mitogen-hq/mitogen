@@ -727,9 +727,9 @@ class Stream(mitogen.core.Stream):
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', self.remote_name)
-        encoded = source.encode('base64').replace('\n', '')
+        encoded = source.encode('zlib').encode('base64').replace('\n', '')
         return [self.python_path, '-c',
-                'exec("%s".decode("base64"))' % (encoded,)]
+                'exec("%s".decode("base64").decode("zlib"))' % (encoded,)]
 
     def get_preamble(self):
         parent_ids = mitogen.parent_ids[:]
