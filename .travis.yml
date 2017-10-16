@@ -14,6 +14,7 @@ install:
 script:
 - PYTHONPATH=. timeout 05.0 python tests/call_function_test.py
 - PYTHONPATH=. timeout 05.0 python tests/channel_test.py
+- PYTHONPATH=. timeout 05.0 python tests/first_stage_test.py
 - PYTHONPATH=. timeout 05.0 python tests/id_allocation_test.py
 - PYTHONPATH=. timeout 05.0 python tests/importer_test.py
 - PYTHONPATH=. timeout 05.0 python tests/local_test.py
