@@ -114,7 +114,7 @@ class TestCase(unittest.TestCase):
 
 class DockerizedSshDaemon(object):
     def __init__(self):
-        self.docker = docker.from_env()
+        self.docker = docker.from_env(version='auto')
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         self.container = self.docker.containers.run(
             image='d2mw/mitogen-test',
