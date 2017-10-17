@@ -706,19 +706,19 @@ class Stream(mitogen.core.Stream):
     def _first_stage():
         import os,sys,zlib
         R,W=os.pipe()
-        R2,W2=os.pipe()
+        r,w=os.pipe()
         if os.fork():
             os.dup2(0,100)
             os.dup2(R,0)
-            os.dup2(R2,101)
-            for f in R,R2,W,W2: os.close(f)
-            os.environ['ARGV0'] = sys.executable
-            os.execv(sys.executable,['mitogen:CONTEXT_NAME'])
+            os.dup2(r,101)
+            for f in R,r,W,w:os.close(f)
+            os.environ['ARGV0']=e=sys.executable
+            os.execv(e,['mitogen:CONTEXT_NAME'])
         else:
             os.write(1, 'EC0\n')
             C = zlib.decompress(sys.stdin.read(input()))
             os.fdopen(W,'w',0).write(C)
-            os.fdopen(W2,'w',0).write('%s\n%s' % (len(C),C))
+            os.fdopen(w,'w',0).write('%s\n%s'%(len(C),C))
             os.write(1, 'EC1\n')
             sys.exit(0)
 
