@@ -718,7 +718,7 @@ class Stream(mitogen.core.Stream):
             os.write(1,'EC0\n')
             C=zlib.decompress(sys.stdin.read(input()))
             os.fdopen(W,'w',0).write(C)
-            os.fdopen(w,'w',0).write('%s\n%s'%(len(C),C))
+            os.fdopen(w,'w',0).write('%s\n'%len(C)+C)
             os.write(1,'EC1\n')
             sys.exit(0)
 
