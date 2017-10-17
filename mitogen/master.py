@@ -714,13 +714,12 @@ class Stream(mitogen.core.Stream):
             for f in R,r,W,w:os.close(f)
             os.environ['ARGV0']=e=sys.executable
             os.execv(e,['mitogen:CONTEXT_NAME'])
-        else:
-            os.write(1,'EC0\n')
-            C=zlib.decompress(sys.stdin.read(input()))
-            os.fdopen(W,'w',0).write(C)
-            os.fdopen(w,'w',0).write('%s\n'%len(C)+C)
-            os.write(1,'EC1\n')
-            sys.exit(0)
+        os.write(1,'EC0\n')
+        C=zlib.decompress(sys.stdin.read(input()))
+        os.fdopen(W,'w',0).write(C)
+        os.fdopen(w,'w',0).write('%s\n'%len(C)+C)
+        os.write(1,'EC1\n')
+        sys.exit(0)
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
