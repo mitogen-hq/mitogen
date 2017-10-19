@@ -1,5 +1,3 @@
-import Queue
-import commands
 import dis
 import errno
 import getpass
@@ -21,6 +19,11 @@ import threading
 import time
 import types
 import zlib
+
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
@@ -51,13 +54,21 @@ def get_child_modules(path, fullname):
     return ['%s.%s' % (fullname, name) for _, name, _ in it]
 
 
-def format_cmdline(args):
-    return ' '.join(
-            commands.mkarg(arg).strip()
-        if any(s in arg for s in (" '\"$")) else
-            arg
-        for arg in args
-    )
+class Argv(object):
+    def __init__(self, argv):
+        self.argv = argv
+
+    def escape(self, x):
+        s = '"'
+        for c in x:
+            if c in '\\$"`':
+                s += '\\'
+            s += c
+        s += '"'
+        return s
+
+    def __str__(self):
+        return ' '.join(map(self.escape, self.argv))
 
 
 def create_child(*args):
@@ -73,7 +84,7 @@ def create_child(*args):
 
     childfp.close()
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, parentfp.fileno(), os.getpid(), format_cmdline(args))
+              pid, parentfp.fileno(), os.getpid(), Argv(args))
     return pid, os.dup(parentfp.fileno())
 
 
@@ -83,10 +94,11 @@ def flags(names):
     return sum(getattr(termios, name) for name in names.split())
 
 
-def cfmakeraw((iflag, oflag, cflag, lflag, ispeed, ospeed, cc)):
+def cfmakeraw(flags):
     """Given a list returned by :py:func:`termios.tcgetattr`, return a list
     that has been modified in the same manner as the `cfmakeraw()` C library
     function."""
+    iflag, oflag, cflag, lflag, ispeed, ospeed, cc = flags
     iflag &= ~flags('IGNBRK BRKINT PARMRK ISTRIP INLCR IGNCR ICRNL IXON')
     oflag &= ~flags('OPOST IXOFF')
     lflag &= ~flags('ECHO ECHOE ECHONL ICANON ISIG IEXTEN')
@@ -135,7 +147,7 @@ def tty_create_child(*args):
 
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, master_fd, os.getpid(), format_cmdline(args))
+              pid, master_fd, os.getpid(), Argv(args))
     return pid, master_fd
 
 
