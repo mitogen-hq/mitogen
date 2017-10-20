@@ -1,5 +1,6 @@
-
+import inspect
 import unittest
+
 import mitogen.master
 
 import testlib
@@ -74,7 +75,7 @@ class GetModuleViaPkgutilTest(testlib.TestCase):
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/regular_mod.py'))
-        self.assertEquals(src, file(regular_mod.__file__).read())
+        self.assertEquals(src, inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
 
 
