@@ -160,8 +160,12 @@ class Process(object):
         self.router.broker.start_receive(self.pump)
 
     def wait(self):
-        while not self.wake_event.wait(0.1):
-            pass
+        while not self.wake_event.isSet():
+            # Timeout is used so that sleep is interruptible, as blocking
+            # variants of libc thread operations cannot be interrupted e.g. via
+            # KeyboardInterrupt. isSet() test and wait() are separate since in
+            # <2.7 wait() always returns None.
+            self.wake_event.wait(0.1):
 
 
 @mitogen.core.takes_router
