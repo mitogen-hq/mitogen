@@ -94,11 +94,11 @@ def flags(names):
     return sum(getattr(termios, name) for name in names.split())
 
 
-def cfmakeraw(flags):
+def cfmakeraw(tflags):
     """Given a list returned by :py:func:`termios.tcgetattr`, return a list
     that has been modified in the same manner as the `cfmakeraw()` C library
     function."""
-    iflag, oflag, cflag, lflag, ispeed, ospeed, cc = flags
+    iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
     iflag &= ~flags('IGNBRK BRKINT PARMRK ISTRIP INLCR IGNCR ICRNL IXON')
     oflag &= ~flags('OPOST IXOFF')
     lflag &= ~flags('ECHO ECHOE ECHONL ICANON ISIG IEXTEN')
