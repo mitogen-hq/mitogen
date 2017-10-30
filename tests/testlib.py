@@ -83,7 +83,21 @@ def wait_for_port(
                 found = True
                 break
 
-        sock.shutdown(socket.SHUT_RDWR)
+        try:
+            sock.shutdown(socket.SHUT_RDWR)
+        except socket.error, e:
+            # On Mac OS X - a BSD variant - the above code only succeeds if the operating system thinks that the
+            # socket is still open when shutdown() is invoked. If Python is too slow and the FIN packet arrives
+            # before that statement can be reached, then OS X kills the sock.shutdown() statement with:
+            #
+            #    socket.error: [Errno 57] Socket is not connected
+            #
+            # Protect shutdown() with a try...except that catches the socket.error, test to make sure Errno is
+            # right, and ignore it if Errno matches.
+            if e.errno == 57:
+                pass
+            else:
+                raise
         sock.close()
 
         if found:
