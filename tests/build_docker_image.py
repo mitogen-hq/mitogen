@@ -49,7 +49,7 @@ def sh(s, *args):
     return shlex.split(s)
 
 
-mydir = os.path.dirname(__file__)
+mydir = os.path.abspath(os.path.dirname(__file__))
 with tempfile.NamedTemporaryFile(dir=mydir) as dockerfile_fp:
     dockerfile_fp.write(DOCKERFILE)
     dockerfile_fp.flush()
