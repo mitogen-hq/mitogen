@@ -36,7 +36,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         stdout, stderr = proc.communicate()
         self.assertEquals(0, proc.returncode)
         self.assertEquals("EC0\n", stdout)
-        self.assertContains("EOFError", stderr)
+        self.assertIn("EOFError", stderr)
 
 
 if __name__ == '__main__':
