@@ -1,5 +1,6 @@
 import os
-import unittest
+
+import unittest2 as unittest
 
 import testlib
 

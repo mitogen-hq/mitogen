@@ -1,8 +1,9 @@
 
 import mock
 import subprocess
-import unittest
 import sys
+
+import unittest2 as unittest
 
 import mitogen.master
 import testlib

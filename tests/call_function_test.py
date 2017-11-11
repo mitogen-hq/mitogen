@@ -1,6 +1,7 @@
 import logging
 import time
-import unittest
+
+import unittest2 as unittest
 
 import mitogen.core
 import mitogen.master

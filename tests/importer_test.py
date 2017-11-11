@@ -2,11 +2,11 @@
 import email.utils
 import sys
 import types
-import unittest
 import zlib
 
 import mock
 import pytest
+import unittest2 as unittest
 
 import mitogen.core
 import testlib

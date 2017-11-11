@@ -1,9 +1,8 @@
-
-import unittest
-
 import mitogen
 import mitogen.ssh
 import mitogen.utils
+
+import unittest2 as unittest
 
 import testlib
 import plain_old_module

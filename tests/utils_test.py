@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import unittest
+import unittest2 as unittest
 
 import mitogen.master
 import mitogen.utils
