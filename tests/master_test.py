@@ -36,7 +36,7 @@ class IterReadTest(unittest.TestCase):
         try:
             reader = self.func(proc.stdout.fileno())
             for i, chunk in enumerate(reader, 1):
-                assert i == int(chunk)
+                self.assertEqual(i, int(chunk))
                 if i > 3:
                     break
         finally:
@@ -52,7 +52,7 @@ class IterReadTest(unittest.TestCase):
                     got.append(chunk)
                 assert 0, 'TimeoutError not raised'
             except mitogen.core.TimeoutError:
-                assert len(got) == 0
+                self.assertEqual(len(got), 0)
         finally:
             proc.terminate()
 
@@ -68,7 +68,8 @@ class IterReadTest(unittest.TestCase):
             except mitogen.core.TimeoutError:
                 # Give a little wiggle room in case of imperfect scheduling.
                 # Ideal number should be 9.
-                assert 3 < len(got) < 5
+                self.assertLess(3, len(got))
+                self.assertLess(len(got), 5)
         finally:
             proc.terminate()
 

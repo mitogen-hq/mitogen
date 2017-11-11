@@ -53,7 +53,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         except mitogen.ssh.PasswordError, e:
             pass
 
-        assert e[0] == self.stream_class.password_required_msg
+        self.assertEqual(e[0], self.stream_class.password_required_msg)
 
     def test_password_incorrect(self):
         try:
@@ -65,7 +65,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         except mitogen.ssh.PasswordError, e:
             pass
 
-        assert e[0] == self.stream_class.password_incorrect_msg
+        self.assertEqual(e[0], self.stream_class.password_incorrect_msg)
 
     def test_password_specified(self):
         context = self.docker_ssh(
@@ -73,8 +73,10 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
             password='y',
         )
 
-        sentinel = 'i-am-mitogen-test-docker-image\n'
-        assert sentinel == context.call(plain_old_module.get_sentinel_value)
+        self.assertEqual(
+            'i-am-mitogen-test-docker-image\n',
+            context.call(plain_old_module.get_sentinel_value),
+        )
 
     def test_pubkey_required(self):
         try:
@@ -85,15 +87,17 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         except mitogen.ssh.PasswordError, e:
             pass
 
-        assert e[0] == self.stream_class.password_required_msg
+        self.assertEqual(e[0], self.stream_class.password_required_msg)
 
     def test_pubkey_specified(self):
         context = self.docker_ssh(
             username='has-sudo-pubkey',
             identity_file=testlib.data_path('docker/has-sudo-pubkey.key'),
         )
-        sentinel = 'i-am-mitogen-test-docker-image\n'
-        assert sentinel == context.call(plain_old_module.get_sentinel_value)
+        self.assertEqual(
+            'i-am-mitogen-test-docker-image\n',
+            context.call(plain_old_module.get_sentinel_value),
+        )
 
 
 if __name__ == '__main__':

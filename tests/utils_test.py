@@ -21,14 +21,14 @@ class RunWithRouterTest(unittest.TestCase):
 
     def test_run_with_broker(self):
         router = mitogen.utils.run_with_router(func0)
-        self.assertTrue(isinstance(router, mitogen.master.Router))
+        self.assertIsInstance(router, mitogen.master.Router)
         self.assertFalse(router.broker._thread.isAlive())
 
 
 class WithRouterTest(unittest.TestCase):
     def test_with_broker(self):
         router = func()
-        self.assertTrue(isinstance(router, mitogen.master.Router))
+        self.assertIsInstance(router, mitogen.master.Router)
         self.assertFalse(router.broker._thread.isAlive())
 
 

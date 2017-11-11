@@ -97,12 +97,12 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         # _socket comes from a .so
         import _socket
         tup = self.call('_socket')
-        self.assertEquals(None, tup)
+        self.assertIsNone(tup)
 
     def test_builtin_fails(self):
         # sys is built-in
         tup = self.call('sys')
-        self.assertEquals(None, tup)
+        self.assertIsNone(tup)
 
 
 class ResolveRelPathTest(testlib.TestCase):
