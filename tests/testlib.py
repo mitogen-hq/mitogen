@@ -5,8 +5,9 @@ import re
 import socket
 import sys
 import time
-import unittest
 import urlparse
+
+import unittest2 as unittest
 
 import mitogen.master
 if mitogen.is_master:  # TODO: shouldn't be necessary.

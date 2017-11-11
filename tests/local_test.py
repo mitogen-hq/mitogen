@@ -1,6 +1,7 @@
 
 import os
-import unittest
+
+import unittest2 as unittest
 
 import mitogen
 import mitogen.ssh

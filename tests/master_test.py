@@ -1,7 +1,8 @@
 
 import subprocess
 import time
-import unittest
+
+import unittest2 as unittest
 
 import testlib
 import mitogen.master
@@ -15,7 +16,7 @@ class ScanCodeImportsTest(unittest.TestCase):
         self.assertEquals(list(self.func(co)), [
             (-1, 'subprocess', ()),
             (-1, 'time', ()),
-            (-1, 'unittest', ()),
+            (-1, 'unittest2', ()),
             (-1, 'testlib', ()),
             (-1, 'mitogen.master', ()),
         ])

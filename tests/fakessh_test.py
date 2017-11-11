@@ -1,7 +1,8 @@
 
 import os
 import shutil
-import unittest
+
+import unittest2 as unittest
 
 import mitogen.fakessh
 
