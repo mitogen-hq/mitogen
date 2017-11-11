@@ -26,7 +26,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         # from the pipe, which is a valid script, and therefore exit indicating
         # success.
 
-        fp = file("/dev/null", "r")
+        fp = open("/dev/null", "r")
         proc = subprocess.Popen(args,
             stdin=fp,
             stdout=subprocess.PIPE,
