@@ -21,7 +21,7 @@ def exec_command(cmd, in_data=None):
 
 
 def read_path(path):
-    return file(path, 'rb').read()
+    return open(path, 'rb').read()
 
 
 def write_path(path, s):

@@ -363,7 +363,7 @@ a large fleet of machines, or to alert the parent of unexpected state changes.
             elif new_size < size:
                 size = 0
 
-            fp = file(path, 'r')
+            fp = open(path, 'r')
             fp.seek(size)
             channel.send(fp.read(new_size - size))
             fp.close()

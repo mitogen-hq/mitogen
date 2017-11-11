@@ -1127,7 +1127,7 @@ class ExternalContext(object):
         # Reopen with line buffering.
         sys.stdout = os.fdopen(1, 'w', 1)
 
-        fp = file('/dev/null')
+        fp = open('/dev/null')
         try:
             os.dup2(fp.fileno(), 0)
         finally:

@@ -309,7 +309,7 @@ def run(dest, router, args, deadline=None, econtext=None):
     tmp_path = tempfile.mkdtemp(prefix='mitogen_fakessh')
     try:
         ssh_path = os.path.join(tmp_path, 'ssh')
-        fp = file(ssh_path, 'w')
+        fp = open(ssh_path, 'w')
         try:
             fp.write('#!%s\n' % (sys.executable,))
             fp.write(inspect.getsource(mitogen.core))
