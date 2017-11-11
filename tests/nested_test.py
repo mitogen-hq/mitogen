@@ -13,7 +13,7 @@ class NestedTest(testlib.RouterMixin, testlib.TestCase):
             context = self.router.local(via=context, name='local%d' % x)
 
         pid = context.call(os.getpid)
-        self.assertTrue(isinstance(pid, int))
+        self.assertIsInstance(pid, int)
 
 
 if __name__ == '__main__':

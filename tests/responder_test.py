@@ -52,7 +52,7 @@ class BrokenModulesTest(unittest.TestCase):
         call = router.route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(50, msg.handle)
-        self.assertTrue(msg.unpickle() is None)
+        self.assertIsNone(msg.unpickle())
 
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
@@ -75,7 +75,7 @@ class BrokenModulesTest(unittest.TestCase):
         call = router.route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(50, msg.handle)
-        self.assertTrue(isinstance(msg.unpickle(), tuple))
+        self.assertIsInstance(msg.unpickle(), tuple)
 
 
 if __name__ == '__main__':
