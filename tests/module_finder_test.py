@@ -89,7 +89,7 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         import __main__
         path, src, is_pkg = self.call('__main__')
         self.assertEquals(path, __main__.__file__)
-        self.assertEquals(src, file(path).read())
+        self.assertEquals(src, open(path).read())
         self.assertFalse(is_pkg)
 
     def test_dylib_fails(self):
