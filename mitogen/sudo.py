@@ -71,7 +71,8 @@ class Stream(mitogen.master.Stream):
                                              time.time() + 10.0):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
-                return self._ec0_received()
+                self._ec0_received()
+                return
             elif PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
