@@ -7,7 +7,7 @@ import sys
 import time
 import urlparse
 
-import unittest2 as unittest
+import unittest2
 
 import mitogen.master
 if mitogen.is_master:  # TODO: shouldn't be necessary.
@@ -114,7 +114,7 @@ def wait_for_port(
                                  % (host, port))
 
 
-class TestCase(unittest.TestCase):
+class TestCase(unittest2.TestCase):
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
         raised. Can't use context manager because tests must run on Python2.4"""

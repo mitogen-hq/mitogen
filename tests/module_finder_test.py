@@ -1,6 +1,6 @@
 import inspect
 
-import unittest2 as unittest
+import unittest2
 
 import mitogen.master
 
@@ -146,4 +146,4 @@ class FindRelatedImportsTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

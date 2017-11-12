@@ -3,7 +3,7 @@ import mock
 import subprocess
 import sys
 
-import unittest2 as unittest
+import unittest2
 
 import mitogen.master
 import testlib
@@ -12,7 +12,7 @@ import plain_old_module
 import simple_pkg.a
 
 
-class GoodModulesTest(testlib.RouterMixin, unittest.TestCase):
+class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
@@ -34,7 +34,7 @@ class GoodModulesTest(testlib.RouterMixin, unittest.TestCase):
         self.assertEquals(output, "['__main__', 50]\n")
 
 
-class BrokenModulesTest(unittest.TestCase):
+class BrokenModulesTest(unittest2.TestCase):
     def test_obviously_missing(self):
         # Ensure we don't crash in the case of a module legitimately being
         # unavailable. Should never happen in the real world.
@@ -79,4 +79,4 @@ class BrokenModulesTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

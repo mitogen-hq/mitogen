@@ -2,13 +2,13 @@ import mitogen
 import mitogen.ssh
 import mitogen.utils
 
-import unittest2 as unittest
+import unittest2
 
 import testlib
 import plain_old_module
 
 
-class FakeSshTest(testlib.RouterMixin, unittest.TestCase):
+class FakeSshTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
         context = self.router.ssh(
                 hostname='hostname',
@@ -20,7 +20,7 @@ class FakeSshTest(testlib.RouterMixin, unittest.TestCase):
         self.assertEquals(3, context.call(plain_old_module.add, 1, 2))
 
 
-class SshTest(testlib.DockerMixin, unittest.TestCase):
+class SshTest(testlib.DockerMixin, unittest2.TestCase):
     stream_class = mitogen.ssh.Stream
 
     def test_stream_name(self):
@@ -101,4 +101,4 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

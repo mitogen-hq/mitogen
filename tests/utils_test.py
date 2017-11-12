@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import unittest2 as unittest
+import unittest2
 
 import mitogen.master
 import mitogen.utils
@@ -15,7 +15,7 @@ def func(router):
     return router
 
 
-class RunWithRouterTest(unittest.TestCase):
+class RunWithRouterTest(unittest2.TestCase):
     # test_shutdown_on_exception
     # test_shutdown_on_success
 
@@ -25,7 +25,7 @@ class RunWithRouterTest(unittest.TestCase):
         self.assertFalse(router.broker._thread.isAlive())
 
 
-class WithRouterTest(unittest.TestCase):
+class WithRouterTest(unittest2.TestCase):
     def test_with_broker(self):
         router = func()
         self.assertIsInstance(router, mitogen.master.Router)
@@ -33,4 +33,4 @@ class WithRouterTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

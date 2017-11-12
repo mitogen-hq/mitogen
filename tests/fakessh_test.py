@@ -2,14 +2,14 @@
 import os
 import shutil
 
-import unittest2 as unittest
+import unittest2
 
 import mitogen.fakessh
 
 import testlib
 
 
-class RsyncTest(testlib.DockerMixin, unittest.TestCase):
+class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
     def test_rsync_from_master(self):
         context = self.docker_ssh_any()
 
@@ -60,4 +60,4 @@ class RsyncTest(testlib.DockerMixin, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

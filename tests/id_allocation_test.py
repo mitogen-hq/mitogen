@@ -1,5 +1,5 @@
 
-import unittest2 as unittest
+import unittest2
 
 import testlib
 import id_allocation
@@ -13,4 +13,4 @@ class SlaveTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

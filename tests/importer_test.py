@@ -6,7 +6,7 @@ import zlib
 
 import mock
 import pytest
-import unittest2 as unittest
+import unittest2
 
 import mitogen.core
 import testlib
@@ -128,4 +128,4 @@ class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()
