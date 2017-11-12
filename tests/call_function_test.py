@@ -1,7 +1,7 @@
 import logging
 import time
 
-import unittest2 as unittest
+import unittest2
 
 import mitogen.core
 import mitogen.master
@@ -89,4 +89,4 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

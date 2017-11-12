@@ -2,13 +2,13 @@
 import subprocess
 import time
 
-import unittest2 as unittest
+import unittest2
 
 import testlib
 import mitogen.master
 
 
-class ScanCodeImportsTest(unittest.TestCase):
+class ScanCodeImportsTest(unittest2.TestCase):
     func = staticmethod(mitogen.master.scan_code_imports)
 
     def test_simple(self):
@@ -22,7 +22,7 @@ class ScanCodeImportsTest(unittest.TestCase):
         ])
 
 
-class IterReadTest(unittest.TestCase):
+class IterReadTest(unittest2.TestCase):
     func = staticmethod(mitogen.master.iter_read)
 
     def make_proc(self):
@@ -74,7 +74,7 @@ class IterReadTest(unittest.TestCase):
             proc.terminate()
 
 
-class WriteAllTest(unittest.TestCase):
+class WriteAllTest(unittest2.TestCase):
     func = staticmethod(mitogen.master.write_all)
 
     def make_proc(self):
@@ -115,4 +115,4 @@ class WriteAllTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()
