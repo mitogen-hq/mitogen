@@ -246,6 +246,18 @@ def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
                        co.co_consts[arg2] or ())
 
 
+def join_thread_async(target_thread, on_join):
+    """Start a thread that waits for another thread to shutdown, before
+    invoking `on_join()`. In CPython it seems possible to use this method to
+    ensure a non-main thread is signalled when the main thread has exitted,
+    using yet another thread as a proxy."""
+    def _watch():
+        target_thread.join()
+        on_join()
+    thread = threading.Thread(target=_watch)
+    thread.start()
+
+
 class SelectError(mitogen.core.Error):
     pass
 
@@ -791,6 +803,11 @@ class Stream(mitogen.core.Stream):
 class Broker(mitogen.core.Broker):
     shutdown_timeout = 5.0
 
+    def __init__(self, install_watcher=True):
+        if install_watcher:
+            join_thread_async(threading.currentThread(), self.shutdown)
+        super(Broker, self).__init__()
+
 
 class Context(mitogen.core.Context):
     via = None
@@ -914,12 +931,15 @@ class ChildIdAllocator(object):
 
 
 class Router(mitogen.core.Router):
+    broker_class = Broker
     debug = False
 
     profiling = False
 
-    def __init__(self, *args, **kwargs):
-        super(Router, self).__init__(*args, **kwargs)
+    def __init__(self, broker=None):
+        if broker is None:
+            broker = self.broker_class()
+        super(Router, self).__init__(broker)
         self.id_allocator = IdAllocator(self)
         self.responder = ModuleResponder(self)
         self.log_forwarder = LogForwarder(self)
