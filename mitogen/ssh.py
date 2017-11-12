@@ -80,7 +80,8 @@ class Stream(mitogen.master.Stream):
                                              time.time() + 10.0):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
-                return self._ec0_received()
+                self._ec0_received()
+                return
             elif PERMDENIED_PROMPT in buf.lower():
                 if self.password is not None and password_sent:
                     raise PasswordError(self.password_incorrect_msg)
