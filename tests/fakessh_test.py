@@ -1,14 +1,15 @@
 
 import os
 import shutil
-import unittest
+
+import unittest2
 
 import mitogen.fakessh
 
 import testlib
 
 
-class RsyncTest(testlib.DockerMixin, unittest.TestCase):
+class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
     def test_rsync_from_master(self):
         context = self.docker_ssh_any()
 
@@ -20,9 +21,9 @@ class RsyncTest(testlib.DockerMixin, unittest.TestCase):
             testlib.data_path('.'), 'target:/tmp/data'
         ])
 
-        assert return_code == 0
-        assert context.call(os.path.exists, '/tmp/data')
-        assert context.call(os.path.exists, '/tmp/data/simple_pkg/a.py')
+        self.assertEqual(return_code, 0)
+        self.assertTrue(context.call(os.path.exists, '/tmp/data'))
+        self.assertTrue(context.call(os.path.exists, '/tmp/data/simple_pkg/a.py'))
 
     def test_rsync_between_direct_children(self):
         # master -> SSH -> has-sudo-pubkey -> rsync(.ssh) -> master ->
@@ -51,10 +52,12 @@ class RsyncTest(testlib.DockerMixin, unittest.TestCase):
             'rsync', '--progress', '-vvva', '.ssh/', 'target:' + dest_path
         ])
 
-        assert return_code == 0
-        assert pubkey_acct.call(os.path.getsize, '.ssh/authorized_keys') == \
-               webapp_acct.call(os.path.getsize, dest_path + '/authorized_keys')
+        self.assertEqual(return_code, 0)
+        self.assertEqual(
+            pubkey_acct.call(os.path.getsize, '.ssh/authorized_keys'),
+            webapp_acct.call(os.path.getsize, dest_path + '/authorized_keys'),
+        )
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

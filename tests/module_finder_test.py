@@ -1,5 +1,6 @@
 import inspect
-import unittest
+
+import unittest2
 
 import mitogen.master
 
@@ -96,12 +97,12 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         # _socket comes from a .so
         import _socket
         tup = self.call('_socket')
-        self.assertEquals(None, tup)
+        self.assertIsNone(tup)
 
     def test_builtin_fails(self):
         # sys is built-in
         tup = self.call('sys')
-        self.assertEquals(None, tup)
+        self.assertIsNone(tup)
 
 
 class ResolveRelPathTest(testlib.TestCase):
@@ -145,4 +146,4 @@ class FindRelatedImportsTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

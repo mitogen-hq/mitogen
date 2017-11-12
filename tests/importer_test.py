@@ -2,11 +2,11 @@
 import email.utils
 import sys
 import types
-import unittest
 import zlib
 
 import mock
 import pytest
+import unittest2
 
 import mitogen.core
 import testlib
@@ -39,8 +39,8 @@ class LoadModuleTest(ImporterMixin, testlib.TestCase):
     def test_module_added_to_sys_modules(self):
         self.context.send_await.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertTrue(sys.modules[self.modname] is mod)
-        self.assertTrue(isinstance(mod, types.ModuleType))
+        self.assertIs(sys.modules[self.modname], mod)
+        self.assertIsInstance(mod, types.ModuleType)
 
     def test_module_file_set(self):
         self.context.send_await.return_value = self.response
@@ -50,12 +50,12 @@ class LoadModuleTest(ImporterMixin, testlib.TestCase):
     def test_module_loader_set(self):
         self.context.send_await.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertTrue(mod.__loader__ is self.importer)
+        self.assertIs(mod.__loader__, self.importer)
 
     def test_module_package_unset(self):
         self.context.send_await.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertTrue(mod.__package__ is None)
+        self.assertIsNone(mod.__package__)
 
 
 class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
@@ -96,7 +96,7 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
     def test_module_loader_set(self):
         self.context.send_await.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertTrue(mod.__loader__ is self.importer)
+        self.assertIs(mod.__loader__, self.importer)
 
     def test_module_path_present(self):
         self.context.send_await.return_value = self.response
@@ -111,7 +111,7 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
     def test_module_data(self):
         self.context.send_await.return_value = self.response
         mod = self.importer.load_module(self.modname)
-        self.assertTrue(isinstance(mod.func, types.FunctionType))
+        self.assertIsInstance(mod.func, types.FunctionType)
         self.assertEquals(mod.func.__module__, self.modname)
 
 
@@ -128,4 +128,4 @@ class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

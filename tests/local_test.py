@@ -1,6 +1,7 @@
 
 import os
-import unittest
+
+import unittest2
 
 import mitogen
 import mitogen.ssh
@@ -10,7 +11,7 @@ import testlib
 import plain_old_module
 
 
-class LocalTest(testlib.RouterMixin, unittest.TestCase):
+class LocalTest(testlib.RouterMixin, unittest2.TestCase):
     stream_class = mitogen.ssh.Stream
 
     def test_stream_name(self):
@@ -20,4 +21,4 @@ class LocalTest(testlib.RouterMixin, unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

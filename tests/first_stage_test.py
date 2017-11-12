@@ -1,6 +1,7 @@
 
 import subprocess
-import unittest
+
+import unittest2
 
 import mitogen.master
 import testlib
@@ -35,8 +36,8 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         stdout, stderr = proc.communicate()
         self.assertEquals(0, proc.returncode)
         self.assertEquals("EC0\n", stdout)
-        self.assertContains("EOFError", stderr)
+        self.assertIn("EOFError", stderr)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

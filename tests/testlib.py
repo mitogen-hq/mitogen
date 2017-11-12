@@ -5,8 +5,9 @@ import re
 import socket
 import sys
 import time
-import unittest
 import urlparse
+
+import unittest2
 
 import mitogen.master
 if mitogen.is_master:  # TODO: shouldn't be necessary.
@@ -113,7 +114,7 @@ def wait_for_port(
                                  % (host, port))
 
 
-class TestCase(unittest.TestCase):
+class TestCase(unittest2.TestCase):
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
         raised. Can't use context manager because tests must run on Python2.4"""
@@ -124,9 +125,6 @@ class TestCase(unittest.TestCase):
         except BaseException, e:
             assert 0, '%r raised %r, not %r' % (func, e, exc)
         assert 0, '%r did not raise %r' % (func, exc)
-
-    def assertContains(self, needle, hay):
-        assert needle in hay, "%r not found in %r" % (needle, hay)
 
 
 class DockerizedSshDaemon(object):

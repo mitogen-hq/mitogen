@@ -1,15 +1,14 @@
-
-import unittest
-
 import mitogen
 import mitogen.ssh
 import mitogen.utils
+
+import unittest2
 
 import testlib
 import plain_old_module
 
 
-class FakeSshTest(testlib.RouterMixin, unittest.TestCase):
+class FakeSshTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
         context = self.router.ssh(
                 hostname='hostname',
@@ -21,7 +20,7 @@ class FakeSshTest(testlib.RouterMixin, unittest.TestCase):
         self.assertEquals(3, context.call(plain_old_module.add, 1, 2))
 
 
-class SshTest(testlib.DockerMixin, unittest.TestCase):
+class SshTest(testlib.DockerMixin, unittest2.TestCase):
     stream_class = mitogen.ssh.Stream
 
     def test_stream_name(self):
@@ -54,7 +53,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         except mitogen.ssh.PasswordError, e:
             pass
 
-        assert e[0] == self.stream_class.password_required_msg
+        self.assertEqual(e[0], self.stream_class.password_required_msg)
 
     def test_password_incorrect(self):
         try:
@@ -66,7 +65,7 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         except mitogen.ssh.PasswordError, e:
             pass
 
-        assert e[0] == self.stream_class.password_incorrect_msg
+        self.assertEqual(e[0], self.stream_class.password_incorrect_msg)
 
     def test_password_specified(self):
         context = self.docker_ssh(
@@ -74,8 +73,10 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
             password='y',
         )
 
-        sentinel = 'i-am-mitogen-test-docker-image\n'
-        assert sentinel == context.call(plain_old_module.get_sentinel_value)
+        self.assertEqual(
+            'i-am-mitogen-test-docker-image\n',
+            context.call(plain_old_module.get_sentinel_value),
+        )
 
     def test_pubkey_required(self):
         try:
@@ -86,16 +87,18 @@ class SshTest(testlib.DockerMixin, unittest.TestCase):
         except mitogen.ssh.PasswordError, e:
             pass
 
-        assert e[0] == self.stream_class.password_required_msg
+        self.assertEqual(e[0], self.stream_class.password_required_msg)
 
     def test_pubkey_specified(self):
         context = self.docker_ssh(
             username='has-sudo-pubkey',
             identity_file=testlib.data_path('docker/has-sudo-pubkey.key'),
         )
-        sentinel = 'i-am-mitogen-test-docker-image\n'
-        assert sentinel == context.call(plain_old_module.get_sentinel_value)
+        self.assertEqual(
+            'i-am-mitogen-test-docker-image\n',
+            context.call(plain_old_module.get_sentinel_value),
+        )
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

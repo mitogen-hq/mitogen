@@ -1,6 +1,7 @@
 import logging
 import time
-import unittest
+
+import unittest2
 
 import mitogen.core
 import mitogen.master
@@ -38,7 +39,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.local = self.router.local()
 
     def test_succeeds(self):
-        assert 3 == self.local.call(function_that_adds_numbers, 1, 2)
+        self.assertEqual(3, self.local.call(function_that_adds_numbers, 1, 2))
 
     def test_crashes(self):
         exc = self.assertRaises(mitogen.core.CallError,
@@ -46,13 +47,13 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
         s = str(exc)
         etype, _, s = s.partition(': ')
-        assert etype == 'exceptions.ValueError'
+        self.assertEqual(etype, 'exceptions.ValueError')
 
         msg, _, s = s.partition('\n')
-        assert msg == 'exception text'
+        self.assertEqual(msg, 'exception text')
 
         # Traceback
-        assert len(s) > 0
+        self.assertGreater(len(s), 0)
 
     def test_bad_return_value(self):
         exc = self.assertRaises(mitogen.core.StreamError,
@@ -60,7 +61,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(exc[0], "cannot unpickle '__main__'/'CrazyType'")
 
     def test_returns_dead(self):
-        assert mitogen.core._DEAD == self.local.call(func_returns_dead)
+        self.assertEqual(mitogen.core._DEAD, self.local.call(func_returns_dead))
 
     def test_aborted_on_local_context_disconnect(self):
         stream = self.router._stream_by_id[self.local.context_id]
@@ -82,10 +83,10 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_accepts_returns_context(self):
         context = self.local.call(func_accepts_returns_context, self.local)
-        assert context is not self.local
-        assert context.context_id == self.local.context_id
-        assert context.name == self.local.name
+        self.assertIsNot(context, self.local)
+        self.assertEqual(context.context_id, self.local.context_id)
+        self.assertEqual(context.name, self.local.name)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

@@ -1,8 +1,9 @@
 
 import mock
 import subprocess
-import unittest
 import sys
+
+import unittest2
 
 import mitogen.master
 import testlib
@@ -11,7 +12,7 @@ import plain_old_module
 import simple_pkg.a
 
 
-class GoodModulesTest(testlib.RouterMixin, unittest.TestCase):
+class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
@@ -33,7 +34,7 @@ class GoodModulesTest(testlib.RouterMixin, unittest.TestCase):
         self.assertEquals(output, "['__main__', 50]\n")
 
 
-class BrokenModulesTest(unittest.TestCase):
+class BrokenModulesTest(unittest2.TestCase):
     def test_obviously_missing(self):
         # Ensure we don't crash in the case of a module legitimately being
         # unavailable. Should never happen in the real world.
@@ -51,7 +52,7 @@ class BrokenModulesTest(unittest.TestCase):
         call = router.route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(50, msg.handle)
-        self.assertTrue(msg.unpickle() is None)
+        self.assertIsNone(msg.unpickle())
 
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
@@ -74,8 +75,8 @@ class BrokenModulesTest(unittest.TestCase):
         call = router.route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(50, msg.handle)
-        self.assertTrue(isinstance(msg.unpickle(), tuple))
+        self.assertIsInstance(msg.unpickle(), tuple)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

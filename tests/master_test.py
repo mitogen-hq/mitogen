@@ -1,13 +1,14 @@
 
 import subprocess
 import time
-import unittest
+
+import unittest2
 
 import testlib
 import mitogen.master
 
 
-class ScanCodeImportsTest(unittest.TestCase):
+class ScanCodeImportsTest(unittest2.TestCase):
     func = staticmethod(mitogen.master.scan_code_imports)
 
     def test_simple(self):
@@ -15,13 +16,13 @@ class ScanCodeImportsTest(unittest.TestCase):
         self.assertEquals(list(self.func(co)), [
             (-1, 'subprocess', ()),
             (-1, 'time', ()),
-            (-1, 'unittest', ()),
+            (-1, 'unittest2', ()),
             (-1, 'testlib', ()),
             (-1, 'mitogen.master', ()),
         ])
 
 
-class IterReadTest(unittest.TestCase):
+class IterReadTest(unittest2.TestCase):
     func = staticmethod(mitogen.master.iter_read)
 
     def make_proc(self):
@@ -35,7 +36,7 @@ class IterReadTest(unittest.TestCase):
         try:
             reader = self.func(proc.stdout.fileno())
             for i, chunk in enumerate(reader, 1):
-                assert i == int(chunk)
+                self.assertEqual(i, int(chunk))
                 if i > 3:
                     break
         finally:
@@ -51,7 +52,7 @@ class IterReadTest(unittest.TestCase):
                     got.append(chunk)
                 assert 0, 'TimeoutError not raised'
             except mitogen.core.TimeoutError:
-                assert len(got) == 0
+                self.assertEqual(len(got), 0)
         finally:
             proc.terminate()
 
@@ -67,12 +68,13 @@ class IterReadTest(unittest.TestCase):
             except mitogen.core.TimeoutError:
                 # Give a little wiggle room in case of imperfect scheduling.
                 # Ideal number should be 9.
-                assert 3 < len(got) < 5
+                self.assertLess(3, len(got))
+                self.assertLess(len(got), 5)
         finally:
             proc.terminate()
 
 
-class WriteAllTest(unittest.TestCase):
+class WriteAllTest(unittest2.TestCase):
     func = staticmethod(mitogen.master.write_all)
 
     def make_proc(self):
@@ -113,4 +115,4 @@ class WriteAllTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()
