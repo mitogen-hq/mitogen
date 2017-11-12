@@ -351,7 +351,7 @@ Router Class
 
 .. currentmodule:: mitogen.master
 
-.. class:: Router
+.. class:: Router (broker=None)
 
     Extend :py:class:`mitogen.core.Router` with functionality useful to
     masters, and child contexts who later become masters. Currently when this
@@ -364,6 +364,10 @@ Router Class
         exist. Multiple routers may be useful when dealing with separate trust
         domains, for example, manipulating infrastructure belonging to separate
         customers or projects.
+
+    :param mitogen.master.Broker broker:
+        :py:class:`Broker` instance to use. If not specified, a private
+        :py:class:`Broker` is created.
 
     .. data:: profiling
 
@@ -828,7 +832,7 @@ Broker Class
 
 
 .. currentmodule:: mitogen.master
-.. class:: Broker
+.. class:: Broker (install_watcher=True)
 
     .. note::
 
@@ -837,6 +841,16 @@ Broker Class
         Multiple brokers may be useful when dealing with sets of children with
         differing lifetimes. For example, a subscription service where
         non-payment results in termination for one customer.
+
+    :param bool install_watcher:
+        If ``True``, an additional thread is started to monitor the lifetime of
+        the main thread, triggering :py:meth:`shutdown` automatically in case
+        the user forgets to call it, or their code crashed.
+
+        You should not rely on this functionality in your program, it is only
+        intended as a fail-safe and to simplify the API for new users. In
+        particular, alternative Python implementations may not be able to
+        support watching the main thread.
 
     .. attribute:: shutdown_timeout = 5.0
 
