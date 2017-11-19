@@ -12,7 +12,7 @@ install:
 - pip install -r dev_requirements.txt
 
 script:
-- PYTHONPATH=. timeout 05.0 ${TRAVIS_BUILD_DIR}/test.sh
+- PYTHONPATH=. ${TRAVIS_BUILD_DIR}/test.sh
 
 services:
   - docker
