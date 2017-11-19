@@ -29,9 +29,9 @@ import os.path
 
 try:
     import six as _system_six
-    print('unsocks', _system_six)
+    print('six_brokenpkg: using system six:', _system_six)
 except ImportError, e:
-    print('cocks', e)
+    print('six_brokenpkg: no system six available', e)
     _system_six = None
 
 if _system_six:
