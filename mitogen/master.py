@@ -135,6 +135,9 @@ def cfmakeraw(tflags):
     cflag &= ~flags('CSIZE PARENB')
     cflag |= flags('CS8')
 
+    # TODO: one or more of the above bit twiddles sets or omits a necessary
+    # flag. Forcing these fields to zero, as shown below, gets us what we want
+    # on Linux/OS X, but it is possibly broken on some other OS.
     iflag = 0
     oflag = 0
     lflag = 0
