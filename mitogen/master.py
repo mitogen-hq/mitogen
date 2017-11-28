@@ -109,9 +109,13 @@ def create_child(*args):
         os.execvp(args[0], args)
 
     childfp.close()
+    # Decouple the socket from the lifetime of the Python socket object.
+    fd = os.dup(parentfp.fileno())
+    parentfp.close()
+
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, parentfp.fileno(), os.getpid(), Argv(args))
-    return pid, os.dup(parentfp.fileno())
+              pid, fd, os.getpid(), Argv(args))
+    return pid, fd
 
 
 def flags(names):
