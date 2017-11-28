@@ -107,7 +107,6 @@ def create_child(*args):
         childfp.close()
         parentfp.close()
         os.execvp(args[0], args)
-        raise SystemExit
 
     childfp.close()
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
@@ -170,7 +169,6 @@ def tty_create_child(*args):
         os.setsid()
         os.close(os.open(os.ttyname(1), os.O_RDWR))
         os.execvp(args[0], args)
-        raise SystemExit
 
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
