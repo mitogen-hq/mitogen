@@ -134,6 +134,7 @@ class DockerizedSshDaemon(object):
         self.container = self.docker.containers.run(
             image='d2mw/mitogen-test',
             detach=True,
+            privileged=True,
             publish_all_ports=True,
         )
         self.container.reload()
