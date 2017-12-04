@@ -163,12 +163,39 @@ class Process(object):
         self.stdin = mitogen.core.Sender(dest, arg[1])
         self.router.broker.start_receive(self.pump)
 
-    def _on_exit(self, msg, arg):
-        LOG.debug('on_exit: proc = %r', self.proc)
         if self.proc:
-            self.proc.terminate()
+            pmon = mitogen.master.ProcessMonitor.instance()
+            pmon.add(self.proc.pid, self._on_proc_exit)
+
+    exitted = False
+
+    def _on_exit(self, msg, arg):
+        LOG.debug('on_exit: proc = %r, arg = %r', self.proc, arg)
+        if self.proc:
+            try:
+                self.proc.terminate()
+            except OSError:
+                pass
         else:
-            self.router.broker.shutdown()
+            #self.router.broker.shutdown()
+            msg = (
+                mitogen.core.Message.pickled(
+                    ('sys', None, 'exit', (arg or 0,), {}),
+                    handle=mitogen.core.CALL_FUNCTION,
+                    src_id=mitogen.parent_ids[0],
+                    dst_id=mitogen.context_id,
+                )
+            )
+            print 'HAHA'
+            print msg
+            self.router.route(
+                mitogen.core.Message.pickled(
+                    ('sys', None, 'exit', (arg or 0,), {}),
+                    handle=mitogen.core.CALL_FUNCTION,
+                    src_id=mitogen.parent_ids[0],
+                    dst_id=mitogen.context_id,
+                )
+            )
 
     def _on_pump_receive(self, s):
         IOLOG.info('%r._on_pump_receive(len %d)', self, len(s))
@@ -205,8 +232,10 @@ def _start_slave(src_id, cmdline, router):
     """
     LOG.debug('_start_slave(%r, %r)', router, cmdline)
 
-    proc = subprocess.Popen(
-        cmdline,
+    # Must be constructed from main thread due to signal use.
+    pmon = mitogen.master.ProcessMonitor.instance()
+
+    proc = subprocess.Popen(cmdline,
         # SSH server always uses user's shell.
         shell=True,
         # SSH server always executes new commands in the user's HOME.

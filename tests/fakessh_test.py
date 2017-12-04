@@ -9,6 +9,19 @@ import mitogen.fakessh
 import testlib
 
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+class ExitStatusTest(testlib.RouterMixin, unittest2.TestCase):
+    # Ensure child's exit status is propagated to the parent.
+    def test_exit_0(self):
+        local = self.router.local()
+
+        exit_status = mitogen.fakessh.run(local, self.router, [
+            'bash', '-c', 'exec ssh foo exit 0'
+        ])
+        self.assertEquals(0, exit_status)
+
+
 class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
     def test_rsync_from_master(self):
         context = self.docker_ssh_any()
@@ -17,7 +30,7 @@ class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
             context.call(shutil.rmtree, '/tmp/data')
 
         return_code = mitogen.fakessh.run(context, self.router, [
-            'rsync', '--progress', '-vvva',
+            'rsync', '-a',
             testlib.data_path('.'), 'target:/tmp/data'
         ])
 
@@ -49,7 +62,7 @@ class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
             webapp_acct.call(shutil.rmtree, dest_path)
 
         return_code = pubkey_acct.call(mitogen.fakessh.run, webapp_acct, args=[
-            'rsync', '--progress', '-vvva', '.ssh/', 'target:' + dest_path
+            'rsync', '-a', '.ssh/', 'target:' + dest_path
         ])
 
         self.assertEqual(return_code, 0)
