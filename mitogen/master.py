@@ -170,6 +170,7 @@ def tty_create_child(*args):
 
     pid = os.fork()
     if not pid:
+        mitogen.core.set_block(slave_fd)
         os.dup2(slave_fd, 0)
         os.dup2(slave_fd, 1)
         os.dup2(slave_fd, 2)
