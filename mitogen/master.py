@@ -102,6 +102,7 @@ def create_child(*args):
     parentfp, childfp = socket.socketpair()
     pid = os.fork()
     if not pid:
+        mitogen.core.set_block(childfp.fileno())
         os.dup2(childfp.fileno(), 0)
         os.dup2(childfp.fileno(), 1)
         childfp.close()

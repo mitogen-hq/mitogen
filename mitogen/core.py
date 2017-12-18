@@ -162,6 +162,11 @@ def set_nonblock(fd):
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
+def set_block(fd):
+    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
+
+
 def io_op(func, *args):
     try:
         return func(*args), False
