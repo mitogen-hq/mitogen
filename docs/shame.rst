@@ -29,7 +29,7 @@ direct filesystem access.
 
 **What could it do instead?**
 
-* ``pkg_resources.get_resource_stream()``
+* ``pkg_resources.resource_stream()``
 
 **What Mitogen is forced to do**
 
