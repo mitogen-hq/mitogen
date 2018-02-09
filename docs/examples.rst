@@ -3,6 +3,175 @@ Examples
 ========
 
 
+Fixing Bugs By Replacing Shell
+------------------------------
+
+Have you ever encountered shell like this? It arranges to conditionally execute
+an ``if`` statement as root on a file server behind a bastion host:
+
+.. code-block:: bash
+
+    ssh bastion "
+        if \"$PROD\";
+        then
+            ssh fileserver sudo su -c \"
+                if grep -qs /dev/sdb1 /proc/mounts;
+                then
+                    echo \\\"sdb1 already mounted!\\\";
+                    umount /dev/sdb1
+                fi;
+                rm -rf \\\"/media/Main Backup Volume\\\"/*;
+                mount /dev/sdb1 \\\"/media/Main Backup Volume\\\"
+            \";
+        fi;
+        sudo touch /var/run/start_backup;
+    "
+
+Chances are high this is familiar territory, we've all seen it, and many of us
+working in infrastructure have almost certainly even written it. At first
+glance, ignoring that annoying quoting, it looks perfectly fine: well
+structured, neatly indented, and the purpose of the snippet seems clear. But I
+have some questions:
+
+1. At first glance, can you say if ``"/media/Main Backup Volume"`` is quoted
+   correctly?
+2. How will the ``if`` statement behave if there is a problem with the machine,
+   and, say, the ``/bin/grep`` binary is absent?
+3. Ignoring quoting, can you spot any other syntax problems?
+4. If you cutpaste this snippet from its original script into an interactive
+   shell, will it behave the same as before?
+5. Can you think offhand of differences in how the arguments to ``sudo
+   ...`` and ``ssh fileserver ...`` are parsed?
+6. In which context will the ``*`` glob be expanded, if it is expanded at all?
+
+
+Innocent But Deadly
+~~~~~~~~~~~~~~~~~~~
+
+And now some answers:
+
+1. No, the quoting used is nonsense! At best, ``mount`` will receive 3
+   arguments. At worst, the snippet will not parse at all.
+2. The ``if`` statement will treat a missing ``grep`` binary (exit status 127)
+   the same as if ``/dev/sdb1`` was not mounted at all (exit status 1). Unless
+   the program executing this script is parsing ``stderr`` output, the failure
+   won't be noticed. Consequently, since the volume was still mounted when
+   ``rm`` was executed, it got wiped.
+3. There is at least one more syntax error present: a semicolon missing after
+   the ``umount`` command.
+4. Depending in which environment the ``PROD`` variable is set, either it will
+   always evaluate to false, because it was set by the bastion host, or it
+   will do the right thing, because it was set by the script host.
+5. If you cutpaste the snippet into an interactive shell, the apparently quoted
+   "!" character in the ``echo`` command will be interepreted as a history
+   expansion.
+6. Nobody knows this one! ``sudo`` preserved the remainder of the argument
+   vector as-is, whereas ``ssh`` **concatenates** each part into a single
+   string that is passed to the login shell.
+7. As for where the glob is expanded, the answer is I have absolutely no idea
+   without running the code, which might wipe out the backups!
+
+Golly, we've managed to hit at least 7 potentially mission-critical gotchas in
+only 14 lines of code, and they are just those I can count! Welcome to the
+reality of "programming" in shell.
+
+In the end, superficial legibility counted for nothing, it's 4AM, you've been
+paged, the network is down and your boss is angry.
+
+
+The Madness That Is Shell Quoting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Let's assume on first approach that we really want to handle those quoting
+issues. I wrote a little Python 3 script based around the
+:py:func:`shlex.quote` function to help construct, to the best of my knowledge,
+the quoting required for each stage of the command:
+
+::
+
+   >>> c1 = q('if grep -qs /dev/sdb1 /proc/mounts ; then echo "sdb1 already mounted!"; unmount /dev/sdb1; fi; mount /dev/sdb1 "/media/Main Backup Volume"')
+   >>> c2 = qq('bash', '-c', c1)
+   >>> c3 = qq('sudo', 'su', '-c', c2)
+   >>> c4 = qq('bash', '-c', 'if $PROD; then ssh 'diskserver', c3)
+   >>> c5 = 'if "$PROD"; then %s; fi; sudo touch /var/run/start_backup' % (c4,)
+   >>> c6 = qq('ssh', 'bastion', qq('bash', '-c', c5))
+   >>> print(c6)
+
+And now, the output:
+
+.. code-block:: bash
+
+    ssh bastion 'bash -c '"'"'if "$PROD"; then ssh diskserver '"'"'"'"'"'"'"
+    '"'sudo su -c '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'bash 
+    -c '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"''"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'if grep
+    -qs /dev/sdb1 /proc/mounts ; then echo "sdb1 already mounted!"; unmount
+    /dev/sdb1; fi; mount /dev/sdb1 "/media/Main Backup Volume"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"''"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"
+    '"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"''"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'"'
+    "'"'"'"'"'"'"'"'"'"''"'"'"'"'"'"'"'"'; fi; sudo touch /var/run/start_backup'"'"''
+
+Even with Python handling all the heavy lifting of correctly quoting each layer
+of shell, and producing the monstrosity that is a syntactically correct result,
+and even if we fixed the aforementioned minor disk-wiping issue, I am still not
+100% confident that I know precisely the argument handling rules for all of
+``su``, ``sudo``, ``ssh``, and ``bash``.
+
+
+There Is Hope
+~~~~~~~~~~~~~
+
+We could instead express the above using Mitogen directly in Python code:
+
+::
+
+    def run(*args):
+        return subprocess.check_call(args)
+
+    def file_contains(s, path):
+        with open(path, 'rb') as fp:
+            return s in fp.read()
+
+    device = '/dev/sdb1'
+    mount_point = '/media/Media Volume'
+
+    bastion = router.ssh(hostname='bastion')
+    bastion_sudo = router.sudo(via=bastion)
+
+    if PROD:
+        fileserver = router.ssh(hostname='fileserver', via=bastion)
+        if fileserver.call(file_contains, device, '/proc/mounts'):
+            print('{} already mounted!'.format(device))
+            fileserver.call(run, 'umount', device)
+        fileserver.call(shutil.rmtree, mount_point)
+        fileserver.call(os.mkdir, mount_point, 0777)
+        fileserver.call(run, 'mount', device, mount_point)
+
+    bastion_sudo.call(run, 'touch', '/var/run/start_backup')
+
+And now, a few more questions:
+
+* Can you tell in which context the ``PROD`` variable must be defined?
+* Can you tell on which machine each step executed?
+* Can you see any escaping issues?
+* What will happen if the ``grep`` binary is missing?
+* What will happen if any step fails?
+
+
 Recursively Nested Bootstrap
 ----------------------------
 
