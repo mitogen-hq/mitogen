@@ -1,5 +1,6 @@
 -r docs/docs-requirements.txt
 ansible==2.3.1.0
+Django==1.11.5  # for module_finder_test
 docker==2.5.1
 docker[tls]==2.5.1
 mock==2.0.0
