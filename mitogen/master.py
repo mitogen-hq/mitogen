@@ -599,13 +599,14 @@ class ModuleFinder(object):
             stack.extend(set(fullnames).difference(found, stack, [fullname]))
             found.update(fullnames)
 
-        return found
+        return sorted(found)
 
 
 class ModuleResponder(object):
     def __init__(self, router):
         self._router = router
         self._finder = ModuleFinder()
+        self._cache = {}  # fullname -> pickled
         router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
 
     def __repr__(self):
@@ -622,6 +623,40 @@ class ModuleResponder(object):
             return src[:match.start()]
         return src
 
+    def _build_tuple(self, fullname):
+        if fullname in self._cache:
+            return self._cache[fullname]
+
+        path, source, is_pkg = self._finder.get_module_source(fullname)
+        if source is None:
+            raise ImportError('could not find %r' % (fullname,))
+
+        if is_pkg:
+            pkg_present = get_child_modules(path, fullname)
+            LOG.debug('_build_tuple(%r, %r) -> %r',
+                      path, fullname, pkg_present)
+        else:
+            pkg_present = None
+
+        if fullname == '__main__':
+            source = self.neutralize_main(source)
+        compressed = zlib.compress(source)
+        related = list(self._finder.find_related(fullname))
+        # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
+        return fullname, pkg_present, path, compressed, related
+
+    def _send_load_module(self, msg, fullname):
+        stream = self._router.stream_by_id(msg.src_id)
+        if fullname not in stream.sent_modules:
+            self._router.route(
+                mitogen.core.Message.pickled(
+                    self._build_tuple(fullname),
+                    dst_id=msg.src_id,
+                    handle=mitogen.core.LOAD_MODULE,
+                )
+            )
+            stream.sent_modules.add(fullname)
+
     def _on_get_module(self, msg):
         LOG.debug('%r.get_module(%r)', self, msg)
         if msg == mitogen.core._DEAD:
@@ -629,33 +664,16 @@ class ModuleResponder(object):
 
         fullname = msg.data
         try:
-            path, source, is_pkg = self._finder.get_module_source(fullname)
-            if source is None:
-                raise ImportError('could not find %r' % (fullname,))
-
-            if is_pkg:
-                pkg_present = get_child_modules(path, fullname)
-                LOG.debug('get_child_modules(%r, %r) -> %r',
-                          path, fullname, pkg_present)
-            else:
-                pkg_present = None
-
-            if fullname == '__main__':
-                source = self.neutralize_main(source)
-            compressed = zlib.compress(source)
-            related = list(self._finder.find_related(fullname))
-            self._router.route(
-                mitogen.core.Message.pickled(
-                    (pkg_present, path, compressed, related),
-                    dst_id=msg.src_id,
-                    handle=msg.reply_to,
-                )
-            )
+            tup = self._build_tuple(fullname)
+            related = tup[4]
+            for name in related + [fullname]:
+                if name not in ('mitogen', 'mitogen.core'):
+                    self._send_load_module(msg, name)
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
             self._router.route(
                 mitogen.core.Message.pickled(
-                    None,
+                    (fullname, None, None, None, []),
                     dst_id=msg.src_id,
                     handle=msg.reply_to,
                 )
@@ -682,40 +700,27 @@ class ModuleForwarder(object):
             return
 
         fullname = msg.data
-        cached = self.importer._cache.get(fullname)
-        if cached:
-            LOG.debug('%r._on_get_module(): using cached %r', self, fullname)
-            self.router.route(
-                mitogen.core.Message.pickled(
-                    cached,
-                    dst_id=msg.src_id,
-                    handle=msg.reply_to,
-                )
-            )
-        else:
-            LOG.debug('%r._on_get_module(): requesting %r', self, fullname)
-            self.parent_context.send(
-                mitogen.core.Message(
-                    data=msg.data,
-                    handle=mitogen.core.GET_MODULE,
-                    reply_to=self.router.add_handler(
-                        lambda m: self._on_got_source(m, msg),
-                        persist=False
-                    )
-                )
-            )
+        callback = lambda: self._on_cache_callback(msg, fullname)
+        self.importer._request_module(fullname, callback)
 
-    def _on_got_source(self, msg, original_msg):
-        LOG.debug('%r._on_got_source(%r, %r)', self, msg, original_msg)
-        fullname = original_msg.data
-        self.importer._cache[fullname] = msg.unpickle()
+    def _send_one_module(self, msg, tup):
         self.router.route(
-            mitogen.core.Message(
-                data=msg.data,
-                dst_id=original_msg.src_id,
-                handle=original_msg.reply_to,
+            mitogen.core.Message.pickled(
+                self.importer._cache[fullname],
+                dst_id=msg.src_id,
+                handle=mitogen.core.LOAD_MODULE,
             )
         )
+
+    def _on_cache_callback(self, msg, fullname):
+        LOG.debug('%r._on_get_module(): sending %r', self, fullname)
+        tup = self.importer._cache[fullname]
+        if tup is not None:
+            for related in tup[4]:
+                rtup = self.importer._cache[fullname]
+                self._send_one_module(rtup)
+
+        self._send_one_module(tup)
 
 
 class Stream(mitogen.core.Stream):
@@ -730,6 +735,10 @@ class Stream(mitogen.core.Stream):
 
     #: True to cause context to write /tmp/mitogen.stats.<pid>.<thread>.log.
     profiling = False
+
+    def __init__(self, *args, **kwargs):
+        super(Stream, self).__init__(*args, **kwargs)
+        self.sent_modules = set()
 
     def construct(self, remote_name=None, python_path=None, debug=False,
                   profiling=False, **kwargs):
