@@ -56,6 +56,7 @@ FORWARD_LOG = 102
 ADD_ROUTE = 103
 ALLOCATE_ID = 104
 SHUTDOWN = 105
+LOAD_MODULE = 106
 
 CHUNK_SIZE = 16384
 
@@ -305,6 +306,8 @@ def _queue_interruptible_get(queue, timeout=None, block=True):
     if timeout is not None:
         timeout += time.time()
 
+    LOG.info('timeout = %r, block = %r', timeout, block)
+
     msg = None
     while msg is None and (timeout is None or timeout > time.time()):
         try:
@@ -395,7 +398,7 @@ class Importer(object):
 
     :param context: Context to communicate via.
     """
-    def __init__(self, context, core_src):
+    def __init__(self, router, context, core_src):
         self._context = context
         self._present = {'mitogen': [
             'mitogen.ansible',
@@ -407,13 +410,19 @@ class Importer(object):
             'mitogen.sudo',
             'mitogen.utils',
         ]}
+        self._lock = threading.Lock()
+        # Presence of an entry in this map indicates in-flight GET_MODULE.
+        self._callbacks = {}
         self.tls = threading.local()
+        router.add_handler(self._on_load_module, LOAD_MODULE)
         self._cache = {}
         if core_src:
             self._cache['mitogen.core'] = (
+                'mitogen.core',
                 None,
                 'mitogen/core.py',
                 zlib.compress(core_src),
+                [],
             )
 
     def __repr__(self):
@@ -468,23 +477,53 @@ class Importer(object):
             # later.
             os.environ['PBR_VERSION'] = '0.0.0'
 
+    def _on_load_module(self, msg):
+        tup = msg.unpickle()
+        fullname = tup[0]
+        LOG.debug('Importer._on_load_module(%r)', fullname)
+
+        self._lock.acquire()
+        try:
+            self._cache[fullname] = tup
+            callbacks = self._callbacks.pop(fullname, [])
+        finally:
+            self._lock.release()
+
+        for callback in callbacks:
+            callback()
+
+    def _request_module(self, fullname, callback):
+        self._lock.acquire()
+        try:
+            present = fullname in self._cache
+            if not present:
+                funcs = self._callbacks.get(fullname)
+                if funcs is not None:
+                    LOG.debug('_request_module(%r): in flight', fullname)
+                    funcs.append(callback)
+                else:
+                    LOG.debug('_request_module(%r): new request', fullname)
+                    self._callbacks[fullname] = [callback]
+                    self._context.send(Message(data=fullname, handle=GET_MODULE))
+        finally:
+            self._lock.release()
+
+        if present:
+            callback()
+
     def load_module(self, fullname):
         LOG.debug('Importer.load_module(%r)', fullname)
         self._load_module_hacks(fullname)
 
-        try:
-            ret = self._cache[fullname]
-        except KeyError:
-            self._cache[fullname] = ret = (
-                self._context.send_await(
-                    Message(data=fullname, handle=GET_MODULE)
-                )
-            )
+        event = threading.Event()
+        self._request_module(fullname, event.set)
+        event.wait()
 
+        ret = self._cache[fullname]
         if ret is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
-        pkg_present = ret[0]
+        pkg_present = ret[1]
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = self.get_filename(fullname)
         mod.__loader__ = self
@@ -500,11 +539,11 @@ class Importer(object):
 
     def get_filename(self, fullname):
         if fullname in self._cache:
-            return 'master:' + self._cache[fullname][1]
+            return 'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
-            return zlib.decompress(self._cache[fullname][2])
+            return zlib.decompress(self._cache[fullname][3])
 
 
 class LogHandler(logging.Handler):
@@ -593,6 +632,7 @@ class Stream(BasicStream):
         self._router = router
         self.remote_id = remote_id
         self.name = 'default'
+        self.modules_sent = set()
         self.construct(**kwargs)
         self._output_buf = collections.deque()
 
@@ -852,6 +892,10 @@ class Router(object):
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
+
+    def stream_by_id(self, dst_id):
+        return self._stream_by_id.get(dst_id,
+            self._stream_by_id.get(mitogen.parent_id))
 
     def on_disconnect(self, stream, broker):
         """Invoked by Stream.on_disconnect()."""
@@ -1132,7 +1176,7 @@ class ExternalContext(object):
         else:
             core_src = None
 
-        self.importer = Importer(self.parent, core_src)
+        self.importer = Importer(self.router, self.parent, core_src)
         sys.meta_path.append(self.importer)
 
     def _setup_package(self, context_id, parent_ids):
