@@ -636,6 +636,12 @@ class ModuleResponder(object):
 
         path, source, is_pkg = self._finder.get_module_source(fullname)
         if source is None:
+            LOG.error('_build_tuple(%r): could not locate source', fullname)
+            tup = fullname, None, None, None, None
+            self._cache[fullname] = tup
+            return tup
+
+        if source is None:
             raise ImportError('could not find %r' % (fullname,))
 
         if is_pkg:
@@ -675,8 +681,7 @@ class ModuleResponder(object):
 
         try:
             tup = self._build_tuple(fullname)
-
-            for name in tup[4]:  # related
+            for name in tup[4] or ():  # related
                 if name == fullname:
                     # Must be sent last
                     continue
