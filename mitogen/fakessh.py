@@ -30,7 +30,6 @@ import inspect
 import logging
 import os
 import shutil
-import signal
 import socket
 import subprocess
 import sys
@@ -39,6 +38,7 @@ import threading
 
 import mitogen.core
 import mitogen.master
+import mitogen.parent
 
 from mitogen.core import LOG, IOLOG
 
@@ -123,7 +123,7 @@ class Process(object):
         mitogen.core.listen(self.pump, 'receive', self._on_pump_receive)
 
         if proc:
-            pmon = mitogen.master.ProcessMonitor.instance()
+            pmon = mitogen.parent.ProcessMonitor.instance()
             pmon.add(proc.pid, self._on_proc_exit)
 
     def __repr__(self):
@@ -313,7 +313,7 @@ def _fakessh_main(dest_context_id, econtext):
 @mitogen.core.takes_router
 def run(dest, router, args, deadline=None, econtext=None):
     if econtext is not None:
-        mitogen.master.upgrade_router(econtext)
+        mitogen.parent.upgrade_router(econtext)
 
     context_id = router.allocate_id()
     fakessh = mitogen.master.Context(router, context_id)

@@ -33,7 +33,7 @@ import commands
 import logging
 import time
 
-import mitogen.master
+import mitogen.parent
 
 
 LOG = logging.getLogger('mitogen')
@@ -46,8 +46,8 @@ class PasswordError(mitogen.core.Error):
     pass
 
 
-class Stream(mitogen.master.Stream):
-    create_child = staticmethod(mitogen.master.tty_create_child)
+class Stream(mitogen.parent.Stream):
+    create_child = staticmethod(mitogen.parent.tty_create_child)
     python_path = 'python2.7'
 
     #: The path to the SSH binary.
@@ -103,8 +103,8 @@ class Stream(mitogen.master.Stream):
 
     def _connect_bootstrap(self):
         password_sent = False
-        for buf in mitogen.master.iter_read(self.receive_side.fd,
-                                             time.time() + 10.0):
+        for buf in mitogen.parent.iter_read(self.receive_side.fd,
+                                            time.time() + 10.0):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
                 self._ec0_received()
