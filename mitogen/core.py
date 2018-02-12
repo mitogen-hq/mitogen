@@ -457,6 +457,13 @@ class Importer(object):
             del self.tls.running
 
     def _load_module_hacks(self, fullname):
+        if fullname in ('builtins', '__builtin__'):
+            # Python 2.x will generate needless imports for 'builtins', while
+            # Python 3.x will generate needless imports for '__builtin__'. The
+            # correct one is already present in sys.modules, the other is
+            # always a negative round-trip.
+            raise ImportError('Refused')
+
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']
 
