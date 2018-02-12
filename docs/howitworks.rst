@@ -668,12 +668,6 @@ bytecode. This is since clean source analysis methods (:py:mod:`ast` and
 major Python versions.
 
 
-Child Module Enumeration
-########################
-
-Package children are enumerated using :py:func:`pkgutil.iter_modules`.
-
-
 Concurrency
 ###########
 
@@ -752,6 +746,12 @@ source arrives, it is not possible to preemptively issue :py:data:`LOAD_MODULE`
 for those dependencies toward a requesting child as they become available from
 the parent at the intermediary. This creates needless network serialization and
 latency that should be addressed in a future design.
+
+
+Child Module Enumeration
+########################
+
+Package children are enumerated using :py:func:`pkgutil.iter_modules`.
 
 
 Use Of Threads
