@@ -266,9 +266,12 @@ def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
             for c in ordit)
 
     opit, opit2, opit3 = itertools.tee(opit, 3)
-    next(opit2)
-    next(opit3)
-    next(opit3)
+    try:
+        next(opit2)
+        next(opit3)
+        next(opit3)
+    except StopIteration:
+        return
 
     for oparg1, oparg2, (op3, arg3) in itertools.izip(opit, opit2, opit3):
         if op3 == IMPORT_NAME:
@@ -532,6 +535,10 @@ class ModuleFinder(object):
         """Given an ImportFrom AST node, guess the prefix that should be tacked
         on to an alias name to produce a canonical name. `fullname` is the name
         of the module in which the ImportFrom appears."""
+        mod = sys.modules.get(fullname, None)
+        if hasattr(mod, '__path__'):
+            fullname += '.__init__'
+
         if level == 0 or not fullname:
             return ''
 
@@ -540,11 +547,11 @@ class ModuleFinder(object):
             # This would be an ImportError in real code.
             return ''
 
-        return '.'.join(bits[:-level]) + '.'
+        return '.'.join(bits[:-level])
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
-            fullname = fullname[:fullname.rindex('.')]
+            fullname, _, _ = fullname.rpartition('.')
             yield fullname
 
     def find_related_imports(self, fullname):
@@ -643,32 +650,53 @@ class ModuleResponder(object):
         compressed = zlib.compress(source)
         related = list(self._finder.find_related(fullname))
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
-        return fullname, pkg_present, path, compressed, related
+        tup = fullname, pkg_present, path, compressed, related
+        self._cache[fullname] = tup
+        return tup
 
-    def _send_load_module(self, msg, fullname):
-        stream = self._router.stream_by_id(msg.src_id)
-        if fullname not in stream.sent_modules:
-            self._router.route(
-                mitogen.core.Message.pickled(
-                    self._build_tuple(fullname),
-                    dst_id=msg.src_id,
-                    handle=mitogen.core.LOAD_MODULE,
-                )
+    def _send_load_module(self, stream, msg, fullname):
+        LOG.debug('_send_load_module(%r, %r)', stream, fullname)
+        self._router.route(
+            mitogen.core.Message.pickled(
+                self._build_tuple(fullname),
+                dst_id=msg.src_id,
+                handle=mitogen.core.LOAD_MODULE,
             )
-            stream.sent_modules.add(fullname)
+        )
+        stream.sent_modules.add(fullname)
 
     def _on_get_module(self, msg):
         LOG.debug('%r.get_module(%r)', self, msg)
         if msg == mitogen.core._DEAD:
             return
 
+        stream = self._router.stream_by_id(msg.src_id)
         fullname = msg.data
+
         try:
             tup = self._build_tuple(fullname)
-            related = tup[4]
-            for name in related + [fullname]:
-                if name not in ('mitogen', 'mitogen.core'):
-                    self._send_load_module(msg, name)
+
+            for name in tup[4]:  # related
+                if name == fullname:
+                    # Must be sent last
+                    continue
+
+                parent_pkg, _, _ = name.partition('.')
+                if parent_pkg != fullname and parent_pkg not in stream.sent_packages:
+                    # Parent hasn't been required, so don't load this guy yet.
+                    continue
+
+                if name in stream.sent_modules:
+                    # Submodule has been sent already, skip.
+                    continue
+
+                self._send_load_module(stream, msg, name)
+
+            self._send_load_module(stream, msg, fullname)
+            if tup[1] is not None:
+                # It's a package, record the fact it was sent.
+                stream.sent_packages.add(fullname)
+
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
             self._router.route(
@@ -706,7 +734,7 @@ class ModuleForwarder(object):
     def _send_one_module(self, msg, tup):
         self.router.route(
             mitogen.core.Message.pickled(
-                self.importer._cache[fullname],
+                tup,
                 dst_id=msg.src_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
@@ -718,9 +746,9 @@ class ModuleForwarder(object):
         if tup is not None:
             for related in tup[4]:
                 rtup = self.importer._cache[fullname]
-                self._send_one_module(rtup)
+                self._send_one_module(msg, rtup)
 
-        self._send_one_module(tup)
+        self._send_one_module(msg, tup)
 
 
 class Stream(mitogen.core.Stream):
@@ -738,7 +766,8 @@ class Stream(mitogen.core.Stream):
 
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
-        self.sent_modules = set()
+        self.sent_modules = set(['mitogen', 'mitogen.core'])
+        self.sent_packages = set(['mitogen'])
 
     def construct(self, remote_name=None, python_path=None, debug=False,
                   profiling=False, **kwargs):
