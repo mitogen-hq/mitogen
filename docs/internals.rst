@@ -170,6 +170,22 @@ Importer Class
    :members:
 
 
+Responder Class
+---------------
+
+.. currentmodule:: mitogen.master
+.. autoclass:: ModuleResponder
+   :members:
+
+
+Forwarder Class
+---------------
+
+.. currentmodule:: mitogen.master
+.. autoclass:: ModuleForwarder
+   :members:
+
+
 ExternalContext Class
 ---------------------
 

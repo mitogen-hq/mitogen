@@ -36,8 +36,8 @@ neatly indented, and the purpose of the snippet seems clear.
 2. How will the ``if`` statement behave if there is a problem with the machine,
    and, say, the ``/bin/grep`` binary is absent?
 3. Ignoring quoting, are there any other syntax problems?
-4. If this snippet is pasted snippet from its original script into an
-   interactive shell, will it behave the same as before?
+4. If this snippet is pasted from its original script into an interactive
+   shell, will it behave the same as before?
 5. Can you think offhand of differences in how the arguments to ``sudo
    ...`` and ``ssh fileserver ...`` are parsed?
 6. In which context will the ``*`` glob be expanded, if it is expanded at all?
@@ -107,13 +107,13 @@ each stage:
     '
 
 Even with Python handling the heavy lifting of quoting each shell layer, and
-and even if we fixed the aforementioned minor disk-wiping issue, I am still not
-100% confident that I know precisely the argument handling rules for all of
-``su``, ``sudo``, ``ssh``, and ``bash``.
+even if the aforementioned minor disk-wiping issue was fixed, it is still not
+100% clear that argument handling rules for all of ``su``, ``sudo``, ``ssh``,
+and ``bash`` are correctly respected.
 
-Finally, if any of the login shells involved may not be set to ``bash``, we
-must introduce additional layers of quoting, in order to explicitly invoke
-``bash`` at each stage, causing an explosion in quoting:
+Finally, if any login shell involved is not ``bash``, we must introduce
+additional quoting in order to explicitly invoke ``bash`` at each stage,
+causing an explosion in quoting:
 
 .. code-block:: bash
 

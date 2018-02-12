@@ -634,7 +634,7 @@ Before replying to a child's request for a module with dependencies:
   determines the :py:mod:`django` module code in the master has :keyword:`import`
   statements for :py:mod:`django.utils`, :py:mod:`django.utils.lru_cache`, and
   :py:mod:`django.utils.version`,
-  and that exceution of the module code on the master caused those modules to
+  and that execution of the module code on the master caused those modules to
   appear in the master's :py:data:`sys.modules`, there is high probability
   execution of the :py:mod:`django` module code in the child will cause the
   same modules to be loaded. Since all those modules exist within the
@@ -642,7 +642,7 @@ Before replying to a child's request for a module with dependencies:
   it is safe to assume the child will make follow-up requests for those modules
   too.
 
-  In the example, this replaces 4 round-trips with 1 round-trip.
+  In the example, 4 round-trips are replaced by 1 round-trip.
 
 For any package module ever requested by a child, the parent keeps a note of
 the name of the package for one final optimization:
@@ -663,7 +663,7 @@ the name of the package for one final optimization:
   :py:mod:`django.dispatch`, and 7 :py:mod:`django.utils` indirect dependencies
   for :py:mod:`django.db`.
 
-  In the example, this replaces 17 round-trips with 1 round-trip.
+  In the example, 17 round-trips are replaced by 1 round-trip.
 
 The method used to detect import statements is similar to the standard library
 :py:mod:`modulefinder` module: rather than analyze module source code,
@@ -677,6 +677,86 @@ Child Module Enumeration
 ########################
 
 Package children are enumerated using :py:func:`pkgutil.iter_modules`.
+
+
+Concurrency
+###########
+
+Duplicate requests must never be issued to the parent, either due to a local
+import or any :py:data:`GET_MODULE` originating from a child. This lets parents
+assume a module requested once by a downstream connection need never be
+re-sent, for example, if it appears as a preloading dependency in a subsequent
+:py:data:`GET_MODULE`, or had been requested immediately after being sent as a
+preloading dependency for an unrelated request by a descendent.
+
+Therefore each tree layer must deduplicate :py:data:`GET_MODULE` requests, and
+synchronize their descendents and local threads on corresponding
+:py:data:`LOAD_MODULE` responses from the parent.
+
+In each context, pending requests are serialized by a
+:py:class:`threading.Lock` within :py:class:`mitogen.core.Importer`, which may
+only be held for operations that cannot block, since :py:class:`ModuleForwarder
+<mitogen.master.ModuleForwarder>` must acquire it while synchronizing
+:py:data:`GET_MODULE` requests from children on the IO multiplexer thread.
+
+
+Requests From Local Threads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When Mitogen begins satisfying an import, it is known the module has never been
+imported in the local process. :py:class:`Importer <mitogen.core.Importer>`
+executes under the runtime importer lock, ensuring :py:keyword:`import`
+statements executing in local threads are serialized.
+
+.. note::
+   
+    In Python 2, :py:exc:`ImportError` is raised when :py:keyword:`import` is
+    attempted while the runtime import lock is held by another thread,
+    therefore imports must be serialized by only attempting them from the main
+    (:py:data:`CALL_FUNCTION`) thread.
+
+    The problem is most likely to manifest in third party libraries that lazily
+    import optional dependencies at runtime from a non-main thread. The
+    workaround is to explicitly import those dependencies from the main thread
+    before initializing the third party library.
+
+    This was fixed in Python 3.5, but Python 3.x is not yet supported. See
+    `Python Issue #9260`_.
+
+.. _Python Issue #9260: https://bugs.python.org/issue9260
+
+While holding its own lock, :py:class:`Importer <mitogen.core.Importer>`
+checks if the source is not yet cached, determines if an in-flight
+:py:data:`GET_MODULE` exists for it, starting one if none exists, adds itself
+to a list of callbacks fired when a corresponding :py:data:`LOAD_MODULE`
+arrives from the parent, then sleeps waiting for the callback.
+
+When the source becomes available, the module is constructed on the calling
+thread using the best practice documented in `PEP 302`_.
+
+.. _PEP 302: https://www.python.org/dev/peps/pep-0302/
+
+
+Requests From Children
+~~~~~~~~~~~~~~~~~~~~~~
+
+As with local imports, when :py:data:`GET_MODULE` is received from a child,
+while holding the :py:class:`Importer <mitogen.core.Importer>` lock,
+:py:class:`ModuleForwarder <mitogen.master.ModuleForwarder>` checks if the
+source is not yet cached, determines if an in-flight :py:data:`GET_MODULE`
+toward the parent exists for it, starting one if none exists, then adds a
+completion handler to the list of callbacks fired when a corresponding
+:py:data:`LOAD_MODULE` arrives from the parent.
+
+When the source becomes available, the completion handler issues corresponding
+:py:data:`LOAD_MODULE` messages toward the child for the requested module after
+any required for dependencies known to be absent from the child.
+
+Since intermediaries do not know a module's dependencies until the module's
+source arrives, it is not possible to preemptively issue :py:data:`LOAD_MODULE`
+for those dependencies toward a requesting child as they become available from
+the parent at the intermediary. This creates needless network serialization and
+latency that should be addressed in a future design.
 
 
 Use Of Threads
