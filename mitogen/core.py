@@ -520,7 +520,7 @@ class Importer(object):
         event.wait()
 
         ret = self._cache[fullname]
-        if ret is None:
+        if ret[2] is None:
             raise ImportError('Master does not have %r' % (fullname,))
 
         pkg_present = ret[1]
