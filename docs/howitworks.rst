@@ -634,7 +634,7 @@ Before replying to a child's request for a module with dependencies:
   determines the :py:mod:`django` module code in the master has :keyword:`import`
   statements for :py:mod:`django.utils`, :py:mod:`django.utils.lru_cache`, and
   :py:mod:`django.utils.version`,
-  and that exceution of the module code on the master caused those modules to
+  and that execution of the module code on the master caused those modules to
   appear in the master's :py:data:`sys.modules`, there is high probability
   execution of the :py:mod:`django` module code in the child will cause the
   same modules to be loaded. Since all those modules exist within the
@@ -642,7 +642,7 @@ Before replying to a child's request for a module with dependencies:
   it is safe to assume the child will make follow-up requests for those modules
   too.
 
-  In the example, this replaces 4 round-trips with 1 round-trip.
+  In the example, 4 round-trips are replaced by 1 round-trip.
 
 For any package module ever requested by a child, the parent keeps a note of
 the name of the package for one final optimization:
@@ -663,7 +663,7 @@ the name of the package for one final optimization:
   :py:mod:`django.dispatch`, and 7 :py:mod:`django.utils` indirect dependencies
   for :py:mod:`django.db`.
 
-  In the example, this replaces 17 round-trips with 1 round-trip.
+  In the example, 17 round-trips are replaced by 1 round-trip.
 
 The method used to detect import statements is similar to the standard library
 :py:mod:`modulefinder` module: rather than analyze module source code,
