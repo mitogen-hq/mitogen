@@ -604,11 +604,6 @@ Import Preloading
 
 .. currentmodule:: mitogen.core
 
-.. warning::
-
-    Preloading is not yet implemented: modules are presently still requested
-    one per round-trip.
-
 To further avoid round-trips, when a module or package is requested by a child,
 its bytecode is scanned in the master to find all the module's
 :keyword:`import` statements, and of those, which associated modules appear to
