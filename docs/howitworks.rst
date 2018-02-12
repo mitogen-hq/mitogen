@@ -682,93 +682,81 @@ Package children are enumerated using :py:func:`pkgutil.iter_modules`.
 Concurrency
 ###########
 
-The importer must ensure duplicate requests are never issued to the parent,
-either due to an import originating on a local thread, or many
-:py:data:`GET_MODULE` requests originating from children. This allows parents
-to assume that when a module has been requested once by a downstream
-connection, it need never be re-sent, for example, if it appears as a
-preloading dependency in a subsequent module request, or it was just requested
-immediately after being sent as a preloading dependency for a module request by
-some indirect descendent.
+Duplicate requests must never be issued to the parent, either due to a local
+import or any :py:data:`GET_MODULE` originating from a child. This lets parents
+assume a module requested once by a downstream connection need never be
+re-sent, for example, if it appears as a preloading dependency in a subsequent
+:py:data:`GET_MODULE`, or had been requested immediately after being sent as a
+preloading dependency for an unrelated request by a descendent.
 
-Since requests from children are serviced on the IO multiplexer thread
-concurrent to local thread requests, care is required to ensure deadlock cannot
-occur.
+Therefore each tree layer must deduplicate :py:data:`GET_MODULE` requests, and
+synchronize their descendents and local threads on corresponding
+:py:data:`LOAD_MODULE` responses from the parent.
 
 In each context, pending requests are serialized by a
 :py:class:`threading.Lock` within :py:class:`mitogen.core.Importer`, which may
 only be held for operations that cannot block, since :py:class:`ModuleForwarder
-<mitogen.master.ModuleForwarder>` must acquire it while servicing
-:py:data:`GET_MODULE` requests on the IO multiplexer thread.
+<mitogen.master.ModuleForwarder>` must acquire it while synchronizing
+:py:data:`GET_MODULE` requests from children on the IO multiplexer thread.
 
-The design must also take into account complications in Python 2.x's import
-locking semantics, where a global lock exists to protect
-:py:data:`sys.modules`, in addition to a per-module lock that protects the
-module object itself, so that a module being initialized on one thread cannot
-be observed in a partially initialized state from another thread.
 
-Import locking changed significantly in Python 3.5, but this design is not yet
-verified to work correctly with 3.x. See `Python Issue #9260`_.
+Requests From Local Threads
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When Mitogen begins satisfying an import, it is known the module has never been
+imported in the local process. :py:class:`Importer <mitogen.core.Importer>`
+executes under the runtime importer lock, ensuring :py:keyword:`import`
+statements executing in local threads are serialized.
+
+.. note::
+   
+    In Python 2, :py:exc:`ImportError` is raised when :py:keyword:`import` is
+    attempted while the runtime import lock is held by another thread,
+    therefore imports must be serialized by only attempting them from the main
+    (:py:data:`CALL_FUNCTION`) thread.
+
+    The problem is most likely to manifest in third party libraries that lazily
+    import optional dependencies at runtime from a non-main thread. The
+    workaround is to explicitly import those dependencies from the main thread
+    before initializing the third party library.
+
+    This was fixed in Python 3.5, but Python 3.x is not yet supported. See
+    `Python Issue #9260`_.
 
 .. _Python Issue #9260: https://bugs.python.org/issue9260
 
+While holding its own lock, :py:class:`Importer <mitogen.core.Importer>`
+checks if the source is not yet cached, determines if an in-flight
+:py:data:`GET_MODULE` exists for it, starting one if none exists, adds itself
+to a list of callbacks fired when a corresponding :py:data:`LOAD_MODULE`
+arrives from the parent, then sleeps waiting for the callback.
 
-Local Thread Requests
-~~~~~~~~~~~~~~~~~~~~~
-
-In Python 2.x, by the time :py:class:`mitogen.core.Importer` is invoked on a
-local thread, the Python importer lock has already been acquired by the import
-machinery. ``ImportError`` will be raised unconditionally by Python if another
-thread attempts an import while this lock is held, therefore imports should
-always be serialized by only attempting them from the main
-(:py:data:`CALL_FUNCTION`) thread.
-
-By the time Mitogen begins satisfying a local thread request, it is known that
-the module has never previously been imported in the local process. A local
-thread request:
-
-1. Takes the Mitogen importer lock.
-2. Checks if the module is already cached.
-3. If the module source is not yet cached,
-    1. If no in-flight request for the exists module,
-        a. a :py:class:`threading.Event` is created that fires when the module
-           source becomes available,
-        b. the Event's :py:meth:`set <threading.Event.set>` method is added to a
-           list of callbacks fired when a :py:data:`LOAD_MODULE` arrives from the
-           parent containing the module source.
-    2. If a request is in-flight, the existing Event is reused by step 7 below.
-4. Releases the importer lock.
-5. If the module source was already cached, skip to step 8.
-6. If this thread was responsible for creating the :py:class:`threading.Event`,
-   it issues a :py:data:`GET_MODULE` request to the parent context.
-7. Sleeps waiting for the event to be set.
-8. Instantiates the module using the best practice documented in `PEP 302`_.
+When the source becomes available, the module is constructed on the calling
+thread using the best practice documented in `PEP 302`_.
 
 .. _PEP 302: https://www.python.org/dev/peps/pep-0302/
 
 
-Child Context Requests
+Requests From Children
 ~~~~~~~~~~~~~~~~~~~~~~
 
-When :py:class:`ModuleForwarder <mitogen.master.ModuleForwarder>` receives a
-:py:data:`GET_MODULE` request from a child context, it:
+As with local imports, when :py:data:`GET_MODULE` is received from a child,
+while holding the :py:class:`Importer <mitogen.core.Importer>` lock,
+:py:class:`ModuleForwarder <mitogen.master.ModuleForwarder>` checks if the
+source is not yet cached, determines if an in-flight :py:data:`GET_MODULE`
+toward the parent exists for it, starting one if none exists, then adds a
+completion handler to the list of callbacks fired when a corresponding
+:py:data:`LOAD_MODULE` arrives from the parent.
 
-1. Takes the Mitogen importer lock.
-2. Checks if the module is already cached.
-3. If the module source is not yet cached,
-    1. If this is the first request for the module,
-        a. a :py:class:`threading.Event` is created that fires when the module
-           source becomes available,
-        b. the Event's :py:meth:`set <threading.Event.set>` method is added to a
-           list of callbacks fired when a :py:data:`LOAD_MODULE` arrives from the
-           parent containing the module source.
-    2. If a request is in-flight, the existing Event is reused by step 7 below.
-4. Releases the importer lock.
-5. If the module source was already cached, skip to step 8.
-6. If this thread was responsible for creating the :py:class:`threading.Event`,
-   it issues a :py:data:`GET_MODULE` request to the parent context.
-7. Sleeps waiting for the event to be set.
-8. Instantiates the module using the best practice documented in `PEP 302`_.
+When the source becomes available, the completion handler issues corresponding
+:py:data:`LOAD_MODULE` messages toward the child for the requested module after
+any required for dependencies known to be absent from the child.
+
+Since intermediaries do not know a module's dependencies until the module's
+source arrives, it is not possible to preemptively issue :py:data:`LOAD_MODULE`
+for those dependencies toward a requesting child as they become available from
+the parent at the intermediary. This creates needless network serialization and
+latency that should be addressed in a future design.
 
 
 Use Of Threads
