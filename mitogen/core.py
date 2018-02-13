@@ -43,8 +43,13 @@ import sys
 import threading
 import time
 import traceback
+import warnings
 import zlib
 
+# TODO: usage of 'import' after setting __name__, but before fixing up
+# sys.modules generates a warning. This happens when profiling = True.
+warnings.filterwarnings('ignore',
+    "Parent module 'mitogen' not found while handling absolute import")
 
 LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
@@ -1129,7 +1134,8 @@ class ExternalContext(object):
         self.channel.close()
 
     def _on_broker_exit(self):
-        os.kill(os.getpid(), signal.SIGTERM)
+        if not self.profiling:
+            os.kill(os.getpid(), signal.SIGTERM)
 
     def _on_shutdown_msg(self, msg):
         LOG.debug('_on_shutdown_msg(%r)', msg)
@@ -1139,6 +1145,7 @@ class ExternalContext(object):
         self.broker.shutdown()
 
     def _setup_master(self, profiling, parent_id, context_id, in_fd, out_fd):
+        self.profiling = profiling
         if profiling:
             enable_profiling()
         self.broker = Broker()
