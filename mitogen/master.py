@@ -464,7 +464,7 @@ class ModuleResponder(object):
         path, source, is_pkg = self._finder.get_module_source(fullname)
         if source is None:
             LOG.error('_build_tuple(%r): could not locate source', fullname)
-            tup = fullname, None, None, None, None
+            tup = fullname, None, None, None, ()
             self._cache[fullname] = tup
             return tup
 
@@ -505,17 +505,16 @@ class ModuleResponder(object):
 
         stream = self._router.stream_by_id(msg.src_id)
         fullname = msg.data
+        if fullname in stream.sent_modules:
+            LOG.warning('_on_get_module(): dup request for %r from %r',
+                       fullname, stream)
 
         try:
             tup = self._build_tuple(fullname)
-            for name in tup[4] or ():  # related
-                if name == fullname:
-                    # Must be sent last
-                    continue
-
+            for name in tup[4]:  # related
                 parent_pkg, _, _ = name.partition('.')
-                if parent_pkg != fullname and parent_pkg not in stream.sent_packages:
-                    # Parent hasn't been required, so don't load this guy yet.
+                if parent_pkg != fullname and parent_pkg not in stream.sent_modules:
+                    # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
                 if name in stream.sent_modules:
@@ -523,11 +522,7 @@ class ModuleResponder(object):
                     continue
 
                 self._send_load_module(stream, msg, name)
-
             self._send_load_module(stream, msg, fullname)
-            if tup[1] is not None:
-                # It's a package, record the fact it was sent.
-                stream.sent_packages.add(fullname)
 
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
