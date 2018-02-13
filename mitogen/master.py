@@ -348,9 +348,13 @@ class ModuleFinder(object):
         for method in self.get_module_methods:
             tup = method(self, fullname)
             if tup:
-                return tup
+                break
+        else:
+            tup = None, None, None
+            LOG.warning('get_module_source(%r): cannot find source', fullname)
 
-        return None, None, None
+        self._found_cache[fullname] = tup
+        return tup
 
     def resolve_relpath(self, fullname, level):
         """Given an ImportFrom AST node, guess the prefix that should be tacked
@@ -388,7 +392,6 @@ class ModuleFinder(object):
 
         modpath, src, _ = self.get_module_source(fullname)
         if src is None:
-            LOG.warning('%r: cannot find source for %r', self, fullname)
             return []
 
         maybe_names = list(self.generate_parent_names(fullname))
