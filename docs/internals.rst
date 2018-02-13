@@ -134,7 +134,7 @@ Stream Classes
 .. autoclass:: Stream
    :members:
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 
 .. autoclass:: Stream
    :members:
@@ -181,7 +181,7 @@ Responder Class
 Forwarder Class
 ---------------
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 .. autoclass:: ModuleForwarder
    :members:
 
@@ -369,7 +369,7 @@ Helper Functions
         List of canonical submodule names.
 
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 
 .. autofunction:: minimize_source (source)
 

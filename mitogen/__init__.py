@@ -63,3 +63,43 @@ parent_id = None
 #: This is an empty list in a master, otherwise it is a list of parent context
 #: IDs ordered from most direct to least direct.
 parent_ids = []
+
+
+def main(log_level='INFO'):
+    """
+    Convenience decorator primarily useful for writing discardable test scripts.
+
+    In the master process, when `func` is defined in the ``__main__`` module,
+    arranges for `func(router)` to be invoked immediately, with
+    :py:class:`mitogen.master.Router` construction and destruction handled just
+    as in :py:func:`mitogen.utils.run_with_router`. In slaves, this function
+    does nothing.
+
+    :param str log_level:
+        Logging package level to configure via
+        :py:func:`mitogen.utils.log_to_file`.
+
+    Example:
+
+    ::
+
+        import mitogen
+        import requests
+
+        def get_url(url):
+            return requests.get(url).text
+
+        @mitogen.main()
+        def main(router):
+            z = router.ssh(hostname='k3')
+            print z.call(get_url, 'http://www.google.com/')
+
+    """
+
+    def wrapper(func):
+        if func.__module__ != '__main__':
+            return func
+        from . import utils
+        utils.log_to_file(level=log_level)
+        return utils.run_with_router(func)
+    return wrapper

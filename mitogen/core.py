@@ -1213,6 +1213,7 @@ class ExternalContext(object):
         mitogen.context_id = context_id
         mitogen.parent_ids = parent_ids
         mitogen.parent_id = parent_ids[0]
+        mitogen.main = lambda *args, **kwargs: (lambda func: None)
         mitogen.core = sys.modules['__main__']
         mitogen.core.__file__ = 'x/mitogen/core.py'  # For inspect.getsource()
         mitogen.core.__loader__ = self.importer

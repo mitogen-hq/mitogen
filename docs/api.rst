@@ -16,6 +16,7 @@ mitogen Package
 .. autodata:: mitogen.context_id
 .. autodata:: mitogen.parent_id
 .. autodata:: mitogen.parent_ids
+.. autofunction:: mitogen.main
 
 
 mitogen.core
