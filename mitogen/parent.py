@@ -267,7 +267,6 @@ class Stream(mitogen.core.Stream):
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
         self.sent_modules = set(['mitogen', 'mitogen.core'])
-        self.sent_packages = set(['mitogen'])
 
     def construct(self, remote_name=None, python_path=None, debug=False,
                   profiling=False, **kwargs):
