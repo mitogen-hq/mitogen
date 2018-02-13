@@ -401,7 +401,9 @@ class ModuleFinder(object):
             if level == -1:
                 modnames = [modname, '%s.%s' % (fullname, modname)]
             else:
-                modnames = [self.resolve_relpath(fullname, level) + modname]
+                modnames = [
+                    '%s.%s' % (self.resolve_relpath(fullname, level), modname)
+                ]
 
             maybe_names.extend(modnames)
             maybe_names.extend(
@@ -425,11 +427,12 @@ class ModuleFinder(object):
         found = set()
 
         while stack:
-            fullname = stack.pop(0)
-            fullnames = self.find_related_imports(fullname)
-            stack.extend(set(fullnames).difference(found, stack, [fullname]))
-            found.update(fullnames)
+            name = stack.pop(0)
+            names = self.find_related_imports(name)
+            stack.extend(set(names).difference(found, stack))
+            found.update(names)
 
+        found.discard(fullname)
         return sorted(found)
 
 
