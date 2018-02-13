@@ -873,7 +873,7 @@ A random assortment of utility functions useful on masters and children.
     OS X bundles some ancient version of the :py:mod:`six` module.
 
 .. currentmodule:: mitogen.utils
-.. function:: log_to_file (path=None, io=True, level='INFO')
+.. function:: log_to_file (path=None, io=True, usec=False, level='INFO')
 
     Install a new :py:class:`logging.Handler` writing applications logs to the
     filesystem. Useful when debugging slave IO problems.
@@ -885,6 +885,10 @@ A random assortment of utility functions useful on masters and children.
     :param bool io:
         If ``True``, include extremely verbose IO logs in the output. Useful
         for debugging hangs, less useful for debugging application code.
+
+    :parm bool usec:
+        If ``True``, include microsecond timestamps. This greatly helps when
+        debugging races and similar determinism issues.
 
     :param str level:
         Name of the :py:mod:`logging` package constant that is the minimum

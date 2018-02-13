@@ -25,6 +25,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import datetime
 import logging
 import sys
 
@@ -42,7 +43,12 @@ def disable_site_packages():
             sys.path.remove(entry)
 
 
-def log_to_file(path=None, io=True, level='INFO'):
+def _formatTime(record, datefmt=None):
+    dt = datetime.datetime.fromtimestamp(record.created)
+    return dt.strftime(datefmt)
+
+
+def log_to_file(path=None, io=True, usec=False, level='INFO'):
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
@@ -57,8 +63,11 @@ def log_to_file(path=None, io=True, level='INFO'):
 
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     datefmt = '%H:%M:%S'
+    if usec:
+        datefmt += '.%f'
     handler = logging.StreamHandler(fp)
     handler.formatter = logging.Formatter(fmt, datefmt)
+    handler.formatter.formatTime = _formatTime
     log.handlers.insert(0, handler)
 
 
