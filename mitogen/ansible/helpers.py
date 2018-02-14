@@ -121,7 +121,7 @@ def run_module(module, raw_params=None, args=None):
         # invocation, so we need to invoke main explicitly.
         mod.main()
     except Exit, e:
-        return e.dct
+        return json.dumps(e.dct)
 
 
 def exec_command(cmd, in_data=None):
