@@ -6,6 +6,7 @@ import unittest2
 
 import testlib
 import mitogen.master
+import mitogen.parent
 
 
 class ScanCodeImportsTest(unittest2.TestCase):
@@ -19,11 +20,12 @@ class ScanCodeImportsTest(unittest2.TestCase):
             (-1, 'unittest2', ()),
             (-1, 'testlib', ()),
             (-1, 'mitogen.master', ()),
+            (-1, 'mitogen.parent', ()),
         ])
 
 
 class IterReadTest(unittest2.TestCase):
-    func = staticmethod(mitogen.master.iter_read)
+    func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
         args = [testlib.data_path('iter_read_generator.sh')]
@@ -75,7 +77,7 @@ class IterReadTest(unittest2.TestCase):
 
 
 class WriteAllTest(unittest2.TestCase):
-    func = staticmethod(mitogen.master.write_all)
+    func = staticmethod(mitogen.parent.write_all)
 
     def make_proc(self):
         args = [testlib.data_path('write_all_consumer.sh')]
