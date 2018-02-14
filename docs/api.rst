@@ -677,7 +677,9 @@ Context Class
 
                 recv = context.call_async(os.check_output, 'ls /tmp/')
                 try:
-                    print recv.get_data()  # Prints output once it is received.
+                    # Prints output once it is received.
+                    msg = recv.get()
+                    print msg.unpickle()
                 except mitogen.core.CallError, e:
                     print 'Call failed:', str(e)
 
