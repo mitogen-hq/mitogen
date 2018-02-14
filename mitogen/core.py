@@ -78,7 +78,7 @@ else:
 
 
 class Error(Exception):
-    def __init__(self, fmt, *args):
+    def __init__(self, fmt=None, *args):
         if args:
             fmt %= args
         Exception.__init__(self, fmt)
@@ -113,7 +113,7 @@ class StreamError(Error):
     pass
 
 
-class TimeoutError(StreamError):
+class TimeoutError(Error):
     pass
 
 
@@ -805,24 +805,25 @@ class Latch(object):
             if self.queue:
                 return self.queue.pop(0)
             if not block:
-                return
+                raise TimeoutError()
             self._tls_init()
             self.wake_socks.append(_tls.wsock)
         finally:
             self.lock.release()
 
         rfds, _, _ = select.select([_tls.rsock], [], [], timeout)
-        assert len(rfds) or timeout is None
+        assert len(rfds) or timeout is not None
 
         self.lock.acquire()
         try:
             if _tls.wsock in self.wake_socks:
                 # Nothing woke us, remove stale entry.
                 self.wake_socks.remove(_tls.wsock)
-                return
-            if _tls.rsock in rfds:
-                _tls.rsock.recv(1)
-                return self.queue.pop(0)
+                raise TimeoutError()
+
+            assert _tls.rsock in rfds
+            _tls.rsock.recv(1)
+            return self.queue.pop(0)
         finally:
             self.lock.release()
 
