@@ -489,13 +489,8 @@ class ModuleResponder(object):
 
     def _send_load_module(self, stream, msg, fullname):
         LOG.debug('_send_load_module(%r, %r)', stream, fullname)
-        self._router.route(
-            mitogen.core.Message.pickled(
-                self._build_tuple(fullname),
-                dst_id=msg.src_id,
-                handle=mitogen.core.LOAD_MODULE,
-            )
-        )
+        msg.reply(self._build_tuple(fullname),
+                  handle=mitogen.core.LOAD_MODULE)
         stream.sent_modules.add(fullname)
 
     def _on_get_module(self, msg):
@@ -526,13 +521,8 @@ class ModuleResponder(object):
 
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
-            self._router.route(
-                mitogen.core.Message.pickled(
-                    (fullname, None, None, None, []),
-                    dst_id=msg.src_id,
-                    handle=msg.reply_to,
-                )
-            )
+            msg.reply((fullname, None, None, None, []),
+                      handle=mitogen.core.LOAD_MODULE)
 
 
 class Broker(mitogen.core.Broker):
@@ -651,13 +641,7 @@ class IdAllocator(object):
         allocated = self.router.context_by_id(id_, msg.src_id)
 
         LOG.debug('%r: allocating %r to %r', self, allocated, requestee)
-        self.router.route(
-            mitogen.core.Message.pickled(
-                id_,
-                dst_id=msg.src_id,
-                handle=msg.reply_to,
-            )
-        )
+        msg.reply(id_)
 
         LOG.debug('%r: publishing route to %r via %r', self,
                   allocated, requestee)

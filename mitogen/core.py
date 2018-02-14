@@ -255,6 +255,12 @@ class Message(object):
             self.data = cPickle.dumps(CallError(e), protocol=2)
         return self
 
+    def reply(self, data, **kwargs):
+        kwargs.setdefault('handle', self.reply_to)
+        self.router.route(
+            self.pickled(data, dst_id=self.src_id, **kwargs)
+        )
+
     def unpickle(self, throw=True):
         """Deserialize `data` into an object."""
         IOLOG.debug('%r.unpickle()', self)
@@ -1249,16 +1255,10 @@ class ExternalContext(object):
                     kwargs.setdefault('econtext', self)
                 if getattr(fn, 'mitogen_takes_router', None):
                     kwargs.setdefault('router', self.router)
-                ret = fn(*args, **kwargs)
-                self.router.route(
-                    Message.pickled(ret, dst_id=msg.src_id, handle=msg.reply_to)
-                )
+                msg.reply(fn(*args, **kwargs))
             except Exception, e:
                 LOG.debug('_dispatch_calls: %s', e)
-                e = CallError(e)
-                self.router.route(
-                    Message.pickled(e, dst_id=msg.src_id, handle=msg.reply_to)
-                )
+                msg.reply(CallError(e))
         self.dispatch_stopped = True
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
