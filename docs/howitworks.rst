@@ -813,6 +813,47 @@ on Windows. When that happens, it would be nice if the process model on Windows
 and UNIX did not differ, and in fact the code used on both were identical.
 
 
+Waking Sleeping Threads
+#######################
+
+Due to fundamental deficiencies in Python 2's threading implementation, it is
+not possible to block waiting on synchronization objects sanely. Two major
+problems exist:
+
+* Sleeping with no timeout set causes signals to be blocked, preventing the
+  user from using CTRL+C to terminate the process.
+
+* Sleeping with a timeout set internally makes use of polling, with an
+  exponential backoff that eventually results in the thread sleeping
+  unconditionally in 50ms increments. . This is a huge source of latency that
+  quickly multiplies.
+
+As the UNIX self-pipe trick must already be employed to wake the broker thread
+from its select loop, Mitogen reuses this technique to wake any thread
+synchronization primitive exposed by the library, embodied in a queue-like
+abstraction called a :py:class:`mitogen.core.Latch`.
+
+Unfortunately it is commonplace for hosts to enforce severe per-process file
+descriptors limits, so aside from being inefficient, it is impossible in the
+usual case to create a pair of descriptors for every waitable object, which for
+example includes the result of every single asynchronous function call.
+
+For this reason self-pipes are created on a per-thread basis, with their
+associated :py:func:`socketpairs <socket.socketpair>` kept in thread-local
+storage. When a latch wishes to sleep its thread, this pair is created
+on-demand and temporarily associated with it only for the duration of the
+sleep.
+
+Python's garbage collector is relied on to clean up by calling the pair's
+destructor on thread exit. There does not otherwise seem to be a robust method
+to trigger cleanup code on arbitrary threads.
+
+To summarize, file descriptor usage is bounded by the number of threads rather
+than the number of waitables, which is a much smaller number, however it also
+means that Mitogen requires twice as many file descriptors as there are user
+threads, with a minimum of 4 required in any configuration.
+
+
 .. rubric:: Footnotes
 
 .. [#f1] Compression may seem redundant, however it is basically free and reducing IO

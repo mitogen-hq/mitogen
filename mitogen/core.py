@@ -64,6 +64,7 @@ SHUTDOWN = 105
 LOAD_MODULE = 106
 
 CHUNK_SIZE = 16384
+_tls = threading.local()
 
 
 if __name__ == 'mitogen.core':
@@ -327,7 +328,6 @@ class Receiver(object):
         self.handle = handle  # Avoid __repr__ crash in add_handler()
         self.handle = router.add_handler(self._on_receive, handle,
                                          persist, respondent)
-        self._queue = Queue.Queue()
         self._latch = Latch()
 
     def __repr__(self):
@@ -336,21 +336,19 @@ class Receiver(object):
     def _on_receive(self, msg):
         """Callback from the Stream; appends data to the internal queue."""
         IOLOG.debug('%r._on_receive(%r)', self, msg)
-        self._queue.put(msg)
-        self._latch.wake()
+        self._latch.put(msg)
         if self.notify:
             self.notify(self)
 
     def close(self):
-        self._queue.put(_DEAD)
+        self._latch.put(_DEAD)
 
     def empty(self):
-        return self._queue.empty()
+        return self._latch.empty()
 
     def get(self, timeout=None, block=True):
         IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
-        self._latch.wait(timeout=timeout)
-        msg = self._queue.get()
+        msg = self._latch.get(timeout=timeout, block=block)
         #IOLOG.debug('%r.get() got %r', self, msg)
 
         if msg == _DEAD:
@@ -399,7 +397,6 @@ class Importer(object):
         self._lock = threading.Lock()
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
-        self.tls = threading.local()
         router.add_handler(self._on_load_module, LOAD_MODULE)
         self._cache = {}
         if core_src:
@@ -415,10 +412,10 @@ class Importer(object):
         return 'Importer()'
 
     def find_module(self, fullname, path=None):
-        if hasattr(self.tls, 'running'):
+        if hasattr(_tls, 'running'):
             return None
 
-        self.tls.running = True
+        _tls.running = True
         fullname = fullname.rstrip('.')
         try:
             pkgname, _, _ = fullname.rpartition('.')
@@ -440,7 +437,7 @@ class Importer(object):
                 LOG.debug('find_module(%r) returning self', fullname)
                 return self
         finally:
-            del self.tls.running
+            del _tls.running
 
     def _load_module_hacks(self, fullname):
         if fullname in ('builtins', '__builtin__'):
@@ -789,42 +786,67 @@ def _unpickle_context(router, context_id, name):
 
 class Latch(object):
     def __init__(self):
-        rfd, wfd = os.pipe()
-        set_cloexec(rfd)
-        set_cloexec(wfd)
-        self.receive_side = Side(self, rfd)
-        self.transmit_side = Side(self, wfd)
+        self.lock = threading.Lock()
+        self.queue = []
+        self.wake_socks = []
 
-    def close(self):
-        self.receive_side.close()
-        self.transmit_side.close()
+    def _tls_init(self):
+        if not hasattr(_tls, 'rsock'):
+            _tls.rsock, _tls.wsock = socket.socketpair()
+            set_cloexec(_tls.rsock.fileno())
+            set_cloexec(_tls.wsock.fileno())
 
-    __del__ = close
+    def empty(self):
+        return len(self.queue) == 0
 
-    def wait(self, timeout=None):
-        while True:
-            rfds, _, _ = select.select([self.receive_side], [], [], timeout)
-            if not rfds:
-                return False
-
-            try:
-                self.receive_side.read(1)
-            except OSError, e:
-                if e[0] == errno.EWOULDBLOCK:
-                    continue
-                raise
-            return False
-
-    def wake(self):
-        IOLOG.debug('%r.wake() [fd=%r]', self, self.transmit_side.fd)
+    def get(self, timeout=None, block=True):
+        self.lock.acquire()
         try:
-            self.transmit_side.write(' ')
+            if self.queue:
+                return self.queue.pop(0)
+            if not block:
+                return
+            self._tls_init()
+            self.wake_socks.append(_tls.wsock)
+        finally:
+            self.lock.release()
+
+        rfds, _, _ = select.select([_tls.rsock], [], [], timeout)
+        assert len(rfds) or timeout is None
+
+        self.lock.acquire()
+        try:
+            if _tls.wsock in self.wake_socks:
+                # Nothing woke us, remove stale entry.
+                self.wake_socks.remove(_tls.wsock)
+                return
+            if _tls.rsock in rfds:
+                _tls.rsock.recv(1)
+                return self.queue.pop(0)
+        finally:
+            self.lock.release()
+
+    def put(self, obj):
+        IOLOG.debug('%r.put(%r)', self, obj)
+        self.lock.acquire()
+        try:
+            self.queue.append(obj)
+            woken = len(self.wake_socks) > 0
+            if woken:
+                self._wake(self.wake_socks.pop(0))
+        finally:
+            self.lock.release()
+        LOG.debug('put() done. woken? %s', woken)
+
+    def _wake(self, sock):
+        try:
+            os.write(sock.fileno(), '\x00')
         except OSError, e:
             if e[0] != errno.EBADF:
                 raise
 
 
-class Waker(Latch, BasicStream):
+class Waker(BasicStream):
     """
     :py:class:`BasicStream` subclass implementing the
     `UNIX self-pipe trick`_. Used internally to wake the IO multiplexer when
@@ -833,8 +855,12 @@ class Waker(Latch, BasicStream):
     .. _UNIX self-pipe trick: https://cr.yp.to/docs/selfpipe.html
     """
     def __init__(self, broker):
-        super(Waker, self).__init__()
         self._broker = broker
+        rfd, wfd = os.pipe()
+        set_cloexec(rfd)
+        set_cloexec(wfd)
+        self.receive_side = Side(self, rfd)
+        self.transmit_side = Side(self, wfd)
 
     def __repr__(self):
         return 'Waker(%r)' % (self._broker,)
@@ -850,8 +876,13 @@ class Waker(Latch, BasicStream):
         Write a byte to the self-pipe, causing the IO multiplexer to wake up.
         Nothing is written if the current thread is the IO multiplexer thread.
         """
+        IOLOG.debug('%r.wake() [fd=%r]', self, self.transmit_side.fd)
         if threading.currentThread() != self._broker._thread:
-            super(Waker, self).wake()
+            try:
+                self.transmit_side.write(' ')
+            except OSError, e:
+                if e[0] != errno.EBADF:
+                    raise
 
 
 class IoLogger(BasicStream):
