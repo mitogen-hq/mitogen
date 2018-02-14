@@ -643,6 +643,9 @@ class Stream(BasicStream):
     protocol <stream-protocol>`.
     """
     _input_buf = ''
+
+    #: If not ``None``, :py:class:`Router` stamps this into
+    #: :py:attr:`Message.auth_id` of every message received on this stream.
     auth_id = None
 
     def __init__(self, router, remote_id, **kwargs):
@@ -993,6 +996,8 @@ class Router(object):
             if stream != expected_stream:
                 LOG.error('%r: bad source: got auth ID %r from %r, should be from %r',
                           self, msg, stream, expected_stream)
+            if stream.auth_id is not None:
+                msg.auth_id = stream.auth_id
 
         if msg.dst_id == mitogen.context_id:
             return self._invoke(msg)
