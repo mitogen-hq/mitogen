@@ -126,14 +126,12 @@ class Select(object):
     def __init__(self, receivers=(), oneshot=True):
         self._receivers = []
         self._oneshot = oneshot
-        self._queue = Queue.Queue()
         self._latch = mitogen.core.Latch()
         for recv in receivers:
             self.add(recv)
 
     def _put(self, value):
-        self._queue.put(value)
-        self._latch.wake()
+        self._latch.put(value)
         if self.notify:
             self.notify(self)
 
@@ -193,7 +191,7 @@ class Select(object):
             self.remove(recv)
 
     def empty(self):
-        return self._queue.empty()
+        return self._latch.empty()
 
     empty_msg = 'Cannot get(), Select instance is empty'
 
@@ -202,8 +200,7 @@ class Select(object):
             raise SelectError(self.empty_msg)
 
         while True:
-            self._latch.wait()
-            recv = self._queue.get()
+            recv = self._latch.get(timeout=timeout)
             try:
                 msg = recv.get(block=False)
                 if self._oneshot:
