@@ -146,8 +146,7 @@ class Select(object):
 
     def __iter__(self):
         while self._receivers:
-            recv, msg = self.get()
-            yield recv, msg
+            yield self.get()
 
     loop_msg = 'Adding this Select instance would create a Select cycle'
 
@@ -206,7 +205,8 @@ class Select(object):
                 msg = recv.get(block=False)
                 if self._oneshot:
                     self.remove(recv)
-                return recv, msg
+                msg.receiver = recv
+                return msg
             except mitogen.core.TimeoutError:
                 # A receiver may have been queued with no result if another
                 # thread drained it before we woke up, or because another
