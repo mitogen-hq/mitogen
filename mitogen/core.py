@@ -619,8 +619,10 @@ class BasicStream(object):
         LOG.debug('%r.on_disconnect()', self)
         broker.stop_receive(self)
         broker.stop_transmit(self)
-        self.receive_side.close()
-        self.transmit_side.close()
+        if self.receive_side:
+            self.receive_side.close()
+        if self.transmit_side:
+            self.transmit_side.close()
         fire(self, 'disconnect')
 
     def on_shutdown(self, broker):
