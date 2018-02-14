@@ -52,7 +52,6 @@ class ContextProxyService(mitogen.service.Service):
         return isinstance(args, dict)
 
     def dispatch(self, dct, msg):
-        print dct.get('via')
         key = repr(sorted(dct.items()))
         if key not in self._context_by_id:
             method = getattr(self.router, dct.pop('method'))
