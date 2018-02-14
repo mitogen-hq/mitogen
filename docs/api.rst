@@ -410,7 +410,7 @@ Router Class
             messages such as ``CALL_FUNCTION`` arrive only from trusted
             contexts.
 
-	.. method:: route(msg)
+    .. method:: route(msg)
 
         Arrange for the :py:class:`Message` `msg` to be delivered to its
         destination using any relevant downstream context, or if none is found,
