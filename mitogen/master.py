@@ -615,6 +615,13 @@ class Router(mitogen.parent.Router):
             child = parent
             parent = parent.via
 
+    def disconnect_stream(self, stream):
+        self.broker.defer(stream.on_disconnect, self.broker)
+
+    def disconnect_all(self):
+        for stream in self._stream_by_id.values():
+            self.disconnect_stream(stream)
+
 
 class IdAllocator(object):
     def __init__(self, router):
