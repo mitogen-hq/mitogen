@@ -564,17 +564,15 @@ class Context(mitogen.core.Context):
         else:
             klass = None
 
-        recv = self.send_async(
+        return self.send_async(
             mitogen.core.Message.pickled(
                 (fn.__module__, klass, fn.__name__, args, kwargs),
                 handle=mitogen.core.CALL_FUNCTION,
             )
         )
-        recv.raise_channelerror = False
-        return recv
 
     def call(self, fn, *args, **kwargs):
-        return self.call_async(fn, *args, **kwargs).get_data()
+        return self.call_async(fn, *args, **kwargs).get().unpickle()
 
 
 class Router(mitogen.parent.Router):
