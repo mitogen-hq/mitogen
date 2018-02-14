@@ -772,9 +772,10 @@ class Context(object):
     def send_await(self, msg, deadline=None):
         """Send `msg` and wait for a response with an optional timeout."""
         receiver = self.send_async(msg)
-        response = receiver.get_data(deadline)
-        IOLOG.debug('%r._send_await() -> %r', self, response)
-        return response
+        response = receiver.get(deadline)
+        data = response.unpickle()
+        IOLOG.debug('%r._send_await() -> %r', self, data)
+        return data
 
     def __repr__(self):
         return 'Context(%s, %r)' % (self.context_id, self.name)
