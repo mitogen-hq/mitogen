@@ -183,7 +183,8 @@ class FindRelatedImportsTest(testlib.TestCase):
 
     def test_django_db_models(self):
         import django.db.models
-        related = self.call('django.db.models'), [
+        related = self.call('django.db.models')
+        self.assertEquals(related, [
             'django',
             'django.apps',
             'django.conf',
