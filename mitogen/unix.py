@@ -78,6 +78,7 @@ class Listener(mitogen.core.BasicStream):
         context = mitogen.master.Context(self._router, context_id)
         stream = mitogen.core.Stream(self._router, context_id)
         stream.accept(sock.fileno(), sock.fileno())
+        stream.auth_id = mitogen.context_id
         self._router.register(context, stream)
         sock.send(struct.pack('>LL', context_id, mitogen.context_id))
         sock.close()
