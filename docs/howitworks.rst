@@ -260,21 +260,55 @@ Stream Protocol
 Once connected, a basic framing protocol is used to communicate between
 parent and child:
 
-+--------------------+------+------------------------------------------------------+
-| Field              | Size | Description                                          |
-+====================+======+======================================================+
-| ``dst_id``         | 2    | Integer target context ID.                           |
-+--------------------+------+------------------------------------------------------+
-| ``src_id``         | 2    | Integer source context ID.                           |
-+--------------------+------+------------------------------------------------------+
-| ``handle``         | 4    | Integer target handle in recipient.                  |
-+--------------------+------+------------------------------------------------------+
-| ``reply_to``       | 4    | Integer response target ID.                          |
-+--------------------+------+------------------------------------------------------+
-| ``length``         | 4    | Message length                                       |
-+--------------------+------+------------------------------------------------------+
-| ``data``           | n/a  | Pickled message data.                                |
-+--------------------+------+------------------------------------------------------+
+.. list-table::
+    :header-rows: 1
+    :widths: auto
+
+    * - Field
+      - Size
+      - Description
+
+    * - `dst_id`
+      - 2
+      - Integer target context ID. :py:class:`Router` delivers messages
+        locally when their `dst_id` matches :py:data:`mitogen.context_id`,
+        otherwise they are routed up or downstream.
+
+    * - `src_id`
+      - 2
+      - Integer source context ID. Used as the target of replies if any are
+        generated.
+
+    * - `auth_id`
+      - 2
+      - The context ID under whose authority the message is acting. See
+        :py:ref:`source-verification`.
+
+    * - `handle`
+      - 4
+      - Integer target handle in the destination context. This is one of the
+        :py:ref:`standard-handles`, or a dynamically generated handle used to
+        receive a one-time reply, such as the return value of a function call.
+
+    * - `reply_to`
+      - 4
+      - Integer target handle to direct any reply to this message. Used to
+        receive a one-time reply, such as the return value of a function call.
+
+    * - `length`
+      - 4
+      - Length of the data part of the message.
+
+    * - `data`
+      - n/a
+      - Message data, which may be raw or pickled.
+
+
+
+.. _standard-handles:
+
+Standard Handles
+################
 
 Masters listen on the following handles:
 
@@ -504,14 +538,21 @@ Source Verification
 Before forwarding or dispatching a message it has received,
 :py:class:`mitogen.core.Router` first looks up the corresponding
 :py:class:`mitogen.core.Stream` it would use to send responses towards the
-message source, and if the looked up stream does not match the stream on which
-the message was received, the message is discarded and a warning is logged.
+context ID listed in the `auth_id` field, and if the looked up stream does not
+match the stream on which the message was received, the message is discarded
+and a warning is logged.
 
 This creates a trust chain leading up to the root of the tree, preventing
 downstream contexts from injecting messages appearing to be from the master or
 any more trustworthy parent. In this way, privileged functionality such as
 :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` can base trust decisions
-on the accuracy of :py:ref:`src_id <stream-protocol>`.
+on the accuracy of :py:ref:`auth_id <stream-protocol>`.
+
+The `auth_id` field is separate from `src_id` in order to support granting
+privilege to contexts that do not follow the tree's natural trust chain. This
+supports cases where siblings are permitted to execute code on one another, or
+where isolated processes can connect to a listener and communicate with an
+already established established tree.
 
 
 Future
