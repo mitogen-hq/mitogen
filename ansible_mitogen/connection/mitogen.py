@@ -43,6 +43,7 @@ Enable it by:
 """
 
 from __future__ import absolute_import
+import os
 
 import ansible.errors
 import ansible.plugins.connection
@@ -65,7 +66,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self.connected:
             return
 
-        self.router, self.parent = mitogen.unix.connect('/tmp/mitosock')
+        path = os.environ['LISTENER_SOCKET_PATH']
+        self.router, self.parent = mitogen.unix.connect(path)
+
         host = mitogen.service.call(self.parent, 500, {
             'method': 'ssh',
             'hostname': self._play_context.remote_addr,

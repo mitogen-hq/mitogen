@@ -74,7 +74,9 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
 
     def run(self, iterator, play_context, result=0):
         self.router = mitogen.master.Router()
-        self.listener = mitogen.unix.Listener(self.router, path='/tmp/mitosock')
+        self.listener = mitogen.unix.Listener(self.router)
+        os.environ['LISTENER_SOCKET_PATH'] = self.listener.path
+
         self.service = ContextProxyService(self.router)
         mitogen.utils.log_to_file()
 
@@ -97,3 +99,4 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
             return super(StrategyModule, self).run(iterator, play_context)
         finally:
             self.router.broker.shutdown()
+            os.unlink(self.listener.path)
