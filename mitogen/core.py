@@ -1247,8 +1247,8 @@ class ExternalContext(object):
         for msg in self.channel:
             data = msg.unpickle(throw=False)
             LOG.debug('_dispatch_calls(%r)', data)
-            if msg.src_id not in mitogen.parent_ids:
-                LOG.warning('CALL_FUNCTION from non-parent %r', msg.src_id)
+            if msg.auth_id not in mitogen.parent_ids:
+                LOG.warning('CALL_FUNCTION from non-parent %r', msg.auth_id)
 
             modname, klass, func, args, kwargs = data
             try:
