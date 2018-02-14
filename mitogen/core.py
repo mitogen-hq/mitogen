@@ -255,10 +255,10 @@ class Message(object):
             self.data = cPickle.dumps(CallError(e), protocol=2)
         return self
 
-    def reply(self, data, **kwargs):
+    def reply(self, obj, **kwargs):
         kwargs.setdefault('handle', self.reply_to)
         self.router.route(
-            self.pickled(data, dst_id=self.src_id, **kwargs)
+            self.pickled(obj, dst_id=self.src_id, **kwargs)
         )
 
     def unpickle(self, throw=True):

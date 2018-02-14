@@ -265,6 +265,74 @@ Sequence:
         Exit status of the child process.
 
 
+Message Class
+============
+
+.. currentmodule:: mitogen.core
+
+.. class:: Message
+
+    .. attribute:: router
+
+        The :py:class:`mitogen.core.Router` responsible for routing the
+        message. This is :py:data:`None` for locally originated messages.
+
+    .. attribute:: receiver
+
+        The :py:class:`mitogen.core.Receiver` over which the message was last
+        received. Part of the :py:class:`mitogen.master.Select` interface.
+        Defaults to :py:data:`None`.
+
+    .. attribute:: dst_id
+
+    .. attribute:: src_id
+
+    .. attribute:: auth_id
+
+    .. attribute:: handle
+
+    .. attribute:: reply_to
+
+    .. attribute:: data
+
+    .. py:method:: __init__ (\**kwargs)
+
+        Construct a message from from the supplied `kwargs`. :py:attr:`src_id`
+        and :py:attr:`auth_id` are always set to :py:data:`mitogen.context_id`.
+
+    .. py:classmethod:: pickled (obj, \**kwargs)
+
+        Construct a pickled message, setting :py:attr:`data` to the
+        serialization of `obj`, and setting remaining fields using `kwargs`.
+
+        :returns:
+            The new message.
+
+    .. method:: unpickle (throw=True)
+
+        Unpickle :py:attr:`data`, optionally raising any exceptions present.
+
+        :param bool throw:
+            If :py:data:`True`, raise exceptions, otherwise it is the caller's
+            responsibility.
+
+        :raises mitogen.core.CallError:
+            The serialized data contained CallError exception.
+        :raises mitogen.core.ChannelError:
+            The serialized data contained :py:data:`mitogen.core._DEAD`.
+
+    .. method:: reply (obj, \**kwargs)
+
+        Compose a pickled reply to this message and send it using
+        :py:attr:`router`.
+
+        :param obj:
+            Object to serialize.
+        :param kwargs:
+            Optional keyword parameters overriding message fields in the reply.
+
+
+
 Router Class
 ============
 
