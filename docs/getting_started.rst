@@ -170,11 +170,12 @@ It is a simple wrapper around the more flexible :meth:`Context.call_async`,
 which immediately returns a :class:`Receiver <mitogen.core.Receiver>` wired up
 to receive the return value instead. A receiver may simply be discarded, kept
 around indefinitely without ever reading its result, or used to wait on the
-results from several calls. Here :meth:`get_data() <mitogen.core.Receiver.get>`
+results from several calls. Here :meth:`get() <mitogen.core.Receiver.get>`
 is called to block the thread until the result arrives::
 
     >>> call = local.call_async(time.time)
-    >>> print call.get_data()
+    >>> msg = call.get()
+    >>> print msg.unpickle()
     1507292737.75547
 
 
