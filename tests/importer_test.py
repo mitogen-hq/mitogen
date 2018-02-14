@@ -18,7 +18,7 @@ class ImporterMixin(testlib.RouterMixin):
     def setUp(self):
         super(ImporterMixin, self).setUp()
         self.context = mock.Mock()
-        self.importer = mitogen.core.Importer(self.context, '')
+        self.importer = mitogen.core.Importer(self.router, self.context, '')
 
     def tearDown(self):
         sys.modules.pop(self.modname, None)
