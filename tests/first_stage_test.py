@@ -3,7 +3,7 @@ import subprocess
 
 import unittest2
 
-import mitogen.master
+import mitogen.parent
 import testlib
 
 
@@ -17,7 +17,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
     #   * 3.x starting 2.7
 
     def test_valid_syntax(self):
-        stream = mitogen.master.Stream(self.router, 0)
+        stream = mitogen.parent.Stream(self.router, 0)
         args = stream.get_boot_command()
 
         # Executing the boot command will print "EC0" and expect to read from
