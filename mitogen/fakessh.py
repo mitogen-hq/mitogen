@@ -137,7 +137,7 @@ class Process(object):
         if msg == mitogen.core._DEAD:
             return
 
-        data = msg.unpickle()
+        data = msg.unpickle(throw=False)
         if data == mitogen.core._DEAD:
             IOLOG.debug('%r._on_stdin() -> %r', self, data)
             self.pump.close()
@@ -148,7 +148,7 @@ class Process(object):
 
     def _on_control(self, msg):
         if msg != mitogen.core._DEAD:
-            command, arg = msg.unpickle()
+            command, arg = msg.unpickle(throw=False)
             LOG.debug('%r._on_control(%r, %s)', self, command, arg)
 
             func = getattr(self, '_on_%s' % (command,), None)
