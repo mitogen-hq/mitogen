@@ -27,7 +27,9 @@
 
 """
 Permit connection of additional contexts that may act with the authority of
-this context.
+this context. For now, the UNIX socket is always mode 0600, i.e. can only be
+accessed by root or the same UID. Therefore we can always trust connections to
+have the same privilege (auth_id) as the current process.
 """
 
 import errno
