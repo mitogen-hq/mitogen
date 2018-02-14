@@ -8,6 +8,7 @@ timeout 05.0 python tests/local_test.py
 timeout 05.0 python tests/master_test.py
 timeout 05.0 python tests/module_finder_test.py
 timeout 05.0 python tests/nested_test.py
+timeout 05.0 python tests/parent_test.py
 timeout 05.0 python tests/responder_test.py
 timeout 05.0 python tests/utils_test.py
 timeout 20.0 python tests/select_test.py
