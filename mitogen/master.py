@@ -127,11 +127,13 @@ class Select(object):
         self._receivers = []
         self._oneshot = oneshot
         self._queue = Queue.Queue()
+        self._latch = mitogen.core.Latch()
         for recv in receivers:
             self.add(recv)
 
     def _put(self, value):
         self._queue.put(value)
+        self._latch.wake()
         if self.notify:
             self.notify(self)
 
@@ -200,7 +202,8 @@ class Select(object):
             raise SelectError(self.empty_msg)
 
         while True:
-            recv = mitogen.core._queue_interruptible_get(self._queue, timeout)
+            self._latch.wait()
+            recv = self._queue.get()
             try:
                 msg = recv.get(block=False)
                 if self._oneshot:
