@@ -127,8 +127,8 @@ class Painter(object):
 def local_main(painter, router, select, delay):
     next_paint = 0
     while True:
-        recv, (msg, data) = select.get()
-        parse_output(recv.host, data)
+        msg = select.get()
+        parse_output(msg.receiver.host, msg.unpickle())
         if next_paint < time.time():
             next_paint = time.time() + delay
             painter.paint()
