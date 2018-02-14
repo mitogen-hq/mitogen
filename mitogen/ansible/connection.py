@@ -43,8 +43,7 @@ Enable it by:
 """
 
 import mitogen.master
-import mitogen.ssh
-import mitogen.utils
+import mitogen.unix
 from mitogen.ansible import helpers
 
 import ansible.errors
@@ -52,7 +51,7 @@ import ansible.plugins.connection
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
-    broker = None
+    router = None
     context = None
 
     become_methods = []
@@ -60,35 +59,35 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     @property
     def connected(self):
-        return self.broker is not None
+        return self.router is not None
 
     def _connect(self):
         if self.connected:
             return
-        self.broker = mitogen.master.Broker()
-        self.router = mitogen.master.Router(self.broker)
-        if self._play_context.remote_addr == 'localhost':
-            self.context = self.router.connect(mitogen.master.Stream)
-        else:
-            self.context = self.router.connect(mitogen.ssh.Stream,
-                hostname=self._play_context.remote_addr,
-            )
+
+        self.router, self.parent = mitogen.unix.connect('/tmp/mitosock')
+        self.context = mitogen.service.call(self.parent, 500, {
+            'hostname': self._play_context.remote_addr,
+        })
+
+    def py_call(self, func, *args, **kwargs):
+        self._connect()
+        return self.context.call(func, *args, **kwargs)
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
         if in_data:
             raise ansible.errors.AnsibleError("does not support module pipelining")
-
-        return self.context.call(helpers.exec_command, cmd, in_data)
+        return self.py_call(helpers.exec_command, cmd, in_data)
 
     def fetch_file(self, in_path, out_path):
-        output = self.context.call(helpers.read_path, in_path)
+        output = self.py_call(helpers.read_path, in_path)
         helpers.write_path(out_path, output)
 
     def put_file(self, in_path, out_path):
-        self.context.call(helpers.write_path, out_path,
-                          helpers.read_path(in_path))
+        self.py_call(helpers.write_path, out_path,
+                     helpers.read_path(in_path))
 
     def close(self):
-        self.broker.shutdown()
-        self.broker.join()
+        self.router.broker.shutdown()
+        self.router.broker.join()
