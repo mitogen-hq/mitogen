@@ -49,13 +49,14 @@ class ContextProxyService(mitogen.service.Service):
         self._context_by_id = {}
 
     def validate_args(self, args):
-        return (isinstance(args, dict) and
-                isinstance(args.get('hostname'), basestring))
+        return isinstance(args, dict)
 
     def dispatch(self, dct, msg):
+        print dct.get('via')
         key = repr(sorted(dct.items()))
         if key not in self._context_by_id:
-            self._context_by_id[key] = self.router.ssh(**dct)
+            method = getattr(self.router, dct.pop('method'))
+            self._context_by_id[key] = method(**dct)
         return self._context_by_id[key]
 
 

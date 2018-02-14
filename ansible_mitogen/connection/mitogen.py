@@ -54,7 +54,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     router = None
     context = None
 
-    become_methods = []
+    become_methods = ['sudo']
     transport = 'mitogen'
 
     @property
@@ -66,9 +66,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             return
 
         self.router, self.parent = mitogen.unix.connect('/tmp/mitosock')
-        self.context = mitogen.service.call(self.parent, 500, {
+        host = mitogen.service.call(self.parent, 500, {
+            'method': 'ssh',
             'hostname': self._play_context.remote_addr,
+            'username': self._play_context.remote_user,
+            'port': self._play_context.port,
+            'ssh_path': self._play_context.ssh_executable,
         })
+
+        if not self._play_context.become:
+            self.context = host
+        else:
+            self.context = mitogen.service.call(self.parent, 500, {
+                'method': 'sudo',
+                'username': self._play_context.become_user,
+                'via': host,
+            })
 
     def py_call(self, func, *args, **kwargs):
         self._connect()
