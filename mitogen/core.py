@@ -83,10 +83,6 @@ class Error(Exception):
         Exception.__init__(self, fmt)
 
 
-class SecurityError(Error):
-    pass
-
-
 class CallError(Error):
     def __init__(self, e):
         s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
