@@ -223,6 +223,7 @@ class Message(object):
     data = ''
 
     router = None
+    receiver = None
 
     def __init__(self, **kwargs):
         self.src_id = mitogen.context_id

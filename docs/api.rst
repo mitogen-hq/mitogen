@@ -83,9 +83,9 @@ contexts.
         total = 0
         recvs = [c.call_async(long_running_operation) for c in contexts]
 
-        for recv, (msg, data) in mitogen.master.Select(recvs):
-            print 'Got %s from %s' % (data, recv)
-            total += data
+        for msg in mitogen.master.Select(recvs):
+            print 'Got %s from %s' % (msg, msg.receiver)
+            total += msg.unpickle()
 
         # Iteration ends when last Receiver yields a result.
         print 'Received total %s from %s receivers' % (total, len(recvs))
@@ -96,8 +96,8 @@ contexts.
 
         with mitogen.master.Select(oneshot=False) as select:
             while running():
-                for recv, (msg, data) in select:
-                    process_result(recv.context, msg.unpickle())
+                for msg in select:
+                    process_result(msg.receiver.context, msg.unpickle())
                 for context, workfunc in get_new_work():
                     select.add(context.call_async(workfunc))
 
@@ -114,8 +114,8 @@ contexts.
             ])
         ]
 
-        for recv, (msg, data) in mitogen.master.Select(selects):
-            print data
+        for msg in mitogen.master.Select(selects):
+            print msg.unpickle()
 
     .. py:method:: get (timeout=None)
 
@@ -123,11 +123,14 @@ contexts.
         :py:class:`mitogen.core.TimeoutError` if no value is available within
         `timeout` seconds.
 
+        On success, the message's :py:attr:`receiver
+        <mitogen.core.Message.receiver>` attribute is set to the receiver.
+
         :param float timeout:
             Timeout in seconds.
 
         :return:
-            `(receiver, (msg, data))`
+            :py:class:`mitogen.core.Message`
 
     .. py:method:: __bool__ ()
 

@@ -183,7 +183,7 @@ class IterTest(testlib.RouterMixin, testlib.TestCase):
         select = self.klass([recv])
         msg = mitogen.core.Message.pickled('123')
         recv._on_receive(msg)
-        self.assertEquals([(recv, (msg, '123'))], list(select))
+        self.assertEquals([msg], list(select))
 
 
 class OneShotTest(testlib.RouterMixin, testlib.TestCase):
@@ -194,7 +194,7 @@ class OneShotTest(testlib.RouterMixin, testlib.TestCase):
         select = self.klass([recv])
         msg = mitogen.core.Message.pickled('123')
         recv._on_receive(msg)
-        recv, (msg_, data) = select.get()
+        msg_ = select.get()
         self.assertEquals(msg, msg_)
         self.assertEquals(0, len(select._receivers))
         self.assertEquals(None, recv.notify)
@@ -204,7 +204,8 @@ class OneShotTest(testlib.RouterMixin, testlib.TestCase):
         select = self.klass([recv], oneshot=False)
         msg = mitogen.core.Message.pickled('123')
         recv._on_receive(msg)
-        self.assertEquals((recv, (msg, '123')), select.get())
+
+        self.assertEquals(msg, select.get())
         self.assertEquals(1, len(select._receivers))
         self.assertEquals(recv, select._receivers[0])
         self.assertEquals(select._put, recv.notify)
@@ -241,22 +242,29 @@ class GetTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         recv._on_receive(mitogen.core.Message.pickled('123'))
         select = self.klass([recv])
-        recv, (msg, data) = select.get()
-        self.assertEquals('123', data)
+        msg = select.get()
+        self.assertEquals('123', msg.unpickle())
 
     def test_nonempty_after_add(self):
         recv = mitogen.core.Receiver(self.router)
         select = self.klass([recv])
         recv._on_receive(mitogen.core.Message.pickled('123'))
-        recv, (msg, data) = select.get()
-        self.assertEquals('123', data)
+        msg = select.get()
+        self.assertEquals('123', msg.unpickle())
+
+    def test_nonempty_receiver_attr_set(self):
+        recv = mitogen.core.Receiver(self.router)
+        select = self.klass([recv])
+        recv._on_receive(mitogen.core.Message.pickled('123'))
+        msg = select.get()
+        self.assertEquals(msg.receiver, recv)
 
     def test_drained_by_other_thread(self):
         recv = mitogen.core.Receiver(self.router)
         recv._on_receive(mitogen.core.Message.pickled('123'))
         select = self.klass([recv])
-        msg, data = recv.get()
-        self.assertEquals('123', data)
+        msg = recv.get()
+        self.assertEquals('123', msg.unpickle())
         self.assertRaises(mitogen.core.TimeoutError,
             lambda: select.get(timeout=0.0))
 
