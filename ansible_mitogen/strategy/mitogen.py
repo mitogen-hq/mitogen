@@ -26,6 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import os
 
 import mitogen
 import mitogen.master
@@ -36,7 +37,7 @@ import ansible_mitogen.action.mitogen
 
 import ansible.errors
 import ansible.plugins.strategy.linear
-from ansible.plugins import action_loader
+import ansible.plugins
 
 
 class ContextProxyService(mitogen.service.Service):
@@ -59,25 +60,40 @@ class ContextProxyService(mitogen.service.Service):
 
 
 class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
-    def run(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
+        super(StrategyModule, self).__init__(*args, **kwargs)
+        self.add_connection_plugin_path()
+
+    def add_connection_plugin_path(self):
+        """Automatically add the connection plug-in directory to the
+        ModuleLoader path, reduces end-user configuration."""
+        # ansible_mitogen base directory:
+        basedir = os.path.dirname(os.path.dirname(__file__))
+        conn_dir = os.path.join(basedir, 'connection')
+        ansible.plugins.connection_loader.add_directory(conn_dir)
+
+    def run(self, iterator, play_context, result=0):
         self.router = mitogen.master.Router()
         self.listener = mitogen.unix.Listener(self.router, path='/tmp/mitosock')
         self.service = ContextProxyService(self.router)
         mitogen.utils.log_to_file()
+
+        if play_context.connection == 'ssh':
+            play_context.connection = 'mitogen'
 
         import threading
         th = threading.Thread(target=self.service.run)
         th.setDaemon(True)
         th.start()
 
-        real_get = action_loader.get
+        real_get = ansible.plugins.action_loader.get
         def get(name, *args, **kwargs):
             if name == 'normal':
                 return ansible_mitogen.action.mitogen.ActionModule(*args, **kwargs)
             return real_get(name, *args, **kwargs)
-        action_loader.get = get
+        ansible.plugins.action_loader.get = get
 
         try:
-            return super(StrategyModule, self).run(*args, **kwargs)
+            return super(StrategyModule, self).run(iterator, play_context)
         finally:
             self.router.broker.shutdown()
