@@ -794,7 +794,7 @@ def _unpickle_context(router, context_id, name):
     assert isinstance(router, Router)
     assert isinstance(context_id, (int, long)) and context_id > 0
     assert isinstance(name, basestring) and len(name) < 100
-    return Context(router, context_id, name)
+    return router.context_class(router, context_id, name)
 
 
 class Waker(BasicStream):
@@ -883,6 +883,8 @@ class IoLogger(BasicStream):
 
 
 class Router(object):
+    context_class = Context
+
     def __init__(self, broker):
         self.broker = broker
         listen(broker, 'shutdown', self.on_broker_shutdown)
