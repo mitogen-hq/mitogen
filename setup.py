@@ -35,7 +35,7 @@ setup(
     author = 'David Wilson',
     license = 'New BSD',
     url = 'https://github.com/dw/mitogen/',
-    packages = ['mitogen'],
+    packages = ['mitogen', 'ansible_mitogen'],
     zip_safe = False,
     classifiers = [
         'Development Status :: 3 - Alpha',

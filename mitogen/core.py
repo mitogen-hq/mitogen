@@ -407,7 +407,6 @@ class Importer(object):
     def __init__(self, router, context, core_src):
         self._context = context
         self._present = {'mitogen': [
-            'mitogen.ansible',
             'mitogen.compat',
             'mitogen.compat.pkgutil',
             'mitogen.fakessh',

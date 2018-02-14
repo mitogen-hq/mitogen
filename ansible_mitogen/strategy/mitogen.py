@@ -25,12 +25,14 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
+
 import mitogen
 import mitogen.master
 import mitogen.service
 import mitogen.unix
 import mitogen.utils
-import mitogen.ansible.action
+import ansible_mitogen.action.mitogen
 
 import ansible.errors
 import ansible.plugins.strategy.linear
@@ -71,7 +73,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         real_get = action_loader.get
         def get(name, *args, **kwargs):
             if name == 'normal':
-                return mitogen.ansible.action.ActionModule(*args, **kwargs)
+                return ansible_mitogen.action.mitogen.ActionModule(*args, **kwargs)
             return real_get(name, *args, **kwargs)
         action_loader.get = get
 

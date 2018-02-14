@@ -38,8 +38,6 @@ import json
 import subprocess
 import time
 
-import mitogen
-
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'

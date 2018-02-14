@@ -42,12 +42,12 @@ Enable it by:
     EOF
 """
 
-import mitogen.master
-import mitogen.unix
-from mitogen.ansible import helpers
+from __future__ import absolute_import
 
 import ansible.errors
 import ansible.plugins.connection
+import ansible_mitogen.helpers
+import mitogen.unix
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
@@ -78,15 +78,15 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
         if in_data:
             raise ansible.errors.AnsibleError("does not support module pipelining")
-        return self.py_call(helpers.exec_command, cmd, in_data)
+        return self.py_call(ansible_mitogen.helpers.exec_command, cmd, in_data)
 
     def fetch_file(self, in_path, out_path):
-        output = self.py_call(helpers.read_path, in_path)
-        helpers.write_path(out_path, output)
+        output = self.py_call(ansible_mitogen.helpers.read_path, in_path)
+        ansible_mitogen.helpers.write_path(out_path, output)
 
     def put_file(self, in_path, out_path):
-        self.py_call(helpers.write_path, out_path,
-                     helpers.read_path(in_path))
+        self.py_call(ansible_mitogen.helpers.write_path, out_path,
+                     ansible_mitogen.helpers.read_path(in_path))
 
     def close(self):
         self.router.broker.shutdown()

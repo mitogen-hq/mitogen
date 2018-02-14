@@ -31,7 +31,7 @@ import os
 import ansible
 import ansible.plugins
 import ansible.plugins.action.normal
-import mitogen.ansible.helpers
+import ansible_mitogen.helpers
 
 
 ANSIBLE_BASEDIR = os.path.dirname(ansible.__file__)
@@ -57,7 +57,7 @@ class ActionModule(ansible.plugins.action.normal.ActionModule):
         #####################################################################
 
         py_module_name = self.get_py_module_name(module_name)
-        js = self._connection.py_call(mitogen.ansible.helpers.run_module, py_module_name,
+        js = self._connection.py_call(ansible_mitogen.helpers.run_module, py_module_name,
                                       args=json.loads(json.dumps(module_args)))
 
         #####################################################################
