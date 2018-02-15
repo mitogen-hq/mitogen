@@ -167,6 +167,11 @@ def restart(func, *args):
                 raise
 
 
+def is_blacklisted_import(importer, fullname):
+    return ((not any(fullname.startswith(s) for s in importer.whitelist)) or
+                 (any(fullname.startswith(s) for s in importer.blacklist)))
+
+
 def set_cloexec(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
@@ -461,8 +466,7 @@ class Importer(object):
             del _tls.running
 
     def _refuse_imports(self, fullname):
-        if ((not any(fullname.startswith(s) for s in self.whitelist)) or
-                (any(fullname.startswith(s) for s in self.blacklist))):
+        if is_blacklisted_import(self, fullname):
             raise ImportError('Refused')
 
         f = sys._getframe(2)

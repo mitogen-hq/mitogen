@@ -442,7 +442,7 @@ class ModuleResponder(object):
         self._finder = ModuleFinder()
         self._cache = {}  # fullname -> pickled
         self.blacklist = []
-        self.whitelist = []
+        self.whitelist = ['']
         router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
 
     def __repr__(self):
@@ -451,6 +451,8 @@ class ModuleResponder(object):
     MAIN_RE = re.compile(r'^if\s+__name__\s*==\s*.__main__.\s*:', re.M)
 
     def whitelist_prefix(self, fullname):
+        if self.whitelist == ['']:
+            self.whitelist = ['mitogen']
         self.whitelist.append(fullname)
 
     def blacklist_prefix(self, fullname):
@@ -466,7 +468,7 @@ class ModuleResponder(object):
         return src
 
     def _build_tuple(self, fullname):
-        if fullname in self._blacklist:
+        if mitogen.core.is_blacklisted_import(self, fullname):
             raise ImportError('blacklisted')
 
         if fullname in self._cache:
