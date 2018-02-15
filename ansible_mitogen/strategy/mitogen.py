@@ -103,11 +103,8 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
 
     def run(self, iterator, play_context, result=0):
         self.router = mitogen.master.Router()
-        self.router.responder.blacklist('OpenSSL')
-        self.router.responder.blacklist('urllib3')
-        self.router.responder.blacklist('requests')
-        self.router.responder.blacklist('systemd')
-        self.router.responder.blacklist('selinux')
+        self.router.responder.whitelist_prefix('ansible')
+        self.router.responder.whitelist_prefix('ansible_mitogen')
         self.listener = mitogen.unix.Listener(self.router)
         os.environ['LISTENER_SOCKET_PATH'] = self.listener.path
 
