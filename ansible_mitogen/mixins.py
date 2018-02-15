@@ -120,7 +120,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._update_module_args(module_name, module_args, task_vars)
 
         # replaces 110 lines
-        js = self._connection.call(
+        js = self.call(
             ansible_mitogen.helpers.run_module,
             get_command_module_name(module_name),
             args=cast(module_args)
