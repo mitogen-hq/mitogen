@@ -158,6 +158,15 @@ def takes_router(func):
     return func
 
 
+def restart(func, *args):
+    while True:
+        try:
+            return func(*args)
+        except (select.error, OSError), e:
+            if e[0] != errno.EINTR:
+                raise
+
+
 def set_cloexec(fd):
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
@@ -815,7 +824,7 @@ class Latch(object):
         finally:
             self.lock.release()
 
-        rfds, _, _ = select.select([_tls.rsock], [], [], timeout)
+        rfds, _, _ = restart(select.select, [_tls.rsock], [], [], timeout)
         assert len(rfds) or timeout is not None
 
         self.lock.acquire()
@@ -1142,8 +1151,12 @@ class Broker(object):
 
         #IOLOG.debug('readers = %r', self._readers)
         #IOLOG.debug('writers = %r', self._writers)
-        rsides, wsides, _ = select.select(self._readers, self._writers,
-                                          (), timeout)
+        rsides, wsides, _ = restart(select.select,
+            self._readers,
+            self._writers,
+            (), timeout
+        )
+
         for side in rsides:
             _vv and IOLOG.debug('%r: POLLIN for %r', self, side)
             self._call(side.stream, side.stream.on_receive)
