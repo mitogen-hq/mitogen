@@ -33,30 +33,57 @@ import mitogen.master
 import mitogen.service
 import mitogen.unix
 import mitogen.utils
-import ansible_mitogen.action.mitogen
 
 import ansible.errors
 import ansible.plugins.strategy.linear
 import ansible.plugins
+import ansible_mitogen.mixins
+
+
+def wrap_action_loader__get(name, *args, **kwargs):
+    """
+    Trap calls to the action plug-in loader, supplementing the type of any
+    ActionModule with Mitogen's ActionModuleMixin before constructing it,
+    causing the mix-in methods to override any inherited from Ansible's base
+    class, replacing most shell use with pure Python equivalents.
+
+    This is preferred to static subclassing as it generalizes to third party
+    action modules existing outside the Ansible tree.
+    """
+    klass = action_loader__get(name, class_only=True)
+    if klass:
+        wrapped_name = 'MitogenActionModule_' + name
+        bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
+        adorned_klass = type(name, bases, {})
+        return adorned_klass(*args, **kwargs)
+
+action_loader__get = ansible.plugins.action_loader.get
+ansible.plugins.action_loader.get = wrap_action_loader__get
 
 
 class ContextProxyService(mitogen.service.Service):
+    """
+    Implement a service accessible from worker processes connecting back into
+    the top-level process. The service yields an existing context matching a
+    connection configuration if it exists, otherwise it constructs a new
+    conncetion before returning it.
+    """
     well_known_id = 500
     max_message_size = 1000
 
     def __init__(self, router):
         super(ContextProxyService, self).__init__(router)
-        self._context_by_id = {}
+        self._context_by_key = {}
 
     def validate_args(self, args):
         return isinstance(args, dict)
 
     def dispatch(self, dct, msg):
         key = repr(sorted(dct.items()))
-        if key not in self._context_by_id:
+        if key not in self._context_by_key:
             method = getattr(self.router, dct.pop('method'))
-            self._context_by_id[key] = method(**dct)
-        return self._context_by_id[key]
+            self._context_by_key[key] = method(**dct)
+        return self._context_by_key[key]
 
 
 class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
@@ -65,8 +92,10 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         self.add_connection_plugin_path()
 
     def add_connection_plugin_path(self):
-        """Automatically add the connection plug-in directory to the
-        ModuleLoader path, reduces end-user configuration."""
+        """
+        Automatically add the connection plug-in directory to the ModuleLoader
+        path, slightly reduces end-user configuration.
+        """
         # ansible_mitogen base directory:
         basedir = os.path.dirname(os.path.dirname(__file__))
         conn_dir = os.path.join(basedir, 'connection')
@@ -74,11 +103,16 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
 
     def run(self, iterator, play_context, result=0):
         self.router = mitogen.master.Router()
+        self.router.responder.blacklist('OpenSSL')
+        self.router.responder.blacklist('urllib3')
+        self.router.responder.blacklist('requests')
+        self.router.responder.blacklist('systemd')
+        self.router.responder.blacklist('selinux')
         self.listener = mitogen.unix.Listener(self.router)
         os.environ['LISTENER_SOCKET_PATH'] = self.listener.path
 
         self.service = ContextProxyService(self.router)
-        mitogen.utils.log_to_file()
+        mitogen.utils.log_to_file()#level='DEBUG', io=False)
 
         if play_context.connection == 'ssh':
             play_context.connection = 'mitogen'
@@ -87,13 +121,6 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         th = threading.Thread(target=self.service.run)
         th.setDaemon(True)
         th.start()
-
-        real_get = ansible.plugins.action_loader.get
-        def get(name, *args, **kwargs):
-            if name == 'normal':
-                return ansible_mitogen.action.mitogen.ActionModule(*args, **kwargs)
-            return real_get(name, *args, **kwargs)
-        ansible.plugins.action_loader.get = get
 
         try:
             return super(StrategyModule, self).run(iterator, play_context)

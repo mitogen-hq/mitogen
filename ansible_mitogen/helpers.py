@@ -25,15 +25,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Ansible is so poorly layered that attempting to import anything under
-ansible.plugins automatically triggers import of __main__, which causes
-remote execution of the ansible command-line tool. :(
-
-So here we define helpers in some sanely layered package where the entirety of
-Ansible won't be imported.
-"""
-
 import json
 import subprocess
 import time
@@ -62,10 +53,9 @@ class ModuleError(Exception):
 
 def wtf_exit_json(self, **kwargs):
     """
-    Replace AnsibleModule.exit_json() with something that doesn't try to
-    suicide the process or JSON-encode the dictionary. Instead, cause Exit to
-    be raised, with a `dct` attribute containing the successful result
-    dictionary.
+    Replace AnsibleModule.exit_json() with something that doesn't try to kill
+    the process or JSON-encode the result dictionary. Instead, cause Exit to be
+    raised, with a `dct` attribute containing the successful result dictionary.
     """
     self.add_path_info(kwargs)
     kwargs.setdefault('changed', False)
@@ -95,7 +85,7 @@ def wtf_fail_json(self, **kwargs):
 def run_module(module, raw_params=None, args=None):
     """
     Set up the process environment in preparation for running an Ansible
-    module. The monkey-patches the Ansible libraries in various places to
+    module. This monkey-patches the Ansible libraries in various places to
     prevent it from trying to kill the process on completion, and to prevent it
     from reading sys.stdin.
     """
@@ -112,13 +102,13 @@ def run_module(module, raw_params=None, args=None):
 
     try:
         mod = __import__(module, {}, {}, [''])
-        # Ansible modules begin execution on import, because they're crap from
-        # hell. Thus the above __import__ will cause either Exit or
-        # ModuleError to be raised. If we reach the line below, the module did
-        # not execute and must already have been imported for a previous
-        # invocation, so we need to invoke main explicitly.
+        # Ansible modules begin execution on import. Thus the above __import__
+        # will cause either Exit or ModuleError to be raised. If we reach the
+        # line below, the module did not execute and must already have been
+        # imported for a previous invocation, so we need to invoke main
+        # explicitly.
         mod.main()
-    except Exit, e:
+    except (Exit, ModuleError), e:
         return json.dumps(e.dct)
 
 

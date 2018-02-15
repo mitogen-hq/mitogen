@@ -25,23 +25,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Basic Ansible connection plug-in mostly useful for testing functionality,
-due to Ansible's use of the multiprocessing package a lot more work is required
-to share the mitogen SSH connection across tasks.
-
-Enable it by:
-
-    $ cat ansible.cfg
-    [defaults]
-    connection_plugins = plugins/connection
-
-    $ mkdir -p plugins/connection
-    $ cat > plugins/connection/mitogen_conn.py <<-EOF
-    from mitogen.ansible.connection import Connection
-    EOF
-"""
-
 from __future__ import absolute_import
 import os
 
@@ -49,6 +32,8 @@ import ansible.errors
 import ansible.plugins.connection
 import ansible_mitogen.helpers
 import mitogen.unix
+
+from ansible_mitogen.utils import cast
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
@@ -69,39 +54,50 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         path = os.environ['LISTENER_SOCKET_PATH']
         self.router, self.parent = mitogen.unix.connect(path)
 
-        host = mitogen.service.call(self.parent, 500, {
+        host = mitogen.service.call(self.parent, 500, cast({
             'method': 'ssh',
             'hostname': self._play_context.remote_addr,
             'username': self._play_context.remote_user,
+            'password': self._play_context.password,
             'port': self._play_context.port,
+            'python_path': '/usr/bin/python',
             'ssh_path': self._play_context.ssh_executable,
-        })
+        }))
 
         if not self._play_context.become:
             self.context = host
         else:
-            self.context = mitogen.service.call(self.parent, 500, {
+            self.context = mitogen.service.call(self.parent, 500, cast({
                 'method': 'sudo',
                 'username': self._play_context.become_user,
+                'password': self._play_context.password,
+                'python_path': '/usr/bin/python',
                 'via': host,
-            })
+                'debug': True,
+            }))
 
-    def py_call(self, func, *args, **kwargs):
+    def call_async(self, func, *args, **kwargs):
         self._connect()
-        return self.context.call(func, *args, **kwargs)
+        print[func, args, kwargs]
+        return self.context.call_async(func, *args, **kwargs)
+
+    def call(self, func, *args, **kwargs):
+        return self.call_async(func, *args, **kwargs).get().unpickle()
 
     def exec_command(self, cmd, in_data=None, sudoable=True):
         super(Connection, self).exec_command(cmd, in_data=in_data, sudoable=sudoable)
         if in_data:
             raise ansible.errors.AnsibleError("does not support module pipelining")
-        return self.py_call(ansible_mitogen.helpers.exec_command, cmd, in_data)
+        return self.py_call(ansible_mitogen.helpers.exec_command,
+                            cast(cmd), cast(in_data))
 
     def fetch_file(self, in_path, out_path):
-        output = self.py_call(ansible_mitogen.helpers.read_path, in_path)
+        output = self.py_call(ansible_mitogen.helpers.read_path,
+                              cast(in_path))
         ansible_mitogen.helpers.write_path(out_path, output)
 
     def put_file(self, in_path, out_path):
-        self.py_call(ansible_mitogen.helpers.write_path, out_path,
+        self.py_call(ansible_mitogen.helpers.write_path, cast(out_path),
                      ansible_mitogen.helpers.read_path(in_path))
 
     def close(self):
