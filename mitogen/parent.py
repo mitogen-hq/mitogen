@@ -63,6 +63,10 @@ class Argv(object):
         return ' '.join(map(self.escape, self.argv))
 
 
+def get_log_level():
+    return (LOG.level or logging.getLogger().level or logging.INFO)
+
+
 def minimize_source(source):
     subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
     source = DOCSTRING_RE.sub(subber, source)
@@ -336,14 +340,17 @@ class Stream(mitogen.core.Stream):
     def get_preamble(self):
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
+
         source = inspect.getsource(mitogen.core)
-        source += '\nExternalContext().main%r\n' % ((
-            parent_ids,                # parent_ids
-            self.remote_id,            # context_id
-            self.debug,
-            self.profiling,
-            LOG.level or logging.getLogger().level or logging.INFO,
-        ),)
+        source += '\nExternalContext().main(**%r)\n' % ({
+            'parent_ids': parent_ids,
+            'context_id': self.remote_id,
+            'debug': self.debug,
+            'profiling': self.profiling,
+            'log_level': get_log_level(),
+            'whitelist': self._router.get_module_whitelist(),
+            'blacklist': self._router.get_module_blacklist(),
+        },)
 
         compressed = zlib.compress(minimize_source(source))
         return str(len(compressed)) + '\n' + compressed
@@ -384,6 +391,16 @@ class ChildIdAllocator(object):
 
 class Router(mitogen.core.Router):
     context_class = mitogen.core.Context
+
+    def get_module_blacklist(self):
+        if mitogen.context_id == 0:
+            return self.responder.blacklist
+        return self.importer.blacklist
+
+    def get_module_whitelist(self):
+        if mitogen.context_id == 0:
+            return self.responder.whitelist
+        return self.importer.whitelist
 
     def allocate_id(self):
         return self.id_allocator.allocate()

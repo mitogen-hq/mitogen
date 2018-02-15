@@ -441,12 +441,20 @@ class ModuleResponder(object):
         self._router = router
         self._finder = ModuleFinder()
         self._cache = {}  # fullname -> pickled
+        self.blacklist = []
+        self.whitelist = []
         router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
 
     MAIN_RE = re.compile(r'^if\s+__name__\s*==\s*.__main__.\s*:', re.M)
+
+    def whitelist_prefix(self, fullname):
+        self.whitelist.append(fullname)
+
+    def blacklist_prefix(self, fullname):
+        self.blacklist.append(fullname)
 
     def neutralize_main(self, src):
         """Given the source for the __main__ module, try to find where it
@@ -458,6 +466,9 @@ class ModuleResponder(object):
         return src
 
     def _build_tuple(self, fullname):
+        if fullname in self._blacklist:
+            raise ImportError('blacklisted')
+
         if fullname in self._cache:
             return self._cache[fullname]
 
