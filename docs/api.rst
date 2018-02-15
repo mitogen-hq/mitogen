@@ -117,6 +117,34 @@ contexts.
         for msg in mitogen.master.Select(selects):
             print msg.unpickle()
 
+    .. py:classmethod:: all (it)
+
+        Take an iterable of receivers and retrieve a :py:class:`Message` from
+        each, returning the result of calling `msg.unpickle()` on each in turn.
+        Results are returned in the order they arrived.
+
+        This is sugar for handling batch :py:class:`Context.call_async`
+        invocations:
+
+        .. code-block:: python
+
+            print('Total disk usage: %.02fMiB' % (sum(
+                mitogen.master.Select.all(
+                    context.call_async(get_disk_usage)
+                    for context in contexts
+                ) / 1048576.0
+            ),))
+
+        However, unlike in a naive comprehension such as:
+
+        .. code-block:: python
+
+            sum(context.call_async(get_disk_usage).get().unpickle()
+                for context in contexts)
+
+        Result processing happens concurrently to new results arriving, so
+        :py:meth:`all` should always be faster.
+
     .. py:method:: get (timeout=None)
 
         Fetch the next available value from any receiver, or raise

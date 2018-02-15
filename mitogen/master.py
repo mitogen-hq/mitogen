@@ -123,6 +123,10 @@ class SelectError(mitogen.core.Error):
 class Select(object):
     notify = None
 
+    @classmethod
+    def all(cls, receivers):
+        return list(msg.unpickle() for msg in cls(receivers))
+
     def __init__(self, receivers=(), oneshot=True):
         self._receivers = []
         self._oneshot = oneshot
