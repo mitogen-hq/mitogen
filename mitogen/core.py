@@ -394,7 +394,7 @@ class Importer(object):
 
     :param context: Context to communicate via.
     """
-    def __init__(self, router, context, core_src):
+    def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
         self._context = context
         self._present = {'mitogen': [
             'mitogen.compat',
@@ -407,6 +407,15 @@ class Importer(object):
             'mitogen.utils',
         ]}
         self._lock = threading.Lock()
+        self.whitelist = whitelist or ['']
+        self.blacklist = list(blacklist) + [
+            # 2.x generates needless imports for 'builtins', while 3.x does the
+            # same for '__builtin__'. The correct one is built-in, the other
+            # always a negative round-trip.
+            'builtins',
+            '__builtin__',
+        ]
+
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
         router.add_handler(self._on_load_module, LOAD_MODULE)
@@ -451,12 +460,9 @@ class Importer(object):
         finally:
             del _tls.running
 
-    def _load_module_hacks(self, fullname):
-        if fullname in ('builtins', '__builtin__'):
-            # Python 2.x will generate needless imports for 'builtins', while
-            # Python 3.x will generate needless imports for '__builtin__'. The
-            # correct one is already present in sys.modules, the other is
-            # always a negative round-trip.
+    def _refuse_imports(self, fullname):
+        if ((not any(fullname.startswith(s) for s in self.whitelist)) or
+                (any(fullname.startswith(s) for s in self.blacklist))):
             raise ImportError('Refused')
 
         f = sys._getframe(2)
@@ -515,7 +521,7 @@ class Importer(object):
 
     def load_module(self, fullname):
         _v and LOG.debug('Importer.load_module(%r)', fullname)
-        self._load_module_hacks(fullname)
+        self._refuse_imports(fullname)
 
         event = threading.Event()
         self._request_module(fullname, event.set)
@@ -1260,7 +1266,7 @@ class ExternalContext(object):
         if debug:
             enable_debug_logging()
 
-    def _setup_importer(self, core_src_fd):
+    def _setup_importer(self, core_src_fd, whitelist, blacklist):
         if core_src_fd:
             with os.fdopen(101, 'r', 1) as fp:
                 core_size = int(fp.readline())
@@ -1271,7 +1277,9 @@ class ExternalContext(object):
         else:
             core_src = None
 
-        self.importer = Importer(self.router, self.parent, core_src)
+        self.importer = Importer(self.router, self.parent, core_src,
+                                 whitelist, blacklist)
+        self.router.importer = self.importer
         sys.meta_path.append(self.importer)
 
     def _setup_package(self, context_id, parent_ids):
@@ -1328,12 +1336,13 @@ class ExternalContext(object):
         self.dispatch_stopped = True
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
-             in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True):
+             in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True,
+             whitelist=(), blacklist=()):
         self._setup_master(profiling, parent_ids[0], context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
-                self._setup_importer(core_src_fd)
+                self._setup_importer(core_src_fd, whitelist, blacklist)
                 self._setup_package(context_id, parent_ids)
                 if setup_stdio:
                     self._setup_stdio()
@@ -1342,7 +1351,7 @@ class ExternalContext(object):
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Connected to %s; my ID is %r, PID is %r',
-                          self.parent, context_id, os.getpid())
+                                 self.parent, context_id, os.getpid())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 _profile_hook('main', self._dispatch_calls)
