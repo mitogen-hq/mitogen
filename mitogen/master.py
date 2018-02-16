@@ -56,9 +56,9 @@ from mitogen.core import LOG
 RLOG = logging.getLogger('mitogen.ctx')
 
 
-def get_child_modules(path, fullname):
+def get_child_modules(path):
     it = pkgutil.iter_modules([os.path.dirname(path)])
-    return ['%s.%s' % (fullname, name) for _, name, _ in it]
+    return [name for _, name, _ in it]
 
 
 def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
@@ -489,7 +489,7 @@ class ModuleResponder(object):
             raise ImportError('could not find %r' % (fullname,))
 
         if is_pkg:
-            pkg_present = get_child_modules(path, fullname)
+            pkg_present = get_child_modules(path)
             LOG.debug('_build_tuple(%r, %r) -> %r',
                       path, fullname, pkg_present)
         else:

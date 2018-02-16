@@ -402,14 +402,14 @@ class Importer(object):
     def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
         self._context = context
         self._present = {'mitogen': [
-            'mitogen.compat',
-            'mitogen.compat.pkgutil',
-            'mitogen.fakessh',
-            'mitogen.master',
-            'mitogen.parent',
-            'mitogen.ssh',
-            'mitogen.sudo',
-            'mitogen.utils',
+            'compat',
+            'compat.pkgutil',
+            'fakessh',
+            'master',
+            'parent',
+            'ssh',
+            'sudo',
+            'utils',
         ]}
         self._lock = threading.Lock()
         self.whitelist = whitelist or ['']
@@ -444,9 +444,10 @@ class Importer(object):
         _tls.running = True
         fullname = fullname.rstrip('.')
         try:
-            pkgname, _, _ = fullname.rpartition('.')
+            pkgname, dot, _ = fullname.rpartition('.')
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
-            if fullname not in self._present.get(pkgname, (fullname,)):
+            suffix = fullname[len(pkgname+dot):]
+            if suffix not in self._present.get(pkgname, (suffix,)):
                 _v and LOG.debug('%r: master doesn\'t know %r', self, fullname)
                 return None
 
