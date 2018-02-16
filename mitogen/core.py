@@ -546,7 +546,13 @@ class Importer(object):
             self._present[fullname] = pkg_present
         else:
             mod.__package__ = fullname.rpartition('.')[0] or None
-        code = compile(self.get_source(fullname), mod.__file__, 'exec')
+
+        # TODO: monster hack: work around modules now being imported as their
+        # actual name, so when Ansible "apt.py" tries to "import apt", it gets
+        # itself. Instead force absolute imports during compilation.
+        flags = 0x4000 if fullname.startswith('ansible') else 0
+        source = self.get_source(fullname)
+        code = compile(source, mod.__file__, 'exec', flags, True)
         exec code in vars(mod)
         return mod
 
