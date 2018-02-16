@@ -50,7 +50,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def _connect_local(self):
         return mitogen.service.call(self.parent, 500, {
             'method': 'local',
-        }
+        })
 
     def _connect_ssh(self):
         return mitogen.service.call(self.parent, 500, cast({
@@ -83,7 +83,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self._play_context.connection == 'local':
             host = self._connect_local()
         else:
-            host = self._connect_ssh(self)
+            host = self._connect_ssh()
 
         if not self._play_context.become:
             self.context = host
