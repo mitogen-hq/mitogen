@@ -12,12 +12,9 @@ import mitogen.parent
 import mitogen.ssh
 import mitogen.sudo
 
-broker = mitogen.master.Broker()
-
-router = mitogen.core.Router(broker)
+router = mitogen.master.Router()
 context = mitogen.master.Context(router, 0)
 stream = mitogen.ssh.Stream(router, 0, hostname='foo')
-broker.shutdown()
 
 print 'SSH command size: %s' % (len(' '.join(stream.get_boot_command())),)
 print 'Preamble size: %s (%.2fKiB)' % (
