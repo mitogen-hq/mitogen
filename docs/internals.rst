@@ -352,21 +352,18 @@ Helper Functions
 
 .. currentmodule:: mitogen.master
 
-.. function:: get_child_modules (path, fullname)
+.. function:: get_child_modules (path)
 
-    Return the canonical names of all submodules of a package `module`.
+    Return the suffixes of submodules directly neated beneath of the package
+    directory at `path`.
 
     :param str path:
         Path to the module's source code on disk, or some PEP-302-recognized
         equivalent. Usually this is the module's ``__file__`` attribute, but
         is specified explicitly to avoid loading the module.
 
-    :param str fullname:
-        The module's canonical name. This is the module's ``__name__``
-        attribute, but is specified explicitly to avoid loading the module.
-
     :return:
-        List of canonical submodule names.
+        List of submodule name suffixes.
 
 
 .. currentmodule:: mitogen.parent
