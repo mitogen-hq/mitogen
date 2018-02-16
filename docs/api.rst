@@ -562,7 +562,7 @@ Router Class
             a password is requested, :py:class:`mitogen.sudo.PasswordError` is
             raised.
 
-    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, \**kwargs)
+    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, compression_level=6, \**kwargs)
 
         Arrange for a context to be constructed over a ``ssh`` invocation. The
         ``ssh`` process is started in a newly allocated pseudo-terminal, and
@@ -594,6 +594,10 @@ Router Class
             the SSH client to perform authenticaion; agent authentication is
             automatically disabled, as is reading the default private key from
             ``~/.ssh/id_rsa``, or ``~/.ssh/id_dsa``.
+        :param int compression_level:
+            Integer 0-9 representing the zlib compression level to use on the
+            connection, with 0 indicating compression is disabled. Defaults to
+            6.
 
 
 Context Class
