@@ -43,6 +43,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     become_methods = ['sudo']
     transport = 'mitogen'
 
+    def __init__(self, play_context, new_stdin, original_transport):
+        self.original_transport = original_transport
+        self.transport = original_transport
+        super(Connection, self).__init__(play_context, new_stdin)
+
     @property
     def connected(self):
         return self.router is not None
@@ -80,19 +85,17 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         path = os.environ['LISTENER_SOCKET_PATH']
         self.router, self.parent = mitogen.unix.connect(path)
 
-        if self._play_context.connection == 'local':
-            host = self._connect_local()
+        if self.original_transport == 'local':
+            self.context = self._connect_local()
         else:
-            host = self._connect_ssh()
-
-        if not self._play_context.become:
-            self.context = host
-        else:
-            self.context = self._connect_sudo(via=host)
+            self.host = self._connect_ssh()
+            if not self._play_context.become:
+                self.context = self.host
+            else:
+                self.context = self._connect_sudo(via=self.host)
 
     def call_async(self, func, *args, **kwargs):
         self._connect()
-        print[func, args, kwargs]
         return self.context.call_async(func, *args, **kwargs)
 
     def call(self, func, *args, **kwargs):

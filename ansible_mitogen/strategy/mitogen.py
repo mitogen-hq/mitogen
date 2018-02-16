@@ -63,6 +63,19 @@ action_loader__get = ansible.plugins.action_loader.get
 ansible.plugins.action_loader.get = wrap_action_loader__get
 
 
+def wrap_connection_loader__get(name, play_context, new_stdin):
+    """
+    """
+    kwargs = {}
+    if name in ('ssh', 'local'):
+        kwargs['original_transport'] = name
+        name = 'mitogen'
+    return connection_loader__get(name, play_context, new_stdin, **kwargs)
+
+connection_loader__get = ansible.plugins.connection_loader.get
+ansible.plugins.connection_loader.get = wrap_connection_loader__get
+
+
 class ContextProxyService(mitogen.service.Service):
     """
     Implement a service accessible from worker processes connecting back into
@@ -111,10 +124,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         os.environ['LISTENER_SOCKET_PATH'] = self.listener.path
 
         self.service = ContextProxyService(self.router)
-        mitogen.utils.log_to_file()#level='DEBUG', io=False)
-
-        if play_context.connection == 'ssh':
-            play_context.connection = 'mitogen'
+        #mitogen.utils.log_to_file(level='DEBUG', io=False)
 
         import threading
         th = threading.Thread(target=self.service.run)
