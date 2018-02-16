@@ -1,0 +1,150 @@
+
+Ansible Extension
+=================
+
+.. image:: images/ans_cell_division.png
+    :align: right
+
+An experimental extension to `Ansible`_ is included that implements host
+connections over Mitogen, replacing embedded shell invocations with pure-Python
+equivalents invoked over SSH via highly efficient remote procedure calls. No
+changes are required to the target hosts.
+
+The extension isn't nearly in a generally dependable state yet, however it
+already works well enough for testing against real-world playbooks. `Bug
+reports`_ in this area are very welcome – Ansible is a huge beast, and only
+significant testing will prove the extension's soundness.
+
+.. _Ansible: https://www.ansible.com/
+
+.. _Bug reports: https://goo.gl/yLKZiJ
+
+
+Overview
+--------
+
+You should expect a general speedup ranging from 1.5x to 5x depending on
+network conditions, the specific modules executed, and time spent by the target
+host already doing useful work. Mitogen cannot speed up a module once it is
+executing, it can only ensure the module executes as quickly as possible.
+
+* A single SSH connection is used for each target host, in addition to one sudo
+  invocation per distinct user account. Subsequent playbook steps always reuse
+  the same connection. This is much better than SSH multiplexing combined with
+  pipelining, as significant state can be maintained in RAM between steps, and
+  the system logs aren't filled with spam from repeat SSH and sudo invocations.
+
+* A single Python interpreter is used per host and sudo account combination for
+  the duration of the run, avoiding the repeat cost of invoking multiple
+  interpreters and recompiling imports, saving 300-1000 ms for every playbook
+  step.
+
+* Remote interpreters reuse Mitogen's module import mechanism, caching uploaded
+  dependencies between steps at the host and user account level. As a
+  consequence, bandwidth usage is consistently an order of magnitude lower
+  compared to SSH pipelining, and around 5x fewer frames are required to
+  traverse the wire for a run to complete successfully.
+
+* No writes to the target host's filesystem occur, unless explicitly
+  triggered by a playbook step. In all typical configurations, Ansible
+  repeatedly rewrites and extracts ZIP files to multiple temporary directories
+  on the target host. Since no temporary files are used, security issues
+  relating to those files in cross-account scenarios are entirely avoided.
+
+
+Limitations
+-----------
+
+* Only Python command modules are supported. Eventually the extension will
+  support non-Python modules, but this is not yet implemented. Almost all
+  modules shipped with Ansible are Python-based.
+
+* Due to a limitation in Ansible's internal APIs, the Python interpreter on
+  the remote machine is temporarily hard-wired to ``/usr/bin/python``,
+  matching Ansible's own default. The ``ansible_python_interpreter`` variable
+  is ignored.
+
+* Interaction with modules that have special action plugins has not seen much
+  testing, except for the ``synchronize`` module. Issues of this sort are
+  likely to be an ongoing struggle.
+
+* More situations likely exist where Mitogen does not respect the playbook's
+  execution conditions (``delegate_to``, ``connection: local``, etc.). These
+  will be fixed as they are encountered.
+
+* Only UNIX machines running Python 2.x are supported. Windows will come later.
+
+* Only the ``sudo`` become method is available, however adding new methods is
+  straightforward, and eventually at least ``su`` will be included.
+
+* In some cases the module loader may aggressively upload optional dependencies
+  available on the Ansible host machine but not on the target machine. It's not
+  yet clear what the correct behaviour should be.
+
+* Due to the integration approach, the only supported strategy is ``linear``,
+  however this should change in the future.
+
+
+Configuration
+-------------
+
+1. Ensure the host machine is using Python 2.x for Ansible by verifying the
+   output of ``ansible --version``
+2. ``python2 -m pip install git+https://github.com/dw/mitogen.git`` **on the
+   host machine only**.
+3. ``python2 -c 'import ansible_mitogen as a; print a.__path__'``
+4. Add ``strategy_plugins = /path/to/../ansible_mitogen/strategy`` using the
+   path from above to the ``[defaults]`` section of ``ansible.cfg``.
+5. Add ``strategy = mitogen`` to the ``[defaults]`` section of ``ansible.cfg``.
+6. Cross your fingers and try it out.
+
+
+Demo
+----
+
+Local VM connection
+~~~~~~~~~~~~~~~~~~~
+
+This demonstrates Mitogen vs. connection pipelining to a local VM, executing
+the 100 simple repeated steps of ``my.yml`` from the examples directory.
+Mitogen uses 43x less bandwidth and 4.25x less time.
+
+.. image:: images/my_yml_traces.png
+
+
+Kathmandu to Paris
+~~~~~~~~~~~~~~~~~~
+
+This is a full Django application playbook over a ~180ms link between Kathmandu
+and Paris. Aside from large pauses where the host performs useful work, the
+high latency of this link means Mitogen only manages a 1.7x speedup.
+
+Many roundtrips near the start are due to inefficiencies in Mitogen's importer
+that will be fixed over time, however the majority, comprising at least 10
+seconds, are due to idling while the host's previous result and next command
+are in-flight on the network.
+
+The initial extension lays groundwork for exciting structural changes to the
+execution model: a future version will tackle latency head-on by delegating
+some control flow to the target host.
+
+.. image:: images/costapp_traces.png
+
+
+SSH Variables
+-------------
+
+This list will grow as more missing pieces are discovered.
+
+* remote_addr
+* remote_user
+* ssh_port
+* ssh_path
+* password (default: assume passwordless)
+
+
+Sudo Variables
+--------------
+
+* username (default: root)
+* password (default: assume passwordless)
