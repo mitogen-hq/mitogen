@@ -47,14 +47,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def connected(self):
         return self.router is not None
 
-    def _connect(self):
-        if self.connected:
-            return
+    def _connect_local(self):
+        return mitogen.service.call(self.parent, 500, {
+            'method': 'local',
+        }
 
-        path = os.environ['LISTENER_SOCKET_PATH']
-        self.router, self.parent = mitogen.unix.connect(path)
-
-        host = mitogen.service.call(self.parent, 500, cast({
+    def _connect_ssh(self):
+        return mitogen.service.call(self.parent, 500, cast({
             'method': 'ssh',
             'hostname': self._play_context.remote_addr,
             'username': self._play_context.remote_user,
@@ -64,17 +63,32 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'ssh_path': self._play_context.ssh_executable,
         }))
 
+    def _connect_sudo(self, via):
+        return mitogen.service.call(self.parent, 500, cast({
+            'method': 'sudo',
+            'username': self._play_context.become_user,
+            'password': self._play_context.password,
+            'python_path': '/usr/bin/python',
+            'via': via,
+            'debug': True,
+        }))
+
+    def _connect(self):
+        if self.connected:
+            return
+
+        path = os.environ['LISTENER_SOCKET_PATH']
+        self.router, self.parent = mitogen.unix.connect(path)
+
+        if self._play_context.connection == 'local':
+            host = self._connect_local()
+        else:
+            host = self._connect_ssh(self)
+
         if not self._play_context.become:
             self.context = host
         else:
-            self.context = mitogen.service.call(self.parent, 500, cast({
-                'method': 'sudo',
-                'username': self._play_context.become_user,
-                'password': self._play_context.password,
-                'python_path': '/usr/bin/python',
-                'via': host,
-                'debug': True,
-            }))
+            self.context = self._connect_sudo(via=host)
 
     def call_async(self, func, *args, **kwargs):
         self._connect()
