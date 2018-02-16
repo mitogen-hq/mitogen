@@ -501,7 +501,7 @@ class ModuleForwarder(object):
         self.importer._request_module(fullname, callback)
 
     def _send_one_module(self, msg, tup):
-        self.router.route(
+        self.router._async_route(
             mitogen.core.Message.pickled(
                 tup,
                 dst_id=msg.src_id,
