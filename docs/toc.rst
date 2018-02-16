@@ -6,6 +6,7 @@ Table Of Contents
    :maxdepth: 2
 
    index
+   ansible
    howitworks
    getting_started
    api
