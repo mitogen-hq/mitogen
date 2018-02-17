@@ -117,20 +117,66 @@ class ContextService(mitogen.service.Service):
 
 
 class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
-    def __init__(self, *args, **kwargs):
-        super(StrategyModule, self).__init__(*args, **kwargs)
-        self._add_connection_plugin_path()
+    """
+    This strategy enhances the default "linear" strategy by arranging for
+    various Mitogen services to be initialized in the Ansible top-level
+    process, and for worker processes to grow support for using those top-level
+    services to communicate with and execute modules on remote hosts.
 
-    def _add_connection_plugin_path(self):
-        """
-        Automatically add the connection plug-in directory to the ModuleLoader
-        path, slightly reduces end-user configuration.
-        """
-        # ansible_mitogen base directory:
-        basedir = os.path.dirname(os.path.dirname(__file__))
-        conn_dir = os.path.join(basedir, 'connection')
-        ansible.plugins.connection_loader.add_directory(conn_dir)
+    Mitogen:
 
+        A private Broker IO multiplexer thread is created to dispatch IO
+        between the local Router and any connected streams, including streams
+        connected to Ansible WorkerProcesses, and SSH commands implementing
+        connections to remote machines.
+
+        A Router is created that implements message dispatch to any locally
+        registered handlers, and message routing for remote streams. Router is
+        the junction point through which WorkerProceses and remote SSH contexts
+        can communicate.
+
+        Router additionally adds message handlers for a variety of base
+        services, review the Standard Handles section of the How It Works guide
+        in the documentation.
+
+        A ContextService is installed as a message handler in the master
+        process and run on a private thread. It is responsible for accepting
+        requests to establish new SSH connections from worker processes, and
+        ensuring precisely one connection exists and is reused for subsequent
+        playbook steps. The service presently runs in a single thread, so to
+        begin with, new SSH connections are serialized.
+
+        Finally a mitogen.unix listener is created through which WorkerProcess
+        can establish a connection back into the master process, in order to
+        avail of ContextService. A UNIX listener socket is necessary as there
+        is no more sane mechanism to arrange for IPC between the Router in the
+        master process, and the corresponding Router in the worker process.
+
+    Ansible:
+
+        PluginLoader monkey patches are installed to catch attempts to create
+        connection and action plug-ins.
+
+        For connection plug-ins, if the desired method is "local" or "ssh", it
+        is redirected to the "mitogen" connection plug-in. That plug-in
+        implements communication via a UNIX socket connection to the master,
+        and uses ContextService running in the master to actually establish and
+        manage the connection.
+
+        For action plug-ins, the original class is looked up as usual, but a
+        new subclass is created dynamically in order to mix-in
+        ansible_mitogen.helpers.ActionModuleMixin, which overrides many of the
+        methods usually inherited from ActionBase in order to replace them with
+        pure-Python equivalents that avoid the use of shell.
+
+        In particular, _execute_module() is overridden with an implementation
+        that uses ansible_mitogen.helpers.run_module() executed in the target
+        Context. run_module() implements module execution by importing the
+        module as if it were a normal Python module, and capturing its output
+        in the remote process. Since the Mitogen module loader is active in the
+        remote process, all the heavy lifting of transferring the action module
+        and its dependencies are automatically handled by Mitogen.
+    """
     def _setup_master(self):
         """
         Construct a Router, Broker, mitogen.unix listener thread, and thread
@@ -181,7 +227,18 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         ansible.plugins.action_loader.get = action_loader__get
         ansible.plugins.connection_loader.get = connection_loader__get
 
+    def _add_connection_plugin_path(self):
+        """
+        Add the mitogen connection plug-in directory to the ModuleLoader path,
+        avoiding the need for manual configuration.
+        """
+        # ansible_mitogen base directory:
+        basedir = os.path.dirname(os.path.dirname(__file__))
+        conn_dir = os.path.join(basedir, 'connection')
+        ansible.plugins.connection_loader.add_directory(conn_dir)
+
     def run(self, iterator, play_context, result=0):
+        self._add_connection_plugin_path()
         self._install_wrappers()
         try:
             return self._run_with_master(iterator, play_context, result)
