@@ -972,6 +972,27 @@ Utility Functions
 A random assortment of utility functions useful on masters and children.
 
 .. currentmodule:: mitogen.utils
+.. function:: cast (obj)
+
+    Many tools love to subclass built-in types in order to implement useful
+    functionality, such as annotating the safety of a Unicode string, or adding
+    additional methods to a dict. However, cPickle loves to preserve those
+    subtypes during serialization, resulting in CallError during :py:meth:`call
+    <mitogen.master.Context.call>` in the target when it tries to deserialize
+    the data.
+
+    This function walks the object graph `obj`, producing a copy with any
+    custom sub-types removed. The functionality is not default since the
+    resulting walk may be computationally expensive given a large enough graph.
+
+    See :ref:`serialization-rules` for a list of supported types.
+
+    :param obj:
+        Object to undecorate.
+    :returns:
+        Undecorated object.
+
+.. currentmodule:: mitogen.utils
 .. function:: disable_site_packages
 
     Remove all entries mentioning ``site-packages`` or ``Extras`` from the

@@ -30,11 +30,12 @@ import os
 
 import ansible.errors
 import ansible.plugins.connection
-import ansible_mitogen.helpers
-import mitogen.unix
 
+import mitogen.unix
+from mitogen.utils import cast
+
+import ansible_mitogen.helpers
 from ansible_mitogen.strategy.mitogen import ContextService
-from ansible_mitogen.utils import cast
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
