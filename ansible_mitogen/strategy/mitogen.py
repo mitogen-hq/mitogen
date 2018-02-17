@@ -75,7 +75,7 @@ def wrap_connection_loader__get(name, play_context, new_stdin):
     return connection_loader__get(name, play_context, new_stdin, **kwargs)
 
 
-class ContextProxyService(mitogen.service.Service):
+class ContextService(mitogen.service.Service):
     """
     Used by worker processes connecting back into the top-level process to
     fetch the single Context instance corresponding to the supplied connection
@@ -98,11 +98,11 @@ class ContextProxyService(mitogen.service.Service):
     :returns mitogen.master.Context:
         Corresponding Context instance.
     """
-    well_known_id = 500
+    handle = 500
     max_message_size = 1000
 
     def __init__(self, router):
-        super(ContextProxyService, self).__init__(router)
+        super(ContextService, self).__init__(router)
         self._context_by_key = {}
 
     def validate_args(self, args):
@@ -149,10 +149,10 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
         self.listener = mitogen.unix.Listener(self.router)
-        os.environ['LISTENER_SOCKET_PATH'] = self.listener.path
+        os.environ['MITOGEN_LISTENER_PATH'] = self.listener.path
 
-        # TODO: gracefully shutdown and join on this at exist.
-        self.service = ContextProxyService(self.router)
+        # TODO: gracefully shutdown and join on this at exit.
+        self.service = ContextService(self.router)
         self.service_thread = threading.Thread(target=self.service.run)
         self.service_thread.setDaemon(True)
         self.service_thread.start()
