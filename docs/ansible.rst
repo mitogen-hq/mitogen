@@ -55,6 +55,12 @@ executing, it can only ensure the module executes as quickly as possible.
 Limitations
 -----------
 
+* Connection establishment is currently single threaded. This is very much
+  temporary until more pressing issues have been addressed. Consequently to get
+  a real feel for performance, for now the extension should only be used
+  against a single host. It is still fully functional multiple hosts, just
+  slower than it needs to be.
+
 * Only Python command modules are supported. Eventually the extension will
   support non-Python modules, but this is not yet implemented. Almost all
   modules shipped with Ansible are Python-based.
