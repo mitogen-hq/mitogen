@@ -91,3 +91,22 @@ def with_router(func):
         return run_with_router(func, *args, **kwargs)
     wrapper.func_name = func.func_name
     return wrapper
+
+
+def cast(obj):
+    if isinstance(obj, dict):
+        return {cast(k): cast(v) for k, v in obj.iteritems()}
+    if isinstance(obj, (list, tuple)):
+        return [cast(v) for v in obj]
+    if obj is None or isinstance(obj, (int, float)):
+        return obj
+    if isinstance(obj, unicode):
+        return unicode(obj)
+    if isinstance(obj, str):
+        return str(obj)
+    if isinstance(obj, (mitogen.core.Context,
+                        mitogen.core.Dead,
+                        mitogen.core.CallError)):
+        return obj
+
+    raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))

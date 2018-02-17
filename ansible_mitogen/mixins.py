@@ -25,18 +25,37 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
 import pwd
 import os
 import tempfile
 
 import ansible
+import ansible.plugins
 import ansible.plugins.action
 
+import mitogen.core
 import mitogen.master
+from mitogen.utils import cast
+
 import ansible_mitogen.helpers
 from ansible.module_utils._text import to_text
-from ansible_mitogen.utils import cast
-from ansible_mitogen.utils import get_command_module_name
+
+
+def get_command_module_name(module_name):
+    """
+    Given the name of an Ansible command module, return its canonical module
+    path within the ansible.
+
+    :param module_name:
+        "shell"
+    :return:
+        "ansible.modules.commands.shell"
+    """
+    path = ansible.plugins.module_loader.find_plugin(module_name, '')
+    relpath = os.path.relpath(path, os.path.dirname(ansible.__file__))
+    root, _ = os.path.splitext(relpath)
+    return 'ansible.' + root.replace('/', '.')
 
 
 class ActionModuleMixin(ansible.plugins.action.ActionBase):
