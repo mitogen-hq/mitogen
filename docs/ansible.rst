@@ -148,3 +148,10 @@ Sudo Variables
 
 * username (default: root)
 * password (default: assume passwordless)
+
+
+Debugging
+---------
+
+See :ref:`logging-env-vars` in the Getting Started guide for environment
+variables that activate debug logging.
