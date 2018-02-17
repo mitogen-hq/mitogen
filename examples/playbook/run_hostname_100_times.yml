@@ -1,7 +1,6 @@
 ---
 
-
 - hosts: all
   gather_facts: false
   roles:
-  - local
+  - run_hostname_100_times

@@ -2,7 +2,7 @@
 Ansible Extension
 =================
 
-.. image:: images/ans_cell_division.png
+.. image:: images/ansible/cell_division.png
     :align: right
 
 An experimental extension to `Ansible`_ is included that implements host
@@ -106,10 +106,10 @@ Local VM connection
 ~~~~~~~~~~~~~~~~~~~
 
 This demonstrates Mitogen vs. connection pipelining to a local VM, executing
-the 100 simple repeated steps of ``my.yml`` from the examples directory.
-Mitogen uses 43x less bandwidth and 4.25x less time.
+the 100 simple repeated steps of ``run_hostname_100_times.yml`` from the
+examples directory. Mitogen uses 43x less bandwidth and 4.25x less time.
 
-.. image:: images/my_yml_traces.png
+.. image:: images/ansible/run_hostname_100_times.png
 
 
 Kathmandu to Paris
@@ -128,7 +128,7 @@ The initial extension lays groundwork for exciting structural changes to the
 execution model: a future version will tackle latency head-on by delegating
 some control flow to the target host.
 
-.. image:: images/costapp_traces.png
+.. image:: images/ansible/costapp.png
 
 
 SSH Variables
