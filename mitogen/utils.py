@@ -27,6 +27,7 @@
 
 import datetime
 import logging
+import os
 import sys
 
 import mitogen
@@ -49,6 +50,10 @@ def _formatTime(record, datefmt=None):
 
 
 def log_to_file(path=None, io=True, usec=False, level='INFO'):
+    io = ('MITOGEN_LOG_IO' in os.environ) or io
+    usec = ('MITOGEN_LOG_USEC' in os.environ) or usec
+    level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
+
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)

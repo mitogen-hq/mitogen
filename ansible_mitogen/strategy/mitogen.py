@@ -131,15 +131,6 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         conn_dir = os.path.join(basedir, 'connection')
         ansible.plugins.connection_loader.add_directory(conn_dir)
 
-    def _setup_logging(self):
-        """
-        Setup Mitogen's logging. Eventually this should be redirected into
-        Ansible's logging.
-        """
-        log_level = os.environ.get('MITOGEN_LOG_LEVEL', 'INFO')
-        log_io = 'MITOGEN_LOG_IO' in os.environ
-        mitogen.utils.log_to_file(level=log_level, io=log_io)
-
     def _setup_master(self):
         """
         Construct a Router, Broker, mitogen.unix listener thread, and thread
@@ -162,7 +153,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Arrange for a mitogen.master.Router to be available for the duration of
         the strategy's real run() method.
         """
-        self._setup_logging()
+        mitogen.utils.log_to_file()
         self._setup_master()
         try:
             return super(StrategyModule, self).run(iterator, play_context)
