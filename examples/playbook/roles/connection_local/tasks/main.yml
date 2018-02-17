@@ -99,23 +99,3 @@
 - name: "My Role"
   connection: local
   command: hostname
-
-- name: "My Role"
-  connection: local
-  command: hostname
-
-- name: "My Role"
-  connection: local
-  command: hostname
-
-- name: "My Role"
-  connection: local
-  command: hostname
-
-- name: "My Role"
-  connection: local
-  command: hostname
-
-- name: "My Role"
-  connection: local
-  command: hostname
