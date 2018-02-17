@@ -77,10 +77,6 @@ Limitations
 * Only the ``sudo`` become method is available, however adding new methods is
   straightforward, and eventually at least ``su`` will be included.
 
-* In some cases the module loader may aggressively upload optional dependencies
-  available on the Ansible host machine but not on the target machine. It's not
-  yet clear what the correct behaviour should be.
-
 * Due to the integration approach, the only supported strategy is ``linear``,
   however this should change in the future.
 
