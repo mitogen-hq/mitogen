@@ -34,19 +34,29 @@ from mitogen.core import LOG
 
 
 class Service(object):
-    well_known_id = None
+    #: If ``None``, a handle is dynamically allocated, otherwise the fixed
+    #: integer handle to use.
+    handle = None
     max_message_size = 0
 
     def __init__(self, router):
         self.router = router
-        self.recv = mitogen.core.Receiver(router, self.well_known_id)
+        self.recv = mitogen.core.Receiver(router, self.handle)
+        self.handle = self.recv.handle
         self.running = True
 
     def validate_args(self, args):
         return True
 
     def run_once(self):
-        msg = self.recv.get()
+        try:
+            msg = self.recv.get()
+        except mitogen.core.ChannelError, e:
+            # Channel closed due to broker shutdown, exit gracefully.
+            LOG.debug('%r: channel closed: %s', self, e)
+            self.running = False
+            return
+
         if len(msg.data) > self.max_message_size:
             LOG.error('%r: larger than permitted size: %r', self, msg)
             msg.reply(mitogen.core.CallError('Message size exceeded'))
