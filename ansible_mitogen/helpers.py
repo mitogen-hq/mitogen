@@ -51,7 +51,7 @@ class ModuleError(Exception):
         self.dct = dct
 
 
-def wtf_exit_json(self, **kwargs):
+def monkey_exit_json(self, **kwargs):
     """
     Replace AnsibleModule.exit_json() with something that doesn't try to kill
     the process or JSON-encode the result dictionary. Instead, cause Exit to be
@@ -67,7 +67,7 @@ def wtf_exit_json(self, **kwargs):
     raise Exit(kwargs)
 
 
-def wtf_fail_json(self, **kwargs):
+def monkey_fail_json(self, **kwargs):
     """
     Replace AnsibleModule.fail_json() with something that raises ModuleError,
     which includes a `dct` attribute.
@@ -94,8 +94,8 @@ def run_module(module, raw_params=None, args=None):
     if raw_params is not None:
         args['_raw_params'] = raw_params
 
-    ansible.module_utils.basic.AnsibleModule.exit_json = wtf_exit_json
-    ansible.module_utils.basic.AnsibleModule.fail_json = wtf_fail_json
+    ansible.module_utils.basic.AnsibleModule.exit_json = monkey_exit_json
+    ansible.module_utils.basic.AnsibleModule.fail_json = monkey_fail_json
     ansible.module_utils.basic._ANSIBLE_ARGS = json.dumps({
         'ANSIBLE_MODULE_ARGS': args
     })
@@ -112,7 +112,14 @@ def run_module(module, raw_params=None, args=None):
         return json.dumps(e.dct)
 
 
-def exec_command(cmd, in_data=None):
+def exec_command(cmd, in_data=''):
+    """
+    Run a command in subprocess, arranging for `in_data` to be supplied on its
+    standard input.
+
+    :return:
+        (return code, stdout bytes, stderr bytes)
+    """
     proc = subprocess.Popen(cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -123,8 +130,14 @@ def exec_command(cmd, in_data=None):
 
 
 def read_path(path):
+    """
+    Fetch the contents of a filesystem `path` as bytes.
+    """
     return open(path, 'rb').read()
 
 
 def write_path(path, s):
+    """
+    Writes bytes `s` to a filesystem `path`.
+    """
     open(path, 'wb').write(s)
