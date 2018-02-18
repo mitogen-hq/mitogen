@@ -23,7 +23,7 @@ significant testing will prove the extension's soundness.
 Overview
 --------
 
-You should **expect a speedup between 1.5x and 5x** depending on network
+You should **expect a speedup between 1.25x and 5x** depending on network
 conditions, the specific modules executed, and time spent by the target host
 already doing useful work. Mitogen cannot speed up a module once it is
 executing, it can only ensure the module executes as quickly as possible.
@@ -37,7 +37,7 @@ executing, it can only ensure the module executes as quickly as possible.
 
 * **A single Python interpreter is used** per host and sudo account combination
   for the duration of the run, avoiding the repeat cost of invoking multiple
-  interpreters and recompiling imports, saving 300-1000 ms for every playbook
+  interpreters and recompiling imports, saving 300-800 ms for every playbook
   step.
 
 * Remote interpreters reuse Mitogen's module import mechanism, caching uploaded
