@@ -120,7 +120,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'password': self._play_context.password,
             'python_path': '/usr/bin/python',
             'via': via,
-            'debug': True,
         }))
 
     def _connect(self):
