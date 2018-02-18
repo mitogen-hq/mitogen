@@ -34,6 +34,11 @@ import ansible
 import ansible.plugins
 import ansible.plugins.action
 
+try:
+    from ansible.plugins.loader import module_loader
+except ImportError:  # Ansible<2.4
+    from ansible.plugins import module_loader
+
 import mitogen.core
 import mitogen.master
 from mitogen.utils import cast
@@ -52,7 +57,7 @@ def get_command_module_name(module_name):
     :return:
         "ansible.modules.commands.shell"
     """
-    path = ansible.plugins.module_loader.find_plugin(module_name, '')
+    path = module_loader.find_plugin(module_name, '')
     relpath = os.path.relpath(path, os.path.dirname(ansible.__file__))
     root, _ = os.path.splitext(relpath)
     return 'ansible.' + root.replace('/', '.')
