@@ -87,10 +87,12 @@ Configuration
 -------------
 
 1. Ensure the host machine is using Python 2.x for Ansible by verifying the
-   output of ``ansible --version``
-2. ``python2 -m pip install git+https://github.com/dw/mitogen.git`` **on the
+   output of ``ansible --version``. Ensure the ``python`` command starts a
+   Python 2.x interpreter. If not, substitute ``python`` for the correct
+   command in steps 2 and 3.
+2. ``python -m pip install -U git+https://github.com/dw/mitogen.git`` **on the
    host machine only**.
-3. ``python2 -c 'import ansible_mitogen as a; print a.__path__'``
+3. ``python -c 'import ansible_mitogen as a; print a.__path__'``
 4. Add ``strategy_plugins = /path/to/../ansible_mitogen/strategy`` using the
    path from above to the ``[defaults]`` section of ``ansible.cfg``.
 5. Add ``strategy = mitogen`` to the ``[defaults]`` section of ``ansible.cfg``.
