@@ -55,36 +55,31 @@ executing, it can only ensure the module executes as quickly as possible.
 Limitations
 -----------
 
-* Connection establishment is currently single threaded. This is very much
-  temporary until more pressing issues have been addressed. Consequently to get
-  a real feel for performance, for now the extension should only be used
-  against a single host. It is still fully functional multiple hosts, just
-  slower than it needs to be.
+This is a proof of concept: issues below are exclusively due to code immaturity.
 
-* Only Python command modules are supported. Eventually the extension will
-  support non-Python modules, but this is not yet implemented. Almost all
-  modules shipped with Ansible are Python-based.
-
-* Due to a limitation in Ansible's internal APIs, the Python interpreter on
-  the remote machine is temporarily hard-wired to ``/usr/bin/python``,
-  matching Ansible's own default. The ``ansible_python_interpreter`` variable
-  is ignored.
-
-* Interaction with modules that have special action plugins has not seen much
-  testing, except for the ``synchronize`` module. Issues of this sort are
-  likely to be an ongoing struggle.
-
-* More situations likely exist where Mitogen does not respect the playbook's
-  execution conditions (``delegate_to``, ``connection: local``, etc.). These
-  will be fixed as they are encountered.
-
-* Only UNIX machines running Python 2.x are supported. Windows will come later.
+* Only UNIX machines running Python 2.x are supported, Windows will come later.
 
 * Only the ``sudo`` become method is available, however adding new methods is
   straightforward, and eventually at least ``su`` will be included.
 
-* Due to the integration approach, the only supported strategy is ``linear``,
-  however this should change in the future.
+* The only supported strategy is ``linear``, which is Ansible's default.
+
+* The remote interpreter is temporarily hard-wired to ``/usr/bin/python``,
+  matching Ansible's default. The ``ansible_python_interpreter`` variable is
+  ignored.
+
+* Connection establishment is single-threaded until more pressing issues are
+  solved. To evaluate performance, target only one host. Many hosts still work,
+  the first playbook step will simply run unnecessarily slowly.
+
+* For now only Python command modules work, however almost all modules shipped
+  with Ansible are Python-based.
+
+* Interaction with modules employing special action plugins is mostly untested,
+  except for the ``synchronize`` module.
+
+* More situations likely exist where the playbook's execution conditions are
+  not respected (``delegate_to``, ``connection: local``, etc.).
 
 
 Configuration
@@ -121,10 +116,10 @@ This is a full Django application playbook over a ~180ms link between Kathmandu
 and Paris. Aside from large pauses where the host performs useful work, the
 high latency of this link means Mitogen only manages a 1.7x speedup.
 
-Many roundtrips near the start are due to inefficiencies in Mitogen's importer
-that will be fixed over time, however the majority, comprising at least 10
-seconds, are due to idling while the host's previous result and next command
-are in-flight on the network.
+Many early roundtrips are due to inefficiencies in Mitogen's importer that will
+be fixed over time, however the majority, comprising at least 10 seconds, are
+due to idling while the host's previous result and next command are in-flight
+on the network.
 
 The initial extension lays groundwork for exciting structural changes to the
 execution model: a future version will tackle latency head-on by delegating
