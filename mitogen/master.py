@@ -660,6 +660,9 @@ class IdAllocator(object):
             self.lock.release()
 
     def on_allocate_id(self, msg):
+        if msg == mitogen.core._DEAD:
+            return
+
         id_ = self.allocate()
         requestee = self.router.context_by_id(msg.src_id)
         allocated = self.router.context_by_id(id_, msg.src_id)

@@ -1003,6 +1003,9 @@ class Router(object):
         for context in self._context_by_id.itervalues():
             context.on_shutdown(self.broker)
 
+        for _, func in self._handle_map.itervalues():
+            func(_DEAD)
+
     def add_route(self, target_id, via_id):
         _v and LOG.debug('%r.add_route(%r, %r)', self, target_id, via_id)
         try:
