@@ -26,7 +26,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import logging
 import os
+import time
 
 import ansible.errors
 import ansible.plugins.connection
@@ -36,6 +38,9 @@ from mitogen.utils import cast
 
 import ansible_mitogen.helpers
 from ansible_mitogen.strategy.mitogen import ContextService
+
+
+LOG = logging.getLogger(__name__)
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
@@ -174,7 +179,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :returns:
             Function return value.
         """
-        return self.call_async(func, *args, **kwargs).get().unpickle()
+        t0 = time.time()
+        try:
+            return self.call_async(func, *args, **kwargs).get().unpickle()
+        finally:
+            LOG.debug('Call %s%r took %d ms', func.func_name, args,
+                      1000 * (time.time() - t0))
 
     def exec_command(self, cmd, in_data='', sudoable=True):
         """

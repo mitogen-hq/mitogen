@@ -1000,10 +1000,13 @@ A random assortment of utility functions useful on masters and children.
     OS X bundles some ancient version of the :py:mod:`six` module.
 
 .. currentmodule:: mitogen.utils
-.. function:: log_to_file (path=None, io=True, usec=False, level='INFO')
+.. function:: log_to_file (path=None, io=False, usec=False, level='INFO')
 
     Install a new :py:class:`logging.Handler` writing applications logs to the
     filesystem. Useful when debugging slave IO problems.
+
+    Parameters to this function may be overridden at runtime using environment
+    variables. See :ref:`logging-env-vars`.
 
     :param str path:
         If not ``None``, a filesystem path to write logs to. Otherwise, logs
