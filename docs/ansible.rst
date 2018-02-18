@@ -23,10 +23,11 @@ significant testing will prove the extension's soundness.
 Overview
 --------
 
-You should **expect a speedup between 1.25x and 5x** depending on network
-conditions, the specific modules executed, and time spent by the target host
-already doing useful work. Mitogen cannot speed up a module once it is
-executing, it can only ensure the module executes as quickly as possible.
+You should **expect a 1.25x - 5x speedup** and a **CPU usage reduction of at
+least 2x**, depending on network conditions, the specific modules executed, and
+time spent by the target host already doing useful work. Mitogen cannot speed
+up a module once it is executing, it can only ensure the module executes as
+quickly as possible.
 
 * **A single SSH connection is used for each target host**, in addition to one
   sudo invocation per distinct user account. Subsequent playbook steps always
