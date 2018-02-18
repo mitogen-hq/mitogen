@@ -78,7 +78,7 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
   with Ansible are Python-based.
 
 * Interaction with modules employing special action plugins is mostly untested,
-  except for the ``synchronize`` module.
+  except for the ``synchronize`` and ``template`` modules.
 
 * More situations likely exist where the playbook's execution conditions are
   not respected (``delegate_to``, ``connection: local``, etc.).
@@ -128,7 +128,9 @@ on the network.
 
 The initial extension lays groundwork for exciting structural changes to the
 execution model: a future version will tackle latency head-on by delegating
-some control flow to the target host.
+some control flow to the target host, melding the performance and scalability
+benefits of pull-based operation with the management simplicity of push-based
+operation.
 
 .. image:: images/ansible/costapp.png
 
