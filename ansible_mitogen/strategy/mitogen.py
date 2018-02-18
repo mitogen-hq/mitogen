@@ -188,10 +188,12 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         self.listener = mitogen.unix.Listener(self.router)
         os.environ['MITOGEN_LISTENER_PATH'] = self.listener.path
 
-        # TODO: gracefully shutdown and join on this at exit.
+    def _setup_services(self):
+        """
+        Construct a ContextService and a thread to service requests for it.
+        """
         self.service = ContextService(self.router)
         self.service_thread = threading.Thread(target=self.service.run)
-        self.service_thread.setDaemon(True)
         self.service_thread.start()
 
     def _run_with_master(self, iterator, play_context, result):
@@ -201,11 +203,13 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         """
         mitogen.utils.log_to_file()
         self._setup_master()
+        self._setup_services()
         try:
             return super(StrategyModule, self).run(iterator, play_context)
         finally:
-            self.router.broker.shutdown()
             os.unlink(self.listener.path)
+            self.router.broker.shutdown()
+            self.service_thread.join(timeout=10)
 
     def _install_wrappers(self):
         """
