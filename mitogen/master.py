@@ -56,6 +56,19 @@ from mitogen.core import LOG
 RLOG = logging.getLogger('mitogen.ctx')
 
 
+def _stdlib_paths():
+    """Return a set of paths from which Python imports the standard library.
+    """
+    attr_candidates = [
+        'prefix',
+        'real_prefix',  # virtualenv: only set inside a virtual environment.
+        'base_prefix',  # venv: always set, equal to prefix if outside.
+    ]
+    prefixes = (getattr(sys, a) for a in attr_candidates if hasattr(sys, a))
+    version = 'python%s.%s' % sys.version_info[0:2]
+    return set(os.path.join(p, 'lib', version) for p in prefixes)
+
+
 def get_child_modules(path):
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return [name for _, name, _ in it]
@@ -247,13 +260,7 @@ class LogForwarder(object):
 
 
 class ModuleFinder(object):
-    STDLIB_DIRS = [
-        # virtualenv on OS X does some weird half-ass job of symlinking the
-        # stdlib into the virtualenv directory. So pick two modules at random
-        # that represent both places the stdlib seems to come from.
-        os.path.dirname(os.path.dirname(logging.__file__)),
-        os.path.dirname(os.path.dirname(os.__file__)),
-    ]
+    _STDLIB_PATHS = _stdlib_paths()
 
     def __init__(self):
         #: Import machinery is expensive, keep :py:meth`:get_module_source`
@@ -281,7 +288,7 @@ class ModuleFinder(object):
         if 'site-packages' in modpath:
             return False
 
-        for dirname in self.STDLIB_DIRS:
+        for dirname in self._STDLIB_PATHS:
             if os.path.commonprefix((dirname, modpath)) == dirname:
                 return True
 
