@@ -30,12 +30,17 @@ from distutils.core import setup
 
 setup(
     name = 'mitogen',
-    version = '0.0.1',
+    version = '0.0.2',
     description = 'Library for writing distributed self-replicating programs.',
     author = 'David Wilson',
     license = 'New BSD',
     url = 'https://github.com/dw/mitogen/',
-    packages = ['mitogen', 'ansible_mitogen'],
+    packages = [
+        'mitogen',
+        'ansible_mitogen',
+        'ansible_mitogen.connection',
+        'ansible_mitogen.strategy',
+    ],
     zip_safe = False,
     classifiers = [
         'Development Status :: 3 - Alpha',
