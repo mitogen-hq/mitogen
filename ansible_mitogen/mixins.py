@@ -26,8 +26,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
-import pwd
 import os
+import pwd
+import shutil
 import tempfile
 
 import ansible
@@ -100,7 +101,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _make_tmp_path(self, remote_user=None):
         # replaces 58 lines
-        return self.call(tempfile.mkdtemp, prefix='ansible_mitogen')
+        path = self.call(tempfile.mkdtemp, prefix='ansible-mitogen-tmp-')
+        self._cleanup_remote_tmp = True
+        return path
 
     def _remove_tmp_path(self, tmp_path):
         # replaces 10 lines
