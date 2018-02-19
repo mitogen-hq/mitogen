@@ -129,11 +129,11 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 3))
 
 
-class FindRelatedImportsTest(testlib.TestCase):
+class FindRelatedTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def call(self, fullname):
-        return self.klass().find_related_imports(fullname)
+        return self.klass().find_related(fullname)
 
     def test_simple(self):
         import mitogen.fakessh
