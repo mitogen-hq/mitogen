@@ -200,6 +200,7 @@ class FindRelatedTest(testlib.TestCase):
             'mitogen',
             'mitogen.core',
             'mitogen.master',
+            'mitogen.parent',
         ])
 
     def test_django_pkg(self):
@@ -243,6 +244,8 @@ class FindRelatedTest(testlib.TestCase):
         self.assertEquals(related, [
             'django',
             'django.apps',
+            'django.apps.config',
+            'django.apps.registry',
             'django.conf',
             'django.conf.global_settings',
             'django.core',
@@ -255,7 +258,9 @@ class FindRelatedTest(testlib.TestCase):
             'django.core.checks.compatibility.django_1_10',
             'django.core.checks.compatibility.django_1_8_0',
             'django.core.checks.database',
+            'django.core.checks.messages',
             'django.core.checks.model_checks',
+            'django.core.checks.registry',
             'django.core.checks.security',
             'django.core.checks.security.base',
             'django.core.checks.security.csrf',
@@ -289,6 +294,8 @@ class FindRelatedTest(testlib.TestCase):
             'django.db.models.fields.related_lookups',
             'django.db.models.fields.reverse_related',
             'django.db.models.functions',
+            'django.db.models.functions.base',
+            'django.db.models.functions.datetime',
             'django.db.models.indexes',
             'django.db.models.lookups',
             'django.db.models.manager',
