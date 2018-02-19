@@ -392,10 +392,15 @@ class ModuleFinder(object):
 
     def find_related_imports(self, fullname):
         """
-        Given the `fullname` of a currently loaded module, and a copy of its
-        source code, examine :py:data:`sys.modules` to determine which of the
-        ``import`` statements from the source code caused a corresponding
-        module to be loaded that is not part of the standard library.
+        Return a list of non-stdlb modules that are directly imported by
+        `fullname`, plus their parents.
+
+        The list is determined by retrieving the source code of
+        `fullname`, compiling it, and examining all IMPORT_NAME ops.
+
+        :param fullname: Fully qualified name of an _already imported_ module
+            for which source code can be retrieved
+        :type fullname: str
         """
         related = self._related_cache.get(fullname)
         if related is not None:
@@ -434,6 +439,17 @@ class ModuleFinder(object):
         ))
 
     def find_related(self, fullname):
+        """
+        Return a list of non-stdlib modules that are imported directly or
+        indirectly by `fullname`, plus their parents.
+
+        This method is like :py:meth:`on_disconect`, but it also recursively
+        searches any modules which are imported by `fullname`.
+
+        :param fullname: Fully qualified name of an _already imported_ module
+            for which source code can be retrieved
+        :type fullname: str
+        """
         stack = [fullname]
         found = set()
 
