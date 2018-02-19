@@ -148,7 +148,6 @@ class FindRelatedTest(testlib.TestCase):
         import django
         related = self.call('django')
         self.assertEquals(related, [
-            'django',
             'django.utils',
             'django.utils.lru_cache',
             'django.utils.version',
@@ -164,7 +163,6 @@ class FindRelatedTest(testlib.TestCase):
             'django.core',
             'django.core.exceptions',
             'django.core.signals',
-            'django.db',
             'django.db.utils',
             'django.dispatch',
             'django.dispatch.dispatcher',
@@ -220,7 +218,6 @@ class FindRelatedTest(testlib.TestCase):
             'django.db',
             'django.db.backends',
             'django.db.backends.utils',
-            'django.db.models',
             'django.db.models.aggregates',
             'django.db.models.base',
             'django.db.models.constants',
