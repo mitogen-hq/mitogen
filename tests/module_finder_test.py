@@ -129,6 +129,64 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 3))
 
 
+class FindRelatedImportsTest(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+
+    def call(self, fullname):
+        return self.klass().find_related_imports(fullname)
+
+    def test_simple(self):
+        import mitogen.fakessh
+        related = self.call('mitogen.fakessh')
+        self.assertEquals(related, [
+            'mitogen',
+            'mitogen.core',
+            'mitogen.master',
+            'mitogen.parent',
+        ])
+
+    def test_django_pkg(self):
+        import django
+        related = self.call('django')
+        self.assertEquals(related, [
+            'django.utils.version',
+        ])
+
+    def test_django_db(self):
+        import django.db
+        related = self.call('django.db')
+        self.assertEquals(related, [
+            'django',
+            'django.core',
+            'django.core.signals',
+            'django.db.utils',
+        ])
+
+    def test_django_db_models(self):
+        import django.db.models
+        related = self.call('django.db.models')
+        self.maxDiff=None
+        self.assertEquals(related, [
+            'django',
+            'django.core.exceptions',
+            'django.db',
+            'django.db.models',
+            'django.db.models.aggregates',
+            'django.db.models.base',
+            'django.db.models.deletion',
+            'django.db.models.expressions',
+            'django.db.models.fields',
+            'django.db.models.fields.files',
+            'django.db.models.fields.proxy',
+            'django.db.models.fields.related',
+            'django.db.models.indexes',
+            'django.db.models.lookups',
+            'django.db.models.manager',
+            'django.db.models.query',
+            'django.db.models.signals',
+        ])
+
+
 class FindRelatedTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
