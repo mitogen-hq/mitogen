@@ -120,7 +120,7 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 0))
 
     def test_rel1(self):
-        self.assertEquals('email.', self.call('email.utils', 1))
+        self.assertEquals('email', self.call('email.utils', 1))
 
     def test_rel2(self):
         self.assertEquals('', self.call('email.utils', 2))
