@@ -59,6 +59,10 @@ Limitations
 
 This is a proof of concept: issues below are exclusively due to code immaturity.
 
+* Connection establishment is single-threaded until more pressing issues are
+  solved. To evaluate performance, target only one host. Many hosts still work,
+  the first playbook step will simply run unnecessarily slowly.
+
 * Only UNIX machines running Python 2.x are supported, Windows will come later.
 
 * Only the ``sudo`` become method is available, however adding new methods is
@@ -69,10 +73,6 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 * The remote interpreter is temporarily hard-wired to ``/usr/bin/python``,
   matching Ansible's default. The ``ansible_python_interpreter`` variable is
   ignored.
-
-* Connection establishment is single-threaded until more pressing issues are
-  solved. To evaluate performance, target only one host. Many hosts still work,
-  the first playbook step will simply run unnecessarily slowly.
 
 * For now only Python command modules work, however almost all modules shipped
   with Ansible are Python-based.
