@@ -120,7 +120,7 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 0))
 
     def test_rel1(self):
-        self.assertEquals('email.', self.call('email.utils', 1))
+        self.assertEquals('email', self.call('email.utils', 1))
 
     def test_rel2(self):
         self.assertEquals('', self.call('email.utils', 2))
@@ -142,13 +142,71 @@ class FindRelatedImportsTest(testlib.TestCase):
             'mitogen',
             'mitogen.core',
             'mitogen.master',
+            'mitogen.parent',
         ])
 
     def test_django_pkg(self):
         import django
         related = self.call('django')
         self.assertEquals(related, [
+            'django.utils.version',
+        ])
+
+    def test_django_db(self):
+        import django.db
+        related = self.call('django.db')
+        self.assertEquals(related, [
             'django',
+            'django.core',
+            'django.core.signals',
+            'django.db.utils',
+        ])
+
+    def test_django_db_models(self):
+        import django.db.models
+        related = self.call('django.db.models')
+        self.maxDiff=None
+        self.assertEquals(related, [
+            'django',
+            'django.core.exceptions',
+            'django.db',
+            'django.db.models',
+            'django.db.models.aggregates',
+            'django.db.models.base',
+            'django.db.models.deletion',
+            'django.db.models.expressions',
+            'django.db.models.fields',
+            'django.db.models.fields.files',
+            'django.db.models.fields.proxy',
+            'django.db.models.fields.related',
+            'django.db.models.indexes',
+            'django.db.models.lookups',
+            'django.db.models.manager',
+            'django.db.models.query',
+            'django.db.models.signals',
+        ])
+
+
+class FindRelatedTest(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+
+    def call(self, fullname):
+        return self.klass().find_related(fullname)
+
+    def test_simple(self):
+        import mitogen.fakessh
+        related = self.call('mitogen.fakessh')
+        self.assertEquals(related, [
+            'mitogen',
+            'mitogen.core',
+            'mitogen.master',
+            'mitogen.parent',
+        ])
+
+    def test_django_pkg(self):
+        import django
+        related = self.call('django')
+        self.assertEquals(related, [
             'django.utils',
             'django.utils.lru_cache',
             'django.utils.version',
@@ -164,7 +222,6 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.core',
             'django.core.exceptions',
             'django.core.signals',
-            'django.db',
             'django.db.utils',
             'django.dispatch',
             'django.dispatch.dispatcher',
@@ -187,6 +244,8 @@ class FindRelatedImportsTest(testlib.TestCase):
         self.assertEquals(related, [
             'django',
             'django.apps',
+            'django.apps.config',
+            'django.apps.registry',
             'django.conf',
             'django.conf.global_settings',
             'django.core',
@@ -199,7 +258,9 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.core.checks.compatibility.django_1_10',
             'django.core.checks.compatibility.django_1_8_0',
             'django.core.checks.database',
+            'django.core.checks.messages',
             'django.core.checks.model_checks',
+            'django.core.checks.registry',
             'django.core.checks.security',
             'django.core.checks.security.base',
             'django.core.checks.security.csrf',
@@ -220,7 +281,6 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.db',
             'django.db.backends',
             'django.db.backends.utils',
-            'django.db.models',
             'django.db.models.aggregates',
             'django.db.models.base',
             'django.db.models.constants',
@@ -234,6 +294,8 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.db.models.fields.related_lookups',
             'django.db.models.fields.reverse_related',
             'django.db.models.functions',
+            'django.db.models.functions.base',
+            'django.db.models.functions.datetime',
             'django.db.models.indexes',
             'django.db.models.lookups',
             'django.db.models.manager',
@@ -307,27 +369,6 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.utils.translation',
             'django.utils.tree',
             'django.utils.version',
-            'jinja2',
-            'jinja2._compat',
-            'jinja2.bccache',
-            'jinja2.compiler',
-            'jinja2.defaults',
-            'jinja2.environment',
-            'jinja2.exceptions',
-            'jinja2.filters',
-            'jinja2.idtracking',
-            'jinja2.lexer',
-            'jinja2.loaders',
-            'jinja2.nodes',
-            'jinja2.optimizer',
-            'jinja2.parser',
-            'jinja2.runtime',
-            'jinja2.tests',
-            'jinja2.utils',
-            'jinja2.visitor',
-            'markupsafe',
-            'markupsafe._compat',
-            'markupsafe._speedups',
             'pytz',
             'pytz.exceptions',
             'pytz.lazy',
