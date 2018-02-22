@@ -65,9 +65,9 @@ dtrace:::BEGIN
 }
 
 syscall::socket:entry
-/execname == SSH && arg0 == PF_INET/
+/execname == SSH/
 {
-    self->is_inet = 1;
+    self->is_inet = (arg0 == PF_INET);
 }
 
 syscall::socket:return
@@ -76,27 +76,28 @@ syscall::socket:return
     self->inet_fds[arg0] = 1;
 }
 
-syscall::write*:entry
-/self->inet_fds[arg0]/
+syscall::write:entry,
+syscall::write_nocancel:entry
 {
-    self->write_fd = arg0;
-    self->write_nbyte = arg2;
+    self->fd = arg0;
 }
 
-syscall::write*:return
-/self->write_fd && arg0 > 0/
+syscall::write:return,
+syscall::write_nocancel:return
+/self->inet_fds[self->fd] && arg0 > 0/
 {
     printf("%d,WRITE,%d,,,\n", walltimestamp, arg0);
 }
 
-syscall::read*:entry
-/self->inet_fds[arg0]/
+syscall::read:entry,
+syscall::read_nocancel:entry
 {
-    self->read_fd = arg0;
+    self->fd = arg0;
 }
 
-syscall::read*:return
-/self->read_fd && arg0 > 0/
+syscall::read*:return,
+syscall::read_nocancel:return
+/self->inet_fds[self->fd] && arg0 > 0/
 {
     printf("%d,READ,%d,,,\n", walltimestamp, arg0);
 }
