@@ -76,6 +76,12 @@ syscall::socket:return
     self->inet_fds[arg0] = 1;
 }
 
+syscall::close:entry
+/execname == SSH/
+{
+    self->inet_fds[arg0] = 0;
+}
+
 syscall::write:entry,
 syscall::write_nocancel:entry
 {
@@ -114,17 +120,24 @@ proc:::lwp-exit
 {
     this->nsecs = vtimestamp - self->start_vtime;
     printf("%d,EXIT,,%d,%d,%s\n", walltimestamp, this->nsecs, pid, execname);
+    /* Kernel threads are recycled, variables hang around. */
+    self->start_vtime = 0;
+    self->ontime = 0;
 }
 
 sched:::on-cpu
 /self->start_vtime/
 {
-    self->ontime = vtimestamp;
+    self->ontime = timestamp;
 }
 
 sched:::off-cpu
 /self->ontime/
 {
-    this->spent = vtimestamp - self->ontime;
-    printf("%d,SCHED,,%d,%d,%s\n", walltimestamp, this->spent, pid, execname);
+    printf("%d,SCHED,,%d,%d,%s\n",
+        walltimestamp,
+        timestamp - self->ontime,
+        pid,
+        execname
+    );
 }
