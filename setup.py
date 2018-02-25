@@ -26,7 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name = 'mitogen',
@@ -41,6 +41,7 @@ setup(
         'ansible_mitogen.connection',
         'ansible_mitogen.strategy',
     ],
+    use_2to3=True,
     zip_safe = False,
     classifiers = [
         'Development Status :: 3 - Alpha',
