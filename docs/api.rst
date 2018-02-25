@@ -557,8 +557,8 @@ Router Class
             Image tag to use to construct a temporary container. Defaults to
             ``None``.
         :param str docker_path:
-            Filename or complete path to the sudo binary. ``PATH`` will be searched
-            if given as a filename. Defaults to ``sudo``.
+            Filename or complete path to the Docker binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``docker``.
 
     .. method:: sudo (username=None, sudo_path=None, password=None, \**kwargs)
 
