@@ -550,7 +550,9 @@ class Importer(object):
         # TODO: monster hack: work around modules now being imported as their
         # actual name, so when Ansible "apt.py" tries to "import apt", it gets
         # itself. Instead force absolute imports during compilation.
-        flags = 0x4000 if fullname.startswith('ansible') else 0
+        flags = 0
+        if fullname.startswith('ansible'):
+            flags = 0x4000
         source = self.get_source(fullname)
         code = compile(source, mod.__file__, 'exec', flags, True)
         exec code in vars(mod)
@@ -1282,11 +1284,13 @@ class ExternalContext(object):
 
     def _setup_importer(self, core_src_fd, whitelist, blacklist):
         if core_src_fd:
-            with os.fdopen(101, 'r', 1) as fp:
+            fp = os.fdopen(101, 'r', 1)
+            try:
                 core_size = int(fp.readline())
                 core_src = fp.read(core_size)
                 # Strip "ExternalContext.main()" call from last line.
                 core_src = '\n'.join(core_src.splitlines()[:-1])
+            finally:
                 fp.close()
         else:
             core_src = None
