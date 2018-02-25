@@ -2,5 +2,7 @@
 
 - hosts: all
   gather_facts: false
-  roles:
-  - run_hostname_100_times
+  tasks:
+    - name: "Run hostname"
+      command: hostname
+      with_sequence: start=1 end=100
