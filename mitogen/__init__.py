@@ -99,7 +99,7 @@ def main(log_level='INFO'):
     def wrapper(func):
         if func.__module__ != '__main__':
             return func
-        from . import utils
+        from mitogen import utils
         utils.log_to_file(level=log_level)
         return utils.run_with_router(func)
     return wrapper
