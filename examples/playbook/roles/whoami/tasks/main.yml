@@ -1,8 +1,0 @@
----
-
-- name: "This command should run as the SSH user"
-  command: whoami
-
-- name: "This command should run as root"
-  become: true
-  command: whoami

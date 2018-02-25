@@ -2,5 +2,8 @@
 
 - hosts: all
   gather_facts: false
-  roles:
-  - connection_local
+  tasks:
+    - name: "Run hostname"
+      connection: local
+      command: hostname
+      with_sequence: start=1 end=100
