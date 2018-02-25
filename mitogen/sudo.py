@@ -107,5 +107,4 @@ class Stream(mitogen.parent.Stream):
                 LOG.debug('sending password')
                 os.write(self.transmit_side.fd, self.password + '\n')
                 password_sent = True
-        else:
-            raise mitogen.core.StreamError('bootstrap failed')
+        raise mitogen.core.StreamError('bootstrap failed')
