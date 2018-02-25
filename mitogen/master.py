@@ -630,6 +630,9 @@ class Router(mitogen.parent.Router):
         self.broker.shutdown()
         self.broker.join()
 
+    def docker(self, **kwargs):
+        return self.connect('docker', **kwargs)
+
     def local(self, **kwargs):
         return self.connect('local', **kwargs)
 

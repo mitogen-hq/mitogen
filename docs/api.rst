@@ -544,6 +544,22 @@ Router Class
                 # Use the SSH connection to create a sudo connection.
                 remote_root = router.sudo(username='root', via=remote_machine)
 
+    .. method:: docker (container=None, image=None, docker_path=None, \**kwargs)
+
+        Arrange for a context to be constructed in an existing or temporary new
+        Docker container. One of `container` or `image` must be specified.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str container:
+            Existing container to connect to. Defaults to ``None``.
+        :param str image:
+            Image tag to use to construct a temporary container. Defaults to
+            ``None``.
+        :param str docker_path:
+            Filename or complete path to the sudo binary. ``PATH`` will be searched
+            if given as a filename. Defaults to ``sudo``.
+
     .. method:: sudo (username=None, sudo_path=None, password=None, \**kwargs)
 
         Arrange for a context to be constructed over a ``sudo`` invocation. The
@@ -554,7 +570,6 @@ Router Class
 
         :param str username:
             The ``sudo`` username; defaults to ``root``.
-
         :param str sudo_path:
             Absolute or relative path to ``sudo``. Defaults to ``sudo``.
         :param str password:
