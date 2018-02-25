@@ -673,7 +673,7 @@ class Stream(BasicStream):
         self._router = router
         self.remote_id = remote_id
         self.name = 'default'
-        self.modules_sent = set()
+        self.sent_modules = set()
         self.construct(**kwargs)
         self._output_buf = collections.deque()
 
