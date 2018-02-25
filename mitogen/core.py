@@ -121,8 +121,14 @@ class TimeoutError(Error):
 
 
 class Dead(object):
+    def __hash__(self):
+        return hash(Dead)
+
     def __eq__(self, other):
         return type(other) is Dead
+
+    def __ne__(self, other):
+        return type(other) is not Dead
 
     def __reduce__(self):
         return (_unpickle_dead, ())
