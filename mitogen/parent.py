@@ -224,6 +224,10 @@ def upgrade_router(econtext):
         ModuleForwarder(econtext.router, econtext.parent, econtext.importer)
 
 
+def _docker_method():
+    import mitogen.docker
+    return mitogen.docker.Stream
+
 def _local_method():
     return mitogen.parent.Stream
 
@@ -237,6 +241,7 @@ def _sudo_method():
 
 
 METHOD_NAMES = {
+    'docker': _docker_method,
     'local': _local_method,
     'ssh': _ssh_method,
     'sudo': _sudo_method,
