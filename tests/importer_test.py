@@ -9,6 +9,8 @@ import pytest
 import unittest2
 
 import mitogen.core
+import mitogen.utils
+
 import testlib
 
 
@@ -23,6 +25,55 @@ class ImporterMixin(testlib.RouterMixin):
     def tearDown(self):
         sys.modules.pop(self.modname, None)
         super(ImporterMixin, self).tearDown()
+
+
+class ImporterBlacklist(testlib.TestCase):
+    def test_is_blacklisted_import_default(self):
+        importer = mitogen.core.Importer(
+            router=mock.Mock(), context=None, core_src='',
+        )
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+
+    def test_is_blacklisted_import_just_whitelist(self):
+        importer = mitogen.core.Importer(
+            router=mock.Mock(), context=None, core_src='',
+            whitelist=('mypkg',),
+        )
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+
+    def test_is_blacklisted_import_just_blacklist(self):
+        importer = mitogen.core.Importer(
+            router=mock.Mock(), context=None, core_src='',
+            blacklist=('mypkg',),
+        )
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
+        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+
+    def test_is_blacklisted_import_whitelist_and_blacklist(self):
+        importer = mitogen.core.Importer(
+            router=mock.Mock(), context=None, core_src='',
+            whitelist=('mypkg',), blacklist=('mypkg',),
+        )
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
+        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
 
 
 class LoadModuleTest(ImporterMixin, testlib.TestCase):
