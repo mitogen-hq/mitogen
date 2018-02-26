@@ -420,7 +420,7 @@ class Importer(object):
             'utils',
         ]}
         self._lock = threading.Lock()
-        self.whitelist = whitelist or ['']
+        self.whitelist = list(whitelist) or ['']
         self.blacklist = list(blacklist) + [
             # 2.x generates needless imports for 'builtins', while 3.x does the
             # same for '__builtin__'. The correct one is built-in, the other
