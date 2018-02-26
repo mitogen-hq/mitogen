@@ -32,6 +32,8 @@ class ImporterBlacklist(testlib.TestCase):
         importer = mitogen.core.Importer(
             router=mock.Mock(), context=None, core_src='',
         )
+        self.assertIsInstance(importer.whitelist, list)
+        self.assertIsInstance(importer.blacklist, list)
         self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
         self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
         self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
@@ -44,6 +46,8 @@ class ImporterBlacklist(testlib.TestCase):
             router=mock.Mock(), context=None, core_src='',
             whitelist=('mypkg',),
         )
+        self.assertIsInstance(importer.whitelist, list)
+        self.assertIsInstance(importer.blacklist, list)
         self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
         self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
@@ -56,6 +60,8 @@ class ImporterBlacklist(testlib.TestCase):
             router=mock.Mock(), context=None, core_src='',
             blacklist=('mypkg',),
         )
+        self.assertIsInstance(importer.whitelist, list)
+        self.assertIsInstance(importer.blacklist, list)
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
         self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
@@ -68,6 +74,8 @@ class ImporterBlacklist(testlib.TestCase):
             router=mock.Mock(), context=None, core_src='',
             whitelist=('mypkg',), blacklist=('mypkg',),
         )
+        self.assertIsInstance(importer.whitelist, list)
+        self.assertIsInstance(importer.blacklist, list)
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
