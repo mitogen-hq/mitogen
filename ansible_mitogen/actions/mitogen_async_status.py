@@ -29,6 +29,7 @@
 import ansible.plugins.action
 import mitogen.core
 import ansible_mitogen.helpers
+from mitogen.utils import cast
 
 
 class ActionModule(ansible.plugins.action.ActionBase):
@@ -37,7 +38,7 @@ class ActionModule(ansible.plugins.action.ActionBase):
         try:
             result = self._connection.call(
                 ansible_mitogen.helpers.get_async_result,
-                job_id,
+                cast(job_id),
             )
         except mitogen.core.CallError, e:
             return {
