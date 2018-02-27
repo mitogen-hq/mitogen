@@ -503,7 +503,7 @@ Router Class
 
     **Context Factories**
 
-    .. method:: local (remote_name=None, python_path=None, debug=False, profiling=False, via=None)
+    .. method:: local (remote_name=None, python_path=None, debug=False, connect_timeout=None, profiling=False, via=None)
 
         Arrange for a context to be constructed on the local machine, as an
         immediate subprocess of the current process. The associated stream
@@ -524,6 +524,10 @@ Router Class
             be enabled in the new context. Automatically ``True`` when
             :py:meth:`enable_debug` has been called, but may be used
             selectively otherwise.
+
+        :param float connect_timeout:
+            Fractional seconds to wait for the subprocess to indicate it is
+            healthy. Defaults to 30 seconds.
 
         :param bool profiling:
             If ``True``, arrange for profiling (:py:data:`profiling`) to be

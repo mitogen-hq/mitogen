@@ -65,15 +65,43 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: hard-codes 'local' and 'ssh' as the only allowable connection types.
     transport = None
 
+    #: Set to 'ansible_python_interpreter' by on_action_run().
+    python_path = None
+
+    #: Set to 'ansible_sudo_exe' by on_action_run().
+    sudo_path = None
+
+    #: Set to 'ansible_ssh_timeout' by on_action_run().
+    connect_timeout = None
+
     def __init__(self, play_context, new_stdin, original_transport):
         assert 'MITOGEN_LISTENER_PATH' in os.environ, (
             'The "mitogen" connection plug-in may only be instantiated '
-             'by the "mitogen" strategy plugin.'
+             'by the "mitogen" strategy plug-in.'
         )
 
         self.original_transport = original_transport
         self.transport = original_transport
         super(Connection, self).__init__(play_context, new_stdin)
+
+    def on_action_run(self, task_vars):
+        """
+        Invoked by ActionModuleMixin to indicate a new task is about to start
+        executing. We use the opportunity to grab relevant bits from the
+        task-specific data.
+        """
+        self.connect_timeout = task_vars.get(
+            'ansible_ssh_timeout',
+            None
+        )
+        self.python_path = task_vars.get(
+            'ansible_python_interpreter',
+            '/usr/bin/python'
+        )
+        self.sudo_path = task_vars.get(
+            'ansible_sudo_exe',
+            'sudo'
+        )
 
     @property
     def connected(self):
@@ -102,8 +130,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 'username': self._play_context.remote_user,
                 'password': self._play_context.password,
                 'port': self._play_context.port,
-                'python_path': '/usr/bin/python',
+                'python_path': self.python_path,
                 'ssh_path': self._play_context.ssh_executable,
+                'connect_timeout': self.connect_timeout,
             })
         )
 
@@ -120,7 +149,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'method': 'sudo',
             'username': self._play_context.become_user,
             'password': self._play_context.password,
-            'python_path': python_path or '/usr/bin/python',
+            'python_path': python_path or self.python_path,
+            'sudo_path': self.sudo_path,
             'via': via,
         }))
 

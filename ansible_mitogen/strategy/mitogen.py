@@ -194,8 +194,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
     """
     def _setup_master(self):
         """
-        Construct a Router, Broker, mitogen.unix listener thread, and thread
-        serving connection requests from worker processes.
+        Construct a Router, Broker, and mitogen.unix listener
         """
         self.router = mitogen.master.Router()
         self.router.responder.whitelist_prefix('ansible')
@@ -205,7 +204,8 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
 
     def _setup_services(self):
         """
-        Construct a ContextService and a thread to service requests for it.
+        Construct a ContextService and a thread to service requests for it
+        arriving from worker processes.
         """
         self.service = ContextService(self.router)
         self.service_thread = threading.Thread(target=self.service.run)
@@ -262,4 +262,3 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
             return self._run_with_master(iterator, play_context, result)
         finally:
             self._remove_wrappers()
-            self._setup_master()

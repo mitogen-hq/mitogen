@@ -68,6 +68,14 @@ def get_command_module_name(module_name):
 
 
 class ActionModuleMixin(ansible.plugins.action.ActionBase):
+    def run(self, tmp=None, task_vars=None):
+        """
+        Override run() to notify the Connection of task-specific data, so it
+        has a chance to know e.g. the Python interpreter in use.
+        """
+        self._connection.on_action_run(task_vars)
+        return super(ActionModuleMixin, self).run(tmp, task_vars)
+
     def call(self, func, *args, **kwargs):
         return self._connection.call(func, *args, **kwargs)
 

@@ -77,12 +77,13 @@ High Risk
   file, the host machine could easily exhaust available RAM. This will be fixed
   soon as it's likely to be tickled by common playbook use cases.
 
+* Situations may exist where the playbook's execution conditions are not
+  respected, however ``delegate_to``, ``connection: local``, ``become``,
+  ``become_user``, and ``local_action`` have all been tested.
+
+
 Medium Risk
 ~~~~~~~~~~~
-
-* The remote interpreter is temporarily hard-wired to ``/usr/bin/python``,
-  matching Ansible's default. The ``ansible_python_interpreter`` variable is
-  ignored.
 
 * In some cases ``remote_tmp`` may not be respected.
 
@@ -194,18 +195,26 @@ SSH Variables
 
 This list will grow as more missing pieces are discovered.
 
-* remote_addr
-* remote_user
-* ssh_port
-* ssh_path
+* ansible_python_interpreter
+* ansible_ssh_timeout
+* ansible_host, ansible_ssh_host
+* ansible_user, ansible_ssh_user
+* ansible_port, ssh_port
+* ansible_ssh_executable, ssh_executable
 * password (default: assume passwordless)
 
 
 Sudo Variables
 --------------
 
-* username (default: root)
-* password (default: assume passwordless)
+* ansible_python_interpreter
+* ansible_sudo_exe, ansible_become_exe
+* ansible_sudo_user, ansible_become_user (default: root)
+* ansible_sudo_pass, ansible_become_pass (default: assume passwordless)
+
+Unsupported:
+
+* sudo_flags
 
 
 Debugging
