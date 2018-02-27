@@ -26,6 +26,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
+import os
+import pwd
 import subprocess
 import time
 
@@ -112,19 +114,41 @@ def run_module(module, raw_params=None, args=None):
         return json.dumps(e.dct)
 
 
-def exec_command(cmd, in_data=''):
+def get_user_shell():
     """
-    Run a command in subprocess, arranging for `in_data` to be supplied on its
-    standard input.
+    For commands executed directly via an SSH command-line, SSH looks up the
+    user's shell via getpwuid() and only defaults to /bin/sh if that field is
+    missing or empty.
+    """
+    try:
+        pw_shell = pwd.getpwuid(os.geteuid()).pw_shell
+    except KeyError:
+        pw_shell = None
 
+    return pw_shell or '/bin/sh'
+
+
+def exec_command(cmd, in_data='', chdir=None, shell=None):
+    """
+    Run a command in a subprocess, emulating the argument handling behaviour of
+    SSH.
+
+    :param bytes cmd:
+        String command line, passed to user's shell.
+    :param bytes in_data:
+        Optional standard input for the command.
     :return:
         (return code, stdout bytes, stderr bytes)
     """
-    proc = subprocess.Popen(cmd,
+    assert isinstance(cmd, basestring)
+
+    proc = subprocess.Popen(
+        args=[get_user_shell(), '-c', cmd],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.PIPE,
-        shell=True)
+        cwd=chdir,
+    )
     stdout, stderr = proc.communicate(in_data)
     return proc.returncode, stdout, stderr
 
