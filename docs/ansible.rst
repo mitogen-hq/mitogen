@@ -59,32 +59,16 @@ Limitations
 
 This is a proof of concept: issues below are exclusively due to code immaturity.
 
+High Risk
+~~~~~~~~~
+
 * Connection establishment is single-threaded until more pressing issues are
   solved. To evaluate performance, target only one host. Many hosts still work,
   the first playbook step will simply run unnecessarily slowly.
 
-* Only UNIX machines running Python 2.x are supported, Windows will come later.
-
-* Only the ``sudo`` become method is available, however adding new methods is
-  straightforward, and eventually at least ``su`` will be included.
-
-* The only supported strategy is ``linear``, which is Ansible's default.
-
-* The remote interpreter is temporarily hard-wired to ``/usr/bin/python``,
-  matching Ansible's default. The ``ansible_python_interpreter`` variable is
-  ignored.
-
-* For now only Python command modules work, however almost all modules shipped
-  with Ansible are Python-based.
-
 * `Asynchronous Actions And Polling
-  <http://docs.ansible.com/ansible/latest/playbooks_async.html>`_ are not yet
-  supported.
-
-* In some cases ``remote_tmp`` may not be respected.
-
-* Interaction with modules employing special action plugins is mostly untested,
-  except for the ``synchronize`` and ``template`` modules.
+  <http://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
+  minimal testing.
 
 * Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
   such as triggered via the ``copy`` module, will cause corresponding temporary
@@ -92,6 +76,32 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
   file as a single large message. If many machines are targetted with a large
   file, the host machine could easily exhaust available RAM. This will be fixed
   soon as it's likely to be tickled by common playbook use cases.
+
+Medium Risk
+~~~~~~~~~~~
+
+* The remote interpreter is temporarily hard-wired to ``/usr/bin/python``,
+  matching Ansible's default. The ``ansible_python_interpreter`` variable is
+  ignored.
+
+* In some cases ``remote_tmp`` may not be respected.
+
+* Interaction with modules employing special action plugins is minimally
+  tested, except for the ``synchronize``, ``template`` and ``copy`` modules.
+
+* For now only Python command modules work, however almost all modules shipped
+  with Ansible are Python-based.
+
+
+Low Risk
+~~~~~~~~
+
+* Only UNIX machines running Python 2.x are supported, Windows will come later.
+
+* Only the ``sudo`` become method is available, however adding new methods is
+  straightforward, and eventually at least ``su`` will be included.
+
+* The only supported strategy is ``linear``, which is Ansible's default.
 
 * Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
   to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
@@ -126,6 +136,10 @@ Behavioural Differences
 
 Configuration
 -------------
+
+.. warning::
+
+    Don't test the prototype in a live environment until this notice is removed.
 
 1. Ensure the host machine is using Python 2.x for Ansible by verifying the
    output of ``ansible --version``. Ensure the ``python`` command starts a
