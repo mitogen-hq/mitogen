@@ -86,9 +86,6 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 * Interaction with modules employing special action plugins is mostly untested,
   except for the ``synchronize`` and ``template`` modules.
 
-* More situations likely exist where the playbook's execution conditions are
-  not respected (``delegate_to``, ``connection: local``, etc.).
-
 * Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
   to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
   disables pseudo TTYs for certain commands where standard input is required or
