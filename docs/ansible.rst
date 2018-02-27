@@ -86,6 +86,13 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 * Interaction with modules employing special action plugins is mostly untested,
   except for the ``synchronize`` and ``template`` modules.
 
+* Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
+  such as triggered via the ``copy`` module, will cause corresponding temporary
+  memory and CPU spikes on both host and target machine, due to delivering the
+  file as a single large message. If many machines are targetted with a large
+  file, the host machine could easily exhaust available RAM. This will be fixed
+  soon as it's likely to be tickled by common playbook use cases.
+
 * Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
   to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
   disables pseudo TTYs for certain commands where standard input is required or
