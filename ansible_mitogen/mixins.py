@@ -117,7 +117,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
         # replaces 83 lines
-        if not execute:
+        if execute:
             return self._remote_chmod(remote_paths, mode='u+x')
         # Do nothing unless request was to set the execute bit.
         return self.COMMAND_RESULT.copy()
