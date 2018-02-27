@@ -1330,24 +1330,27 @@ class ExternalContext(object):
         finally:
             fp.close()
 
+    def _dispatch_one(self, msg):
+        data = msg.unpickle(throw=False)
+        _v and LOG.debug('_dispatch_calls(%r)', data)
+        if msg.auth_id not in mitogen.parent_ids:
+            LOG.warning('CALL_FUNCTION from non-parent %r', msg.auth_id)
+
+        modname, klass, func, args, kwargs = data
+        obj = __import__(modname, {}, {}, [''])
+        if klass:
+            obj = getattr(obj, klass)
+        fn = getattr(obj, func)
+        if getattr(fn, 'mitogen_takes_econtext', None):
+            kwargs.setdefault('econtext', self)
+        if getattr(fn, 'mitogen_takes_router', None):
+            kwargs.setdefault('router', self.router)
+        return fn(*args, **kwargs)
+
     def _dispatch_calls(self):
         for msg in self.channel:
-            data = msg.unpickle(throw=False)
-            _v and LOG.debug('_dispatch_calls(%r)', data)
-            if msg.auth_id not in mitogen.parent_ids:
-                LOG.warning('CALL_FUNCTION from non-parent %r', msg.auth_id)
-
-            modname, klass, func, args, kwargs = data
             try:
-                obj = __import__(modname, {}, {}, [''])
-                if klass:
-                    obj = getattr(obj, klass)
-                fn = getattr(obj, func)
-                if getattr(fn, 'mitogen_takes_econtext', None):
-                    kwargs.setdefault('econtext', self)
-                if getattr(fn, 'mitogen_takes_router', None):
-                    kwargs.setdefault('router', self.router)
-                msg.reply(fn(*args, **kwargs))
+                msg.reply(self._dispatch_one(msg))
             except Exception, e:
                 _v and LOG.debug('_dispatch_calls: %s', e)
                 msg.reply(CallError(e))
