@@ -26,6 +26,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import commands
 import os
 import pwd
 import shutil
@@ -177,17 +178,24 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _low_level_execute_command(self, cmd, sudoable=True, in_data=None,
                                    executable=None,
-                                   encoding_errors='surrogate_then_replace'):
+                                   encoding_errors='surrogate_then_replace',
+                                   chdir=None):
+        if executable is None:  # executable defaults to False
+            executable = self._play_context.executable
+        if executable:
+            cmd = executable + ' -c ' + commands.mkarg(cmd)
+
         # replaces 57 lines
         # replaces 126 lines of make_become_cmd()
         rc, stdout, stderr = self.call(
             ansible_mitogen.helpers.exec_command,
-            cmd,
-            in_data,
+            cast(cmd),
+            cast(in_data),
+            chdir=cast(chdir),
         )
         return {
             'rc': rc,
-            'stdout': to_text(stdout, encoding_errors),
-            'stdout_lines': '\n'.split(to_text(stdout, encoding_errors)),
+            'stdout': to_text(stdout, errors=encoding_errors),
+            'stdout_lines': to_text(stdout, errors=encoding_errors).splitlines(),
             'stderr': stderr,
         }
