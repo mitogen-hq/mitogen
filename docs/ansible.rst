@@ -119,6 +119,10 @@ Behavioural Differences
   connection to host closed`` to appear in ``stderr`` output of every executed
   command. This never manifests with the Mitogen extension.
 
+* Asynchronous jobs execute in a thread of the single target Python
+  interpreter. In future this will be replaced with subprocesses, as it's
+  likely some use cases spawn many asynchronous jobs.
+
 
 Configuration
 -------------
