@@ -26,8 +26,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
+import operator
 import os
 import pwd
+import re
+import stat
 import subprocess
 import time
 
@@ -165,3 +168,59 @@ def write_path(path, s):
     Writes bytes `s` to a filesystem `path`.
     """
     open(path, 'wb').write(s)
+
+
+
+CHMOD_CLAUSE_PAT = re.compile(r'([uoga]?)([+\-=])([ugo]|[rwx]*)')
+CHMOD_MASKS = {
+    'u': stat.S_IRWXU,
+    'g': stat.S_IRWXG,
+    'o': stat.S_IRWXO,
+    'a': (stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO),
+}
+CHMOD_BITS = {
+    'u': {'r':stat.S_IRUSR, 'w':stat.S_IWUSR, 'x':stat.S_IXUSR},
+    'g': {'r':stat.S_IRGRP, 'w':stat.S_IWGRP, 'x':stat.S_IXGRP},
+    'o': {'r':stat.S_IROTH, 'w':stat.S_IWOTH, 'x':stat.S_IXOTH},
+    'a': {
+        'r': (stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH),
+        'w': (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH),
+        'x': (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    }
+}
+
+def or_(it):
+    return reduce(operator.or_, it, 0)
+
+
+def apply_mode_spec(spec, mode):
+    for clause in spec.split(','):
+        match = CHMOD_CLAUSE_PAT.match(clause)
+        who, op, perms = match.groups()
+        mask = CHMOD_MASKS[who]
+        bits = CHMOD_BITS[who]
+        for ch in who or 'a':
+            cur_perm_bits = mode & mask
+            new_perm_bits = or_(bits[p] for p in perms)
+            mode &= ~mask
+            if op == '=':
+                mode |= new_perm_bits
+            elif op == '+':
+                mode |= new_perm_bits | cur_per_bits
+            else:
+                mode |= cur_perm_bits & ~new_perm_bits
+    return mode
+
+
+def set_file_mode(path, spec):
+    """
+    Update the permissions of a file using the same syntax as chmod(1).
+    """
+    mode = os.stat(path).st_mode
+
+    if spec.is_digit():
+        new_mode = int(spec, 8)
+    else:
+        new_mode = apply_mode_spec(spec, mode)
+
+    os.chmod(path, new_mode)
