@@ -519,7 +519,14 @@ class ModuleForwarder(object):
         tup = self.importer._cache[fullname]
         if tup is not None:
             for related in tup[4]:
-                rtup = self.importer._cache[fullname]
+                LOG.debug('%r._on_get_module(): trying related %r',
+                          self, related)
+                try:
+                    rtup = self.importer._cache[related]
+                except KeyError:
+                    LOG.warn('%r._on_get_module(): skipping %r, not in cache', 
+                             self, related)
+                    continue
                 self._send_one_module(msg, rtup)
 
         self._send_one_module(msg, tup)
