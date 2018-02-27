@@ -77,7 +77,11 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 * For now only Python command modules work, however almost all modules shipped
   with Ansible are Python-based.
 
-* `Asynchronous Actions And Polling <Ansible_Async>`_ is not yet supported.
+* `Asynchronous Actions And Polling
+  <http://docs.ansible.com/ansible/latest/playbooks_async.html>`_ are not yet
+  supported.
+
+* In some cases ``remote_tmp`` may not be respected.
 
 * Interaction with modules employing special action plugins is mostly untested,
   except for the ``synchronize`` and ``template`` modules.
@@ -101,7 +105,6 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
   what that behaviour is supposed to be. See `Ansible#14377`_ for related
   discussion.
 
-.. _Ansible_Async: https://www.google.co.uk/search?q=ansible%20async
 .. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
 
 
