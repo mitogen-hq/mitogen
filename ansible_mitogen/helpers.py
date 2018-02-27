@@ -96,7 +96,7 @@ def monkey_fail_json(self, **kwargs):
     raise ModuleError(kwargs.get('msg'), kwargs)
 
 
-def run_module(module, raw_params=None, args=None):
+def run_module(module, raw_params=None, args=None, env=None):
     """
     Set up the process environment in preparation for running an Ansible
     module. This monkey-patches the Ansible libraries in various places to
@@ -114,6 +114,10 @@ def run_module(module, raw_params=None, args=None):
         'ANSIBLE_MODULE_ARGS': args
     })
 
+    if env:
+        original_env = os.environ.copy()
+        os.environ.update((k, str(v)) for k, v in env.iteritems())
+
     try:
         mod = __import__(module, {}, {}, [''])
         # Ansible modules begin execution on import. Thus the above __import__
@@ -123,16 +127,22 @@ def run_module(module, raw_params=None, args=None):
         # explicitly.
         mod.main()
     except (Exit, ModuleError), e:
-        return json.dumps(e.dct)
+        result = json.dumps(e.dct)
+
+    if env:
+        os.environ.clear()
+        os.environ.update(original_env)
+
+    return result
 
 
-def _async_main(job_id, module, raw_params, args):
+def _async_main(job_id, module, raw_params, args, env):
     """
     Implementation for the thread that implements asynchronous module
     execution.
     """
     try:
-        rc = run_module(module, raw_params, args)
+        rc = run_module(module, raw_params, args, env)
     except Exception, e:
         rc = mitogen.core.CallError(e)
 

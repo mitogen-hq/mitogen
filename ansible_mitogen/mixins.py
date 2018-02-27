@@ -165,11 +165,15 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         else:
             helper = ansible_mitogen.helpers.run_module
 
+        env = {}
+        self._compute_environment_string(env)
+
         # replaces 110 lines
         js = self.call(
             helper,
             get_command_module_name(module_name),
             args=cast(module_args),
+            env=cast(env),
         )
 
         data = self._parse_returned_data({

@@ -1,0 +1,17 @@
+---
+# Ensure environment: is preserved during call.
+
+- hosts: all
+  gather_facts: false
+  tasks:
+
+    - shell: echo $SOME_ENV
+      environment:
+        SOME_ENV: 123
+      register: result
+
+    - debug: msg={{result}}
+
+    - assert:
+        that: "result.stdout == '123'"
+
