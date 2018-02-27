@@ -269,6 +269,9 @@ class Stream(mitogen.core.Stream):
     #: The path to the remote Python interpreter.
     python_path = 'python2.7'
 
+    #: Maximum time to wait for a connection attempt.
+    connect_timeout = 30.0
+
     #: True to cause context to write verbose /tmp/mitogen.<pid>.log.
     debug = False
 
@@ -280,13 +283,14 @@ class Stream(mitogen.core.Stream):
         self.sent_modules = set(['mitogen', 'mitogen.core'])
 
     def construct(self, remote_name=None, python_path=None, debug=False,
-                  profiling=False, **kwargs):
+                  connect_timeout=None, profiling=False, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
         if python_path:
             self.python_path = python_path
-
+        if connect_timeout:
+            self.connect_timeout = connect_timeout
         if remote_name is None:
             remote_name = '%s@%s:%d'
             remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
@@ -381,7 +385,8 @@ class Stream(mitogen.core.Stream):
         discard_until(self.receive_side.fd, 'EC1\n', time.time() + 10.0)
 
     def _connect_bootstrap(self):
-        discard_until(self.receive_side.fd, 'EC0\n', time.time() + 10.0)
+        deadline = time.time() + self.connect_timeout
+        discard_until(self.receive_side.fd, 'EC0\n', deadline)
         self._ec0_received()
 
 
