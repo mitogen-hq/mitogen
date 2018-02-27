@@ -190,9 +190,6 @@ CHMOD_BITS = {
     }
 }
 
-def or_(it):
-    return reduce(operator.or_, it, 0)
-
 
 def apply_mode_spec(spec, mode):
     for clause in spec.split(','):
@@ -202,7 +199,7 @@ def apply_mode_spec(spec, mode):
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = or_(bits[p] for p in perms)
+            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
