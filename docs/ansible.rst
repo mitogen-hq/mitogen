@@ -23,7 +23,7 @@ significant testing will prove the extension's soundness.
 Overview
 --------
 
-You should **expect a 1.25x - 5x speedup** and a **CPU usage reduction of at
+You should **expect a 1.25x - 7x speedup** and a **CPU usage reduction of at
 least 2x**, depending on network conditions, the specific modules executed, and
 time spent by the target host already doing useful work. Mitogen cannot speed
 up a module once it is executing, it can only ensure the module executes as
@@ -82,6 +82,32 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 
 * More situations likely exist where the playbook's execution conditions are
   not respected (``delegate_to``, ``connection: local``, etc.).
+
+* Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
+  to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
+  disables pseudo TTYs for certain commands where standard input is required or
+  ``sudo`` is not in use. Mitogen does not require this, as it can simply call
+  :py:func:`pty.openpty` from the SSH user account during ``sudo`` setup.
+
+  A major downside to Ansible's default is that stdout and stderr of any
+  resulting executed command are merged, with additional carriage return
+  characters synthesized in the output by the TTY layer. Neither of these
+  problems are apparent using the Mitogen extension, which may break some
+  playbooks.
+
+  A future version will emulate Ansible's behaviour, once it is clear precisely
+  what that behaviour is supposed to be. See `Ansible#14377`_ for related
+  discussion.
+
+.. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
+
+
+Behavioural Differences
+-----------------------
+
+ * Ansible with SSH multiplexing enabled causes a string like ``Shared
+   connection to host closed`` to appear in ``stderr`` output of every executed
+   command. This never manifests with the Mitogen extension.
 
 
 Configuration
