@@ -168,6 +168,14 @@ def restart(func, *args):
 
 
 def is_blacklisted_import(importer, fullname):
+    """Return ``True`` if `fullname` is part of a blacklisted package, or if
+    any packages have been whitelisted and `fullname` is not part of one.
+
+    NB:
+      - If a package is on both lists, then it is treated as blacklisted.
+      - If any package is whitelisted, then all non-whitelisted packages are
+        treated as blacklisted.
+    """
     return ((not any(fullname.startswith(s) for s in importer.whitelist)) or
                  (any(fullname.startswith(s) for s in importer.blacklist)))
 
@@ -412,7 +420,7 @@ class Importer(object):
             'utils',
         ]}
         self._lock = threading.Lock()
-        self.whitelist = whitelist or ['']
+        self.whitelist = list(whitelist) or ['']
         self.blacklist = list(blacklist) + [
             # 2.x generates needless imports for 'builtins', while 3.x does the
             # same for '__builtin__'. The correct one is built-in, the other
