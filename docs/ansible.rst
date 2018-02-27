@@ -77,6 +77,8 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 * For now only Python command modules work, however almost all modules shipped
   with Ansible are Python-based.
 
+* `Asynchronous Actions And Polling <Ansible_Async>`_ is not yet supported.
+
 * Interaction with modules employing special action plugins is mostly untested,
   except for the ``synchronize`` and ``template`` modules.
 
@@ -99,15 +101,16 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
   what that behaviour is supposed to be. See `Ansible#14377`_ for related
   discussion.
 
+.. _Ansible_Async: https://www.google.co.uk/search?q=ansible%20async
 .. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
 
 
 Behavioural Differences
 -----------------------
 
- * Ansible with SSH multiplexing enabled causes a string like ``Shared
-   connection to host closed`` to appear in ``stderr`` output of every executed
-   command. This never manifests with the Mitogen extension.
+* Ansible with SSH multiplexing enabled causes a string like ``Shared
+  connection to host closed`` to appear in ``stderr`` output of every executed
+  command. This never manifests with the Mitogen extension.
 
 
 Configuration
