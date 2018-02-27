@@ -117,11 +117,14 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
         # replaces 83 lines
-        assert False, "_fixup_perms2() should never be called."
+        if not execute:
+            return self._remote_chmod(remote_paths, mode='u+x')
+        # Do nothing unless request was to set the execute bit.
+        return self.COMMAND_RESULT.copy()
 
     def _remote_chmod(self, paths, mode, sudoable=False):
         return self.fake_shell(lambda: mitogen.master.Select.all(
-            self._connection.call_async(os.chmod, path, mode)
+            self._connection.call_async(helpers.set_file_mode, path, mode)
             for path in paths
         ))
 

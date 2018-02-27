@@ -197,8 +197,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :returns:
             (return code, stdout bytes, stderr bytes)
         """
-        return self.py_call(ansible_mitogen.helpers.exec_command,
-                            cast(cmd), cast(in_data))
+        return self.call(ansible_mitogen.helpers.exec_command,
+                         cast(cmd), cast(in_data))
 
     def fetch_file(self, in_path, out_path):
         """
@@ -210,8 +210,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Local filesystem path to write.
         """
-        output = self.py_call(ansible_mitogen.helpers.read_path,
-                              cast(in_path))
+        output = self.call(ansible_mitogen.helpers.read_path,
+                           cast(in_path))
         ansible_mitogen.helpers.write_path(out_path, output)
 
     def put_file(self, in_path, out_path):
@@ -224,5 +224,5 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.py_call(ansible_mitogen.helpers.write_path, cast(out_path),
-                     ansible_mitogen.helpers.read_path(in_path))
+        self.call(ansible_mitogen.helpers.write_path, cast(out_path),
+                  ansible_mitogen.helpers.read_path(in_path))
