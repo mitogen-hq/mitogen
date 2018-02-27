@@ -28,6 +28,7 @@
 from __future__ import absolute_import
 import logging
 import os
+import sys
 import time
 
 import ansible.errors
@@ -105,7 +106,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             })
         )
 
-    def _connect_sudo(self, via):
+    def _connect_sudo(self, via=None, python_path=None):
         """
         Fetch a reference to a sudo Context matching the play context from
         ContextService in the master process.
@@ -118,7 +119,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'method': 'sudo',
             'username': self._play_context.become_user,
             'password': self._play_context.password,
-            'python_path': '/usr/bin/python',
+            'python_path': python_path or '/usr/bin/python',
             'via': via,
         }))
 
@@ -140,7 +141,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.router, self.parent = mitogen.unix.connect(path)
 
         if self.original_transport == 'local':
-            self.context = self._connect_local()
+            if not self._play_context.become:
+                self.context = self._connect_local()
+            else:
+                self.context = self._connect_sudo(python_path=sys.executable)
         else:
             self.host = self._connect_ssh()
             if not self._play_context.become:
