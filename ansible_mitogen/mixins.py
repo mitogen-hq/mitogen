@@ -152,12 +152,16 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         task_vars = task_vars or {}
 
         self._update_module_args(module_name, module_args, task_vars)
+        if wrap_async:
+            helper = ansible_mitogen.helpers.run_module_async
+        else:
+            helper = ansible_mitogen.helpers.run_module
 
         # replaces 110 lines
         js = self.call(
-            ansible_mitogen.helpers.run_module,
+            helper,
             get_command_module_name(module_name),
-            args=cast(module_args)
+            args=cast(module_args),
         )
 
         data = self._parse_returned_data({
@@ -166,9 +170,6 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             'stdout_lines': [js],
             'stderr': ''
         })
-
-        if wrap_async:
-            data['changed'] = True
 
         # pre-split stdout/stderr into lines if needed
         if 'stdout' in data and 'stdout_lines' not in data:

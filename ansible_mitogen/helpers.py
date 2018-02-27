@@ -30,14 +30,22 @@ import json
 import operator
 import os
 import pwd
+import random
 import re
 import stat
 import subprocess
+import threading
 import time
 
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+
+#: Mapping of job_id<->result dict
+_result_by_job_id = {}
+
+#: Mapping of job_id<->threading.Thread
+_thread_by_job_id = {}
 
 
 class Exit(Exception):
@@ -118,6 +126,57 @@ def run_module(module, raw_params=None, args=None):
         return json.dumps(e.dct)
 
 
+def _async_main(job_id, module, raw_params, args):
+    """
+    Implementation for the thread that implements asynchronous module
+    execution.
+    """
+    try:
+        rc = run_module(module, raw_params, args)
+    except Exception, e:
+        rc = mitogen.core.CallError(e)
+
+    _result_by_job_id[job_id] = rc
+
+
+def run_module_async(module, raw_params=None, args=None):
+    """
+    Arrange for an Ansible module to be executed in a thread of the current
+    process, with results available via :py:func:`get_async_result`.
+    """
+    job_id = '%08x' % random.randint(0, 2**32-1)
+    _result_by_job_id[job_id] = None
+    _thread_by_job_id[job_id] = threading.Thread(
+        target=_async_main,
+        kwargs={
+            'job_id': job_id,
+            'module': module,
+            'raw_params': raw_params,
+            'args': args,
+        }
+    )
+    _thread_by_job_id[job_id].start()
+    return json.dumps({
+        'ansible_job_id': job_id,
+        'changed': True
+    })
+
+
+def get_async_result(job_id):
+    """
+    Poll for the result of an asynchronous task.
+
+    :param str job_id:
+        Job ID to poll for.
+    :returns:
+        ``None`` if job is still running, JSON-encoded result dictionary if
+        execution completed normally, or :py:class:`mitogen.core.CallError` if
+        an exception was thrown.
+    """
+    if not _thread_by_job_id[job_id].isAlive():
+        return _result_by_job_id[job_id]
+
+
 def get_user_shell():
     """
     For commands executed directly via an SSH command-line, SSH looks up the
@@ -192,6 +251,10 @@ CHMOD_BITS = {
 
 
 def apply_mode_spec(spec, mode):
+    """
+    Given a symbolic file mode change specification in the style of chmod(1)
+    `spec`, apply changes in the specification to the numeric file mode `mode`.
+    """
     for clause in spec.split(','):
         match = CHMOD_CLAUSE_PAT.match(clause)
         who, op, perms = match.groups()

@@ -50,14 +50,22 @@ except ImportError:  # Ansible <2.4
 
 def wrap_action_loader__get(name, *args, **kwargs):
     """
-    While the mitogen stratey is active, trap action_loader.get() calls,
+    While the mitogen strategy is active, trap action_loader.get() calls,
     augmenting any fetched class with ActionModuleMixin, which replaces various
     helper methods inherited from ActionBase with implementations that avoid
     the use of shell fragments wherever possible.
 
+    Additionally catch attempts to instantiate the "normal" action with a task
+    argument whose action is "async_status", and redirect it to a special
+    implementation that fetches polls the task result via RPC.
+
     This is used instead of static subclassing as it generalizes to third party
     action modules outside the Ansible tree.
     """
+    if ( name == 'normal' and 'task' in kwargs and
+         kwargs['task'].action == 'async_status'):
+        name = 'mitogen_async_status'
+
     klass = action_loader__get(name, class_only=True)
     if klass:
         wrapped_name = 'MitogenActionModule_' + name
@@ -243,10 +251,9 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Add the mitogen connection plug-in directory to the ModuleLoader path,
         avoiding the need for manual configuration.
         """
-        # ansible_mitogen base directory:
         basedir = os.path.dirname(os.path.dirname(__file__))
-        conn_dir = os.path.join(basedir, 'connection')
-        connection_loader.add_directory(conn_dir)
+        connection_loader.add_directory(os.path.join(basedir, 'connection'))
+        action_loader.add_directory(os.path.join(basedir, 'actions'))
 
     def run(self, iterator, play_context, result=0):
         self._add_connection_plugin_path()
