@@ -172,7 +172,7 @@ def write_path(path, s):
 
 
 
-CHMOD_CLAUSE_PAT = re.compile(r'([uoga]?)([+\-=])([ugo]|[rwx]*)')
+CHMOD_CLAUSE_PAT = re.compile(r'([uoga]*)([+\-=])([ugo]|[rwx]*)')
 CHMOD_MASKS = {
     'u': stat.S_IRWXU,
     'g': stat.S_IRWXG,
@@ -198,16 +198,16 @@ def apply_mode_spec(spec, mode):
     for clause in spec.split(','):
         match = CHMOD_CLAUSE_PAT.match(clause)
         who, op, perms = match.groups()
-        mask = CHMOD_MASKS[who]
-        bits = CHMOD_BITS[who]
         for ch in who or 'a':
+            mask = CHMOD_MASKS[ch]
+            bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
             new_perm_bits = or_(bits[p] for p in perms)
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
             elif op == '+':
-                mode |= new_perm_bits | cur_per_bits
+                mode |= new_perm_bits | cur_perm_bits
             else:
                 mode |= cur_perm_bits & ~new_perm_bits
     return mode
