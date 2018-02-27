@@ -3,8 +3,8 @@
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 #
-# 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer.
+# 1. Redistributions of source code must retain the above copyright notice,
+# this list of conditions and the following disclaimer.
 #
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 # this list of conditions and the following disclaimer in the documentation
@@ -14,16 +14,17 @@
 # may be used to endorse or promote products derived from this software without
 # specific prior written permission.
 #
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 import dis
 import imp
@@ -37,11 +38,6 @@ import sys
 import threading
 import types
 import zlib
-
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
@@ -74,8 +70,11 @@ def get_child_modules(path):
     return [name for _, name, _ in it]
 
 
-def scan_code_imports(co, LOAD_CONST=dis.opname.index('LOAD_CONST'),
-                          IMPORT_NAME=dis.opname.index('IMPORT_NAME')):
+LOAD_CONST = dis.opname.index('LOAD_CONST')
+IMPORT_NAME = dis.opname.index('IMPORT_NAME')
+
+
+def scan_code_imports(co):
     """Given a code object `co`, scan its bytecode yielding any
     ``IMPORT_NAME`` and associated prior ``LOAD_CONST`` instructions
     representing an `Import` statement or `ImportFrom` statement.
@@ -303,7 +302,8 @@ class ModuleFinder(object):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
         would be the only required implementation of get_module()."""
         loader = pkgutil.find_loader(fullname)
-        LOG.debug('pkgutil._get_module_via_pkgutil(%r) -> %r', fullname, loader)
+        LOG.debug('pkgutil._get_module_via_pkgutil(%r) -> %r',
+                  fullname, loader)
         if not loader:
             return
 
@@ -542,13 +542,13 @@ class ModuleResponder(object):
         fullname = msg.data
         if fullname in stream.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
-                       fullname, stream)
+                        fullname, stream)
 
         try:
             tup = self._build_tuple(fullname)
             for name in tup[4]:  # related
-                parent_pkg, _, _ = name.partition('.')
-                if parent_pkg != fullname and parent_pkg not in stream.sent_modules:
+                parent, _, _ = name.partition('.')
+                if parent != fullname and parent not in stream.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
@@ -648,7 +648,8 @@ class Router(mitogen.parent.Router):
         parent = via.via
 
         while parent is not None:
-            LOG.debug('Adding route to %r for %r via %r', parent, target, child)
+            LOG.debug('Adding route to %r for %r via %r',
+                      parent, target, child)
             parent.send(
                 mitogen.core.Message(
                     data='%s\x00%s' % (target.context_id, child.context_id),
