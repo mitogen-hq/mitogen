@@ -39,7 +39,7 @@ import mitogen.unix
 from mitogen.utils import cast
 
 import ansible_mitogen.helpers
-from ansible_mitogen.strategy.mitogen import ContextService
+from ansible_mitogen.services import ContextService
 
 
 LOG = logging.getLogger(__name__)
