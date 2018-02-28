@@ -1,0 +1,6 @@
+---
+
+- hosts: all
+  gather_facts: false
+  tasks:
+    - bin_bash_module:
