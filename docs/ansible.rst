@@ -149,7 +149,7 @@ Configuration
 2. ``python -m pip install -U git+https://github.com/dw/mitogen.git`` **on the
    host machine only**.
 3. ``python -c 'import ansible_mitogen as a; print a.__path__'``
-4. Add ``strategy_plugins = /path/to/../ansible_mitogen/strategy`` using the
+4. Add ``strategy_plugins = /path/to/../ansible_mitogen/plugins/strategy`` using the
    path from above to the ``[defaults]`` section of ``ansible.cfg``.
 5. Add ``strategy = mitogen`` to the ``[defaults]`` section of ``ansible.cfg``.
 6. Cross your fingers and try it out.
