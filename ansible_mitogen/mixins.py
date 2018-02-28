@@ -47,6 +47,7 @@ import mitogen.core
 import mitogen.master
 from mitogen.utils import cast
 
+import ansible_mitogen.connection
 import ansible_mitogen.helpers
 from ansible.module_utils._text import to_text
 
@@ -95,6 +96,22 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
       that crop up due to this. Mitogen always runs a task completely within
       the target user account, so it's not a problem for us.
     """
+    def __init__(self, task, connection, *args, **kwargs):
+        """
+        Verify the received connection is really a Mitogen connection. If not,
+        transmute this instance back into the original unadorned base class.
+
+        This allows running the Mitogen strategy in mixed-target playbooks,
+        where some targets use SSH while others use WinRM or some fancier UNIX
+        connection plug-in. That's because when the Mitogen strategy is active,
+        ActionModuleMixin is unconditionally mixed into any action module that
+        is instantiated, and there is no direct way for the monkey-patch to
+        know what kind of connection will be used upfront.
+        """
+        super(ActionModuleMixin, self).__init__(task, connection, *args, **kwargs)
+        if not isinstance(connection, ansible_mitogen.connection.Connection):
+            _, self.__class__ = type(self).__bases__
+
     def run(self, tmp=None, task_vars=None):
         """
         Override run() to notify Connection of task-specific data, so it has a
