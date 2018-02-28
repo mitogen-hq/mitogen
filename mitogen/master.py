@@ -310,10 +310,12 @@ class ModuleFinder(object):
         try:
             path = self._py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
-            if path is not None and source is not None:
-                return path, source, loader.is_package(fullname)
+            is_pkg = loader.is_package(fullname)
         except AttributeError:
             return
+
+        if path is not None and source is not None:
+            return path, source, is_pkg
 
     def _get_module_via_sys_modules(self, fullname):
         """Attempt to fetch source code via sys.modules. This is specifically
@@ -324,22 +326,21 @@ class ModuleFinder(object):
                       fullname)
             return
 
-        modpath = self._py_filename(getattr(module, '__file__', ''))
-        if not modpath:
+        path = self._py_filename(getattr(module, '__file__', ''))
+        if not path:
             return
 
         is_pkg = hasattr(module, '__path__')
         try:
             source = inspect.getsource(module)
         except IOError:
-            # Work around inspect.getsourcelines() bug.
+            # Work around inspect.getsourcelines() bug for 0-byte __init__.py
+            # files.
             if not is_pkg:
                 raise
             source = '\n'
 
-        return (module.__file__.rstrip('co'),
-                source,
-                hasattr(module, '__path__'))
+        return path, source, is_pkg
 
     get_module_methods = [_get_module_via_pkgutil,
                           _get_module_via_sys_modules]
