@@ -4,7 +4,14 @@
   gather_facts: false
   tasks:
 
-  - name: simulate long running op (15 sec), wait for up to 45 sec, poll every 5 sec
-    command: /bin/sleep 10
-    async: 15
-    poll: 1
+  - name: simulate long running op (3 sec), wait for up to 5 sec, poll every 1 sec
+    command: /bin/sleep 2
+    async: 4
+    register: derp
+
+  - debug: msg={{derp}}
+
+  - async_status: jid={{derp.ansible_job_id}}
+    register: derp2
+
+  - debug: msg={{derp2}}
