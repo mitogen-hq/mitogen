@@ -39,6 +39,7 @@ import mitogen.utils
 import ansible.errors
 import ansible.plugins.strategy.linear
 import ansible_mitogen.mixins
+import ansible_mitogen.services
 
 try:
     from ansible.plugins.loader import action_loader
@@ -88,47 +89,6 @@ def wrap_connection_loader__get(name, play_context, new_stdin):
         kwargs['original_transport'] = name
         name = 'mitogen'
     return connection_loader__get(name, play_context, new_stdin, **kwargs)
-
-
-class ContextService(mitogen.service.Service):
-    """
-    Used by worker processes connecting back into the top-level process to
-    fetch the single Context instance corresponding to the supplied connection
-    configuration, creating a matching connection if it does not exist.
-
-    For connection methods and their parameters, refer to:
-        http://mitogen.readthedocs.io/en/latest/api.html#context-factories
-
-    This concentrates all SSH connections in the top-level process, which may
-    become a bottleneck. There are multiple ways to fix that: 
-        * creating one .local() child context per CPU and sharding connections
-          between them, using the master process to route messages, or
-        * as above, but having each child create a unique UNIX listener and
-          having workers connect in directly.
-
-    :param dict dct:
-        Parameters passed to mitogen.master.Router.[method](). One key,
-        "method", is popped from the dictionary and used to look up the method.
-
-    :returns mitogen.master.Context:
-        Corresponding Context instance.
-    """
-    handle = 500
-    max_message_size = 1000
-
-    def __init__(self, router):
-        super(ContextService, self).__init__(router)
-        self._context_by_key = {}
-
-    def validate_args(self, args):
-        return isinstance(args, dict)
-
-    def dispatch(self, dct, msg):
-        key = repr(sorted(dct.items()))
-        if key not in self._context_by_key:
-            method = getattr(self.router, dct.pop('method'))
-            self._context_by_key[key] = method(**dct)
-        return self._context_by_key[key]
 
 
 class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
@@ -207,7 +167,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Construct a ContextService and a thread to service requests for it
         arriving from worker processes.
         """
-        self.service = ContextService(self.router)
+        self.service = ansible_mitogen.services.ContextService(self.router)
         self.service_thread = threading.Thread(target=self.service.run)
         self.service_thread.start()
 
@@ -251,9 +211,9 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Add the mitogen connection plug-in directory to the ModuleLoader path,
         avoiding the need for manual configuration.
         """
-        basedir = os.path.dirname(os.path.dirname(__file__))
-        connection_loader.add_directory(os.path.join(basedir, 'connection'))
-        action_loader.add_directory(os.path.join(basedir, 'actions'))
+        base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
+        connection_loader.add_directory(os.path.join(base_dir, 'connection'))
+        action_loader.add_directory(os.path.join(base_dir, 'actions'))
 
     def run(self, iterator, play_context, result=0):
         self._add_connection_plugin_path()
