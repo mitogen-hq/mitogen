@@ -68,15 +68,48 @@ def get_command_module_name(module_name):
 
 
 class ActionModuleMixin(ansible.plugins.action.ActionBase):
+    """
+    The Mitogen-patched PluginLoader dynamically mixes this into every action
+    class that Ansible attempts to load. It exists to override all the
+    assumptions built into the base action class that should really belong in
+    some middle layer, or at least in the connection layer.
+
+    Functionality is defined here for:
+
+    * Capturing the final set of task variables and giving Connection a chance
+      to update its idea of the correct execution environment, before any
+      attempt is made to call a Connection method. While it's not expected for
+      the interpreter to change on a per-task basis, Ansible permits this, and
+      so it must be supported.
+
+    * Overriding lots of methods that try to call out to shell for mundane
+      reasons, such as copying files around, changing file permissions,
+      creating temporary directories and suchlike.
+
+    * Short-circuiting any use of Ansiballz or related code for executing a
+      module remotely using shell commands and SSH.
+
+    * Short-circuiting most of the logic in dealing with the fact that Ansible
+      always runs become: tasks across at least the SSH user account and the
+      destination user account, and handling the security permission issues
+      that crop up due to this. Mitogen always runs a task completely within
+      the target user account, so it's not a problem for us.
+    """
     def run(self, tmp=None, task_vars=None):
         """
-        Override run() to notify the Connection of task-specific data, so it
-        has a chance to know e.g. the Python interpreter in use.
+        Override run() to notify Connection of task-specific data, so it has a
+        chance to know e.g. the Python interpreter in use.
         """
         self._connection.on_action_run(task_vars)
         return super(ActionModuleMixin, self).run(tmp, task_vars)
 
     def call(self, func, *args, **kwargs):
+        """
+        Arrange for a Python function to be called in the target context, which
+        should be some function from the standard library or
+        ansible_mitogen.helpers module. This junction point exists mainly as a
+        nice place to insert print statements during debugging.
+        """
         return self._connection.call(func, *args, **kwargs)
 
     COMMAND_RESULT = {
@@ -87,6 +120,20 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
     }
 
     def fake_shell(self, func, stdout=False):
+        """
+        Execute a function and decorate its return value in the style of
+        _low_level_execute_command(). This produces a return value that looks
+        like some shell command was run, when really func() was implemented
+        entirely in Python.
+
+        If the function raises :py:class:`mitogen.core.CallError`, this will be
+        translated into a failed shell command with a non-zero exit status.
+
+        :param func:
+            Function invoked as `func()`.
+        :returns:
+            See :py:attr:`COMMAND_RESULT`.
+        """
         dct = self.COMMAND_RESULT.copy()
         try:
             rc = func()
@@ -99,55 +146,90 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         return dct
 
     def _remote_file_exists(self, path):
-        # replaces 5 lines.
+        """
+        Determine if `path` exists by directly invoking os.path.exists() in the
+        target user account.
+        """
         return self.call(os.path.exists, path)
 
     def _configure_module(self, module_name, module_args, task_vars=None):
-        # replaces 58 lines
+        """
+        Mitogen does not use the Ansiballz framework. This call should never
+        happen when ActionMixin is active, so crash if it does.
+        """
         assert False, "_configure_module() should never be called."
 
     def _is_pipelining_enabled(self, module_style, wrap_async=False):
-        # replaces 17 lines
-        return False
+        """
+        Mitogen does not use SSH pipelining. This call should never happen when
+        ActionMixin is active, so crash if it does.
+        """
+        assert False, "_is_pipelining_enabled() should never be called."
 
     def _make_tmp_path(self, remote_user=None):
-        # replaces 58 lines
+        """
+        Replace the base implementation's use of shell to implement mkdtemp()
+        with an actual call to mkdtemp().
+        """
         path = self.call(tempfile.mkdtemp, prefix='ansible-mitogen-tmp-')
         self._cleanup_remote_tmp = True
         return path
 
     def _remove_tmp_path(self, tmp_path):
-        # replaces 10 lines
+        """
+        Replace the base implementation's invocation of rm -rf with a call to
+        shutil.rmtree().
+        """
         if self._should_remove_tmp_path(tmp_path):
             return self.call(shutil.rmtree, tmp_path)
 
     def _transfer_data(self, remote_path, data):
-        # replaces 20 lines
+        """
+        This is used by the base implementation of _execute_module(), it should
+        never be called.
+        """
         assert False, "_transfer_data() should never be called."
 
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
-        # replaces 83 lines
+        """
+        Mitogen always executes ActionBase helper methods in the context of the
+        target user account, so it is never necessary to modify permissions
+        except to ensure the execute bit is set if requested.
+        """
         if execute:
             return self._remote_chmod(remote_paths, mode='u+x')
-        # Do nothing unless request was to set the execute bit.
         return self.COMMAND_RESULT.copy()
 
     def _remote_chmod(self, paths, mode, sudoable=False):
+        """
+        Issue an asynchronous set_file_mode() call for every path in `paths`,
+        then format the resulting return value list with fake_shell().
+        """
         return self.fake_shell(lambda: mitogen.master.Select.all(
-            self._connection.call_async(ansible_mitogen.helpers.set_file_mode,
-                                        path, mode)
+            self._connection.call_async(
+                ansible_mitogen.helpers.set_file_mode, path, mode
+            )
             for path in paths
         ))
 
     def _remote_chown(self, paths, user, sudoable=False):
+        """
+        Issue an asynchronous os.chown() call for every path in `paths`, then
+        format the resulting return value list with fake_shell().
+        """
         ent = self.call(pwd.getpwnam, user)
         return self.fake_shell(lambda: mitogen.master.Select.all(
-            self._connection.call_async(os.chown, path, ent.pw_uid, ent.pw_gid)
+            self._connection.call_async(
+                os.chown, path, ent.pw_uid, ent.pw_gid
+            )
             for path in paths
         ))
 
     def _remote_expand_user(self, path, sudoable=True):
-        # replaces 25 lines
+        """
+        Replace the base implementation's attempt to emulate
+        os.path.expanduser() with an actual call to os.path.expanduser().
+        """
         if path.startswith('~'):
             path = self.call(os.path.expanduser, path)
         return path
@@ -155,6 +237,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
                         delete_remote_tmp=True, wrap_async=False):
+        """
+        Collect up a module's execution environment then use it to invoke
+        helpers.run_module() or helpers.run_module_async() in the target
+        context.
+        """
         module_name = module_name or self._task.action
         module_args = module_args or self._task.args
         task_vars = task_vars or {}
@@ -168,7 +255,6 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         env = {}
         self._compute_environment_string(env)
 
-        # replaces 110 lines
         js = self.call(
             helper,
             get_command_module_name(module_name),
@@ -183,15 +269,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             'stderr': ''
         })
 
-        # pre-split stdout/stderr into lines if needed
+        # Cutpasted from the base implementation.
         if 'stdout' in data and 'stdout_lines' not in data:
-            # if the value is 'False', a default won't catch it.
-            txt = data.get('stdout', None) or u''
-            data['stdout_lines'] = txt.splitlines()
+            data['stdout_lines'] = (data['stdout'] or u'').splitlines()
         if 'stderr' in data and 'stderr_lines' not in data:
-            # if the value is 'False', a default won't catch it.
-            txt = data.get('stderr', None) or u''
-            data['stderr_lines'] = txt.splitlines()
+            data['stderr_lines'] = (data['stderr'] or u'').splitlines()
 
         return data
 
@@ -199,13 +281,15 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                                    executable=None,
                                    encoding_errors='surrogate_then_replace',
                                    chdir=None):
+        """
+        Replace the mad rat's nest of logic in the base implementation by
+        simply calling helpers.exec_command() in the target context.
+        """
         if executable is None:  # executable defaults to False
             executable = self._play_context.executable
         if executable:
             cmd = executable + ' -c ' + commands.mkarg(cmd)
 
-        # replaces 57 lines
-        # replaces 126 lines of make_become_cmd()
         rc, stdout, stderr = self.call(
             ansible_mitogen.helpers.exec_command,
             cast(cmd),
