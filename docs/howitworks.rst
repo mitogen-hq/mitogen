@@ -813,6 +813,8 @@ on Windows. When that happens, it would be nice if the process model on Windows
 and UNIX did not differ, and in fact the code used on both were identical.
 
 
+.. _waking-sleeping-threads:
+
 Waking Sleeping Threads
 #######################
 
