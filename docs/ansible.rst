@@ -211,10 +211,7 @@ Sudo Variables
 * ansible_sudo_exe, ansible_become_exe
 * ansible_sudo_user, ansible_become_user (default: root)
 * ansible_sudo_pass, ansible_become_pass (default: assume passwordless)
-
-Unsupported:
-
-* sudo_flags
+* sudo_flags, become_flags
 
 
 Debugging
@@ -222,3 +219,49 @@ Debugging
 
 See :ref:`logging-env-vars` in the Getting Started guide for environment
 variables that activate debug logging.
+
+
+Implementation Notes
+--------------------
+
+Interpreter Reuse
+~~~~~~~~~~~~~~~~~
+
+The extension aggressively reuses the single target Python interpreter to
+execute every module. While this works well, it violates an unwritten
+assumption regarding Ansible modules, and so it is possible a buggy module
+could cause a run to fail, or for unrelated modules to interact with each other
+due to bad hygiene. Mitigations will be added as necessary if problems of this
+sort ever actually manfest.
+
+Patches
+~~~~~~~
+
+Three small patches are employed to hook into Ansible in desirable locations,
+in order to override uses of shell, the module executor, and the mechanism for
+selecting a connection plug-in. While it is hoped the patches can be avoided in
+future, for interesting versions of Ansible deployed today this simply is not
+possible, and so they continue to be required.
+
+The patches are well defined, act conservatively including by disabling
+themselves when non-Mitogen connections are in use, and additional third party
+plug-ins are unlikely to attempt similar patches, so the risk to an established
+configuration should be minimal.
+
+Flag Emulation
+~~~~~~~~~~~~~~
+
+Mitogen re-parses ``sudo_flags``, ``become_flags``, and ``ssh_flags`` using
+option parsers extracted from `sudo(1)` and `ssh(1)` in order to emulate their
+equivalent semantics. This allows:
+
+* robust support for common ``ansible.cfg`` tricks without reconfiguration,
+  such as forwarding SSH agents across ``sudo`` invocations,
+* reporting on conflicting flag combinations,
+* reporting on unsupported flag combinations,
+* avoiding opening the extension up to untestable scenarios where users can
+  insert arbitrary garbage between Mitogen and the components it integrates
+  with.
+* precise emulation by an alternative implementation, for example if Mitogen
+  grew support for Paramiko.
+
