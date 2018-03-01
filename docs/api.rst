@@ -573,13 +573,28 @@ Router Class
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
         :param str username:
-            The ``sudo`` username; defaults to ``root``.
+            Username to pass to sudo as the ``-u`` parameter, defaults to
+            ``root``.
         :param str sudo_path:
-            Absolute or relative path to ``sudo``. Defaults to ``sudo``.
+            Filename or complete path to the sudo binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``sudo``.
         :param str password:
-            Password to type if/when ``sudo`` requests it. If not specified and
-            a password is requested, :py:class:`mitogen.sudo.PasswordError` is
-            raised.
+            The password to use if/when sudo requests it. Depending on the sudo
+            configuration, this is either the current account password or the
+            target account password. :py:class:`mitogen.sudo.PasswordError`
+            will be raised if sudo requests a password but none is provided.
+        :param bool set_home:
+            If :py:data:`True`, request ``sudo`` set the ``HOME`` environment
+            variable to match the target UNIX account.
+        :param bool preserve_env:
+            If :py:data:`True`, request ``sudo`` to preserve the environment of
+            the parent process.
+        :param list sudo_args:
+            Arguments in the style of :py:data:`sys.argv` that would normally
+            be passed to ``sudo``. The arguments are parsed in-process to set
+            equivalent parameters. Re-parsing ensures unsupported options cause
+            :py:class:`mitogen.core.StreamError` to be raised, and that
+            attributes of the stream match the actual behaviour of ``sudo``.
 
     .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, compression_level=6, \**kwargs)
 
