@@ -29,6 +29,7 @@
 from __future__ import absolute_import
 import logging
 import os
+import shlex
 import sys
 import time
 
@@ -152,6 +153,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'python_path': python_path or self.python_path,
             'sudo_path': self.sudo_path,
             'via': via,
+            'sudo_args': shlex.split(self._play_context.sudo_flags or
+                                     self._play_context.become_flags or ''),
         }))
 
     def _connect(self):
