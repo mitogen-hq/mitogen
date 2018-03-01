@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import logging
+import optparse
 import os
 import time
 
@@ -36,6 +37,61 @@ import mitogen.parent
 
 LOG = logging.getLogger(__name__)
 PASSWORD_PROMPT = 'password'
+SUDO_OPTIONS = [
+    #(False, 'bool', '--askpass', '-A')
+    #(False, 'str', '--auth-type', '-a')
+    #(False, 'bool', '--background', '-b')
+    #(False, 'str', '--close-from', '-C')
+    #(False, 'str', '--login-class', 'c')
+    (True,  'bool', '--preserve-env', '-E'),
+    #(False, 'bool', '--edit', '-e')
+    #(False, 'str', '--group', '-g')
+    (True,  'bool', '--set-home', '-H'),
+    #(False, 'str', '--host', '-h')
+    #(False, 'bool', '--login', '-i')
+    #(False, 'bool', '--remove-timestamp', '-K')
+    #(False, 'bool', '--reset-timestamp', '-k')
+    #(False, 'bool', '--list', '-l')
+    #(False, 'bool', '--non-interactive', '-n')
+    #(False, 'bool', '--preserve-groups', '-P')
+    #(False, 'str', '--prompt', '-p')
+    #(False, 'str', '--role', '-r')
+    #(False, 'str', '--stdin', '-S')
+    #(False, 'str', '--shell', '-s')
+    #(False, 'str', '--type', '-t')
+    #(False, 'str', '--other-user', '-U')
+    #(False, 'str', '--user', '-u')
+    #(False, 'bool', '--version', '-V')
+    #(False, 'bool', '--validate', '-v')
+]
+
+
+class OptionParser(optparse.OptionParser):
+    def help(self):
+        self.exit()
+    def error(self, msg):
+        self.exit(msg=msg)
+    def exit(self, status=0, msg=None):
+        msg = 'sudo: ' + (msg or 'unsupported option')
+        raise mitogen.core.StreamError(msg)
+
+
+def make_sudo_parser():
+    parser = OptionParser()
+    for supported, kind, longopt, shortopt in SUDO_OPTIONS:
+        if kind == 'bool':
+            parser.add_option(longopt, shortopt, action='store_true')
+        else:
+            parser.add_option(longopt, shortopt)
+    return parser
+
+
+def parse_sudo_flags(args):
+    parser = make_sudo_parser()
+    opts, args = parser.parse_args(args)
+    if len(args):
+        raise mitogen.core.StreamError('unsupported sudo arguments:'+str(args))
+    return opts
 
 
 class PasswordError(mitogen.core.Error):
@@ -45,41 +101,27 @@ class PasswordError(mitogen.core.Error):
 class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.tty_create_child)
     sudo_path = 'sudo'
+    username = 'root'
     password = None
+    preserve_env = False
+    set_home = False
 
     def construct(self, username=None, sudo_path=None, password=None,
+                  preserve_env=None, set_home=None, sudo_args=None,
                   **kwargs):
-        """
-        Get the named sudo context, creating it if it does not exist.
-
-        :param mitogen.core.Broker broker:
-            The broker that will own the context.
-
-        :param str username:
-            Username to pass to sudo as the ``-u`` parameter, defaults to
-            ``root``.
-
-        :param str sudo_path:
-            Filename or complete path to the sudo binary. ``PATH`` will be
-            searched if given as a filename. Defaults to ``sudo``.
-
-        :param str python_path:
-            Filename or complete path to the Python binary. ``PATH`` will be
-            searched if given as a filename. Defaults to
-            :py:data:`sys.executable`.
-
-        :param str password:
-            The password to use when authenticating to sudo. Depending on the
-            sudo configuration, this is either the current account password or
-            the target account password. :py:class:`mitogen.sudo.PasswordError`
-            will be raised if sudo requests a password but none is provided.
-        """
         super(Stream, self).construct(**kwargs)
-        self.username = username or 'root'
-        if sudo_path:
+        opts = parse_sudo_flags(sudo_args or [])
+
+        if username is not None:
+            self.username = username
+        if sudo_path is not None:
             self.sudo_path = sudo_path
-        if password:
+        if password is not None:
             self.password = password
+        if (preserve_env or opts.preserve_env) is not None:
+            self.preserve_env = preserve_env or opts.preserve_env
+        if (set_home or opts.set_home) is not None:
+            self.set_home = set_home or opts.set_home
 
     def connect(self):
         super(Stream, self).connect()
@@ -87,6 +129,10 @@ class Stream(mitogen.parent.Stream):
 
     def get_boot_command(self):
         bits = [self.sudo_path, '-u', self.username]
+        if self.preserve_env:
+            bits += ['--preserve-env']
+        if self.set_home:
+            bits += ['--set-home']
         bits = bits + super(Stream, self).get_boot_command()
         LOG.debug('sudo command line: %r', bits)
         return bits
