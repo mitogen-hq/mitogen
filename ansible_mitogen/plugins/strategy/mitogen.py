@@ -48,7 +48,7 @@ try:
     import ansible_mitogen
 except ImportError:
     base_dir = os.path.dirname(__file__)
-    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../..')))
+    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
     del base_dir
 
 from ansible_mitogen.strategy import StrategyModule
