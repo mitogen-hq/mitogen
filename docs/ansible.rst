@@ -201,7 +201,8 @@ This list will grow as more missing pieces are discovered.
 * ansible_user, ansible_ssh_user
 * ansible_port, ssh_port
 * ansible_ssh_executable, ssh_executable
-* password (default: assume passwordless)
+* ansible_ssh_private_key_file
+* ansible_ssh_pass, ansible_password (default: assume passwordless)
 
 
 Sudo Variables
