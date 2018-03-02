@@ -135,6 +135,15 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 'identity_file': self._play_context.private_key_file,
                 'ssh_path': self._play_context.ssh_executable,
                 'connect_timeout': self.connect_timeout,
+                'ssh_args': [
+                    term
+                    for s in (
+                        getattr(self._play_context, 'ssh_args', ''),
+                        getattr(self._play_context, 'ssh_common_args', ''),
+                        getattr(self._play_context, 'ssh_extra_args', '')
+                    )
+                    for term in shlex.split(s or '')
+                ]
             })
         )
 
