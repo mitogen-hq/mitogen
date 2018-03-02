@@ -60,7 +60,7 @@ class Stream(mitogen.parent.Stream):
 
     def construct(self, hostname, username=None, ssh_path=None, port=None,
                   check_host_keys=True, password=None, identity_file=None,
-                  compression_level=6, **kwargs):
+                  compression_level=6, ssh_args=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         self.hostname = hostname
         self.username = username
@@ -71,6 +71,8 @@ class Stream(mitogen.parent.Stream):
         self.compression_level = compression_level
         if ssh_path:
             self.ssh_path = ssh_path
+        if ssh_args:
+            self.ssh_args = ssh_args
 
     def get_boot_command(self):
         bits = [self.ssh_path]
@@ -94,6 +96,8 @@ class Stream(mitogen.parent.Stream):
                 '-o', 'StrictHostKeyChecking no',
                 '-o', 'UserKnownHostsFile /dev/null',
             ]
+        if self.ssh_args:
+            bits += self.ssh_args
         bits.append(self.hostname)
         base = super(Stream, self).get_boot_command()
         return bits + [commands.mkarg(s).strip() for s in base]
