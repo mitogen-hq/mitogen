@@ -82,18 +82,6 @@ High Risk
   ``become_user``, and ``local_action`` have all been tested.
 
 
-Medium Risk
-~~~~~~~~~~~
-
-* In some cases ``remote_tmp`` may not be respected.
-
-* Interaction with modules employing special action plugins is minimally
-  tested, except for the ``synchronize``, ``template`` and ``copy`` modules.
-
-* For now only Python command modules work, however almost all modules shipped
-  with Ansible are Python-based.
-
-
 Low Risk
 ~~~~~~~~
 
@@ -103,6 +91,17 @@ Low Risk
   straightforward, and eventually at least ``su`` will be included.
 
 * The only supported strategy is ``linear``, which is Ansible's default.
+
+* In some cases ``remote_tmp`` may not be respected.
+
+* Interaction with modules employing special action plugins is minimally
+  tested, except for the ``synchronize``, ``template`` and ``copy`` modules.
+
+* For now only Python command modules work, however almost all modules shipped
+  with Ansible are Python-based.
+
+* Uncaptured standard output of remotely executing modules and shell commands
+  are logged to the console. This will be fixed in a later version.
 
 * Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
   to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
