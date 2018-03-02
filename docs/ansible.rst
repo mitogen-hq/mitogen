@@ -238,11 +238,11 @@ sort ever actually manfest.
 Patches
 ~~~~~~~
 
-Three small patches are employed to hook into Ansible in desirable locations,
-in order to override uses of shell, the module executor, and the mechanism for
-selecting a connection plug-in. While it is hoped the patches can be avoided in
-future, for interesting versions of Ansible deployed today this simply is not
-possible, and so they continue to be required.
+Three small runtime patches are employed to hook into Ansible in desirable
+locations, in order to override uses of shell, the module executor, and the
+mechanism for selecting a connection plug-in. While it is hoped the patches can
+be avoided in future, for interesting versions of Ansible deployed today this
+simply is not possible, and so they continue to be required.
 
 The patches are well defined, act conservatively including by disabling
 themselves when non-Mitogen connections are in use, and additional third party
@@ -262,7 +262,7 @@ equivalent semantics. This allows:
 * reporting on unsupported flag combinations,
 * avoiding opening the extension up to untestable scenarios where users can
   insert arbitrary garbage between Mitogen and the components it integrates
-  with.
+  with,
 * precise emulation by an alternative implementation, for example if Mitogen
   grew support for Paramiko.
 
