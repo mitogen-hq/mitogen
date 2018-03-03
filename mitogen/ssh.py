@@ -57,6 +57,7 @@ class Stream(mitogen.parent.Stream):
     identity_file = None
     password = None
     port = None
+    ssh_args = None
 
     def construct(self, hostname, username=None, ssh_path=None, port=None,
                   check_host_keys=True, password=None, identity_file=None,
