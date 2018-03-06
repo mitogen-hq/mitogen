@@ -344,7 +344,7 @@ class Stream(mitogen.core.Stream):
         # same str (2.x) or an equivalent bytes (3.x).
         return [
             self.python_path, '-c',
-            'from codecs import decode as _;'
+            'import codecs;_=codecs.decode;'
             'exec(_(_("%s".encode(),"base64"),"zlib"))' % (encoded,)
         ]
 
