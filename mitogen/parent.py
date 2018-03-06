@@ -326,7 +326,6 @@ class Stream(mitogen.core.Stream):
     # Optimized for minimum byte count after minification & compression.
     @staticmethod
     def _first_stage():
-        import os,sys
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
@@ -361,7 +360,7 @@ class Stream(mitogen.core.Stream):
         # same str (2.x) or an equivalent bytes (3.x).
         return [
             self.python_path, '-c',
-            'import codecs;_=codecs.decode;'
+            'import codecs,os,sys;_=codecs.decode;'
             'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded,)
         ]
 
