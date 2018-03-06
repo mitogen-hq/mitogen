@@ -177,6 +177,10 @@ as running `sftp` and `rsync` over a `sudo` session, to an account the user
 cannot otherwise directly log into, including in restrictive environments that
 for example enforce an interactive TTY and account password.
 
+.. raw:: html
+
+   <div style="clear: both;"></div>
+
 .. code-block:: python
 
     bastion = router.ssh(hostname='bastion.mycorp.com')
