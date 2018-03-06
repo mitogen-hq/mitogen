@@ -340,7 +340,7 @@ class Stream(mitogen.core.Stream):
             os.environ['ARGV0']=e=sys.executable
             os.execv(e,['mitogen:CONTEXT_NAME'])
         os.write(1,'EC0\n')
-        C=_(sys.stdin.read(PREAMBLE_COMPRESSED_LEN), 'zlib')
+        C=_(sys.stdin.read(PREAMBLE_COMPRESSED_LEN), 'zip')
         os.fdopen(W,'w',0).write(C)
         os.fdopen(w,'w',0).write('PREAMBLE_LEN\n'+C)
         os.write(1,'EC1\n')
@@ -362,7 +362,7 @@ class Stream(mitogen.core.Stream):
         return [
             self.python_path, '-c',
             'import codecs;_=codecs.decode;'
-            'exec(_(_("%s".encode(),"base64"),"zlib"))' % (encoded,)
+            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded,)
         ]
 
     def get_preamble(self):
