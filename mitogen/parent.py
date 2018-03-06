@@ -318,9 +318,12 @@ class Stream(mitogen.core.Stream):
             )
         )
 
-    # base64'd and passed to 'python -c'. It forks, dups 0->100, creates a
-    # pipe, then execs a new interpreter with a custom argv. 'CONTEXT_NAME' is
-    # replaced with the context name. Optimized for size.
+    # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
+    # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
+    # with a custom argv.
+    # 'CONTEXT_NAME', 'PREAMBLE_COMPRESSED_LEN', and 'PREAMBLE_LEN' are
+    # substituted with their respective values.
+    # Optimized for minimum byte count after minification & compression.
     @staticmethod
     def _first_stage():
         import os,sys
@@ -337,9 +340,9 @@ class Stream(mitogen.core.Stream):
             os.environ['ARGV0']=e=sys.executable
             os.execv(e,['mitogen:CONTEXT_NAME'])
         os.write(1,'EC0\n')
-        C=_(sys.stdin.read(input()), 'zlib')
+        C=_(sys.stdin.read(PREAMBLE_COMPRESSED_LEN), 'zlib')
         os.fdopen(W,'w',0).write(C)
-        os.fdopen(w,'w',0).write('%s\n'%len(C)+C)
+        os.fdopen(w,'w',0).write('PREAMBLE_LEN\n'+C)
         os.write(1,'EC1\n')
 
     def get_boot_command(self):
@@ -347,6 +350,9 @@ class Stream(mitogen.core.Stream):
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', self.remote_name)
+        preamble_compressed = self.get_preamble()
+        source = source.replace('PREAMBLE_COMPRESSED_LEN', str(len(preamble_compressed)))
+        source = source.replace('PREAMBLE_LEN', str(len(zlib.decompress(preamble_compressed))))
         encoded = zlib.compress(source, 9).encode('base64').replace('\n', '')
         # We can't use bytes.decode() in 3.x since it was restricted to always
         # return unicode, so codecs.decode() is used instead. In 3.x
@@ -374,8 +380,7 @@ class Stream(mitogen.core.Stream):
             'blacklist': self._router.get_module_blacklist(),
         },)
 
-        compressed = zlib.compress(minimize_source(source), 9)
-        return str(len(compressed)) + '\n' + compressed
+        return zlib.compress(minimize_source(source), 9)
 
     create_child = staticmethod(create_child)
 
