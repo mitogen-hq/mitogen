@@ -341,7 +341,6 @@ class Stream(mitogen.core.Stream):
         os.fdopen(W,'w',0).write(C)
         os.fdopen(w,'w',0).write('%s\n'%len(C)+C)
         os.write(1,'EC1\n')
-        sys.exit(0)
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
