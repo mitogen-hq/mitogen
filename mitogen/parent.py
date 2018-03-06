@@ -323,7 +323,7 @@ class Stream(mitogen.core.Stream):
     # replaced with the context name. Optimized for size.
     @staticmethod
     def _first_stage():
-        import os,sys,zlib
+        import os,sys
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
@@ -337,7 +337,7 @@ class Stream(mitogen.core.Stream):
             os.environ['ARGV0']=e=sys.executable
             os.execv(e,['mitogen:CONTEXT_NAME'])
         os.write(1,'EC0\n')
-        C=zlib.decompress(sys.stdin.read(input()))
+        C=_(sys.stdin.read(input()), 'zlib')
         os.fdopen(W,'w',0).write(C)
         os.fdopen(w,'w',0).write('%s\n'%len(C)+C)
         os.write(1,'EC1\n')
