@@ -337,7 +337,7 @@ class Stream(mitogen.core.Stream):
             os.close(W)
             os.close(w)
             os.environ['ARGV0']=sys.executable
-            os.execv(sys.executable,['mitogen:CONTEXT_NAME'])
+            os.execl(sys.executable,'mitogen:CONTEXT_NAME')
         os.write(1,'EC0\n')
         C=_(sys.stdin.read(PREAMBLE_COMPRESSED_LEN),'zip')
         os.fdopen(W,'w',0).write(C)
