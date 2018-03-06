@@ -345,7 +345,7 @@ class Stream(mitogen.core.Stream):
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', self.remote_name)
-        encoded = source.encode('zlib').encode('base64').replace('\n', '')
+        encoded = zlib.compress(source, 9).encode('base64').replace('\n', '')
         # We can't use bytes.decode() in 3.x since it was restricted to always
         # return unicode, so codecs.decode() is used instead. In 3.x
         # codecs.decode() requires a bytes object. Since we must be compatible
@@ -372,7 +372,7 @@ class Stream(mitogen.core.Stream):
             'blacklist': self._router.get_module_blacklist(),
         },)
 
-        compressed = zlib.compress(minimize_source(source))
+        compressed = zlib.compress(minimize_source(source), 9)
         return str(len(compressed)) + '\n' + compressed
 
     create_child = staticmethod(create_child)
