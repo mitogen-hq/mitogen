@@ -521,7 +521,7 @@ class ModuleResponder(object):
 
         if fullname == '__main__':
             source = self.neutralize_main(source)
-        compressed = zlib.compress(source)
+        compressed = zlib.compress(source, 9)
         related = list(self._finder.find_related(fullname))
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
         tup = fullname, pkg_present, path, compressed, related

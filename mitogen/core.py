@@ -445,7 +445,7 @@ class Importer(object):
                 'mitogen.core',
                 None,
                 'mitogen/core.py',
-                zlib.compress(core_src),
+                zlib.compress(core_src, 9),
                 [],
             )
 
