@@ -29,6 +29,12 @@ time spent by the target host already doing useful work. Mitogen cannot speed
 up a module once it is executing, it can only ensure the module executes as
 quickly as possible.
 
+.. raw:: html
+
+    <div style="float:right; border:1px solid silver;margin-left: 16px;">
+    <iframe src="https://www.kickstarter.com/projects/548438714/mitogen-extension-for-ansible/widget/card.html?v=2" width="220" height="420" frameborder="0" scrolling="no" target="_blank"></iframe>
+    </div>
+
 * **A single SSH connection is used for each target host**, in addition to one
   sudo invocation per distinct user account. Subsequent playbook steps always
   reuse the same connection. This is much better than SSH multiplexing combined
@@ -54,6 +60,31 @@ quickly as possible.
   relating to those files in cross-account scenarios are entirely avoided.
 
 
+Installation
+------------
+
+.. caution::
+
+    Thoroughly review the list of limitations before use, and **do not test the
+    prototype in a live environment until this notice is removed**.
+
+1. Verify Ansible 2.4 and Python 2.7 are listed in the output of ``ansible
+   --version``
+2. Download and extract http://github.com/dw/mitogen/archive/master.zip
+3. Modify ``ansible.cfg``:
+
+   .. code-block:: dosini
+
+        [defaults]
+        strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
+        strategy = mitogen
+
+   The ``strategy`` key is optional. If omitted, you can set the
+   ``ANSIBLE_STRATEGY=mitogen`` environment variable on a per-run basis.
+
+4. Cross your fingers and try it.
+
+
 Limitations
 -----------
 
@@ -70,6 +101,9 @@ High Risk
   <http://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
   minimal testing.
 
+* For now only **built-in Python command modules work**, however almost all
+  modules shipped with Ansible are Python-based.
+
 * Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
   such as triggered via the ``copy`` module, will cause corresponding temporary
   memory and CPU spikes on both host and target machine, due to delivering the
@@ -80,6 +114,10 @@ High Risk
 * Situations may exist where the playbook's execution conditions are not
   respected, however ``delegate_to``, ``connection: local``, ``become``,
   ``become_user``, and ``local_action`` have all been tested.
+
+* Only Ansible 2.4 is being used for development, with occasional tests under
+  2.3 and 2.2. It should be more than possible to fully support at least 2.3,
+  if not also 2.2.
 
 
 Low Risk
@@ -96,9 +134,6 @@ Low Risk
 
 * Interaction with modules employing special action plugins is minimally
   tested, except for the ``synchronize``, ``template`` and ``copy`` modules.
-
-* For now only Python command modules work, however almost all modules shipped
-  with Ansible are Python-based.
 
 * Uncaptured standard output of remotely executing modules and shell commands
   are logged to the console. This will be fixed in a later version.
@@ -129,29 +164,8 @@ Behavioural Differences
   connection to host closed`` to appear in ``stderr`` output of every executed
   command. This never manifests with the Mitogen extension.
 
-* Asynchronous jobs execute in a thread of the single target Python
-  interpreter. In future this will be replaced with subprocesses, as it's
-  likely some use cases spawn many asynchronous jobs.
-
-
-Configuration
--------------
-
-.. warning::
-
-    Don't test the prototype in a live environment until this notice is removed.
-
-1. Ensure the host machine is using Python 2.x for Ansible by verifying the
-   output of ``ansible --version``. Ensure the ``python`` command starts a
-   Python 2.x interpreter. If not, substitute ``python`` for the correct
-   command in steps 2 and 3.
-2. ``python -m pip install -U git+https://github.com/dw/mitogen.git`` **on the
-   host machine only**.
-3. ``python -c 'import ansible_mitogen as a; print a.__path__'``
-4. Add ``strategy_plugins = /path/to/../ansible_mitogen/plugins/strategy`` using the
-   path from above to the ``[defaults]`` section of ``ansible.cfg``.
-5. Add ``strategy = mitogen`` to the ``[defaults]`` section of ``ansible.cfg``.
-6. Cross your fingers and try it out.
+* Asynchronous support is very primitive, and jobs execute in a thread of the
+  target Python interpreter. This will fixed shortly.
 
 
 Demo
@@ -232,8 +246,8 @@ The extension aggressively reuses the single target Python interpreter to
 execute every module. While this works well, it violates an unwritten
 assumption regarding Ansible modules, and so it is possible a buggy module
 could cause a run to fail, or for unrelated modules to interact with each other
-due to bad hygiene. Mitigations will be added as necessary if problems of this
-sort ever actually manfest.
+due to bad hygiene. Mitigations (such as forking) will be added as necessary if
+problems of this sort ever actually manfest.
 
 Patches
 ~~~~~~~
@@ -244,8 +258,8 @@ mechanism for selecting a connection plug-in. While it is hoped the patches can
 be avoided in future, for interesting versions of Ansible deployed today this
 simply is not possible, and so they continue to be required.
 
-The patches are well defined, act conservatively including by disabling
-themselves when non-Mitogen connections are in use, and additional third party
+The patches are concise and behave conservatively, including by disabling
+themselves when non-Mitogen connections are in use. Additional third party
 plug-ins are unlikely to attempt similar patches, so the risk to an established
 configuration should be minimal.
 
@@ -260,6 +274,8 @@ equivalent semantics. This allows:
   such as forwarding SSH agents across ``sudo`` invocations,
 * reporting on conflicting flag combinations,
 * reporting on unsupported flag combinations,
+* internally special-casing certain behaviour (like recursive agent forwarding)
+  without boring the user with the details,
 * avoiding opening the extension up to untestable scenarios where users can
   insert arbitrary garbage between Mitogen and the components it integrates
   with,

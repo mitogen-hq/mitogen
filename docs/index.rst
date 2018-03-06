@@ -12,18 +12,15 @@ Mitogen is a Python library for writing distributed self-replicating programs.
         }
     </style>
 
-.. warning::
+.. caution::
 
-    This is alpha-quality code. If you intend to use it, be aware of how little
-    real world testing it has received, the total absence of any systematic
-    tests, and the nightmare-level difficulty of debugging hangs in a tree of
-    processes running identical code straddling multiple thread and machine
-    boundaries! ``router.enable_debug()`` is your friend.
+    Be aware this is prerelease code, and that comprehensive automated tests
+    are presently absent.
+    :py:meth:`Router.enable_debug() <mitogen.master.Router.enable_debug>` is
+    your friend. If have a use for this software, please `drop an e-mail`_ so
+    expectations and bug fixes can be managed sensibly.
 
-    If you think you have a use for this software, please `drop me an e-mail`_
-    so that expectations and bug fixes can be managed sensibly.
-
-    .. _drop me an e-mail: dw@botanicus.net
+    .. _drop an e-mail: dw@botanicus.net
 
 .. image:: images/cell_division.png
     :align: right
