@@ -259,9 +259,12 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         helpers.run_module() or helpers.run_module_async() in the target
         context.
         """
-        module_name = module_name or self._task.action
-        module_args = module_args or self._task.args
-        task_vars = task_vars or {}
+        if task_vars is None:
+            task_vars = {}
+        if module_name is None:
+            module_name = self._task.action
+        if module_args is None:
+            module_args = self._task.args
 
         self._update_module_args(module_name, module_args, task_vars)
         if wrap_async:
