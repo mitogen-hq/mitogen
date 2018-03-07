@@ -50,11 +50,19 @@ def _formatTime(record, datefmt=None):
     return dt.strftime(datefmt)
 
 
-def log_to_file(path=None, io=False, usec=False, level='INFO'):
-    io = ('MITOGEN_LOG_IO' in os.environ) or io
+def log_get_formatter(usec=False):
     usec = ('MITOGEN_LOG_USEC' in os.environ) or usec
-    level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
+    datefmt = '%H:%M:%S'
+    if usec:
+        datefmt += '.%f'
 
+    fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
+    formatter = logging.Formatter(fmt, datefmt)
+    formatter.formatTime = _formatTime
+    return formatter
+
+
+def log_to_file(path=None, io=False, usec=False, level='INFO'):
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
@@ -62,18 +70,16 @@ def log_to_file(path=None, io=False, usec=False, level='INFO'):
     else:
         fp = sys.stderr
 
+    level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
     level = getattr(logging, level, logging.INFO)
     log.setLevel(level)
+
+    io = ('MITOGEN_LOG_IO' in os.environ) or io
     if io:
         logging.getLogger('mitogen.io').setLevel(level)
 
-    fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
-    datefmt = '%H:%M:%S'
-    if usec:
-        datefmt += '.%f'
     handler = logging.StreamHandler(fp)
-    handler.formatter = logging.Formatter(fmt, datefmt)
-    handler.formatter.formatTime = _formatTime
+    handler.formatter = log_get_formatter(usec=usec)
     log.handlers.insert(0, handler)
 
 

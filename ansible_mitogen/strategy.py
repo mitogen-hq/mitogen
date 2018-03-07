@@ -38,6 +38,7 @@ import mitogen.utils
 
 import ansible.errors
 import ansible.plugins.strategy.linear
+import ansible_mitogen.logging
 import ansible_mitogen.mixins
 import ansible_mitogen.services
 
@@ -176,7 +177,6 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Arrange for a mitogen.master.Router to be available for the duration of
         the strategy's real run() method.
         """
-        mitogen.utils.log_to_file()
         self._setup_master()
         self._setup_services()
         try:
@@ -216,6 +216,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         action_loader.add_directory(os.path.join(base_dir, 'actions'))
 
     def run(self, iterator, play_context, result=0):
+        ansible_mitogen.logging.setup()
         self._add_connection_plugin_path()
         self._install_wrappers()
         try:
