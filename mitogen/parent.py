@@ -537,7 +537,7 @@ class ModuleForwarder(object):
                 try:
                     rtup = self.importer._cache[related]
                 except KeyError:
-                    LOG.warn('%r._on_get_module(): skipping %r, not in cache', 
+                    LOG.debug('%r._on_get_module(): skipping %r, not in cache', 
                              self, related)
                     continue
                 self._send_one_module(msg, rtup)
