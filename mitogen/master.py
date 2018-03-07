@@ -363,7 +363,7 @@ class ModuleFinder(object):
                 break
         else:
             tup = None, None, None
-            LOG.warning('get_module_source(%r): cannot find source', fullname)
+            LOG.debug('get_module_source(%r): cannot find source', fullname)
 
         self._found_cache[fullname] = tup
         return tup
