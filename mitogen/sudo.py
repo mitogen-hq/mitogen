@@ -56,7 +56,11 @@ SUDO_OPTIONS = [
     #(False, 'bool', '--preserve-groups', '-P')
     #(False, 'str', '--prompt', '-p')
     #(False, 'str', '--role', '-r')
-    #(False, 'str', '--stdin', '-S')
+
+    # For now the password is always typed interactively on a TTY, so accept
+    # this option but do not pass it through.
+    (True, 'bool', '--stdin', '-S'),
+
     #(False, 'str', '--shell', '-s')
     #(False, 'str', '--type', '-t')
     #(False, 'str', '--other-user', '-U')
