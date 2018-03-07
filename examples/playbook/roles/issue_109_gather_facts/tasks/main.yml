@@ -1,0 +1,4 @@
+---
+
+- name: Gather facts
+  action: setup
