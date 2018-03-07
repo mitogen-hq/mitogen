@@ -26,17 +26,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import getpass
+import inspect
 import logging
 import os
-import termios
-import signal
+import re
 import select
-import getpass
-import time
+import signal
 import socket
-import inspect
+import sys
+import termios
 import textwrap
+import time
 import zlib
 
 import mitogen.core
@@ -289,6 +290,11 @@ class Stream(mitogen.core.Stream):
         super(Stream, self).construct(**kwargs)
         if python_path:
             self.python_path = python_path
+        if sys.platform == 'darwin' and self.python_path == '/usr/bin/python':
+            # OS X installs a craptacular argv0-introspecting Python version
+            # switcher as /usr/bin/python. Override attempts to call it with an
+            # explicit call to python2.7
+            self.python_path = '/usr/bin/python2.7'
         if connect_timeout:
             self.connect_timeout = connect_timeout
         if remote_name is None:
