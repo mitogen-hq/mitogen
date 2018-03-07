@@ -380,10 +380,9 @@ The package is written using syntax compatible all the way back to **Python
 potentially ancient corporate hardware. For example Mitogen can be used out of
 the box against Red Hat Enterprise Linux 5, released in 2007.
 
-There is currently no support for Python 3, and no solid plan for supporting it
-any time soon. Due to constraints on implementation size and desire for
-compatibility with ancient Python versions, conventional porting methods such
-as ``six.py`` are likely to be unsuitable.
+Support for Python 3 is included using 2to3 triggered during setup.py, however
+such a Mitogen install does not support communicating with older 2.x systems. A
+future revision will support full cross 2/3 compatibility.
 
 
 Zero Dependencies
