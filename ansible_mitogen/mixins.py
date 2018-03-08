@@ -28,6 +28,7 @@
 
 from __future__ import absolute_import
 import commands
+import logging
 import os
 import pwd
 import shutil
@@ -50,6 +51,9 @@ from mitogen.utils import cast
 import ansible_mitogen.connection
 import ansible_mitogen.helpers
 from ansible.module_utils._text import to_text
+
+
+LOG = logging.getLogger(__name__)
 
 
 def get_command_module_name(module_name):
@@ -157,6 +161,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             if stdout:
                 dct['stdout'] = repr(rc)
         except mitogen.core.CallError:
+            LOG.exception('While emulating a shell command')
             dct['rc'] = 1
             dct['stderr'] = traceback.format_exc()
 
