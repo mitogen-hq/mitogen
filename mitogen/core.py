@@ -482,6 +482,11 @@ class Importer(object):
                           self, fullname)
                 return None
 
+            # #114: explicitly whitelisted prefixes override any
+            # system-installed package.
+            if self.whitelist and not is_blacklisted_import(self, fullname):
+                return self
+
             try:
                 self.builtin_find_module(fullname)
                 _v and LOG.debug('%r: %r is available locally', self, fullname)
