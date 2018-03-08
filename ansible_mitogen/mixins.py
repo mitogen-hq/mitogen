@@ -216,6 +216,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_transfer_data(%r, %s ..%d bytes)',
                   remote_path, type(data), len(data))
         self._connection.put_data(remote_path, data)
+        return remote_path
 
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
         """
