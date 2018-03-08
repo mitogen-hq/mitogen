@@ -13,10 +13,6 @@ while time.time() < deadline and proc.poll() is None:
     time.sleep(1.0)
 
 if proc.poll() is not None:
-    if proc.returncode:
-        print
-        print >> sys.stderr, "Command failed:", sys.argv[2:]
-        print
     sys.exit(proc.returncode)
 proc.terminate()
 print
