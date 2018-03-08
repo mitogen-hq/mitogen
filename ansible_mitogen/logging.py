@@ -45,7 +45,8 @@ class Handler(logging.Handler):
         self.method = method
 
     def emit(self, record):
-        self.method(self.format(record))
+        msg = self.format(record)
+        self.method('[pid %d] %s' % (os.getpid(), msg))
 
 
 def find_display():
