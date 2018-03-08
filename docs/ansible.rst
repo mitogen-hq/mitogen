@@ -132,12 +132,6 @@ Low Risk
 
 * In some cases ``remote_tmp`` may not be respected.
 
-* Interaction with modules employing special action plugins is minimally
-  tested, except for the ``synchronize``, ``template`` and ``copy`` modules.
-
-* Uncaptured standard output of remotely executing modules and shell commands
-  are logged to the console. This will be fixed in a later version.
-
 * Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
   to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
   disables pseudo TTYs for certain commands where standard input is required or
@@ -159,6 +153,11 @@ Low Risk
 
 Behavioural Differences
 -----------------------
+
+* Normally with Ansible, diagnostics and use of the :py:mod:`logging` package
+  output on the target machine are discarded. With Mitogen, all of this is
+  captured and returned to the host machine, where it can be viewed as desired
+  with ``-vvv``.
 
 * Ansible with SSH multiplexing enabled causes a string like ``Shared
   connection to host closed`` to appear in ``stderr`` output of every executed
