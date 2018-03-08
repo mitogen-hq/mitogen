@@ -62,7 +62,8 @@ def _stdlib_paths():
     ]
     prefixes = (getattr(sys, a) for a in attr_candidates if hasattr(sys, a))
     version = 'python%s.%s' % sys.version_info[0:2]
-    return set(os.path.join(p, 'lib', version) for p in prefixes)
+    return set(os.path.abspath(os.path.join(p, 'lib', version))
+               for p in prefixes)
 
 
 def get_child_modules(path):
@@ -283,7 +284,7 @@ class ModuleFinder(object):
             return False
 
         # six installs crap with no __file__
-        modpath = getattr(module, '__file__', '')
+        modpath = os.path.abspath(getattr(module, '__file__', ''))
         if 'site-packages' in modpath:
             return False
 
@@ -535,10 +536,10 @@ class ModuleResponder(object):
         stream.sent_modules.add(fullname)
 
     def _on_get_module(self, msg):
-        LOG.debug('%r.get_module(%r)', self, msg)
         if msg == mitogen.core._DEAD:
             return
 
+        LOG.debug('%r._on_get_module(%r)', self, msg.data)
         stream = self._router.stream_by_id(msg.src_id)
         fullname = msg.data
         if fullname in stream.sent_modules:
