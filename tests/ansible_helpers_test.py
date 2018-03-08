@@ -6,7 +6,7 @@ import testlib
 
 
 class ApplyModeSpecTest(unittest2.TestCase):
-    func = staticmethod(ansible_mitogen.apply_mode_spec)
+    func = staticmethod(ansible_mitogen.helpers.apply_mode_spec)
 
     def test_simple(self):
         spec = 'u+rwx,go=x'
