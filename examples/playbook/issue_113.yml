@@ -1,7 +1,9 @@
-
+---
 
 - hosts: all
+  gather_facts: false
   tasks:
+
   - name: Get auth token
     uri:
       url: "https://httpbin.org/post"
@@ -13,7 +15,7 @@
     register: r_token
     no_log: false
     run_once: true
-    delegate_to: localhost
+    register: foo
 
-
-
+  - assert:
+      that: foo.status == 200
