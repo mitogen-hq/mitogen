@@ -172,6 +172,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Determine if `path` exists by directly invoking os.path.exists() in the
         target user account.
         """
+        LOG.debug('_remote_file_exists(%r)', path)
         return self.call(os.path.exists, path)
 
     def _configure_module(self, module_name, module_args, task_vars=None):
@@ -193,6 +194,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Replace the base implementation's use of shell to implement mkdtemp()
         with an actual call to mkdtemp().
         """
+        LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
         path = self.call(tempfile.mkdtemp, prefix='ansible-mitogen-tmp-')
         self._cleanup_remote_tmp = True
         return path
@@ -202,6 +204,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Replace the base implementation's invocation of rm -rf with a call to
         shutil.rmtree().
         """
+        LOG.debug('_remove_tmp_path(%r)', tmp_path)
         if self._should_remove_tmp_path(tmp_path):
             return self.call(shutil.rmtree, tmp_path)
 
@@ -210,6 +213,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Used by the base _execute_module(), and in <2.4 also by the template
         action module, and probably others.
         """
+        LOG.debug('_transfer_data(%r, %s ..%d bytes)',
+                  remote_path, type(data), len(data))
         self._connection.put_data(remote_path, data)
 
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
@@ -218,6 +223,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         target user account, so it is never necessary to modify permissions
         except to ensure the execute bit is set if requested.
         """
+        LOG.debug('_fixup_perms2(%r, remote_user=%r, execute=%r)',
+                  remote_paths, remote_user, execute)
         if execute:
             return self._remote_chmod(remote_paths, mode='u+x')
         return self.COMMAND_RESULT.copy()
@@ -227,6 +234,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Issue an asynchronous set_file_mode() call for every path in `paths`,
         then format the resulting return value list with fake_shell().
         """
+        LOG.debug('_remote_chmod(%r, mode=%r, sudoable=%r)',
+                  paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.master.Select.all(
             self._connection.call_async(
                 ansible_mitogen.helpers.set_file_mode, path, mode
@@ -239,6 +248,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Issue an asynchronous os.chown() call for every path in `paths`, then
         format the resulting return value list with fake_shell().
         """
+        LOG.debug('_remote_chown(%r, user=%r, sudoable=%r)',
+                  paths, user, sudoable)
         ent = self.call(pwd.getpwnam, user)
         return self.fake_shell(lambda: mitogen.master.Select.all(
             self._connection.call_async(
@@ -252,6 +263,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Replace the base implementation's attempt to emulate
         os.path.expanduser() with an actual call to os.path.expanduser().
         """
+        LOG.debug('_remove_expand_user(%r, sudoable=%r)', path, sudoable)
         if path.startswith('~'):
             path = self.call(os.path.expanduser, path)
         return path
@@ -310,6 +322,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Replace the mad rat's nest of logic in the base implementation by
         simply calling helpers.exec_command() in the target context.
         """
+        LOG.debug('_low_level_execute_command(%r, in_data=%r, exe=%r, dir=%r)',
+                  cmd, type(in_data), executable, chdir)
         if executable is None:  # executable defaults to False
             executable = self._play_context.executable
         if executable:
