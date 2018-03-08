@@ -262,6 +262,19 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                            cast(in_path))
         ansible_mitogen.helpers.write_path(out_path, output)
 
+    def put_data(self, out_path, data):
+        """
+        Implement put_file() by caling the corresponding
+        ansible_mitogen.helpers function in the target.
+
+        :param str in_path:
+            Local filesystem path to read.
+        :param str out_path:
+            Remote filesystem path to write.
+        """
+        self.call(ansible_mitogen.helpers.write_path,
+                  cast(out_path), cast(data))
+
     def put_file(self, in_path, out_path):
         """
         Implement put_file() by caling the corresponding
@@ -272,5 +285,4 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.call(ansible_mitogen.helpers.write_path, cast(out_path),
-                  ansible_mitogen.helpers.read_path(in_path))
+        self.put_data(out_path, ansible_mitogen.helpers.read_path(in_path))
