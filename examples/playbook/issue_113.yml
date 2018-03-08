@@ -15,7 +15,6 @@
     register: r_token
     no_log: false
     run_once: true
-    register: foo
 
   - assert:
-      that: foo.status == 200
+      that: r_token.status == 200
