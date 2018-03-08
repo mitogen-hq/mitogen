@@ -78,13 +78,17 @@ class Listener(mitogen.core.BasicStream):
 
     def on_receive(self, broker):
         sock, _ = self._sock.accept()
+        pid, = struct.unpack('>L', sock.recv(4))
+
         context_id = self._router.id_allocator.allocate()
         context = mitogen.master.Context(self._router, context_id)
         stream = mitogen.core.Stream(self._router, context_id)
         stream.accept(sock.fileno(), sock.fileno())
+        stream.name = 'unix_client.%d' % (pid,)
         stream.auth_id = mitogen.context_id
         self._router.register(context, stream)
-        sock.send(struct.pack('>LL', context_id, mitogen.context_id))
+        sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
+                              os.getpid()))
         sock.close()
 
 
@@ -92,7 +96,8 @@ def connect(path):
     LOG.debug('unix.connect(path=%r)', path)
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(path)
-    mitogen.context_id, remote_id = struct.unpack('>LL', sock.recv(8))
+    sock.send(struct.pack('>L', os.getpid()))
+    mitogen.context_id, remote_id, pid = struct.unpack('>LLL', sock.recv(12))
     mitogen.parent_id = remote_id
     mitogen.parent_ids = [remote_id]
 
@@ -102,6 +107,7 @@ def connect(path):
     router = mitogen.master.Router()
     stream = mitogen.core.Stream(router, remote_id)
     stream.accept(sock.fileno(), sock.fileno())
+    stream.name = 'unix_listener.%d' % (pid,)
 
     context = mitogen.master.Context(router, remote_id)
     router.register(context, stream)
