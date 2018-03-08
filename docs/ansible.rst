@@ -234,16 +234,17 @@ Debugging
 
 Mitogen's logs are integrated into Ansible's display framework. Basic high
 level debug logs are produced with ``-vvv``, with logging of all IO activity on
-the controller machine with ``-vvvv``.
+the controller machine when ``-vvvv`` or higher is specified.
 
-It is not possible to receive IO activity logs from children spawned on remote
-machines, as the processs of receiving those woulds would in turn generate more
-logs To receive a complete trace of every process, file-based logging is
-required, which can be enabled by setting ``MITOGEN_ROUTER_DEBUG=1`` in your
-environment.
+Although any use of standard IO and the logging package on remote machines is
+forwarded to the controller machine, it is not possible to receive logs of all
+IO activity, as the processs of receiving those logs would would in turn
+generate more IO activity. To receive a complete trace of every process on
+every machine, file-based logging is required. File-based logging can be
+enabled by setting ``MITOGEN_ROUTER_DEBUG=1`` in your environment.
 
 When file-based logging is enabled, one file per context will be created on the
-target machines, as ``/tmp/mitogen.<pid>.log``.
+local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
 
 
 Implementation Notes
