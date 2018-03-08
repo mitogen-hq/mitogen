@@ -202,10 +202,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _transfer_data(self, remote_path, data):
         """
-        This is used by the base implementation of _execute_module(), it should
-        never be called.
+        Used by the base _execute_module(), and in <2.4 also by the template
+        action module, and probably others.
         """
-        assert False, "_transfer_data() should never be called."
+        self._connection.put_data(remote_path, data)
 
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
         """
