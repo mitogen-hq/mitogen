@@ -158,6 +158,8 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Construct a Router, Broker, and mitogen.unix listener
         """
         self.router = mitogen.master.Router()
+        if 'MITOGEN_ROUTER_DEBUG' in os.environ:
+            self.router.enable_debug()
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
         self.listener = mitogen.unix.Listener(self.router)

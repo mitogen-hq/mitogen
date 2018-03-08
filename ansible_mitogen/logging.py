@@ -69,11 +69,9 @@ def setup():
     """
     display = find_display()
 
-    mitogen.core.LOG.propagate = False
     mitogen.core.LOG.handlers = [Handler(display.v)]
     mitogen.core.LOG.setLevel(logging.DEBUG)
 
-    mitogen.core.IOLOG.propagate = False
     mitogen.core.IOLOG.handlers = [Handler(display.vvvv)]
     if display.verbosity > 3:
         mitogen.core.IOLOG.setLevel(logging.DEBUG)
