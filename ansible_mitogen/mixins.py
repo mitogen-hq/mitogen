@@ -35,6 +35,9 @@ import shutil
 import tempfile
 import traceback
 
+from ansible.module_utils._text import to_bytes
+from ansible.parsing.utils.jsonify import jsonify
+
 import ansible
 import ansible.plugins
 import ansible.plugins.action
@@ -213,6 +216,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Used by the base _execute_module(), and in <2.4 also by the template
         action module, and probably others.
         """
+        if isinstance(data, dict):
+            data = jsonify(data)
+        if not isinstance(data, bytes):
+            data = to_bytes(data, errors='surrogate_or_strict')
+
         LOG.debug('_transfer_data(%r, %s ..%d bytes)',
                   remote_path, type(data), len(data))
         self._connection.put_data(remote_path, data)
