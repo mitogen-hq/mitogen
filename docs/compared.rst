@@ -129,6 +129,31 @@ Basically a Fabric-alike
 
 .. _invoke: http://www.pyinvoke.org/
 
+Multiprocessing
+###############
+
+multiprocessing_ was added to the stdlib in Python 2.6.
+
+    multiprocessing is a package that supports spawning processes using an
+    API similar to the threading module. The multiprocessing package offers
+    both local and remote concurrency
+
+There is a backport_ for Python 2.4 & 2.5, but it is not pure Python.
+pymultiprocessing_ appears to be a pure Python implementation.
+An ecosystem_ of packages has built up around multiprocessing.
+
+The `programming guidelines`_ section notes
+
+- Arguments to proxies must be picklable. On Windows this also applies to
+  ``multiprocessing.Process.__init__()`` arguments.
+- Callers should beware replacing ``sys.stdin``, because
+  ``multiprocessing.Process._bootstrap()``
+  will close it and open /dev/null instead
+
+.. _programming guidelines: https://docs.python.org/2/library/multiprocessing.html#programming-guidelines
+.. _backport: https://pypi.python.org/pypi/multiprocessing
+.. _pymultiprocessing: https://pypi.python.org/pypi/pymultiprocessing
+.. _ecosystem: https://pypi.python.org/pypi?%3Aaction=search&term=multiprocessing&submit=search
 
 Paver
 #####
