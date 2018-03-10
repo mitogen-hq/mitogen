@@ -89,11 +89,19 @@ Execnet_
 - Built-in unidirectional rsync-alike, compared to Mitogen's SSH emulation which allows use of real rsync in any supported mode
 - no support for sudo, but supports connecting to vagrant
 - works with read-only filesystem
-- includes its own serialization independent of the standard library, Mitogen uses cPickle.
+- includes its own serialization_ independent of the standard library
+
+      The obj and all contained objects must be of a builtin python type
+      (so nested dicts, sets, etc. are all ok but not user-level instances).
+
+- Known uses include `pytest-xdist`_, and `Distributed NLTK`_
 
 You should use Execnet if you value code maturity more than featureset.
 
 .. _Execnet: https://codespeak.net/execnet/
+.. _serialization: https://codespeak.net/execnet/basics.html#dumps-loads
+.. _pytest-xdist: https://pypi.python.org/pypi/pytest-xdist
+.. _Distributed NLTK: https://streamhacker.com/2009/12/14/execnet-disco-distributed-nltk/
 
 Fabric
 ######
