@@ -86,7 +86,7 @@ Installation
 
 1. Verify Ansible 2.4 and Python 2.7 are listed in the output of ``ansible
    --version``
-2. Download and extract http://github.com/dw/mitogen/archive/master.zip
+2. Download and extract https://github.com/dw/mitogen/archive/master.zip
 3. Modify ``ansible.cfg``:
 
    .. code-block:: dosini
@@ -114,7 +114,7 @@ High Risk
   the first playbook step will simply run unnecessarily slowly.
 
 * `Asynchronous Actions And Polling
-  <http://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
+  <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
   minimal testing.
 
 * For now only **built-in Python command modules work**, however almost all
