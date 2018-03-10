@@ -127,6 +127,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             ContextService.handle,
             cast({
                 'method': 'ssh',
+                'check_host_keys': False,  # TODO
                 'hostname': self._play_context.remote_addr,
                 'username': self._play_context.remote_user,
                 'password': self._play_context.password,
