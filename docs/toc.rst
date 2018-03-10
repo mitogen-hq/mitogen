@@ -12,5 +12,7 @@ Table Of Contents
    api
    examples
    internals
+   signals
+   compared
    history
    shame
