@@ -38,7 +38,7 @@ and efficient low-level API on which tools like `Salt`_, `Ansible`_, or
 
 .. _Salt: https://docs.saltstack.com/en/latest/
 .. _Ansible: http://docs.ansible.com/
-.. _Fabric: http://docs.fabfile.org/en/
+.. _Fabric: http://www.fabfile.org/
 
 The focus is to centralize and perfect the intricate dance required to run
 Python code safely and efficiently on a remote machine, while **avoiding
