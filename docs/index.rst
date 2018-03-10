@@ -12,18 +12,15 @@ Mitogen is a Python library for writing distributed self-replicating programs.
         }
     </style>
 
-.. warning::
+.. caution::
 
-    This is alpha-quality code. If you intend to use it, be aware of how little
-    real world testing it has received, the total absence of any systematic
-    tests, and the nightmare-level difficulty of debugging hangs in a tree of
-    processes running identical code straddling multiple thread and machine
-    boundaries! ``router.enable_debug()`` is your friend.
+    Be aware this is prerelease code, and that comprehensive automated tests
+    are presently absent.
+    :py:meth:`Router.enable_debug() <mitogen.master.Router.enable_debug>` is
+    your friend. If have a use for this software, please `drop an e-mail`_ so
+    expectations and bug fixes can be managed sensibly.
 
-    If you think you have a use for this software, please `drop me an e-mail`_
-    so that expectations and bug fixes can be managed sensibly.
-
-    .. _drop me an e-mail: dw@botanicus.net
+    .. _drop an e-mail: dw@botanicus.net
 
 .. image:: images/cell_division.png
     :align: right
@@ -179,6 +176,10 @@ Scenarios that were not previously possible with these tools are enabled, such
 as running `sftp` and `rsync` over a `sudo` session, to an account the user
 cannot otherwise directly log into, including in restrictive environments that
 for example enforce an interactive TTY and account password.
+
+.. raw:: html
+
+   <div style="clear: both;"></div>
 
 .. code-block:: python
 
@@ -379,10 +380,9 @@ The package is written using syntax compatible all the way back to **Python
 potentially ancient corporate hardware. For example Mitogen can be used out of
 the box against Red Hat Enterprise Linux 5, released in 2007.
 
-There is currently no support for Python 3, and no solid plan for supporting it
-any time soon. Due to constraints on implementation size and desire for
-compatibility with ancient Python versions, conventional porting methods such
-as ``six.py`` are likely to be unsuitable.
+Support for Python 3 is included using 2to3 triggered during setup.py, however
+such a Mitogen install does not support communicating with older 2.x systems. A
+future revision will support full cross 2/3 compatibility.
 
 
 Zero Dependencies

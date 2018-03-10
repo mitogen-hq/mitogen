@@ -26,17 +26,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import re
+import getpass
+import inspect
 import logging
 import os
-import termios
-import signal
+import re
 import select
-import getpass
-import time
+import signal
 import socket
-import inspect
+import sys
+import termios
 import textwrap
+import time
 import zlib
 
 import mitogen.core
@@ -214,6 +215,9 @@ def iter_read(fd, deadline=None):
 
 def discard_until(fd, s, deadline):
     for buf in iter_read(fd, deadline):
+        if IOLOG.level == logging.DEBUG:
+            for line in buf.splitlines():
+                IOLOG.debug('discard_until: discarding %r', line)
         if buf.endswith(s):
             return
 
@@ -289,6 +293,11 @@ class Stream(mitogen.core.Stream):
         super(Stream, self).construct(**kwargs)
         if python_path:
             self.python_path = python_path
+        if sys.platform == 'darwin' and self.python_path == '/usr/bin/python':
+            # OS X installs a craptacular argv0-introspecting Python version
+            # switcher as /usr/bin/python. Override attempts to call it with an
+            # explicit call to python2.7
+            self.python_path = '/usr/bin/python2.7'
         if connect_timeout:
             self.connect_timeout = connect_timeout
         if remote_name is None:
@@ -532,13 +541,10 @@ class ModuleForwarder(object):
         tup = self.importer._cache[fullname]
         if tup is not None:
             for related in tup[4]:
-                LOG.debug('%r._on_get_module(): trying related %r',
-                          self, related)
-                try:
-                    rtup = self.importer._cache[related]
-                except KeyError:
-                    LOG.warn('%r._on_get_module(): skipping %r, not in cache', 
-                             self, related)
+                rtup = self.importer._cache.get(related)
+                if not rtup:
+                    LOG.debug('%r._on_get_module(): skipping absent %r',
+                               self, related)
                     continue
                 self._send_one_module(msg, rtup)
 

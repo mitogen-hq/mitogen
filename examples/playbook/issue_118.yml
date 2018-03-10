@@ -1,0 +1,11 @@
+---
+
+# issue #118 repro: chmod +x not happening during script upload
+#
+- name: saytrue
+  hosts: all
+  become: True
+
+  tasks:
+    - name: run script saytrue
+      script: scripts/issue_118_saytrue

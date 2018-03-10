@@ -127,6 +127,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             ContextService.handle,
             cast({
                 'method': 'ssh',
+                'check_host_keys': False,  # TODO
                 'hostname': self._play_context.remote_addr,
                 'username': self._play_context.remote_user,
                 'password': self._play_context.password,
@@ -156,16 +157,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Parent Context of the sudo Context. For Ansible, this should always
             be a Context returned by _connect_ssh().
         """
-        return mitogen.service.call(self.parent, ContextService.handle, cast({
-            'method': 'sudo',
-            'username': self._play_context.become_user,
-            'password': self._play_context.password,
-            'python_path': python_path or self.python_path,
-            'sudo_path': self.sudo_path,
-            'via': via,
-            'sudo_args': shlex.split(self._play_context.sudo_flags or
-                                     self._play_context.become_flags or ''),
-        }))
+        return mitogen.service.call(
+            self.parent,
+            ContextService.handle,
+            cast({
+                'method': 'sudo',
+                'username': self._play_context.become_user,
+                'password': self._play_context.password,
+                'python_path': python_path or self.python_path,
+                'sudo_path': self.sudo_path,
+                'via': via,
+                'sudo_args': shlex.split(
+                    self._play_context.sudo_flags or
+                    self._play_context.become_flags or ''
+                ),
+            })
+        )
 
     def _connect(self):
         """
@@ -262,6 +269,19 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                            cast(in_path))
         ansible_mitogen.helpers.write_path(out_path, output)
 
+    def put_data(self, out_path, data):
+        """
+        Implement put_file() by caling the corresponding
+        ansible_mitogen.helpers function in the target.
+
+        :param str in_path:
+            Local filesystem path to read.
+        :param str out_path:
+            Remote filesystem path to write.
+        """
+        self.call(ansible_mitogen.helpers.write_path,
+                  cast(out_path), cast(data))
+
     def put_file(self, in_path, out_path):
         """
         Implement put_file() by caling the corresponding
@@ -272,5 +292,4 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.call(ansible_mitogen.helpers.write_path, cast(out_path),
-                  ansible_mitogen.helpers.read_path(in_path))
+        self.put_data(out_path, ansible_mitogen.helpers.read_path(in_path))

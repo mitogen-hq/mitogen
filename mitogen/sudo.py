@@ -52,11 +52,15 @@ SUDO_OPTIONS = [
     #(False, 'bool', '--remove-timestamp', '-K')
     #(False, 'bool', '--reset-timestamp', '-k')
     #(False, 'bool', '--list', '-l')
-    #(False, 'bool', '--non-interactive', '-n')
     #(False, 'bool', '--preserve-groups', '-P')
     #(False, 'str', '--prompt', '-p')
     #(False, 'str', '--role', '-r')
-    #(False, 'str', '--stdin', '-S')
+
+    # These options are supplied by default by Ansible, but are ignored, as
+    # sudo always runs under a TTY with Mitogen.
+    (True, 'bool', '--stdin', '-S'),
+    (True, 'bool', '--non-interactive', '-n'),
+
     #(False, 'str', '--shell', '-s')
     #(False, 'str', '--type', '-t')
     #(False, 'str', '--other-user', '-U')

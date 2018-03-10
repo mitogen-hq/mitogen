@@ -78,7 +78,7 @@ class BrokenModulesTest(unittest2.TestCase):
         self.assertIsInstance(msg.unpickle(), tuple)
 
 
-class BlacklistTest(unittest.TestCase):
+class BlacklistTest(unittest2.TestCase):
     def test_whitelist_no_blacklist(self):
         assert 0
 

@@ -28,18 +28,11 @@
 
 from __future__ import absolute_import
 import os
-import threading
-
-import mitogen
-import mitogen.master
-import mitogen.service
-import mitogen.unix
-import mitogen.utils
 
 import ansible.errors
 import ansible.plugins.strategy.linear
 import ansible_mitogen.mixins
-import ansible_mitogen.services
+import ansible_mitogen.process
 
 try:
     from ansible.plugins.loader import action_loader
@@ -152,40 +145,6 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         remote process, all the heavy lifting of transferring the action module
         and its dependencies are automatically handled by Mitogen.
     """
-    def _setup_master(self):
-        """
-        Construct a Router, Broker, and mitogen.unix listener
-        """
-        self.router = mitogen.master.Router()
-        self.router.responder.whitelist_prefix('ansible')
-        self.router.responder.whitelist_prefix('ansible_mitogen')
-        self.listener = mitogen.unix.Listener(self.router)
-        os.environ['MITOGEN_LISTENER_PATH'] = self.listener.path
-
-    def _setup_services(self):
-        """
-        Construct a ContextService and a thread to service requests for it
-        arriving from worker processes.
-        """
-        self.service = ansible_mitogen.services.ContextService(self.router)
-        self.service_thread = threading.Thread(target=self.service.run)
-        self.service_thread.start()
-
-    def _run_with_master(self, iterator, play_context, result):
-        """
-        Arrange for a mitogen.master.Router to be available for the duration of
-        the strategy's real run() method.
-        """
-        mitogen.utils.log_to_file()
-        self._setup_master()
-        self._setup_services()
-        try:
-            return super(StrategyModule, self).run(iterator, play_context)
-        finally:
-            os.unlink(self.listener.path)
-            self.router.broker.shutdown()
-            self.service_thread.join(timeout=10)
-
     def _install_wrappers(self):
         """
         Install our PluginLoader monkey patches and update global variables
@@ -216,9 +175,14 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         action_loader.add_directory(os.path.join(base_dir, 'actions'))
 
     def run(self, iterator, play_context, result=0):
+        """
+        Arrange for a mitogen.master.Router to be available for the duration of
+        the strategy's real run() method.
+        """
+        self.state = ansible_mitogen.process.State.instance()
         self._add_connection_plugin_path()
         self._install_wrappers()
         try:
-            return self._run_with_master(iterator, play_context, result)
+            return super(StrategyModule, self).run(iterator, play_context)
         finally:
             self._remove_wrappers()

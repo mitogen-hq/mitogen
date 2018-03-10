@@ -452,6 +452,16 @@ class Importer(object):
     def __repr__(self):
         return 'Importer()'
 
+    def builtin_find_module(self, fullname):
+        parent, _, modname = fullname.rpartition('.')
+        if parent:
+            path = sys.modules[parent].__path__
+        else:
+            path = None
+        fp, pathname, description = imp.find_module(modname, path)
+        if fp:
+            fp.close()
+
     def find_module(self, fullname, path=None):
         if hasattr(_tls, 'running'):
             return None
@@ -472,8 +482,13 @@ class Importer(object):
                           self, fullname)
                 return None
 
+            # #114: explicitly whitelisted prefixes override any
+            # system-installed package.
+            if self.whitelist and not is_blacklisted_import(self, fullname):
+                return self
+
             try:
-                __import__(fullname, {}, {}, [''])
+                self.builtin_find_module(fullname)
                 _v and LOG.debug('%r: %r is available locally', self, fullname)
             except ImportError:
                 _v and LOG.debug('find_module(%r) returning self', fullname)
@@ -483,7 +498,7 @@ class Importer(object):
 
     def _refuse_imports(self, fullname):
         if is_blacklisted_import(self, fullname):
-            raise ImportError('Refused')
+            raise ImportError('Refused: ' + fullname)
 
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']

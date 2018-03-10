@@ -1,0 +1,20 @@
+---
+
+- hosts: all
+  gather_facts: false
+  tasks:
+
+  - name: Get auth token
+    uri:
+      url: "https://httpbin.org/post"
+      method: POST
+      body: "client_id=admin-cli&username=admin&\
+             password=keycloak_admin_password&grant_type=password"
+      return_content: true
+      validate_certs: false
+    register: r_token
+    no_log: false
+    run_once: true
+
+  - assert:
+      that: r_token.status == 200

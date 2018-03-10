@@ -289,7 +289,7 @@ def set_file_mode(path, spec):
     """
     mode = os.stat(path).st_mode
 
-    if spec.is_digit():
+    if spec.isdigit():
         new_mode = int(spec, 8)
     else:
         new_mode = apply_mode_spec(spec, mode)
