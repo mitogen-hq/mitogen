@@ -157,16 +157,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Parent Context of the sudo Context. For Ansible, this should always
             be a Context returned by _connect_ssh().
         """
-        return mitogen.service.call(self.parent, ContextService.handle, cast({
-            'method': 'sudo',
-            'username': self._play_context.become_user,
-            'password': self._play_context.password,
-            'python_path': python_path or self.python_path,
-            'sudo_path': self.sudo_path,
-            'via': via,
-            'sudo_args': shlex.split(self._play_context.sudo_flags or
-                                     self._play_context.become_flags or ''),
-        }))
+        return mitogen.service.call(
+            self.parent,
+            ContextService.handle,
+            cast({
+                'method': 'sudo',
+                'username': self._play_context.become_user,
+                'password': self._play_context.password,
+                'python_path': python_path or self.python_path,
+                'sudo_path': self.sudo_path,
+                'via': via,
+                'sudo_args': shlex.split(
+                    self._play_context.sudo_flags or
+                    self._play_context.become_flags or ''
+                ),
+            })
+        )
 
     def _connect(self):
         """
