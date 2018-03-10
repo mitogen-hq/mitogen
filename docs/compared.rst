@@ -27,6 +27,8 @@ Baker
     functions using a simple decorator, to create scripts with "sub-commands",
     similar to Django's ``manage.py``, ``svn``, ``hg``, etc.
 
+- Unmaintained since 2015
+- No obvious remote execution functionality
 
 .. _Baker: https://bitbucket.org/mchaput/baker
 
