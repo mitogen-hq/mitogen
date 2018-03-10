@@ -37,7 +37,7 @@ class ContextService(mitogen.service.Service):
     configuration, creating a matching connection if it does not exist.
 
     For connection methods and their parameters, refer to:
-        http://mitogen.readthedocs.io/en/latest/api.html#context-factories
+        https://mitogen.readthedocs.io/en/latest/api.html#context-factories
 
     This concentrates all SSH connections in the top-level process, which may
     become a bottleneck. There are multiple ways to fix that: 
