@@ -79,6 +79,18 @@ You should use Chopsticks if you need Python 3 support.
 .. _pencode: https://github.com/lordmauve/chopsticks/blob/master/doc/pencode.rst
 .. _pencode.src: https://github.com/lordmauve/chopsticks/blob/master/chopsticks/pencode.py
 
+Disco
+#####
+
+    Disco_ is a lightweight, open-source framework for distributed computing
+    based on the MapReduce paradigm.
+
+- An Erlang core, with Python bindings
+- Wire format is pickle, according to `Execnet vs NLTK for distributed NLTK`_
+
+.. _Disco: http://discoproject.org/
+.. _Execnet vs NLTK for distributed NLTK: https://streamhacker.com/2009/12/14/execnet-disco-distributed-nltk/
+
 Execnet
 #######
 
