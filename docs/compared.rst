@@ -47,13 +47,19 @@ good set of tests
 real PEP-302 module loader, but doesn't try to cope with master also relying on
 a PEP-302 module loader (e.g. py2exe).
 
-unclear which versions of Python are supported, requires at least Python2.6
-(from __future__ import print_function). Unspecified versions of 3 are
-supported.
+Based on the tox configuration Python 2.7, and 3.3 to 3.6 are supported.
 
 I/O multiplexer in the master, but not in children.
 
-as with Execnet it includes its own serialization.
+As with Execnet it includes its own serialization - pencode_ supports
+
+- most Python primitive types (``bytes``/``str``/``unicode``, ``list``, ``tuple`` ...)
+- identity references
+- self referencing (recursive) data srtuctures
+
+pencode lacks support for arbitrary classes. Byte strings require special
+treatment if they contain non-ascii characters. Some primitive types
+(e.g. ``complex``), but adding support would be trivial.
 
 design is reminiscent of Mitogen in places (Tunnel is practically identical to
 Mitogen's Stream), and closer to Execnet elsewhere (lack of uniformity,
@@ -61,10 +67,15 @@ tendency to prefer logic expressed in if/else special case soup rather than the
 type system, though some of that is due to supporting Python 3, so not judging
 too harshly!)
 
+Chopsticks has its own `Chopsticks vs`_ comparisons.
+
 You should use Chopsticks if you need Python 3 support.
 
 .. _Chopsticks: https://chopsticks.readthedocs.io/en/stable/
 .. _Chopsticks.src: https://github.com/lordmauve/chopsticks/
+.. _Chopsticks vs: https://chopsticks.readthedocs.io/en/stable/intro.html#chopsticks-vs
+.. _pencode: https://github.com/lordmauve/chopsticks/blob/master/doc/pencode.rst
+.. _pencode.src: https://github.com/lordmauve/chopsticks/blob/master/chopsticks/pencode.py
 
 Execnet
 #######
