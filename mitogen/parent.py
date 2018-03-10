@@ -215,6 +215,9 @@ def iter_read(fd, deadline=None):
 
 def discard_until(fd, s, deadline):
     for buf in iter_read(fd, deadline):
+        if IOLOG.level == logging.DEBUG:
+            for line in buf.splitlines():
+                IOLOG.debug('discard_until: discarding %r', line)
         if buf.endswith(s):
             return
 
