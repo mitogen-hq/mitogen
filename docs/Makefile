@@ -2,7 +2,7 @@
 #
 
 default:
-	sphinx-autobuild . _build/html/
+	sphinx-autobuild -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
