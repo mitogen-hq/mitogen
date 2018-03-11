@@ -484,7 +484,7 @@ class Importer(object):
 
             # #114: explicitly whitelisted prefixes override any
             # system-installed package.
-            if self.whitelist != [''] and not is_blacklisted_import(self, fullname):
+            if self.whitelist and not is_blacklisted_import(self, fullname):
                 return self
 
             try:
