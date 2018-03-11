@@ -596,7 +596,7 @@ Router Class
             :py:class:`mitogen.core.StreamError` to be raised, and that
             attributes of the stream match the actual behaviour of ``sudo``.
 
-    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, compression_level=6, \**kwargs)
+    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, compression=True, \**kwargs)
 
         Arrange for a context to be constructed over a ``ssh`` invocation. The
         ``ssh`` process is started in a newly allocated pseudo-terminal, and
@@ -628,10 +628,12 @@ Router Class
             the SSH client to perform authenticaion; agent authentication is
             automatically disabled, as is reading the default private key from
             ``~/.ssh/id_rsa``, or ``~/.ssh/id_dsa``.
-        :param int compression_level:
-            Integer 0-9 representing the zlib compression level to use on the
-            connection, with 0 indicating compression is disabled. Defaults to
-            6.
+        :param bool compression:
+            If :py:data:`True`, enable ``ssh`` compression support. Compression
+            has a minimal effect on the size of modules transmitted, as they
+            are already compressed, however it has a large effect on every
+            remaining message in the otherwise uncompressed stream protocol,
+            such as function call arguments and return values.
 
 
 Context Class
