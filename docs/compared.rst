@@ -61,7 +61,9 @@ As with Execnet it includes its own serialization - pencode_ supports
 
 pencode lacks support for arbitrary classes. Byte strings require special
 treatment if they contain non-ascii characters. Some primitive types
-(e.g. ``complex``), but adding support would be trivial.
+(e.g. ``complex``) are not handled. This would be straightforwar to address.
+Values are length-prefixed with a 32 bit unsigned integer, meaning values
+are limited to 4 billion bytes or items in length.
 
 design is reminiscent of Mitogen in places (Tunnel is practically identical to
 Mitogen's Stream), and closer to Execnet elsewhere (lack of uniformity,
