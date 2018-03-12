@@ -26,7 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name = 'mitogen',
@@ -35,12 +35,7 @@ setup(
     author = 'David Wilson',
     license = 'New BSD',
     url = 'https://github.com/dw/mitogen/',
-    packages = [
-        'mitogen',
-        'ansible_mitogen',
-        'ansible_mitogen.connection',
-        'ansible_mitogen.strategy',
-    ],
+    packages = find_packages(exclude=['tests', 'examples']),
     use_2to3=True,
     zip_safe = False,
     classifiers = [
