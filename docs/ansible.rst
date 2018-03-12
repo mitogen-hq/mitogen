@@ -247,7 +247,7 @@ Sudo Variables
 Chat on IRC
 -----------
 
-Some users and developers are hang out on the
+Some users and developers hang out on the
 `#mitogen <https://webchat.freenode.net/?channels=mitogen>`_ channel on the
 FreeNode IRC network.
 
