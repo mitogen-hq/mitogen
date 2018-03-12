@@ -609,7 +609,8 @@ class Context(mitogen.core.Context):
         )
 
     def call(self, fn, *args, **kwargs):
-        return self.call_async(fn, *args, **kwargs).get().unpickle()
+        receiver = self.call_async(fn, *args, **kwargs)
+        return receiver.get().unpickle(throw_dead=False)
 
 
 class Router(mitogen.parent.Router):
