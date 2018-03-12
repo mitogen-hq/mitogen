@@ -294,7 +294,7 @@ class Message(object):
             self.pickled(obj, dst_id=self.src_id, **kwargs)
         )
 
-    def unpickle(self, throw=True):
+    def unpickle(self, throw=True, throw_dead=True):
         """Deserialize `data` into an object."""
         _vv and IOLOG.debug('%r.unpickle()', self)
         fp = cStringIO.StringIO(self.data)
@@ -308,7 +308,7 @@ class Message(object):
             raise StreamError('invalid message: %s', ex)
 
         if throw:
-            if obj == _DEAD:
+            if obj == _DEAD and throw_dead:
                 raise ChannelError(ChannelError.remote_msg)
             if isinstance(obj, CallError):
                 raise obj
