@@ -290,8 +290,8 @@ available.
                     for name in dirnames + filenames), 0)
 
     total = 0
-    for msg in Select(c.call_async(usage, '/tmp') for c in contexts):
-        usage = msg.unpickle()
+    for recv, msg in Select(c.call_async(usage, '/tmp') for c in contexts):
+        usage = msg[0].unpickle()
         print 'Context %s /tmp usage: %d' % (recv.context, usage)
         total += usage
 
