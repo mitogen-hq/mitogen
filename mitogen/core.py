@@ -453,11 +453,18 @@ class Importer(object):
         return 'Importer()'
 
     def builtin_find_module(self, fullname):
+        # imp.find_module() will always succeed for __main__, because it is a
+        # built-in module. That means it exists on a special linked list deep
+        # within the bowels of the interpreter. We must special case it.
+        if fullname == '__main__':
+            raise ImportError()
+
         parent, _, modname = fullname.rpartition('.')
         if parent:
             path = sys.modules[parent].__path__
         else:
             path = None
+
         fp, pathname, description = imp.find_module(modname, path)
         if fp:
             fp.close()
@@ -484,8 +491,9 @@ class Importer(object):
 
             # #114: explicitly whitelisted prefixes override any
             # system-installed package.
-            if self.whitelist and not is_blacklisted_import(self, fullname):
-                return self
+            if self.whitelist != ['']:
+                if any(fullname.startswith(s) for s in self.whitelist):
+                    return self
 
             try:
                 self.builtin_find_module(fullname)
