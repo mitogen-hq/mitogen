@@ -54,7 +54,7 @@ Mitogen's main feature is enabling your Python program to bootstrap and
 communicate with new copies of itself under its control running on remote
 machines, **using only an existing installed Python interpreter and SSH
 client**, something that by default can be found on almost all contemporary
-machines in the wild. To accomplish bootstrap, Mitogen uses a single 600 byte
+machines in the wild. To accomplish bootstrap, Mitogen uses a single 400 byte
 SSH command line and 8KB of its own source code sent to stdin of the remote SSH
 connection.
 
