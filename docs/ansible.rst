@@ -244,6 +244,14 @@ Sudo Variables
 * sudo_flags, become_flags
 
 
+Chat on IRC
+-----------
+
+Some users and developers are hang out on the
+`#mitogen <https://webchat.freenode.net/?channels=mitogen>`_ channel on the
+FreeNode IRC network.
+
+
 Debugging
 ---------
 
