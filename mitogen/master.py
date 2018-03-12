@@ -522,13 +522,12 @@ class ModuleResponder(object):
 
         if fullname == '__main__':
             source = self.neutralize_main(source)
-        compressed = zlib.compress(source)
+        compressed = zlib.compress(source, 9)
         related = [
             name
             for name in self._finder.find_related(fullname)
             if not mitogen.core.is_blacklisted_import(self, name)
         ]
-
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
         tup = fullname, pkg_present, path, compressed, related
         self._cache[fullname] = tup
