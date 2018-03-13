@@ -1,0 +1,29 @@
+---
+
+# Reproduction for issue #140.
+
+- hosts: all
+  gather_facts: no
+  tasks:
+
+    - name: Create file tree
+      connection: local
+      shell: >
+        mkdir filetree;
+        for i in {1..1000} ; do touch filetree/$i ; done
+      args:
+        creates: filetree
+
+
+    - name: Delete remote file tree
+      shell: rm -rf /tmp/filetree
+
+
+    - name: Trigger nasty process pileup
+      synchronize:
+        src: "{{ item.src }}"
+        dest: "/tmp/filetree"
+      with_filetree:
+        - filetree
+      when: item.state == 'file'
+
