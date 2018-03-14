@@ -152,7 +152,6 @@ class Stream(mitogen.parent.Stream):
         it = mitogen.parent.iter_read(
             fd=self.receive_side.fd,
             deadline=self.connect_deadline,
-            display_on_failure=0
         )
 
         for buf in it:
