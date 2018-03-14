@@ -276,6 +276,10 @@ class Stream(mitogen.core.Stream):
     #: Maximum time to wait for a connection attempt.
     connect_timeout = 30.0
 
+    #: Derived from :py:attr:`connect_timeout`; absolute floating point
+    #: UNIX timestamp after which the connection attempt should be abandoned.
+    connect_deadline = None
+
     #: True to cause context to write verbose /tmp/mitogen.<pid>.log.
     debug = False
 
@@ -306,6 +310,7 @@ class Stream(mitogen.core.Stream):
         self.remote_name = remote_name
         self.debug = debug
         self.profiling = profiling
+        self.connect_deadline = time.time() + self.connect_timeout
 
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""

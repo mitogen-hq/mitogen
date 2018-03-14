@@ -149,8 +149,13 @@ class Stream(mitogen.parent.Stream):
 
     def _connect_bootstrap(self):
         password_sent = False
-        for buf in mitogen.parent.iter_read(self.receive_side.fd,
-                                            time.time() + 10.0):
+        it = mitogen.parent.iter_read(
+            fd=self.receive_side.fd,
+            deadline=self.connect_deadline,
+            display_on_failure=0
+        )
+
+        for buf in it:
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
                 self._ec0_received()
