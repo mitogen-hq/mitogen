@@ -171,6 +171,16 @@ Low Risk
 Behavioural Differences
 -----------------------
 
+* Mitogen treats connection timeouts for the SSH and become steps of a task
+  invocation separately, meaning that in some circumstances the configured
+  timeout may appear to be doubled. This is since Mitogen internally treats the
+  creation of an SSH account context separately to the creation of a sudo
+  account context proxied via that SSH account.
+
+  A future revision may detect a sudo account context created immediately
+  following its parent SSH account, and try to emulate Ansible's existing
+  timeout semantics.
+
 * Normally with Ansible, diagnostics and use of the :py:mod:`logging` package
   output on the target machine are discarded. With Mitogen, all of this is
   captured and returned to the host machine, where it can be viewed as desired
