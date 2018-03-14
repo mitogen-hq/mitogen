@@ -620,6 +620,9 @@ class LogHandler(logging.Handler):
         try:
             msg = self.format(rec)
             encoded = '%s\x00%s\x00%s' % (rec.name, rec.levelno, msg)
+            if isinstance(encoded, unicode):
+                # Logging package emits both :(
+                encoded = encoded.encode('utf-8')
             self.context.send(Message(data=encoded, handle=FORWARD_LOG))
         finally:
             self.local.in_emit = False
