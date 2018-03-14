@@ -10,7 +10,7 @@
       connection: local
       shell: >
         mkdir filetree;
-        for i in {1..1000} ; do touch filetree/$i ; done
+        for i in `seq 1 1000` ; do echo $i > filetree/$i ; done
       args:
         creates: filetree
 
