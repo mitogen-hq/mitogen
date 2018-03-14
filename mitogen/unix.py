@@ -92,7 +92,7 @@ class Listener(mitogen.core.BasicStream):
         sock.close()
 
 
-def connect(path):
+def connect(path, broker=None):
     LOG.debug('unix.connect(path=%r)', path)
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(path)
@@ -104,7 +104,7 @@ def connect(path):
     LOG.debug('unix.connect(): local ID is %r, remote is %r',
               mitogen.context_id, remote_id)
 
-    router = mitogen.master.Router()
+    router = mitogen.master.Router(broker=broker)
     stream = mitogen.core.Stream(router, remote_id)
     stream.accept(sock.fileno(), sock.fileno())
     stream.name = 'unix_listener.%d' % (pid,)
