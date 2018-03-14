@@ -253,6 +253,7 @@ Sudo Variables
 * ansible_sudo_user, ansible_become_user (default: root)
 * ansible_sudo_pass, ansible_become_pass (default: assume passwordless)
 * sudo_flags, become_flags
+* ansible.cfg: timeout
 
 
 Chat on IRC

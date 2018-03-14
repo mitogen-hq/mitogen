@@ -73,7 +73,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     sudo_path = None
 
     #: Set to 'ansible_ssh_timeout' by on_action_run().
-    connect_timeout = None
+    ansible_ssh_timeout = None
 
     def __init__(self, play_context, new_stdin, original_transport):
         assert 'MITOGEN_LISTENER_PATH' in os.environ, (
@@ -91,7 +91,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         executing. We use the opportunity to grab relevant bits from the
         task-specific data.
         """
-        self.connect_timeout = task_vars.get(
+        self.ansible_ssh_timeout = task_vars.get(
             'ansible_ssh_timeout',
             None
         )
@@ -135,7 +135,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 'python_path': self.python_path,
                 'identity_file': self._play_context.private_key_file,
                 'ssh_path': self._play_context.ssh_executable,
-                'connect_timeout': self.connect_timeout,
+                'connect_timeout': self.ansible_ssh_timeout,
                 'ssh_args': [
                     term
                     for s in (
@@ -166,6 +166,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 'password': self._play_context.password,
                 'python_path': python_path or self.python_path,
                 'sudo_path': self.sudo_path,
+                'connect_timeout': self._play_context.timeout,
                 'via': via,
                 'sudo_args': shlex.split(
                     self._play_context.sudo_flags or
