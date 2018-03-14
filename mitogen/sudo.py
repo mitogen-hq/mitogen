@@ -132,11 +132,14 @@ class Stream(mitogen.parent.Stream):
         self.name = 'sudo.' + self.username
 
     def get_boot_command(self):
+        # Note: sudo did not introduce long-format option processing until July
+        # 2013, so even though we parse long-format options, we always supply
+        # short-form to the sudo command.
         bits = [self.sudo_path, '-u', self.username]
         if self.preserve_env:
-            bits += ['--preserve-env']
+            bits += ['-E']
         if self.set_home:
-            bits += ['--set-home']
+            bits += ['-H']
         bits = bits + super(Stream, self).get_boot_command()
         LOG.debug('sudo command line: %r', bits)
         return bits
