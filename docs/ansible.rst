@@ -26,6 +26,9 @@ Testimonials
 * "With mitogen **my playbook runtime went from 45 minutes to just under 3
   minutes**. Awesome work!"
 
+* "The runtime was reduced from **1.5 hours on 4 servers to just under 3
+  minutes**. Thanks!"
+
 * "Oh, performance improvement using Mitogen is *huge*. As mentioned before,
   running with Mitogen enables takes 7m36 (give or take a few seconds). Without
   Mitogen, the same run takes 19m49! **I'm not even deploying without Mitogen
