@@ -47,6 +47,9 @@ LOG = logging.getLogger(__name__)
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
+    #: mitogen.master.Broker for this worker.
+    broker = None
+
     #: mitogen.master.Router for this worker.
     router = None
 
@@ -85,6 +88,15 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.transport = original_transport
         super(Connection, self).__init__(play_context, new_stdin)
 
+    def __del__(self):
+        """
+        Ansible cannot be trusted to always call close() e.g. the synchronize
+        action constructs a local connection like this. So provide a destructor
+        in the hopes of catching these cases.
+        """
+        # https://github.com/dw/mitogen/issues/140
+        self.close()
+
     def on_action_run(self, task_vars):
         """
         Invoked by ActionModuleMixin to indicate a new task is about to start
@@ -106,7 +118,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     @property
     def connected(self):
-        return self.router is not None
+        return self.broker is not None
 
     def _connect_local(self):
         """
@@ -190,7 +202,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             return
 
         path = os.environ['MITOGEN_LISTENER_PATH']
-        self.router, self.parent = mitogen.unix.connect(path)
+        self.broker = mitogen.master.Broker()
+        self.router, self.parent = mitogen.unix.connect(
+            path=path,
+            broker=self.broker,
+        )
 
         if self.original_transport == 'local':
             if not self._play_context.become:
@@ -210,9 +226,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
-        if self.router:
-            self.router.broker.shutdown()
-            self.router.broker.join()
+        if self.broker:
+            self.broker.shutdown()
+            self.broker.join()
+            self.broker = None
             self.router = None
 
     def call_async(self, func, *args, **kwargs):
