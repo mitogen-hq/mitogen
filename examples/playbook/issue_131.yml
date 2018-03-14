@@ -1,0 +1,61 @@
+---
+
+# Hopeful reproduction for issue #131.
+# Run lots of steps (rather than just one) so WorkerProcess and suchlike
+# machinery is constantly recreated.
+
+- hosts: all
+  gather_facts: no
+  tasks:
+
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+    - shell: "true"
+
