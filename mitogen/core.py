@@ -217,6 +217,8 @@ def enable_debug_logging():
     root.setLevel(logging.DEBUG)
     IOLOG.setLevel(logging.DEBUG)
     fp = open('/tmp/mitogen.%s.log' % (os.getpid(),), 'w', 1)
+    fp.write('Parent PID: %s\n' % (os.getppid(),))
+    fp.write('Created by:\n\n%s\n\n' % (''.join(traceback.format_stack()),))
     set_cloexec(fp.fileno())
     handler = logging.StreamHandler(fp)
     handler.formatter = logging.Formatter(
