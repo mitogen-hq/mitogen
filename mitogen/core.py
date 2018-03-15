@@ -782,7 +782,7 @@ class Stream(BasicStream):
                 self.on_disconnect(broker)
                 return
             elif written != len(buf):
-                self._output_buf.appendleft(buf[written:])
+                self._output_buf.appendleft(buffer(buf, written))
 
             _vv and IOLOG.debug('%r.on_transmit() -> len %d', self, written)
 
