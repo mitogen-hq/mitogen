@@ -67,7 +67,7 @@ ALLOCATE_ID = 104
 SHUTDOWN = 105
 LOAD_MODULE = 106
 
-CHUNK_SIZE = 16384
+CHUNK_SIZE = 131072
 _tls = threading.local()
 
 
