@@ -123,6 +123,12 @@ def close_nonstandard_fds():
 
 def create_child(*args):
     parentfp, childfp = socket.socketpair()
+    parentfp.setsockopt(socket.SOL_SOCKET,
+                        socket.SO_SNDBUF,
+                        mitogen.core.CHUNK_SIZE)
+    childfp.setsockopt(socket.SOL_SOCKET,
+                       socket.SO_RCVBUF,
+                       mitogen.core.CHUNK_SIZE)
     pid = os.fork()
     if not pid:
         mitogen.core.set_block(childfp.fileno())
