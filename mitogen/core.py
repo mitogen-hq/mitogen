@@ -664,7 +664,7 @@ class Side(object):
         if self.fd is None:
             return None
 
-        written, disconnected = io_op(os.write, self.fd, s[:CHUNK_SIZE])
+        written, disconnected = io_op(os.write, self.fd, s)
         if disconnected:
             return None
         return written
