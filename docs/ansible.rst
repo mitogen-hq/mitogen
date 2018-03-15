@@ -20,25 +20,6 @@ significant testing will prove the extension's soundness.
 .. _Bug reports: https://goo.gl/yLKZiJ
 
 
-Testimonials
-------------
-
-* "With mitogen **my playbook runtime went from 45 minutes to just under 3
-  minutes**. Awesome work!"
-
-* "The runtime was reduced from **1.5 hours on 4 servers to just under 3
-  minutes**. Thanks!"
-
-* "Oh, performance improvement using Mitogen is *huge*. As mentioned before,
-  running with Mitogen enables takes 7m36 (give or take a few seconds). Without
-  Mitogen, the same run takes 19m49! **I'm not even deploying without Mitogen
-  anymore** :)"
-
-* "**Works like a charm**, thank you for your quick response"
-
-* "I tried it out. **He is not kidding about the speed increase**."
-
-
 Overview
 --------
 
@@ -77,6 +58,25 @@ quickly as possible.
   repeatedly rewrites and extracts ZIP files to multiple temporary directories
   on the target host. Since no temporary files are used, security issues
   relating to those files in cross-account scenarios are entirely avoided.
+
+
+Testimonials
+------------
+
+* "With mitogen **my playbook runtime went from 45 minutes to just under 3
+  minutes**. Awesome work!"
+
+* "The runtime was reduced from **1.5 hours on 4 servers to just under 3
+  minutes**. Thanks!"
+
+* "Oh, performance improvement using Mitogen is *huge*. As mentioned before,
+  running with Mitogen enables takes 7m36 (give or take a few seconds). Without
+  Mitogen, the same run takes 19m49! **I'm not even deploying without Mitogen
+  anymore** :)"
+
+* "**Works like a charm**, thank you for your quick response"
+
+* "I tried it out. **He is not kidding about the speed increase**."
 
 
 Installation
