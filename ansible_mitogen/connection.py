@@ -201,24 +201,23 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self.connected:
             return
 
-        path = os.environ['MITOGEN_LISTENER_PATH']
         self.broker = mitogen.master.Broker()
         self.router, self.parent = mitogen.unix.connect(
-            path=path,
+            path=os.environ['MITOGEN_LISTENER_PATH'],
             broker=self.broker,
         )
 
         if self.original_transport == 'local':
-            if not self._play_context.become:
-                self.context = self._connect_local()
-            else:
+            if self._play_context.become:
                 self.context = self._connect_sudo(python_path=sys.executable)
+            else:
+                self.context = self._connect_local()
         else:
             self.host = self._connect_ssh()
-            if not self._play_context.become:
-                self.context = self.host
-            else:
+            if self._play_context.become:
                 self.context = self._connect_sudo(via=self.host)
+            else:
+                self.context = self.host
 
     def close(self):
         """
