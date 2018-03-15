@@ -78,6 +78,7 @@ class Listener(mitogen.core.BasicStream):
 
     def on_receive(self, broker):
         sock, _ = self._sock.accept()
+        sock.setblocking(True)
         pid, = struct.unpack('>L', sock.recv(4))
 
         context_id = self._router.id_allocator.allocate()
