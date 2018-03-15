@@ -531,6 +531,9 @@ class Importer(object):
             os.environ['PBR_VERSION'] = '0.0.0'
 
     def _on_load_module(self, msg):
+        if msg == _DEAD:
+            return
+
         tup = msg.unpickle()
         fullname = tup[0]
         _v and LOG.debug('Importer._on_load_module(%r)', fullname)
@@ -1285,7 +1288,7 @@ class ExternalContext(object):
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
-        if msg.src_id != mitogen.parent_id:
+        if msg != _DEAD and msg.src_id != mitogen.parent_id:
             LOG.warning('Ignoring SHUTDOWN from non-parent: %r', msg)
             return
         self.broker.shutdown()
