@@ -126,10 +126,9 @@ High Risk
 * Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
   such as triggered via the ``copy`` module, will cause corresponding temporary
   memory and CPU spikes on both host and target machine, due to delivering the
-  file as a single large message, and quadratic buffer management in both
-  sender and receiver. If many machines are targetted with a large file, the
-  host machine could easily exhaust available RAM. This will be fixed soon as
-  it's likely to be tickled by common playbook use cases.
+  file as a single large message. If many machines are targetted with a large
+  file, the host machine could easily exhaust available RAM. This will be fixed
+  soon as it's likely to be tickled by common playbook use cases.
 
 * Situations may exist where the playbook's execution conditions are not
   respected, however ``delegate_to``, ``connection: local``, ``become``,
