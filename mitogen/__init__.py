@@ -66,7 +66,7 @@ parent_id = None
 parent_ids = []
 
 
-def main(log_level='INFO'):
+def main(log_level='INFO', profiling=False):
     """
     Convenience decorator primarily useful for writing discardable test
     scripts.
@@ -80,6 +80,13 @@ def main(log_level='INFO'):
     :param str log_level:
         Logging package level to configure via
         :py:func:`mitogen.utils.log_to_file`.
+
+    :param bool profiling:
+        If :py:data:`True`, equivalent to setting
+        :py:attr:`mitogen.master.Router.profiling` prior to router
+        construction. This causes ``/tmp`` files to be created everywhere at
+        the end of a successful run with :py:mod:`cProfile` output for every
+        thread.
 
     Example:
 
@@ -101,7 +108,9 @@ def main(log_level='INFO'):
     def wrapper(func):
         if func.__module__ != '__main__':
             return func
-        from mitogen import utils
+        import mitogen.master
+        import mitogen.utils
+        mitogen.master.Router.profiling = profiling
         utils.log_to_file(level=log_level)
         return utils.run_with_router(func)
     return wrapper
