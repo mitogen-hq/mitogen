@@ -258,6 +258,15 @@ Sudo Variables
 * ansible.cfg: timeout
 
 
+Docker Variables
+----------------
+
+Note: Docker support is only intended for developer testing, it might disappear
+entirely prior to a stable release.
+
+* ansible_host
+
+
 Chat on IRC
 -----------
 

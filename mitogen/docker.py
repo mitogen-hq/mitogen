@@ -61,6 +61,4 @@ class Stream(mitogen.parent.Stream):
         elif self.image:
             bits += ['run', '-i', '--rm', self.image]
         bits += super(Stream, self).get_boot_command()
-        LOG.debug('Docker command line: %r', bits)
-        print bits
         return bits

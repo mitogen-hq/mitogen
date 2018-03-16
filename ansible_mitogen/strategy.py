@@ -78,7 +78,7 @@ def wrap_connection_loader__get(name, play_context, new_stdin):
     an argument, so that it can emulate the original type.
     """
     kwargs = {}
-    if name in ('ssh', 'local'):
+    if name in ('ssh', 'local', 'docker'):
         kwargs['original_transport'] = name
         name = 'mitogen'
     return connection_loader__get(name, play_context, new_stdin, **kwargs)

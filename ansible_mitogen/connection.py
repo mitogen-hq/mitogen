@@ -160,6 +160,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             })
         )
 
+    def _connect_docker(self):
+        return mitogen.service.call(
+            self.parent,
+            ContextService.handle,
+            cast({
+                'method': 'docker',
+                'container': self._play_context.remote_addr,
+                'python_path': self.python_path,
+                'connect_timeout': self._play_context.timeout,
+            })
+        )
+
     def _connect_sudo(self, via=None, python_path=None):
         """
         Fetch a reference to a sudo Context matching the play context from
@@ -212,12 +224,17 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 self.context = self._connect_sudo(python_path=sys.executable)
             else:
                 self.context = self._connect_local()
-        else:
+            return
+
+        if self.original_transport == 'docker':
+            self.host = self._connect_docker()
+        elif self.original_transport == 'ssh':
             self.host = self._connect_ssh()
-            if self._play_context.become:
-                self.context = self._connect_sudo(via=self.host)
-            else:
-                self.context = self.host
+
+        if self._play_context.become:
+            self.context = self._connect_sudo(via=self.host)
+        else:
+            self.context = self.host
 
     def close(self):
         """
