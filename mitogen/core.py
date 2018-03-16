@@ -212,15 +212,36 @@ def io_op(func, *args):
         return None, True
 
 
+class PidfulStreamHandler(logging.StreamHandler):
+    open_pid = None
+    template = '/tmp/mitogen.%s.%s.log'
+
+    def _reopen(self):
+        self.acquire()
+        try:
+            ts = time.strftime('%Y%m%d_%H%M%S')
+            path = self.template % (os.getpid(), ts)
+            self.stream = open(path, 'w', 1)
+            set_cloexec(self.stream.fileno())
+            self.stream.write('Parent PID: %s\n' % (os.getppid(),))
+            self.stream.write('Created by:\n\n%s\n' % (
+                ''.join(traceback.format_stack()),
+            ))
+            self.open_pid = os.getpid()
+        finally:
+            self.release()
+
+    def emit(self, record):
+        if self.open_pid != os.getpid():
+            self._reopen()
+        return super(PidfulStreamHandler, self).emit(record)
+
+
 def enable_debug_logging():
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
     IOLOG.setLevel(logging.DEBUG)
-    fp = open('/tmp/mitogen.%s.log' % (os.getpid(),), 'w', 1)
-    fp.write('Parent PID: %s\n' % (os.getppid(),))
-    fp.write('Created by:\n\n%s\n\n' % (''.join(traceback.format_stack()),))
-    set_cloexec(fp.fileno())
-    handler = logging.StreamHandler(fp)
+    handler = PidfulStreamHandler()
     handler.formatter = logging.Formatter(
         '%(asctime)s %(levelname).1s %(name)s: %(message)s',
         '%H:%M:%S'
