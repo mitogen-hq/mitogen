@@ -55,12 +55,16 @@ def is_path_dead(path):
         return False
 
 
+def make_socket_path():
+    return tempfile.mktemp(prefix='mitogen_unix_')
+
+
 class Listener(mitogen.core.BasicStream):
     keep_alive = True
 
     def __init__(self, router, path=None, backlog=30):
         self._router = router
-        self.path = path or tempfile.mktemp(prefix='mitogen_unix_')
+        self.path = path or make_socket_path()
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 
         if os.path.exists(self.path) and is_path_dead(self.path):

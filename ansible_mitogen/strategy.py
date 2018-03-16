@@ -179,7 +179,7 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         Arrange for a mitogen.master.Router to be available for the duration of
         the strategy's real run() method.
         """
-        self.state = ansible_mitogen.process.State.instance()
+        ansible_mitogen.process.MuxProcess.start()
         self._add_connection_plugin_path()
         self._install_wrappers()
         try:

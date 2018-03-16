@@ -27,12 +27,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
-import threading
 import os
+import socket
+import sys
+import threading
 
 import mitogen
 import mitogen.core
 import mitogen.master
+import mitogen.parent
 import mitogen.service
 import mitogen.unix
 import mitogen.utils
@@ -41,26 +44,71 @@ import ansible_mitogen.logging
 import ansible_mitogen.services
 
 
-class State(object):
+class MuxProcess(object):
     """
-    Process-global state that should persist across playbook runs.
+    This implements a process forked from the Ansible top-level process as a
+    safe place to contain the Mitogen IO multiplexer thread, keeping its use of
+    the logging package (and the logging package's heavy use of locks) far away
+    from the clutches of os.fork(), which is used continuously in the top-level
+    process.
+
+    The problem with running the multiplexer in that process is that should the
+    multiplexer thread be in the process of emitting a log entry (and holding
+    its lock) at the point of fork, in the child, the first attempt to log any
+    log entry using the same handler will deadlock the child, as in the memory
+    image the child received, the lock will always be marked held.
     """
-    #: ProcessState singleton.
+
+    #: In the top-level process, this references one end of a socketpair(),
+    #: which the MuxProcess blocks reading from in order to determine when
+    #: the master process deies. Once the read returns, the MuxProcess will
+    #: begin shutting itself down.
+    worker_sock = None
+
+    #: In the worker process, this references the other end of the
+    #: :py:attr:`worker_sock`.
+    child_sock = None
+
+    #: In the top-level process, this is the PID of the single MuxProcess
+    #: that was spawned.
+    worker_pid = None
+
+    #: In both processes, this is the temporary UNIX socket used for
+    #: forked WorkerProcesses to contact the MuxProcess
+    unix_listener_path = None
+
+    #: Singleton.
     _instance = None
 
     @classmethod
-    def instance(cls):
-        """
-        Fetch the ProcessState singleton, constructing it as necessary.
-        """
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    def start(cls):
+        if cls.worker_sock is not None:
+            return
 
-    def __init__(self):
+        cls.unix_listener_path = mitogen.unix.make_socket_path()
+        cls.worker_sock, cls.child_sock = socket.socketpair()
+        cls.child_pid = os.fork()
         ansible_mitogen.logging.setup()
+        if cls.child_pid:
+            cls.child_sock.close()
+            cls.child_sock = None
+            cls.worker_sock.recv(1)
+        else:
+            cls.worker_sock.close()
+            cls.worker_sock = None
+            self = cls()
+            self.run()
+            sys.exit()
+
+    def run(self):
         self._setup_master()
         self._setup_services()
+        self.child_sock.send('1')
+        try:
+            self.child_sock.recv(1)
+        except Exception, e:
+            print 'do e', e
+            pass
 
     def _setup_master(self):
         """
@@ -70,8 +118,10 @@ class State(object):
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
         mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)
-        self.listener = mitogen.unix.Listener(self.router)
-        os.environ['MITOGEN_LISTENER_PATH'] = self.listener.path
+        self.listener = mitogen.unix.Listener(
+            router=self.router,
+            path=self.unix_listener_path,
+        )
         if 'MITOGEN_ROUTER_DEBUG' in os.environ:
             self.router.enable_debug()
 

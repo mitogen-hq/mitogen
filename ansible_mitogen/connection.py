@@ -40,6 +40,7 @@ import mitogen.unix
 from mitogen.utils import cast
 
 import ansible_mitogen.helpers
+import ansible_mitogen.process
 from ansible_mitogen.services import ContextService
 
 
@@ -79,7 +80,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     ansible_ssh_timeout = None
 
     def __init__(self, play_context, new_stdin, original_transport):
-        assert 'MITOGEN_LISTENER_PATH' in os.environ, (
+        assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'The "mitogen" connection plug-in may only be instantiated '
              'by the "mitogen" strategy plug-in.'
         )
@@ -215,7 +216,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.broker = mitogen.master.Broker()
         self.router, self.parent = mitogen.unix.connect(
-            path=os.environ['MITOGEN_LISTENER_PATH'],
+            path=ansible_mitogen.process.MuxProcess.unix_listener_path,
             broker=self.broker,
         )
 
