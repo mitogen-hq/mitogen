@@ -219,6 +219,8 @@ class PidfulStreamHandler(logging.StreamHandler):
     def _reopen(self):
         self.acquire()
         try:
+            if self.open_pid == os.getpid():
+                return
             ts = time.strftime('%Y%m%d_%H%M%S')
             path = self.template % (os.getpid(), ts)
             self.stream = open(path, 'w', 1)
