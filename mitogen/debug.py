@@ -56,6 +56,7 @@ def format_stacks():
             threadId,
             stack,
         )]
+        stack = stack.f_back.f_back
 
         for filename, lineno, name, line in traceback.extract_stack(stack):
             l += [
@@ -90,7 +91,7 @@ def _handler(*_):
         ))
 
         if diff:
-            fp.write('\n'.join(diff))
+            fp.write('\n'.join(diff) + '\n')
         else:
             fp.write('(no change since last time)\n')
     _last = s
