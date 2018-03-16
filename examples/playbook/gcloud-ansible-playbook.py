@@ -18,9 +18,10 @@ def main():
     for inst in resp['items']:
         if inst['status'] == 'RUNNING' and inst['name'].startswith(group_name):
             ips.extend(
-                bytes(config['natIP'])
+                #bytes(config['natIP'])
+                bytes(interface['networkIP'])
                 for interface in inst['networkInterfaces']
-                for config in interface['accessConfigs']
+                #for config in interface['accessConfigs']
             )
 
     print 'Addresses:', ips
