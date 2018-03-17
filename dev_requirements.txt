@@ -13,3 +13,4 @@ unittest2==1.1.0
 # Fix InsecurePlatformWarning while creating py26 tox environment
 # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
 urllib3[secure]; python_version < '2.7.9'
+google-api-python-client==1.6.5
