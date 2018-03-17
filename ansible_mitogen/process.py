@@ -46,17 +46,20 @@ import ansible_mitogen.services
 
 class MuxProcess(object):
     """
-    This implements a process forked from the Ansible top-level process as a
-    safe place to contain the Mitogen IO multiplexer thread, keeping its use of
-    the logging package (and the logging package's heavy use of locks) far away
-    from the clutches of os.fork(), which is used continuously in the top-level
-    process.
+    Implement a subprocess forked from the Ansible top-level, as a safe place
+    to contain the Mitogen IO multiplexer thread, keeping its use of the
+    logging package (and the logging package's heavy use of locks) far away
+    from the clutches of os.fork(), which is used continuously by the
+    multiprocessing package in the top-level process.
 
     The problem with running the multiplexer in that process is that should the
     multiplexer thread be in the process of emitting a log entry (and holding
     its lock) at the point of fork, in the child, the first attempt to log any
     log entry using the same handler will deadlock the child, as in the memory
     image the child received, the lock will always be marked held.
+
+    See https://bugs.python.org/issue6721 for a thorough description of the
+    class of problems this worker is intended to avoid.
     """
 
     #: In the top-level process, this references one end of a socketpair(),
@@ -82,6 +85,13 @@ class MuxProcess(object):
 
     @classmethod
     def start(cls):
+        """
+        Arrange for the subprocess to be started, if it is not already running.
+
+        The parent process picks a UNIX socket path the child will use prior to
+        fork, creates a socketpair used essentially as a semaphore, then blocks
+        waiting for the child to indicate the UNIX socket is ready for use.
+        """
         if cls.worker_sock is not None:
             return
 
@@ -100,18 +110,22 @@ class MuxProcess(object):
             cls.worker_sock.close()
             cls.worker_sock = None
             self = cls()
-            self.run()
+            self.worker_main()
             sys.exit()
 
-    def run(self):
+    def worker_main(self):
+        """
+        The main function of for the mux process: setup the Mitogen broker
+        thread and ansible_mitogen services, then sleep waiting for the socket
+        connected to the parent to be closed (indicating the parent has died).
+        """
         self._setup_master()
         self._setup_services()
+
+        # Let the parent know our listening socket is ready.
         self.child_sock.send('1')
-        try:
-            self.child_sock.recv(1)
-        except Exception, e:
-            print 'do e', e
-            pass
+        # Block until the socket is closed, which happens on parent exit.
+        self.child_sock.recv(1)
 
     def _setup_master(self):
         """
