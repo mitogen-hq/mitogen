@@ -133,10 +133,6 @@ High Risk
   file, the host machine could easily exhaust available RAM. This will be fixed
   soon as it's likely to be tickled by common playbook use cases.
 
-* Situations may exist where the playbook's execution conditions are not
-  respected, however ``delegate_to``, ``connection: local``, ``become``,
-  ``become_user``, and ``local_action`` have all been tested.
-
 * Only Ansible 2.4 is being used for development, with occasional tests under
   2.3 and 2.2. It should be more than possible to fully support at least 2.3,
   if not also 2.2.
@@ -197,6 +193,14 @@ Behavioural Differences
 
 * Asynchronous support is very primitive, and jobs execute in a thread of the
   target Python interpreter. This will fixed shortly.
+
+* Local commands are executed in a reuseable Python interpreter created
+  identically to interpreters used on remote hosts. At present only one such
+  interpreter per ``become_user`` exists, and so only one action may be
+  executed in each context simultaneously. Ansible usually permits up to
+  ``ansible.cfg:forks`` simultaneous local actions, which may trigger a
+  performance regression in some playbooks. This will be fixed in a future
+  release.
 
 
 Demo
