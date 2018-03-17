@@ -61,11 +61,11 @@ class MuxProcess(object):
 
     #: In the top-level process, this references one end of a socketpair(),
     #: which the MuxProcess blocks reading from in order to determine when
-    #: the master process deies. Once the read returns, the MuxProcess will
+    #: the master process dies. Once the read returns, the MuxProcess will
     #: begin shutting itself down.
     worker_sock = None
 
-    #: In the worker process, this references the other end of the
+    #: In the worker process, this references the other end of
     #: :py:attr:`worker_sock`.
     child_sock = None
 
@@ -87,6 +87,9 @@ class MuxProcess(object):
 
         cls.unix_listener_path = mitogen.unix.make_socket_path()
         cls.worker_sock, cls.child_sock = socket.socketpair()
+        mitogen.core.set_cloexec(cls.worker_sock)
+        mitogen.core.set_cloexec(cls.child_sock)
+
         cls.child_pid = os.fork()
         ansible_mitogen.logging.setup()
         if cls.child_pid:
