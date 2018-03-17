@@ -234,28 +234,34 @@ operation.
 SSH Variables
 -------------
 
+Matching Ansible's existing model, these variables are treated on a per-task
+basis, causing establishment of additional reuseable interpreters as necessary
+to match the configuration of each task.
+
 This list will grow as more missing pieces are discovered.
 
-* ansible_python_interpreter
-* ansible_ssh_timeout
-* ansible_host, ansible_ssh_host
-* ansible_user, ansible_ssh_user
-* ansible_port, ssh_port
-* ansible_ssh_executable, ssh_executable
-* ansible_ssh_private_key_file
-* ansible_ssh_pass, ansible_password (default: assume passwordless)
-* ssh_args, ssh_common_args, ssh_extra_args
+* ``ansible_ssh_timeout``
+* ``ansible_host``, ``ansible_ssh_host``
+* ``ansible_user``, ``ansible_ssh_user``
+* ``ansible_port``, ``ssh_port``
+* ``ansible_ssh_executable``, ``ssh_executable``
+* ``ansible_ssh_private_key_file``
+* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
+* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
+* ``mitogen_ssh_discriminator``: if present, a string mixed into the key used
+  to deduplicate connections. This permits intentional duplicate Mitogen
+  connections to a single host, which is probably only useful for testing.
 
 
 Sudo Variables
 --------------
 
-* ansible_python_interpreter
-* ansible_sudo_exe, ansible_become_exe
-* ansible_sudo_user, ansible_become_user (default: root)
-* ansible_sudo_pass, ansible_become_pass (default: assume passwordless)
-* sudo_flags, become_flags
-* ansible.cfg: timeout
+* ``ansible_python_interpreter``
+* ``ansible_sudo_exe``, ``ansible_become_exe``
+* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
+* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
+* ``sudo_flags``, ``become_flags``
+* ansible.cfg: ``timeout``
 
 
 Docker Variables

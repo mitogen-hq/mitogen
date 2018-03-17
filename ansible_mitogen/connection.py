@@ -79,6 +79,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to 'ansible_ssh_timeout' by on_action_run().
     ansible_ssh_timeout = None
 
+    #: Set to 'mitogen_ssh_discriminator' by on_action_run()
+    mitogen_ssh_discriminator = None
+
     def __init__(self, play_context, new_stdin, original_transport):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'The "mitogen" connection plug-in may only be instantiated '
@@ -104,6 +107,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         executing. We use the opportunity to grab relevant bits from the
         task-specific data.
         """
+        self.mitogen_ssh_discriminator = task_vars.get(
+            'mitogen_ssh_discriminator',
+            None
+        )
         self.ansible_ssh_timeout = task_vars.get(
             'ansible_ssh_timeout',
             None
@@ -142,6 +149,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 'method': 'ssh',
                 'check_host_keys': False,  # TODO
                 'hostname': self._play_context.remote_addr,
+                'discriminator': self.mitogen_ssh_discriminator,
                 'username': self._play_context.remote_user,
                 'password': self._play_context.password,
                 'port': self._play_context.port,

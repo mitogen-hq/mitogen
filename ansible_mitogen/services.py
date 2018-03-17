@@ -47,8 +47,13 @@ class ContextService(mitogen.service.Service):
           having workers connect in directly.
 
     :param dict dct:
-        Parameters passed to mitogen.master.Router.[method](). One key,
-        "method", is popped from the dictionary and used to look up the method.
+        Parameters passed to `mitogen.master.Router.[method]()`.
+
+        * The `method` key is popped from the dictionary and used to look up
+          the Mitogen connection method.
+        * The `discriminator` key is mixed into the key used to select an
+          existing connection, but popped from the list of arguments passed to
+          the connection method.
 
     :returns mitogen.master.Context:
         Corresponding Context instance.
@@ -65,6 +70,8 @@ class ContextService(mitogen.service.Service):
 
     def dispatch(self, dct, msg):
         key = repr(sorted(dct.items()))
+        dct.pop('discriminator', None)
+
         if key not in self._context_by_key:
             method = getattr(self.router, dct.pop('method'))
             self._context_by_key[key] = method(**dct)
