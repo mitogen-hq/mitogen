@@ -15,6 +15,9 @@ already works well enough for testing against real-world playbooks. `Bug
 reports`_ in this area are very welcome – Ansible is a huge beast, and only
 significant testing will prove the extension's soundness.
 
+Divergence from Ansible's normal behaviour is considered a bug, so please
+report anything you notice, regardless of how inconsequential it may seem.
+
 .. _Ansible: https://www.ansible.com/
 
 .. _Bug reports: https://goo.gl/yLKZiJ
