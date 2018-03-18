@@ -87,32 +87,34 @@ class Service(object):
 
 class Pool(object):
     def __init__(self, router, services, size=1):
+        self.router = router
         self.services = list(services)
-        self.select = mitogen.master.Select(
+        self.size = size
+        self._select = mitogen.master.Select(
             receivers=[
                 service.recv
                 for service in self.services
             ],
             oneshot=False,
         )
-        self.threads = []
+        self._threads = []
         for x in xrange(size):
             thread = threading.Thread(
                 name='mitogen.service.Pool.worker-%d' % (x,),
                 target=self._worker_main,
             )
             thread.start()
-            self.threads.append(thread)
+            self._threads.append(thread)
 
     def stop(self):
-        self.select.close()
-        for th in self.threads:
+        self._select.close()
+        for th in self._threads:
             th.join()
 
     def _worker_main(self):
         while True:
             try:
-                msg = self.select.get()
+                msg = self._select.get()
             except (mitogen.core.ChannelError, mitogen.core.LatchError):
                 e = sys.exc_info()[1]
                 LOG.error('%r: channel or latch closed, exitting: %s', self, e)
