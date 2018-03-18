@@ -1,0 +1,25 @@
+
+- hosts: all
+  gather_facts: no
+  become: true
+  vars:
+    repo_baseurl: "http://myurl.com"
+    default_repos:
+      - repo: demo-repo1
+        description: Base software packages
+        url: "{{repo_baseurl}}/repo1"
+      - repo: demo-repo2
+        description: Misc packages
+        url: "{{repo_baseurl}}/repo2"
+
+  tasks:
+  - name: Create multiple yum repos
+    yum_repository:
+      name: '{{item.repo}}'
+      http_caching: packages
+      gpgcheck: no
+      description: '{{item.description}}'
+      state: present
+      baseurl: '{{item.url}}'
+      enabled: yes
+    with_items: '{{ default_repos }}'
