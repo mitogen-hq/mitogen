@@ -51,7 +51,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
 
     Additionally catch attempts to instantiate the "normal" action with a task
     argument whose action is "async_status", and redirect it to a special
-    implementation that fetches polls the task result via RPC.
+    implementation that fetches the task result via RPC.
 
     This is used instead of static subclassing as it generalizes to third party
     action modules outside the Ansible tree.
@@ -127,9 +127,9 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
 
         For connection plug-ins, if the desired method is "local" or "ssh", it
         is redirected to the "mitogen" connection plug-in. That plug-in
-        implements communication via a UNIX socket connection to the master,
-        and uses ContextService running in the master to actually establish and
-        manage the connection.
+        implements communication via a UNIX socket connection to the top-level
+        Ansible process, and uses ContextService running in the top-level
+        process to actually establish and manage the connection.
 
         For action plug-ins, the original class is looked up as usual, but a
         new subclass is created dynamically in order to mix-in
