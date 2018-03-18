@@ -96,6 +96,15 @@ def monkey_fail_json(self, **kwargs):
     raise ModuleError(kwargs.get('msg'), kwargs)
 
 
+def module_fixups(mod):
+    """
+    Apply fixups for known problems with mainline Ansible modules.
+    """
+    if mod.__name__ == 'ansible.modules.packaging.os.yum_repository':
+        # https://github.com/dw/mitogen/issues/154
+        mod.YumRepo.repofile = mod.configparser.RawConfigParser()
+
+
 def run_module(module, raw_params=None, args=None, env=None):
     """
     Set up the process environment in preparation for running an Ansible
@@ -120,6 +129,7 @@ def run_module(module, raw_params=None, args=None, env=None):
 
     try:
         mod = __import__(module, {}, {}, [''])
+        module_fixups(mod)
         # Ansible modules begin execution on import. Thus the above __import__
         # will cause either Exit or ModuleError to be raised. If we reach the
         # line below, the module did not execute and must already have been
