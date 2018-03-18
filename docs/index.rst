@@ -68,7 +68,7 @@ using the UNIX **ps** command:
 
     20051 ?        Ss     0:00  \_ sshd: dmw [priv]
     20053 ?        S      0:00  |   \_ sshd: dmw@notty
-    20054 ?        Ssl    0:00  |       \_ mitogen:dmw@Eldil.home:22476
+    20054 ?        Ssl    0:00  |       \_ /usr/bin/python(mitogen:dmw@Eldil.home:22476)
     20103 ?        S      0:00  |           \_ tar zxvf myapp.tar.gz
 
 The example context was started by UID ``dmw`` on host ``Eldil.home``, process

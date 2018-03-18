@@ -313,6 +313,8 @@ class Stream(mitogen.core.Stream):
         if remote_name is None:
             remote_name = '%s@%s:%d'
             remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
+        if '/' in remote_name or '\\' in remote_name:
+            raise ValueError('remote_name= cannot contain slashes')
         self.remote_name = remote_name
         self.debug = debug
         self.profiling = profiling
@@ -332,9 +334,11 @@ class Stream(mitogen.core.Stream):
     # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
     # with a custom argv.
-    # 'CONTEXT_NAME', 'PREAMBLE_COMPRESSED_LEN', and 'PREAMBLE_LEN' are
-    # substituted with their respective values.
-    # Optimized for minimum byte count after minification & compression.
+    #   * Optimized for minimum byte count after minification & compression.
+    #   * 'CONTEXT_NAME', 'PREAMBLE_COMPRESSED_LEN', and 'PREAMBLE_LEN' are
+    #     substituted with their respective values.
+    #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
+    #     order to allow virtualenvs to detect their install prefix.
     @staticmethod
     def _first_stage():
         R,W=os.pipe()
@@ -348,7 +352,7 @@ class Stream(mitogen.core.Stream):
             os.close(W)
             os.close(w)
             os.environ['ARGV0']=sys.executable
-            os.execl(sys.executable,'mitogen:CONTEXT_NAME')
+            os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'EC0\n')
         C=_(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN),'zip')
         os.fdopen(W,'w',0).write(C)

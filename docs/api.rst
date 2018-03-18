@@ -525,6 +525,11 @@ Router Class
 
             If unspecified, defaults to ``<username>@<hostname>:<pid>``.
 
+            This variable cannot contain slash characters, as the resulting
+            ``argv[0]`` must be presented in such a way as to allow Python to
+            determine its installation prefix. This is required to support
+            virtualenv.
+
         :param str python_path:
             Path to the Python interpreter to use for bootstrap. Defaults to
             ``python2.7``. In future this may default to ``sys.executable``.
