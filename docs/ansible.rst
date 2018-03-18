@@ -123,7 +123,7 @@ High Risk
   memory and CPU spikes on both host and target machine, due to delivering the
   file as a single large message. If many machines are targetted with a large
   file, the host machine could easily exhaust available RAM. This will be fixed
-  soon as it's likely to be tickled by common playbook use cases.
+  soon as it's likely to be tickled by common playbooks.
 
 * `Asynchronous Actions And Polling
   <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
@@ -321,19 +321,21 @@ could cause a run to fail, or for unrelated modules to interact with each other
 due to bad hygiene. Mitigations (such as forking) will be added as necessary if
 problems of this sort ever actually manfest.
 
-Patches
-~~~~~~~
 
-Three small runtime patches are employed to hook into Ansible in desirable
-locations, in order to override uses of shell, the module executor, and the
-mechanism for selecting a connection plug-in. While it is hoped the patches can
-be avoided in future, for interesting versions of Ansible deployed today this
-simply is not possible, and so they continue to be required.
+Runtime Patches
+~~~~~~~~~~~~~~~
+
+Three small runtime patches are employed in ``strategy.py`` to hook into
+desirable locations, in order to override uses of shell, the module executor,
+and the mechanism for selecting a connection plug-in. While it is hoped the
+patches can be avoided in future, for interesting versions of Ansible deployed
+today this simply is not possible, and so they continue to be required.
 
 The patches are concise and behave conservatively, including by disabling
 themselves when non-Mitogen connections are in use. Additional third party
 plug-ins are unlikely to attempt similar patches, so the risk to an established
 configuration should be minimal.
+
 
 Flag Emulation
 ~~~~~~~~~~~~~~
