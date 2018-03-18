@@ -79,15 +79,19 @@ class BrokenModulesTest(unittest2.TestCase):
 
 
 class BlacklistTest(unittest2.TestCase):
+    @unittest2.skip('implement me')
     def test_whitelist_no_blacklist(self):
         assert 0
 
+    @unittest2.skip('implement me')
     def test_whitelist_has_blacklist(self):
         assert 0
 
+    @unittest2.skip('implement me')
     def test_blacklist_no_whitelist(self):
         assert 0
 
+    @unittest2.skip('implement me')
     def test_blacklist_has_whitelist(self):
         assert 0
 
