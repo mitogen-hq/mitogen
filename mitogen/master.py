@@ -236,6 +236,7 @@ class Select(object):
     def close(self):
         for recv in self._receivers[:]:
             self.remove(recv)
+        self._latch.close()
 
     def empty(self):
         return self._latch.empty()

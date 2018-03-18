@@ -159,6 +159,11 @@ contexts.
 
         :return:
             :py:class:`mitogen.core.Message`
+        :raises mitogen.core.TimeoutError:
+            Timeout was reached.
+        :raises mitogen.core.LatchError:
+            :py:meth:`close` has been called, and the underlying latch is no
+            longer valid.
 
     .. py:method:: __bool__ ()
 
@@ -166,9 +171,14 @@ contexts.
 
     .. py:method:: close ()
 
-        Remove the select's notifier function from each registered receiver.
-        Necessary to prevent memory leaks in long-running receivers. This is
-        called automatically when the Python :keyword:`with` statement is used.
+        Remove the select's notifier function from each registered receiver,
+        mark the associated latch as closed, and cause any thread currently
+        sleeping in :py:meth:`get` to be woken with
+        :py:class:`mitogen.core.LatchError`.
+
+        This is necessary to prevent memory leaks in long-running receivers. It
+        is called automatically when the Python :keyword:`with` statement is
+        used.
 
     .. py:method:: empty ()
 
