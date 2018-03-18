@@ -88,6 +88,10 @@ class Error(Exception):
         Exception.__init__(self, fmt)
 
 
+class LatchError(Error):
+    pass
+
+
 class CallError(Error):
     def __init__(self, e):
         s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
@@ -902,6 +906,8 @@ def _unpickle_context(router, context_id, name):
 
 
 class Latch(object):
+    closed = False
+
     def __init__(self):
         self.lock = threading.Lock()
         self.queue = []
@@ -913,12 +919,23 @@ class Latch(object):
             set_cloexec(_tls.rsock.fileno())
             set_cloexec(_tls.wsock.fileno())
 
+    def close(self):
+        self.lock.acquire()
+        try:
+            self.closed = True
+            for sock in self.wake_socks:
+                self._wake(sock)
+        finally:
+            self.lock.release()
+
     def empty(self):
         return len(self.queue) == 0
 
     def get(self, timeout=None, block=True):
         self.lock.acquire()
         try:
+            if self.closed:
+                raise LatchError()
             if self.queue:
                 return self.queue.pop(0)
             if not block:
@@ -933,6 +950,8 @@ class Latch(object):
 
         self.lock.acquire()
         try:
+            if self.closed:
+                raise LatchError()
             if _tls.wsock in self.wake_socks:
                 # Nothing woke us, remove stale entry.
                 self.wake_socks.remove(_tls.wsock)
@@ -948,6 +967,8 @@ class Latch(object):
         _vv and IOLOG.debug('%r.put(%r)', self, obj)
         self.lock.acquire()
         try:
+            if self.closed:
+                raise LatchError()
             self.queue.append(obj)
             woken = len(self.wake_socks) > 0
             if woken:

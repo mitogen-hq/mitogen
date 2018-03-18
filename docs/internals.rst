@@ -54,6 +54,9 @@ Latch Class
             If :py:data:`False`, immediately raise
             :py:class:`mitogen.core.TimeoutError` if the latch is empty.
 
+        :raises mitogen.core.LatchError:
+            :py:meth:`close` has been called, and the object is no longer valid.
+
         :raises mitogen.core.TimeoutError:
             Timeout was reached.
 
@@ -62,8 +65,16 @@ Latch Class
 
     .. method:: put (obj)
 
-        Enquue an object on this latch, waking the first thread that is asleep
+        Enqueue an object on this latch, waking the first thread that is asleep
         waiting for a result, if one exists.
+
+        :raises mitogen.core.LatchError:
+            :py:meth:`close` has been called, and the object is no longer valid.
+
+    .. method:: close ()
+
+        Mark the latch as closed, and cause every sleeping thread to be woken,
+        with :py:class:`mitogen.core.LatchError` raised in each thread.
 
 
 Side Class

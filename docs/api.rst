@@ -1104,6 +1104,11 @@ Exceptions
 
     Raised when a channel dies or has been closed.
 
+.. class:: LatchError (fmt, \*args)
+
+    Raised when an attempt is made to use a :py:class:`mitogen.core.Latch` that
+    has been marked closed.
+
 .. class:: StreamError (fmt, \*args)
 
     Raised when a stream cannot be established.
