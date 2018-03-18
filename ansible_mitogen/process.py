@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import logging
 import os
 import socket
 import sys
@@ -41,6 +42,9 @@ import mitogen.utils
 
 import ansible_mitogen.logging
 import ansible_mitogen.services
+
+
+LOG = logging.getLogger(__name__)
 
 
 class MuxProcess(object):
@@ -146,9 +150,14 @@ class MuxProcess(object):
         Construct a ContextService and a thread to service requests for it
         arriving from worker processes.
         """
-        self.pool = mitogen.service.Pool(self.router, [
-            ansible_mitogen.services.ContextService(self.router)
-        ])
+        self.pool = mitogen.service.Pool(
+            router=self.router,
+            services=[
+                ansible_mitogen.services.ContextService(self.router)
+            ],
+            size=int(os.environ.get('MITOGEN_POOL_SIZE', '16')),
+        )
+        LOG.debug('Service pool configured: size=%d', self.pool.size)
 
     def on_broker_shutdown(self):
         """

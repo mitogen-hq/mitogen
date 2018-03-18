@@ -115,14 +115,6 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 High Risk
 ~~~~~~~~~
 
-* Connection establishment is single-threaded until more pressing issues are
-  solved. To evaluate performance, target only one host. Many hosts still work,
-  the first playbook step will simply run unnecessarily slowly.
-
-* `Asynchronous Actions And Polling
-  <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
-  minimal testing.
-
 * For now only **built-in Python command modules work**, however almost all
   modules shipped with Ansible are Python-based.
 
@@ -132,6 +124,10 @@ High Risk
   file as a single large message. If many machines are targetted with a large
   file, the host machine could easily exhaust available RAM. This will be fixed
   soon as it's likely to be tickled by common playbook use cases.
+
+* `Asynchronous Actions And Polling
+  <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
+  minimal testing.
 
 * Only Ansible 2.4 is being used for development, with occasional tests under
   2.3 and 2.2. It should be more than possible to fully support at least 2.3,
@@ -171,6 +167,12 @@ Low Risk
 
 Behavioural Differences
 -----------------------
+
+* Ansible permits up to ``forks`` SSH connections to be setup simultaneously,
+  whereas in Mitogen this is handled by a thread pool. Eventually this pool
+  will become per-CPU, but meanwhile, a maximum of 16 SSH connections may be
+  established simultaneously by default. This can be increased or decreased
+  setting the ``MITOGEN_POOL_SIZE`` environment variable.
 
 * Mitogen treats connection timeouts for the SSH and become steps of a task
   invocation separately, meaning that in some circumstances the configured
