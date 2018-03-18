@@ -135,6 +135,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         return mitogen.service.call(self.parent, ContextService.handle, cast({
             'method': 'local',
+            'python_path': self.python_path,
         }))
 
     def _connect_ssh(self):
