@@ -741,16 +741,17 @@ class Stream(BasicStream):
         _vv and IOLOG.debug('%r.on_receive()', self)
 
         buf = self.receive_side.read()
-        if buf:
-            if self._input_buf and self._input_buf_len < 128:
-                self._input_buf[0] += buf
-            else:
-                self._input_buf.append(buf)
-            self._input_buf_len += len(buf)
-            while self._receive_one(broker):
-                pass
-        else:
+        if not buf:
             return self.on_disconnect(broker)
+
+        if self._input_buf and self._input_buf_len < 128:
+            self._input_buf[0] += buf
+        else:
+            self._input_buf.append(buf)
+
+        self._input_buf_len += len(buf)
+        while self._receive_one(broker):
+            pass
 
     HEADER_FMT = '>hhhLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
