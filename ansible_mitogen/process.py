@@ -30,7 +30,6 @@ from __future__ import absolute_import
 import os
 import socket
 import sys
-import threading
 
 import mitogen
 import mitogen.core
@@ -147,9 +146,9 @@ class MuxProcess(object):
         Construct a ContextService and a thread to service requests for it
         arriving from worker processes.
         """
-        self.service = ansible_mitogen.services.ContextService(self.router)
-        self.service_thread = threading.Thread(target=self.service.run)
-        self.service_thread.start()
+        self.pool = mitogen.service.Pool(self.router, [
+            ansible_mitogen.services.ContextService(self.router)
+        ])
 
     def on_broker_shutdown(self):
         """
@@ -157,5 +156,5 @@ class MuxProcess(object):
         the main thread) by unlinking the listening socket. Ideally this would
         happen explicitly, but Ansible provides no hook to allow it.
         """
+        self.pool.stop()
         os.unlink(self.listener.path)
-        self.service_thread.join(timeout=10)
