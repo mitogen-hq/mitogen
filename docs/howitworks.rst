@@ -269,18 +269,18 @@ parent and child:
       - Description
 
     * - `dst_id`
-      - 2
+      - 4
       - Integer target context ID. :py:class:`Router` delivers messages
         locally when their `dst_id` matches :py:data:`mitogen.context_id`,
         otherwise they are routed up or downstream.
 
     * - `src_id`
-      - 2
+      - 4
       - Integer source context ID. Used as the target of replies if any are
         generated.
 
     * - `auth_id`
-      - 2
+      - 4
       - The context ID under whose authority the message is acting. See
         :py:ref:`source-verification`.
 

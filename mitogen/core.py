@@ -757,7 +757,7 @@ class Stream(BasicStream):
         while self._receive_one(broker):
             pass
 
-    HEADER_FMT = '>hhhLLL'
+    HEADER_FMT = '>LLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
 
     def _receive_one(self, broker):
@@ -819,9 +819,9 @@ class Stream(BasicStream):
 
     def _send(self, msg):
         _vv and IOLOG.debug('%r._send(%r)', self, msg)
-        pkt = struct.pack('>hhhLLL', msg.dst_id, msg.src_id, msg.auth_id,
-                          msg.handle, msg.reply_to or 0, len(msg.data)
-        ) + msg.data
+        pkt = struct.pack(self.HEADER_FMT, msg.dst_id, msg.src_id,
+                          msg.auth_id, msg.handle, msg.reply_to or 0,
+                          len(msg.data)) + msg.data
         self._output_buf.append(pkt)
         self._router.broker.start_transmit(self)
 
