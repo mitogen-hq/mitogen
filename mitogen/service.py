@@ -135,7 +135,12 @@ class Pool(object):
             raise
 
     def __repr__(self):
-        return 'mitogen.service.Pool(%#x, size=%d)' % (id(self), self.size)
+        th = threading.currentThread()
+        return 'mitogen.service.Pool(%#x, size=%d, th=%r)' % (
+            id(self),
+            self.size,
+            th.name,
+        )
 
 
 def call(context, handle, obj):
