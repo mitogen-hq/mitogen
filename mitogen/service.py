@@ -100,7 +100,7 @@ class Pool(object):
         self._threads = []
         for x in xrange(size):
             thread = threading.Thread(
-                name='mitogen.service.Pool.worker-%d' % (x,),
+                name='mitogen.service.Pool.%x.worker-%d' % (id(self), x,),
                 target=self._worker_main,
             )
             thread.start()
@@ -111,7 +111,7 @@ class Pool(object):
         for th in self._threads:
             th.join()
 
-    def _worker_main(self):
+    def _worker_run(self):
         while True:
             try:
                 msg = self._select.get()
@@ -125,6 +125,17 @@ class Pool(object):
                 service.dispatch_one(msg)
             except Exception:
                 LOG.exception('While handling %r using %r', msg, service)
+
+    def _worker_main(self):
+        try:
+            self._worker_run()
+        except Exception:
+            th = threading.currentThread()
+            LOG.exception('%r: worker %r crashed', self, th.name)
+            raise
+
+    def __repr__(self):
+        return 'mitogen.service.Pool(%#x, size=%d)' % (id(self), self.size)
 
 
 def call(context, handle, obj):
