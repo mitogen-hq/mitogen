@@ -41,7 +41,7 @@ class Handler(logging.Handler):
     """
     def __init__(self, method):
         super(Handler, self).__init__()
-        self.formatter = mitogen.utils.log_get_formatter()
+        self.formatter = mitogen.utils.log_get_formatter(usec=True)
         self.method = method
 
     def emit(self, record):
