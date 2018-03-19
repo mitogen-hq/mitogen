@@ -78,3 +78,4 @@ def setup():
     mitogen.core.IOLOG.handlers = [Handler(display.vvvv)]
     if display.verbosity > 3:
         mitogen.core.IOLOG.setLevel(logging.DEBUG)
+        mitogen.core.IOLOG.propagate = False
