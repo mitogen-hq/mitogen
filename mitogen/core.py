@@ -966,8 +966,12 @@ class Latch(object):
 
             assert _tls.rsock in rfds
             assert _tls.rsock.recv(1) == '\x7f'
-            _vv and IOLOG.debug('%r.get() wake -> %r', self, self.queue[0])
-            return self.queue.pop(0)
+            try:
+                _vv and IOLOG.debug('%r.get() wake -> %r', self, self.queue[0])
+                return self.queue.pop(0)
+            except IndexError:
+                IOLOG.exception('%r.get() INDEX ERROR', self)
+                raise
         finally:
             self.lock.release()
 
