@@ -980,6 +980,8 @@ class Latch(object):
             self.queue.append(obj)
             woken = len(self.wake_socks) > 0
             if woken:
+                _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
+                                    self, self.wake_socks[0].fileno())
                 self._wake(self.wake_socks.pop(0))
         finally:
             self.lock.release()
