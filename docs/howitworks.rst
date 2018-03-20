@@ -883,7 +883,7 @@ written to the first socket in the list before finally releasing `lock`.
 Latch.close()
 ~~~~~~~~~~~
 
-:py:meth:`mitogen.core.Latch.putclose` acquires `lock`, sets `closed` to
+:py:meth:`mitogen.core.Latch.close` acquires `lock`, sets `closed` to
 :py:data:`True`, then writes a byte to every socket in `wake_socks`. As above,
 on waking from sleep, after removing itself from `wake_socks`, each sleeping
 thread tests if `closed` is :py:data:`True`, and if so throws
