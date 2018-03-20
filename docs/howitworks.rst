@@ -889,10 +889,16 @@ Latch.close()
 ~~~~~~~~~~~
 
 :py:meth:`mitogen.core.Latch.close` acquires `lock`, sets `closed` to
-:py:data:`True`, then writes a byte to every socket in `sleeping`. Per above,
-on waking from sleep, after removing itself from `sleeping`, each sleeping
-thread tests if `closed` is :py:data:`True`, and if so throws
+:py:data:`True`, then writes a byte to every `sleeping[waking]` socket, while
+incrementing `waking`, until no more unwoken sockets exist. Per above, on
+waking from sleep, after removing itself from `sleeping`, each sleeping thread
+tests if `closed` is :py:data:`True`, and if so throws
 :py:class:`mitogen.core.LatchError`.
+
+It is necessary to ensure at most one byte is delivered on each socket, even if
+the latch is being torn down, as the sockets outlive the scope of a single
+latch, and must never have extraneous data buffered on them, as this will cause
+unexpected wakeups if future latches sleep on the same thread.
 
 
 Latch.get()
@@ -929,6 +935,11 @@ item.
     :py:class:`mitogen.core.TimeoutError` if no byte was written, decrements
     `waking`,  then pops and returns the first item in `queue` that is
     guaranteed to exist.
+
+    It is paramount that in every case, if :py:func:`select.select` indicates a
+    byte was written to the socket, that the byte is read away. The socket is
+    reused by subsequent latches sleeping on the same thread, and unexpected
+    wakeups are triggered if extraneous data remains buffered on the socket.
 
 
 .. rubric:: Footnotes
