@@ -941,9 +941,10 @@ class Latch(object):
         try:
             if self.closed:
                 raise LatchError()
-            if self._queue and not self._sleeping:
-                _vv and IOLOG.debug('%r.get() -> %r', self, self._queue[0])
-                return self._queue.pop(0)
+            i = len(self._sleeping)
+            if len(self._queue) > i:
+                _vv and IOLOG.debug('%r.get() -> %r', self, self._queue[i])
+                return self._queue.pop(i)
             if not block:
                 raise TimeoutError()
             self._tls_init()
@@ -952,25 +953,21 @@ class Latch(object):
             self._lock.release()
 
         _vv and IOLOG.debug('%r.get() -> sleeping', self)
-        rfds, _, _ = restart(select.select, [_tls.rsock], [], [], timeout)
-        assert len(rfds) or timeout is not None
+        restart(select.select, [_tls.rsock], [], [], timeout)
 
         self._lock.acquire()
         try:
-            self._sleeping.remove(_tls.wsock)
-            if not rfds:
+            i = self._sleeping.index(_tls.wsock)
+            del self._sleeping[i]
+            self._waking -= 1
+            if i > self._waking:
                 raise TimeoutError()
             if _tls.rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
-            self._waking -= 1
             if self.closed:
                 raise LatchError()
-            try:
-                _vv and IOLOG.debug('%r.get() wake -> %r', self, self._queue[0])
-                return self._queue.pop(0)
-            except IndexError:
-                IOLOG.exception('%r.get() INDEX ERROR', self)
-                raise
+            _vv and IOLOG.debug('%r.get() wake -> %r', self, self._queue[i])
+            return self._queue.pop(i)
         finally:
             self._lock.release()
 
