@@ -925,9 +925,9 @@ item.
     :py:meth:`mitogen.core.Latch.put`.
 
 **4. Wake, Non-empty**
-    On wake it re-acquires `lock`, removes itself from `sleeping`, decrementing
-    `waking`, throws :py:class:`mitogen.core.TimeoutError` if no byte was
-    written, otherwise pops and returns the first item in `queue` that is
+    On wake it re-acquires `lock`, removes itself from `sleeping`, throws
+    :py:class:`mitogen.core.TimeoutError` if no byte was written, decrements
+    `waking`,  then pops and returns the first item in `queue` that is
     guaranteed to exist.
 
 

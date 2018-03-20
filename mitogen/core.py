@@ -957,11 +957,11 @@ class Latch(object):
         self._lock.acquire()
         try:
             self._sleeping.remove(_tls.wsock)
-            self._waking -= 1
             if self.closed:
                 raise LatchError()
             if not rfds:
                 raise TimeoutError()
+            self._waking -= 1
             if _tls.rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
             try:
