@@ -907,12 +907,12 @@ def _unpickle_context(router, context_id, name):
 
 class Latch(object):
     closed = False
+    _waking = 0
 
     def __init__(self):
         self._lock = threading.Lock()
         self._queue = []
         self._sleeping = []
-        self._pending = {}
 
     def close(self):
         self._lock.acquire()
@@ -940,7 +940,7 @@ class Latch(object):
         try:
             if self.closed:
                 raise LatchError()
-            if self._queue:
+            if self._queue and not self._sleeping:
                 _vv and IOLOG.debug('%r.get() -> %r', self, self._queue[0])
                 return self._queue.pop(0)
             if not block:
@@ -956,6 +956,8 @@ class Latch(object):
 
         self._lock.acquire()
         try:
+            self._sleeping.remove(_tls.wsock)
+            self._waking -= 1
             if self.closed:
                 raise LatchError()
             if not rfds:
@@ -963,9 +965,8 @@ class Latch(object):
             if _tls.rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
             try:
-                obj = self._pending.pop(_tls.wsock)
-                _vv and IOLOG.debug('%r.get() wake -> %r', self, obj)
-                return obj
+                _vv and IOLOG.debug('%r.get() wake -> %r', self, self._queue[0])
+                return self._queue.pop(0)
             except IndexError:
                 IOLOG.exception('%r.get() INDEX ERROR', self)
                 raise
@@ -978,14 +979,13 @@ class Latch(object):
         try:
             if self.closed:
                 raise LatchError()
-            if self._sleeping:
-                sock = self._sleeping.pop(0)
-                self._pending[sock] = obj
+            self._queue.append(obj)
+            if self._waking < len(self._sleeping):
+                sock = self._sleeping[self._waking]
+                self._waking += 1
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, sock.fileno())
                 self._wake(sock)
-            else:
-                self._queue.append(obj)
         finally:
             self._lock.release()
 

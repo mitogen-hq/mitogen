@@ -862,12 +862,11 @@ Latch Internals
 Attributes:
 
 * `lock` – :py:class:`threading.Lock`.
-* `queue` – enqueued items.
-* `wake_socks` – the write sides of the socketpairs for each currently
-  sleeping thread. While the lock is held, a non-empty `wake_socks` indicates
-  not only the presence of sleeping threads, but threads that have recently
-  woken but have not yet to retrieved their item from `queue`.
-* `closed` – a simple boolean defaulting to :py:data:`False`. Every time `lock`
+* `queue` – items waiting to be dequeued.
+* `sleeping` – write sides of the socketpairs for each sleeping thread, and
+  threads in the process of waking from sleep.
+* `waking` – integer number of `sleeping` threads in the process of waking up.
+* `closed` – boolean defaulting to :py:data:`False`. Every time `lock`
   is acquired, `closed` must be tested, and if it is :py:data:`True`,
   :py:class:`mitogen.core.LatchError` must be thrown.
 
@@ -875,17 +874,23 @@ Attributes:
 Latch.put()
 ~~~~~~~~~~~
 
-:py:meth:`mitogen.core.Latch.put` operates simply by acquiring `lock`,
-appending the item on to `queue`, then if `wake_socks` is non-empty, a byte is
-written to the first socket in the list before finally releasing `lock`.
+:py:meth:`mitogen.core.Latch.put` operates by:
+
+1. Acquiring `lock`
+2. Appending the item on to `queue`.
+3. If `waking` is less than the length of `sleeping`, write a byte to the
+   socket at `sleeping[waking]` and increment `waking`.
+
+In this way each thread is woken only once, and receives each element according
+to when its socket was placed on `sleeping`.
 
 
 Latch.close()
 ~~~~~~~~~~~
 
 :py:meth:`mitogen.core.Latch.close` acquires `lock`, sets `closed` to
-:py:data:`True`, then writes a byte to every socket in `wake_socks`. As above,
-on waking from sleep, after removing itself from `wake_socks`, each sleeping
+:py:data:`True`, then writes a byte to every socket in `sleeping`. Per above,
+on waking from sleep, after removing itself from `sleeping`, each sleeping
 thread tests if `closed` is :py:data:`True`, and if so throws
 :py:class:`mitogen.core.LatchError`.
 
@@ -899,30 +904,31 @@ first thread to attempt to retrieve an item always receives the first available
 item.
 
 **1. Non-empty, No Waiters, No sleep**
-    On entry `lock` is taken, and if `queue` is non-empty, and `wake_socks` is
+    On entry `lock` is taken, and if `queue` is non-empty, and `sleeping` is
     empty, it is safe to return `queue`'s first item without blocking.
 
 **2. Non-empty, Waiters Present, Sleep**
-    In this case `wake_socks` is non-empty, and it is not safe to pop the item
+    In this case `sleeping` is non-empty, and it is not safe to pop the item
     even though we are holding `lock`, as it would bump the calling thread to
     the front of the line, starving any sleeping thread of their item, since a
-    race exists between a thread waking from :py:func:`select.select` and its
-    re-acquiring of `lock`.
+    race exists between a thread waking from :py:func:`select.select` and
+    re-acquiring `lock`.
 
-    This avoids the need for a retry loop for waking threads, and a sleeping
-    thread being continually re-woken only to discover `queue` drained by a
-    thread that never slept.
+    This avoids the need for a retry loop for waking threads, and a thread
+    being continually re-woken to discover `queue` drained by a thread that
+    never slept.
 
 **3. Sleep**
-    Since `queue` was empty, or `wake_socks` was non-empty, the thread adds its
-    socket to `wake_socks` before releasing `lock`, and sleeping in
+    Since `queue` was empty, or `sleeping` was non-empty, the thread adds its
+    socket to `sleeping` before releasing `lock`, and sleeping in
     :py:func:`select.select` waiting for a write from
     :py:meth:`mitogen.core.Latch.put`.
 
 **4. Wake, Non-empty**
-    On wake it re-acquires `lock`, removes itself from `wake_socks`, throws
-    :py:class:`mitogen.core.TimeoutError` if no byte was written, otherwise
-    pops and returns the first item in `queue` that is guaranteed to exist.
+    On wake it re-acquires `lock`, removes itself from `sleeping`, decrementing
+    `waking`, throws :py:class:`mitogen.core.TimeoutError` if no byte was
+    written, otherwise pops and returns the first item in `queue` that is
+    guaranteed to exist.
 
 
 .. rubric:: Footnotes
