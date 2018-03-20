@@ -823,7 +823,7 @@ not possible to block waiting on synchronization objects sanely. Two major
 problems exist:
 
 * Sleeping with no timeout set causes signals to be blocked, preventing the
-  user from using CTRL+C to terminate the process.
+  user from terminating the process using CTRL+C.
 
 * Sleeping with a timeout set internally makes use of polling, with an
   exponential backoff that eventually results in the thread sleeping
