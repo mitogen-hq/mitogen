@@ -917,8 +917,8 @@ class Latch(object):
         self.lock.acquire()
         try:
             self.closed = True
-            while self.wake_socks:
-                self._wake(self.wake_socks.pop())
+            for wsock in self.wake_socks:
+                self._wake(wsock)
         finally:
             self.lock.release()
 
@@ -932,16 +932,14 @@ class Latch(object):
             set_cloexec(_tls.wsock.fileno())
 
     def get(self, timeout=None, block=True):
-        _vv and IOLOG.debug(
-            '%r.get(timeout=%r, block=%r)',
-            self, timeout, block
-        )
+        _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)',
+                            self, timeout, block)
 
         self.lock.acquire()
         try:
             if self.closed:
                 raise LatchError()
-            if self.queue:
+            if self.queue and not self.wake_socks:
                 _vv and IOLOG.debug('%r.get() -> %r', self, self.queue[0])
                 return self.queue.pop(0)
             if not block:
@@ -957,14 +955,11 @@ class Latch(object):
 
         self.lock.acquire()
         try:
+            self.wake_socks.remove(_tls.wsock)
             if self.closed:
                 raise LatchError()
-            if _tls.wsock in self.wake_socks:
-                # Nothing woke us, remove stale entry.
-                self.wake_socks.remove(_tls.wsock)
+            if not rfds:
                 raise TimeoutError()
-
-            assert _tls.rsock in rfds
             assert _tls.rsock.recv(1) == '\x7f'
             try:
                 _vv and IOLOG.debug('%r.get() wake -> %r', self, self.queue[0])
@@ -982,14 +977,12 @@ class Latch(object):
             if self.closed:
                 raise LatchError()
             self.queue.append(obj)
-            woken = len(self.wake_socks) > 0
-            if woken:
+            if self.wake_socks:
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, self.wake_socks[0].fileno())
-                self._wake(self.wake_socks.pop(0))
+                self._wake(self.wake_socks[0])
         finally:
             self.lock.release()
-        _v and LOG.debug('put() done. woken? %s', woken)
 
     def _wake(self, sock):
         try:
