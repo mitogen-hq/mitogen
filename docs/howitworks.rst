@@ -934,6 +934,10 @@ receive items in the order they are requested, as they become available.
     for timeout, or a write from :py:meth:`Latch.put` or
     :py:meth:`Latch.close`.
 
+    If :py:func:`select.select` throws an exception, the exception must be
+    caught and re-raised only after some of the wake steps below have
+    completed.
+
 **5. Wake, Non-empty**
     On wake `lock` is re-acquired, the socket is removed from `sleeping` after
     noting its index, and :py:class:`TimeoutError` is thrown if `waking`
