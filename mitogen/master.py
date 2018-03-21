@@ -117,46 +117,67 @@ def scan_code_imports(co):
                        co.co_consts[arg2] or ())
 
 
-_join_lock = threading.Lock()
-_join_process_id = None
-_join_callbacks_by_target = {}
-_join_thread_by_target = {}
+class ThreadWatcher(object):
+    """
+    Manage threads that waits for nother threads to shutdown, before invoking
+    `on_join()`. In CPython it seems possible to use this method to ensure a
+    non-main thread is signalled when the main thread has exitted, using yet
+    another thread as a proxy.
+    """
+    _lock = threading.Lock()
+    _pid = None
+    _instances_by_target = {}
+    _thread_by_target = {}
 
+    @classmethod
+    def _reset(cls):
+        """If we have forked since the watch dictionaries were initialized, all
+        that has is garbage, so clear it."""
+        if os.getpid() != cls._pid:
+            cls._pid = os.getpid()
+            cls._instances_by_target.clear()
+            cls._thread_by_target.clear()
 
-def _join_thread_reset():
-    """If we have forked since the watch dictionaries were initialized, all
-    that has is garbage, so clear it."""
-    global _join_process_id
+    def __init__(self, target, on_join):
+        self.target = target
+        self.on_join = on_join
 
-    if os.getpid() != _join_process_id:
-        _join_process_id = os.getpid()
-        _join_callbacks_by_target.clear()
-        _join_thread_by_target.clear()
+    @classmethod
+    def _watch(cls, target):
+        target.join()
+        for watcher in cls._instances_by_target[target]:
+            watcher.on_join()
 
+    def install(self):
+        self._lock.acquire()
+        try:
+            self._reset()
+            self._instances_by_target.setdefault(self.target, []).append(self)
+            if self.target not in self._thread_by_target:
+                self._thread_by_target[self.target] = threading.Thread(
+                    name='mitogen.master.join_thread_async',
+                    target=self._watch,
+                    args=(self.target,)
+                )
+                self._thread_by_target[self.target].start()
+        finally:
+            self._lock.release()
 
-def join_thread_async(target_thread, on_join):
-    """Start a thread that waits for another thread to shutdown, before
-    invoking `on_join()`. In CPython it seems possible to use this method to
-    ensure a non-main thread is signalled when the main thread has exitted,
-    using yet another thread as a proxy."""
+    def remove(self):
+        self._lock.acquire()
+        try:
+            self._reset()
+            lst = self._instances_by_target.get(self.target, [])
+            if self in lst:
+                lst.remove(self)
+        finally:
+            self._lock.release()
 
-    def _watch():
-        target_thread.join()
-        for on_join in _join_callbacks_by_target[target_thread]:
-            on_join()
-
-    _join_lock.acquire()
-    try:
-        _join_thread_reset()
-        _join_callbacks_by_target.setdefault(target_thread, []).append(on_join)
-        if target_thread not in _join_thread_by_target:
-            _join_thread_by_target[target_thread] = threading.Thread(
-                name='mitogen.master.join_thread_async',
-                target=_watch,
-            )
-            _join_thread_by_target[target_thread].start()
-    finally:
-        _join_lock.release()
+    @classmethod
+    def watch(cls, target, on_join):
+        watcher = cls(target, on_join)
+        watcher.install()
+        return watcher
 
 
 class SelectError(mitogen.core.Error):
@@ -604,11 +625,20 @@ class ModuleResponder(object):
 
 class Broker(mitogen.core.Broker):
     shutdown_timeout = 5.0
+    _watcher = None
 
     def __init__(self, install_watcher=True):
         if install_watcher:
-            join_thread_async(threading.currentThread(), self.shutdown)
+            self._watcher = ThreadWatcher.watch(
+                target=threading.currentThread(),
+                on_join=self.shutdown,
+            )
         super(Broker, self).__init__()
+
+    def shutdown(self):
+        super(Broker, self).shutdown()
+        if self._watcher:
+            self._watcher.remove()
 
 
 class Context(mitogen.core.Context):
