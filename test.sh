@@ -24,5 +24,10 @@ sys.exit(1)
 
 for f in tests/*_test.py; do
     echo $f
-    timeout 10 python $f
+    timeout 10 python $f || fail=1
 done
+
+if [ "$fail" ]; then
+    echo "AT LEAST ONE TEST FAILED" >&2
+    exit 1
+fi
