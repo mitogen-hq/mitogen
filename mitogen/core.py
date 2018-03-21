@@ -1362,7 +1362,7 @@ class Broker(object):
         self._thread.join()
 
     def __repr__(self):
-        return 'Broker()'
+        return 'Broker(%#x)' % (id(self),)
 
 
 class ExternalContext(object):
