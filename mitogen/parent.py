@@ -37,6 +37,7 @@ import socket
 import sys
 import termios
 import textwrap
+import threading
 import time
 import zlib
 
@@ -423,12 +424,24 @@ class Stream(mitogen.core.Stream):
 class ChildIdAllocator(object):
     def __init__(self, router):
         self.router = router
+        self.lock = threading.Lock()
+        self.it = iter(xrange(0))
 
     def allocate(self):
-        master = mitogen.core.Context(self.router, 0)
-        return master.send_await(
-            mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
-        )
+        self.lock.acquire()
+        try:
+            for id_ in self.it:
+                return id_
+
+            master = mitogen.core.Context(self.router, 0)
+            start, end = master.send_await(
+                mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
+            )
+            self.it = iter(xrange(start, end))
+        finally:
+            self.lock.release()
+
+        return self.allocate()
 
 
 class Router(mitogen.core.Router):

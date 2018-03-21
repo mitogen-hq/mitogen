@@ -724,16 +724,25 @@ class IdAllocator(object):
         finally:
             self.lock.release()
 
+    def allocate_block(self):
+        self.lock.acquire()
+        try:
+            id_ = self.next_id
+            self.next_id += 1000
+            return id_, id_ + 1000
+        finally:
+            self.lock.release()
+
     def on_allocate_id(self, msg):
         if msg == mitogen.core._DEAD:
             return
 
-        id_ = self.allocate()
+        id_, last_id = self.allocate_block()
         requestee = self.router.context_by_id(msg.src_id)
         allocated = self.router.context_by_id(id_, msg.src_id)
 
-        LOG.debug('%r: allocating %r to %r', self, allocated, requestee)
-        msg.reply(id_)
+        LOG.debug('%r: allocating [%r..%r) to %r', self, allocated, requestee)
+        msg.reply((id_, last_id))
 
         LOG.debug('%r: publishing route to %r via %r', self,
                   allocated, requestee)
