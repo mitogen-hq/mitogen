@@ -22,10 +22,38 @@ sys.exit(1)
     ' "$@"
 }
 
-for f in tests/*_test.py; do
-    echo $f
-    timeout 10 python $f || fail=1
-done
+trap 'sigint' INT
+sigint()
+{
+    echo "SIGINT received, stopping.."
+    exit 1
+}
+
+run_test()
+{
+    echo "Running $1.."
+    timeout 10 python $1 || fail=$?
+}
+
+run_test tests/ansible_helpers_test.py
+run_test tests/call_function_test.py
+run_test tests/channel_test.py
+run_test tests/fakessh_test.py
+run_test tests/first_stage_test.py
+run_test tests/id_allocation_test.py
+run_test tests/importer_test.py
+run_test tests/latch_test.py
+run_test tests/local_test.py
+run_test tests/master_test.py
+run_test tests/module_finder_test.py
+run_test tests/nested_test.py
+run_test tests/parent_test.py
+run_test tests/responder_test.py
+run_test tests/router_test.py
+run_test tests/select_test.py
+run_test tests/ssh_test.py
+run_test tests/testlib.py
+run_test tests/utils_test.py
 
 if [ "$fail" ]; then
     echo "AT LEAST ONE TEST FAILED" >&2
