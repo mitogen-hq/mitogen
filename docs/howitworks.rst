@@ -335,11 +335,11 @@ Masters listen on the following handles:
 .. currentmodule:: mitogen.core
 .. data:: ALLOCATE_ID
 
-    Replies to any message sent to it with a newly allocated unique context ID,
-    to allow children to safely start their own contexts. In future this is
-    likely to be replaced by 32-bit context IDs and pseudorandom allocation,
-    with an improved :py:data:`ADD_ROUTE` message sent upstream rather than
-    downstream that generates NACKs if any ancestor detects an ID collision.
+    Replies to any message sent to it with a newly allocated range of context
+    IDs, to allow children to safely start their own contexts. Presently IDs
+    are allocated in batches of 1000 from a 32 bit range, allowing up to 4.2
+    million parent contexts to be created and destroyed before the associated
+    Router must be recreated.
 
 
 Children listen on the following handles:
@@ -394,33 +394,28 @@ Children listen on the following handles:
     :py:data:`SHUTDOWN` to it, and arranging for the connection to its parent
     to be closed shortly thereafter.
 
+
+Masters, and children that have ever been used to create a descendent child
+also listen on the following handles:
+
 .. _ADD_ROUTE:
 .. currentmodule:: mitogen.core
 .. data:: ADD_ROUTE
 
-    Receives `(target_id, via_id)` integer tuples, describing how messages
-    arriving at this context on any stream should be forwarded on the stream
-    associated with the context `via_id` such that they are eventually
-    delivered to the target context.
+    Receives `target_id` integer from downstream, describing an ID allocated to
+    a recently constructed child. The receiver verifies no existing route
+    exists to `target_id` before updating its local table to route messages for
+    `target_id` via the stream from which the :py:data:`ADD_ROUTE` message was
+    received.
 
-    This message is necessary to inform intermediary contexts of the existence
-    of a downstream Context, as they do not otherwise parse traffic they are
-    fowarding to their downstream contexts that may cause new contexts to be
-    established.
+.. _DEL_ROUTE:
+.. currentmodule:: mitogen.core
+.. data:: DEL_ROUTE
 
-    Given a chain `master -> ssh1 -> sudo1`, no :py:data:`ADD_ROUTE` message is
-    necessary, since :py:class:`mitogen.core.Router` in the `ssh` context can
-    arrange to update its routes while setting up the new child during
-    :py:meth:`Router.proxy_connect() <mitogen.master.Router.proxy_connect>`.
-
-    However, given a chain like `master -> ssh1 -> sudo1 -> ssh2 -> sudo2`,
-    `ssh1` requires an :py:data:`ADD_ROUTE` for `ssh2`, and both `ssh1` and
-    `sudo1` require an :py:data:`ADD_ROUTE` for `sudo2`, as neither directly
-    dealt with its establishment.
-
-
-Children that have ever been used to create a descendent child also listen on
-the following handles:
+    Receives `target_id` integer from downstream, verifies a route exists to
+    `target_id` via the stream on which the message was received, removes that
+    route from its local table, then propagates the message upward towards its
+    own parent.
 
 .. currentmodule:: mitogen.core
 .. data:: GET_MODULE
@@ -507,9 +502,13 @@ message or stream, instead it is forwarded upwards to the immediate parent, and
 recursively by each parent in turn until one is reached that knows how to
 forward the message down the tree.
 
-When the master establishes a new context via an existing child context, it
-sends corresponding :py:data:`ADD_ROUTE <mitogen.core.ADD_ROUTE>` messages to
-each indirect parent between the context and the root.
+When a parent establishes a new child, it sends a corresponding
+:py:data:`ADD_ROUTE <mitogen.core.ADD_ROUTE>` message towards its parent, which
+recursively forwards it up towards the root.
+
+Parents keep note of all routes associated with each stream they connect with,
+and trigger ``DEL_ROUTE`` messages propagated upstream for each route
+associated with that stream if the stream is disconnected for any reason.
 
 
 Example
@@ -517,10 +516,16 @@ Example
 
 .. image:: images/context-tree.png
 
-In the diagram, when ``master`` is creating the ``sudo:node12b:webapp``
-context, it must send ``ADD_ROUTE`` messages to ``rack12``, ``dc1``,
-``bastion``, and itself; ``node12b`` does not require an ``ADD_ROUTE`` message
-since it has a stream directly connected to the new context.
+In the diagram, when ``node12b`` is creating the ``sudo:node12b:webapp``
+context, it must send ``ADD_ROUTE`` messages to ``rack12``, which will
+propagate it to ``dc1``, and recursively to ``bastion``, and ``master``;
+``node12b`` does not require an ``ADD_ROUTE`` message since it has a stream
+directly connected to the new context.
+
+Since Mitogen streams are strictly ordered, it is never possible for a parent
+to receive a message from a newly constructed child before receiving a
+corresponding ``ADD_ROUTE`` sent by the child's parent, describing how to reply
+to it.
 
 When ``sudo:node22a:webapp`` wants to send a message to
 ``sudo:node12b:webapp``, the message will be routed as follows:
@@ -553,15 +558,6 @@ privilege to contexts that do not follow the tree's natural trust chain. This
 supports cases where siblings are permitted to execute code on one another, or
 where isolated processes can connect to a listener and communicate with an
 already established established tree.
-
-
-Future
-######
-
-The current routing approach is incomplete, since routes to downstream contexts
-are not propagated upwards when a descendant of the master context establishes
-a new child context, but that is okay for now, since child contexts cannot
-currently allocate new context IDs anyway.
 
 
 Differences Between Master And Child Brokers

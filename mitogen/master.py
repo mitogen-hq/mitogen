@@ -683,9 +683,13 @@ class Router(mitogen.parent.Router):
         if broker is None:
             broker = self.broker_class()
         super(Router, self).__init__(broker)
+        self.upgrade()
+
+    def upgrade(self):
         self.id_allocator = IdAllocator(self)
         self.responder = ModuleResponder(self)
         self.log_forwarder = LogForwarder(self)
+        self.route_monitor = mitogen.parent.RouteMonitor(router=self)
 
     def enable_debug(self):
         mitogen.core.enable_debug_logging()
@@ -710,23 +714,6 @@ class Router(mitogen.parent.Router):
     def ssh(self, **kwargs):
         return self.connect('ssh', **kwargs)
 
-    def propagate_route(self, target, via):
-        self.add_route(target.context_id, via.context_id)
-        child = via
-        parent = via.via
-
-        while parent is not None:
-            LOG.debug('Adding route to %r for %r via %r',
-                      parent, target, child)
-            parent.send(
-                mitogen.core.Message(
-                    data='%s\x00%s' % (target.context_id, child.context_id),
-                    handle=mitogen.core.ADD_ROUTE,
-                )
-            )
-            child = parent
-            parent = parent.via
-
     def disconnect_stream(self, stream):
         self.broker.defer(stream.on_disconnect, self.broker)
 
@@ -745,6 +732,8 @@ class IdAllocator(object):
     def __repr__(self):
         return 'IdAllocator(%r)' % (self.router,)
 
+    BLOCK_SIZE = 1000
+
     def allocate(self):
         self.lock.acquire()
         try:
@@ -758,8 +747,10 @@ class IdAllocator(object):
         self.lock.acquire()
         try:
             id_ = self.next_id
-            self.next_id += 1000
-            return id_, id_ + 1000
+            self.next_id += self.BLOCK_SIZE
+            end_id = id_ + self.BLOCK_SIZE
+            LOG.debug('%r: allocating (%d..%d]', self, id_, end_id)
+            return id_, end_id
         finally:
             self.lock.release()
 
@@ -771,9 +762,6 @@ class IdAllocator(object):
         requestee = self.router.context_by_id(msg.src_id)
         allocated = self.router.context_by_id(id_, msg.src_id)
 
-        LOG.debug('%r: allocating [%r..%r) to %r', self, allocated, requestee)
+        LOG.debug('%r: allocating [%r..%r) to %r',
+                  self, allocated, requestee, msg.src_id)
         msg.reply((id_, last_id))
-
-        LOG.debug('%r: publishing route to %r via %r', self,
-                  allocated, requestee)
-        self.router.propagate_route(allocated, requestee)

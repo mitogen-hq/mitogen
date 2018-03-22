@@ -63,9 +63,10 @@ GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
 ADD_ROUTE = 103
-ALLOCATE_ID = 104
-SHUTDOWN = 105
-LOAD_MODULE = 106
+DEL_ROUTE = 104
+ALLOCATE_ID = 105
+SHUTDOWN = 106
+LOAD_MODULE = 107
 
 CHUNK_SIZE = 131072
 _tls = threading.local()
@@ -1115,16 +1116,10 @@ class Router(object):
         self._context_by_id = {}
         self._last_handle = itertools.count(1000)
         #: handle -> (persistent?, func(msg))
-        self._handle_map = {
-            ADD_ROUTE: (True, self._on_add_route)
-        }
+        self._handle_map = {}
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
-
-    def stream_by_id(self, dst_id):
-        return self._stream_by_id.get(dst_id,
-            self._stream_by_id.get(mitogen.parent_id))
 
     def on_disconnect(self, stream, broker):
         """Invoked by Stream.on_disconnect()."""
@@ -1140,19 +1135,6 @@ class Router(object):
 
         for _, func in self._handle_map.itervalues():
             func(_DEAD)
-
-    def add_route(self, target_id, via_id):
-        _v and LOG.debug('%r.add_route(%r, %r)', self, target_id, via_id)
-        try:
-            self._stream_by_id[target_id] = self._stream_by_id[via_id]
-        except KeyError:
-            LOG.error('%r: cant add route to %r via %r: no such stream',
-                      self, target_id, via_id)
-
-    def _on_add_route(self, msg):
-        if msg != _DEAD:
-            target_id, via_id = map(int, msg.data.split('\x00'))
-            self.add_route(target_id, via_id)
 
     def register(self, context, stream):
         _v and LOG.debug('register(%r, %r)', context, stream)

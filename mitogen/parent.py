@@ -232,9 +232,10 @@ def discard_until(fd, s, deadline):
 def upgrade_router(econtext):
     if not isinstance(econtext.router, Router):  # TODO
         econtext.router.__class__ = Router  # TODO
-        econtext.router.id_allocator = ChildIdAllocator(econtext.router)
-        LOG.debug('_proxy_connect(): constructing ModuleForwarder')
-        ModuleForwarder(econtext.router, econtext.parent, econtext.importer)
+        econtext.router.upgrade(
+            importer=econtext.importer,
+            parent=econtext.parent,
+        )
 
 
 def _docker_method():
@@ -262,15 +263,14 @@ METHOD_NAMES = {
 
 
 @mitogen.core.takes_econtext
-def _proxy_connect(name, context_id, method_name, kwargs, econtext):
+def _proxy_connect(name, method_name, kwargs, econtext):
     mitogen.parent.upgrade_router(econtext)
     context = econtext.router._connect(
-        context_id,
-        METHOD_NAMES[method_name](),
+        klass=METHOD_NAMES[method_name](),
         name=name,
         **kwargs
     )
-    return context.name
+    return context.context_id, context.name
 
 
 class Stream(mitogen.core.Stream):
@@ -296,6 +296,9 @@ class Stream(mitogen.core.Stream):
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
         self.sent_modules = set(['mitogen', 'mitogen.core'])
+        #: List of contexts reachable via this stream; used to cleanup routes
+        #: during disconnection.
+        self.routes = set([self.remote_id])
 
     def construct(self, remote_name=None, python_path=None, debug=False,
                   connect_timeout=None, profiling=False, **kwargs):
@@ -444,8 +447,129 @@ class ChildIdAllocator(object):
         return self.allocate()
 
 
+class RouteMonitor(object):
+    def __init__(self, router, parent=None):
+        self.router = router
+        self.parent = parent
+        self.router.add_handler(
+            fn=self._on_add_route,
+            handle=mitogen.core.ADD_ROUTE,
+            persist=True,
+        )
+        self.router.add_handler(
+            fn=self._on_del_route,
+            handle=mitogen.core.DEL_ROUTE,
+            persist=True,
+        )
+
+    def propagate(self, handle, target_id):
+        # self.parent is None in the master.
+        if self.parent:
+            self.parent.send(
+                mitogen.core.Message(
+                    handle=handle,
+                    data=str(target_id),
+                )
+            )
+
+    def notice_stream(self, stream):
+        """
+        When this parent is responsible for a new directly connected child
+        stream, we're also responsible for broadcasting DEL_ROUTE upstream
+        if/when that child disconnects.
+        """
+        self.propagate(mitogen.core.ADD_ROUTE, stream.remote_id)
+        mitogen.core.listen(
+            obj=stream,
+            name='disconnect',
+            func=lambda: self._on_stream_disconnect(stream),
+        )
+
+    def _on_stream_disconnect(self, stream):
+        """
+        Respond to disconnection of a local stream by 
+        """
+        for target_id in stream.routes:
+            LOG.debug('%r is gone; propagating DEL_ROUTE for ID %d',
+                      stream, target_id)
+            self.router.del_route(target_id)
+            self.propagate(mitogen.core.DEL_ROUTE, target_id)
+
+    def _on_add_route(self, msg):
+        if msg == mitogen.core._DEAD:
+            return
+
+        target_id = int(msg.data)
+        stream = self.router.stream_by_id(msg.auth_id)
+        current = self.router.stream_by_id(target_id)
+        if current and current.remote_id != mitogen.parent_id:
+            LOG.error('Cannot add duplicate route to %r via %r, '
+                      'already have existing route via %r',
+                      target_id, stream, current)
+            return
+
+        LOG.debug('Adding route to %d via %r', target_id, stream)
+        stream.routes.add(target_id)
+        self.router.add_route(target_id, stream)
+        self.propagate(mitogen.core.ADD_ROUTE, target_id)
+
+    def _on_del_route(self, msg):
+        if msg == mitogen.core._DEAD:
+            return
+
+        target_id = int(msg.data)
+        registered_stream = self.router.stream_by_id(target_id)
+        stream = self.router.stream_by_id(msg.auth_id)
+        if registered_stream != stream:
+            LOG.error('Received DEL_ROUTE for %d from %r, expected %r',
+                      target_id, stream, registered_stream)
+            return
+
+        LOG.debug('Deleting route to %d via %r', target_id, stream)
+        stream.routes.discard(target_id)
+        self.router.del_route(target_id)
+        self.propagate(mitogen.core.DEL_ROUTE, target_id)
+
+
 class Router(mitogen.core.Router):
     context_class = mitogen.core.Context
+
+    id_allocator = None
+    responder = None
+    log_forwarder = None
+    route_monitor = None
+
+    def upgrade(self, importer, parent):
+        LOG.debug('%r.upgrade()', self)
+        self.id_allocator = ChildIdAllocator(router=self)
+        self.responder = ModuleForwarder(
+            router=self,
+            parent_context=parent,
+            importer=importer,
+        )
+        self.route_monitor = RouteMonitor(self, parent)
+
+    def stream_by_id(self, dst_id):
+        return self._stream_by_id.get(dst_id,
+            self._stream_by_id.get(mitogen.parent_id))
+
+    def add_route(self, target_id, stream):
+        LOG.debug('%r.add_route(%r, %r)', self, target_id, stream)
+        assert isinstance(target_id, int)
+        assert isinstance(stream, Stream)
+        try:
+            self._stream_by_id[target_id] = stream
+        except KeyError:
+            LOG.error('%r: cant add route to %r via %r: no such stream',
+                      self, target_id, stream)
+
+    def del_route(self, target_id):
+        LOG.debug('%r.del_route(%r)', self, target_id)
+        try:
+            del self._stream_by_id[target_id]
+        except KeyError:
+            LOG.error('%r: cant delete route to %r: no such stream',
+                      self, target_id)
 
     def get_module_blacklist(self):
         if mitogen.context_id == 0:
@@ -469,13 +593,16 @@ class Router(mitogen.core.Router):
             self._context_by_id[context_id] = context
         return context
 
-    def _connect(self, context_id, klass, name=None, **kwargs):
+    def _connect(self, klass, name=None, **kwargs):
+        context_id = self.allocate_id()
         context = self.context_class(self, context_id)
-        stream = klass(self, context.context_id, **kwargs)
+        stream = klass(self, context_id, **kwargs)
         if name is not None:
             stream.name = name
         stream.connect()
         context.name = stream.name
+        self.route_monitor.notice_stream(stream)
+        self.route_monitor.propagate(mitogen.core.ADD_ROUTE, context_id)
         self.register(context, stream)
         return context
 
@@ -487,23 +614,19 @@ class Router(mitogen.core.Router):
         via = kwargs.pop('via', None)
         if via is not None:
             return self.proxy_connect(via, method_name, name=name, **kwargs)
-        context_id = self.allocate_id()
-        return self._connect(context_id, klass, name=name, **kwargs)
+        return self._connect(klass, name=name, **kwargs)
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
-        context_id = self.allocate_id()
-        # Must be added prior to _proxy_connect() to avoid a race.
-        self.add_route(context_id, via_context.context_id)
-        name = via_context.call(_proxy_connect,
-            name, context_id, method_name, kwargs
+        context_id, name = via_context.call(_proxy_connect,
+            name=name,
+            method_name=method_name,
+            kwargs=kwargs
         )
         name = '%s.%s' % (via_context.name, name)
 
         context = self.context_class(self, context_id, name=name)
         context.via = via_context
         self._context_by_id[context.context_id] = context
-
-        self.propagate_route(context, via_context)
         return context
 
 
