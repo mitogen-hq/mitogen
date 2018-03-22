@@ -369,8 +369,10 @@ class Stream(mitogen.core.Stream):
         source = source.replace('    ', '\t')
         source = source.replace('CONTEXT_NAME', self.remote_name)
         preamble_compressed = self.get_preamble()
-        source = source.replace('PREAMBLE_COMPRESSED_LEN', str(len(preamble_compressed)))
-        source = source.replace('PREAMBLE_LEN', str(len(zlib.decompress(preamble_compressed))))
+        source = source.replace('PREAMBLE_COMPRESSED_LEN',
+                                str(len(preamble_compressed)))
+        source = source.replace('PREAMBLE_LEN',
+                                str(len(zlib.decompress(preamble_compressed))))
         encoded = zlib.compress(source, 9).encode('base64').replace('\n', '')
         # We can't use bytes.decode() in 3.x since it was restricted to always
         # return unicode, so codecs.decode() is used instead. In 3.x
@@ -495,6 +497,10 @@ class RouteMonitor(object):
             self.router.del_route(target_id)
             self.propagate(mitogen.core.DEL_ROUTE, target_id)
 
+            context = self.router.context_by_id(target_id, create=False)
+            if context:
+                mitogen.core.fire(context, 'disconnect')
+
     def _on_add_route(self, msg):
         if msg == mitogen.core._DEAD:
             return
@@ -584,9 +590,9 @@ class Router(mitogen.core.Router):
     def allocate_id(self):
         return self.id_allocator.allocate()
 
-    def context_by_id(self, context_id, via_id=None):
+    def context_by_id(self, context_id, via_id=None, create=True):
         context = self._context_by_id.get(context_id)
-        if context is None:
+        if create and not context:
             context = self.context_class(self, context_id)
             if via_id is not None:
                 context.via = self.context_by_id(via_id)
