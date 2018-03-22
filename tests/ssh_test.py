@@ -28,8 +28,11 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
             username='has-sudo',
             password='y',
         )
-        self.assertEquals('ssh.localhost:%s' % (self.dockerized_ssh.port,),
-                          context.name)
+        name = 'ssh.%s:%s' % (
+            self.dockerized_ssh.get_host(),
+            self.dockerized_ssh.port,
+        )
+        self.assertEquals(name, context.name)
 
     def test_via_stream_name(self):
         context = self.docker_ssh(
