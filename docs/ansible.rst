@@ -32,12 +32,6 @@ time spent by the target host already doing useful work. Mitogen cannot speed
 up a module once it is executing, it can only ensure the module executes as
 quickly as possible.
 
-.. raw:: html
-
-    <div style="float:right; border:1px solid silver;margin-left: 16px;">
-    <iframe src="https://www.kickstarter.com/projects/548438714/mitogen-extension-for-ansible/widget/card.html?v=2" width="220" height="420" frameborder="0" scrolling="no" target="_blank"></iframe>
-    </div>
-
 * **A single SSH connection is used for each target host**, in addition to one
   sudo invocation per distinct user account. Subsequent playbook steps always
   reuse the same connection. This is much better than SSH multiplexing combined
