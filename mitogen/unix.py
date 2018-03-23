@@ -74,9 +74,6 @@ class Listener(mitogen.core.BasicStream):
         self._sock.bind(self.path)
         os.chmod(self.path, 0600)
         self._sock.listen(backlog)
-        mitogen.core.set_nonblock(self._sock.fileno())
-        mitogen.core.set_cloexec(self._sock.fileno())
-        self.path = self._sock.getsockname()
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
 

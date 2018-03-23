@@ -844,8 +844,6 @@ class Stream(BasicStream):
         # TODO: what is this os.dup for?
         self.receive_side = Side(self, os.dup(rfd))
         self.transmit_side = Side(self, os.dup(wfd))
-        set_cloexec(self.receive_side.fd)
-        set_cloexec(self.transmit_side.fd)
 
     def __repr__(self):
         cls = type(self)
@@ -1025,8 +1023,6 @@ class Waker(BasicStream):
     def __init__(self, broker):
         self._broker = broker
         rfd, wfd = os.pipe()
-        set_cloexec(rfd)
-        set_cloexec(wfd)
         self.receive_side = Side(self, rfd)
         self.transmit_side = Side(self, wfd)
 

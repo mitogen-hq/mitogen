@@ -322,7 +322,6 @@ def run(dest, router, args, deadline=None, econtext=None):
     fakessh.name = 'fakessh.%d' % (context_id,)
 
     sock1, sock2 = socket.socketpair()
-    mitogen.core.set_cloexec(sock1.fileno())
 
     stream = mitogen.core.Stream(router, context_id)
     stream.name = 'fakessh'
