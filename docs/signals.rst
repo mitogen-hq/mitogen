@@ -2,6 +2,30 @@
 Signals
 =======
 
+Mitogen exposes a simplistic signal mechanism to help decouple its internal
+components. When a signal is fired by a particular instance of a class, any
+functions registered to receive it will be called back.
+
+
+Functions
+---------
+
+.. function:: mitogen.core.listen (obj, name, func)
+
+    Arrange for `func(\*args, \*\*kwargs)` to be invoked when the named signal
+    is fired by `obj`.
+
+.. function:: mitogen.core.fire (obj, name, \*args, \*\*kwargs)
+
+    Arrange for `func(\*args, \*\*kwargs)` to be invoked for every function
+    registered for the named signal on `obj`.
+
+
+
+List
+----
+
+These signals are used internally by Mitogen.
 
 .. list-table::
     :header-rows: 1
