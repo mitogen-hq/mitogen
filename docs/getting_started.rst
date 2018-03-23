@@ -248,6 +248,19 @@ without the need for writing asynchronous code::
 
 
 
+Recovering Mitogen Object References In Children
+------------------------------------------------
+
+::
+
+    @mitogen.core.takes_econtext
+    def func1(a, b, econtext):
+        ...
+
+    @mitogen.core.takes_router
+    def func2(a, b, router):
+        ...
+
 
 
 Recursion
