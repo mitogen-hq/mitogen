@@ -666,6 +666,7 @@ class Side(object):
         self.stream = stream
         self.fd = fd
         self.keep_alive = keep_alive
+        set_cloexec(fd)
         set_nonblock(fd)
 
     def __repr__(self):
