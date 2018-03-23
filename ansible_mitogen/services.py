@@ -30,7 +30,7 @@ from __future__ import absolute_import
 import mitogen.service
 
 
-class ContextService(mitogen.service.Service):
+class ContextService(mitogen.service.DeduplicatingService):
     """
     Used by worker processes connecting back into the top-level process to
     fetch the single Context instance corresponding to the supplied connection
@@ -60,20 +60,11 @@ class ContextService(mitogen.service.Service):
     """
     handle = 500
     max_message_size = 1000
+    required_args = {
+        'method': str
+    }
 
-    def __init__(self, router):
-        super(ContextService, self).__init__(router)
-        self._context_by_key = {}
-
-    def validate_args(self, args):
-        return isinstance(args, dict)
-
-    def dispatch(self, dct, msg):
-        key = repr(sorted(dct.items()))
-        dct.pop('discriminator', None)
-
-        if key not in self._context_by_key:
-            method = getattr(self.router, dct.pop('method'))
-            self._context_by_key[key] = method(**dct)
-        return self._context_by_key[key]
-
+    def get_response(self, args):
+        args.pop('discriminator', None)
+        method = getattr(self.router, args.pop('method'))
+        return method(**args)
