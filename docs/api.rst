@@ -525,6 +525,30 @@ Router Class
         and router, and responds to function calls identically to children
         created using other methods.
 
+        For long-lived processes, :py:meth:`local` is always better as it
+        guarantees a pristine interpreter state that inherited nothing from the
+        parent. Forking should only be used in performance-sensitive scenarios
+        where short-lived children are spawned, and only after accounting for
+        all the bad things possible as a result of, for example:
+        
+        * file descriptors open in the parent remaining open in the child,
+          causing the lifetime of the underlying object to be extended
+          indefinitely by the child. For example:
+
+          * From the perspective of external components, this is observable
+            in the form of pipes and sockets that are apparently never closed
+            by the remote end (your program).
+
+          * Descriptors that reference large temporary files will not have
+            their disk space reclaimed until the child exits.
+
+        * third party package state (such as urllib3's HTTP connection pool)
+          attempting to write to file descriptors shared with the parent.
+        * memory mappings for large files that cannot have their space freed on
+          disk due to the mapping living on in the child.
+        * thread locks held in the parent producing random deadlocks in the
+          child.
+
         The associated stream implementation is
         :py:class:`mitogen.fork.Stream`.
 
