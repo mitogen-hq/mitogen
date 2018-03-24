@@ -544,8 +544,14 @@ Router Class
 
         * third party package state (such as urllib3's HTTP connection pool)
           attempting to write to file descriptors shared with the parent.
+
         * memory mappings for large files that cannot have their space freed on
           disk due to the mapping living on in the child.
+
+        * Difficult to diagnose memory usage spikes due to large object graphs
+          present in the parent being unreferenced in the child, causing
+          immediate copy-on-write to large portions of the process heap.
+
         * thread locks held in the parent producing random deadlocks in the
           child.
 
