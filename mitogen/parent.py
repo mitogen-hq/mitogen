@@ -615,6 +615,8 @@ class RouteMonitor(object):
 
 class Router(mitogen.core.Router):
     context_class = Context
+    debug = False
+    profiling = False
 
     id_allocator = None
     responder = None
@@ -709,6 +711,21 @@ class Router(mitogen.core.Router):
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
+
+    def docker(self, **kwargs):
+        return self.connect('docker', **kwargs)
+
+    def local(self, **kwargs):
+        return self.connect('local', **kwargs)
+
+    def fork(self, **kwargs):
+        return self.connect('fork', **kwargs)
+
+    def sudo(self, **kwargs):
+        return self.connect('sudo', **kwargs)
+
+    def ssh(self, **kwargs):
+        return self.connect('ssh', **kwargs)
 
 
 class ProcessMonitor(object):
