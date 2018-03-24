@@ -954,8 +954,9 @@ class Latch(object):
         try:
             i = self._sleeping.index(_tls.wsock)
             del self._sleeping[i]
-            self._waking -= 1
-            if i > self._waking:
+            if i < self._waking:
+                self._waking -= 1
+            else:
                 raise TimeoutError()
             if _tls.rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
