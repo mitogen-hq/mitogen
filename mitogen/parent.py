@@ -608,7 +608,6 @@ class Router(mitogen.core.Router):
         stream.connect()
         context.name = stream.name
         self.route_monitor.notice_stream(stream)
-        self.route_monitor.propagate(mitogen.core.ADD_ROUTE, context_id)
         self.register(context, stream)
         return context
 
