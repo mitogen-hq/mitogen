@@ -140,6 +140,10 @@ Low Risk
 
 * In some cases ``remote_tmp`` may not be respected.
 
+* The extension's performance benefits do not scale perfectly linearly with the
+  number of targets. This is a subject of ongoing investigation and
+  improvements will appear in time.
+
 * Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
   to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
   disables pseudo TTYs for certain commands where standard input is required or
