@@ -170,15 +170,6 @@ def takes_router(func):
     return func
 
 
-def restart(func, *args):
-    while True:
-        try:
-            return func(*args)
-        except (select.error, OSError), e:
-            if e[0] != errno.EINTR:
-                raise
-
-
 def is_blacklisted_import(importer, fullname):
     """Return ``True`` if `fullname` is part of a blacklisted package, or if
     any packages have been whitelisted and `fullname` is not part of one.
@@ -208,13 +199,16 @@ def set_block(fd):
 
 
 def io_op(func, *args):
-    try:
-        return func(*args), False
-    except OSError, e:
-        _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
-        if e.errno not in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
+    while True:
+        try:
+            return func(*args), False
+        except OSError, e:
+            _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
+            if e.errno == errno.EINTR:
+                continue
+            if e.errno in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
+                return None, True
             raise
-        return None, True
 
 
 class PidfulStreamHandler(logging.StreamHandler):
@@ -950,7 +944,7 @@ class Latch(object):
         _vv and IOLOG.debug('%r.get() -> sleeping', self)
         e = None
         try:
-            restart(select.select, [_tls.rsock], [], [], timeout)
+            io_op(select.select, [_tls.rsock], [], [], timeout)
         except Exception, e:
             pass
 
@@ -1280,7 +1274,7 @@ class Broker(object):
 
         #IOLOG.debug('readers = %r', self._readers)
         #IOLOG.debug('writers = %r', self._writers)
-        rsides, wsides, _ = restart(select.select,
+        (rsides, wsides, _), _ = io_op(select.select,
             self._readers,
             self._writers,
             (), timeout
