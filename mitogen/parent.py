@@ -385,12 +385,10 @@ class Stream(mitogen.core.Stream):
             'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded,)
         ]
 
-    def get_preamble(self):
+    def get_main_kwargs(self):
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
-
-        source = inspect.getsource(mitogen.core)
-        source += '\nExternalContext().main(**%r)\n' % ({
+        return {
             'parent_ids': parent_ids,
             'context_id': self.remote_id,
             'debug': self.debug,
@@ -398,8 +396,13 @@ class Stream(mitogen.core.Stream):
             'log_level': get_log_level(),
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
-        },)
+        }
 
+    def get_preamble(self):
+        source = inspect.getsource(mitogen.core)
+        source += '\nExternalContext().main(**%r)\n' % (
+            self.get_main_kwargs(),
+        )
         return zlib.compress(minimize_source(source), 9)
 
     create_child = staticmethod(create_child)
