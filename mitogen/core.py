@@ -444,6 +444,7 @@ class Importer(object):
             'compat',
             'compat.pkgutil',
             'fakessh',
+            'fork',
             'master',
             'parent',
             'ssh',
