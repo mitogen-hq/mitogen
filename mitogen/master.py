@@ -644,13 +644,6 @@ class Broker(mitogen.core.Broker):
 class Context(mitogen.core.Context):
     via = None
 
-    def on_disconnect(self, broker):
-        """
-        Override base behaviour of triggering Broker shutdown on parent stream
-        disconnection.
-        """
-        mitogen.core.fire(self, 'disconnect')
-
     def call_async(self, fn, *args, **kwargs):
         LOG.debug('%r.call_async(%r, *%r, **%r)',
                   self, fn, args, kwargs)
