@@ -67,6 +67,7 @@ class Stream(mitogen.parent.Stream):
     def create_child(self, *_args):
         parentfp, childfp = mitogen.parent.create_socketpair()
         self.pid = os.fork()
+        self.name = 'fork.' + str(self.pid)
         if self.pid:
             childfp.close()
             # Decouple the socket from the lifetime of the Python socket object.
@@ -78,6 +79,8 @@ class Stream(mitogen.parent.Stream):
             self._child_main(childfp)
 
     def _child_main(self, childfp):
+        # TODO: Latch descriptors inherited from the parent should be closed.
+        vars(mitogen.core._tls).clear()
         break_logging_locks()
         mitogen.core.set_block(childfp.fileno())
         os.dup2(childfp.fileno(), 1)
@@ -88,10 +91,6 @@ class Stream(mitogen.parent.Stream):
         kwargs['setup_package'] = False
         mitogen.core.ExternalContext().main(**kwargs)
         sys.exit(0)
-
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = 'fork.' + str(self.pid)
 
     def _connect_bootstrap(self):
         # None required.
