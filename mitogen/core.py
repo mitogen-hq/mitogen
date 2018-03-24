@@ -943,7 +943,11 @@ class Latch(object):
         finally:
             self._lock.release()
 
-        _vv and IOLOG.debug('%r.get() -> sleeping', self)
+        return self._get_sleep(timeout, block)
+
+    def _get_sleep(self, timeout, block):
+        _vv and IOLOG.debug('%r._get_sleep(timeout=%r, block=%r)',
+                            self, timeout, block)
         e = None
         try:
             io_op(select.select, [_tls.rsock], [], [], timeout)
@@ -954,10 +958,9 @@ class Latch(object):
         try:
             i = self._sleeping.index(_tls.wsock)
             del self._sleeping[i]
-            if i < self._waking:
-                self._waking -= 1
-            else:
+            if i >= self._waking:
                 raise TimeoutError()
+            self._waking -= 1
             if _tls.rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
             if e:
