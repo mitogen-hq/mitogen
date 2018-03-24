@@ -204,6 +204,11 @@ Stream Classes
 .. autoclass:: Stream
    :members:
 
+.. currentmodule:: mitogen.fork
+
+.. autoclass:: Stream
+   :members:
+
 .. currentmodule:: mitogen.parent
 
 .. autoclass:: Stream
