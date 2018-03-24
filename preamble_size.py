@@ -13,7 +13,7 @@ import mitogen.ssh
 import mitogen.sudo
 
 router = mitogen.master.Router()
-context = mitogen.master.Context(router, 0)
+context = mitogen.parent.Context(router, 0)
 stream = mitogen.ssh.Stream(router, 0, hostname='foo')
 
 print 'SSH command size: %s' % (len(' '.join(stream.get_boot_command())),)

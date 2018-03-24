@@ -732,12 +732,12 @@ Context Class
             No message was received and `deadline` passed.
 
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 
 .. class:: Context
 
     Extend :py:class:`mitogen.core.Router` with functionality useful to
-    masters, and child contexts who later become masters. Currently when this
+    masters, and child contexts who later become parents. Currently when this
     class is required, the target context's router is upgraded at runtime.
 
     .. method:: call_async (fn, \*args, \*\*kwargs)
@@ -820,7 +820,7 @@ Receiver Class
 
     Receivers are used to wait for pickled responses from another context to be
     sent to a handle registered in this context. A receiver may be single-use
-    (as in the case of :py:meth:`mitogen.master.Context.call_async`) or
+    (as in the case of :py:meth:`mitogen.parent.Context.call_async`) or
     multiple use.
 
     :param mitogen.core.Router router:
@@ -1057,7 +1057,7 @@ A random assortment of utility functions useful on masters and children.
     functionality, such as annotating the safety of a Unicode string, or adding
     additional methods to a dict. However, cPickle loves to preserve those
     subtypes during serialization, resulting in CallError during :py:meth:`call
-    <mitogen.master.Context.call>` in the target when it tries to deserialize
+    <mitogen.parent.Context.call>` in the target when it tries to deserialize
     the data.
 
     This function walks the object graph `obj`, producing a copy with any
@@ -1139,7 +1139,7 @@ Exceptions
 
 .. class:: CallError (e)
 
-    Raised when :py:meth:`Context.call() <mitogen.master.Context.call>` fails.
+    Raised when :py:meth:`Context.call() <mitogen.parent.Context.call>` fails.
     A copy of the traceback from the external context is appended to the
     exception message.
 

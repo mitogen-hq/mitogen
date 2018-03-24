@@ -641,33 +641,7 @@ class Broker(mitogen.core.Broker):
             self._watcher.remove()
 
 
-class Context(mitogen.core.Context):
-    via = None
-
-    def call_async(self, fn, *args, **kwargs):
-        LOG.debug('%r.call_async(%r, *%r, **%r)',
-                  self, fn, args, kwargs)
-
-        if isinstance(fn, types.MethodType) and \
-           isinstance(fn.im_self, (type, types.ClassType)):
-            klass = fn.im_self.__name__
-        else:
-            klass = None
-
-        return self.send_async(
-            mitogen.core.Message.pickled(
-                (fn.__module__, klass, fn.__name__, args, kwargs),
-                handle=mitogen.core.CALL_FUNCTION,
-            )
-        )
-
-    def call(self, fn, *args, **kwargs):
-        receiver = self.call_async(fn, *args, **kwargs)
-        return receiver.get().unpickle(throw_dead=False)
-
-
 class Router(mitogen.parent.Router):
-    context_class = Context
     broker_class = Broker
     debug = False
     profiling = False

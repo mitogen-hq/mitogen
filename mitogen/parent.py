@@ -39,6 +39,7 @@ import termios
 import textwrap
 import threading
 import time
+import types
 import zlib
 
 import mitogen.core
@@ -467,6 +468,31 @@ class ChildIdAllocator(object):
         return self.allocate()
 
 
+class Context(mitogen.core.Context):
+    via = None
+
+    def call_async(self, fn, *args, **kwargs):
+        LOG.debug('%r.call_async(%r, *%r, **%r)',
+                  self, fn, args, kwargs)
+
+        if isinstance(fn, types.MethodType) and \
+           isinstance(fn.im_self, (type, types.ClassType)):
+            klass = fn.im_self.__name__
+        else:
+            klass = None
+
+        return self.send_async(
+            mitogen.core.Message.pickled(
+                (fn.__module__, klass, fn.__name__, args, kwargs),
+                handle=mitogen.core.CALL_FUNCTION,
+            )
+        )
+
+    def call(self, fn, *args, **kwargs):
+        receiver = self.call_async(fn, *args, **kwargs)
+        return receiver.get().unpickle(throw_dead=False)
+
+
 class RouteMonitor(object):
     def __init__(self, router, parent=None):
         self.router = router
@@ -556,7 +582,7 @@ class RouteMonitor(object):
 
 
 class Router(mitogen.core.Router):
-    context_class = mitogen.core.Context
+    context_class = Context
 
     id_allocator = None
     responder = None

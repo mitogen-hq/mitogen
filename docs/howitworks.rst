@@ -206,8 +206,8 @@ After all initialization is complete, the child's main thread sits in a loop
 reading from a :py:class:`Channel <mitogen.core.Channel>` connected to the
 :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` handle. This handle is
 written to by
-:py:meth:`call() <mitogen.master.Context.call>`
-and :py:meth:`call_async() <mitogen.master.Context.call_async>`.
+:py:meth:`call() <mitogen.parent.Context.call>`
+and :py:meth:`call_async() <mitogen.parent.Context.call_async>`.
 
 :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` only accepts requests
 from the context IDs listed in :py:data:`mitogen.parent_ids`, forming a chain
@@ -369,7 +369,7 @@ Children listen on the following handles:
 
     Receives `(mod_name, class_name, func_name, args, kwargs)`
     5-tuples from
-    :py:meth:`call_async() <mitogen.master.Context.call_async>`,
+    :py:meth:`call_async() <mitogen.parent.Context.call_async>`,
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
@@ -430,7 +430,7 @@ also listen on the following handles:
 
 
 Additional handles are created to receive the result of every function call
-triggered by :py:meth:`call_async() <mitogen.master.Context.call_async>`.
+triggered by :py:meth:`call_async() <mitogen.parent.Context.call_async>`.
 
 
 Sentinel Value

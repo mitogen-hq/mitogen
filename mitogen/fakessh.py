@@ -287,7 +287,7 @@ def _fakessh_main(dest_context_id, econtext):
     if not args:
         die('fakessh: login mode not supported and no command specified')
 
-    dest = mitogen.master.Context(econtext.router, dest_context_id)
+    dest = mitogen.parent.Context(econtext.router, dest_context_id)
 
     # Even though SSH receives an argument vector, it still cats the vector
     # together before sending to the server, the server just uses /bin/sh -c to
@@ -318,7 +318,7 @@ def run(dest, router, args, deadline=None, econtext=None):
         mitogen.parent.upgrade_router(econtext)
 
     context_id = router.allocate_id()
-    fakessh = mitogen.master.Context(router, context_id)
+    fakessh = mitogen.parent.Context(router, context_id)
     fakessh.name = 'fakessh.%d' % (context_id,)
 
     sock1, sock2 = socket.socketpair()
@@ -345,8 +345,8 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write('ExternalContext().main(**%r)\n' % ({
                 'parent_ids': parent_ids,
                 'context_id': context_id,
-                'debug': router.debug,
-                'profiling': router.profiling,
+                'debug': getattr(router, 'debug', False),
+                'profiling': getattr(router, 'profiling', False),
                 'log_level': mitogen.parent.get_log_level(),
                 'in_fd': sock2.fileno(),
                 'out_fd': sock2.fileno(),
