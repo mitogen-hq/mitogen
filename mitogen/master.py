@@ -708,6 +708,9 @@ class Router(mitogen.parent.Router):
     def local(self, **kwargs):
         return self.connect('local', **kwargs)
 
+    def fork(self, **kwargs):
+        return self.connect('fork', **kwargs)
+
     def sudo(self, **kwargs):
         return self.connect('sudo', **kwargs)
 

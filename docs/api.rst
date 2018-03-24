@@ -304,7 +304,7 @@ Sequence:
 
 
 Message Class
-============
+=============
 
 .. currentmodule:: mitogen.core
 
@@ -513,11 +513,29 @@ Router Class
 
     **Context Factories**
 
+    .. method:: fork (new_stack=False, debug=False, profiling=False)
+
+        Construct a context on the local machine by forking the current
+        process. The associated stream implementation is
+        :py:class:`mitogen.fork.Stream`.
+
+        :param bool new_stack:
+            If :py:data:`True`, arrange for the local thread stack to be
+            discarded, by forking from a new thread. Aside from clean
+            tracebacks, this has the effect of causing objects referenced by
+            the stack to cease existing in the child.
+
+        :param bool debug:
+            Same as the `debug` parameter for :py:meth:`local`.
+
+        :param bool profiling:
+            Same as the `profiling` parameter for :py:meth:`local`.
+
     .. method:: local (remote_name=None, python_path=None, debug=False, connect_timeout=None, profiling=False, via=None)
 
-        Arrange for a context to be constructed on the local machine, as an
-        immediate subprocess of the current process. The associated stream
-        implementation is :py:class:`mitogen.master.Stream`.
+        Construct a context on the local machine as a subprocess of the current
+        process. The associated stream implementation is
+        :py:class:`mitogen.master.Stream`.
 
         :param str remote_name:
             The ``argv[0]`` suffix for the new process. If `remote_name` is
@@ -565,8 +583,9 @@ Router Class
 
     .. method:: docker (container=None, image=None, docker_path=None, \**kwargs)
 
-        Arrange for a context to be constructed in an existing or temporary new
-        Docker container. One of `container` or `image` must be specified.
+        Construct a context on the local machine within an existing or
+        temporary new Docker container. One of `container` or `image` must be
+        specified.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -581,9 +600,9 @@ Router Class
 
     .. method:: sudo (username=None, sudo_path=None, password=None, \**kwargs)
 
-        Arrange for a context to be constructed over a ``sudo`` invocation. The
-        ``sudo`` process is started in a newly allocated pseudo-terminal, and
-        supports typing interactive passwords.
+        Construct a context on the local machine over a ``sudo`` invocation.
+        The ``sudo`` process is started in a newly allocated pseudo-terminal,
+        and supports typing interactive passwords.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -613,9 +632,9 @@ Router Class
 
     .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, compression=True, \**kwargs)
 
-        Arrange for a context to be constructed over a ``ssh`` invocation. The
-        ``ssh`` process is started in a newly allocated pseudo-terminal, and
-        supports typing interactive passwords.
+        Construct a remote context over a ``ssh`` invocation. The ``ssh``
+        process is started in a newly allocated pseudo-terminal, and supports
+        typing interactive passwords.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 

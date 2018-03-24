@@ -251,6 +251,10 @@ def _docker_method():
     import mitogen.docker
     return mitogen.docker.Stream
 
+def _fork_method():
+    import mitogen.fork
+    return mitogen.fork.Stream
+
 def _local_method():
     return mitogen.parent.Stream
 
@@ -265,6 +269,7 @@ def _sudo_method():
 
 METHOD_NAMES = {
     'docker': _docker_method,
+    'fork': _fork_method,
     'local': _local_method,
     'ssh': _ssh_method,
     'sudo': _sudo_method,
