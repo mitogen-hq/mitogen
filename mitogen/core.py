@@ -656,11 +656,12 @@ class LogHandler(logging.Handler):
 
 
 class Side(object):
-    def __init__(self, stream, fd, keep_alive=True):
+    def __init__(self, stream, fd, cloexec=True, keep_alive=True):
         self.stream = stream
         self.fd = fd
         self.keep_alive = keep_alive
-        set_cloexec(fd)
+        if cloexec:
+            set_cloexec(fd)
         set_nonblock(fd)
 
     def __repr__(self):
@@ -1053,14 +1054,13 @@ class IoLogger(BasicStream):
         self._broker = broker
         self._name = name
         self._log = logging.getLogger(name)
-
         self._rsock, self._wsock = socket.socketpair()
         os.dup2(self._wsock.fileno(), dest_fd)
         set_cloexec(self._rsock.fileno())
         set_cloexec(self._wsock.fileno())
 
         self.receive_side = Side(self, self._rsock.fileno())
-        self.transmit_side = Side(self, dest_fd)
+        self.transmit_side = Side(self, dest_fd, cloexec=False)
         self._broker.start_receive(self)
 
     def __repr__(self):
