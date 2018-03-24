@@ -1016,7 +1016,11 @@ class Waker(BasicStream):
         self.transmit_side = Side(self, wfd)
 
     def __repr__(self):
-        return 'Waker(%r)' % (self._broker,)
+        return 'Waker(%r rfd=%r, wfd=%r)' % (
+            self._broker,
+            self.receive_side.fd,
+            self.transmit_side.fd,
+        )
 
     def on_receive(self, broker):
         """
