@@ -740,6 +740,18 @@ Context Class
     masters, and child contexts who later become parents. Currently when this
     class is required, the target context's router is upgraded at runtime.
 
+    .. method:: shutdown (wait=False)
+
+        Arrange for the context to receive a ``SHUTDOWN`` message, triggering
+        graceful shutdown.
+
+        Due to a lack of support for timers, no attempt is made yet to force
+        terminate a hung context using this method. This will be fixed shortly.
+
+        :param bool wait:
+            If :py:data:`True`, block the calling thread until the context has
+            completely terminated.
+
     .. method:: call_async (fn, \*args, \*\*kwargs)
 
         Arrange for the context's ``CALL_FUNCTION`` handle to receive a

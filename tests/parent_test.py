@@ -1,3 +1,4 @@
+import os
 import subprocess
 import time
 
@@ -5,6 +6,14 @@ import unittest2
 
 import mitogen.parent
 import testlib
+
+
+class ContextTest(testlib.RouterMixin, unittest2.TestCase):
+    def test_context_shutdown(self):
+        local = self.router.local()
+        pid = local.call(os.getpid)
+        local.shutdown(wait=True)
+        self.assertRaises(OSError, lambda: os.kill(pid, 0))
 
 
 class IterReadTest(unittest2.TestCase):

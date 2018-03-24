@@ -308,6 +308,9 @@ class Stream(mitogen.core.Stream):
     #: True to cause context to write /tmp/mitogen.stats.<pid>.<thread>.log.
     profiling = False
 
+    #: Set to the child's PID by connect().
+    pid = None
+
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
         self.sent_modules = set(['mitogen', 'mitogen.core'])
@@ -350,6 +353,16 @@ class Stream(mitogen.core.Stream):
                 handle=mitogen.core.SHUTDOWN,
             )
         )
+
+    def on_disconnect(self, broker):
+        pid, status = os.waitpid(self.pid, os.WNOHANG)
+        if pid:
+            LOG.debug('%r: child process exit status was %d', self, status)
+        else:
+            LOG.debug('%r: child process still alive, sending SIGTERM', self)
+            os.kill(self.pid, signal.SIGTERM)
+            pid, status = os.waitpid(self.pid, 0)
+        super(Stream, self).on_disconnect(broker)
 
     # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
@@ -425,8 +438,8 @@ class Stream(mitogen.core.Stream):
 
     def connect(self):
         LOG.debug('%r.connect()', self)
-        pid, fd = self.create_child(*self.get_boot_command())
-        self.name = 'local.%s' % (pid,)
+        self.pid, fd = self.create_child(*self.get_boot_command())
+        self.name = 'local.%s' % (self.pid,)
         self.receive_side = mitogen.core.Side(self, fd)
         self.transmit_side = mitogen.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
@@ -491,6 +504,20 @@ class Context(mitogen.core.Context):
     def call(self, fn, *args, **kwargs):
         receiver = self.call_async(fn, *args, **kwargs)
         return receiver.get().unpickle(throw_dead=False)
+
+    def shutdown(self, wait=False):
+        LOG.debug('%r.shutdown() sending SHUTDOWN', self)
+        latch = mitogen.core.Latch()
+        mitogen.core.listen(self, 'disconnect', lambda: latch.put(None))
+
+        self.send(
+            mitogen.core.Message(
+                handle=mitogen.core.SHUTDOWN,
+            )
+        )
+
+        if wait:
+            latch.get()
 
 
 class RouteMonitor(object):
