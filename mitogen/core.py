@@ -1412,16 +1412,12 @@ class ExternalContext(object):
         self.router.importer = self.importer
         sys.meta_path.append(self.importer)
 
-    def _setup_package(self, context_id, parent_ids):
+    def _setup_package(self):
         global mitogen
         mitogen = imp.new_module('mitogen')
         mitogen.__package__ = 'mitogen'
         mitogen.__path__ = []
         mitogen.__loader__ = self.importer
-        mitogen.is_master = False
-        mitogen.context_id = context_id
-        mitogen.parent_ids = parent_ids
-        mitogen.parent_id = parent_ids[0]
         mitogen.main = lambda *args, **kwargs: (lambda func: None)
         mitogen.core = sys.modules['__main__']
         mitogen.core.__file__ = 'x/mitogen/core.py'  # For inspect.getsource()
@@ -1429,6 +1425,12 @@ class ExternalContext(object):
         sys.modules['mitogen'] = mitogen
         sys.modules['mitogen.core'] = mitogen.core
         del sys.modules['__main__']
+
+    def _setup_globals(self, context_id, parent_ids):
+        mitogen.is_master = False
+        mitogen.context_id = context_id
+        mitogen.parent_ids = parent_ids
+        mitogen.parent_id = parent_ids[0]
 
     def _setup_stdio(self):
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
@@ -1470,13 +1472,18 @@ class ExternalContext(object):
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
              in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True,
-             whitelist=(), blacklist=()):
+             setup_package=True, importer=None, whitelist=(), blacklist=()):
         self._setup_master(profiling, parent_ids[0], context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
-                self._setup_importer(core_src_fd, whitelist, blacklist)
-                self._setup_package(context_id, parent_ids)
+                if importer:
+                    self.importer = importer
+                else:
+                    self._setup_importer(core_src_fd, whitelist, blacklist)
+                if setup_package:
+                    self._setup_package()
+                self._setup_globals(context_id, parent_ids)
                 if setup_stdio:
                     self._setup_stdio()
 
