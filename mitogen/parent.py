@@ -50,6 +50,11 @@ from mitogen.core import IOLOG
 DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
 COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 
+try:
+    SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
+except:
+    SC_OPEN_MAX = 1024
+
 
 class Argv(object):
     def __init__(self, argv):
@@ -116,7 +121,7 @@ def disable_echo(fd):
 
 
 def close_nonstandard_fds():
-    for fd in xrange(3, 1024):
+    for fd in xrange(3, SC_OPEN_MAX):
         try:
             os.close(fd)
         except OSError:
