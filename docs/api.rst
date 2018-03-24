@@ -522,8 +522,8 @@ Router Class
 
         Construct a context on the local machine by forking the current
         process. The forked child receives a new identity, sets up a new broker
-        and router, and responds to function calls identically, just like
-        children created using any other method.
+        and router, and responds to function calls identically to children
+        created using other methods.
 
         The associated stream implementation is
         :py:class:`mitogen.fork.Stream`.
