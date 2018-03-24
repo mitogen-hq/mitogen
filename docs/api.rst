@@ -531,7 +531,7 @@ Router Class
         where short-lived children are spawned, and only after accounting for
         all the bad things possible as a result of, for example:
         
-        * file descriptors open in the parent remaining open in the child,
+        * File descriptors open in the parent remaining open in the child,
           causing the lifetime of the underlying object to be extended
           indefinitely by the child. For example:
 
@@ -542,17 +542,17 @@ Router Class
           * Descriptors that reference large temporary files will not have
             their disk space reclaimed until the child exits.
 
-        * third party package state (such as urllib3's HTTP connection pool)
+        * Third party package state (such as urllib3's HTTP connection pool)
           attempting to write to file descriptors shared with the parent.
 
-        * memory mappings for large files that cannot have their space freed on
+        * Memory mappings for large files that cannot have their space freed on
           disk due to the mapping living on in the child.
 
         * Difficult to diagnose memory usage spikes due to large object graphs
           present in the parent being unreferenced in the child, causing
           immediate copy-on-write to large portions of the process heap.
 
-        * thread locks held in the parent producing random deadlocks in the
+        * Thread locks held in the parent producing random deadlocks in the
           child.
 
         The associated stream implementation is
