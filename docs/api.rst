@@ -2,6 +2,11 @@
 API Reference
 *************
 
+.. toctree::
+    :hidden:
+
+    signals
+
 
 Package Layout
 ==============
@@ -516,7 +521,11 @@ Router Class
     .. method:: fork (new_stack=False, debug=False, profiling=False)
 
         Construct a context on the local machine by forking the current
-        process. The associated stream implementation is
+        process. The forked child receives a new identity, sets up a new broker
+        and router, and responds to function calls identically, just like
+        children created using any other method.
+
+        The associated stream implementation is
         :py:class:`mitogen.fork.Stream`.
 
         :param bool new_stack:
