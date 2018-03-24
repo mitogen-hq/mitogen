@@ -122,7 +122,7 @@ def close_nonstandard_fds():
             pass
 
 
-def create_child(*args):
+def create_socketpair():
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
                         socket.SO_SNDBUF,
@@ -130,8 +130,17 @@ def create_child(*args):
     childfp.setsockopt(socket.SOL_SOCKET,
                        socket.SO_RCVBUF,
                        mitogen.core.CHUNK_SIZE)
+    return parentfp, childfp
+
+
+def create_child(*args):
+    parentfp, childfp = create_socketpair()
     pid = os.fork()
     if not pid:
+        # When running under a monkey patches-enabled gevent, the socket module
+        # yields file descriptors who already have O_NONBLOCK, which is
+        # persisted across fork, totally breaking Python. Therefore, drop
+        # O_NONBLOCK from Python's future stdin fd.
         mitogen.core.set_block(childfp.fileno())
         os.dup2(childfp.fileno(), 0)
         os.dup2(childfp.fileno(), 1)
