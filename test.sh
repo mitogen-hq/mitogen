@@ -40,6 +40,7 @@ run_test tests/call_function_test.py
 run_test tests/channel_test.py
 run_test tests/fakessh_test.py
 run_test tests/first_stage_test.py
+run_test tests/fork_test.py
 run_test tests/id_allocation_test.py
 run_test tests/importer_test.py
 run_test tests/latch_test.py
