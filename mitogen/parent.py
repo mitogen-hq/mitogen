@@ -310,7 +310,8 @@ class Stream(mitogen.core.Stream):
         self.routes = set([self.remote_id])
 
     def construct(self, remote_name=None, python_path=None, debug=False,
-                  connect_timeout=None, profiling=False, **kwargs):
+                  connect_timeout=None, profiling=False,
+                  old_router=None, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
@@ -614,7 +615,7 @@ class Router(mitogen.core.Router):
     def _connect(self, klass, name=None, **kwargs):
         context_id = self.allocate_id()
         context = self.context_class(self, context_id)
-        stream = klass(self, context_id, **kwargs)
+        stream = klass(self, context_id, old_router=self, **kwargs)
         if name is not None:
             stream.name = name
         stream.connect()
