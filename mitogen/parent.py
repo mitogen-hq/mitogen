@@ -440,11 +440,12 @@ class Stream(mitogen.core.Stream):
         return zlib.compress(minimize_source(source), 9)
 
     create_child = staticmethod(create_child)
+    name_prefix = 'local'
 
     def connect(self):
         LOG.debug('%r.connect()', self)
         self.pid, fd = self.create_child(*self.get_boot_command())
-        self.name = 'local.%s' % (self.pid,)
+        self.name = '%s.%s' % (self.name_prefix, self.pid)
         self.receive_side = mitogen.core.Side(self, fd)
         self.transmit_side = mitogen.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
@@ -572,9 +573,9 @@ class RouteMonitor(object):
         """
         Respond to disconnection of a local stream by 
         """
+        LOG.debug('%r is gone; propagating DEL_ROUTE for %r',
+                  stream, stream.routes)
         for target_id in stream.routes:
-            LOG.debug('%r is gone; propagating DEL_ROUTE for ID %d',
-                      stream, target_id)
             self.router.del_route(target_id)
             self.propagate(mitogen.core.DEL_ROUTE, target_id)
 
