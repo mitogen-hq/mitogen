@@ -250,7 +250,6 @@ def write_path(path, s):
     open(path, 'wb').write(s)
 
 
-
 CHMOD_CLAUSE_PAT = re.compile(r'([uoga]*)([+\-=])([ugo]|[rwx]*)')
 CHMOD_MASKS = {
     'u': stat.S_IRWXU,

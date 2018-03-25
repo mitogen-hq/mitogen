@@ -35,6 +35,25 @@ import mitogen.master
 from mitogen.core import LOG
 
 
+class Policy(object):
+    """
+    Base security policy.
+    """
+    def is_authorized(self, service, msg):
+        raise NotImplementedError()
+
+
+class AllowAny(Policy):
+    def is_authorized(self, service, msg):
+        return True
+
+
+class AllowParents(Policy):
+    def is_authorized(self, service, msg):
+        return (msg.auth_id in mitogen.parent_ids or
+                msg.auth_id == mitogen.context_id)
+
+
 class Service(object):
     #: Sentinel object to suppress reply generation, since returning ``None``
     #: will trigger a response message containing the pickled ``None``.
@@ -49,6 +68,12 @@ class Service(object):
     #: used by the default :py:meth:`validate_args` implementation to validate
     #: requests.
     required_args = {}
+
+    #: Policies that must authorize each message. By default only parents are
+    #: authorized.
+    policies = (
+        AllowParents(),
+    )
 
     def __init__(self, router):
         self.router = router
@@ -68,6 +93,11 @@ class Service(object):
         raise NotImplementedError()
 
     def dispatch_one(self, msg):
+        if not all(p.is_authorized(self, msg) for p in self.policies):
+            LOG.error('%r: unauthorized message %r', self, msg)
+            msg.reply(mitogen.core.CallError('Unauthorized'))
+            return
+
         if len(msg.data) > self.max_message_size:
             LOG.error('%r: larger than permitted size: %r', self, msg)
             msg.reply(mitogen.core.CallError('Message size exceeded'))
