@@ -528,8 +528,9 @@ Router Class
         For long-lived processes, :py:meth:`local` is always better as it
         guarantees a pristine interpreter state that inherited little from the
         parent. Forking should only be used in performance-sensitive scenarios
-        where short-lived children are spawned, and only after accounting for
-        all the bad things possible as a result of, at a minimum:
+        where short-lived children must be spawned to isolate potentially buggy
+        code, and only after accounting for all the bad things possible as a
+        result of, at a minimum:
 
         * Files open in the parent remaining open in the child,
           causing the lifetime of the underlying object to be extended
