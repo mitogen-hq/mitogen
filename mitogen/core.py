@@ -45,6 +45,7 @@ import threading
 import time
 import traceback
 import warnings
+import weakref
 import zlib
 
 # TODO: usage of 'import' after setting __name__, but before fixing up
@@ -658,10 +659,13 @@ class LogHandler(logging.Handler):
 
 
 class Side(object):
+    _fork_refs = weakref.WeakValueDictionary()
+
     def __init__(self, stream, fd, cloexec=True, keep_alive=True):
         self.stream = stream
         self.fd = fd
         self.keep_alive = keep_alive
+        self._fork_refs[id(self)] = self
         if cloexec:
             set_cloexec(fd)
         set_nonblock(fd)
@@ -673,6 +677,11 @@ class Side(object):
         if self.fd is None:
             raise StreamError('%r.fileno() called but no FD set', self)
         return self.fd
+
+    @classmethod
+    def _on_fork(cls):
+        for side in list(cls._fork_refs.values()):
+            side.close()
 
     def close(self):
         if self.fd is not None:
