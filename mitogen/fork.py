@@ -56,18 +56,23 @@ class Stream(mitogen.parent.Stream):
     #: Reference to the importer, if any, recovered from the parent.
     importer = None
 
-    def construct(self, old_router, debug=False, profiling=False):
+    #: User-supplied function for cleaning up child process state.
+    on_fork = None
+
+    def construct(self, old_router, on_fork=None, debug=False, profiling=False):
         # fork method only supports a tiny subset of options.
         super(Stream, self).construct(debug=debug, profiling=profiling)
+        self.on_fork = on_fork
 
         responder = getattr(old_router, 'responder', None)
         if isinstance(responder, mitogen.parent.ModuleForwarder):
             self.importer = responder.importer
 
+    name_prefix = 'fork'
+
     def create_child(self, *_args):
         parentfp, childfp = mitogen.parent.create_socketpair()
         self.pid = os.fork()
-        self.name = 'fork.' + str(self.pid)
         if self.pid:
             childfp.close()
             # Decouple the socket from the lifetime of the Python socket object.
@@ -79,18 +84,32 @@ class Stream(mitogen.parent.Stream):
             self._child_main(childfp)
 
     def _child_main(self, childfp):
-        # TODO: Latch descriptors inherited from the parent should be closed.
-        vars(mitogen.core._tls).clear()
+        mitogen.core.Latch._on_fork()
+        mitogen.core.Side._on_fork()
         break_logging_locks()
+        if self.on_fork:
+            self.on_fork()
         mitogen.core.set_block(childfp.fileno())
+
+        # Expected by the ExternalContext.main().
         os.dup2(childfp.fileno(), 1)
         os.dup2(childfp.fileno(), 100)
+        # Overwritten by ExternalContext.main(); we must replace the
+        # parent-inherited descriptors that were closed by Side._on_fork() to
+        # avoid ExternalContext.main() accidentally allocating new files over
+        # the standard handles.
+        os.dup2(childfp.fileno(), 0)
+        os.dup2(childfp.fileno(), 2)
+        childfp.close()
+
         kwargs = self.get_main_kwargs()
         kwargs['core_src_fd'] = None
         kwargs['importer'] = self.importer
         kwargs['setup_package'] = False
         mitogen.core.ExternalContext().main(**kwargs)
-        sys.exit(0)
+
+        # Don't trigger atexit handlers, they were copied from the parent.
+        os._exit(0)
 
     def _connect_bootstrap(self):
         # None required.
