@@ -540,15 +540,20 @@ class RouteMonitor(object):
             persist=True,
         )
 
-    def propagate(self, handle, target_id):
+    def propagate(self, handle, target_id, name=None):
         # self.parent is None in the master.
-        if self.parent:
-            self.parent.send(
-                mitogen.core.Message(
-                    handle=handle,
-                    data=str(target_id),
-                )
+        if not self.parent:
+            return
+
+        data = str(target_id)
+        if name:
+            data = '%s:%s' % (target_id, name)
+        self.parent.send(
+            mitogen.core.Message(
+                handle=handle,
+                data=data,
             )
+        )
 
     def notice_stream(self, stream):
         """
@@ -556,7 +561,7 @@ class RouteMonitor(object):
         stream, we're also responsible for broadcasting DEL_ROUTE upstream
         if/when that child disconnects.
         """
-        self.propagate(mitogen.core.ADD_ROUTE, stream.remote_id)
+        self.propagate(mitogen.core.ADD_ROUTE, stream.remote_id, stream.name)
         mitogen.core.listen(
             obj=stream,
             name='disconnect',
@@ -581,7 +586,9 @@ class RouteMonitor(object):
         if msg == mitogen.core._DEAD:
             return
 
-        target_id = int(msg.data)
+        target_id_s, _, target_name = msg.data.partition(':')
+        target_id = int(target_id_s)
+        self.router.context_by_id(target_id).name = target_name
         stream = self.router.stream_by_id(msg.auth_id)
         current = self.router.stream_by_id(target_id)
         if current and current.remote_id != mitogen.parent_id:
@@ -593,7 +600,7 @@ class RouteMonitor(object):
         LOG.debug('Adding route to %d via %r', target_id, stream)
         stream.routes.add(target_id)
         self.router.add_route(target_id, stream)
-        self.propagate(mitogen.core.ADD_ROUTE, target_id)
+        self.propagate(mitogen.core.ADD_ROUTE, target_id, target_name)
 
     def _on_del_route(self, msg):
         if msg == mitogen.core._DEAD:
