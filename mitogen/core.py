@@ -1085,7 +1085,7 @@ class IoLogger(BasicStream):
 
     def on_receive(self, broker):
         _vv and IOLOG.debug('%r.on_receive()', self)
-        buf = os.read(self.receive_side.fd, CHUNK_SIZE)
+        buf = self.receive_side.read()
         if not buf:
             return self.on_disconnect(broker)
 
