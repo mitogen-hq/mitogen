@@ -1073,7 +1073,6 @@ class IoLogger(BasicStream):
         self._log = logging.getLogger(name)
         self._rsock, self._wsock = socket.socketpair()
         os.dup2(self._wsock.fileno(), dest_fd)
-        set_cloexec(self._rsock.fileno())
         set_cloexec(self._wsock.fileno())
 
         self.receive_side = Side(self, self._rsock.fileno())
