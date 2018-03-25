@@ -518,7 +518,7 @@ Router Class
 
     **Context Factories**
 
-    .. method:: fork (new_stack=False, debug=False, profiling=False)
+    .. method:: fork (new_stack=False, after_fork=None, debug=False, profiling=False, via=None)
 
         Construct a context on the local machine by forking the current
         process. The forked child receives a new identity, sets up a new broker
@@ -526,34 +526,57 @@ Router Class
         created using other methods.
 
         For long-lived processes, :py:meth:`local` is always better as it
-        guarantees a pristine interpreter state that inherited nothing from the
+        guarantees a pristine interpreter state that inherited little from the
         parent. Forking should only be used in performance-sensitive scenarios
         where short-lived children are spawned, and only after accounting for
-        all the bad things possible as a result of, for example:
-        
-        * File descriptors open in the parent remaining open in the child,
+        all the bad things possible as a result of, at a minimum:
+
+        * Files open in the parent remaining open in the child,
           causing the lifetime of the underlying object to be extended
-          indefinitely by the child. For example:
+          indefinitely.
 
           * From the perspective of external components, this is observable
-            in the form of pipes and sockets that are apparently never closed
-            by the remote end (your program).
+            in the form of pipes and sockets that are never closed, which may
+            break anything relying on closure to signal protocol termination.
 
-          * Descriptors that reference large temporary files will not have
-            their disk space reclaimed until the child exits.
+          * Descriptors that reference temporary files will not have their disk
+            space reclaimed until the child exits.
 
-        * Third party package state (such as urllib3's HTTP connection pool)
-          attempting to write to file descriptors shared with the parent.
+        * Third party package state, such as urllib3's HTTP connection pool,
+          attempting to write to file descriptors shared with the parent,
+          causing random failures in both parent and child.
 
-        * Memory mappings for large files that cannot have their space freed on
+        * UNIX signal handlers installed in the parent process remaining active
+          in the child, despite associated resources, such as service threads
+          and child processes, becoming absent in the child.
+
+        * Library code that makes assumptions about the process ID remaining
+          unchanged, for example to implement inter-process locking, or to
+          generate file names.
+
+        * Anonymous ``MAP_PRIVATE`` memory mappings whose storage requirement
+          doubles as either parent or child dirties their pages.
+
+        * File-backed memory mappings that cannot have their space freed on
           disk due to the mapping living on in the child.
 
-        * Difficult to diagnose memory usage spikes due to large object graphs
-          present in the parent being unreferenced in the child, causing
+        * Difficult to diagnose memory usage and latency spikes due to object
+          graphs becoming unreferenced in either parent or child, causing
           immediate copy-on-write to large portions of the process heap.
 
-        * Thread locks held in the parent producing random deadlocks in the
-          child.
+        * Locks held in the parent causing random deadlocks in the child, such
+          as when another thread emits a log entry via the :py:mod:`logging`
+          package concurrent to another thread calling :py:meth:`fork`.
+
+        * Objects existing in Thread-Local Storage of every non-:py:meth:`fork`
+          thread becoming permanently inaccessible, and never having their
+          object destructors called, including TLS usage by native extension
+          code, triggering many new variants of all the issues above.
+
+        :py:meth:`fork` cleans up Mitogen-internal objects, in addition to
+        locks held by the :py:mod:`logging` package. You must arrange for your
+        program's state, including any third party packages in use, to be
+        cleaned up by specifying an `on_fork` function.
 
         The associated stream implementation is
         :py:class:`mitogen.fork.Stream`.
@@ -563,6 +586,15 @@ Router Class
             discarded, by forking from a new thread. Aside from clean
             tracebacks, this has the effect of causing objects referenced by
             the stack to cease existing in the child.
+
+        :param function on_fork:
+            Function invoked as `on_fork()` from within the child process. This
+            permits supplying a program-specific cleanup function to break
+            locks and close file descriptors belonging to the parent from
+            within the child.
+
+        :param Context via:
+            Same as the `via` parameter for :py:meth:`local`.
 
         :param bool debug:
             Same as the `debug` parameter for :py:meth:`local`.
