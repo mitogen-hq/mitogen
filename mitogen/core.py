@@ -1397,22 +1397,26 @@ class ExternalContext(object):
         if debug:
             enable_debug_logging()
 
-    def _setup_importer(self, core_src_fd, whitelist, blacklist):
-        if core_src_fd:
-            fp = os.fdopen(101, 'r', 1)
-            try:
-                core_size = int(fp.readline())
-                core_src = fp.read(core_size)
-                # Strip "ExternalContext.main()" call from last line.
-                core_src = '\n'.join(core_src.splitlines()[:-1])
-            finally:
-                fp.close()
-        else:
-            core_src = None
+    def _setup_importer(self, importer, core_src_fd, whitelist, blacklist):
+        if not importer:
+            if core_src_fd:
+                fp = os.fdopen(101, 'r', 1)
+                try:
+                    core_size = int(fp.readline())
+                    core_src = fp.read(core_size)
+                    # Strip "ExternalContext.main()" call from last line.
+                    core_src = '\n'.join(core_src.splitlines()[:-1])
+                finally:
+                    fp.close()
+            else:
+                core_src = None
 
-        self.importer = Importer(self.router, self.parent, core_src,
-                                 whitelist, blacklist)
-        self.router.importer = self.importer
+            importer = Importer(self.router, self.parent,
+                                core_src, whitelist, blacklist)
+
+        self.importer = importer
+        self.importer._context = self.parent  # for fork().
+        self.router.importer = importer
         sys.meta_path.append(self.importer)
 
     def _setup_package(self):
@@ -1480,10 +1484,7 @@ class ExternalContext(object):
         try:
             try:
                 self._setup_logging(debug, log_level)
-                if importer:
-                    self.importer = importer
-                else:
-                    self._setup_importer(core_src_fd, whitelist, blacklist)
+                self._setup_importer(importer, core_src_fd, whitelist, blacklist)
                 if setup_package:
                     self._setup_package()
                 self._setup_globals(context_id, parent_ids)
