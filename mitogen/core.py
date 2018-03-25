@@ -1452,16 +1452,33 @@ class ExternalContext(object):
         mitogen.parent_id = parent_ids[0]
 
     def _setup_stdio(self):
+        # We must open this prior to closing stdout, otherwise it will recycle
+        # a standard handle, the dup2() will not error, and on closing it, we
+        # lose a standrd handle, causing later code to again recycle a standard
+        # handle.
+        fp = open('/dev/null')
+
+        # When sys.stdout was opened by the runtime, overwriting it will not
+        # cause close to be called. However when forking from a child that
+        # previously used fdopen, overwriting it /will/ cause close to be
+        # called. So we must explicitly close it before IoLogger overwrites the
+        # file descriptor, otherwise the assignment below will cause stdout to
+        # be closed.
+        sys.stdout.close()
+        sys.stdout = None
+
+        try:
+            os.dup2(fp.fileno(), 0)
+            os.dup2(fp.fileno(), 1)
+            os.dup2(fp.fileno(), 2)
+        finally:
+            fp.close()
+
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
         self.stderr_log = IoLogger(self.broker, 'stderr', 2)
         # Reopen with line buffering.
         sys.stdout = os.fdopen(1, 'w', 1)
 
-        fp = open('/dev/null')
-        try:
-            os.dup2(fp.fileno(), 0)
-        finally:
-            fp.close()
 
     def _dispatch_one(self, msg):
         data = msg.unpickle(throw=False)
