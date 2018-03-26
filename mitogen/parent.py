@@ -619,6 +619,9 @@ class RouteMonitor(object):
         stream.routes.discard(target_id)
         self.router.del_route(target_id)
         self.propagate(mitogen.core.DEL_ROUTE, target_id)
+        context = self.router.context_by_id(target_id, create=False)
+        if context:
+            mitogen.core.fire(context, 'disconnect')
 
 
 class Router(mitogen.core.Router):
