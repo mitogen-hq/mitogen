@@ -1019,14 +1019,10 @@ class Latch(object):
                 raise
 
     def __repr__(self):
-        rsock = getattr(_tls, 'rsock', None)
-        wsock = getattr(_tls, 'wsock', None)
-        return 'Latch(%#x, size=%d, t=%r, r=%r, w=%r)' % (
+        return 'Latch(%#x, size=%d, t=%r)' % (
             id(self),
             len(self._queue),
             threading.currentThread().name,
-            rsock and rsock.fileno(),
-            wsock and wsock.fileno(),
         )
 
 
