@@ -253,6 +253,19 @@ def upgrade_router(econtext):
         )
 
 
+def make_call_msg(fn, *args, **kwargs):
+    if isinstance(fn, types.MethodType) and \
+       isinstance(fn.im_self, (type, types.ClassType)):
+        klass = fn.im_self.__name__
+    else:
+        klass = None
+
+    return mitogen.core.Message.pickled(
+        (fn.__module__, klass, fn.__name__, args, kwargs),
+        handle=mitogen.core.CALL_FUNCTION,
+    )
+
+
 def _docker_method():
     import mitogen.docker
     return mitogen.docker.Stream
@@ -496,19 +509,7 @@ class Context(mitogen.core.Context):
     def call_async(self, fn, *args, **kwargs):
         LOG.debug('%r.call_async(%r, *%r, **%r)',
                   self, fn, args, kwargs)
-
-        if isinstance(fn, types.MethodType) and \
-           isinstance(fn.im_self, (type, types.ClassType)):
-            klass = fn.im_self.__name__
-        else:
-            klass = None
-
-        return self.send_async(
-            mitogen.core.Message.pickled(
-                (fn.__module__, klass, fn.__name__, args, kwargs),
-                handle=mitogen.core.CALL_FUNCTION,
-            )
-        )
+        return self.send_async(make_call_msg(fn, *args, **kwargs))
 
     def call(self, fn, *args, **kwargs):
         receiver = self.call_async(fn, *args, **kwargs)
