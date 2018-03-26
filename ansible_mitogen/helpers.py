@@ -35,7 +35,8 @@ import re
 import stat
 import subprocess
 import threading
-import time
+
+import mitogen.core
 
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
@@ -76,7 +77,10 @@ def monkey_exit_json(self, **kwargs):
     kwargs.setdefault('invocation', {
         'module_args': self.params
     })
-    kwargs = ansible.module_utils.basic.remove_values(kwargs, self.no_log_values)
+    kwargs = ansible.module_utils.basic.remove_values(
+        kwargs,
+        self.no_log_values
+    )
     self.do_cleanup_files()
     raise Exit(kwargs)
 
@@ -91,7 +95,10 @@ def monkey_fail_json(self, **kwargs):
     kwargs.setdefault('invocation', {
         'module_args': self.params
     })
-    kwargs = ansible.module_utils.basic.remove_values(kwargs, self.no_log_values)
+    kwargs = ansible.module_utils.basic.remove_values(
+        kwargs,
+        self.no_log_values
+    )
     self.do_cleanup_files()
     raise ModuleError(kwargs.get('msg'), kwargs)
 
@@ -258,9 +265,9 @@ CHMOD_MASKS = {
     'a': (stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO),
 }
 CHMOD_BITS = {
-    'u': {'r':stat.S_IRUSR, 'w':stat.S_IWUSR, 'x':stat.S_IXUSR},
-    'g': {'r':stat.S_IRGRP, 'w':stat.S_IWGRP, 'x':stat.S_IXGRP},
-    'o': {'r':stat.S_IROTH, 'w':stat.S_IWOTH, 'x':stat.S_IXOTH},
+    'u': {'r': stat.S_IRUSR, 'w': stat.S_IWUSR, 'x': stat.S_IXUSR},
+    'g': {'r': stat.S_IRGRP, 'w': stat.S_IWGRP, 'x': stat.S_IXGRP},
+    'o': {'r': stat.S_IROTH, 'w': stat.S_IWOTH, 'x': stat.S_IXOTH},
     'a': {
         'r': (stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH),
         'w': (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH),
