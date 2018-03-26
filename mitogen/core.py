@@ -1372,7 +1372,7 @@ class ExternalContext(object):
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
-        if msg != _DEAD and msg.src_id != mitogen.parent_id:
+        if msg != _DEAD and msg.auth_id not in mitogen.parent_ids:
             LOG.warning('Ignoring SHUTDOWN from non-parent: %r', msg)
             return
         self.broker.shutdown()
