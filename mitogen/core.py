@@ -863,7 +863,7 @@ class Context(object):
     def __reduce__(self):
         return _unpickle_context, (self.context_id, self.name)
 
-    def on_disconnect(self, broker):
+    def on_disconnect(self):
         _v and LOG.debug('%r.on_disconnect()', self)
         fire(self, 'disconnect')
 
@@ -1141,7 +1141,7 @@ class Router(object):
             stream_ = self._stream_by_id.get(context.context_id)
             if stream_ is stream:
                 del self._stream_by_id[context.context_id]
-                context.on_disconnect(broker)
+                context.on_disconnect()
 
     def on_broker_shutdown(self):
         for context in self._context_by_id.itervalues():
@@ -1486,7 +1486,6 @@ class ExternalContext(object):
         self.stderr_log = IoLogger(self.broker, 'stderr', 2)
         # Reopen with line buffering.
         sys.stdout = os.fdopen(1, 'w', 1)
-
 
     def _dispatch_one(self, msg):
         data = msg.unpickle(throw=False)
