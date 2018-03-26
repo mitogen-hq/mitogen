@@ -75,6 +75,8 @@ Testimonials
 
 * "I tried it out. **He is not kidding about the speed increase**."
 
+* "I don't know what kind of dark magic David Wilson has done, but his Mitogen strategy took Clojars' Ansible runs from 14 minutes to 2 minutes. I still can't quite believe it."
+
 
 Installation
 ------------
