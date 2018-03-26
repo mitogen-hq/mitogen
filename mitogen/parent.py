@@ -442,9 +442,12 @@ class Stream(mitogen.core.Stream):
     create_child = staticmethod(create_child)
     name_prefix = 'local'
 
+    def start_child(self):
+        return self.create_child(*self.get_boot_command())
+
     def connect(self):
         LOG.debug('%r.connect()', self)
-        self.pid, fd = self.create_child(*self.get_boot_command())
+        self.pid, fd = self.start_child()
         self.name = '%s.%s' % (self.name_prefix, self.pid)
         self.receive_side = mitogen.core.Side(self, fd)
         self.transmit_side = mitogen.core.Side(self, os.dup(fd))

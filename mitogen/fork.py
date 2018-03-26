@@ -70,7 +70,7 @@ class Stream(mitogen.parent.Stream):
 
     name_prefix = 'fork'
 
-    def create_child(self, *_args):
+    def start_child(self):
         parentfp, childfp = mitogen.parent.create_socketpair()
         self.pid = os.fork()
         if self.pid:
