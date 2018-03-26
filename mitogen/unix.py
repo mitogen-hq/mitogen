@@ -50,9 +50,8 @@ def is_path_dead(path):
     try:
         s.connect(path)
     except socket.error, e:
-        if e[0] in (errno.ECONNREFUSED, errno.ENOENT):
-            return True
-        return False
+        return e[0] in (errno.ECONNREFUSED, errno.ENOENT)
+    return False
 
 
 def make_socket_path():
