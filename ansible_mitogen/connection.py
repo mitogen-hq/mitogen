@@ -82,7 +82,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to 'mitogen_ssh_discriminator' by on_action_run()
     mitogen_ssh_discriminator = None
 
-    def __init__(self, play_context, new_stdin, original_transport):
+    def __init__(self, play_context, new_stdin, original_transport, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'The "mitogen" connection plug-in may only be instantiated '
              'by the "mitogen" strategy plug-in.'
@@ -90,6 +90,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.original_transport = original_transport
         self.transport = original_transport
+        self.kwargs = kwargs
         super(Connection, self).__init__(play_context, new_stdin)
 
     def __del__(self):
