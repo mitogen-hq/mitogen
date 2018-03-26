@@ -518,7 +518,7 @@ Router Class
 
     **Context Factories**
 
-    .. method:: fork (new_stack=False, after_fork=None, debug=False, profiling=False, via=None)
+    .. method:: fork (new_stack=False, on_fork=None, debug=False, profiling=False, via=None)
 
         Construct a context on the local machine by forking the current
         process. The forked child receives a new identity, sets up a new broker
