@@ -108,7 +108,8 @@ class CallError(Error):
 
 
 def _unpickle_call_error(s):
-    assert type(s) is str and len(s) < 10000
+    if not (type(s) is str and len(s) < 10000):
+        raise TypeError('cannot unpickle CallError: bad input')
     inst = CallError.__new__(CallError)
     Exception.__init__(inst, s)
     return inst
@@ -900,9 +901,10 @@ class Context(object):
 
 
 def _unpickle_context(router, context_id, name):
-    assert isinstance(router, Router)
-    assert isinstance(context_id, (int, long)) and context_id > 0
-    assert isinstance(name, basestring) and len(name) < 100
+    if not (isinstance(router, Router) and
+            isinstance(context_id, (int, long)) and context_id > 0 and
+            isinstance(name, basestring) and len(name) < 100):
+        raise TypeError('cannot unpickle Context: bad input')
     return router.context_class(router, context_id, name)
 
 
