@@ -110,8 +110,9 @@ def main(log_level='INFO', profiling=False):
             return func
         import mitogen.parent
         import mitogen.utils
-        mitogen.core.enable_profiling()
-        mitogen.master.Router.profiling = profiling
+        if profiling:
+            mitogen.core.enable_profiling()
+            mitogen.master.Router.profiling = profiling
         utils.log_to_file(level=log_level)
         return mitogen.core._profile_hook(
             'main',
