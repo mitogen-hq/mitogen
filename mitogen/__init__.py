@@ -108,9 +108,14 @@ def main(log_level='INFO', profiling=False):
     def wrapper(func):
         if func.__module__ != '__main__':
             return func
-        import mitogen.master
+        import mitogen.parent
         import mitogen.utils
+        mitogen.core.enable_profiling()
         mitogen.master.Router.profiling = profiling
         utils.log_to_file(level=log_level)
-        return utils.run_with_router(func)
+        return mitogen.core._profile_hook(
+            'main',
+            utils.run_with_router,
+            func,
+        )
     return wrapper
