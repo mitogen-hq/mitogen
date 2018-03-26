@@ -416,6 +416,7 @@ class Receiver(object):
 
         if msg == _DEAD:
             raise ChannelError(ChannelError.local_msg)
+        msg.unpickle()  # Cause .remote_msg to be thrown.
         return msg
 
     def __iter__(self):
@@ -1006,6 +1007,7 @@ class Latch(object):
             if self.closed:
                 raise LatchError()
             self._queue.append(obj)
+
             if self._waking < len(self._sleeping):
                 sock = self._sleeping[self._waking]
                 self._waking += 1
