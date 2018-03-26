@@ -1139,7 +1139,7 @@ class Router(object):
         return 'Router(%r)' % (self.broker,)
 
     def on_stream_disconnect(self, stream):
-        for context in self._context_by_id.itervalues():
+        for context in self._context_by_id.values():
             stream_ = self._stream_by_id.get(context.context_id)
             if stream_ is stream:
                 del self._stream_by_id[context.context_id]
