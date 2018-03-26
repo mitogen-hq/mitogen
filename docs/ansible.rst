@@ -119,6 +119,10 @@ High Risk
   file, the host machine could easily exhaust available RAM. This will be fixed
   soon as it's likely to be tickled by common playbooks.
 
+* Local actions are single threaded. Any that execute for every target will
+  experience artificial serialization, causing slowdown equivalent to
+  `task_duration * num_targets`. This will be fixed soon.
+
 * `Asynchronous Actions And Polling
   <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
   minimal testing.
