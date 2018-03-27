@@ -575,10 +575,19 @@ Router Class
           object destructors called, including TLS usage by native extension
           code, triggering many new variants of all the issues above.
 
+        * Pseudo-Random Number Generator state that is easily observable by
+          network peers to be duplicate, violating requirements of
+          cryptographic protocols through one-time state reuse. In the worst
+          case, children continually reuse the same state due to repeatedly
+          forking from a static parent.
+
         :py:meth:`fork` cleans up Mitogen-internal objects, in addition to
-        locks held by the :py:mod:`logging` package. You must arrange for your
-        program's state, including any third party packages in use, to be
-        cleaned up by specifying an `on_fork` function.
+        locks held by the :py:mod:`logging` package, reseeds
+        :py:func:`random.random`, and the OpenSSL PRNG via
+        :py:func:`ssl.RAND_add`, but only if the :py:mod:`ssl` module is
+        already loaded. You must arrange for your program's state, including
+        any third party packages in use, to be cleaned up by specifying an
+        `on_fork` function.
 
         The associated stream implementation is
         :py:class:`mitogen.fork.Stream`.
