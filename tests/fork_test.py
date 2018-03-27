@@ -47,6 +47,8 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertNotEqual(context.call(random_random), random_random())
 
     def test_ssl_module_diverges(self):
+        # Ensure generator state is initialized.
+        RAND_pseudo_bytes()
         context = self.router.fork()
         self.assertNotEqual(context.call(RAND_pseudo_bytes),
                             RAND_pseudo_bytes())
