@@ -548,8 +548,9 @@ Router Class
           causing random failures in both parent and child.
 
         * UNIX signal handlers installed in the parent process remaining active
-          in the child, despite associated resources, such as service threads
-          and child processes, becoming absent in the child.
+          in the child, despite associated resources, such as service threads,
+          child processes, resource usage counters or process timers becoming
+          absent or reset in the child.
 
         * Library code that makes assumptions about the process ID remaining
           unchanged, for example to implement inter-process locking, or to
