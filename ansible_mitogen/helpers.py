@@ -112,6 +112,17 @@ def module_fixups(mod):
         mod.YumRepo.repofile = mod.configparser.RawConfigParser()
 
 
+class TemporaryEnvironment(object):
+    def __init__(self, env=None):
+        self.original = os.environ.copy()
+        self.env = env or {}
+        os.environ.update((k, str(v)) for k, v in self.env.iteritems())
+
+    def revert(self):
+        os.environ.clear()
+        os.environ.update(self.original)
+
+
 def run_module(module, raw_params=None, args=None, env=None):
     """
     Set up the process environment in preparation for running an Ansible
@@ -130,25 +141,21 @@ def run_module(module, raw_params=None, args=None, env=None):
         'ANSIBLE_MODULE_ARGS': args
     })
 
-    if env:
-        original_env = os.environ.copy()
-        os.environ.update((k, str(v)) for k, v in env.iteritems())
-
+    temp_env = TemporaryEnvironment(env)
     try:
-        mod = __import__(module, {}, {}, [''])
-        module_fixups(mod)
-        # Ansible modules begin execution on import. Thus the above __import__
-        # will cause either Exit or ModuleError to be raised. If we reach the
-        # line below, the module did not execute and must already have been
-        # imported for a previous invocation, so we need to invoke main
-        # explicitly.
-        mod.main()
-    except (Exit, ModuleError), e:
-        result = json.dumps(e.dct)
-
-    if env:
-        os.environ.clear()
-        os.environ.update(original_env)
+        try:
+            mod = __import__(module, {}, {}, [''])
+            module_fixups(mod)
+            # Ansible modules begin execution on import. Thus the above __import__
+            # will cause either Exit or ModuleError to be raised. If we reach the
+            # line below, the module did not execute and must already have been
+            # imported for a previous invocation, so we need to invoke main
+            # explicitly.
+            mod.main()
+        except (Exit, ModuleError), e:
+            result = json.dumps(e.dct)
+    finally:
+        temp_env.revert()
 
     return result
 
