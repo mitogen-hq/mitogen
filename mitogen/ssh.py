@@ -93,6 +93,7 @@ class Stream(mitogen.parent.Stream):
             bits += [
                 '-o', 'StrictHostKeyChecking no',
                 '-o', 'UserKnownHostsFile /dev/null',
+                '-o', 'GlobalKnownHostsFile /dev/null',
             ]
         if self.ssh_args:
             bits += self.ssh_args
