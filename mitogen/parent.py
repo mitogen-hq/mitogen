@@ -26,6 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import fcntl
 import getpass
 import inspect
 import logging
@@ -177,8 +178,15 @@ def tty_create_child(*args):
         os.dup2(slave_fd, 2)
         close_nonstandard_fds()
         os.setsid()
-        os.close(os.open(os.ttyname(1), os.O_RDWR))
+        if sys.platform == 'linux2':
+            # On Linux, the controlling tty becomes the first tty opened by a
+            # process lacking any prior tty.
+            os.close(os.open(os.ttyname(1), os.O_RDWR))
+        if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
+            # On BSD an explicit ioctl is required.
+            fcntl.ioctl(0, termios.TIOCSCTTY)
         os.execvp(args[0], args)
+        os._exit(1)
 
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
