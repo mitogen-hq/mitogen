@@ -1292,12 +1292,21 @@ class Router(object):
             return
 
         # Perform source verification.
-        if stream is not None:
-            expected_stream = self._stream_by_id.get(msg.auth_id,
-                self._stream_by_id.get(mitogen.parent_id))
-            if stream != expected_stream:
-                LOG.error('%r: bad source: got auth ID %r from %r, should be from %r',
-                          self, msg, stream, expected_stream)
+        if stream:
+            parent = self._stream_by_id.get(mitogen.parent_id)
+            expect = self._stream_by_id.get(msg.auth_id, parent)
+            if stream != expect:
+                LOG.error('%r: bad auth_id: got %r via %r, not %r: %r',
+                          self, msg.auth_id, stream, expect, msg)
+                return
+
+            if msg.src_id != msg.auth_id:
+                expect = self._stream_by_id.get(msg.src_id, parent)
+                if stream != expect:
+                    LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
+                              self, msg.src_id, stream, expect, msg)
+                    return
+
             if stream.auth_id is not None:
                 msg.auth_id = stream.auth_id
 

@@ -11,6 +11,10 @@ import mitogen.master
 import mitogen.utils
 
 
+def ping():
+    return True
+
+
 @mitogen.core.takes_router
 def return_router_max_message_size(router):
     return router.max_message_size
@@ -19,6 +23,70 @@ def return_router_max_message_size(router):
 def send_n_sized_reply(sender, n):
     sender.send(' ' * n)
     return 123
+
+
+class SourceVerifyTest(testlib.RouterMixin, unittest2.TestCase):
+    def setUp(self):
+        super(SourceVerifyTest, self).setUp()
+        # Create some children, ping them, and store what their messages look
+        # like so we can mess with them later.
+        self.child1 = self.router.fork()
+        self.child1_msg = self.child1.call_async(ping).get()
+        self.child1_stream = self.router._stream_by_id[self.child1.context_id]
+
+        self.child2 = self.router.fork()
+        self.child2_msg = self.child2.call_async(ping).get()
+        self.child2_stream = self.router._stream_by_id[self.child2.context_id]
+
+    def test_bad_auth_id(self):
+        # Deliver a message locally from child2, but using child1's stream.
+        log = testlib.LogCapturer()
+        log.start()
+
+        # Used to ensure the message was dropped rather than routed after the
+        # error is logged.
+        recv = mitogen.core.Receiver(self.router)
+        self.child2_msg.handle = recv.handle
+
+        self.broker.defer(self.router._async_route,
+                          self.child2_msg,
+                          stream=self.child1_stream)
+
+        # Wait for IO loop to finish everything above.
+        self.sync_with_broker()
+
+        # Ensure message wasn't forwarded.
+        self.assertTrue(recv.empty())
+
+        # Ensure error was logged.
+        expect = 'bad auth_id: got %d via' % (self.child2_msg.auth_id,)
+        self.assertTrue(expect in log.stop())
+
+    def test_bad_src_id(self):
+        # Deliver a message locally from child2 with the correct auth_id, but
+        # the wrong src_id.
+        log = testlib.LogCapturer()
+        log.start()
+
+        # Used to ensure the message was dropped rather than routed after the
+        # error is logged.
+        recv = mitogen.core.Receiver(self.router)
+        self.child2_msg.handle = recv.handle
+        self.child2_msg.src_id = self.child1.context_id
+
+        self.broker.defer(self.router._async_route,
+                          self.child2_msg,
+                          self.child2_stream)
+
+        # Wait for IO loop to finish everything above.
+        self.sync_with_broker()
+
+        # Ensure message wasn't forwarded.
+        self.assertTrue(recv.empty())
+
+        # Ensure error was lgoged.
+        expect = 'bad src_id: got %d via' % (self.child1_msg.src_id,)
+        self.assertTrue(expect in log.stop())
 
 
 class CrashTest(testlib.BrokerMixin, unittest2.TestCase):

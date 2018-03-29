@@ -11,6 +11,7 @@ import urlparse
 
 import unittest2
 
+import mitogen.core
 import mitogen.master
 import mitogen.utils
 
@@ -115,6 +116,20 @@ def wait_for_port(
                                  % (host, port))
 
 
+def sync_with_broker(broker, timeout=10.0):
+    """
+    Insert a synchronization barrier between the calling thread and the Broker
+    thread, ensuring it has completed at least one full IO loop before
+    returning.
+
+    Used to block while asynchronous stuff (like defer()) happens on the
+    broker.
+    """
+    sem = mitogen.core.Latch()
+    broker.defer(sem.put, None)
+    sem.get(timeout=10.0)
+
+
 class LogCapturer(object):
     def __init__(self, name=None):
         self.sio = StringIO.StringIO()
@@ -187,6 +202,9 @@ class BrokerMixin(object):
         self.broker.shutdown()
         self.broker.join()
         super(BrokerMixin, self).tearDown()
+
+    def sync_with_broker(self):
+        sync_with_broker(self.broker)
 
 
 class RouterMixin(BrokerMixin):
