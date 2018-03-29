@@ -15,13 +15,6 @@ import mitogen.utils
 import testlib
 
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
-mitogen.core._v = True
-mitogen.core._vv = True
-mitogen.core.IOLOG.setLevel(logging.DEBUG)
-
-
 class ImporterMixin(testlib.RouterMixin):
     modname = None
 

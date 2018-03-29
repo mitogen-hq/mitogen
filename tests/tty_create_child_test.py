@@ -4,6 +4,7 @@ import tempfile
 import time
 import unittest2
 
+import testlib
 import mitogen.parent
 
 
@@ -11,8 +12,6 @@ class TtyCreateChildTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.tty_create_child)
 
     def test_dev_tty_open_succeeds(self):
-        import logging
-        logging.basicConfig(level=logging.DEBUG)
         tf = tempfile.NamedTemporaryFile()
         try:
             pid, fd = self.func(

@@ -10,6 +10,8 @@ import urlparse
 import unittest2
 
 import mitogen.master
+import mitogen.utils
+
 if mitogen.is_master:  # TODO: shouldn't be necessary.
     import docker
 
@@ -17,10 +19,7 @@ if mitogen.is_master:  # TODO: shouldn't be necessary.
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 sys.path.append(DATA_DIR)
 
-
-def set_debug():
-    import logging
-    logging.getLogger('mitogen').setLevel(logging.DEBUG)
+mitogen.utils.log_to_file()
 
 
 def data_path(suffix):
