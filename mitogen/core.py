@@ -216,9 +216,9 @@ def io_op(func, *args):
             return func(*args), False
         except (select.error, OSError), e:
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
-            if e.errno == errno.EINTR:
+            if e[0] == errno.EINTR:
                 continue
-            if e.errno in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
+            if e[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
                 return None, True
             raise
 
