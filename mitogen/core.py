@@ -1273,7 +1273,7 @@ class Router(object):
                       self, msg, mitogen.context_id)
             return
 
-        stream.send(msg)
+        stream._send(msg)
 
     def route(self, msg):
         self.broker.defer(self._async_route, msg)
