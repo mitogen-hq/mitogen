@@ -299,6 +299,9 @@ class Message(object):
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(self.router, context_id, name)
 
+    def _unpickle_sender(self, context_id, dst_handle):
+        return _unpickle_sender(self.router, context_id, dst_handle)
+
     def _find_global(self, module, func):
         """Return the class implementing `module_name.class_name` or raise
         `StreamError` if the module is not whitelisted."""
@@ -307,6 +310,8 @@ class Message(object):
                 return _unpickle_call_error
             elif func == '_unpickle_dead':
                 return _unpickle_dead
+            elif func == '_unpickle_sender':
+                return self._unpickle_sender
             elif func == '_unpickle_context':
                 return self._unpickle_context
 
@@ -366,6 +371,9 @@ class Sender(object):
     def __repr__(self):
         return 'Sender(%r, %r)' % (self.context, self.dst_handle)
 
+    def __reduce__(self):
+        return _unpickle_sender, (self.context.context_id, self.dst_handle)
+
     def close(self):
         """Indicate this channel is closed to the remote side."""
         _vv and IOLOG.debug('%r.close()', self)
@@ -387,6 +395,14 @@ class Sender(object):
         )
 
 
+def _unpickle_sender(router, context_id, dst_handle):
+    if not (isinstance(router, Router) and
+            isinstance(context_id, (int, long)) and context_id >= 0 and
+            isinstance(dst_handle, (int, long)) and dst_handle > 0):
+        raise TypeError('cannot unpickle Sender: bad input')
+    return Sender(Context(router, context_id), dst_handle)
+
+
 class Receiver(object):
     notify = None
     raise_channelerror = True
@@ -400,6 +416,10 @@ class Receiver(object):
 
     def __repr__(self):
         return 'Receiver(%r, %r)' % (self.router, self.handle)
+
+    def to_sender(self):
+        context = Context(self.router, mitogen.context_id)
+        return Sender(context, self.handle)
 
     def _on_receive(self, msg):
         """Callback from the Stream; appends data to the internal queue."""
@@ -912,7 +932,7 @@ class Context(object):
 
 def _unpickle_context(router, context_id, name):
     if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id > 0 and
+            isinstance(context_id, (int, long)) and context_id >= 0 and
             isinstance(name, basestring) and len(name) < 100):
         raise TypeError('cannot unpickle Context: bad input')
     return router.context_class(router, context_id, name)
