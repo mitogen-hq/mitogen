@@ -34,7 +34,7 @@ def func_accepts_returns_context(context):
 
 
 def func_accepts_returns_sender(sender):
-    sender.put(123)
+    sender.send(123)
     sender.close()
     return sender
 

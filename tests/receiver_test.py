@@ -7,7 +7,7 @@ import testlib
 
 def yield_stuff_then_die(sender):
     for x in xrange(5):
-        sender.put(x)
+        sender.send(x)
     sender.close()
     return 10
 

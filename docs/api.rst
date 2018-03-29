@@ -1027,7 +1027,7 @@ Sender Class
         Send :py:data:`_DEAD` to the remote end, causing
         :py:meth:`ChannelError` to be raised in any waiting thread.
 
-    .. py:method:: put (data)
+    .. py:method:: send (data)
 
         Send `data` to the remote end.
 
