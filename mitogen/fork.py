@@ -31,6 +31,7 @@ import os
 import random
 import sys
 import threading
+import traceback
 
 import mitogen.core
 import mitogen.parent
@@ -65,6 +66,18 @@ def break_logging_locks():
             handler.createLock()
 
 
+def handle_child_crash():
+    """
+    Respond to _child_main() crashing by ensuring the relevant exception is
+    logged to /dev/tty.
+    """
+    sys.stderr.write('\n\nFORKED CHILD PID %d CRASHED\n%s\n\n' % (
+        os.getpid(),
+        traceback.format_exc(),
+    ))
+    os._exit(1)
+
+
 class Stream(mitogen.parent.Stream):
     #: Reference to the importer, if any, recovered from the parent.
     importer = None
@@ -94,7 +107,13 @@ class Stream(mitogen.parent.Stream):
             return self.pid, fd
         else:
             parentfp.close()
+            self._wrap_child_main(childfp)
+
+    def _wrap_child_main(self, childfp):
+        try:
             self._child_main(childfp)
+        except BaseException, e:
+            handle_child_crash()
 
     def _child_main(self, childfp):
         mitogen.core.Latch._on_fork()
@@ -113,17 +132,18 @@ class Stream(mitogen.parent.Stream):
         # avoid ExternalContext.main() accidentally allocating new files over
         # the standard handles.
         os.dup2(childfp.fileno(), 0)
-        os.dup2(childfp.fileno(), 2)
+        os.dup2(sys.stderr.fileno(), 2)
         childfp.close()
 
         kwargs = self.get_main_kwargs()
         kwargs['core_src_fd'] = None
         kwargs['importer'] = self.importer
         kwargs['setup_package'] = False
-        mitogen.core.ExternalContext().main(**kwargs)
-
-        # Don't trigger atexit handlers, they were copied from the parent.
-        os._exit(0)
+        try:
+            mitogen.core.ExternalContext().main(**kwargs)
+        finally:
+            # Don't trigger atexit handlers, they were copied from the parent.
+            os._exit(0)
 
     def _connect_bootstrap(self):
         # None required.
