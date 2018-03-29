@@ -412,7 +412,7 @@ Router Class
         receive side to the I/O multiplexer. This This method remains public
         for now while hte design has not yet settled.
 
-    .. method:: add_handler (fn, handle=None, persist=True, respondent=None)
+    .. method:: add_handler (fn, handle=None, persist=True, respondent=None, policy=None)
 
         Invoke `fn(msg)` for each Message sent to `handle` from this context.
         Unregister after one invocation if `persist` is ``False``. If `handle`
@@ -434,6 +434,28 @@ Router Class
 
             In future `respondent` will likely also be used to prevent other
             contexts from sending messages to the handle.
+
+        :param function policy:
+            Function invoked as `policy(msg, stream)` where `msg` is a
+            :py:class:`mitogen.core.Message` about to be delivered, and
+            `stream` is the :py:class:`mitogen.core.Stream` on which it was
+            received. The function must return :py:data:`True`, otherwise an
+            error is logged and delivery is refused.
+
+            Two built-in policy functions exist:
+
+            * :py:func:`mitogen.core.has_parent_authority`: requires the
+              message arrived from a parent context, or a context acting with a
+              parent context's authority (``auth_id``).
+
+            * :py:func:`mitogen.parent.is_immediate_child`: requires the
+              message arrived from an immediately connected child, for use in
+              messaging patterns where either something becomes buggy or
+              insecure by permitting indirect upstream communication.
+
+            In case of refusal, and the message's ``reply_to`` field is
+            nonzero, a :py:class:`mitogen.core.CallError` is delivered to the
+            sender indicating refusal occurred.
 
         :return:
             `handle`, or if `handle` was ``None``, the newly allocated handle.

@@ -89,6 +89,55 @@ class SourceVerifyTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertTrue(expect in log.stop())
 
 
+class PolicyTest(testlib.RouterMixin, testlib.TestCase):
+    def test_allow_any(self):
+        # This guy gets everything.
+        recv = mitogen.core.Receiver(self.router)
+        recv.to_sender().send(123)
+        self.sync_with_broker()
+        self.assertFalse(recv.empty())
+        self.assertEquals(123, recv.get().unpickle())
+
+    def test_refuse_all(self):
+        # Deliver a message locally from child2 with the correct auth_id, but
+        # the wrong src_id.
+        log = testlib.LogCapturer()
+        log.start()
+
+        # This guy never gets anything.
+        recv = mitogen.core.Receiver(
+            router=self.router,
+            policy=(lambda msg, stream: False),
+        )
+
+        # This guy becomes the reply_to of our refused message.
+        reply_target = mitogen.core.Receiver(self.router)
+
+        # Send the message.
+        self.router.route(
+            mitogen.core.Message(
+                dst_id=mitogen.context_id,
+                handle=recv.handle,
+                reply_to=reply_target.handle,
+            )
+        )
+
+        # Wait for IO loop.
+        self.sync_with_broker()
+
+        # Verify log.
+        expect = '%r: policy refused message: ' % (self.router,)
+        self.assertTrue(expect in log.stop())
+
+        # Verify message was not delivered.
+        self.assertTrue(recv.empty())
+
+        # Verify CallError received by reply_to target.
+        e = self.assertRaises(mitogen.core.CallError,
+                              lambda: reply_target.get().unpickle())
+        self.assertEquals(e[0], self.router.refused_msg)
+
+
 class CrashTest(testlib.BrokerMixin, unittest2.TestCase):
     # This is testing both Broker's ability to crash nicely, and Router's
     # ability to respond to the crash event.

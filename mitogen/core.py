@@ -157,6 +157,10 @@ def _unpickle_dead():
 _DEAD = Dead()
 
 
+def has_parent_authority(msg, _stream):
+    return msg.auth_id in mitogen.parent_ids
+
+
 def listen(obj, name, func):
     signals = vars(obj).setdefault('_signals', {})
     signals.setdefault(name, []).append(func)
@@ -407,11 +411,17 @@ class Receiver(object):
     notify = None
     raise_channelerror = True
 
-    def __init__(self, router, handle=None, persist=True, respondent=None):
+    def __init__(self, router, handle=None, persist=True,
+                 respondent=None, policy=None):
         self.router = router
         self.handle = handle  # Avoid __repr__ crash in add_handler()
-        self.handle = router.add_handler(self._on_receive, handle,
-                                         persist, respondent)
+        self.handle = router.add_handler(
+            fn=self._on_receive,
+            handle=handle,
+            policy=policy,
+            persist=persist,
+            respondent=respondent,
+        )
         self._latch = Latch()
 
     def __repr__(self):
@@ -497,7 +507,11 @@ class Importer(object):
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
-        router.add_handler(self._on_load_module, LOAD_MODULE)
+        router.add_handler(
+            fn=self._on_load_module,
+            handle=LOAD_MODULE,
+            policy=has_parent_authority,
+        )
         self._cache = {}
         if core_src:
             self._cache['mitogen.core'] = (
@@ -1235,7 +1249,7 @@ class Router(object):
 
     def _cleanup_handlers(self):
         while self._handle_map:
-            _, (_, func) = self._handle_map.popitem()
+            _, (_, func, _) = self._handle_map.popitem()
             func(_DEAD)
 
     def register(self, context, stream):
@@ -1245,18 +1259,22 @@ class Router(object):
         self.broker.start_receive(stream)
         listen(stream, 'disconnect', lambda: self.on_stream_disconnect(stream))
 
-    def add_handler(self, fn, handle=None, persist=True, respondent=None):
+    def add_handler(self, fn, handle=None, persist=True,
+                    policy=None, respondent=None):
         handle = handle or self._last_handle.next()
         _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
-        self._handle_map[handle] = persist, fn
 
         if respondent:
+            assert policy is None
+            def policy(msg, _stream):
+                return msg.src_id == respondent.context_id
             def on_disconnect():
                 if handle in self._handle_map:
                     fn(_DEAD)
                     del self._handle_map[handle]
             listen(respondent, 'disconnect', on_disconnect)
 
+        self._handle_map[handle] = persist, fn, policy
         return handle
 
     def on_shutdown(self, broker):
@@ -1268,12 +1286,24 @@ class Router(object):
             _v and LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
             fn(_DEAD)
 
-    def _invoke(self, msg):
+    refused_msg = 'Refused by policy.'
+
+    def _invoke(self, msg, stream):
         #IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
-            persist, fn = self._handle_map[msg.handle]
+            persist, fn, policy = self._handle_map[msg.handle]
         except KeyError:
             LOG.error('%r: invalid handle: %r', self, msg)
+            return
+
+        if policy and not policy(msg, stream):
+            LOG.error('%r: policy refused message: %r', self, msg)
+            if msg.reply_to:
+                self.route(Message.pickled(
+                    CallError(self.refused_msg),
+                    dst_id=msg.src_id,
+                    handle=msg.reply_to
+                ))
             return
 
         if not persist:
@@ -1311,7 +1341,7 @@ class Router(object):
                 msg.auth_id = stream.auth_id
 
         if msg.dst_id == mitogen.context_id:
-            return self._invoke(msg)
+            return self._invoke(msg, stream)
 
         stream = self._stream_by_id.get(msg.dst_id)
         if stream is None:
@@ -1456,10 +1486,8 @@ class ExternalContext(object):
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
-        if msg != _DEAD and msg.auth_id not in mitogen.parent_ids:
-            LOG.warning('Ignoring SHUTDOWN from non-parent: %r', msg)
-            return
-        self.broker.shutdown()
+        if msg != _DEAD:
+            self.broker.shutdown()
 
     def _on_parent_disconnect(self):
         _v and LOG.debug('%r: parent stream is gone, dying.', self)
@@ -1473,14 +1501,20 @@ class ExternalContext(object):
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
-        self.router.add_handler(self._on_shutdown_msg, SHUTDOWN)
+        self.router.add_handler(
+            fn=self._on_shutdown_msg,
+            handle=SHUTDOWN,
+            policy=has_parent_authority,
+        )
         self.master = Context(self.router, 0, 'master')
         if parent_id == 0:
             self.parent = self.master
         else:
             self.parent = Context(self.router, parent_id, 'parent')
 
-        self.channel = Receiver(self.router, CALL_FUNCTION)
+        self.channel = Receiver(router=self.router,
+                                handle=CALL_FUNCTION,
+                                policy=has_parent_authority)
         self.stream = Stream(self.router, parent_id)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)
@@ -1576,8 +1610,6 @@ class ExternalContext(object):
     def _dispatch_one(self, msg):
         data = msg.unpickle(throw=False)
         _v and LOG.debug('_dispatch_calls(%r)', data)
-        if msg.auth_id not in mitogen.parent_ids:
-            LOG.warning('CALL_FUNCTION from non-parent %r', msg.auth_id)
 
         modname, klass, func, args, kwargs = data
         obj = __import__(modname, {}, {}, [''])

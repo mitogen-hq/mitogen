@@ -78,6 +78,14 @@ def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
 
 
+def is_immediate_child(msg, stream):
+    """
+    Handler policy that requires messages to arrive only from immediately
+    connected children.
+    """
+    return msg.src_id == stream.remote_id
+
+
 def minimize_source(source):
     subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
     source = DOCSTRING_RE.sub(subber, source)
@@ -554,11 +562,13 @@ class RouteMonitor(object):
             fn=self._on_add_route,
             handle=mitogen.core.ADD_ROUTE,
             persist=True,
+            policy=is_immediate_child,
         )
         self.router.add_handler(
             fn=self._on_del_route,
             handle=mitogen.core.DEL_ROUTE,
             persist=True,
+            policy=is_immediate_child,
         )
 
     def propagate(self, handle, target_id, name=None):
@@ -795,7 +805,12 @@ class ModuleForwarder(object):
         self.router = router
         self.parent_context = parent_context
         self.importer = importer
-        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
+        router.add_handler(
+            fn=self._on_get_module,
+            handle=mitogen.core.GET_MODULE,
+            persist=True,
+            policy=is_immediate_child,
+        )
 
     def __repr__(self):
         return 'ModuleForwarder(%r)' % (self.router,)
