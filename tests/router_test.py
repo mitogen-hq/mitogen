@@ -21,6 +21,36 @@ def send_n_sized_reply(sender, n):
     return 123
 
 
+class CrashTest(testlib.BrokerMixin, unittest2.TestCase):
+    # This is testing both Broker's ability to crash nicely, and Router's
+    # ability to respond to the crash event.
+    klass = mitogen.master.Router
+
+    def _naughty(self):
+        raise ValueError('eek')
+
+    def test_shutdown(self):
+        router = self.klass(self.broker)
+
+        sem = mitogen.core.Latch()
+        router.add_handler(sem.put)
+
+        log = testlib.LogCapturer('mitogen')
+        log.start()
+
+        # Force a crash and ensure it wakes up.
+        self.broker._loop_once = self._naughty
+        self.broker.defer(lambda: None)
+
+        # sem should have received _DEAD.
+        self.assertEquals(mitogen.core._DEAD, sem.get())
+
+        # Ensure it was logged.
+        expect = '_broker_main() crashed'
+        self.assertTrue(expect in log.stop())
+
+
+
 class AddHandlerTest(unittest2.TestCase):
     klass = mitogen.master.Router
 

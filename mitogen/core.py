@@ -1201,6 +1201,7 @@ class Router(object):
 
     def __init__(self, broker):
         self.broker = broker
+        listen(broker, 'crash', self._cleanup_handlers)
         listen(broker, 'shutdown', self.on_broker_shutdown)
 
         # Here seems as good a place as any.
@@ -1230,7 +1231,11 @@ class Router(object):
         for context in self._context_by_id.itervalues():
             context.on_shutdown(self.broker)
 
-        for _, func in self._handle_map.itervalues():
+        self._cleanup_handlers()
+
+    def _cleanup_handlers(self):
+        while self._handle_map:
+            _, (_, func) = self._handle_map.popitem()
             func(_DEAD)
 
     def register(self, context, stream):
@@ -1415,6 +1420,7 @@ class Broker(object):
                 side.stream.on_disconnect(self)
         except Exception:
             LOG.exception('_broker_main() crashed')
+            fire(self, 'crash')
 
         fire(self, 'exit')
 
