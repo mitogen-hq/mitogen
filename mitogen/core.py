@@ -862,8 +862,10 @@ class Stream(BasicStream):
         pkt = struct.pack(self.HEADER_FMT, msg.dst_id, msg.src_id,
                           msg.auth_id, msg.handle, msg.reply_to or 0,
                           len(msg.data)) + msg.data
+        was_transmitting = len(self._output_buf)
         self._output_buf.append(pkt)
-        self._router.broker._start_transmit(self)
+        if not was_transmitting:
+            self._router.broker._start_transmit(self)
 
     def send(self, msg):
         """Send `data` to `handle`, and tell the broker we have output. May
