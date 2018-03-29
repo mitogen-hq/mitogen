@@ -932,6 +932,23 @@ Receiver Class
         Used by :py:class:`mitogen.master.Select` to implement waiting on
         multiple receivers.
 
+    .. py:method:: to_sender ()
+
+        Return a :py:class:`mitogen.core.Sender` configured to deliver messages
+        to this receiver. Since a Sender can be serialized, this makes it
+        convenient to pass `(context_id, handle)` pairs around::
+
+            def deliver_monthly_report(sender):
+                for line in open('monthly_report.txt'):
+                    sender.send(line)
+                sender.close()
+
+            remote = router.ssh(hostname='mainframe')
+            recv = mitogen.core.Receiver(router)
+            remote.call(deliver_monthly_report, recv.to_sender())
+            for msg in recv:
+                print(msg)
+
     .. py:method:: empty ()
 
         Return ``True`` if calling :py:meth:`get` would block.
@@ -996,6 +1013,9 @@ Sender Class
 
     Senders are used to send pickled messages to a handle in another context,
     it is the inverse of :py:class:`mitogen.core.Sender`.
+
+    Senders may be serialized, making them convenient to wire up data flows.
+    See :py:meth:`mitogen.core.Receiver.to_sender` for more information.
 
     :param mitogen.core.Context context:
         Context to send messages to.

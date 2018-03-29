@@ -292,6 +292,7 @@ User-defined types may not be used, except for:
 
 * :py:class:`mitogen.core.CallError`
 * :py:class:`mitogen.core.Context`
+* :py:class:`mitogen.core.Sender`
 * :py:class:`mitogen.core._DEAD`
 
 Subclasses of built-in types must be undecorated using
