@@ -85,9 +85,11 @@ class Stream(mitogen.parent.Stream):
     #: User-supplied function for cleaning up child process state.
     on_fork = None
 
-    def construct(self, old_router, on_fork=None, debug=False, profiling=False):
+    def construct(self, old_router, max_message_size, on_fork=None,
+                  debug=False, profiling=False):
         # fork method only supports a tiny subset of options.
-        super(Stream, self).construct(debug=debug, profiling=profiling)
+        super(Stream, self).construct(max_message_size=max_message_size,
+                                      debug=debug, profiling=profiling)
         self.on_fork = on_fork
 
         responder = getattr(old_router, 'responder', None)

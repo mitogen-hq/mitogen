@@ -646,9 +646,11 @@ class Router(mitogen.parent.Router):
     debug = False
     profiling = False
 
-    def __init__(self, broker=None):
+    def __init__(self, broker=None, max_message_size=None):
         if broker is None:
             broker = self.broker_class()
+        if max_message_size:
+            self.max_message_size = max_message_size
         super(Router, self).__init__(broker)
         self.upgrade()
 

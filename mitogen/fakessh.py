@@ -343,14 +343,15 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext().main(**%r)\n' % ({
-                'parent_ids': parent_ids,
                 'context_id': context_id,
-                'debug': getattr(router, 'debug', False),
-                'profiling': getattr(router, 'profiling', False),
-                'log_level': mitogen.parent.get_log_level(),
-                'in_fd': sock2.fileno(),
-                'out_fd': sock2.fileno(),
                 'core_src_fd': None,
+                'debug': getattr(router, 'debug', False),
+                'in_fd': sock2.fileno(),
+                'log_level': mitogen.parent.get_log_level(),
+                'max_message_size': router.max_message_size,
+                'out_fd': sock2.fileno(),
+                'parent_ids': parent_ids,
+                'profiling': getattr(router, 'profiling', False),
                 'setup_stdio': False,
             },))
         finally:

@@ -337,6 +337,10 @@ class Stream(mitogen.core.Stream):
     #: Set to the child's PID by connect().
     pid = None
 
+    #: Passed via Router wrapper methods, must eventually be passed to
+    #: ExternalContext.main().
+    max_message_size = None
+
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
         self.sent_modules = set(['mitogen', 'mitogen.core'])
@@ -344,12 +348,13 @@ class Stream(mitogen.core.Stream):
         #: during disconnection.
         self.routes = set([self.remote_id])
 
-    def construct(self, remote_name=None, python_path=None, debug=False,
-                  connect_timeout=None, profiling=False,
+    def construct(self, max_message_size, remote_name=None, python_path=None,
+                  debug=False, connect_timeout=None, profiling=False,
                   old_router=None, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
+        self.max_message_size = max_message_size
         if python_path:
             self.python_path = python_path
         if sys.platform == 'darwin' and self.python_path == '/usr/bin/python':
@@ -367,6 +372,7 @@ class Stream(mitogen.core.Stream):
         self.remote_name = remote_name
         self.debug = debug
         self.profiling = profiling
+        self.max_message_size = max_message_size
         self.connect_deadline = time.time() + self.connect_timeout
 
     def on_shutdown(self, broker):
@@ -441,6 +447,7 @@ class Stream(mitogen.core.Stream):
         ]
 
     def get_main_kwargs(self):
+        assert self.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
         return {
@@ -451,6 +458,7 @@ class Stream(mitogen.core.Stream):
             'log_level': get_log_level(),
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
+            'max_message_size': self.max_message_size,
         }
 
     def get_preamble(self):
@@ -703,7 +711,9 @@ class Router(mitogen.core.Router):
     def _connect(self, klass, name=None, **kwargs):
         context_id = self.allocate_id()
         context = self.context_class(self, context_id)
-        stream = klass(self, context_id, old_router=self, **kwargs)
+        kwargs['old_router'] = self
+        kwargs['max_message_size'] = self.max_message_size
+        stream = klass(self, context_id, **kwargs)
         if name is not None:
             stream.name = name
         stream.connect()

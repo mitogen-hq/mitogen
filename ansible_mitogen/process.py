@@ -134,7 +134,7 @@ class MuxProcess(object):
         """
         Construct a Router, Broker, and mitogen.unix listener
         """
-        self.router = mitogen.master.Router()
+        self.router = mitogen.master.Router(max_message_size=4096*1048576)
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
         mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)

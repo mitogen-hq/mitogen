@@ -1,4 +1,6 @@
 
+import StringIO
+import logging
 import os
 import random
 import re
@@ -113,6 +115,24 @@ def wait_for_port(
                                  % (host, port))
 
 
+class LogCapturer(object):
+    def __init__(self, name=None):
+        self.sio = StringIO.StringIO()
+        self.logger = logging.getLogger(name)
+        self.handler = logging.StreamHandler(self.sio)
+        self.old_propagate = self.logger.propagate
+        self.old_handlers = self.logger.handlers
+
+    def start(self):
+        self.logger.handlers = [self.handler]
+        self.logger.propagate = False
+
+    def stop(self):
+        self.logger.handlers = self.old_handlers
+        self.logger.propagate = self.old_propagate
+        return self.sio.getvalue()
+
+
 class TestCase(unittest2.TestCase):
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
@@ -156,19 +176,25 @@ class DockerizedSshDaemon(object):
         self.container.remove()
 
 
-class RouterMixin(object):
+class BrokerMixin(object):
     broker_class = mitogen.master.Broker
-    router_class = mitogen.master.Router
 
     def setUp(self):
-        super(RouterMixin, self).setUp()
+        super(BrokerMixin, self).setUp()
         self.broker = self.broker_class()
-        self.router = self.router_class(self.broker)
 
     def tearDown(self):
         self.broker.shutdown()
         self.broker.join()
-        super(RouterMixin, self).tearDown()
+        super(BrokerMixin, self).tearDown()
+
+
+class RouterMixin(BrokerMixin):
+    router_class = mitogen.master.Router
+
+    def setUp(self):
+        super(RouterMixin, self).setUp()
+        self.router = self.router_class(self.broker)
 
 
 class DockerMixin(RouterMixin):

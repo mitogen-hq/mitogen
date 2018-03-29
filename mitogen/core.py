@@ -812,6 +812,12 @@ class Stream(BasicStream):
             self._input_buf[0][:self.HEADER_LEN],
         )
 
+        if msg_len > self._router.max_message_size:
+            LOG.error('Maximum message size exceeded (got %d, max %d)',
+                      msg_len, self._router.max_message_size)
+            self.on_disconnect(broker)
+            return False
+
         total_len = msg_len + self.HEADER_LEN
         if self._input_buf_len < total_len:
             _vv and IOLOG.debug(
@@ -1191,6 +1197,7 @@ class IoLogger(BasicStream):
 
 class Router(object):
     context_class = Context
+    max_message_size = 128 * 1048576
 
     def __init__(self, broker):
         self.broker = broker
@@ -1274,6 +1281,11 @@ class Router(object):
 
     def _async_route(self, msg, stream=None):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, stream)
+        if len(msg.data) > self.max_message_size:
+            LOG.error('message too large (max %d bytes): %r',
+                      self.max_message_size, msg)
+            return
+
         # Perform source verification.
         if stream is not None:
             expected_stream = self._stream_by_id.get(msg.auth_id,
@@ -1438,7 +1450,9 @@ class ExternalContext(object):
         _v and LOG.debug('%r: parent stream is gone, dying.', self)
         self.broker.shutdown()
 
-    def _setup_master(self, profiling, parent_id, context_id, in_fd, out_fd):
+    def _setup_master(self, max_message_size, profiling, parent_id,
+                      context_id, in_fd, out_fd):
+        Router.max_message_size = max_message_size
         self.profiling = profiling
         if profiling:
             enable_profiling()
@@ -1571,9 +1585,11 @@ class ExternalContext(object):
         self.dispatch_stopped = True
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
-             in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True,
-             setup_package=True, importer=None, whitelist=(), blacklist=()):
-        self._setup_master(profiling, parent_ids[0], context_id, in_fd, out_fd)
+             max_message_size, in_fd=100, out_fd=1, core_src_fd=101,
+             setup_stdio=True, setup_package=True, importer=None,
+             whitelist=(), blacklist=()):
+        self._setup_master(max_message_size, profiling, parent_ids[0],
+                           context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)
