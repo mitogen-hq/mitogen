@@ -1,11 +1,12 @@
 import os
 import subprocess
+import tempfile
 import time
 
 import unittest2
+import testlib
 
 import mitogen.parent
-import testlib
 
 
 class ContextTest(testlib.RouterMixin, unittest2.TestCase):
@@ -14,6 +15,27 @@ class ContextTest(testlib.RouterMixin, unittest2.TestCase):
         pid = local.call(os.getpid)
         local.shutdown(wait=True)
         self.assertRaises(OSError, lambda: os.kill(pid, 0))
+
+
+class TtyCreateChildTest(unittest2.TestCase):
+    func = staticmethod(mitogen.parent.tty_create_child)
+
+    def test_dev_tty_open_succeeds(self):
+        tf = tempfile.NamedTemporaryFile()
+        try:
+            pid, fd = self.func(
+                'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
+            )
+            deadline = time.time() + 5.0
+            for line in mitogen.parent.iter_read(fd, deadline):
+                self.assertEquals('hi\n', line)
+                break
+            waited_pid, status = os.waitpid(pid, 0)
+            self.assertEquals(pid, waited_pid)
+            self.assertEquals(0, status)
+            self.assertEquals('', tf.read())
+        finally:
+            tf.close()
 
 
 class IterReadTest(unittest2.TestCase):
