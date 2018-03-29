@@ -131,9 +131,13 @@ High Risk
   <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
   minimal testing.
 
+* No mechanism exists yet to bound the number of interpreters created during a
+  run. For some playbooks that parameterize ``become_user`` over a large number
+  of user accounts, resource exhaustion may be triggered on the target machine.
+
 * Only Ansible 2.4 is being used for development, with occasional tests under
-  2.3 and 2.2. It should be more than possible to fully support at least 2.3,
-  if not also 2.2.
+  2.5, 2.3 and 2.2. It should be more than possible to fully support at least
+  2.3, if not also 2.2.
 
 
 Low Risk
