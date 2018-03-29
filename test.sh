@@ -36,6 +36,7 @@ run_test()
 }
 
 run_test tests/ansible_helpers_test.py
+run_test tests/call_error_test.py
 run_test tests/call_function_test.py
 run_test tests/channel_test.py
 run_test tests/fakessh_test.py

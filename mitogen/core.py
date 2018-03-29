@@ -95,13 +95,18 @@ class LatchError(Error):
 
 
 class CallError(Error):
-    def __init__(self, e):
-        s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
-        tb = sys.exc_info()[2]
-        if tb:
-            s += '\n'
-            s += ''.join(traceback.format_tb(tb))
-        Error.__init__(self, s)
+    def __init__(self, fmt=None, *args):
+        if not isinstance(fmt, Exception):
+            Error.__init__(self, fmt, *args)
+        else:
+            e = fmt
+            fmt = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
+            args = ()
+            tb = sys.exc_info()[2]
+            if tb:
+                fmt += '\n'
+                fmt += ''.join(traceback.format_tb(tb))
+            Error.__init__(self, fmt)
 
     def __reduce__(self):
         return (_unpickle_call_error, (self[0],))
