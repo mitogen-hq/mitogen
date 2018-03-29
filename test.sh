@@ -54,7 +54,6 @@ run_test tests/responder_test.py
 run_test tests/router_test.py
 run_test tests/select_test.py
 run_test tests/ssh_test.py
-run_test tests/testlib.py
 run_test tests/utils_test.py
 
 if [ "$fail" ]; then
