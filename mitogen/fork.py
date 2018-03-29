@@ -71,10 +71,12 @@ def handle_child_crash():
     Respond to _child_main() crashing by ensuring the relevant exception is
     logged to /dev/tty.
     """
-    sys.stderr.write('\n\nFORKED CHILD PID %d CRASHED\n%s\n\n' % (
+    tty = open('/dev/tty', 'wb')
+    tty.write('\n\nFORKED CHILD PID %d CRASHED\n%s\n\n' % (
         os.getpid(),
         traceback.format_exc(),
     ))
+    tty.close()
     os._exit(1)
 
 
@@ -134,7 +136,13 @@ class Stream(mitogen.parent.Stream):
         # avoid ExternalContext.main() accidentally allocating new files over
         # the standard handles.
         os.dup2(childfp.fileno(), 0)
-        os.dup2(sys.stderr.fileno(), 2)
+
+        # Avoid corrupting the stream on fork crash by dupping /dev/null over
+        # stderr. Instead, handle_child_crash() uses /dev/tty to log errors.
+        devnull = os.open('/dev/null', os.O_WRONLY)
+        if devnull != 2:
+            os.dup2(devnull, 2)
+            os.close(devnull)
         childfp.close()
 
         kwargs = self.get_main_kwargs()
