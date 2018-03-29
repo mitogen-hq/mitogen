@@ -69,11 +69,12 @@ def setup():
     """
     display = find_display()
 
-    logging.getLogger('ansible_mitogen').handlers = [Handler(display.v)]
-    logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
+    if display.verbosity > 2:
+        logging.getLogger('ansible_mitogen').handlers = [Handler(display.v)]
+        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
 
-    mitogen.core.LOG.handlers = [Handler(display.v)]
-    mitogen.core.LOG.setLevel(logging.DEBUG)
+        mitogen.core.LOG.handlers = [Handler(display.vv)]
+        mitogen.core.LOG.setLevel(logging.DEBUG)
 
     mitogen.core.IOLOG.handlers = [Handler(display.vvvv)]
     if display.verbosity > 3:
