@@ -27,7 +27,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import logging
+import zlib
+
+import mitogen
 import mitogen.service
+
+
+LOG = logging.getLogger(__name__)
 
 
 class ContextService(mitogen.service.DeduplicatingService):
@@ -40,7 +47,7 @@ class ContextService(mitogen.service.DeduplicatingService):
         https://mitogen.readthedocs.io/en/latest/api.html#context-factories
 
     This concentrates all SSH connections in the top-level process, which may
-    become a bottleneck. There are multiple ways to fix that: 
+    become a bottleneck. There are multiple ways to fix that:
         * creating one .local() child context per CPU and sharding connections
           between them, using the master process to route messages, or
         * as above, but having each child create a unique UNIX listener and
@@ -68,3 +75,64 @@ class ContextService(mitogen.service.DeduplicatingService):
         args.pop('discriminator', None)
         method = getattr(self.router, args.pop('method'))
         return method(**args)
+
+
+class FileService(mitogen.service.Service):
+    """
+    Primitive latency-inducing file server for old-style incantations of the
+    module runner. This is to be replaced later with a scheme that forwards
+    files known to be missing without the target having to ask for them,
+    avoiding a corresponding roundtrip per file.
+
+    Paths must be explicitly added to the service by a trusted context before
+    they will be served to an untrusted context.
+
+    :param tuple args:
+        Tuple of `(cmd, path)`, where:
+            - cmd: one of "register", "fetch", where:
+                - register: register a file that may be fetched
+                - fetch: fetch a file that was previously registered
+            - path: key of the file to fetch or register
+
+    :returns:
+        Returns ``None` for "register", or the file data for "fetch".
+
+    :raises mitogen.core.CallError:
+        Security violation occurred, either path not registered, or attempt to
+        register path from unprivileged context.
+    """
+    handle = 501
+    max_message_size = 1000
+
+    unprivileged_msg = 'Cannot register from unprivileged context.'
+    unregistered_msg = 'Path is not registered with FileService.'
+
+    def __init__(self, router):
+        super(FileService, self).__init__(router)
+        self._paths = {}
+
+    def validate_args(self, args):
+        return (
+            isinstance(args, tuple) and
+            len(args) == 2 and
+            args[0] in ('register', 'fetch') and
+            isinstance(args[1], str)
+        )
+
+    def dispatch(self, args, msg):
+        cmd, path = msg
+        return getattr(self, cmd)(path, msg)
+
+    def register(self, path, msg):
+        if msg.auth_id not in mitogen.parent_ids:
+            raise mitogen.core.CallError(self.unprivileged_msg)
+
+        with open(path, 'rb') as fp:
+            self._paths[path] = zlib.compress(fp.read())
+
+    def fetch(self, path, msg):
+        if path not in self._paths:
+            raise mitogen.core.CallError(self.unregistered_msg)
+
+        LOG.debug('Serving %r to context %r', path, msg.src_id)
+        return self._paths[path]
