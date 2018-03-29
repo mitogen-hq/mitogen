@@ -12,7 +12,7 @@ install:
 - pip install -r dev_requirements.txt
 
 script:
-- PYTHONPATH=. ${TRAVIS_BUILD_DIR}/test.sh
+- MITOGEN_LOG_LEVEL=debug PYTHONPATH=. ${TRAVIS_BUILD_DIR}/test.sh
 
 services:
   - docker
