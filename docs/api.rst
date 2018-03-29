@@ -1062,11 +1062,11 @@ Broker Class
         Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
         not ready for reading. Safe to call from any thread.
 
-    .. method:: start_transmit (stream)
+    .. method:: _start_transmit (stream)
 
         Mark the :py:attr:`transmit_side <Stream.transmit_side>` on `stream` as
-        ready for writing. Safe to call from any thread. When the associated
-        file descriptor becomes ready for writing,
+        ready for writing. Must only be called from the Broker thread. When the
+        associated file descriptor becomes ready for writing,
         :py:meth:`BasicStream.on_transmit` will be called.
 
     .. method:: stop_receive (stream)

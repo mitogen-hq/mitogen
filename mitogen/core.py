@@ -723,7 +723,7 @@ class BasicStream(object):
     def on_disconnect(self, broker):
         LOG.debug('%r.on_disconnect()', self)
         broker.stop_receive(self)
-        broker.stop_transmit(self)
+        broker._stop_transmit(self)
         if self.receive_side:
             self.receive_side.close()
         if self.transmit_side:
@@ -834,7 +834,7 @@ class Stream(BasicStream):
             _vv and IOLOG.debug('%r.on_transmit() -> len %d', self, written)
 
         if not self._output_buf:
-            broker.stop_transmit(self)
+            broker._stop_transmit(self)
 
     def _send(self, msg):
         _vv and IOLOG.debug('%r._send(%r)', self, msg)
@@ -842,7 +842,7 @@ class Stream(BasicStream):
                           msg.auth_id, msg.handle, msg.reply_to or 0,
                           len(msg.data)) + msg.data
         self._output_buf.append(pkt)
-        self._router.broker.start_transmit(self)
+        self._router.broker._start_transmit(self)
 
     def send(self, msg):
         """Send `data` to `handle`, and tell the broker we have output. May
@@ -1317,14 +1317,14 @@ class Broker(object):
         IOLOG.debug('%r.stop_receive(%r)', self, stream)
         self.defer(self._list_discard, self._readers, stream.receive_side)
 
-    def start_transmit(self, stream):
-        IOLOG.debug('%r.start_transmit(%r)', self, stream)
+    def _start_transmit(self, stream):
+        IOLOG.debug('%r._start_transmit(%r)', self, stream)
         assert stream.transmit_side and stream.transmit_side.fd is not None
-        self.defer(self._list_add, self._writers, stream.transmit_side)
+        self._list_add(self._writers, stream.transmit_side)
 
-    def stop_transmit(self, stream):
-        IOLOG.debug('%r.stop_transmit(%r)', self, stream)
-        self.defer(self._list_discard, self._writers, stream.transmit_side)
+    def _stop_transmit(self, stream):
+        IOLOG.debug('%r._stop_transmit(%r)', self, stream)
+        self._list_discard(self._writers, stream.transmit_side)
 
     def _call(self, stream, func):
         try:

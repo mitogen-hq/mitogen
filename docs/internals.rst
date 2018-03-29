@@ -188,12 +188,12 @@ Stream Classes
     .. method:: on_transmit (broker)
 
         Called by :py:class:`Broker` when the stream's :py:attr:`transmit_side`
-        has been marked writeable using :py:meth:`Broker.start_transmit` and
+        has been marked writeable using :py:meth:`Broker._start_transmit` and
         the broker has detected the associated file descriptor is ready for
         writing.
 
         Subclasses must implement this method if
-        :py:meth:`Broker.start_transmit` is ever called on them.
+        :py:meth:`Broker._start_transmit` is ever called on them.
 
     .. method:: on_shutdown (broker)
 

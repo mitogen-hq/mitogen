@@ -62,14 +62,14 @@ class IoPump(mitogen.core.BasicStream):
 
     def write(self, s):
         self._output_buf += s
-        self._broker.start_transmit(self)
+        self._broker._start_transmit(self)
 
     def close(self):
         self._closed = True
         # If local process hasn't exitted yet, ensure its write buffer is
         # drained before lazily triggering disconnect in on_transmit.
         if self.transmit_side.fd is not None:
-            self._broker.start_transmit(self)
+            self._broker._start_transmit(self)
 
     def on_shutdown(self, broker):
         self.close()
@@ -83,7 +83,7 @@ class IoPump(mitogen.core.BasicStream):
             self._output_buf = self._output_buf[written:]
 
         if not self._output_buf:
-            broker.stop_transmit(self)
+            broker._stop_transmit(self)
             if self._closed:
                 self.on_disconnect(broker)
 
