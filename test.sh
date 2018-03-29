@@ -50,6 +50,7 @@ run_test tests/master_test.py
 run_test tests/module_finder_test.py
 run_test tests/nested_test.py
 run_test tests/parent_test.py
+run_test tests/receiver_test.py
 run_test tests/responder_test.py
 run_test tests/router_test.py
 run_test tests/select_test.py
