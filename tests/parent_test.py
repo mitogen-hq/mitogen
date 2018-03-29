@@ -21,6 +21,15 @@ class TtyCreateChildTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.tty_create_child)
 
     def test_dev_tty_open_succeeds(self):
+        # In the early days of UNIX, a process that lacked a controlling TTY
+        # would acquire one simply by opening an existing TTY. Linux and OS X
+        # continue to follow this behaviour, however at least FreeBSD moved to
+        # requiring an explicit ioctl(). Linux supports it, but we don't yet
+        # use it there and anyway the behaviour will never change, so no point
+        # in fixing things that aren't broken. Below we test that
+        # getpass-loving apps like sudo and ssh get our slave PTY when they
+        # attempt to open /dev/tty, which is what they both do on attempting to
+        # read a password.
         tf = tempfile.NamedTemporaryFile()
         try:
             pid, fd = self.func(
