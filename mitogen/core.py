@@ -386,7 +386,7 @@ class Sender(object):
 
     def send(self, data):
         """Send `data` to the remote."""
-        _vv and IOLOG.debug('%r.send(%r..)', self, data[:100])
+        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
         self.context.send(
             Message.pickled(
                 data,
