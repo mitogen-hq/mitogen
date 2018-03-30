@@ -1,3 +1,15 @@
+"""
+mitop.py is a version of the UNIX top command that knows how to display process
+lists from multiple machines in a single listing.
+
+This is a basic, initial version showing overall program layout. A future
+version will extend it to:
+
+    * Only notify the master of changed processes, rather than all processes.
+    * Runtime-reconfigurable filters and aggregations handled on the remote
+      machines rather than forcing a bottleneck in the master.
+
+"""
 
 import curses
 import subprocess
