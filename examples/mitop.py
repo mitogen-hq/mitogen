@@ -57,9 +57,9 @@ class Process(object):
 
 def child_main(sender, delay):
     """
-    Executed on the main thread of the Python interpreter running on the target
-    machine, using context.call() by the master. It simply sends the output of
-    the UNIX 'ps' command at regular intervals toward a Receiver on master.
+    Executed on the main thread of the Python interpreter running on each
+    target machine, Context.call() from the master. It simply sends the output
+    of the UNIX 'ps' command at regular intervals toward a Receiver on master.
     
     :param mitogen.core.Sender sender:
         The Sender to use for delivering our result. This could target
@@ -102,6 +102,9 @@ def parse_output(host, s):
 
 
 class Painter(object):
+    """
+    This is ncurses (screen drawing) magic, you can ignore it. :)
+    """
     def __init__(self, hosts):
         self.stdscr = curses.initscr()
         curses.start_color()
@@ -219,15 +222,15 @@ def main(router):
         # Finally invoke the function in the remote target. Since child_main()
         # is an infinite loop, using .call() would block the parent, since
         # child_main() never returns. Instead use .call_async(), which returns
-        # another Receiver. We also want to wait for results from receiver --
-        # even child_main() never returns, if there is an exception, it will be
-        # delivered instead.
+        # another Receiver. We also want to wait for results from it --
+        # although child_main() never returns, if it crashes the exception will
+        # be delivered instead.
         call_recv = host.context.call_async(child_main, sender, delay)
         call_recv.host = host
 
-        # Adding call_recv to the select will cause CallError to be thrown by
-        # .get() if startup in the context fails, halt master_main() and cause
-        # the exception to be printed.
+        # Adding call_recv to the select will cause mitogen.core.CallError to
+        # be thrown by .get() if startup of any context fails, causing halt of
+        # master_main(), and the exception to be printed.
         select.add(call_recv)
         hosts.append(host)
 
