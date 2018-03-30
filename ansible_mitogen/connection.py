@@ -198,7 +198,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             cast({
                 'method': 'sudo',
                 'username': self._play_context.become_user,
-                'password': self._play_context.password,
+                'password': self._play_context.become_pass,
                 'python_path': python_path or self.python_path,
                 'sudo_path': self.sudo_path,
                 'connect_timeout': self._play_context.timeout,
