@@ -22,12 +22,45 @@ print 'Preamble size: %s (%.2fKiB)' % (
     len(stream.get_preamble()) / 1024.0,
 )
 
+print(
+    '               '
+    ' '
+    '  Original   '
+    '  '
+    '     Minimized     '
+    '  '
+    '    Compressed     '
+)
+
 for mod in (
         mitogen.master,
         mitogen.parent,
         mitogen.ssh,
         mitogen.sudo,
         mitogen.fakessh,
-        ):
-    sz = len(zlib.compress(mitogen.parent.minimize_source(inspect.getsource(mod))))
-    print '%s size: %s (%.2fKiB)' % (mod.__name__, sz, sz / 1024.0)
+    ):
+    original = inspect.getsource(mod)
+    original_size = len(original)
+    minimized = mitogen.parent.minimize_source(original)
+    minimized_size = len(minimized)
+    compressed = zlib.compress(minimized, 9)
+    compressed_size = len(compressed)
+    print(
+        '%-15s'
+        ' '
+        '%5i %4.1fKiB'
+        '  '
+        '%5i %4.1fKiB %.1f%%'
+        '  '
+        '%5i %4.1fKiB %.1f%%'
+    % (
+        mod.__name__,
+        original_size,
+        original_size / 1024.0,
+        minimized_size,
+        minimized_size / 1024.0,
+        100 * minimized_size / float(original_size),
+        compressed_size,
+        compressed_size / 1024.0,
+        100 * compressed_size / float(original_size),
+    ))
