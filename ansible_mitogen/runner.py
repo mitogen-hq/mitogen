@@ -31,7 +31,7 @@ import json
 import os
 import tempfile
 
-import ansible_mitogen.helpers
+import ansible_mitogen.helpers  # TODO: circular import
 
 try:
     from shlex import quote as shlex_quote
@@ -41,23 +41,6 @@ except ImportError:
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
-
-
-class Exit(Exception):
-    """
-    Raised when a module exits with success.
-    """
-    def __init__(self, dct):
-        self.dct = dct
-
-
-class ModuleError(Exception):
-    """
-    Raised when a module voluntarily indicates failure via .fail_json().
-    """
-    def __init__(self, msg, dct):
-        Exception.__init__(self, msg)
-        self.dct = dct
 
 
 class TemporaryEnvironment(object):
@@ -71,44 +54,41 @@ class TemporaryEnvironment(object):
         os.environ.update(self.original)
 
 
-class MethodOverrides(object):
-    @staticmethod
-    def exit_json(self, **kwargs):
-        """
-        Replace AnsibleModule.exit_json() with something that doesn't try to
-        kill the process or JSON-encode the result dictionary. Instead, cause
-        Exit to be raised, with a `dct` attribute containing the successful
-        result dictionary.
-        """
-        self.add_path_info(kwargs)
-        kwargs.setdefault('changed', False)
+class NativeModuleExit(Exception):
+    """
+    Capture the result of a call to `.exit_json()` or `.fail_json()` by a
+    native Ansible module.
+    """
+    def __init__(self, ansible_module, **kwargs):
+        ansible_module.add_path_info(kwargs)
         kwargs.setdefault('invocation', {
-            'module_args': self.params
+            'module_args': ansible_module.params
         })
-        kwargs = ansible.module_utils.basic.remove_values(
+        ansible_module.do_cleanup_files()
+        self.dct = ansible.module_utils.basic.remove_values(
             kwargs,
             self.no_log_values,
         )
-        self.do_cleanup_files()
-        raise Exit(kwargs)
+
+
+class NativeMethodOverrides(object):
+    @staticmethod
+    def exit_json(self, **kwargs):
+        """
+        Raise exit_json() output as the `.dct` attribute of a
+        :class:`NativeModuleExit` exception`.
+        """
+        kwargs.setdefault('changed', False)
+        return NativeModuleExit(self, **kwargs)
 
     @staticmethod
     def fail_json(self, **kwargs):
         """
-        Replace AnsibleModule.fail_json() with something that raises
-        ModuleError, which includes a `dct` attribute.
+        Raise fail_json() output as the `.dct` attribute of a
+        :class:`NativeModuleExit` exception`.
         """
-        self.add_path_info(kwargs)
         kwargs.setdefault('failed', True)
-        kwargs.setdefault('invocation', {
-            'module_args': self.params
-        })
-        kwargs = ansible.module_utils.basic.remove_values(
-            kwargs,
-            self.no_log_values,
-        )
-        self.do_cleanup_files()
-        raise ModuleError(kwargs.get('msg'), kwargs)
+        return NativeModuleExit(self, **kwargs)
 
     klass = ansible.module_utils.basic.AnsibleModule
 
@@ -119,14 +99,16 @@ class MethodOverrides(object):
         self.klass.fail_json = self.fail_json
 
     def revert(self):
+        """
+        Restore prior state.
+        """
         self.klass.exit_json = self._original_exit_json
         self.klass.fail_json = self._original_fail_json
 
 
-class ModuleArguments(object):
+class NativeModuleArguments(object):
     """
-    Patch the ansible.module_utils.basic global arguments variable on
-    construction, and revert the changes on call to :meth:`revert`.
+    Patch ansible.module_utils.basic argument globals.
     """
     def __init__(self, args):
         self.original = ansible.module_utils.basic._ANSIBLE_ARGS
@@ -135,29 +117,44 @@ class ModuleArguments(object):
         })
 
     def revert(self):
+        """
+        Restore prior state.
+        """
         ansible.module_utils.basic._ANSIBLE_ARGS = self._original_args
 
 
 class Runner(object):
-    def __init__(self, module, raw_params=None, args=None, env=None,
-                 runner_params=None):
+    """
+    Ansible module runner. After instantiation (with kwargs supplied by the
+    corresponding Planner), `.run()` is invoked, upon which `setup()`,
+    `_run()`, and `revert()` are invoked, with the return value of `_run()`
+    returned by `run()`.
+
+    Subclasses may override `_run`()` and extend `setup()` and `revert()`.
+    """
+    def __init__(self, module, raw_params=None, args=None, env=None):
         if args is None:
             args = {}
         if raw_params is not None:
             args['_raw_params'] = raw_params
-        if runner_params is None:
-            runner_params = {}
 
         self.module = module
         self.raw_params = raw_params
         self.args = args
         self.env = env
-        self.runner_params = runner_params
 
     def setup(self):
+        """
+        Prepare the current process for running a module. The base
+        implementation simply prepares the environment.
+        """
         self._env = TemporaryEnvironment(self.env)
 
     def revert(self):
+        """
+        Revert any changes made to the process after running a module. The base
+        implementation simply restores the original environment.
+        """
         self._env.revert()
 
     def _run(self):
@@ -169,6 +166,9 @@ class Runner(object):
         module. This monkey-patches the Ansible libraries in various places to
         prevent it from trying to kill the process on completion, and to
         prevent it from reading sys.stdin.
+
+        :returns:
+            Module result dictionary.
         """
         self.setup()
         try:
@@ -177,37 +177,53 @@ class Runner(object):
             self.revert()
 
 
-class PythonRunner(object):
+class NativeRunner(object):
     """
     Execute a new-style Ansible module, where Module Replacer-related tricks
     aren't required.
     """
     def setup(self):
-        super(PythonRunner, self).setup()
-        self._overrides = MethodOverrides()
-        self._args = ModuleArguments(self.args)
+        super(NativeRunner, self).setup()
+        self._overrides = NativeMethodOverrides()
+        self._args = NativeModuleArguments(self.args)
 
     def revert(self):
-        super(PythonRunner, self).revert()
+        super(NativeRunner, self).revert()
         self._args.revert()
         self._overrides.revert()
+
+    def module_fixups(mod):
+        """
+        Apply fixups for known problems with mainline Ansible modules.
+        """
+        if mod.__name__ == 'ansible.modules.packaging.os.yum_repository':
+            # https://github.com/dw/mitogen/issues/154
+            mod.YumRepo.repofile = mod.configparser.RawConfigParser()
 
     def _run(self):
         try:
             mod = __import__(self.module, {}, {}, [''])
+            self.module_fixups(mod)
             # Ansible modules begin execution on import. Thus the above
             # __import__ will cause either Exit or ModuleError to be raised. If
             # we reach the line below, the module did not execute and must
             # already have been imported for a previous invocation, so we need
             # to invoke main explicitly.
             mod.main()
-        except (Exit, ModuleError), e:
-            return json.dumps(e.dct)
+        except NativeModuleExit, e:
+            return e.dct
 
-        assert False, "Module returned no result."
+        return {
+            'failed': True,
+            'msg': 'ansible_mitogen: module did not exit normally.'
+        }
 
 
 class BinaryRunner(object):
+    def __init__(self, path, **kwargs):
+        super(BinaryRunner, self).__init__(**kwargs)
+        self.path = path
+
     def setup(self):
         super(BinaryRunner, self).setup()
         self._setup_binary()
@@ -261,9 +277,12 @@ class BinaryRunner(object):
         super(BinaryRunner, self).revert()
 
     def _run(self):
-        rc, stdout, stderr = ansible_mitogen.helpers.exec_args(
-            args=[self.bin_fp.name, self.args_fp.name],
-        )
+        try:
+            rc, stdout, stderr = ansible_mitogen.helpers.exec_args(
+                args=[self.bin_fp.name, self.args_fp.name],
+            )
+        except Exception, e:
+            return 
         # ...
         assert 0
 
