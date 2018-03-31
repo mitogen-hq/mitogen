@@ -26,6 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
 import json
 import operator
 import os
@@ -38,10 +39,7 @@ import tempfile
 import threading
 
 import mitogen.core
-
-# Prevent accidental import of an Ansible module from hanging on stdin read.
-import ansible.module_utils.basic
-ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+import ansible_mitogen.runner
 
 #: Mapping of job_id<->result dict
 _result_by_job_id = {}
@@ -50,124 +48,26 @@ _result_by_job_id = {}
 _thread_by_job_id = {}
 
 
-class Exit(Exception):
-    """
-    Raised when a module exits with success.
-    """
-    def __init__(self, dct):
-        self.dct = dct
-
-
-class ModuleError(Exception):
-    """
-    Raised when a module voluntarily indicates failure via .fail_json().
-    """
-    def __init__(self, msg, dct):
-        Exception.__init__(self, msg)
-        self.dct = dct
-
-
-def monkey_exit_json(self, **kwargs):
-    """
-    Replace AnsibleModule.exit_json() with something that doesn't try to kill
-    the process or JSON-encode the result dictionary. Instead, cause Exit to be
-    raised, with a `dct` attribute containing the successful result dictionary.
-    """
-    self.add_path_info(kwargs)
-    kwargs.setdefault('changed', False)
-    kwargs.setdefault('invocation', {
-        'module_args': self.params
-    })
-    kwargs = ansible.module_utils.basic.remove_values(
-        kwargs,
-        self.no_log_values
-    )
-    self.do_cleanup_files()
-    raise Exit(kwargs)
-
-
-def monkey_fail_json(self, **kwargs):
-    """
-    Replace AnsibleModule.fail_json() with something that raises ModuleError,
-    which includes a `dct` attribute.
-    """
-    self.add_path_info(kwargs)
-    kwargs.setdefault('failed', True)
-    kwargs.setdefault('invocation', {
-        'module_args': self.params
-    })
-    kwargs = ansible.module_utils.basic.remove_values(
-        kwargs,
-        self.no_log_values
-    )
-    self.do_cleanup_files()
-    raise ModuleError(kwargs.get('msg'), kwargs)
-
-
-def module_fixups(mod):
-    """
-    Apply fixups for known problems with mainline Ansible modules.
-    """
-    if mod.__name__ == 'ansible.modules.packaging.os.yum_repository':
-        # https://github.com/dw/mitogen/issues/154
-        mod.YumRepo.repofile = mod.configparser.RawConfigParser()
-
-
-class TemporaryEnvironment(object):
-    def __init__(self, env=None):
-        self.original = os.environ.copy()
-        self.env = env or {}
-        os.environ.update((k, str(v)) for k, v in self.env.iteritems())
-
-    def revert(self):
-        os.environ.clear()
-        os.environ.update(self.original)
-
-
-def run_module(module, raw_params=None, args=None, env=None):
+def run_module(kwargs):
     """
     Set up the process environment in preparation for running an Ansible
     module. This monkey-patches the Ansible libraries in various places to
     prevent it from trying to kill the process on completion, and to prevent it
     from reading sys.stdin.
     """
-    if args is None:
-        args = {}
-    if raw_params is not None:
-        args['_raw_params'] = raw_params
-
-    ansible.module_utils.basic.AnsibleModule.exit_json = monkey_exit_json
-    ansible.module_utils.basic.AnsibleModule.fail_json = monkey_fail_json
-    ansible.module_utils.basic._ANSIBLE_ARGS = json.dumps({
-        'ANSIBLE_MODULE_ARGS': args
-    })
-
-    temp_env = TemporaryEnvironment(env)
-    try:
-        try:
-            mod = __import__(module, {}, {}, [''])
-            module_fixups(mod)
-            # Ansible modules begin execution on import. Thus the above __import__
-            # will cause either Exit or ModuleError to be raised. If we reach the
-            # line below, the module did not execute and must already have been
-            # imported for a previous invocation, so we need to invoke main
-            # explicitly.
-            mod.main()
-        except (Exit, ModuleError), e:
-            result = json.dumps(e.dct)
-    finally:
-        temp_env.revert()
-
-    return result
+    runner_name = kwargs.pop('runner_name')
+    klass = getattr(ansible_mitogen.runner, runner_name)
+    impl = klass(**kwargs)
+    return json.dumps(impl.run())
 
 
-def _async_main(job_id, module, raw_params, args, env):
+def _async_main(job_id, runner_name, kwargs):
     """
     Implementation for the thread that implements asynchronous module
     execution.
     """
     try:
-        rc = run_module(module, raw_params, args, env)
+        rc = run_module(runner_name, kwargs)
     except Exception, e:
         rc = mitogen.core.CallError(e)
 
@@ -189,7 +89,7 @@ def make_temp_directory(base_dir):
         prefix='ansible-mitogen-tmp-',
     )
 
-def run_module_async(module, raw_params=None, args=None):
+def run_module_async(runner_name, kwargs):
     """
     Arrange for an Ansible module to be executed in a thread of the current
     process, with results available via :py:func:`get_async_result`.
@@ -200,9 +100,8 @@ def run_module_async(module, raw_params=None, args=None):
         target=_async_main,
         kwargs={
             'job_id': job_id,
-            'module': module,
-            'raw_params': raw_params,
-            'args': args,
+            'runner_name': runner_name,
+            'kwargs': kwargs,
         }
     )
     _thread_by_job_id[job_id].start()
@@ -241,7 +140,7 @@ def get_user_shell():
     return pw_shell or '/bin/sh'
 
 
-def exec_command(cmd, in_data='', chdir=None, shell=None):
+def exec_args(args, in_data='', chdir=None, shell=None):
     """
     Run a command in a subprocess, emulating the argument handling behaviour of
     SSH.
@@ -256,7 +155,7 @@ def exec_command(cmd, in_data='', chdir=None, shell=None):
     assert isinstance(cmd, basestring)
 
     proc = subprocess.Popen(
-        args=[get_user_shell(), '-c', cmd],
+        args=args,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.PIPE,
@@ -264,6 +163,27 @@ def exec_command(cmd, in_data='', chdir=None, shell=None):
     )
     stdout, stderr = proc.communicate(in_data)
     return proc.returncode, stdout, stderr
+
+
+def exec_command(cmd, in_data='', chdir=None, shell=None):
+    """
+    Run a command in a subprocess, emulating the argument handling behaviour of
+    SSH.
+
+    :param bytes cmd:
+        String command line, passed to user's shell.
+    :param bytes in_data:
+        Optional standard input for the command.
+    :return:
+        (return code, stdout bytes, stderr bytes)
+    """
+    assert isinstance(cmd, basestring)
+    return _exec_command(
+        args=[get_user_shell(), '-c', cmd],
+        in_data=in_Data,
+        chdir=chdir,
+        shell=shell,
+    )
 
 
 def read_path(path):

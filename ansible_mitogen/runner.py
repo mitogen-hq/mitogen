@@ -43,86 +43,6 @@ import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 
 
-class TemporaryEnvironment(object):
-    def __init__(self, env=None):
-        self.original = os.environ.copy()
-        self.env = env or {}
-        os.environ.update((k, str(v)) for k, v in self.env.iteritems())
-
-    def revert(self):
-        os.environ.clear()
-        os.environ.update(self.original)
-
-
-class NativeModuleExit(Exception):
-    """
-    Capture the result of a call to `.exit_json()` or `.fail_json()` by a
-    native Ansible module.
-    """
-    def __init__(self, ansible_module, **kwargs):
-        ansible_module.add_path_info(kwargs)
-        kwargs.setdefault('invocation', {
-            'module_args': ansible_module.params
-        })
-        ansible_module.do_cleanup_files()
-        self.dct = ansible.module_utils.basic.remove_values(
-            kwargs,
-            self.no_log_values,
-        )
-
-
-class NativeMethodOverrides(object):
-    @staticmethod
-    def exit_json(self, **kwargs):
-        """
-        Raise exit_json() output as the `.dct` attribute of a
-        :class:`NativeModuleExit` exception`.
-        """
-        kwargs.setdefault('changed', False)
-        return NativeModuleExit(self, **kwargs)
-
-    @staticmethod
-    def fail_json(self, **kwargs):
-        """
-        Raise fail_json() output as the `.dct` attribute of a
-        :class:`NativeModuleExit` exception`.
-        """
-        kwargs.setdefault('failed', True)
-        return NativeModuleExit(self, **kwargs)
-
-    klass = ansible.module_utils.basic.AnsibleModule
-
-    def __init__(self):
-        self._original_exit_json = self.klass.exit_json
-        self._original_fail_json = self.klass.fail_json
-        self.klass.exit_json = self.exit_json
-        self.klass.fail_json = self.fail_json
-
-    def revert(self):
-        """
-        Restore prior state.
-        """
-        self.klass.exit_json = self._original_exit_json
-        self.klass.fail_json = self._original_fail_json
-
-
-class NativeModuleArguments(object):
-    """
-    Patch ansible.module_utils.basic argument globals.
-    """
-    def __init__(self, args):
-        self.original = ansible.module_utils.basic._ANSIBLE_ARGS
-        ansible.module_utils.basic._ANSIBLE_ARGS = json.dumps({
-            'ANSIBLE_MODULE_ARGS': args
-        })
-
-    def revert(self):
-        """
-        Restore prior state.
-        """
-        ansible.module_utils.basic._ANSIBLE_ARGS = self._original_args
-
-
 class Runner(object):
     """
     Ansible module runner. After instantiation (with kwargs supplied by the
@@ -177,11 +97,95 @@ class Runner(object):
             self.revert()
 
 
-class NativeRunner(object):
+class TemporaryEnvironment(object):
+    def __init__(self, env=None):
+        self.original = os.environ.copy()
+        self.env = env or {}
+        os.environ.update((k, str(v)) for k, v in self.env.iteritems())
+
+    def revert(self):
+        os.environ.clear()
+        os.environ.update(self.original)
+
+
+class NativeModuleExit(Exception):
+    """
+    Capture the result of a call to `.exit_json()` or `.fail_json()` by a
+    native Ansible module.
+    """
+    def __init__(self, ansible_module, **kwargs):
+        ansible_module.add_path_info(kwargs)
+        kwargs.setdefault('invocation', {
+            'module_args': ansible_module.params
+        })
+        ansible_module.do_cleanup_files()
+        self.dct = ansible.module_utils.basic.remove_values(
+            kwargs,
+            ansible_module.no_log_values,
+        )
+
+
+class NativeMethodOverrides(object):
+    @staticmethod
+    def exit_json(self, **kwargs):
+        """
+        Raise exit_json() output as the `.dct` attribute of a
+        :class:`NativeModuleExit` exception`.
+        """
+        kwargs.setdefault('changed', False)
+        raise NativeModuleExit(self, **kwargs)
+
+    @staticmethod
+    def fail_json(self, **kwargs):
+        """
+        Raise fail_json() output as the `.dct` attribute of a
+        :class:`NativeModuleExit` exception`.
+        """
+        kwargs.setdefault('failed', True)
+        raise NativeModuleExit(self, **kwargs)
+
+    klass = ansible.module_utils.basic.AnsibleModule
+
+    def __init__(self):
+        self._original_exit_json = self.klass.exit_json
+        self._original_fail_json = self.klass.fail_json
+        self.klass.exit_json = self.exit_json
+        self.klass.fail_json = self.fail_json
+
+    def revert(self):
+        """
+        Restore prior state.
+        """
+        self.klass.exit_json = self._original_exit_json
+        self.klass.fail_json = self._original_fail_json
+
+
+class NativeModuleArguments(object):
+    """
+    Patch ansible.module_utils.basic argument globals.
+    """
+    def __init__(self, args):
+        self.original = ansible.module_utils.basic._ANSIBLE_ARGS
+        ansible.module_utils.basic._ANSIBLE_ARGS = json.dumps({
+            'ANSIBLE_MODULE_ARGS': args
+        })
+
+    def revert(self):
+        """
+        Restore prior state.
+        """
+        ansible.module_utils.basic._ANSIBLE_ARGS = self.original
+
+
+class NativeRunner(Runner):
     """
     Execute a new-style Ansible module, where Module Replacer-related tricks
     aren't required.
     """
+    def __init__(self, mod_name, **kwargs):
+        super(NativeRunner, self).__init__(**kwargs)
+        self.mod_name = mod_name
+
     def setup(self):
         super(NativeRunner, self).setup()
         self._overrides = NativeMethodOverrides()
@@ -192,18 +196,18 @@ class NativeRunner(object):
         self._args.revert()
         self._overrides.revert()
 
-    def module_fixups(mod):
-        """
-        Apply fixups for known problems with mainline Ansible modules.
-        """
-        if mod.__name__ == 'ansible.modules.packaging.os.yum_repository':
-            # https://github.com/dw/mitogen/issues/154
-            mod.YumRepo.repofile = mod.configparser.RawConfigParser()
+    def _fixup__default(self, mod):
+        pass
+
+    def _fixup__yum_repository(self, mod):
+        # https://github.com/dw/mitogen/issues/154
+        mod.YumRepo.repofile = mod.configparser.RawConfigParser()
 
     def _run(self):
+        fixup = getattr(self, '_fixup__' + self.module, self._fixup__default)
         try:
-            mod = __import__(self.module, {}, {}, [''])
-            self.module_fixups(mod)
+            mod = __import__(self.mod_name, {}, {}, [''])
+            fixup(mod)
             # Ansible modules begin execution on import. Thus the above
             # __import__ will cause either Exit or ModuleError to be raised. If
             # we reach the line below, the module did not execute and must
@@ -219,7 +223,7 @@ class NativeRunner(object):
         }
 
 
-class BinaryRunner(object):
+class BinaryRunner(Runner):
     def __init__(self, path, **kwargs):
         super(BinaryRunner, self).__init__(**kwargs)
         self.path = path
@@ -282,9 +286,16 @@ class BinaryRunner(object):
                 args=[self.bin_fp.name, self.args_fp.name],
             )
         except Exception, e:
-            return 
-        # ...
-        assert 0
+            return {
+                'failed': True,
+                'msg': '%s: %s' % (type(e), e),
+            }
+
+        return {
+            'rc': rc,
+            'stdout': stdout,
+            'stderr': stderr
+        }
 
 
 class WantJsonRunner(BinaryRunner):
