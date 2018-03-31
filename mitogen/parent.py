@@ -26,12 +26,12 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import cStringIO
 import fcntl
 import getpass
 import inspect
 import logging
 import os
-import re
 import select
 import signal
 import socket
@@ -39,6 +39,7 @@ import sys
 import termios
 import textwrap
 import threading
+import tokenize
 import time
 import types
 import zlib
@@ -47,9 +48,6 @@ import mitogen.core
 from mitogen.core import LOG
 from mitogen.core import IOLOG
 
-
-DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
-COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 
 try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
@@ -79,10 +77,66 @@ def get_log_level():
 
 
 def minimize_source(source):
-    subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
-    source = DOCSTRING_RE.sub(subber, source)
-    source = COMMENT_RE.sub('', source)
-    return source.replace('    ', '\t')
+    """Remove most comments and docstrings from Python source code.
+    """
+    tokens = tokenize.generate_tokens(cStringIO.StringIO(source).readline)
+    tokens = strip_comments(tokens)
+    tokens = strip_docstrings(tokens)
+    return tokenize.untokenize(tokens)
+
+
+def strip_comments(tokens):
+    """Drop comment tokens from a `tokenize` stream.
+
+    Comments on lines 1-2 are kept, to preserve hashbang and encoding.
+    Trailing whitespace is remove from all lines.
+    """
+    prev_typ = None
+    prev_end_col = 0
+    for typ, tok, (start_row, start_col), (end_row, end_col), line in tokens:
+        if typ in (tokenize.NL, tokenize.NEWLINE):
+            if prev_typ in (tokenize.NL, tokenize.NEWLINE):
+                start_col = 0
+            else:
+                start_col = prev_end_col
+            end_col = start_col + 1
+        elif typ == tokenize.COMMENT and start_row > 2:
+            continue
+        prev_typ = typ
+        prev_end_col = end_col
+        yield typ, tok, (start_row, start_col), (end_row, end_col), line
+
+
+def strip_docstrings(tokens):
+    """Replace docstring tokens with NL tokens in a `tokenize` stream.
+
+    Any STRING token not part of an expression is deemed a docstring.
+    Indented docstrings are not yet recognised.
+    """
+    stack = []
+    state = 'wait_string'
+    for t in tokens:
+        typ = t[0]
+        if state == 'wait_string':
+            if typ in (tokenize.NL, tokenize.COMMENT):
+                yield t
+            elif typ == tokenize.STRING:
+                stack.append(t)
+            elif typ == tokenize.NEWLINE:
+                stack.append(t)
+                start_line, end_line = stack[0][2][0], stack[-1][3][0]+1
+                for i in range(start_line, end_line):
+                    yield tokenize.NL, '\n', (i, 0), (i,1), '\n'
+                del stack[:]
+            else:
+                stack.append(t)
+                for t in stack: yield t
+                del stack[:]
+                state = 'wait_newline'
+        elif state == 'wait_newline':
+            if typ == tokenize.NEWLINE:
+                state = 'wait_string'
+            yield t
 
 
 def flags(names):
