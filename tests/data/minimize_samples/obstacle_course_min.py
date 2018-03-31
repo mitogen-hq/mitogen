@@ -46,4 +46,4 @@ class c2(object):
         def inner(): pass
         d = {'a':0}
         for x in '':
-            "justastring"
+

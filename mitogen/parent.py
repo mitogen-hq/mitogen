@@ -120,13 +120,16 @@ def strip_docstrings(tokens):
         if state == 'wait_string':
             if typ in (tokenize.NL, tokenize.COMMENT):
                 yield t
-            elif typ == tokenize.STRING:
+            elif typ in (tokenize.DEDENT, tokenize.INDENT, tokenize.STRING):
                 stack.append(t)
             elif typ == tokenize.NEWLINE:
                 stack.append(t)
                 start_line, end_line = stack[0][2][0], stack[-1][3][0]+1
                 for i in range(start_line, end_line):
                     yield tokenize.NL, '\n', (i, 0), (i,1), '\n'
+                for t in stack:
+                    if t[0] in (tokenize.DEDENT, tokenize.INDENT):
+                        yield t[0], t[1], (i+1, t[2][1]), (i+1, t[3][1]), t[4]
                 del stack[:]
             else:
                 stack.append(t)

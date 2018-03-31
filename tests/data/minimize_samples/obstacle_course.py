@@ -45,5 +45,5 @@ class c2(object):
         "docstring"
         def inner(): pass
         d = {'a':0}
-        for x in '':
+        for x in '': # FIXME Removing this leaves nothing, hence a SyntaxError
             "justastring"
