@@ -46,7 +46,7 @@ run_test tests/importer_test.py
 run_test tests/latch_test.py
 run_test tests/local_test.py
 run_test tests/master_test.py
-run_test tests/minimize_source_tests.py
+run_test tests/minimize_source_test.py
 run_test tests/module_finder_test.py
 run_test tests/nested_test.py
 run_test tests/parent_test.py
