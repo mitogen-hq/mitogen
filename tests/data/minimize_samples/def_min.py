@@ -1,4 +1,4 @@
 def f():
 
 
-    pass
+ pass

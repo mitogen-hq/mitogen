@@ -82,6 +82,7 @@ def minimize_source(source):
     tokens = tokenize.generate_tokens(cStringIO.StringIO(source).readline)
     tokens = strip_comments(tokens)
     tokens = strip_docstrings(tokens)
+    tokens = reindent(tokens)
     return tokenize.untokenize(tokens)
 
 
@@ -140,6 +141,25 @@ def strip_docstrings(tokens):
             if typ == tokenize.NEWLINE:
                 state = 'wait_string'
             yield t
+
+
+def reindent(tokens, indent=' '):
+    old_levels = []
+    old_level = 0
+    new_level = 0
+    for typ, tok, (start_row, start_col), (end_row, end_col), line in tokens:
+        if typ == tokenize.INDENT:
+            old_levels.append(old_level)
+            old_level = len(tok)
+            new_level += 1
+            tok = indent * new_level
+        elif typ == tokenize.DEDENT:
+            old_level = old_levels.pop()
+            new_level -= 1
+        start_col = max(0, start_col - old_level + new_level)
+        if start_row == end_row:
+            end_col = start_col + len(tok)
+        yield typ, tok, (start_row, start_col), (end_row, end_col), line
 
 
 def flags(names):

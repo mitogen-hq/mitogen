@@ -2,7 +2,7 @@ class C:
 
 
 
-    def method(self):
+ def method(self):
 
 
-        pass
+  pass

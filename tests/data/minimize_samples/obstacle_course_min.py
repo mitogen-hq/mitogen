@@ -29,21 +29,21 @@ b,
 def f2():
 
 
-    pass
+ pass
 class c:
 
 
 
 
-    f='justastring'
+ f='justastring'
 
 
 @f1
 class c2(object):
 
-    def __init__(self):
+ def __init__(self):
 
-        def inner(): pass
-        d = {'a':0}
-        for x in '':
+  def inner(): pass
+  d = {'a':0}
+  for x in '':
 
