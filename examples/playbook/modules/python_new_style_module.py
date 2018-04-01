@@ -14,7 +14,6 @@ def usage():
 
 # Also must slurp in our own source code, to verify the encoding string was
 # added.
-print 'WTFFFFFFFFFFFFFFFF %r' % (sys.argv,)
 with open(sys.argv[0]) as fp:
     me = fp.read()
 
