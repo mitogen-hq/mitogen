@@ -166,20 +166,24 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
+    def _rewrite_interpreter(self, interpreter, task_vars, templar):
+        key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
+        try:
+            return templar.template(task_vars[key].strip())
+        except KeyError:
+            return interpreter
+
     def plan(self, invocation):
         kwargs = super(ScriptPlanner, self).plan(invocation)
         interpreter, arg = parse_script_interpreter(invocation.module_source)
-        shebang, _ = module_common._get_shebang(
-            interpreter=interpreter,
-            task_vars=invocation.task_vars,
-            templar=invocation.templar,
+        return dict(kwargs,
+            interpreter_arg=arg,
+            interpreter=self._rewrite_interpreter(
+                interpreter=interpreter,
+                task_vars=invocation.task_vars,
+                templar=invocation.templar,
+            )
         )
-        if shebang:
-            interpreter = shebang[2:]
-
-        kwargs['interpreter'] = interpreter
-        kwargs['interpreter_arg'] = arg
-        return kwargs
 
 
 class ReplacerPlanner(BinaryPlanner):
