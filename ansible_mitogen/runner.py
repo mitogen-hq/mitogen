@@ -37,6 +37,7 @@ how to build arguments for it, preseed related data, etc.
 
 from __future__ import absolute_import
 import json
+import logging
 import os
 import tempfile
 
@@ -50,6 +51,9 @@ except ImportError:
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+
+
+LOG = logging.getLogger(__name__)
 
 
 class Runner(object):
@@ -247,17 +251,28 @@ class NativeRunner(Runner):
         }
 
 
-class BinaryRunner(Runner):
+class ProgramRunner(Runner):
     def __init__(self, path, service_context, **kwargs):
-        print 'derp', kwargs
-        super(BinaryRunner, self).__init__(**kwargs)
+        super(ProgramRunner, self).__init__(**kwargs)
         self.path = path
         self.service_context = service_context
 
     def setup(self):
-        super(BinaryRunner, self).setup()
+        super(ProgramRunner, self).setup()
         self._setup_program()
-        self._setup_args()
+
+    def _setup_program(self):
+        """
+        Create a temporary file containing the program code. The code is
+        fetched via :meth:`_get_program`.
+        """
+        self.program_fp = tempfile.NamedTemporaryFile(
+            prefix='ansible_mitogen',
+            suffix='-binary',
+        )
+        self.program_fp.write(self._get_program())
+        self.program_fp.flush()
+        os.chmod(self.program_fp.name, int('0700', 8))
 
     def _get_program(self):
         """
@@ -268,49 +283,20 @@ class BinaryRunner(Runner):
             path=self.path,
         )
 
-    def _get_args(self):
-        """
-        Return the module arguments formatted as JSON.
-        """
-        return json.dumps(self.args)
-
-    def _setup_program(self):
-        """
-        Create a temporary file containing the program code. The code is
-        fetched via :meth:`_get_program`.
-        """
-        self.bin_fp = tempfile.NamedTemporaryFile(
-            prefix='ansible_mitogen',
-            suffix='-binary',
-        )
-        self.bin_fp.write(self._get_program())
-        self.bin_fp.flush()
-        os.chmod(self.bin_fp.name, int('0700', 8))
-
-    def _setup_args(self):
-        """
-        Create a temporary file containing the module's arguments. The
-        arguments are formatted via :meth:`_get_args`.
-        """
-        self.args_fp = tempfile.NamedTemporaryFile(
-            prefix='ansible_mitogen',
-            suffix='-args',
-        )
-        self.args_fp.write(self._get_args())
-        self.args_fp.flush()
+    def _get_program_args(self):
+        return [self.program_fp.name]
 
     def revert(self):
         """
-        Delete the temporary binary and argument files.
+        Delete the temporary program file.
         """
-        self.args_fp.close()
-        self.bin_fp.close()
-        super(BinaryRunner, self).revert()
+        super(ProgramRunner, self).revert()
+        self.program_fp.close()
 
     def _run(self):
         try:
             rc, stdout, stderr = ansible_mitogen.helpers.exec_args(
-                args=[self.bin_fp.name, self.args_fp.name],
+                args=self._get_program_args(),
             )
         except Exception, e:
             return {
@@ -326,15 +312,100 @@ class BinaryRunner(Runner):
         }
 
 
-class WantJsonRunner(BinaryRunner):
+class ArgsFileRunner(Runner):
+    def setup(self):
+        super(ArgsFileRunner, self).setup()
+        self._setup_args()
+
+    def _setup_args(self):
+        """
+        Create a temporary file containing the module's arguments. The
+        arguments are formatted via :meth:`_get_args`.
+        """
+        self.args_fp = tempfile.NamedTemporaryFile(
+            prefix='ansible_mitogen',
+            suffix='-args',
+        )
+        self.args_fp.write(self._get_args_contents())
+        self.args_fp.flush()
+
+    def _get_args_contents(self):
+        """
+        Return the module arguments formatted as JSON.
+        """
+        return json.dumps(self.args)
+
+    def _get_program_args(self):
+        return [self.program_fp.name, self.args_fp.name]
+
+    def revert(self):
+        """
+        Delete the temporary argument file.
+        """
+        super(ArgsFileRunner, self).revert()
+        self.args_fp.close()
+
+
+class BinaryRunner(ArgsFileRunner, ProgramRunner):
+    pass
+
+
+class ScriptRunner(ProgramRunner):
+    def __init__(self, interpreter, interpreter_arg, **kwargs):
+        super(ScriptRunner, self).__init__(**kwargs)
+        self.interpreter = interpreter
+        self.interpreter_arg = interpreter_arg
+
+    b_ENCODING_STRING = b'# -*- coding: utf-8 -*-'
+
     def _get_program(self):
-        s = super(WantJsonRunner, self)._get_program()
-        # fix up shebang.
-        return s
+        return self._rewrite_source(
+            super(ScriptRunner, self)._get_program()
+        )
+
+    def _rewrite_source(self, s):
+        """
+        Mutate the source according to the per-task parameters.
+        """
+        # Couldn't find shebang, so let shell run it, because shell assumes
+        # executables like this are just shell scripts.
+        LOG.debug('++++++++++++++ %s', self.interpreter)
+        if not self.interpreter:
+            return s
+
+        shebang = '#!' + self.interpreter
+        if self.interpreter_arg:
+            shebang += ' ' + self.interpreter_arg
+
+        new = [shebang]
+        if os.path.basename(self.interpreter).startswith('python'):
+            new.append(self.b_ENCODING_STRING)
+
+        _, _, rest = s.partition('\n')
+        new.append(rest)
+        return '\n'.join(new)
 
 
-class OldStyleRunner(BinaryRunner):
-    def _get_args(self):
+class JsonArgsFileRunner(ScriptRunner):
+    JSON_ARGS = '<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
+
+    def _get_args_contents(self):
+        return json.dump(self.args)
+
+    def _rewrite_source(self, s):
+        return (
+            super(JsonArgsFileRunner, self)._rewrite_source(s)
+            .replace(self.JSON_ARGS, self._get_args_contents())
+        )
+
+
+class WantJsonRunner(ArgsFileRunner, ScriptRunner):
+    pass
+
+
+
+class OldStyleRunner(ScriptRunner):
+    def _get_args_contents(self):
         """
         Mimic the argument formatting behaviour of
         ActionBase._execute_module().

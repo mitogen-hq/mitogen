@@ -55,13 +55,41 @@ import ansible_mitogen.services
 LOG = logging.getLogger(__name__)
 
 
+def parse_script_interpreter(source):
+    """
+    Extract the script interpreter and its sole argument from the module
+    source code.
+
+    :returns:
+        Tuple of `(interpreter, arg)`, where `intepreter` is the script
+        interpreter and `arg` is its solve argument if present, otherwise
+        :py:data:`None`.
+    """
+    # Linux requires first 2 bytes with no whitespace, pretty sure it's the
+    # same everywhere. See binfmt_script.c.
+    if not source.startswith('#!'):
+        return None, None
+
+    # Find terminating newline. Assume last byte of binprm_buf if absent.
+    nl = source.find('\n', 0, 128)
+    if nl == -1:
+        nl = min(128, len(source))
+
+    # Split once on the first run of whitespace. If no whitespace exists,
+    # bits just contains the interpreter filename.
+    bits = source[2:nl].strip().split(None, 1)
+    if len(bits) == 1:
+        return bits[0], None
+    return bits[0], bits[1]
+
+
 class Invocation(object):
     """
     Collect up a module's execution environment then use it to invoke
     helpers.run_module() or helpers.run_module_async() in the target context.
     """
     def __init__(self, action, connection, module_name, module_args,
-                 env, wrap_async):
+                 task_vars, templar, env, wrap_async):
         #: ActionBase instance invoking the module. Required to access some
         #: output postprocessing methods that don't belong in ActionBase at
         #: all.
@@ -73,6 +101,10 @@ class Invocation(object):
         self.module_name = module_name
         #: Final module arguments.
         self.module_args = module_args
+        #: Task variables, needed to extract ansible_*_interpreter.
+        self.task_vars = task_vars
+        #: Templar, needed to extract ansible_*_interpreter.
+        self.templar = templar
         #: Final module environment.
         self.env = env
         #: Boolean, if :py:data:`True`, launch the module asynchronously.
@@ -129,6 +161,27 @@ class BinaryPlanner(Planner):
         }
 
 
+class ScriptPlanner(BinaryPlanner):
+    """
+    Common functionality for script module planners -- handle interpreter
+    detection and rewrite.
+    """
+    def plan(self, invocation):
+        kwargs = super(ScriptPlanner, self).plan(invocation)
+        interpreter, arg = parse_script_interpreter(invocation.module_source)
+        shebang, _ = module_common._get_shebang(
+            interpreter=interpreter,
+            task_vars=invocation.task_vars,
+            templar=invocation.templar,
+        )
+        if shebang:
+            interpreter = shebang[2:]
+
+        kwargs['interpreter'] = interpreter
+        kwargs['interpreter_arg'] = arg
+        return kwargs
+
+
 class ReplacerPlanner(BinaryPlanner):
     """
     The Module Replacer framework is the original framework implementing
@@ -159,7 +212,7 @@ class ReplacerPlanner(BinaryPlanner):
         return module_common.REPLACER in invocation.module_source
 
 
-class JsonArgsPlanner(BinaryPlanner):
+class JsonArgsPlanner(ScriptPlanner):
     """
     Script that has its interpreter directive and the task arguments
     substituted into its source as a JSON string.
@@ -170,7 +223,7 @@ class JsonArgsPlanner(BinaryPlanner):
         return module_common.REPLACER_JSONARGS in invocation.module_source
 
 
-class WantJsonPlanner(BinaryPlanner):
+class WantJsonPlanner(ScriptPlanner):
     """
     If a module has the string WANT_JSON in it anywhere, Ansible treats it as a
     non-native module that accepts a filename as its only command line
@@ -224,7 +277,7 @@ class NativePlanner(Planner):
 
 _planners = [
     # JsonArgsPlanner,
-    # WantJsonPlanner,
+    WantJsonPlanner,
     # ReplacerPlanner,
     BinaryPlanner,
     NativePlanner,
