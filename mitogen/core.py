@@ -157,8 +157,9 @@ def _unpickle_dead():
 _DEAD = Dead()
 
 
-def has_parent_authority(msg, _stream):
-    return msg.auth_id in mitogen.parent_ids
+def has_parent_authority(msg, _stream=None):
+    return (msg.auth_id == mitogen.context_id or
+            msg.auth_id in mitogen.parent_ids)
 
 
 def listen(obj, name, func):
