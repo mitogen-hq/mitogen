@@ -257,6 +257,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         else:
             self.context = self.host
 
+    def get_context_name(self):
+        """
+        Return the name of the target context we issue commands against, i.e. a
+        unique string useful as a key for related data, such as a list of
+        modules uploaded to the target.
+        """
+        return self.context.name
+
     def close(self):
         """
         Arrange for the mitogen.master.Router running in the worker to
