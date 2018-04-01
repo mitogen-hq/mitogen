@@ -113,9 +113,6 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 High Risk
 ~~~~~~~~~
 
-* For now only **built-in Python command modules work**, however almost all
-  modules shipped with Ansible are Python-based.
-
 * Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
   such as triggered via the ``copy`` module, will cause corresponding temporary
   memory and CPU spikes on both host and target machine, due to delivering the
@@ -171,6 +168,10 @@ Low Risk
   A future version will emulate Ansible's behaviour, once it is clear precisely
   what that behaviour is supposed to be. See `Ansible#14377`_ for related
   discussion.
+
+* "Module Replacer" style modules are not yet supported. These rarely appear in
+  practice, and light Github code searches failed to reveal many examples of
+  them.
 
 .. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
 
