@@ -52,9 +52,9 @@ except ImportError:
     del base_dir
 
 import ansible_mitogen.strategy
-import ansible.plugins.strategy.linear
+import ansible.plugins.strategy.free
 
 
 class StrategyModule(ansible_mitogen.strategy.StrategyMixin,
-                     ansible.plugins.strategy.linear.StrategyModule):
+                     ansible.plugins.strategy.free.StrategyModule):
     pass

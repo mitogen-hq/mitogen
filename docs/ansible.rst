@@ -97,10 +97,12 @@ Installation
 
         [defaults]
         strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
-        strategy = mitogen
+        strategy = mitogen_linear
 
    The ``strategy`` key is optional. If omitted, you can set the
-   ``ANSIBLE_STRATEGY=mitogen`` environment variable on a per-run basis.
+   ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable on a per-run basis.
+   Like ``mitogen_linear``, the ``mitogen_free`` strategy also exists to mimic
+   the built-in ``free`` strategy.
 
 4. Cross your fingers and try it.
 
@@ -145,8 +147,6 @@ Low Risk
 
 * Only the ``sudo`` become method is available, however adding new methods is
   straightforward, and eventually at least ``su`` will be included.
-
-* The only supported strategy is ``linear``, which is Ansible's default.
 
 * In some cases ``remote_tmp`` may not be respected.
 

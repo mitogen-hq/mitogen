@@ -30,7 +30,6 @@ from __future__ import absolute_import
 import os
 
 import ansible.errors
-import ansible.plugins.strategy.linear
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 
@@ -83,12 +82,12 @@ def wrap_connection_loader__get(name, play_context, new_stdin, **kwargs):
     return connection_loader__get(name, play_context, new_stdin, **kwargs)
 
 
-class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
+class StrategyMixin(object):
     """
-    This strategy enhances the default "linear" strategy by arranging for
-    various Mitogen services to be initialized in the Ansible top-level
-    process, and for worker processes to grow support for using those top-level
-    services to communicate with and execute modules on remote hosts.
+    This mix-in enhances any built-in strategy by arranging for various Mitogen
+    services to be initialized in the Ansible top-level process, and for worker
+    processes to grow support for using those top-level services to communicate
+    with and execute modules on remote hosts.
 
     Mitogen:
 
@@ -182,6 +181,6 @@ class StrategyModule(ansible.plugins.strategy.linear.StrategyModule):
         self._add_connection_plugin_path()
         self._install_wrappers()
         try:
-            return super(StrategyModule, self).run(iterator, play_context)
+            return super(StrategyMixin, self).run(iterator, play_context)
         finally:
             self._remove_wrappers()
