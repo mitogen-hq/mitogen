@@ -957,8 +957,10 @@ class Context(object):
 
 def _unpickle_context(router, context_id, name):
     if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id >= 0 and
-            isinstance(name, basestring) and len(name) < 100):
+            isinstance(context_id, (int, long)) and context_id >= 0 and (
+                (name is None) or
+                (isinstance(name, basestring) and len(name) < 100))
+            ):
         raise TypeError('cannot unpickle Context: bad input')
     return router.context_class(router, context_id, name)
 
