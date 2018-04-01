@@ -36,10 +36,13 @@ how to build arguments for it, preseed related data, etc.
 """
 
 from __future__ import absolute_import
+import cStringIO
 import json
 import logging
 import os
+import sys
 import tempfile
+import types
 
 import ansible_mitogen.helpers  # TODO: circular import
 
@@ -131,124 +134,37 @@ class TemporaryEnvironment(object):
         os.environ.update(self.original)
 
 
-class NewStyleModuleExit(Exception):
-    """
-    Capture the result of a call to `.exit_json()` or `.fail_json()` by a
-    native Ansible module.
-    """
-    def __init__(self, ansible_module, **kwargs):
-        ansible_module.add_path_info(kwargs)
-        kwargs.setdefault('invocation', {
-            'module_args': ansible_module.params
-        })
-        ansible_module.do_cleanup_files()
-        self.dct = ansible.module_utils.basic.remove_values(
-            kwargs,
-            ansible_module.no_log_values,
-        )
-
-
-class NewStyleMethodOverrides(object):
-    @staticmethod
-    def exit_json(self, **kwargs):
-        """
-        Raise exit_json() output as the `.dct` attribute of a
-        :class:`NewStyleModuleExit` exception`.
-        """
-        kwargs.setdefault('changed', False)
-        raise NewStyleModuleExit(self, **kwargs)
-
-    @staticmethod
-    def fail_json(self, **kwargs):
-        """
-        Raise fail_json() output as the `.dct` attribute of a
-        :class:`NewStyleModuleExit` exception`.
-        """
-        kwargs.setdefault('failed', True)
-        raise NewStyleModuleExit(self, **kwargs)
-
-    klass = ansible.module_utils.basic.AnsibleModule
-
-    def __init__(self):
-        self._original_exit_json = self.klass.exit_json
-        self._original_fail_json = self.klass.fail_json
-        self.klass.exit_json = self.exit_json
-        self.klass.fail_json = self.fail_json
+class TemporaryArgv(object):
+    def __init__(self, argv):
+        self.original = sys.argv[:]
+        sys.argv[:] = argv
 
     def revert(self):
-        """
-        Restore prior state.
-        """
-        self.klass.exit_json = self._original_exit_json
-        self.klass.fail_json = self._original_fail_json
+        sys.argv[:] = self.original
 
 
-class NewStyleModuleArguments(object):
+class NewStyleStdio(object):
     """
     Patch ansible.module_utils.basic argument globals.
     """
     def __init__(self, args):
-        self.original = ansible.module_utils.basic._ANSIBLE_ARGS
+        self.original_stdout = sys.stdout
+        self.original_stderr = sys.stderr
+        self.original_stdin = sys.stdin
+        sys.stdout = cStringIO.StringIO()
+        sys.stderr = cStringIO.StringIO()
         ansible.module_utils.basic._ANSIBLE_ARGS = json.dumps({
             'ANSIBLE_MODULE_ARGS': args
         })
+        sys.stdin = cStringIO.StringIO(
+            ansible.module_utils.basic._ANSIBLE_ARGS
+        )
 
     def revert(self):
-        """
-        Restore prior state.
-        """
-        ansible.module_utils.basic._ANSIBLE_ARGS = self.original
-
-
-class NewStyleRunner(Runner):
-    """
-    Execute a new-style Ansible module, where Module Replacer-related tricks
-    aren't required.
-    """
-    def __init__(self, mod_name, **kwargs):
-        super(NewStyleRunner, self).__init__(**kwargs)
-        self.mod_name = mod_name
-
-    def setup(self):
-        super(NewStyleRunner, self).setup()
-        self._overrides = NewStyleMethodOverrides()
-        self._args = NewStyleModuleArguments(self.args)
-
-    def revert(self):
-        super(NewStyleRunner, self).revert()
-        self._args.revert()
-        self._overrides.revert()
-
-    def _fixup__default(self, mod):
-        pass
-
-    def _fixup__yum_repository(self, mod):
-        # https://github.com/dw/mitogen/issues/154
-        mod.YumRepo.repofile = mod.configparser.RawConfigParser()
-
-    def _run(self):
-        fixup = getattr(self, '_fixup__' + self.module, self._fixup__default)
-        try:
-            mod = __import__(self.mod_name, {}, {}, [''])
-            fixup(mod)
-            # Ansible modules begin execution on import. Thus the above
-            # __import__ will cause either Exit or ModuleError to be raised. If
-            # we reach the line below, the module did not execute and must
-            # already have been imported for a previous invocation, so we need
-            # to invoke main explicitly.
-            mod.main()
-        except NewStyleModuleExit, e:
-            return {
-                'rc': 0,
-                'stdout': json.dumps(e.dct),
-                'stderr': '',
-            }
-
-        return {
-            'rc': 1,
-            'stdout': '',
-            'stderr': 'ansible_mitogen: module did not exit normally.',
-        }
+        sys.stdout = self.original_stdout
+        sys.stderr = self.original_stderr
+        sys.stdin = self.original_stdin
+        ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 
 
 class ProgramRunner(Runner):
@@ -385,6 +301,47 @@ class ScriptRunner(ProgramRunner):
         return '\n'.join(new)
 
 
+class NewStyleRunner(ScriptRunner):
+    """
+    Execute a new-style Ansible module, where Module Replacer-related tricks
+    aren't required.
+    """
+    def setup(self):
+        super(NewStyleRunner, self).setup()
+        self._stdio = NewStyleStdio(self.args)
+        self._argv = TemporaryArgv([self.path])
+
+    def revert(self):
+        super(NewStyleRunner, self).revert()
+        self._stdio.revert()
+
+    def _get_bytecode(self):
+        """
+        Fetch the module binary from the master if necessary.
+        """
+        return ansible_mitogen.helpers.get_bytecode(
+            context=self.service_context,
+            path=self.path,
+        )
+
+    def _run(self):
+        bytecode = self._get_bytecode()
+        mod = types.ModuleType('__main__')
+        d = vars(mod)
+        e = None
+
+        try:
+            exec bytecode in d, d
+        except SystemExit, e:
+            pass
+
+        return {
+            'rc': e[0] if e else 2,
+            'stdout': sys.stdout.getvalue(),
+            'stderr': sys.stderr.getvalue(),
+        }
+
+
 class JsonArgsFileRunner(ArgsFileRunner, ScriptRunner):
     JSON_ARGS = '<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
 
@@ -411,4 +368,4 @@ class OldStyleRunner(ArgsFileRunner, ScriptRunner):
         return ' '.join(
             '%s=%s' % (key, shlex_quote(str(self.args[key])))
             for key in self.args
-        )
+        ) + ' '  # Bug-for-bug :(

@@ -51,6 +51,9 @@ LOG = logging.getLogger(__name__)
 #: Caching of fetched file data.
 _file_cache = {}
 
+#: Caching of compiled new-style module bytecode.
+_bytecode_cache = {}
+
 #: Mapping of job_id<->result dict
 _result_by_job_id = {}
 
@@ -82,6 +85,13 @@ def get_file(context, path):
         )
 
     return _file_cache[path]
+
+
+def get_bytecode(context, path):
+    if path not in _bytecode_cache:
+        source = get_file(context, path)
+        _bytecode_cache[path] = compile(source, path, 'exec')
+    return _bytecode_cache[path]
 
 
 def run_module(kwargs):
