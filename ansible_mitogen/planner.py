@@ -128,9 +128,27 @@ class Planner(object):
     exports a method to run the module.
     """
     def detect(self, invocation):
+        """
+        Return true if the supplied `invocation` matches the module type
+        implemented by this planner.
+        """
         raise NotImplementedError()
 
     def plan(self, invocation):
+        """
+        If :meth:`detect` returned :data:`True`, plan for the module's
+        execution, including granting access to or delivering any files to it
+        that are known to be absent, and finally return a dict::
+
+            {
+                # Name of the class from runners.py that implements the
+                # target-side execution of this module type.
+                "runner_name": "...",
+
+                # Remaining keys are passed to the constructor of the class
+                # named by `runner_name`.
+            }
+        """
         raise NotImplementedError()
 
 
