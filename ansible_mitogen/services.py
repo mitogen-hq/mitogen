@@ -28,6 +28,7 @@
 
 from __future__ import absolute_import
 import logging
+import os.path
 import zlib
 
 import mitogen
@@ -62,7 +63,13 @@ class ContextService(mitogen.service.DeduplicatingService):
           existing connection, but popped from the list of arguments passed to
           the connection method.
 
-    :returns mitogen.master.Context:
+    :returns tuple:
+        Tuple of `(context, home_dir)`, where:
+            * `context` is the mitogen.master.Context referring to the target
+              context.
+            * `home_dir` is a cached copy of the remote directory.
+
+    mitogen.master.Context:
         Corresponding Context instance.
     """
     handle = 500
@@ -74,7 +81,9 @@ class ContextService(mitogen.service.DeduplicatingService):
     def get_response(self, args):
         args.pop('discriminator', None)
         method = getattr(self.router, args.pop('method'))
-        return method(**args)
+        context = method(**args)
+        home_dir = context.call(os.path.expanduser, '~')
+        return context, home_dir
 
 
 class FileService(mitogen.service.Service):

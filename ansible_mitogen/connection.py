@@ -82,6 +82,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to 'mitogen_ssh_discriminator' by on_action_run()
     mitogen_ssh_discriminator = None
 
+    #: Set after connection to the target context's home directory.
+    _homedir = None
+
     def __init__(self, play_context, new_stdin, original_transport, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'The "mitogen" connection plug-in may only be instantiated '
@@ -124,6 +127,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'ansible_sudo_exe',
             'sudo'
         )
+
+    @property
+    def homedir(self):
+        self._connect()
+        return self._homedir
 
     @property
     def connected(self):
@@ -232,18 +240,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         if self.original_transport == 'local':
             if self._play_context.become:
-                self.context = self._connect_sudo(python_path=sys.executable)
+                self.context, self._homedir = self._connect_sudo(
+                    python_path=sys.executable
+                )
             else:
-                self.context = self._connect_local()
+                self.context, self._homedir = self._connect_local()
             return
 
         if self.original_transport == 'docker':
-            self.host = self._connect_docker()
+            self.host, self._homedir = self._connect_docker()
         elif self.original_transport == 'ssh':
-            self.host = self._connect_ssh()
+            self.host, self._homedir = self._connect_ssh()
 
         if self._play_context.become:
-            self.context = self._connect_sudo(via=self.host)
+            self.context, self._homedir = self._connect_sudo(via=self.host)
         else:
             self.context = self.host
 

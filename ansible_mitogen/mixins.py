@@ -272,10 +272,19 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Replace the base implementation's attempt to emulate
         os.path.expanduser() with an actual call to os.path.expanduser().
         """
-        LOG.debug('_remove_expand_user(%r, sudoable=%r)', path, sudoable)
+        LOG.debug('_remote_expand_user(%r, sudoable=%r)', path, sudoable)
+        if not path.startswith('~'):
+            # /home/foo -> /home/foo
+            return path
+        if path == '~':
+            # ~ -> /home/dmw
+            return self._connection.homedir
+        if path.startswith('~/'):
+            # ~/.ansible -> /home/dmw/.ansible
+            return os.path.join(self._connection.homedir, path[2:])
         if path.startswith('~'):
-            path = self.call(os.path.expanduser, path)
-        return path
+            # ~root/.ansible -> /root/.ansible
+            return self.call(os.path.expanduser, path)
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
