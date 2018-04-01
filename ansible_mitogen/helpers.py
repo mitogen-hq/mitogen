@@ -28,6 +28,7 @@
 
 from __future__ import absolute_import
 import json
+import logging
 import operator
 import os
 import pwd
@@ -37,15 +38,50 @@ import stat
 import subprocess
 import tempfile
 import threading
+import zlib
 
 import mitogen.core
+import mitogen.service
 import ansible_mitogen.runner
+import ansible_mitogen.services
+
+
+LOG = logging.getLogger(__name__)
+
+#: Caching of fetched file data.
+_file_cache = {}
 
 #: Mapping of job_id<->result dict
 _result_by_job_id = {}
 
 #: Mapping of job_id<->threading.Thread
 _thread_by_job_id = {}
+
+
+def get_file(context, path):
+    """
+    Basic in-memory caching module fetcher. This generates an one roundtrip for
+    every previously unseen module, so it is only temporary.
+
+    :param context:
+        Context we should direct FileService requests to. For now (and probably
+        forever) this is just the top-level Mitogen connection manager process.
+    :param path:
+        Path to fetch from FileService, must previously have been registered by
+        a privileged context using the `register` command.
+    :returns:
+        Bytestring file data.
+    """
+    if path not in _file_cache:
+        _file_cache[path] = zlib.decompress(
+            mitogen.service.call(
+                context,
+                ansible_mitogen.services.FileService.handle,
+                ('fetch', path)
+            )
+        )
+
+    return _file_cache[path]
 
 
 def run_module(kwargs):
@@ -145,14 +181,15 @@ def exec_args(args, in_data='', chdir=None, shell=None):
     Run a command in a subprocess, emulating the argument handling behaviour of
     SSH.
 
-    :param bytes cmd:
-        String command line, passed to user's shell.
+    :param list[str]:
+        Argument vector.
     :param bytes in_data:
         Optional standard input for the command.
     :return:
         (return code, stdout bytes, stderr bytes)
     """
-    assert isinstance(cmd, basestring)
+    LOG.debug('exec_args(%r, ..., chdir=%r)', args, chdir)
+    assert isinstance(args, list)
 
     proc = subprocess.Popen(
         args=args,
