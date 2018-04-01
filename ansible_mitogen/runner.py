@@ -26,6 +26,15 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+
+"""
+These classes implement execution for each style of Ansible module. They are
+instantiated in the target context by way of helpers.py::run_module().
+
+Each class in here has a corresponding Planner class in planners.py that knows
+how to build arguments for it, preseed related data, etc.
+"""
+
 from __future__ import absolute_import
 import json
 import os
