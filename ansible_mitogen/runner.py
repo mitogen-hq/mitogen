@@ -306,32 +306,41 @@ class NewStyleRunner(ScriptRunner):
     Execute a new-style Ansible module, where Module Replacer-related tricks
     aren't required.
     """
+    #: path => new-style module bytecode.
+    _code_by_path = {}
+
     def setup(self):
         super(NewStyleRunner, self).setup()
         self._stdio = NewStyleStdio(self.args)
         self._argv = TemporaryArgv([self.path])
 
     def revert(self):
-        super(NewStyleRunner, self).revert()
+        self._argv.revert()
         self._stdio.revert()
+        super(NewStyleRunner, self).revert()
 
-    def _get_bytecode(self):
-        """
-        Fetch the module binary from the master if necessary.
-        """
-        return ansible_mitogen.helpers.get_bytecode(
-            context=self.service_context,
-            path=self.path,
-        )
+    def _get_code(self):
+        try:
+            return self._code_by_path[self.path]
+        except KeyError:
+            return self._code_by_path.setdefault(self.path, compile(
+                source=ansible_mitogen.helpers.get_file(
+                    context=self.service_context,
+                    path=self.path,
+                ),
+                filename=self.path,
+                mode='exec',
+                dont_inherit=True,
+            ))
 
     def _run(self):
-        bytecode = self._get_bytecode()
+        code = self._get_code()
         mod = types.ModuleType('__main__')
         d = vars(mod)
         e = None
 
         try:
-            exec bytecode in d, d
+            exec code in d, d
         except SystemExit, e:
             pass
 
