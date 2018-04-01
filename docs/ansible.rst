@@ -126,7 +126,8 @@ High Risk
 
 * `Asynchronous Actions And Polling
   <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
-  minimal testing.
+  minimal testing. Jobs execute in a thread of the target Python interpreter.
+  This will fixed shortly.
 
 * No mechanism exists yet to bound the number of interpreters created during a
   run. For some playbooks that parameterize ``become_user`` over a large number
@@ -203,9 +204,6 @@ Behavioural Differences
 * Ansible with SSH multiplexing enabled causes a string like ``Shared
   connection to host closed`` to appear in ``stderr`` output of every executed
   command. This never manifests with the Mitogen extension.
-
-* Asynchronous support is very primitive, and jobs execute in a thread of the
-  target Python interpreter. This will fixed shortly.
 
 * Local commands are executed in a reuseable Python interpreter created
   identically to interpreters used on remote hosts. At present only one such
