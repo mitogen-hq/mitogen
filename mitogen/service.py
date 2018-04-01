@@ -82,6 +82,12 @@ class Service(object):
         self.handle = self.recv.handle
         self.running = True
 
+    def __repr__(self):
+        return '%s.%s()' % (
+            self.__class__.__module__,
+            self.__class__.__name__,
+        )
+
     def validate_args(self, args):
         return (
             isinstance(args, dict) and
@@ -108,6 +114,7 @@ class Service(object):
              isinstance(args, mitogen.core.CallError) or
              not self.validate_args(args)):
             LOG.warning('Received junk message: %r', args)
+            msg.reply(mitogen.core.CallError('Received junk message'))
             return
 
         try:
