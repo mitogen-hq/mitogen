@@ -157,8 +157,9 @@ def _unpickle_dead():
 _DEAD = Dead()
 
 
-def has_parent_authority(msg, _stream):
-    return msg.auth_id in mitogen.parent_ids
+def has_parent_authority(msg, _stream=None):
+    return (msg.auth_id == mitogen.context_id or
+            msg.auth_id in mitogen.parent_ids)
 
 
 def listen(obj, name, func):
@@ -491,6 +492,7 @@ class Importer(object):
             'fork',
             'master',
             'parent',
+            'service',
             'ssh',
             'sudo',
             'utils',
@@ -955,8 +957,10 @@ class Context(object):
 
 def _unpickle_context(router, context_id, name):
     if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id >= 0 and
-            isinstance(name, basestring) and len(name) < 100):
+            isinstance(context_id, (int, long)) and context_id >= 0 and (
+                (name is None) or
+                (isinstance(name, basestring) and len(name) < 100))
+            ):
         raise TypeError('cannot unpickle Context: bad input')
     return router.context_class(router, context_id, name)
 
