@@ -174,7 +174,7 @@ def _async_main(job_id, module, raw_params, args, env):
     _result_by_job_id[job_id] = rc
 
 
-def make_temp_directory:(base_dir):
+def make_temp_directory(base_dir):
     """
     Handle creation of `base_dir` if it is absent, in addition to a unique
     temporary directory within `base_dir`.

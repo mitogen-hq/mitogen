@@ -203,7 +203,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # The copy action plugin violates layering and grabs this attribute
         # directly.
         self._connection._shell.tmpdir = self.call(
-            ansible_mitogen.helpers.make_temp_directory:,
+            ansible_mitogen.helpers.make_temp_directory,
             base_dir=self._remote_expand_user(
                 # ~/.ansible
                 self._connection._shell.get_option('remote_tmp')
