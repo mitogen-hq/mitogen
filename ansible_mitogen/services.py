@@ -112,6 +112,9 @@ class FileService(mitogen.service.Service):
     """
     handle = 501
     max_message_size = 1000
+    policies = (
+        mitogen.service.AllowAny(),
+    )
 
     unprivileged_msg = 'Cannot register from unprivileged context.'
     unregistered_msg = 'Path is not registered with FileService.'
@@ -133,7 +136,7 @@ class FileService(mitogen.service.Service):
         return getattr(self, cmd)(path, msg)
 
     def register(self, path, msg):
-        if msg.auth_id not in mitogen.parent_ids:
+        if not mitogen.core.has_parent_authority(msg):
             raise mitogen.core.CallError(self.unprivileged_msg)
 
         with open(path, 'rb') as fp:
