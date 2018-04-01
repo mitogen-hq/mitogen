@@ -49,6 +49,7 @@ except ImportError:  # Ansible <2.4
 import mitogen
 import mitogen.service
 import ansible_mitogen.helpers
+import ansible_mitogen.services
 
 
 LOG = logging.getLogger(__name__)
@@ -65,13 +66,24 @@ class Invocation(object):
         #: output postprocessing methods that don't belong in ActionBase at
         #: all.
         self.action = action
+        #: Ansible connection to use to contact the target. Must be an
+        #: ansible_mitogen connection.
         self.connection = connection
+        #: Name of the module ('command', 'shell', etc.) to execute.
         self.module_name = module_name
+        #: Final module arguments.
         self.module_args = module_args
-        self.module_path = None
-        self.module_source = None
+        #: Final module environment.
         self.env = env
+        #: Boolean, if :py:data:`True`, launch the module asynchronously.
         self.wrap_async = wrap_async
+
+        #: Initially ``None``, but set by :func:`invoke`. The path on the
+        #: master to the module's implementation file.
+        self.module_path = None
+        #: Initially ``None``, but set by :func:`invoke`. The raw source or
+        #: binary contents of the module.
+        self.module_source = None
 
     def __repr__(self):
         return 'Invocation(module_name=%s)' % (self.module_name,)
@@ -90,50 +102,34 @@ class Planner(object):
         raise NotImplementedError()
 
 
-class JsonArgsPlanner(Planner):
+class BinaryPlanner(Planner):
     """
-    Script that has its interpreter directive and the task arguments
-    substituted into its source as a JSON string.
+    Binary modules take their arguments and will return data to Ansible in the
+    same way as want JSON modules.
     """
+    runner_name = 'BinaryRunner'
+
     def detect(self, invocation):
-        return module_common.REPLACER_JSONARGS in invocation.module_source
+        return module_common._is_binary(invocation.module_source)
 
     def plan(self, invocation):
-        path = None  # TODO
-        mitogen.service.call(501, ('register', path))
+        invocation.connection._connect()
+        mitogen.service.call(
+            invocation.connection.parent,
+            ansible_mitogen.services.FileService.handle,
+            ('register', invocation.module_path)
+        )
         return {
-            'func': 'run_json_args_module',
-            'binary': source,
-            'args': args,
-            'env': env,
+            'runner_name': self.runner_name,
+            'module': invocation.module_name,
+            'service_context': invocation.connection.parent,
+            'path': invocation.module_path,
+            'args': invocation.module_args,
+            'env': invocation.env,
         }
 
 
-class WantJsonPlanner(Planner):
-    """
-    If a module has the string WANT_JSON in it anywhere, Ansible treats it as a
-    non-native module that accepts a filename as its only command line
-    parameter. The filename is for a temporary file containing a JSON string
-    containing the module's parameters. The module needs to open the file, read
-    and parse the parameters, operate on the data, and print its return data as
-    a JSON encoded dictionary to stdout before exiting.
-
-    These types of modules are self-contained entities. As of Ansible 2.1,
-    Ansible only modifies them to change a shebang line if present.
-    """
-    def detect(self, invocation):
-        return 'WANT_JSON' in invocation.module_source
-
-    def plan(self, name, source, args, env):
-        return {
-            'func': 'run_want_json_module',
-            'binary': source,
-            'args': args,
-            'env': env,
-        }
-
-
-class ReplacerPlanner(Planner):
+class ReplacerPlanner(BinaryPlanner):
     """
     The Module Replacer framework is the original framework implementing
     new-style modules. It is essentially a preprocessor (like the C
@@ -157,33 +153,39 @@ class ReplacerPlanner(Planner):
       "ansible/module_utils/powershell.ps1". It should only be used with
       new-style Powershell modules.
     """
+    runner_name = 'ReplacerRunner'
+
     def detect(self, invocation):
         return module_common.REPLACER in invocation.module_source
 
-    def plan(self, name, source, args, env):
-        return {
-            'func': 'run_replacer_module',
-            'binary': source,
-            'args': args,
-            'env': env,
-        }
 
+class JsonArgsPlanner(BinaryPlanner):
+    """
+    Script that has its interpreter directive and the task arguments
+    substituted into its source as a JSON string.
+    """
+    runner_name = 'JsonArgsRunner'
 
-class BinaryPlanner(Planner):
-    """
-    Binary modules take their arguments and will return data to Ansible in the
-    same way as want JSON modules.
-    """
     def detect(self, invocation):
-        return module_common._is_binary(invocation.module_source)
+        return module_common.REPLACER_JSONARGS in invocation.module_source
 
-    def plan(self, name, source, args, env):
-        return {
-            'runner_name': 'BinaryRunner',
-            'binary': source,
-            'args': args,
-            'env': env,
-        }
+
+class WantJsonPlanner(BinaryPlanner):
+    """
+    If a module has the string WANT_JSON in it anywhere, Ansible treats it as a
+    non-native module that accepts a filename as its only command line
+    parameter. The filename is for a temporary file containing a JSON string
+    containing the module's parameters. The module needs to open the file, read
+    and parse the parameters, operate on the data, and print its return data as
+    a JSON encoded dictionary to stdout before exiting.
+
+    These types of modules are self-contained entities. As of Ansible 2.1,
+    Ansible only modifies them to change a shebang line if present.
+    """
+    runner_name = 'WantJsonRunner'
+
+    def detect(self, invocation):
+        return 'WANT_JSON' in invocation.module_source
 
 
 class NativePlanner(Planner):

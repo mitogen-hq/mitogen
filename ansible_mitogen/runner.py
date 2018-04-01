@@ -233,21 +233,24 @@ class NativeRunner(Runner):
 
 
 class BinaryRunner(Runner):
-    def __init__(self, path, **kwargs):
+    def __init__(self, path, service_context, **kwargs):
+        print 'derp', kwargs
         super(BinaryRunner, self).__init__(**kwargs)
         self.path = path
+        self.service_context = service_context
 
     def setup(self):
         super(BinaryRunner, self).setup()
-        self._setup_binary()
+        self._setup_program()
         self._setup_args()
 
-    def _get_binary(self):
+    def _get_program(self):
         """
         Fetch the module binary from the master if necessary.
         """
         return ansible_mitogen.helpers.get_file(
-            path=self.runner_params['path'],
+            context=self.service_context,
+            path=self.path,
         )
 
     def _get_args(self):
@@ -259,15 +262,15 @@ class BinaryRunner(Runner):
     def _setup_program(self):
         """
         Create a temporary file containing the program code. The code is
-        fetched via :meth:`_get_binary`.
+        fetched via :meth:`_get_program`.
         """
         self.bin_fp = tempfile.NamedTemporaryFile(
             prefix='ansible_mitogen',
             suffix='-binary',
         )
-        self.bin_fp.write(self._get_binary())
+        self.bin_fp.write(self._get_program())
         self.bin_fp.flush()
-        os.chmod(self.fp.name, int('0700', 8))
+        os.chmod(self.bin_fp.name, int('0700', 8))
 
     def _setup_args(self):
         """
@@ -308,8 +311,8 @@ class BinaryRunner(Runner):
 
 
 class WantJsonRunner(BinaryRunner):
-    def _get_binary(self):
-        s = super(WantJsonRunner, self)._get_binary()
+    def _get_program(self):
+        s = super(WantJsonRunner, self)._get_program()
         # fix up shebang.
         return s
 
