@@ -131,7 +131,7 @@ class TemporaryEnvironment(object):
         os.environ.update(self.original)
 
 
-class NativeModuleExit(Exception):
+class NewStyleModuleExit(Exception):
     """
     Capture the result of a call to `.exit_json()` or `.fail_json()` by a
     native Ansible module.
@@ -148,24 +148,24 @@ class NativeModuleExit(Exception):
         )
 
 
-class NativeMethodOverrides(object):
+class NewStyleMethodOverrides(object):
     @staticmethod
     def exit_json(self, **kwargs):
         """
         Raise exit_json() output as the `.dct` attribute of a
-        :class:`NativeModuleExit` exception`.
+        :class:`NewStyleModuleExit` exception`.
         """
         kwargs.setdefault('changed', False)
-        raise NativeModuleExit(self, **kwargs)
+        raise NewStyleModuleExit(self, **kwargs)
 
     @staticmethod
     def fail_json(self, **kwargs):
         """
         Raise fail_json() output as the `.dct` attribute of a
-        :class:`NativeModuleExit` exception`.
+        :class:`NewStyleModuleExit` exception`.
         """
         kwargs.setdefault('failed', True)
-        raise NativeModuleExit(self, **kwargs)
+        raise NewStyleModuleExit(self, **kwargs)
 
     klass = ansible.module_utils.basic.AnsibleModule
 
@@ -183,7 +183,7 @@ class NativeMethodOverrides(object):
         self.klass.fail_json = self._original_fail_json
 
 
-class NativeModuleArguments(object):
+class NewStyleModuleArguments(object):
     """
     Patch ansible.module_utils.basic argument globals.
     """
@@ -200,22 +200,22 @@ class NativeModuleArguments(object):
         ansible.module_utils.basic._ANSIBLE_ARGS = self.original
 
 
-class NativeRunner(Runner):
+class NewStyleRunner(Runner):
     """
     Execute a new-style Ansible module, where Module Replacer-related tricks
     aren't required.
     """
     def __init__(self, mod_name, **kwargs):
-        super(NativeRunner, self).__init__(**kwargs)
+        super(NewStyleRunner, self).__init__(**kwargs)
         self.mod_name = mod_name
 
     def setup(self):
-        super(NativeRunner, self).setup()
-        self._overrides = NativeMethodOverrides()
-        self._args = NativeModuleArguments(self.args)
+        super(NewStyleRunner, self).setup()
+        self._overrides = NewStyleMethodOverrides()
+        self._args = NewStyleModuleArguments(self.args)
 
     def revert(self):
-        super(NativeRunner, self).revert()
+        super(NewStyleRunner, self).revert()
         self._args.revert()
         self._overrides.revert()
 
@@ -237,7 +237,7 @@ class NativeRunner(Runner):
             # already have been imported for a previous invocation, so we need
             # to invoke main explicitly.
             mod.main()
-        except NativeModuleExit, e:
+        except NewStyleModuleExit, e:
             return {
                 'rc': 0,
                 'stdout': json.dumps(e.dct),
@@ -369,7 +369,6 @@ class ScriptRunner(ProgramRunner):
         """
         # Couldn't find shebang, so let shell run it, because shell assumes
         # executables like this are just shell scripts.
-        LOG.debug('++++++++++++++ %s', self.interpreter)
         if not self.interpreter:
             return s
 
@@ -386,7 +385,7 @@ class ScriptRunner(ProgramRunner):
         return '\n'.join(new)
 
 
-class JsonArgsFileRunner(ScriptRunner):
+class JsonArgsFileRunner(ArgsFileRunner, ScriptRunner):
     JSON_ARGS = '<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
 
     def _get_args_contents(self):
@@ -403,8 +402,7 @@ class WantJsonRunner(ArgsFileRunner, ScriptRunner):
     pass
 
 
-
-class OldStyleRunner(ScriptRunner):
+class OldStyleRunner(ArgsFileRunner, ScriptRunner):
     def _get_args_contents(self):
         """
         Mimic the argument formatting behaviour of

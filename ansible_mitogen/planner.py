@@ -241,14 +241,16 @@ class WantJsonPlanner(ScriptPlanner):
         return 'WANT_JSON' in invocation.module_source
 
 
-class NativePlanner(Planner):
+class NewStylePlanner(Planner):
     """
     The Ansiballz framework differs from module replacer in that it uses real
     Python imports of things in ansible/module_utils instead of merely
     preprocessing the module.
     """
+    runner_name = 'NewStyleRunner'
+
     def detect(self, invocation):
-        return True
+        return 'from ansible.module_utils.' in invocation.module_source
 
     def get_command_module_name(self, module_name):
         """
@@ -267,7 +269,7 @@ class NativePlanner(Planner):
 
     def plan(self, invocation):
         return {
-            'runner_name': 'NativeRunner',
+            'runner_name': self.runner_name,
             'module': invocation.module_name,
             'mod_name': self.get_command_module_name(invocation.module_name),
             'args': invocation.module_args,
@@ -275,12 +277,28 @@ class NativePlanner(Planner):
         }
 
 
+class ReplacerPlanner(NewStylePlanner):
+    runner_name = 'ReplacerRunner'
+
+    def detect(self, invocation):
+        return module_common.REPLACER in invocation.module_source
+
+
+class OldStylePlanner(ScriptPlanner):
+    runner_name = 'OldStyleRunner'
+
+    def detect(self, invocation):
+        # Everything else.
+        return True
+
+
 _planners = [
+    BinaryPlanner,
+    # ReplacerPlanner,
+    NewStylePlanner,
     # JsonArgsPlanner,
     WantJsonPlanner,
-    # ReplacerPlanner,
-    BinaryPlanner,
-    NativePlanner,
+    OldStylePlanner,
 ]
 
 
