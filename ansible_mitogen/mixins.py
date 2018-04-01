@@ -184,15 +184,18 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
 
+        try:
+            remote_tmp = self._connection._shell.get_option('remote_tmp')
+        except AttributeError:
+            # Required for <2.4.x.
+            remote_tmp = '~/.ansible'
+
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
         # The copy action plugin violates layering and grabs this attribute
         # directly.
         self._connection._shell.tmpdir = self.call(
             ansible_mitogen.helpers.make_temp_directory,
-            base_dir=self._remote_expand_user(
-                # ~/.ansible
-                self._connection._shell.get_option('remote_tmp')
-            )
+            base_dir=self._remote_expand_user(remote_tmp),
         )
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
