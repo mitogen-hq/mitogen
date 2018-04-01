@@ -315,18 +315,22 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             )
         )
 
-    def _postprocess_response(self, js):
+    def _postprocess_response(self, result):
         """
         Apply fixups mimicking ActionBase._execute_module(); this is copied
         verbatim from action/__init__.py, the guts of _parse_returned_data are
         garbage and should be removed or reimplemented once tests exist.
+
+        :param dict result:
+            Dictionary with format::
+
+                {
+                    "rc": int,
+                    "stdout": "stdout data",
+                    "stderr": "stderr data"
+                }
         """
-        data = self._parse_returned_data({
-            'rc': 0,
-            'stdout': js,
-            'stdout_lines': [js],
-            'stderr': ''
-        })
+        data = self._parse_returned_data(result)
 
         # Cutpasted from the base implementation.
         if 'stdout' in data and 'stdout_lines' not in data:

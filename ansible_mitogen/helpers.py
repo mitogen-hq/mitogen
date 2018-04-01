@@ -94,7 +94,7 @@ def run_module(kwargs):
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
     impl = klass(**kwargs)
-    return json.dumps(impl.run())
+    return impl.run()
 
 
 def _async_main(job_id, runner_name, kwargs):

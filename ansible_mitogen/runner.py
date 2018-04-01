@@ -87,6 +87,16 @@ class Runner(object):
         self._env.revert()
 
     def _run(self):
+        """
+        The _run() method is expected to return a dictionary in the form of
+        ActionBase._low_level_execute_command() output, i.e. having::
+
+            {
+                "rc": int,
+                "stdout": "stdout data",
+                "stderr": "stderr data"
+            }
+        """
         raise NotImplementedError()
 
     def run(self):
@@ -224,11 +234,16 @@ class NativeRunner(Runner):
             # to invoke main explicitly.
             mod.main()
         except NativeModuleExit, e:
-            return e.dct
+            return {
+                'rc': 0,
+                'stdout': json.dumps(e.dct),
+                'stderr': '',
+            }
 
         return {
-            'failed': True,
-            'msg': 'ansible_mitogen: module did not exit normally.'
+            'rc': 1,
+            'stdout': '',
+            'stderr': 'ansible_mitogen: module did not exit normally.',
         }
 
 
@@ -299,8 +314,9 @@ class BinaryRunner(Runner):
             )
         except Exception, e:
             return {
-                'failed': True,
-                'msg': '%s: %s' % (type(e), e),
+                'rc': 1,
+                'stdout': '',
+                'stderr': '%s: %s' % (type(e), e),
             }
 
         return {
