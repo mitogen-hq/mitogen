@@ -4,6 +4,7 @@ notifications:
   email: false
 
 language: python
+cache: pip
 
 python:
 - "2.7"
