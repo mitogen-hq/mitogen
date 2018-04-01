@@ -492,6 +492,7 @@ class Importer(object):
             'fork',
             'master',
             'parent',
+            'service',
             'ssh',
             'sudo',
             'utils',
