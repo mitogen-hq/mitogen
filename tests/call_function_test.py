@@ -64,7 +64,10 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def test_bad_return_value(self):
         exc = self.assertRaises(mitogen.core.StreamError,
             lambda: self.local.call(func_with_bad_return_value))
-        self.assertEquals(exc[0], "cannot unpickle '__main__'/'CrazyType'")
+        self.assertEquals(
+                exc[0],
+                "cannot unpickle '%s'/'CrazyType'" % (__name__,),
+        )
 
     def test_returns_dead(self):
         self.assertEqual(mitogen.core._DEAD, self.local.call(func_returns_dead))
