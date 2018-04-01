@@ -342,15 +342,15 @@ class NewStyleRunner(ScriptRunner):
         }
 
 
-class JsonArgsFileRunner(ArgsFileRunner, ScriptRunner):
+class JsonArgsRunner(ScriptRunner):
     JSON_ARGS = '<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
 
     def _get_args_contents(self):
-        return json.dump(self.args)
+        return json.dumps(self.args)
 
     def _rewrite_source(self, s):
         return (
-            super(JsonArgsFileRunner, self)._rewrite_source(s)
+            super(JsonArgsRunner, self)._rewrite_source(s)
             .replace(self.JSON_ARGS, self._get_args_contents())
         )
 

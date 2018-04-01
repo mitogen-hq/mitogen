@@ -272,7 +272,7 @@ _planners = [
     BinaryPlanner,
     # ReplacerPlanner,
     NewStylePlanner,
-    # JsonArgsPlanner,
+    JsonArgsPlanner,
     WantJsonPlanner,
     OldStylePlanner,
 ]
