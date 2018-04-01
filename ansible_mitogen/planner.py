@@ -60,18 +60,16 @@ class Invocation(object):
     helpers.run_module() or helpers.run_module_async() in the target context.
     """
     def __init__(self, action, connection, module_name, module_args,
-                 task_vars, tmp, env, wrap_async):
-        #: Instance of the ActionBase subclass invoking the module. Required to
-        #: access some output postprocessing methods that don't belong in
-        #: ActionBase at all.
+                 env, wrap_async):
+        #: ActionBase instance invoking the module. Required to access some
+        #: output postprocessing methods that don't belong in ActionBase at
+        #: all.
         self.action = action
         self.connection = connection
         self.module_name = module_name
         self.module_args = module_args
         self.module_path = None
         self.module_source = None
-        self.task_vars = task_vars
-        self.tmp = tmp
         self.env = env
         self.wrap_async = wrap_async
 
