@@ -1,0 +1,11 @@
+#/bin/sh
+
+UNIT2="$(which unit2)"
+
+coverage erase
+coverage run "${UNIT2}" discover \
+                        --start-directory "tests" \
+                        --pattern '*_test.py' \
+                        "$@"
+coverage html
+echo coverage report is at "file://$(pwd)/htmlcov/index.html"

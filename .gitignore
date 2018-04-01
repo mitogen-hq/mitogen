@@ -1,7 +1,9 @@
+.coverage
 .venv
 **/.DS_Store
 MANIFEST
 build/
 dist/
 docs/_build
+htmlcov/
 *.egg-info
