@@ -34,6 +34,7 @@ import random
 import re
 import stat
 import subprocess
+import tempfile
 import threading
 
 import mitogen.core
@@ -172,6 +173,21 @@ def _async_main(job_id, module, raw_params, args, env):
 
     _result_by_job_id[job_id] = rc
 
+
+def make_temp_directory:(base_dir):
+    """
+    Handle creation of `base_dir` if it is absent, in addition to a unique
+    temporary directory within `base_dir`.
+
+    :returns:
+        Newly created temporary directory.
+    """
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir, mode=int('0700', 8))
+    return tempfile.mkdtemp(
+        dir=base_dir,
+        prefix='ansible-mitogen-tmp-',
+    )
 
 def run_module_async(module, raw_params=None, args=None):
     """

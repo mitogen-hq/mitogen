@@ -198,9 +198,20 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         with an actual call to mkdtemp().
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
-        path = self.call(tempfile.mkdtemp, prefix='ansible-mitogen-tmp-')
+
+        # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
+        # The copy action plugin violates layering and grabs this attribute
+        # directly.
+        self._connection._shell.tmpdir = self.call(
+            ansible_mitogen.helpers.make_temp_directory:,
+            base_dir=self._remote_expand_user(
+                # ~/.ansible
+                self._connection._shell.get_option('remote_tmp')
+            )
+        )
+        LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
-        return path
+        return self._connection._shell.tmpdir
 
     def _remove_tmp_path(self, tmp_path):
         """
@@ -208,8 +219,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         shutil.rmtree().
         """
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
+        if tmp_path is None:
+            tmp_path = self._connection._shell.tmpdir
         if self._should_remove_tmp_path(tmp_path):
-            return self.call(shutil.rmtree, tmp_path)
+            self.call(shutil.rmtree, tmp_path)
+            self._connection._shell.tmpdir = None
 
     def _transfer_data(self, remote_path, data):
         """
