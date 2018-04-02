@@ -10,15 +10,14 @@ import tempfile
 LOG = logging.getLogger(__name__)
 
 suffixes = [
-    '-m bin_bash_module',
-    '-m binary_producing_json',
-    '-m binary_producing_junk',
-    '-m old_style_module',
-    '-m python_new_style_module',
-    '-m python_want_json_module',
-    '-m single_null_binary',
-    '-m want_json_module',
-    '-m json_args_python',
+    '-m custom_bash_old_style_module',
+    '-m custom_bash_want_json_module',
+    '-m custom_binary_producing_json',
+    '-m custom_binary_producing_junk',
+    '-m custom_binary_single_null',
+    '-m custom_python_json_args_module',
+    '-m custom_python_new_style_module',
+    '-m custom_python_want_json_module',
     '-m setup',
 ]
 
