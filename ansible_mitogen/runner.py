@@ -214,7 +214,11 @@ class ProgramRunner(Runner):
         )
 
     def _get_program_args(self):
-        return [self.program_fp.name]
+        return [
+            self.args['_ansible_shell_executable'],
+            '-c',
+            self.program_fp.name
+        ]
 
     def revert(self):
         """
@@ -229,6 +233,7 @@ class ProgramRunner(Runner):
                 args=self._get_program_args(),
             )
         except Exception, e:
+            LOG.exception('While running %s', self._get_program_args())
             return {
                 'rc': 1,
                 'stdout': '',
@@ -267,7 +272,11 @@ class ArgsFileRunner(Runner):
         return json.dumps(self.args)
 
     def _get_program_args(self):
-        return [self.program_fp.name, self.args_fp.name]
+        return [
+            self.args['_ansible_shell_executable'],
+            '-c',
+            "%s %s" % (self.program_fp.name, self.args_fp.name),
+        ]
 
     def revert(self):
         """
