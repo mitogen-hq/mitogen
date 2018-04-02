@@ -184,25 +184,27 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
-    def _rewrite_interpreter(self, interpreter, task_vars, templar):
-        if interpreter is None:
-            return None
-
+    def _rewrite_interpreter(self, invocation, interpreter):
         key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
         try:
-            return templar.template(task_vars[key].strip())
+            template = invocation.task_vars[key].strip()
+            return invocation.templar.template(template)
         except KeyError:
             return interpreter
 
     def plan(self, invocation):
         kwargs = super(ScriptPlanner, self).plan(invocation)
         interpreter, arg = parse_script_interpreter(invocation.module_source)
+        if interpreter is None:
+            raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
+                invocation.module_name,
+            ))
+
         return dict(kwargs,
             interpreter_arg=arg,
             interpreter=self._rewrite_interpreter(
                 interpreter=interpreter,
-                task_vars=invocation.task_vars,
-                templar=invocation.templar,
+                invocation=invocation
             )
         )
 
@@ -305,6 +307,7 @@ _planners = [
 
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 CRASHED_MSG = 'Mitogen: internal error: '
+NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
 
 
 def get_module_data(name):
