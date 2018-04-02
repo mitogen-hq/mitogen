@@ -215,9 +215,9 @@ def exec_command(cmd, in_data='', chdir=None, shell=None):
         (return code, stdout bytes, stderr bytes)
     """
     assert isinstance(cmd, basestring)
-    return _exec_command(
+    return exec_args(
         args=[get_user_shell(), '-c', cmd],
-        in_data=in_Data,
+        in_data=in_data,
         chdir=chdir,
         shell=shell,
     )
