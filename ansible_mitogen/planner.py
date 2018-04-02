@@ -53,6 +53,9 @@ import ansible_mitogen.services
 
 
 LOG = logging.getLogger(__name__)
+NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
+CRASHED_MSG = 'Mitogen: internal error: '
+NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
 
 
 def parse_script_interpreter(source):
@@ -62,7 +65,7 @@ def parse_script_interpreter(source):
 
     :returns:
         Tuple of `(interpreter, arg)`, where `intepreter` is the script
-        interpreter and `arg` is its solve argument if present, otherwise
+        interpreter and `arg` is its sole argument if present, otherwise
         :py:data:`None`.
     """
     # Linux requires first 2 bytes with no whitespace, pretty sure it's the
@@ -303,11 +306,6 @@ _planners = [
     WantJsonPlanner,
     OldStylePlanner,
 ]
-
-
-NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
-CRASHED_MSG = 'Mitogen: internal error: '
-NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
 
 
 def get_module_data(name):
