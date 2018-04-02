@@ -59,6 +59,19 @@ ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 LOG = logging.getLogger(__name__)
 
 
+def reopen_readonly(fp):
+    """
+    Replace the file descriptor belonging to the file object `fp` with one
+    open on the same file (`fp.name`), but opened with :py:data:`os.O_RDONLY`.
+    This enables temporary files to be executed on Linux, which usually theows
+    ``ETXTBUSY`` if any writeable handle exists pointing to a file passed to
+    `execve()`.
+    """
+    fd = os.open(fp.name, os.O_RDONLY)
+    os.dup2(fd, fp.fileno())
+    os.close(fd)
+
+
 class Runner(object):
     """
     Ansible module runner. After instantiation (with kwargs supplied by the
@@ -189,6 +202,7 @@ class ProgramRunner(Runner):
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
         os.chmod(self.program_fp.name, int('0700', 8))
+        reopen_readonly(self.program_fp)
 
     def _get_program(self):
         """
@@ -244,6 +258,7 @@ class ArgsFileRunner(Runner):
         )
         self.args_fp.write(self._get_args_contents())
         self.args_fp.flush()
+        reopen_readonly(self.program_fp)
 
     def _get_args_contents(self):
         """
