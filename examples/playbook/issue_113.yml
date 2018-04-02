@@ -1,7 +1,4 @@
----
-
 - hosts: all
-  gather_facts: false
   tasks:
 
   - name: Get auth token

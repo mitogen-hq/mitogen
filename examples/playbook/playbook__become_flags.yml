@@ -1,0 +1,27 @@
+# This must be run with FOO=2 set in the environment.
+
+#
+# Test sudo_flags respects -E.
+#
+
+- hosts: all
+  tasks:
+    - name: "without -E"
+      become: true
+      shell: "echo $FOO"
+      register: out
+
+    - assert:
+        that: "out.stdout == ''"
+
+- hosts: all
+  become_flags: -E
+  tasks:
+    - name: "with -E"
+      become: true
+      shell: "set"
+      register: out2
+
+    - debug: msg={{out2}}
+    - assert:
+        that: "out2.stdout == '2'"

@@ -1,8 +1,5 @@
-
-
 - hosts: all
   tasks:
-
   - name: Make virtualenv
     pip:
       virtualenv: /tmp/issue_151_virtualenv

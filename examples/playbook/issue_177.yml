@@ -1,11 +1,7 @@
-
-
 - hosts: all
-  gather_facts: false
   tasks:
   - name: copy repo configs
     copy: src=/etc/{{ item }} dest=/tmp/{{item}} mode=0644
     with_items:
       - passwd
       - hosts
-

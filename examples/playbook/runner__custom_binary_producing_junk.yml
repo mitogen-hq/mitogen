@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+    - custom_binary_producing_junk:
+        foo: true
+      with_sequence: start=1 end={{end|default(100)}}
+      ignore_errors: true

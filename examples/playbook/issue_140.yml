@@ -1,11 +1,7 @@
----
-
 # Reproduction for issue #140.
 
 - hosts: all
-  gather_facts: no
   tasks:
-
     - name: Create file tree
       connection: local
       shell: >
@@ -26,4 +22,3 @@
       with_filetree:
         - filetree
       when: item.state == 'file'
-

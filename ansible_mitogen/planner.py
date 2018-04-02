@@ -185,6 +185,9 @@ class ScriptPlanner(BinaryPlanner):
     detection and rewrite.
     """
     def _rewrite_interpreter(self, interpreter, task_vars, templar):
+        if interpreter is None:
+            return None
+
         key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
         try:
             return templar.template(task_vars[key].strip())

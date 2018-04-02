@@ -1,11 +1,7 @@
----
-
 # Verify the behaviour of _low_level_execute_command().
 
 - hosts: all
-  gather_facts: false
   tasks:
-
     # "echo -en" to test we actually hit bash shell too.
     - name: Run raw module without sudo
       raw: 'echo -en $((1 + 1))'

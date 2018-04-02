@@ -1,0 +1,9 @@
+- import_playbook: runner__builtin_command_module.yml
+- import_playbook: runner__custom_bash_old_style_module.yml
+- import_playbook: runner__custom_bash_want_json_module.yml
+- import_playbook: runner__custom_binary_producing_json.yml
+- import_playbook: runner__custom_binary_producing_junk.yml
+- import_playbook: runner__custom_binary_single_null.yml
+- import_playbook: runner__custom_python_json_args_module.yml
+- import_playbook: runner__custom_python_new_style_module.yml
+- import_playbook: runner__custom_python_want_json_module.yml

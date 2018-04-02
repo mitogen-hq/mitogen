@@ -1,6 +1,4 @@
-
 - hosts: all
-  gather_facts: no
   become: true
   vars:
     repo_baseurl: "http://myurl.com"
@@ -11,7 +9,6 @@
       - repo: demo-repo2
         description: Misc packages
         url: "{{repo_baseurl}}/repo2"
-
   tasks:
   - name: Create multiple yum repos
     yum_repository:

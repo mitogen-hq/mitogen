@@ -1,9 +1,5 @@
----
-
 - hosts: all
-  gather_facts: false
   tasks:
-
   - name: simulate long running op (3 sec), wait for up to 5 sec, poll every 1 sec
     command: /bin/sleep 2
     async: 4

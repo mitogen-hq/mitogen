@@ -1,5 +1,3 @@
----
-
 # issue #118 repro: chmod +x not happening during script upload
 #
 - name: saytrue

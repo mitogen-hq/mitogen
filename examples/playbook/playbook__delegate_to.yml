@@ -1,9 +1,5 @@
----
-
 - hosts: all
-  gather_facts: false
   tasks:
-
     #
     # delegate_to, no sudo
     #

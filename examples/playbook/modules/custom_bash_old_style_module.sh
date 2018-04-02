@@ -4,13 +4,13 @@
 INPUT=$1
 
 [ ! -r "$INPUT" ] && {
-    echo "Usage: $0 <input.json>" >&2
+    echo "Usage: $0 <input_file>" >&2
     exit 1
 }
 
 echo "{"
 echo "  \"changed\": false,"
 echo "  \"msg\": \"Here is my input\","
-echo "  \"filname\": \"$INPUT\","
+echo "  \"filename\": \"$INPUT\","
 echo "  \"input\": [\"$(cat $INPUT | tr \" \' )\"]"
 echo "}"
