@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - custom_perl_json_args_module:
+        foo: true
+      with_sequence: start=1 end={{end|default(100)}}
