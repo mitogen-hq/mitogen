@@ -57,6 +57,19 @@ quickly as possible.
   relating to those files in cross-account scenarios are entirely avoided.
 
 
+Demo
+----
+
+This demonstrates Ansible running a subset of the Mitogen integration tests
+concurrent to an equivalent run using the extension.
+
+.. raw:: html
+
+    <video width="100%" controls>
+        <source src="http://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
+    </video>
+
+
 Testimonials
 ------------
 
@@ -214,8 +227,8 @@ Behavioural Differences
   release.
 
 
-Demo
-----
+Sample Profiles
+---------------
 
 Local VM connection
 ~~~~~~~~~~~~~~~~~~~
