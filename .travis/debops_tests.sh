@@ -9,7 +9,10 @@ function on_exit()
     echo travis_fold:start:cleanup
     [ "$KEEP" ] || {
         rm -rvf "$TMPDIR" || true
-        docker kill target || true
+        docker kill target1 || true
+        docker kill target2 || true
+        docker kill target3 || true
+        docker kill target4 || true
     }
     echo travis_fold:end:cleanup
 }
@@ -45,7 +48,7 @@ ansible_python_interpreter: /usr/bin/python2.7
 dhparam__bits: ["128", "64"]
 EOF
 
-cat > ansible/inventory/hosts <<-EOF
+cat >> ansible/inventory/hosts <<-EOF
 target1
 target2
 target3
