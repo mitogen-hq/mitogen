@@ -15,8 +15,13 @@ function on_exit()
 trap on_exit EXIT
 mkdir "$TMPDIR"
 
-docker run --rm --detach --name=target d2mw/mitogen-test /bin/sleep 86400
 
+echo travis_fold:start:docker_setup
+docker run --rm --detach --name=target d2mw/mitogen-test /bin/sleep 86400
+echo travis_fold:end:docker_setup
+
+
+echo travis_fold:start:job_setup
 pip install -U debops==0.7.2 ansible==2.4.3.0
 debops-init "$TMPDIR/project"
 cd "$TMPDIR/project"
@@ -36,4 +41,14 @@ dhparam__bits: ["128", "64"]
 EOF
 
 echo target >> ansible/inventory/hosts
-debops common
+echo travis_fold:end:job_setup
+
+
+echo travis_fold:start:first_run
+/usr/bin/time debops common
+echo travis_fold:end:first_run
+
+
+echo travis_fold:start:second_run
+/usr/bin/time debops common
+echo travis_fold:end:second_run
