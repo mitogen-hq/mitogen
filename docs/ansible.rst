@@ -165,27 +165,9 @@ Low Risk
   number of targets. This is a subject of ongoing investigation and
   improvements will appear in time.
 
-* Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
-  to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
-  disables pseudo TTYs for certain commands where standard input is required or
-  ``sudo`` is not in use. Mitogen does not require this, as it can simply call
-  :py:func:`pty.openpty` from the SSH user account during ``sudo`` setup.
-
-  A major downside to Ansible's default is that stdout and stderr of any
-  resulting executed command are merged, with additional carriage return
-  characters synthesized in the output by the TTY layer. Neither of these
-  problems are apparent using the Mitogen extension, which may break some
-  playbooks.
-
-  A future version will emulate Ansible's behaviour, once it is clear precisely
-  what that behaviour is supposed to be. See `Ansible#14377`_ for related
-  discussion.
-
 * "Module Replacer" style modules are not yet supported. These rarely appear in
   practice, and light Github code searches failed to reveal many examples of
   them.
-
-.. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
 
 
 Behavioural Differences
@@ -211,10 +193,6 @@ Behavioural Differences
   output on the target machine are discarded. With Mitogen, all of this is
   captured and returned to the host machine, where it can be viewed as desired
   with ``-vvv``.
-
-* Ansible with SSH multiplexing enabled causes a string like ``Shared
-  connection to host closed`` to appear in ``stderr`` output of every executed
-  command. This never manifests with the Mitogen extension.
 
 * Local commands are executed in a reuseable Python interpreter created
   identically to interpreters used on remote hosts. At present only one such
@@ -355,6 +333,30 @@ The patches are concise and behave conservatively, including by disabling
 themselves when non-Mitogen connections are in use. Additional third party
 plug-ins are unlikely to attempt similar patches, so the risk to an established
 configuration should be minimal.
+
+
+Standard IO
+~~~~~~~~~~~
+
+Ansible uses pseudo TTYs for most invocations, to allow it to handle typing
+passwords interactively, however it disables pseudo TTYs for certain commands
+where standard input is required or ``sudo`` is not in use. Additionally when
+SSH multiplexing is enabled, a string like ``Shared connection to localhost
+closed\r\n`` appears in ``stderr`` of every invocation.
+
+Mitogen does not naturally require either of these, as command output is
+embedded within the SSH stream, and it can simply call :py:func:`pty.openpty`
+in every location an interactive password must be typed.
+
+A major downside to Ansible's behaviour is that ``stdout`` and ``stderr`` are
+merged together into a single ``stdout`` variable, with carriage returns
+inserted in the output by the TTY layer. However ugly, the extension emulates
+all of this behaviour precisely, to avoid breaking playbooks that expect
+certain text to appear in certain variables with certain linefeed characters.
+
+See `Ansible#14377`_ for related discussion.
+
+.. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
 
 
 Flag Emulation

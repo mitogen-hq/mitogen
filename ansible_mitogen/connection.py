@@ -303,7 +303,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             LOG.debug('Call %s%r took %d ms', func.func_name, args,
                       1000 * (time.time() - t0))
 
-    def exec_command(self, cmd, in_data='', sudoable=True):
+    def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
         Implement exec_command() by calling the corresponding
         ansible_mitogen.helpers function in the target.
@@ -315,8 +315,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :returns:
             (return code, stdout bytes, stderr bytes)
         """
-        return self.call(ansible_mitogen.helpers.exec_command,
-                         cast(cmd), cast(in_data))
+        emulate_tty = (not in_data and sudoable)
+        rc, stdout, stderr = self.call(
+            ansible_mitogen.helpers.exec_command,
+            cmd=cast(cmd),
+            in_data=cast(in_data),
+            chdir=mitogen_chdir,
+            emulate_tty=emulate_tty,
+        )
+
+        stderr += 'Shared connection to %s closed.%s' % (
+            self._play_context.remote_addr,
+            ('\r\n' if emulate_tty else '\n'),
+        )
+        return rc, stdout, stderr
 
     def fetch_file(self, in_path, out_path):
         """

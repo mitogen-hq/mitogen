@@ -176,7 +176,7 @@ def get_user_shell():
     return pw_shell or '/bin/sh'
 
 
-def exec_args(args, in_data='', chdir=None, shell=None):
+def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     """
     Run a command in a subprocess, emulating the argument handling behaviour of
     SSH.
@@ -185,24 +185,36 @@ def exec_args(args, in_data='', chdir=None, shell=None):
         Argument vector.
     :param bytes in_data:
         Optional standard input for the command.
+    :param bool emulate_tty:
+        If :data:`True`, arrange for stdout and stderr to be merged into the
+        stdout pipe and for LF to be translated into CRLF, emulating the
+        behaviour of a TTY.
     :return:
         (return code, stdout bytes, stderr bytes)
     """
     LOG.debug('exec_args(%r, ..., chdir=%r)', args, chdir)
     assert isinstance(args, list)
 
+    if emulate_tty:
+        stderr = subprocess.STDOUT
+    else:
+        stderr = subprocess.PIPE
+
     proc = subprocess.Popen(
         args=args,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=stderr,
         stdin=subprocess.PIPE,
         cwd=chdir,
     )
     stdout, stderr = proc.communicate(in_data)
-    return proc.returncode, stdout, stderr
+
+    if emulate_tty:
+        stdout = stdout.replace('\n', '\r\n')
+    return proc.returncode, stdout, stderr or ''
 
 
-def exec_command(cmd, in_data='', chdir=None, shell=None):
+def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
     """
     Run a command in a subprocess, emulating the argument handling behaviour of
     SSH.
@@ -220,6 +232,7 @@ def exec_command(cmd, in_data='', chdir=None, shell=None):
         in_data=in_data,
         chdir=chdir,
         shell=shell,
+        emulate_tty=emulate_tty,
     )
 
 

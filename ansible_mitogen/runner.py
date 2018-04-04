@@ -243,6 +243,7 @@ class ProgramRunner(Runner):
         try:
             rc, stdout, stderr = ansible_mitogen.helpers.exec_args(
                 args=self._get_program_args(),
+                emulate_tty=True,
             )
         except Exception, e:
             LOG.exception('While running %s', self._get_program_args())

@@ -367,11 +367,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if executable:
             cmd = executable + ' -c ' + commands.mkarg(cmd)
 
-        rc, stdout, stderr = self.call(
-            ansible_mitogen.helpers.exec_command,
-            cast(cmd),
-            cast(in_data),
-            chdir=cast(chdir),
+        rc, stdout, stderr = self._connection.exec_command(
+            cmd=cast(cmd),
+            in_data=cast(in_data),
+            sudoable=sudoable,
+            mitogen_chdir=cast(chdir),
         )
         stdout_text = to_text(stdout, errors=encoding_errors)
 
