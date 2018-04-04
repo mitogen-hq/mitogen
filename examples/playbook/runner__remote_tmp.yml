@@ -1,0 +1,16 @@
+#
+# The ansible.cfg remote_tmp setting should be copied to the target and used
+# when generating temporary paths created by the runner.py code executing
+# remotely.
+#
+- hosts: all
+  gather_facts: true
+  tasks:
+    - bash_return_paths:
+      register: output
+
+    - assert:
+        that: output.argv0.startswith('%s/.ansible/mitogen-tests/' % ansible_user_dir)
+
+    - assert:
+        that: output.argv1.startswith('%s/.ansible/mitogen-tests/' % ansible_user_dir)

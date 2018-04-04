@@ -9,3 +9,4 @@
 - import_playbook: runner__custom_python_json_args_module.yml
 - import_playbook: runner__custom_python_new_style_module.yml
 - import_playbook: runner__custom_python_want_json_module.yml
+- import_playbook: runner__remote_tmp.yml
