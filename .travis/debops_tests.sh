@@ -45,7 +45,7 @@ ansible_python_interpreter: /usr/bin/python2.7
 dhparam__bits: ["128", "64"]
 EOF
 
-cat  ansible/inventory/hosts <<-EOF
+cat > ansible/inventory/hosts <<-EOF
 target1
 target2
 target3
