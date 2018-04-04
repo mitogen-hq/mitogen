@@ -9,11 +9,15 @@ cache: pip
 python:
 - "2.7"
 
+env:
+- MODE=mitogen
+- MODE=debops
+
 install:
 - pip install -r dev_requirements.txt
 
 script:
-- MITOGEN_LOG_LEVEL=debug PYTHONPATH=. ${TRAVIS_BUILD_DIR}/test
+- ${TRAVIS_BUILD_DIR}/.travis/${MODE}_tests.sh
 
 services:
   - docker
