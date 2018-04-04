@@ -1,5 +1,5 @@
 - hosts: all
   tasks:
-    - name: "Run hostname"
+    - name: builtin_command_module
       command: hostname
       with_sequence: start=1 end={{end|default(100)}}
