@@ -21,7 +21,7 @@ echo travis_fold:end:docker_setup
 
 
 echo travis_fold:start:job_setup
-pip install -U ansible==${ANSIBLE_VERSION}"
+pip install -U ansible=="${ANSIBLE_VERSION}"
 cd ${TRAVIS_BUILD_DIR}/tests/ansible
 
 cat >> ${TMPDIR}/hosts <<-EOF

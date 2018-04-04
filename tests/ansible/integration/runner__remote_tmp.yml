@@ -6,7 +6,8 @@
 - hosts: all
   gather_facts: true
   tasks:
-    - bash_return_paths:
+    - name: integration/runner__remote_tmp.yml
+      bash_return_paths:
       register: output
 
     - assert:

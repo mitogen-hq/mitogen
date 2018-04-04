@@ -39,6 +39,7 @@ from ansible.module_utils._text import to_bytes
 from ansible.parsing.utils.jsonify import jsonify
 
 import ansible
+import ansible.constants
 import ansible.plugins
 import ansible.plugins.action
 
@@ -184,8 +185,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         try:
             s = self._connection._shell.get_option('remote_tmp')
         except AttributeError:
-            # Required for <2.4.x.
-            s = '~/.ansible'
+            s = ansible.constants.DEFAULT_REMOTE_TMP  # <=2.4.x
 
         return self._remote_expand_user(s)
 
