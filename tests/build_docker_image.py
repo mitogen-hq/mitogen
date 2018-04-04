@@ -11,7 +11,7 @@ DOCKERFILE = r"""
 FROM debian:stable
 RUN apt-get update
 RUN \
-    apt-get install -y python2.7 openssh-server sudo rsync git && \
+    apt-get install -y python2.7 openssh-server sudo rsync git strace && \
     apt-get clean
 RUN \
     mkdir /var/run/sshd && \
@@ -25,7 +25,8 @@ RUN \
     ( echo 'root:x' | chpasswd; ) && \
     ( echo 'has-sudo:y' | chpasswd; ) && \
     ( echo 'has-sudo-nopw:y' | chpasswd; ) && \
-    mkdir ~has-sudo-pubkey/.ssh
+    mkdir ~has-sudo-pubkey/.ssh && \
+    { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }
 
 COPY data/docker/has-sudo-pubkey.key.pub /home/has-sudo-pubkey/.ssh/authorized_keys
 RUN \
@@ -41,7 +42,6 @@ RUN echo "export VISIBLE=now" >> /etc/profile
 EXPOSE 22
 CMD ["/usr/sbin/sshd", "-D"]
 
-RUN apt-get install -y strace && apt-get clean && { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }
 """
 
 
