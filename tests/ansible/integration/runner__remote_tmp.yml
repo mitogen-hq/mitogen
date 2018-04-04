@@ -4,6 +4,7 @@
 # remotely.
 #
 - hosts: all
+  any_errors_fatal: true
   gather_facts: true
   tasks:
     - name: integration/runner__remote_tmp.yml

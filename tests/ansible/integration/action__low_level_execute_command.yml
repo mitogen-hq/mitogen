@@ -1,6 +1,7 @@
 # Verify the behaviour of _low_level_execute_command().
 
 - hosts: all
+  any_errors_fatal: true
   tasks:
     - name: integration/action__low_level_execute_command.yml
       assert:

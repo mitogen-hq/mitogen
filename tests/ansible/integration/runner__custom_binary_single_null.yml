@@ -7,6 +7,9 @@
       ignore_errors: true
       register: out
 
+- hosts: all
+  any_errors_fatal: true
+  tasks:
     - assert:
         that: |
           out.failed and

@@ -1,4 +1,5 @@
 - hosts: all
+  any_errors_fatal: true
   tasks:
     - name: integration/runner__custom_binary_producing_json.yml
       custom_binary_producing_json:

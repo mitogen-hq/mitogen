@@ -1,4 +1,5 @@
 - hosts: all
+  any_errors_fatal: true
   tasks:
     #
     # delegate_to, no sudo

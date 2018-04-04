@@ -1,4 +1,5 @@
 - hosts: all
+  any_errors_fatal: true
   tasks:
     - name: integration/runner__custom_python_json_args_module.yml
       custom_python_json_args_module:

@@ -1,4 +1,5 @@
 - hosts: all
+  any_errors_fatal: true
   tasks:
     - name: integration/runner__custom_bash_want_json_module.yml
       custom_bash_want_json_module:

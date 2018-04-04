@@ -5,6 +5,7 @@
 #
 
 - hosts: all
+  any_errors_fatal: true
   tasks:
     - name: "without -E"
       become: true
@@ -15,6 +16,7 @@
         that: "out.stdout == ''"
 
 - hosts: all
+  any_errors_fatal: true
   become_flags: -E
   tasks:
     - name: "with -E"
