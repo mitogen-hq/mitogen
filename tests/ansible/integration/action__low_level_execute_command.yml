@@ -2,6 +2,10 @@
 
 - hosts: all
   tasks:
+    - name: integration/action__low_level_execute_command.yml
+      assert:
+        that: true
+
     # "echo -en" to test we actually hit bash shell too.
     - name: Run raw module without sudo
       raw: 'echo -en $((1 + 1))'

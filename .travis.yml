@@ -12,6 +12,8 @@ python:
 env:
 - MODE=mitogen
 - MODE=debops
+- MODE=ansible ANSIBLE_VERSION=2.4.3.0
+- MODE=ansible ANSIBLE_VERSION=2.5.0
 
 install:
 - pip install -r dev_requirements.txt
