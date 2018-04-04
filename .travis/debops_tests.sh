@@ -32,7 +32,7 @@ ansible_connection: docker
 ansible_python_interpreter: /usr/bin/python2.7
 
 # Speed up slow DH generation.
-dhparam__bits: [128, 64]
+dhparam__bits: ["128", "64"]
 EOF
 
 echo target >> ansible/inventory/hosts
