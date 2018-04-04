@@ -27,8 +27,13 @@ strategy_plugins = ${TRAVIS_BUILD_DIR}/ansible_mitogen/plugins/strategy
 strategy = mitogen_linear
 EOF
 
-cat >> ansible/inventory/hosts <<-EOF
-target ansible_python_interpreter=/usr/bin/python2.7 ansible_connection=docker
+cat > ansible/inventory/host_vars/target.yml <<-EOF
+ansible_connection: docker
+ansible_python_interpreter: /usr/bin/python2.7
+
+# Speed up slow DH generation.
+dhparam__bits: [128, 64]
 EOF
 
+echo target >> ansible/inventory/hosts
 debops common
