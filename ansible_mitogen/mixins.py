@@ -177,6 +177,18 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         assert False, "_is_pipelining_enabled() should never be called."
 
+    def _get_remote_tmp(self):
+        """
+        Mitogen-only: return the 'remote_tmp' setting.
+        """
+        try:
+            s = self._connection._shell.get_option('remote_tmp')
+        except AttributeError:
+            # Required for <2.4.x.
+            s = '~/.ansible'
+
+        return self._remote_expand_user(s)
+
     def _make_tmp_path(self, remote_user=None):
         """
         Replace the base implementation's use of shell to implement mkdtemp()
@@ -184,18 +196,12 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
 
-        try:
-            remote_tmp = self._connection._shell.get_option('remote_tmp')
-        except AttributeError:
-            # Required for <2.4.x.
-            remote_tmp = '~/.ansible'
-
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
         # The copy action plugin violates layering and grabs this attribute
         # directly.
         self._connection._shell.tmpdir = self.call(
             ansible_mitogen.helpers.make_temp_directory,
-            base_dir=self._remote_expand_user(remote_tmp),
+            base_dir=self._get_remote_tmp(),
         )
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
@@ -313,6 +319,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 connection=self._connection,
                 module_name=mitogen.utils.cast(module_name),
                 module_args=mitogen.utils.cast(module_args),
+                remote_tmp=mitogen.utils.cast(self._get_remote_tmp()),
                 task_vars=task_vars,
                 templar=self._templar,
                 env=mitogen.utils.cast(env),

@@ -40,6 +40,7 @@ import cStringIO
 import json
 import logging
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -81,16 +82,25 @@ class Runner(object):
 
     Subclasses may override `_run`()` and extend `setup()` and `revert()`.
     """
-    def __init__(self, module, raw_params=None, args=None, env=None):
+    def __init__(self, module, remote_tmp, raw_params=None, args=None, env=None):
         if args is None:
             args = {}
         if raw_params is not None:
             args['_raw_params'] = raw_params
 
         self.module = module
+        self.remote_tmp = os.path.expanduser(remote_tmp)
         self.raw_params = raw_params
         self.args = args
         self.env = env
+        self._temp_dir = None
+
+    def get_temp_dir(self):
+        if not self._temp_dir:
+            self._temp_dir = ansible_mitogen.helpers.make_temp_directory(
+                self.remote_tmp,
+            )
+        return self._temp_dir
 
     def setup(self):
         """
@@ -105,6 +115,8 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
+        if self._temp_dir:
+            shutil.rmtree(self._temp_dir)
 
     def _run(self):
         """
@@ -195,9 +207,9 @@ class ProgramRunner(Runner):
         Create a temporary file containing the program code. The code is
         fetched via :meth:`_get_program`.
         """
-        self.program_fp = tempfile.NamedTemporaryFile(
-            prefix='ansible_mitogen',
-            suffix='-binary',
+        self.program_fp = open(
+            os.path.join(self.get_temp_dir(), self.module),
+            'wb'
         )
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
@@ -224,8 +236,8 @@ class ProgramRunner(Runner):
         """
         Delete the temporary program file.
         """
-        super(ProgramRunner, self).revert()
         self.program_fp.close()
+        super(ProgramRunner, self).revert()
 
     def _run(self):
         try:
@@ -260,6 +272,7 @@ class ArgsFileRunner(Runner):
         self.args_fp = tempfile.NamedTemporaryFile(
             prefix='ansible_mitogen',
             suffix='-args',
+            dir=self.get_temp_dir(),
         )
         self.args_fp.write(self._get_args_contents())
         self.args_fp.flush()
@@ -282,8 +295,8 @@ class ArgsFileRunner(Runner):
         """
         Delete the temporary argument file.
         """
-        super(ArgsFileRunner, self).revert()
         self.args_fp.close()
+        super(ArgsFileRunner, self).revert()
 
 
 class BinaryRunner(ArgsFileRunner, ProgramRunner):

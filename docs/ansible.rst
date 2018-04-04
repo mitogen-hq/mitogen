@@ -161,8 +161,6 @@ Low Risk
 * Only the ``sudo`` become method is available, however adding new methods is
   straightforward, and eventually at least ``su`` will be included.
 
-* In some cases ``remote_tmp`` may not be respected.
-
 * The extension's performance benefits do not scale perfectly linearly with the
   number of targets. This is a subject of ongoing investigation and
   improvements will appear in time.
