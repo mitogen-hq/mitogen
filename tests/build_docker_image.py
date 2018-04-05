@@ -24,6 +24,7 @@ RUN \
     useradd -m webapp && \
     ( echo 'root:x' | chpasswd; ) && \
     ( echo 'has-sudo:y' | chpasswd; ) && \
+    ( echo 'has-sudo-pubkey:y' | chpasswd; ) && \
     ( echo 'has-sudo-nopw:y' | chpasswd; ) && \
     mkdir ~has-sudo-pubkey/.ssh && \
     { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }

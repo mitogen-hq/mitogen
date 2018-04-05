@@ -3,16 +3,18 @@
 
 TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
+TARGET_COUNT="${TARGET_COUNT:-4}"
+
 
 function on_exit()
 {
     echo travis_fold:start:cleanup
     [ "$KEEP" ] || {
-        rm -rvf "$TMPDIR" || true
-        docker kill target1 || true
-        docker kill target2 || true
-        docker kill target3 || true
-        docker kill target4 || true
+        rm -rf "$TMPDIR" || true
+        for i in $(seq $TARGET_COUNT)
+        do
+            docker kill target$i || true
+        done
     }
     echo travis_fold:end:cleanup
 }
@@ -21,16 +23,8 @@ trap on_exit EXIT
 mkdir "$TMPDIR"
 
 
-echo travis_fold:start:docker_setup
-docker run --rm --detach --name=target1 d2mw/mitogen-test /bin/sleep 86400
-docker run --rm --detach --name=target2 d2mw/mitogen-test /bin/sleep 86400
-docker run --rm --detach --name=target3 d2mw/mitogen-test /bin/sleep 86400
-docker run --rm --detach --name=target4 d2mw/mitogen-test /bin/sleep 86400
-echo travis_fold:end:docker_setup
-
-
 echo travis_fold:start:job_setup
-pip install -U debops==0.7.2 ansible==2.4.3.0
+pip install -qqqU debops==0.7.2 ansible==2.4.3.0
 debops-init "$TMPDIR/project"
 cd "$TMPDIR/project"
 
@@ -41,19 +35,35 @@ strategy = mitogen_linear
 EOF
 
 cat > ansible/inventory/group_vars/debops_all_hosts.yml <<-EOF
-ansible_connection: docker
 ansible_python_interpreter: /usr/bin/python2.7
+
+ansible_user: has-sudo-pubkey
+ansible_become_pass: y
+ansible_ssh_private_key_file: ${TRAVIS_BUILD_DIR}/tests/data/docker/has-sudo-pubkey.key
 
 # Speed up slow DH generation.
 dhparam__bits: ["128", "64"]
 EOF
 
-cat >> ansible/inventory/hosts <<-EOF
-target1
-target2
-target3
-target4
-EOF
+DOCKER_HOSTNAME="$(python ${TRAVIS_BUILD_DIR}/tests/show_docker_hostname.py)"
+
+for i in $(seq $TARGET_COUNT)
+do
+    port=$((2200 + $i))
+    docker run \
+        --rm \
+        --detach \
+        --publish 0.0.0.0:$port:22/tcp \
+        --name=target$i \
+        d2mw/mitogen-test
+
+    echo \
+        target$i \
+        ansible_host=$DOCKER_HOSTNAME \
+        ansible_port=$port \
+        >> ansible/inventory/hosts
+done
+
 echo travis_fold:end:job_setup
 
 
