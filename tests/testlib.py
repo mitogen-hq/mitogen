@@ -161,6 +161,14 @@ class TestCase(unittest2.TestCase):
         assert 0, '%r did not raise %r' % (func, exc)
 
 
+def get_docker_host(docker):
+    if docker.api.base_url == 'http+docker://localunixsocket':
+        return 'localhost'
+
+    parsed = urlparse.urlparse(docker.api.base_url)
+    return parsed.netloc.partition(':')[0]
+
+
 class DockerizedSshDaemon(object):
     def __init__(self):
         self.docker = docker.from_env(version='auto')
@@ -177,11 +185,7 @@ class DockerizedSshDaemon(object):
         self.host = self.get_host()
 
     def get_host(self):
-        if self.docker.api.base_url == 'http+docker://localunixsocket':
-            return 'localhost'
-
-        parsed = urlparse.urlparse(self.docker.api.base_url)
-        return parsed.netloc.partition(':')[0]
+        return get_docker_host(self.docker)
 
     def wait_for_sshd(self):
         wait_for_port(self.get_host(), int(self.port), pattern='OpenSSH')
