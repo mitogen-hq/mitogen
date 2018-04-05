@@ -11,7 +11,7 @@
 
     - name: "without -E"
       become: true
-      shell: "echo $FOO"
+      shell: "echo $I_WAS_PRESERVED"
       register: out
 
     - assert:
@@ -23,10 +23,10 @@
   tasks:
     - name: "with -E"
       become: true
-      shell: "echo $FOO"
+      shell: "echo $I_WAS_PRESERVED"
       register: out2
       environment:
-        FOO: 2
+        I_WAS_PRESERVED: 2
 
     - assert:
         that: "out2.stdout == '2'"
