@@ -43,7 +43,7 @@ PASSWORD_PROMPT = 'password'
 PERMDENIED_PROMPT = 'permission denied'
 
 
-class PasswordError(mitogen.core.Error):
+class PasswordError(mitogen.core.StreamError):
     pass
 
 

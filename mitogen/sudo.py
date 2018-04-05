@@ -98,7 +98,7 @@ def parse_sudo_flags(args):
     return opts
 
 
-class PasswordError(mitogen.core.Error):
+class PasswordError(mitogen.core.StreamError):
     pass
 
 
