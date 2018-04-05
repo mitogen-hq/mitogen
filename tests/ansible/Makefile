@@ -1,4 +1,4 @@
 
 all: \
-	modules/custom_binary_producing_junk \
-	modules/custom_binary_producing_json
+	lib/modules/custom_binary_producing_junk \
+	lib/modules/custom_binary_producing_json
