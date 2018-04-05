@@ -314,12 +314,24 @@ METHOD_NAMES = {
 @mitogen.core.takes_econtext
 def _proxy_connect(name, method_name, kwargs, econtext):
     mitogen.parent.upgrade_router(econtext)
-    context = econtext.router._connect(
-        klass=METHOD_NAMES[method_name](),
-        name=name,
-        **kwargs
-    )
-    return context.context_id, context.name
+    try:
+        context = econtext.router._connect(
+            klass=METHOD_NAMES[method_name](),
+            name=name,
+            **kwargs
+        )
+    except mitogen.core.StreamError, e:
+        return {
+            'id': None,
+            'name': None,
+            'msg': str(e),
+        }
+
+    return {
+        'id': context.context_id,
+        'name': context.name,
+        'msg': None,
+    }
 
 
 class Stream(mitogen.core.Stream):
@@ -743,14 +755,16 @@ class Router(mitogen.core.Router):
         return self._connect(klass, name=name, **kwargs)
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
-        context_id, name = via_context.call(_proxy_connect,
+        resp = via_context.call(_proxy_connect,
             name=name,
             method_name=method_name,
             kwargs=kwargs
         )
-        name = '%s.%s' % (via_context.name, name)
+        if resp['msg'] is not None:
+            raise mitogen.core.StreamError(resp['msg'])
 
-        context = self.context_class(self, context_id, name=name)
+        name = '%s.%s' % (via_context.name, resp['name'])
+        context = self.context_class(self, resp['id'], name=name)
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
