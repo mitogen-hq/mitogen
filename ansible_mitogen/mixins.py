@@ -162,7 +162,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         target user account.
         """
         LOG.debug('_remote_file_exists(%r)', path)
-        return self.call(os.path.exists, path)
+        return self.call(os.path.exists, mitogen.utils.cast(path))
 
     def _configure_module(self, module_name, module_args, task_vars=None):
         """
