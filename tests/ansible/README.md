@@ -8,9 +8,15 @@ It will be tidied up over time, meanwhile, the playbooks here are a useful
 demonstrator for what does and doesn't work.
 
 
+## ``run_ansible_playbook.sh``
+
+This is necessary to set some environment variables used by future tests, as
+there appears to be no better way to inject them into the top-level process
+environment before the Mitogen connection process forks.
+
 
 ## Running Everything
 
 ```
-ANSIBLE_STRATEGY=mitogen_linear ansible-playbook all.yml
+ANSIBLE_STRATEGY=mitogen_linear ./run_ansible_playbook.sh all.yml
 ```
