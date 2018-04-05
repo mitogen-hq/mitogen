@@ -1,5 +1,3 @@
-# This must be run with FOO=2 set in the environment.
-
 #
 # Test sudo_flags respects -E.
 #
@@ -7,6 +5,10 @@
 - hosts: all
   any_errors_fatal: true
   tasks:
+    - name: integration/playbook_semantics/become_flags.yml
+      assert:
+        that: true
+
     - name: "without -E"
       become: true
       shell: "echo $FOO"
@@ -21,9 +23,10 @@
   tasks:
     - name: "with -E"
       become: true
-      shell: "set"
+      shell: "echo $FOO"
       register: out2
+      environment:
+        FOO: 2
 
-    - debug: msg={{out2}}
     - assert:
         that: "out2.stdout == '2'"
