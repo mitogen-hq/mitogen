@@ -81,9 +81,21 @@ class ContextService(mitogen.service.DeduplicatingService):
     def get_response(self, args):
         args.pop('discriminator', None)
         method = getattr(self.router, args.pop('method'))
-        context = method(**args)
+        try:
+            context = method(**args)
+        except mitogen.core.StreamError as e:
+            return {
+                'context': None,
+                'home_dir': None,
+                'msg': str(e),
+            }
+
         home_dir = context.call(os.path.expanduser, '~')
-        return context, home_dir
+        return {
+            'context': context,
+            'home_dir': home_dir,
+            'msg': None,
+        }
 
 
 class FileService(mitogen.service.Service):
