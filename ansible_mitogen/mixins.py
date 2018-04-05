@@ -368,10 +368,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             cmd = executable + ' -c ' + commands.mkarg(cmd)
 
         rc, stdout, stderr = self._connection.exec_command(
-            cmd=cast(cmd),
-            in_data=cast(in_data),
+            cmd=cmd,
+            in_data=in_data,
             sudoable=sudoable,
-            mitogen_chdir=cast(chdir),
+            mitogen_chdir=chdir,
         )
         stdout_text = to_text(stdout, errors=encoding_errors)
 
