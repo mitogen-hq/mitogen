@@ -39,7 +39,7 @@ import mitogen.parent
 
 LOG = logging.getLogger('mitogen')
 
-PASSWORD_PROMPT = 'password'
+PASSWORD_PROMPT = 'password:'
 PERMDENIED_PROMPT = 'permission denied'
 
 
