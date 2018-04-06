@@ -39,7 +39,7 @@ import ansible.plugins.connection
 import mitogen.unix
 import mitogen.utils
 
-import ansible_mitogen.helpers
+import ansible_mitogen.target
 import ansible_mitogen.process
 from ansible_mitogen.services import ContextService
 
@@ -306,7 +306,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
         Implement exec_command() by calling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str cmd:
             Shell command to execute.
@@ -317,7 +317,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         emulate_tty = (not in_data and sudoable)
         rc, stdout, stderr = self.call(
-            ansible_mitogen.helpers.exec_command,
+            ansible_mitogen.target.exec_command,
             cmd=mitogen.utils.cast(cmd),
             in_data=mitogen.utils.cast(in_data),
             chdir=mitogen_chdir,
@@ -333,39 +333,39 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def fetch_file(self, in_path, out_path):
         """
         Implement fetch_file() by calling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str in_path:
             Remote filesystem path to read.
         :param str out_path:
             Local filesystem path to write.
         """
-        output = self.call(ansible_mitogen.helpers.read_path,
+        output = self.call(ansible_mitogen.target.read_path,
                            mitogen.utils.cast(in_path))
-        ansible_mitogen.helpers.write_path(out_path, output)
+        ansible_mitogen.target.write_path(out_path, output)
 
     def put_data(self, out_path, data):
         """
         Implement put_file() by caling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str in_path:
             Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.call(ansible_mitogen.helpers.write_path,
+        self.call(ansible_mitogen.target.write_path,
                   mitogen.utils.cast(out_path),
                   mitogen.utils.cast(data))
 
     def put_file(self, in_path, out_path):
         """
         Implement put_file() by caling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str in_path:
             Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.put_data(out_path, ansible_mitogen.helpers.read_path(in_path))
+        self.put_data(out_path, ansible_mitogen.target.read_path(in_path))

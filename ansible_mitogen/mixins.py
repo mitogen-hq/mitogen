@@ -54,7 +54,7 @@ from mitogen.utils import cast
 
 import ansible_mitogen.connection
 import ansible_mitogen.planner
-import ansible_mitogen.helpers
+import ansible_mitogen.target
 from ansible.module_utils._text import to_text
 
 
@@ -117,7 +117,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         Arrange for a Python function to be called in the target context, which
         should be some function from the standard library or
-        ansible_mitogen.helpers module. This junction point exists mainly as a
+        ansible_mitogen.target module. This junction point exists mainly as a
         nice place to insert print statements during debugging.
         """
         return self._connection.call(func, *args, **kwargs)
@@ -200,7 +200,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # The copy action plugin violates layering and grabs this attribute
         # directly.
         self._connection._shell.tmpdir = self.call(
-            ansible_mitogen.helpers.make_temp_directory,
+            ansible_mitogen.target.make_temp_directory,
             base_dir=self._get_remote_tmp(),
         )
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
@@ -255,7 +255,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                   paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.master.Select.all(
             self._connection.call_async(
-                ansible_mitogen.helpers.set_file_mode, path, mode
+                ansible_mitogen.target.set_file_mode, path, mode
             )
             for path in paths
         ))
@@ -299,7 +299,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                         delete_remote_tmp=True, wrap_async=False):
         """
         Collect up a module's execution environment then use it to invoke
-        helpers.run_module() or helpers.run_module_async() in the target
+        target.run_module() or helpers.run_module_async() in the target
         context.
         """
         if module_name is None:
@@ -358,7 +358,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                                    chdir=None):
         """
         Override the base implementation by simply calling
-        helpers.exec_command() in the target context.
+        target.exec_command() in the target context.
         """
         LOG.debug('_low_level_execute_command(%r, in_data=%r, exe=%r, dir=%r)',
                   cmd, type(in_data), executable, chdir)
