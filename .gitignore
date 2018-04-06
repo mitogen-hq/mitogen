@@ -8,7 +8,6 @@
 MANIFEST
 build/
 dist/
-docs/_build
 htmlcov/
 *.egg-info
 __pycache__/
