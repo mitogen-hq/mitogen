@@ -48,7 +48,7 @@ except ImportError:  # Ansible <2.4
 
 import mitogen
 import mitogen.service
-import ansible_mitogen.helpers
+import ansible_mitogen.target
 import ansible_mitogen.services
 
 
@@ -89,7 +89,7 @@ def parse_script_interpreter(source):
 class Invocation(object):
     """
     Collect up a module's execution environment then use it to invoke
-    helpers.run_module() or helpers.run_module_async() in the target context.
+    target.run_module() or helpers.run_module_async() in the target context.
     """
     def __init__(self, action, connection, module_name, module_args,
                  remote_tmp, task_vars, templar, env, wrap_async):
@@ -335,9 +335,9 @@ def invoke(invocation):
 
     kwargs = planner.plan(invocation)
     if invocation.wrap_async:
-        helper = ansible_mitogen.helpers.run_module_async
+        helper = ansible_mitogen.target.run_module_async
     else:
-        helper = ansible_mitogen.helpers.run_module
+        helper = ansible_mitogen.target.run_module
 
     try:
         js = invocation.connection.call(helper, kwargs)

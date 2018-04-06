@@ -29,7 +29,7 @@
 
 """
 These classes implement execution for each style of Ansible module. They are
-instantiated in the target context by way of helpers.py::run_module().
+instantiated in the target context by way of target.py::run_module().
 
 Each class in here has a corresponding Planner class in planners.py that knows
 how to build arguments for it, preseed related data, etc.
@@ -45,7 +45,7 @@ import sys
 import tempfile
 import types
 
-import ansible_mitogen.helpers  # TODO: circular import
+import ansible_mitogen.target  # TODO: circular import
 
 try:
     from shlex import quote as shlex_quote
@@ -97,7 +97,7 @@ class Runner(object):
 
     def get_temp_dir(self):
         if not self._temp_dir:
-            self._temp_dir = ansible_mitogen.helpers.make_temp_directory(
+            self._temp_dir = ansible_mitogen.target.make_temp_directory(
                 self.remote_tmp,
             )
         return self._temp_dir
@@ -220,7 +220,7 @@ class ProgramRunner(Runner):
         """
         Fetch the module binary from the master if necessary.
         """
-        return ansible_mitogen.helpers.get_file(
+        return ansible_mitogen.target.get_file(
             context=self.service_context,
             path=self.path,
         )
@@ -241,7 +241,7 @@ class ProgramRunner(Runner):
 
     def _run(self):
         try:
-            rc, stdout, stderr = ansible_mitogen.helpers.exec_args(
+            rc, stdout, stderr = ansible_mitogen.target.exec_args(
                 args=self._get_program_args(),
                 emulate_tty=True,
             )
@@ -362,7 +362,7 @@ class NewStyleRunner(ScriptRunner):
             return self._code_by_path[self.path]
         except KeyError:
             return self._code_by_path.setdefault(self.path, compile(
-                source=ansible_mitogen.helpers.get_file(
+                source=ansible_mitogen.target.get_file(
                     context=self.service_context,
                     path=self.path,
                 ),

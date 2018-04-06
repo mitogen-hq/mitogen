@@ -28,7 +28,7 @@
 
 import ansible.plugins.action
 import mitogen.core
-import ansible_mitogen.helpers
+import ansible_mitogen.target
 from mitogen.utils import cast
 
 
@@ -37,7 +37,7 @@ class ActionModule(ansible.plugins.action.ActionBase):
         job_id = self._task.args['jid']
         try:
             result = self._connection.call(
-                ansible_mitogen.helpers.get_async_result,
+                ansible_mitogen.target.get_async_result,
                 cast(job_id),
             )
         except mitogen.core.CallError, e:
