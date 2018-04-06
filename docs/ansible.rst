@@ -65,7 +65,7 @@ concurrent to an equivalent run using the extension.
 
 .. raw:: html
 
-    <video width="100%" controls>
+    <video width="720" height="439" controls>
         <source src="http://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
     </video>
 
@@ -206,23 +206,24 @@ Behavioural Differences
 How Modules Execute
 -------------------
 
-Ansible usually modifies and recompresses a module each time it runs on a
-target, work that must be repeated for every playbook step. With the extension
-much of this work is pushed to the target, allowing pristine copies of the
-module to be cached by the target, reducing the necessity to re-transfer
-modified modules for every invocation.
+Ansible usually modifies, recompresses and reuploads modules every time they
+run on a target, work that must be repeated by the controller for every
+playbook step.
+
+With the extension any modifications are done on the target, allowing pristine
+copies of modules to be cached, reducing the necessity to re-transfer modules
+for each invocation. Unmodified modules are uploaded once on first use and
+cached in RAM for the remainder of the run.
 
 **Binary**
     * Native executables detected using a complex heuristic.
     * Arguments are supplied as a JSON file whose path is the sole script
       parameter.
-    * Downloaded from the master on first use, and cached in the target for the
-      remainder of the run.
 
 **Module Replacer**
     * Python scripts detected by the presence of
       ``#<<INCLUDE_ANSIBLE_MODULE_COMMON>>`` appearing in their source.
-    * This type is not yet supported.
+    * Not yet supported.
 
 **New-Style**
     * Python scripts detected by the presence of ``from ansible.module_utils.``
@@ -240,17 +241,15 @@ modified modules for every invocation.
 
 **WANT_JSON**
     * Detected by the presence of ``WANT_JSON`` appearing in the script source.
-    * The interpreter directive is adjusted to match the corresponding value
-      of ``{{ansible_*_interpreter}}`` if one is set.
+    * The interpreter directive is adjusted as above.
     * Arguments are supplied as a JSON file whose path is the sole script
       parameter.
 
 **Old Style**
     * Files not matching any of the above tests.
-    * The interpreter directive is adjusted to match the corresponding value
-      of ``{{ansible_*_interpreter}}`` if one is set.
+    * The interpreter directive is adjusted as above.
     * Arguments are supplied as a file whose path is the sole script parameter.
-      The format of the file is "``key=repr(value)[ key2=repr(value2)[ ..]]``".
+      The format of the file is ``"key=repr(value)[ key2=repr(value2)[ ..]] "``.
 
 
 Sample Profiles
