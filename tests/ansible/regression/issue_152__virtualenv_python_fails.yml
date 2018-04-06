@@ -8,8 +8,6 @@
   - name: Use virtualenv for the Python interpeter
     set_fact: ansible_python_interpreter=/tmp/issue_151_virtualenv/bin/python
 
-  - command: sleep 123123
-
   - name: Ensure the app DB user exists
     postgresql_user:
       db: postgres

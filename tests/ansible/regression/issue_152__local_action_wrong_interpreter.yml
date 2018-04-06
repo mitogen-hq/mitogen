@@ -9,4 +9,11 @@
 
 - hosts: all
   tasks:
-  - local_action: cloudformation_facts
+  - name: regression/issue_152__local_action_wrong_interpreter.yml
+    connection: local
+    become: true
+    shell: pip uninstall boto3
+    ignore_errors: true
+
+  - cloudformation_facts:
+    connection: local
