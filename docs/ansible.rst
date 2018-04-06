@@ -203,6 +203,56 @@ Behavioural Differences
   release.
 
 
+How Modules Execute
+-------------------
+
+Ansible usually modifies and recompresses a module each time it runs on a
+target, work that must be repeated for every playbook step. With the extension
+much of this work is pushed to the target, allowing pristine copies of the
+module to be cached by the target, reducing the necessity to re-transfer
+modified modules for every invocation.
+
+**Binary**
+    * Native executables detected using a complex heuristic.
+    * Arguments are supplied as a JSON file whose path is the sole script
+      parameter.
+    * Downloaded from the master on first use, and cached in the target for the
+      remainder of the run.
+
+**Module Replacer**
+    * Python scripts detected by the presence of
+      ``#<<INCLUDE_ANSIBLE_MODULE_COMMON>>`` appearing in their source.
+    * This type is not yet supported.
+
+**New-Style**
+    * Python scripts detected by the presence of ``from ansible.module_utils.``
+      appearing in their source.
+    * Arguments are supplied as JSON written to ``sys.stdin`` of the target
+      interpreter.
+
+**JSON_ARGS**
+    * Detected by the presence of ``INCLUDE_ANSIBLE_MODULE_JSON_ARGS``
+      appearing in the script source.
+    * The interpreter directive (``#!interpreter``) is adjusted to match the
+      corresponding value of ``{{ansible_*_interpreter}}`` if one is set.
+    * Arguments are supplied as JSON mixed into the script as a replacement for
+      ``INCLUDE_ANSIBLE_MODULE_JSON_ARGS``.
+
+**WANT_JSON**
+    * Detected by the presence of ``WANT_JSON`` appearing in the script source.
+    * The interpreter directive is adjusted to match the corresponding value
+      of ``{{ansible_*_interpreter}}`` if one is set.
+    * Arguments are supplied as a JSON file whose path is the sole script
+      parameter.
+
+**Old Style**
+    * Files not matching any of the above tests.
+    * The interpreter directive is adjusted to match the corresponding value
+      of ``{{ansible_*_interpreter}}`` if one is set.
+    * Arguments are supplied as a file whose path is the sole script parameter.
+      The format of the file is "``key=repr(value)[ key2=repr(value2)[ ..]]``".
+
+
 Sample Profiles
 ---------------
 
