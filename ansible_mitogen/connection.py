@@ -37,9 +37,9 @@ import ansible.errors
 import ansible.plugins.connection
 
 import mitogen.unix
-from mitogen.utils import cast
+import mitogen.utils
 
-import ansible_mitogen.helpers
+import ansible_mitogen.target
 import ansible_mitogen.process
 from ansible_mitogen.services import ContextService
 
@@ -81,6 +81,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     #: Set to 'mitogen_ssh_discriminator' by on_action_run()
     mitogen_ssh_discriminator = None
+
+    #: Set after connection to the target context's home directory.
+    _homedir = None
 
     def __init__(self, play_context, new_stdin, original_transport, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
@@ -126,62 +129,71 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         )
 
     @property
+    def homedir(self):
+        self._connect()
+        return self._homedir
+
+    @property
     def connected(self):
         return self.broker is not None
+
+    def _wrap_connect(self, args):
+        dct = mitogen.service.call(
+            context=self.parent,
+            handle=ContextService.handle,
+            obj=mitogen.utils.cast(args),
+        )
+
+        if dct['msg']:
+            raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
+
+        return dct['context'], dct['home_dir']
 
     def _connect_local(self):
         """
         Fetch a reference to the local() Context from ContextService in the
         master process.
         """
-        return mitogen.service.call(self.parent, ContextService.handle, cast({
+        return self._wrap_connect({
             'method': 'local',
             'python_path': self.python_path,
-        }))
+        })
 
     def _connect_ssh(self):
         """
         Fetch a reference to an SSH Context matching the play context from
         ContextService in the master process.
         """
-        return mitogen.service.call(
-            self.parent,
-            ContextService.handle,
-            cast({
-                'method': 'ssh',
-                'check_host_keys': False,  # TODO
-                'hostname': self._play_context.remote_addr,
-                'discriminator': self.mitogen_ssh_discriminator,
-                'username': self._play_context.remote_user,
-                'password': self._play_context.password,
-                'port': self._play_context.port,
-                'python_path': self.python_path,
-                'identity_file': self._play_context.private_key_file,
-                'ssh_path': self._play_context.ssh_executable,
-                'connect_timeout': self.ansible_ssh_timeout,
-                'ssh_args': [
-                    term
-                    for s in (
-                        getattr(self._play_context, 'ssh_args', ''),
-                        getattr(self._play_context, 'ssh_common_args', ''),
-                        getattr(self._play_context, 'ssh_extra_args', '')
-                    )
-                    for term in shlex.split(s or '')
-                ]
-            })
-        )
+        return self._wrap_connect({
+            'method': 'ssh',
+            'check_host_keys': False,  # TODO
+            'hostname': self._play_context.remote_addr,
+            'discriminator': self.mitogen_ssh_discriminator,
+            'username': self._play_context.remote_user,
+            'password': self._play_context.password,
+            'port': self._play_context.port,
+            'python_path': self.python_path,
+            'identity_file': self._play_context.private_key_file,
+            'ssh_path': self._play_context.ssh_executable,
+            'connect_timeout': self.ansible_ssh_timeout,
+            'ssh_args': [
+                term
+                for s in (
+                    getattr(self._play_context, 'ssh_args', ''),
+                    getattr(self._play_context, 'ssh_common_args', ''),
+                    getattr(self._play_context, 'ssh_extra_args', '')
+                )
+                for term in shlex.split(s or '')
+            ]
+        })
 
     def _connect_docker(self):
-        return mitogen.service.call(
-            self.parent,
-            ContextService.handle,
-            cast({
-                'method': 'docker',
-                'container': self._play_context.remote_addr,
-                'python_path': self.python_path,
-                'connect_timeout': self._play_context.timeout,
-            })
-        )
+        return self._wrap_connect({
+            'method': 'docker',
+            'container': self._play_context.remote_addr,
+            'python_path': self.python_path,
+            'connect_timeout': self._play_context.timeout,
+        })
 
     def _connect_sudo(self, via=None, python_path=None):
         """
@@ -192,23 +204,19 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Parent Context of the sudo Context. For Ansible, this should always
             be a Context returned by _connect_ssh().
         """
-        return mitogen.service.call(
-            self.parent,
-            ContextService.handle,
-            cast({
-                'method': 'sudo',
-                'username': self._play_context.become_user,
-                'password': self._play_context.password,
-                'python_path': python_path or self.python_path,
-                'sudo_path': self.sudo_path,
-                'connect_timeout': self._play_context.timeout,
-                'via': via,
-                'sudo_args': shlex.split(
-                    self._play_context.sudo_flags or
-                    self._play_context.become_flags or ''
-                ),
-            })
-        )
+        return self._wrap_connect({
+            'method': 'sudo',
+            'username': self._play_context.become_user,
+            'password': self._play_context.become_pass,
+            'python_path': python_path or self.python_path,
+            'sudo_path': self.sudo_path,
+            'connect_timeout': self._play_context.timeout,
+            'via': via,
+            'sudo_args': shlex.split(
+                self._play_context.sudo_flags or
+                self._play_context.become_flags or ''
+            ),
+        })
 
     def _connect(self):
         """
@@ -232,20 +240,30 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         if self.original_transport == 'local':
             if self._play_context.become:
-                self.context = self._connect_sudo(python_path=sys.executable)
+                self.context, self._homedir = self._connect_sudo(
+                    python_path=sys.executable
+                )
             else:
-                self.context = self._connect_local()
+                self.context, self._homedir = self._connect_local()
             return
 
         if self.original_transport == 'docker':
-            self.host = self._connect_docker()
+            self.host, self._homedir = self._connect_docker()
         elif self.original_transport == 'ssh':
-            self.host = self._connect_ssh()
+            self.host, self._homedir = self._connect_ssh()
 
         if self._play_context.become:
-            self.context = self._connect_sudo(via=self.host)
+            self.context, self._homedir = self._connect_sudo(via=self.host)
         else:
             self.context = self.host
+
+    def get_context_name(self):
+        """
+        Return the name of the target context we issue commands against, i.e. a
+        unique string useful as a key for related data, such as a list of
+        modules uploaded to the target.
+        """
+        return self.context.name
 
     def close(self):
         """
@@ -285,10 +303,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             LOG.debug('Call %s%r took %d ms', func.func_name, args,
                       1000 * (time.time() - t0))
 
-    def exec_command(self, cmd, in_data='', sudoable=True):
+    def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
         Implement exec_command() by calling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str cmd:
             Shell command to execute.
@@ -297,44 +315,57 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :returns:
             (return code, stdout bytes, stderr bytes)
         """
-        return self.call(ansible_mitogen.helpers.exec_command,
-                         cast(cmd), cast(in_data))
+        emulate_tty = (not in_data and sudoable)
+        rc, stdout, stderr = self.call(
+            ansible_mitogen.target.exec_command,
+            cmd=mitogen.utils.cast(cmd),
+            in_data=mitogen.utils.cast(in_data),
+            chdir=mitogen_chdir,
+            emulate_tty=emulate_tty,
+        )
+
+        stderr += 'Shared connection to %s closed.%s' % (
+            self._play_context.remote_addr,
+            ('\r\n' if emulate_tty else '\n'),
+        )
+        return rc, stdout, stderr
 
     def fetch_file(self, in_path, out_path):
         """
         Implement fetch_file() by calling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str in_path:
             Remote filesystem path to read.
         :param str out_path:
             Local filesystem path to write.
         """
-        output = self.call(ansible_mitogen.helpers.read_path,
-                           cast(in_path))
-        ansible_mitogen.helpers.write_path(out_path, output)
+        output = self.call(ansible_mitogen.target.read_path,
+                           mitogen.utils.cast(in_path))
+        ansible_mitogen.target.write_path(out_path, output)
 
     def put_data(self, out_path, data):
         """
         Implement put_file() by caling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str in_path:
             Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.call(ansible_mitogen.helpers.write_path,
-                  cast(out_path), cast(data))
+        self.call(ansible_mitogen.target.write_path,
+                  mitogen.utils.cast(out_path),
+                  mitogen.utils.cast(data))
 
     def put_file(self, in_path, out_path):
         """
         Implement put_file() by caling the corresponding
-        ansible_mitogen.helpers function in the target.
+        ansible_mitogen.target function in the target.
 
         :param str in_path:
             Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.put_data(out_path, ansible_mitogen.helpers.read_path(in_path))
+        self.put_data(out_path, ansible_mitogen.target.read_path(in_path))

@@ -288,7 +288,10 @@ class LogForwarder(object):
     def __init__(self, router):
         self._router = router
         self._cache = {}
-        router.add_handler(self._on_forward_log, mitogen.core.FORWARD_LOG)
+        router.add_handler(
+            fn=self._on_forward_log,
+            handle=mitogen.core.FORWARD_LOG,
+        )
 
     def _on_forward_log(self, msg):
         if msg == mitogen.core._DEAD:
@@ -524,7 +527,10 @@ class ModuleResponder(object):
         self._cache = {}  # fullname -> pickled
         self.blacklist = []
         self.whitelist = ['']
-        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
+        router.add_handler(
+            fn=self._on_get_module,
+            handle=mitogen.core.GET_MODULE,
+        )
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
@@ -646,9 +652,11 @@ class Router(mitogen.parent.Router):
     debug = False
     profiling = False
 
-    def __init__(self, broker=None):
+    def __init__(self, broker=None, max_message_size=None):
         if broker is None:
             broker = self.broker_class()
+        if max_message_size:
+            self.max_message_size = max_message_size
         super(Router, self).__init__(broker)
         self.upgrade()
 
@@ -682,7 +690,10 @@ class IdAllocator(object):
         self.router = router
         self.next_id = 1
         self.lock = threading.Lock()
-        router.add_handler(self.on_allocate_id, mitogen.core.ALLOCATE_ID)
+        router.add_handler(
+            fn=self.on_allocate_id,
+            handle=mitogen.core.ALLOCATE_ID,
+        )
 
     def __repr__(self):
         return 'IdAllocator(%r)' % (self.router,)

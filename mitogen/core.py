@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import Queue
 import cPickle
 import cStringIO
 import collections
@@ -41,6 +40,7 @@ import signal
 import socket
 import struct
 import sys
+import thread
 import threading
 import time
 import traceback
@@ -95,13 +95,18 @@ class LatchError(Error):
 
 
 class CallError(Error):
-    def __init__(self, e):
-        s = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
-        tb = sys.exc_info()[2]
-        if tb:
-            s += '\n'
-            s += ''.join(traceback.format_tb(tb))
-        Error.__init__(self, s)
+    def __init__(self, fmt=None, *args):
+        if not isinstance(fmt, Exception):
+            Error.__init__(self, fmt, *args)
+        else:
+            e = fmt
+            fmt = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
+            args = ()
+            tb = sys.exc_info()[2]
+            if tb:
+                fmt += '\n'
+                fmt += ''.join(traceback.format_tb(tb))
+            Error.__init__(self, fmt)
 
     def __reduce__(self):
         return (_unpickle_call_error, (self[0],))
@@ -150,6 +155,11 @@ def _unpickle_dead():
 
 
 _DEAD = Dead()
+
+
+def has_parent_authority(msg, _stream=None):
+    return (msg.auth_id == mitogen.context_id or
+            msg.auth_id in mitogen.parent_ids)
 
 
 def listen(obj, name, func):
@@ -205,11 +215,11 @@ def io_op(func, *args):
     while True:
         try:
             return func(*args), False
-        except OSError, e:
+        except (select.error, OSError), e:
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
-            if e.errno == errno.EINTR:
+            if e[0] == errno.EINTR:
                 continue
-            if e.errno in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
+            if e[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
                 return None, True
             raise
 
@@ -294,6 +304,9 @@ class Message(object):
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(self.router, context_id, name)
 
+    def _unpickle_sender(self, context_id, dst_handle):
+        return _unpickle_sender(self.router, context_id, dst_handle)
+
     def _find_global(self, module, func):
         """Return the class implementing `module_name.class_name` or raise
         `StreamError` if the module is not whitelisted."""
@@ -302,6 +315,8 @@ class Message(object):
                 return _unpickle_call_error
             elif func == '_unpickle_dead':
                 return _unpickle_dead
+            elif func == '_unpickle_sender':
+                return self._unpickle_sender
             elif func == '_unpickle_context':
                 return self._unpickle_context
 
@@ -361,6 +376,9 @@ class Sender(object):
     def __repr__(self):
         return 'Sender(%r, %r)' % (self.context, self.dst_handle)
 
+    def __reduce__(self):
+        return _unpickle_sender, (self.context.context_id, self.dst_handle)
+
     def close(self):
         """Indicate this channel is closed to the remote side."""
         _vv and IOLOG.debug('%r.close()', self)
@@ -371,9 +389,9 @@ class Sender(object):
             )
         )
 
-    def put(self, data):
+    def send(self, data):
         """Send `data` to the remote."""
-        _vv and IOLOG.debug('%r.put(%r..)', self, data[:100])
+        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
         self.context.send(
             Message.pickled(
                 data,
@@ -382,19 +400,37 @@ class Sender(object):
         )
 
 
+def _unpickle_sender(router, context_id, dst_handle):
+    if not (isinstance(router, Router) and
+            isinstance(context_id, (int, long)) and context_id >= 0 and
+            isinstance(dst_handle, (int, long)) and dst_handle > 0):
+        raise TypeError('cannot unpickle Sender: bad input')
+    return Sender(Context(router, context_id), dst_handle)
+
+
 class Receiver(object):
     notify = None
     raise_channelerror = True
 
-    def __init__(self, router, handle=None, persist=True, respondent=None):
+    def __init__(self, router, handle=None, persist=True,
+                 respondent=None, policy=None):
         self.router = router
         self.handle = handle  # Avoid __repr__ crash in add_handler()
-        self.handle = router.add_handler(self._on_receive, handle,
-                                         persist, respondent)
+        self.handle = router.add_handler(
+            fn=self._on_receive,
+            handle=handle,
+            policy=policy,
+            persist=persist,
+            respondent=respondent,
+        )
         self._latch = Latch()
 
     def __repr__(self):
         return 'Receiver(%r, %r)' % (self.router, self.handle)
+
+    def to_sender(self):
+        context = Context(self.router, mitogen.context_id)
+        return Sender(context, self.handle)
 
     def _on_receive(self, msg):
         """Callback from the Stream; appends data to the internal queue."""
@@ -416,13 +452,14 @@ class Receiver(object):
 
         if msg == _DEAD:
             raise ChannelError(ChannelError.local_msg)
-        msg.unpickle()  # Cause .remote_msg to be thrown.
         return msg
 
     def __iter__(self):
         while True:
             try:
-                yield self.get()
+                msg = self.get()
+                msg.unpickle()  # Cause .remote_msg to be thrown.
+                yield msg
             except ChannelError:
                 return
 
@@ -455,6 +492,7 @@ class Importer(object):
             'fork',
             'master',
             'parent',
+            'service',
             'ssh',
             'sudo',
             'utils',
@@ -471,7 +509,11 @@ class Importer(object):
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
-        router.add_handler(self._on_load_module, LOAD_MODULE)
+        router.add_handler(
+            fn=self._on_load_module,
+            handle=LOAD_MODULE,
+            policy=has_parent_authority,
+        )
         self._cache = {}
         if core_src:
             self._cache['mitogen.core'] = (
@@ -718,7 +760,7 @@ class BasicStream(object):
     def on_disconnect(self, broker):
         LOG.debug('%r.on_disconnect()', self)
         broker.stop_receive(self)
-        broker.stop_transmit(self)
+        broker._stop_transmit(self)
         if self.receive_side:
             self.receive_side.close()
         if self.transmit_side:
@@ -786,6 +828,12 @@ class Stream(BasicStream):
             self._input_buf[0][:self.HEADER_LEN],
         )
 
+        if msg_len > self._router.max_message_size:
+            LOG.error('Maximum message size exceeded (got %d, max %d)',
+                      msg_len, self._router.max_message_size)
+            self.on_disconnect(broker)
+            return False
+
         total_len = msg_len + self.HEADER_LEN
         if self._input_buf_len < total_len:
             _vv and IOLOG.debug(
@@ -829,15 +877,17 @@ class Stream(BasicStream):
             _vv and IOLOG.debug('%r.on_transmit() -> len %d', self, written)
 
         if not self._output_buf:
-            broker.stop_transmit(self)
+            broker._stop_transmit(self)
 
     def _send(self, msg):
         _vv and IOLOG.debug('%r._send(%r)', self, msg)
         pkt = struct.pack(self.HEADER_FMT, msg.dst_id, msg.src_id,
                           msg.auth_id, msg.handle, msg.reply_to or 0,
                           len(msg.data)) + msg.data
+        was_transmitting = len(self._output_buf)
         self._output_buf.append(pkt)
-        self._router.broker.start_transmit(self)
+        if not was_transmitting:
+            self._router.broker._start_transmit(self)
 
     def send(self, msg):
         """Send `data` to `handle`, and tell the broker we have output. May
@@ -907,8 +957,10 @@ class Context(object):
 
 def _unpickle_context(router, context_id, name):
     if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id > 0 and
-            isinstance(name, basestring) and len(name) < 100):
+            isinstance(context_id, (int, long)) and context_id >= 0 and (
+                (name is None) or
+                (isinstance(name, basestring) and len(name) < 100))
+            ):
         raise TypeError('cannot unpickle Context: bad input')
     return router.context_class(router, context_id, name)
 
@@ -1034,14 +1086,19 @@ class Latch(object):
 
 class Waker(BasicStream):
     """
-    :py:class:`BasicStream` subclass implementing the
-    `UNIX self-pipe trick`_. Used internally to wake the IO multiplexer when
-    some of its state has been changed by another thread.
+    :py:class:`BasicStream` subclass implementing the `UNIX self-pipe trick`_.
+    Used to wake the multiplexer when another thread needs to modify its state
+    (via a cross-thread function call).
 
     .. _UNIX self-pipe trick: https://cr.yp.to/docs/selfpipe.html
     """
+    broker_ident = None
+
     def __init__(self, broker):
         self._broker = broker
+        self._lock = threading.Lock()
+        self._deferred = []
+
         rfd, wfd = os.pipe()
         self.receive_side = Side(self, rfd)
         self.transmit_side = Side(self, wfd)
@@ -1053,24 +1110,63 @@ class Waker(BasicStream):
             self.transmit_side.fd,
         )
 
+    @property
+    def keep_alive(self):
+        """
+        Prevent immediate Broker shutdown while deferred functions remain.
+        """
+        self._lock.acquire()
+        try:
+            return len(self._deferred)
+        finally:
+            self._lock.release()
+
     def on_receive(self, broker):
         """
-        Read a byte from the self-pipe.
+        Drain the pipe and fire callbacks. Reading multiple bytes is safe since
+        new bytes corresponding to future .defer() calls are written only after
+        .defer() takes _lock: either a byte we read corresponds to something
+        already on the queue by the time we take _lock, or a byte remains
+        buffered, causing another wake up, because it was written after we
+        released _lock.
         """
-        self.receive_side.read(256)
+        _vv and IOLOG.debug('%r.on_receive()', self)
+        self.receive_side.read(128)
+        self._lock.acquire()
+        try:
+            deferred = self._deferred
+            self._deferred = []
+        finally:
+            self._lock.release()
 
-    def wake(self):
-        """
-        Write a byte to the self-pipe, causing the IO multiplexer to wake up.
-        Nothing is written if the current thread is the IO multiplexer thread.
-        """
-        _vv and IOLOG.debug('%r.wake() [fd=%r]', self, self.transmit_side.fd)
-        if threading.currentThread() != self._broker._thread:
+        for func, args, kwargs in deferred:
             try:
-                self.transmit_side.write(' ')
-            except OSError, e:
-                if e[0] != errno.EBADF:
-                    raise
+                func(*args, **kwargs)
+            except Exception:
+                LOG.exception('defer() crashed: %r(*%r, **%r)',
+                              func, args, kwargs)
+                self._broker.shutdown()
+
+    def defer(self, func, *args, **kwargs):
+        if thread.get_ident() == self.broker_ident:
+            _vv and IOLOG.debug('%r.defer() [immediate]', self)
+            return func(*args, **kwargs)
+
+        _vv and IOLOG.debug('%r.defer() [fd=%r]', self, self.transmit_side.fd)
+        self._lock.acquire()
+        try:
+            self._deferred.append((func, args, kwargs))
+        finally:
+            self._lock.release()
+
+        # Wake the multiplexer by writing a byte. If the broker is in the midst
+        # of tearing itself down, the waker fd may already have been closed, so
+        # ignore EBADF here.
+        try:
+            self.transmit_side.write(' ')
+        except OSError, e:
+            if e[0] != errno.EBADF:
+                raise
 
 
 class IoLogger(BasicStream):
@@ -1119,9 +1215,11 @@ class IoLogger(BasicStream):
 
 class Router(object):
     context_class = Context
+    max_message_size = 128 * 1048576
 
     def __init__(self, broker):
         self.broker = broker
+        listen(broker, 'crash', self._cleanup_handlers)
         listen(broker, 'shutdown', self.on_broker_shutdown)
 
         # Here seems as good a place as any.
@@ -1151,7 +1249,11 @@ class Router(object):
         for context in self._context_by_id.itervalues():
             context.on_shutdown(self.broker)
 
-        for _, func in self._handle_map.itervalues():
+        self._cleanup_handlers()
+
+    def _cleanup_handlers(self):
+        while self._handle_map:
+            _, (_, func, _) = self._handle_map.popitem()
             func(_DEAD)
 
     def register(self, context, stream):
@@ -1161,18 +1263,22 @@ class Router(object):
         self.broker.start_receive(stream)
         listen(stream, 'disconnect', lambda: self.on_stream_disconnect(stream))
 
-    def add_handler(self, fn, handle=None, persist=True, respondent=None):
+    def add_handler(self, fn, handle=None, persist=True,
+                    policy=None, respondent=None):
         handle = handle or self._last_handle.next()
         _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
-        self._handle_map[handle] = persist, fn
 
         if respondent:
+            assert policy is None
+            def policy(msg, _stream):
+                return msg.src_id == respondent.context_id
             def on_disconnect():
                 if handle in self._handle_map:
                     fn(_DEAD)
                     del self._handle_map[handle]
             listen(respondent, 'disconnect', on_disconnect)
 
+        self._handle_map[handle] = persist, fn, policy
         return handle
 
     def on_shutdown(self, broker):
@@ -1184,12 +1290,24 @@ class Router(object):
             _v and LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
             fn(_DEAD)
 
-    def _invoke(self, msg):
+    refused_msg = 'Refused by policy.'
+
+    def _invoke(self, msg, stream):
         #IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
-            persist, fn = self._handle_map[msg.handle]
+            persist, fn, policy = self._handle_map[msg.handle]
         except KeyError:
             LOG.error('%r: invalid handle: %r', self, msg)
+            return
+
+        if policy and not policy(msg, stream):
+            LOG.error('%r: policy refused message: %r', self, msg)
+            if msg.reply_to:
+                self.route(Message.pickled(
+                    CallError(self.refused_msg),
+                    dst_id=msg.src_id,
+                    handle=msg.reply_to
+                ))
             return
 
         if not persist:
@@ -1202,18 +1320,32 @@ class Router(object):
 
     def _async_route(self, msg, stream=None):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, stream)
+        if len(msg.data) > self.max_message_size:
+            LOG.error('message too large (max %d bytes): %r',
+                      self.max_message_size, msg)
+            return
+
         # Perform source verification.
-        if stream is not None:
-            expected_stream = self._stream_by_id.get(msg.auth_id,
-                self._stream_by_id.get(mitogen.parent_id))
-            if stream != expected_stream:
-                LOG.error('%r: bad source: got auth ID %r from %r, should be from %r',
-                          self, msg, stream, expected_stream)
+        if stream:
+            parent = self._stream_by_id.get(mitogen.parent_id)
+            expect = self._stream_by_id.get(msg.auth_id, parent)
+            if stream != expect:
+                LOG.error('%r: bad auth_id: got %r via %r, not %r: %r',
+                          self, msg.auth_id, stream, expect, msg)
+                return
+
+            if msg.src_id != msg.auth_id:
+                expect = self._stream_by_id.get(msg.src_id, parent)
+                if stream != expect:
+                    LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
+                              self, msg.src_id, stream, expect, msg)
+                    return
+
             if stream.auth_id is not None:
                 msg.auth_id = stream.auth_id
 
         if msg.dst_id == mitogen.context_id:
-            return self._invoke(msg)
+            return self._invoke(msg, stream)
 
         stream = self._stream_by_id.get(msg.dst_id)
         if stream is None:
@@ -1224,7 +1356,7 @@ class Router(object):
                       self, msg, mitogen.context_id)
             return
 
-        stream.send(msg)
+        stream._send(msg)
 
     def route(self, msg):
         self.broker.defer(self._async_route, msg)
@@ -1237,24 +1369,17 @@ class Broker(object):
 
     def __init__(self):
         self._alive = True
-        self._queue = Queue.Queue()
-        self._readers = []
-        self._writers = []
         self._waker = Waker(self)
-        self.start_receive(self._waker)
+        self.defer = self._waker.defer
+        self._readers = [self._waker.receive_side]
+        self._writers = []
         self._thread = threading.Thread(
             target=_profile_hook,
             args=('broker', self._broker_main),
             name='mitogen-broker'
         )
         self._thread.start()
-
-    def defer(self, func, *args, **kwargs):
-        if threading.currentThread() == self._thread:
-            func(*args, **kwargs)
-        else:
-            self._queue.put((func, args, kwargs))
-            self._waker.wake()
+        self._waker.broker_ident = self._thread.ident
 
     def _list_discard(self, lst, value):
         try:
@@ -1275,14 +1400,14 @@ class Broker(object):
         IOLOG.debug('%r.stop_receive(%r)', self, stream)
         self.defer(self._list_discard, self._readers, stream.receive_side)
 
-    def start_transmit(self, stream):
-        IOLOG.debug('%r.start_transmit(%r)', self, stream)
+    def _start_transmit(self, stream):
+        IOLOG.debug('%r._start_transmit(%r)', self, stream)
         assert stream.transmit_side and stream.transmit_side.fd is not None
-        self.defer(self._list_add, self._writers, stream.transmit_side)
+        self._list_add(self._writers, stream.transmit_side)
 
-    def stop_transmit(self, stream):
-        IOLOG.debug('%r.stop_transmit(%r)', self, stream)
-        self.defer(self._list_discard, self._writers, stream.transmit_side)
+    def _stop_transmit(self, stream):
+        IOLOG.debug('%r._stop_transmit(%r)', self, stream)
+        self._list_discard(self._writers, stream.transmit_side)
 
     def _call(self, stream, func):
         try:
@@ -1291,19 +1416,8 @@ class Broker(object):
             LOG.exception('%r crashed', stream)
             stream.on_disconnect(self)
 
-    def _run_defer(self):
-        while not self._queue.empty():
-            func, args, kwargs = self._queue.get()
-            try:
-                func(*args, **kwargs)
-            except Exception:
-                LOG.exception('defer() crashed: %r(*%r, **%r)',
-                              func, args, kwargs)
-                self.shutdown()
-
     def _loop_once(self, timeout=None):
         _vv and IOLOG.debug('%r._loop_once(%r)', self, timeout)
-        self._run_defer()
 
         #IOLOG.debug('readers = %r', self._readers)
         #IOLOG.debug('writers = %r', self._writers)
@@ -1322,15 +1436,13 @@ class Broker(object):
             self._call(side.stream, side.stream.on_transmit)
 
     def keep_alive(self):
-        return (sum((side.keep_alive for side in self._readers), 0) +
-                (not self._queue.empty()))
+        return sum((side.keep_alive for side in self._readers), 0)
 
     def _broker_main(self):
         try:
             while self._alive:
                 self._loop_once()
 
-            self._run_defer()
             fire(self, 'shutdown')
 
             for side in set(self._readers).union(self._writers):
@@ -1351,13 +1463,15 @@ class Broker(object):
                 side.stream.on_disconnect(self)
         except Exception:
             LOG.exception('_broker_main() crashed')
+            fire(self, 'crash')
 
         fire(self, 'exit')
 
     def shutdown(self):
         _v and LOG.debug('%r.shutdown()', self)
-        self._alive = False
-        self._waker.wake()
+        def _shutdown():
+            self._alive = False
+        self.defer(_shutdown)
 
     def join(self):
         self._thread.join()
@@ -1376,29 +1490,35 @@ class ExternalContext(object):
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
-        if msg != _DEAD and msg.auth_id not in mitogen.parent_ids:
-            LOG.warning('Ignoring SHUTDOWN from non-parent: %r', msg)
-            return
-        self.broker.shutdown()
+        if msg != _DEAD:
+            self.broker.shutdown()
 
     def _on_parent_disconnect(self):
         _v and LOG.debug('%r: parent stream is gone, dying.', self)
         self.broker.shutdown()
 
-    def _setup_master(self, profiling, parent_id, context_id, in_fd, out_fd):
+    def _setup_master(self, max_message_size, profiling, parent_id,
+                      context_id, in_fd, out_fd):
+        Router.max_message_size = max_message_size
         self.profiling = profiling
         if profiling:
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
-        self.router.add_handler(self._on_shutdown_msg, SHUTDOWN)
+        self.router.add_handler(
+            fn=self._on_shutdown_msg,
+            handle=SHUTDOWN,
+            policy=has_parent_authority,
+        )
         self.master = Context(self.router, 0, 'master')
         if parent_id == 0:
             self.parent = self.master
         else:
             self.parent = Context(self.router, parent_id, 'parent')
 
-        self.channel = Receiver(self.router, CALL_FUNCTION)
+        self.channel = Receiver(router=self.router,
+                                handle=CALL_FUNCTION,
+                                policy=has_parent_authority)
         self.stream = Stream(self.router, parent_id)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)
@@ -1494,8 +1614,6 @@ class ExternalContext(object):
     def _dispatch_one(self, msg):
         data = msg.unpickle(throw=False)
         _v and LOG.debug('_dispatch_calls(%r)', data)
-        if msg.auth_id not in mitogen.parent_ids:
-            LOG.warning('CALL_FUNCTION from non-parent %r', msg.auth_id)
 
         modname, klass, func, args, kwargs = data
         obj = __import__(modname, {}, {}, [''])
@@ -1518,9 +1636,11 @@ class ExternalContext(object):
         self.dispatch_stopped = True
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
-             in_fd=100, out_fd=1, core_src_fd=101, setup_stdio=True,
-             setup_package=True, importer=None, whitelist=(), blacklist=()):
-        self._setup_master(profiling, parent_ids[0], context_id, in_fd, out_fd)
+             max_message_size, in_fd=100, out_fd=1, core_src_fd=101,
+             setup_stdio=True, setup_package=True, importer=None,
+             whitelist=(), blacklist=()):
+        self._setup_master(max_message_size, profiling, parent_ids[0],
+                           context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)

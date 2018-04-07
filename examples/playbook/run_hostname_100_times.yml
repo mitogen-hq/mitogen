@@ -1,8 +1,0 @@
----
-
-- hosts: all
-  gather_facts: false
-  tasks:
-    - name: "Run hostname"
-      command: hostname
-      with_sequence: start=1 end=100

@@ -33,10 +33,16 @@ def func_accepts_returns_context(context):
     return context
 
 
+def func_accepts_returns_sender(sender):
+    sender.send(123)
+    sender.close()
+    return sender
+
+
 class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def setUp(self):
         super(CallFunctionTest, self).setUp()
-        self.local = self.router.local()
+        self.local = self.router.fork()
 
     def test_succeeds(self):
         self.assertEqual(3, self.local.call(function_that_adds_numbers, 1, 2))
@@ -58,7 +64,10 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def test_bad_return_value(self):
         exc = self.assertRaises(mitogen.core.StreamError,
             lambda: self.local.call(func_with_bad_return_value))
-        self.assertEquals(exc[0], "cannot unpickle '__main__'/'CrazyType'")
+        self.assertEquals(
+                exc[0],
+                "cannot unpickle '%s'/'CrazyType'" % (__name__,),
+        )
 
     def test_returns_dead(self):
         self.assertEqual(mitogen.core._DEAD, self.local.call(func_returns_dead))
@@ -86,6 +95,17 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertIsNot(context, self.local)
         self.assertEqual(context.context_id, self.local.context_id)
         self.assertEqual(context.name, self.local.name)
+
+    def test_accepts_returns_sender(self):
+        recv = mitogen.core.Receiver(self.router)
+        sender = recv.to_sender()
+        sender2 = self.local.call(func_accepts_returns_sender, sender)
+        self.assertEquals(sender.context.context_id,
+                          sender2.context.context_id)
+        self.assertEquals(sender.dst_handle, sender2.dst_handle)
+        self.assertEquals(123, recv.get().unpickle())
+        self.assertRaises(mitogen.core.ChannelError,
+                          lambda: recv.get().unpickle())
 
 
 if __name__ == '__main__':

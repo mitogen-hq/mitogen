@@ -1,0 +1,14 @@
+# Ensure 'ssh' connections are grabbed.
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+    - name: integration/connection_loader__ssh_blemished.yml
+      determine_strategy:
+
+    - custom_python_detect_environment:
+      connection: ssh
+      register: out
+
+    - assert:
+        that: out.mitogen_loaded or not is_mitogen

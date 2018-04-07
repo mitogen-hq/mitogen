@@ -2,6 +2,7 @@
 import os
 import shutil
 
+import timeoutcontext
 import unittest2
 
 import mitogen.fakessh
@@ -10,6 +11,7 @@ import testlib
 
 
 class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
+    @timeoutcontext.timeout(5)
     def test_rsync_from_master(self):
         context = self.docker_ssh_any()
 
@@ -25,6 +27,7 @@ class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
         self.assertTrue(context.call(os.path.exists, '/tmp/data'))
         self.assertTrue(context.call(os.path.exists, '/tmp/data/simple_pkg/a.py'))
 
+    @timeoutcontext.timeout(5)
     def test_rsync_between_direct_children(self):
         # master -> SSH -> has-sudo-pubkey -> rsync(.ssh) -> master ->
         # has-sudo -> rsync

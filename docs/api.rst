@@ -412,7 +412,7 @@ Router Class
         receive side to the I/O multiplexer. This This method remains public
         for now while hte design has not yet settled.
 
-    .. method:: add_handler (fn, handle=None, persist=True, respondent=None)
+    .. method:: add_handler (fn, handle=None, persist=True, respondent=None, policy=None)
 
         Invoke `fn(msg)` for each Message sent to `handle` from this context.
         Unregister after one invocation if `persist` is ``False``. If `handle`
@@ -434,6 +434,28 @@ Router Class
 
             In future `respondent` will likely also be used to prevent other
             contexts from sending messages to the handle.
+
+        :param function policy:
+            Function invoked as `policy(msg, stream)` where `msg` is a
+            :py:class:`mitogen.core.Message` about to be delivered, and
+            `stream` is the :py:class:`mitogen.core.Stream` on which it was
+            received. The function must return :py:data:`True`, otherwise an
+            error is logged and delivery is refused.
+
+            Two built-in policy functions exist:
+
+            * :py:func:`mitogen.core.has_parent_authority`: requires the
+              message arrived from a parent context, or a context acting with a
+              parent context's authority (``auth_id``).
+
+            * :py:func:`mitogen.parent.is_immediate_child`: requires the
+              message arrived from an immediately connected child, for use in
+              messaging patterns where either something becomes buggy or
+              insecure by permitting indirect upstream communication.
+
+            In case of refusal, and the message's ``reply_to`` field is
+            nonzero, a :py:class:`mitogen.core.CallError` is delivered to the
+            sender indicating refusal occurred.
 
         :return:
             `handle`, or if `handle` was ``None``, the newly allocated handle.
@@ -932,6 +954,23 @@ Receiver Class
         Used by :py:class:`mitogen.master.Select` to implement waiting on
         multiple receivers.
 
+    .. py:method:: to_sender ()
+
+        Return a :py:class:`mitogen.core.Sender` configured to deliver messages
+        to this receiver. Since a Sender can be serialized, this makes it
+        convenient to pass `(context_id, handle)` pairs around::
+
+            def deliver_monthly_report(sender):
+                for line in open('monthly_report.txt'):
+                    sender.send(line)
+                sender.close()
+
+            remote = router.ssh(hostname='mainframe')
+            recv = mitogen.core.Receiver(router)
+            remote.call(deliver_monthly_report, recv.to_sender())
+            for msg in recv:
+                print(msg)
+
     .. py:method:: empty ()
 
         Return ``True`` if calling :py:meth:`get` would block.
@@ -997,6 +1036,9 @@ Sender Class
     Senders are used to send pickled messages to a handle in another context,
     it is the inverse of :py:class:`mitogen.core.Sender`.
 
+    Senders may be serialized, making them convenient to wire up data flows.
+    See :py:meth:`mitogen.core.Receiver.to_sender` for more information.
+
     :param mitogen.core.Context context:
         Context to send messages to.
     :param int dst_handle:
@@ -1007,7 +1049,7 @@ Sender Class
         Send :py:data:`_DEAD` to the remote end, causing
         :py:meth:`ChannelError` to be raised in any waiting thread.
 
-    .. py:method:: put (data)
+    .. py:method:: send (data)
 
         Send `data` to the remote end.
 
@@ -1062,11 +1104,11 @@ Broker Class
         Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
         not ready for reading. Safe to call from any thread.
 
-    .. method:: start_transmit (stream)
+    .. method:: _start_transmit (stream)
 
         Mark the :py:attr:`transmit_side <Stream.transmit_side>` on `stream` as
-        ready for writing. Safe to call from any thread. When the associated
-        file descriptor becomes ready for writing,
+        ready for writing. Must only be called from the Broker thread. When the
+        associated file descriptor becomes ready for writing,
         :py:meth:`BasicStream.on_transmit` will be called.
 
     .. method:: stop_receive (stream)

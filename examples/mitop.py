@@ -1,3 +1,15 @@
+"""
+mitop.py is a version of the UNIX top command that knows how to display process
+lists from multiple machines in a single listing.
+
+This is a basic, initial version showing overall program layout. A future
+version will extend it to:
+
+    * Only notify the master of changed processes, rather than all processes.
+    * Runtime-reconfigurable filters and aggregations handled on the remote
+      machines rather than forcing a bottleneck in the master.
+
+"""
 
 import curses
 import subprocess
@@ -10,15 +22,28 @@ import mitogen.utils
 
 
 class Host(object):
+    """
+    A target host from the perspective of the master process.
+    """
+    #: String hostname.
     name = None
+
+    #: mitogen.parent.Context used to call functions on the host.
     context = None
+
+    #: mitogen.core.Receiver the target delivers state updates to.
     recv = None
 
     def __init__(self):
-        self.procs = {}  #: pid -> Process()
+        #: Mapping of pid -> Process() for each process described
+        #: in the host's previous status update.
+        self.procs = {}
 
 
 class Process(object):
+    """
+    A single process running on a target host.
+    """
     host = None
     user = None
     pid = None
@@ -30,14 +55,20 @@ class Process(object):
     rss = None
 
 
-@mitogen.core.takes_router
-def remote_main(context_id, handle, delay, router):
-    context = mitogen.core.Context(router, context_id)
-    sender = mitogen.core.Sender(context, handle)
-
+def child_main(sender, delay):
+    """
+    Executed on the main thread of the Python interpreter running on each
+    target machine, Context.call() from the master. It simply sends the output
+    of the UNIX 'ps' command at regular intervals toward a Receiver on master.
+    
+    :param mitogen.core.Sender sender:
+        The Sender to use for delivering our result. This could target
+        anywhere, but the sender supplied by the master simply causes results
+        to be delivered to the master's associated per-host Receiver.
+    """
     args = ['ps', '-axwwo', 'user,pid,ppid,pgid,%cpu,rss,command']
     while True:
-        sender.put(subprocess.check_output(args))
+        sender.send(subprocess.check_output(args))
         time.sleep(delay)
 
 
@@ -71,6 +102,9 @@ def parse_output(host, s):
 
 
 class Painter(object):
+    """
+    This is ncurses (screen drawing) magic, you can ignore it. :)
+    """
     def __init__(self, hosts):
         self.stdscr = curses.initscr()
         curses.start_color()
@@ -124,7 +158,12 @@ class Painter(object):
         self.stdscr.refresh()
 
 
-def local_main(painter, router, select, delay):
+def master_main(painter, router, select, delay):
+    """
+    Loop until CTRL+C is pressed, waiting for the next result delivered by the
+    Select. Use parse_output() to turn that result ('ps' command output) into
+    rich data, and finally repaint the screen if the repaint delay has passed.
+    """
     next_paint = 0
     while True:
         msg = select.get()
@@ -134,8 +173,13 @@ def local_main(painter, router, select, delay):
             painter.paint()
 
 
-def main(router, argv):
-    mitogen.utils.log_to_file()
+@mitogen.main()
+def main(router):
+    """
+    Main program entry point. @mitogen.main() is just a helper to handle
+    reliable setup/destruction of Broker, Router and the logging package.
+    """
+    argv = sys.argv[1:]
     if not len(argv):
         print 'mitop: Need a list of SSH hosts to connect to.'
         sys.exit(1)
@@ -144,36 +188,60 @@ def main(router, argv):
     select = mitogen.master.Select(oneshot=False)
     hosts = []
 
+    # For each hostname on the command line, create a Host instance, a Mitogen
+    # connection, a Receiver to accept messages from the host, and finally
+    # start child_main() on the host to pump messages into the receiver.
     for hostname in argv:
         print 'Starting on', hostname
         host = Host()
         host.name = hostname
+
         if host.name == 'localhost':
             host.context = router.local()
         else:
             host.context = router.ssh(hostname=host.name)
 
+        # A receiver wires up a handle (via Router.add_handler()) to an
+        # internal thread-safe queue object, which can be drained through calls
+        # to recv.get().
         host.recv = mitogen.core.Receiver(router)
         host.recv.host = host
+
+        # But we don't want to receive data from just one receiver, we want to
+        # receive data from many. In this case we can use a Select(). It knows
+        # how to efficiently sleep while waiting for the first message sent to
+        # many receivers.
         select.add(host.recv)
 
-        call_recv = host.context.call_async(remote_main,
-            mitogen.context_id, host.recv.handle, delay)
+        # The inverse of a Receiver is a Sender. Unlike receivers, senders are
+        # serializable, so we can call the .to_sender() helper method to create
+        # one equivalent to our host's receiver, and pass it directly to the
+        # host as a function parameter.
+        sender = host.recv.to_sender()
 
-        # Adding call_recv to the select will cause CallError to be thrown by
-        # .get() if startup in the context fails, halt local_main() and cause
-        # the exception to be printed.
+        # Finally invoke the function in the remote target. Since child_main()
+        # is an infinite loop, using .call() would block the parent, since
+        # child_main() never returns. Instead use .call_async(), which returns
+        # another Receiver. We also want to wait for results from it --
+        # although child_main() never returns, if it crashes the exception will
+        # be delivered instead.
+        call_recv = host.context.call_async(child_main, sender, delay)
+        call_recv.host = host
+
+        # Adding call_recv to the select will cause mitogen.core.CallError to
+        # be thrown by .get() if startup of any context fails, causing halt of
+        # master_main(), and the exception to be printed.
         select.add(call_recv)
         hosts.append(host)
 
+    # Painter just wraps up all the prehistory ncurses code and keeps it out of
+    # master_main().
     painter = Painter(hosts)
     try:
         try:
-            local_main(painter, router, select, delay)
+            master_main(painter, router, select, delay)
         except KeyboardInterrupt:
+            # Shut down gracefully when the user presses CTRL+C.
             pass
     finally:
         painter.close()
-
-if __name__ == '__main__':
-    mitogen.utils.run_with_router(main, sys.argv[1:])

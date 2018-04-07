@@ -1,7 +1,13 @@
+.coverage
+.tox
 .venv
 **/.DS_Store
+*.pyc
+*.pyd
+*.pyo
 MANIFEST
 build/
 dist/
-docs/_build
+htmlcov/
 *.egg-info
+__pycache__/

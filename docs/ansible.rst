@@ -57,6 +57,19 @@ quickly as possible.
   relating to those files in cross-account scenarios are entirely avoided.
 
 
+Demo
+----
+
+This demonstrates Ansible running a subset of the Mitogen integration tests
+concurrent to an equivalent run using the extension.
+
+.. raw:: html
+
+    <video width="720" height="439" controls>
+        <source src="http://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
+    </video>
+
+
 Testimonials
 ------------
 
@@ -97,10 +110,12 @@ Installation
 
         [defaults]
         strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
-        strategy = mitogen
+        strategy = mitogen_linear
 
    The ``strategy`` key is optional. If omitted, you can set the
-   ``ANSIBLE_STRATEGY=mitogen`` environment variable on a per-run basis.
+   ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable on a per-run basis.
+   Like ``mitogen_linear``, the ``mitogen_free`` strategy also exists to mimic
+   the built-in ``free`` strategy.
 
 4. Cross your fingers and try it.
 
@@ -112,9 +127,6 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 
 High Risk
 ~~~~~~~~~
-
-* For now only **built-in Python command modules work**, however almost all
-  modules shipped with Ansible are Python-based.
 
 * Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
   such as triggered via the ``copy`` module, will cause corresponding temporary
@@ -129,11 +141,16 @@ High Risk
 
 * `Asynchronous Actions And Polling
   <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
-  minimal testing.
+  minimal testing. Jobs execute in a thread of the target Python interpreter.
+  This will fixed shortly.
+
+* No mechanism exists yet to bound the number of interpreters created during a
+  run. For some playbooks that parameterize ``become_user`` over a large number
+  of user accounts, resource exhaustion may be triggered on the target machine.
 
 * Only Ansible 2.4 is being used for development, with occasional tests under
-  2.3 and 2.2. It should be more than possible to fully support at least 2.3,
-  if not also 2.2.
+  2.5, 2.3 and 2.2. It should be more than possible to fully support at least
+  2.3, if not also 2.2.
 
 
 Low Risk
@@ -144,31 +161,13 @@ Low Risk
 * Only the ``sudo`` become method is available, however adding new methods is
   straightforward, and eventually at least ``su`` will be included.
 
-* The only supported strategy is ``linear``, which is Ansible's default.
-
-* In some cases ``remote_tmp`` may not be respected.
-
 * The extension's performance benefits do not scale perfectly linearly with the
   number of targets. This is a subject of ongoing investigation and
   improvements will appear in time.
 
-* Ansible defaults to requiring pseudo TTYs for most SSH invocations, in order
-  to allow it to handle ``sudo`` with ``requiretty`` enabled, however it
-  disables pseudo TTYs for certain commands where standard input is required or
-  ``sudo`` is not in use. Mitogen does not require this, as it can simply call
-  :py:func:`pty.openpty` from the SSH user account during ``sudo`` setup.
-
-  A major downside to Ansible's default is that stdout and stderr of any
-  resulting executed command are merged, with additional carriage return
-  characters synthesized in the output by the TTY layer. Neither of these
-  problems are apparent using the Mitogen extension, which may break some
-  playbooks.
-
-  A future version will emulate Ansible's behaviour, once it is clear precisely
-  what that behaviour is supposed to be. See `Ansible#14377`_ for related
-  discussion.
-
-.. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
+* "Module Replacer" style modules are not yet supported. These rarely appear in
+  practice, and light Github code searches failed to reveal many examples of
+  them.
 
 
 Behavioural Differences
@@ -195,13 +194,6 @@ Behavioural Differences
   captured and returned to the host machine, where it can be viewed as desired
   with ``-vvv``.
 
-* Ansible with SSH multiplexing enabled causes a string like ``Shared
-  connection to host closed`` to appear in ``stderr`` output of every executed
-  command. This never manifests with the Mitogen extension.
-
-* Asynchronous support is very primitive, and jobs execute in a thread of the
-  target Python interpreter. This will fixed shortly.
-
 * Local commands are executed in a reuseable Python interpreter created
   identically to interpreters used on remote hosts. At present only one such
   interpreter per ``become_user`` exists, and so only one action may be
@@ -211,8 +203,57 @@ Behavioural Differences
   release.
 
 
-Demo
-----
+How Modules Execute
+-------------------
+
+Ansible usually modifies, recompresses and reuploads modules every time they
+run on a target, work that must be repeated by the controller for every
+playbook step.
+
+With the extension any modifications are done on the target, allowing pristine
+copies of modules to be cached, reducing the necessity to re-transfer modules
+for each invocation. Unmodified modules are uploaded once on first use and
+cached in RAM for the remainder of the run.
+
+**Binary**
+    * Native executables detected using a complex heuristic.
+    * Arguments are supplied as a JSON file whose path is the sole script
+      parameter.
+
+**Module Replacer**
+    * Python scripts detected by the presence of
+      ``#<<INCLUDE_ANSIBLE_MODULE_COMMON>>`` appearing in their source.
+    * Not yet supported.
+
+**New-Style**
+    * Python scripts detected by the presence of ``from ansible.module_utils.``
+      appearing in their source.
+    * Arguments are supplied as JSON written to ``sys.stdin`` of the target
+      interpreter.
+
+**JSON_ARGS**
+    * Detected by the presence of ``INCLUDE_ANSIBLE_MODULE_JSON_ARGS``
+      appearing in the script source.
+    * The interpreter directive (``#!interpreter``) is adjusted to match the
+      corresponding value of ``{{ansible_*_interpreter}}`` if one is set.
+    * Arguments are supplied as JSON mixed into the script as a replacement for
+      ``INCLUDE_ANSIBLE_MODULE_JSON_ARGS``.
+
+**WANT_JSON**
+    * Detected by the presence of ``WANT_JSON`` appearing in the script source.
+    * The interpreter directive is adjusted as above.
+    * Arguments are supplied as a JSON file whose path is the sole script
+      parameter.
+
+**Old Style**
+    * Files not matching any of the above tests.
+    * The interpreter directive is adjusted as above.
+    * Arguments are supplied as a file whose path is the sole script parameter.
+      The format of the file is ``"key=repr(value)[ key2=repr(value2)[ ..]] "``.
+
+
+Sample Profiles
+---------------
 
 Local VM connection
 ~~~~~~~~~~~~~~~~~~~
@@ -341,6 +382,30 @@ The patches are concise and behave conservatively, including by disabling
 themselves when non-Mitogen connections are in use. Additional third party
 plug-ins are unlikely to attempt similar patches, so the risk to an established
 configuration should be minimal.
+
+
+Standard IO
+~~~~~~~~~~~
+
+Ansible uses pseudo TTYs for most invocations, to allow it to handle typing
+passwords interactively, however it disables pseudo TTYs for certain commands
+where standard input is required or ``sudo`` is not in use. Additionally when
+SSH multiplexing is enabled, a string like ``Shared connection to localhost
+closed\r\n`` appears in ``stderr`` of every invocation.
+
+Mitogen does not naturally require either of these, as command output is
+embedded within the SSH stream, and it can simply call :py:func:`pty.openpty`
+in every location an interactive password must be typed.
+
+A major downside to Ansible's behaviour is that ``stdout`` and ``stderr`` are
+merged together into a single ``stdout`` variable, with carriage returns
+inserted in the output by the TTY layer. However ugly, the extension emulates
+all of this behaviour precisely, to avoid breaking playbooks that expect
+certain text to appear in certain variables with certain linefeed characters.
+
+See `Ansible#14377`_ for related discussion.
+
+.. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
 
 
 Flag Emulation

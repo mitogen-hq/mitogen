@@ -1,0 +1,15 @@
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+    - name: integration/runner__custom_python_json_args_module.yml
+      custom_python_json_args_module:
+        foo: true
+      with_sequence: start=1 end={{end|default(1)}}
+      register: out
+
+    - assert:
+        that: |
+          (not out.changed) and
+          (not out.results[0].changed) and
+          out.results[0].input[0].foo and
+          out.results[0].msg == 'Here is my input'

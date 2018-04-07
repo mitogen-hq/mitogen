@@ -26,6 +26,10 @@ c_ssl.RAND_pseudo_bytes.argtypes = [ctypes.c_char_p, ctypes.c_int]
 c_ssl.RAND_pseudo_bytes.restype = ctypes.c_int
 
 
+def ping():
+    return 123
+
+
 def random_random():
     return random.random()
 
@@ -52,6 +56,23 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.fork()
         self.assertNotEqual(context.call(RAND_pseudo_bytes),
                             RAND_pseudo_bytes())
+
+
+class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
+    def test_okay(self):
+        # When forking from the master process, Mitogen had nothing to do with
+        # setting up stdio -- that was inherited wherever the Master is running
+        # (supervisor, iTerm, etc). When forking from a Mitogen child context
+        # however, Mitogen owns all of fd 0, 1, and 2, and during the fork
+        # procedure, it deletes all of these descriptors. That leaves the
+        # process in a weird state that must be handled by some combination of
+        # fork.py and ExternalContext.main().
+
+        # Below we simply test whether ExternalContext.main() managed to boot
+        # successfully. In future, we need lots more tests.
+        c1 = self.router.fork()
+        c2 = self.router.fork(via=c1)
+        self.assertEquals(123, c2.call(ping))
 
 
 if __name__ == '__main__':

@@ -27,4 +27,4 @@ and run the tests there.
 1. Build the virtual environment ``virtualenv ../venv``
 1. Enable the virtual environment we just built ``source ../venv/bin/activate``
 1. Install Mitogen in pip editable mode ``pip install -e .``
-1. Run ``test.sh``
+1. Run ``test``

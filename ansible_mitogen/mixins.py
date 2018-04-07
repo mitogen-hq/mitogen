@@ -39,6 +39,7 @@ from ansible.module_utils._text import to_bytes
 from ansible.parsing.utils.jsonify import jsonify
 
 import ansible
+import ansible.constants
 import ansible.plugins
 import ansible.plugins.action
 
@@ -52,27 +53,12 @@ import mitogen.master
 from mitogen.utils import cast
 
 import ansible_mitogen.connection
-import ansible_mitogen.helpers
+import ansible_mitogen.planner
+import ansible_mitogen.target
 from ansible.module_utils._text import to_text
 
 
 LOG = logging.getLogger(__name__)
-
-
-def get_command_module_name(module_name):
-    """
-    Given the name of an Ansible command module, return its canonical module
-    path within the ansible.
-
-    :param module_name:
-        "shell"
-    :return:
-        "ansible.modules.commands.shell"
-    """
-    path = module_loader.find_plugin(module_name, '')
-    relpath = os.path.relpath(path, os.path.dirname(ansible.__file__))
-    root, _ = os.path.splitext(relpath)
-    return 'ansible.' + root.replace('/', '.')
 
 
 class ActionModuleMixin(ansible.plugins.action.ActionBase):
@@ -131,7 +117,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         Arrange for a Python function to be called in the target context, which
         should be some function from the standard library or
-        ansible_mitogen.helpers module. This junction point exists mainly as a
+        ansible_mitogen.target module. This junction point exists mainly as a
         nice place to insert print statements during debugging.
         """
         return self._connection.call(func, *args, **kwargs)
@@ -176,7 +162,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         target user account.
         """
         LOG.debug('_remote_file_exists(%r)', path)
-        return self.call(os.path.exists, path)
+        return self.call(os.path.exists, mitogen.utils.cast(path))
 
     def _configure_module(self, module_name, module_args, task_vars=None):
         """
@@ -192,15 +178,34 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         assert False, "_is_pipelining_enabled() should never be called."
 
+    def _get_remote_tmp(self):
+        """
+        Mitogen-only: return the 'remote_tmp' setting.
+        """
+        try:
+            s = self._connection._shell.get_option('remote_tmp')
+        except AttributeError:
+            s = ansible.constants.DEFAULT_REMOTE_TMP  # <=2.4.x
+
+        return self._remote_expand_user(s)
+
     def _make_tmp_path(self, remote_user=None):
         """
         Replace the base implementation's use of shell to implement mkdtemp()
         with an actual call to mkdtemp().
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
-        path = self.call(tempfile.mkdtemp, prefix='ansible-mitogen-tmp-')
+
+        # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
+        # The copy action plugin violates layering and grabs this attribute
+        # directly.
+        self._connection._shell.tmpdir = self.call(
+            ansible_mitogen.target.make_temp_directory,
+            base_dir=self._get_remote_tmp(),
+        )
+        LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
-        return path
+        return self._connection._shell.tmpdir
 
     def _remove_tmp_path(self, tmp_path):
         """
@@ -208,8 +213,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         shutil.rmtree().
         """
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
+        if tmp_path is None:
+            tmp_path = self._connection._shell.tmpdir
         if self._should_remove_tmp_path(tmp_path):
-            return self.call(shutil.rmtree, tmp_path)
+            self.call(shutil.rmtree, tmp_path)
+            self._connection._shell.tmpdir = None
 
     def _transfer_data(self, remote_path, data):
         """
@@ -247,7 +255,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                   paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.master.Select.all(
             self._connection.call_async(
-                ansible_mitogen.helpers.set_file_mode, path, mode
+                ansible_mitogen.target.set_file_mode, path, mode
             )
             for path in paths
         ))
@@ -272,48 +280,69 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Replace the base implementation's attempt to emulate
         os.path.expanduser() with an actual call to os.path.expanduser().
         """
-        LOG.debug('_remove_expand_user(%r, sudoable=%r)', path, sudoable)
+        LOG.debug('_remote_expand_user(%r, sudoable=%r)', path, sudoable)
+        if not path.startswith('~'):
+            # /home/foo -> /home/foo
+            return path
+        if path == '~':
+            # ~ -> /home/dmw
+            return self._connection.homedir
+        if path.startswith('~/'):
+            # ~/.ansible -> /home/dmw/.ansible
+            return os.path.join(self._connection.homedir, path[2:])
         if path.startswith('~'):
-            path = self.call(os.path.expanduser, path)
-        return path
+            # ~root/.ansible -> /root/.ansible
+            return self.call(os.path.expanduser, path)
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
                         delete_remote_tmp=True, wrap_async=False):
         """
         Collect up a module's execution environment then use it to invoke
-        helpers.run_module() or helpers.run_module_async() in the target
+        target.run_module() or helpers.run_module_async() in the target
         context.
         """
-        if task_vars is None:
-            task_vars = {}
         if module_name is None:
             module_name = self._task.action
         if module_args is None:
             module_args = self._task.args
+        if task_vars is None:
+            task_vars = {}
 
         self._update_module_args(module_name, module_args, task_vars)
-        if wrap_async:
-            helper = ansible_mitogen.helpers.run_module_async
-        else:
-            helper = ansible_mitogen.helpers.run_module
-
         env = {}
         self._compute_environment_string(env)
 
-        js = self.call(
-            helper,
-            get_command_module_name(module_name),
-            args=cast(module_args),
-            env=cast(env),
+        return ansible_mitogen.planner.invoke(
+            ansible_mitogen.planner.Invocation(
+                action=self,
+                connection=self._connection,
+                module_name=mitogen.utils.cast(module_name),
+                module_args=mitogen.utils.cast(module_args),
+                remote_tmp=mitogen.utils.cast(self._get_remote_tmp()),
+                task_vars=task_vars,
+                templar=self._templar,
+                env=mitogen.utils.cast(env),
+                wrap_async=wrap_async,
+            )
         )
 
-        data = self._parse_returned_data({
-            'rc': 0,
-            'stdout': js,
-            'stdout_lines': [js],
-            'stderr': ''
-        })
+    def _postprocess_response(self, result):
+        """
+        Apply fixups mimicking ActionBase._execute_module(); this is copied
+        verbatim from action/__init__.py, the guts of _parse_returned_data are
+        garbage and should be removed or reimplemented once tests exist.
+
+        :param dict result:
+            Dictionary with format::
+
+                {
+                    "rc": int,
+                    "stdout": "stdout data",
+                    "stderr": "stderr data"
+                }
+        """
+        data = self._parse_returned_data(result)
 
         # Cutpasted from the base implementation.
         if 'stdout' in data and 'stdout_lines' not in data:
@@ -328,8 +357,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                                    encoding_errors='surrogate_then_replace',
                                    chdir=None):
         """
-        Replace the mad rat's nest of logic in the base implementation by
-        simply calling helpers.exec_command() in the target context.
+        Override the base implementation by simply calling
+        target.exec_command() in the target context.
         """
         LOG.debug('_low_level_execute_command(%r, in_data=%r, exe=%r, dir=%r)',
                   cmd, type(in_data), executable, chdir)
@@ -338,11 +367,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if executable:
             cmd = executable + ' -c ' + commands.mkarg(cmd)
 
-        rc, stdout, stderr = self.call(
-            ansible_mitogen.helpers.exec_command,
-            cast(cmd),
-            cast(in_data),
-            chdir=cast(chdir),
+        rc, stdout, stderr = self._connection.exec_command(
+            cmd=cmd,
+            in_data=in_data,
+            sudoable=sudoable,
+            mitogen_chdir=chdir,
         )
         stdout_text = to_text(stdout, errors=encoding_errors)
 

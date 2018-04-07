@@ -247,6 +247,24 @@ without the need for writing asynchronous code::
         print 'Reply from %s: %s' % (recv.context, data)
 
 
+Running Code That May Hang
+--------------------------
+
+When executing code that may hang due to, for example, talking to network peers
+that may become unavailable, it is desirable to be able to recover control in
+the case a remote call has hung.
+
+By specifying the `timeout` parameter to :meth:`Receiver.get` on the receiver
+returned by `Context.call_async`, it becomes possible to wait for a function to
+complete, but time out if its result does not become available.
+
+When a context has become hung like this, it is still possible to gracefully
+terminate it using the :meth:`Context.shutdown` method. This method sends a
+shutdown message to the target process, where its IO multiplexer thread can
+still process it independently of the hung function running on on the target's
+main thread.
+
+
 
 Recovering Mitogen Object References In Children
 ------------------------------------------------
@@ -260,7 +278,6 @@ Recovering Mitogen Object References In Children
     @mitogen.core.takes_router
     def func2(a, b, router):
         ...
-
 
 
 Recursion
@@ -292,6 +309,7 @@ User-defined types may not be used, except for:
 
 * :py:class:`mitogen.core.CallError`
 * :py:class:`mitogen.core.Context`
+* :py:class:`mitogen.core.Sender`
 * :py:class:`mitogen.core._DEAD`
 
 Subclasses of built-in types must be undecorated using

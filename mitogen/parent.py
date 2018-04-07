@@ -76,6 +76,14 @@ def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
 
 
+def is_immediate_child(msg, stream):
+    """
+    Handler policy that requires messages to arrive only from immediately
+    connected children.
+    """
+    return msg.src_id == stream.remote_id
+
+
 def minimize_source(source):
     """Remove most comments and docstrings from Python source code.
     """
@@ -383,12 +391,24 @@ METHOD_NAMES = {
 @mitogen.core.takes_econtext
 def _proxy_connect(name, method_name, kwargs, econtext):
     mitogen.parent.upgrade_router(econtext)
-    context = econtext.router._connect(
-        klass=METHOD_NAMES[method_name](),
-        name=name,
-        **kwargs
-    )
-    return context.context_id, context.name
+    try:
+        context = econtext.router._connect(
+            klass=METHOD_NAMES[method_name](),
+            name=name,
+            **kwargs
+        )
+    except mitogen.core.StreamError, e:
+        return {
+            'id': None,
+            'name': None,
+            'msg': str(e),
+        }
+
+    return {
+        'id': context.context_id,
+        'name': context.name,
+        'msg': None,
+    }
 
 
 class Stream(mitogen.core.Stream):
@@ -414,6 +434,10 @@ class Stream(mitogen.core.Stream):
     #: Set to the child's PID by connect().
     pid = None
 
+    #: Passed via Router wrapper methods, must eventually be passed to
+    #: ExternalContext.main().
+    max_message_size = None
+
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
         self.sent_modules = set(['mitogen', 'mitogen.core'])
@@ -421,12 +445,13 @@ class Stream(mitogen.core.Stream):
         #: during disconnection.
         self.routes = set([self.remote_id])
 
-    def construct(self, remote_name=None, python_path=None, debug=False,
-                  connect_timeout=None, profiling=False,
+    def construct(self, max_message_size, remote_name=None, python_path=None,
+                  debug=False, connect_timeout=None, profiling=False,
                   old_router=None, **kwargs):
         """Get the named context running on the local machine, creating it if
         it does not exist."""
         super(Stream, self).construct(**kwargs)
+        self.max_message_size = max_message_size
         if python_path:
             self.python_path = python_path
         if sys.platform == 'darwin' and self.python_path == '/usr/bin/python':
@@ -444,6 +469,7 @@ class Stream(mitogen.core.Stream):
         self.remote_name = remote_name
         self.debug = debug
         self.profiling = profiling
+        self.max_message_size = max_message_size
         self.connect_deadline = time.time() + self.connect_timeout
 
     def on_shutdown(self, broker):
@@ -518,6 +544,7 @@ class Stream(mitogen.core.Stream):
         ]
 
     def get_main_kwargs(self):
+        assert self.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
         return {
@@ -528,6 +555,7 @@ class Stream(mitogen.core.Stream):
             'log_level': get_log_level(),
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
+            'max_message_size': self.max_message_size,
         }
 
     def get_preamble(self):
@@ -623,11 +651,13 @@ class RouteMonitor(object):
             fn=self._on_add_route,
             handle=mitogen.core.ADD_ROUTE,
             persist=True,
+            policy=is_immediate_child,
         )
         self.router.add_handler(
             fn=self._on_del_route,
             handle=mitogen.core.DEL_ROUTE,
             persist=True,
+            policy=is_immediate_child,
         )
 
     def propagate(self, handle, target_id, name=None):
@@ -780,7 +810,9 @@ class Router(mitogen.core.Router):
     def _connect(self, klass, name=None, **kwargs):
         context_id = self.allocate_id()
         context = self.context_class(self, context_id)
-        stream = klass(self, context_id, old_router=self, **kwargs)
+        kwargs['old_router'] = self
+        kwargs['max_message_size'] = self.max_message_size
+        stream = klass(self, context_id, **kwargs)
         if name is not None:
             stream.name = name
         stream.connect()
@@ -800,14 +832,16 @@ class Router(mitogen.core.Router):
         return self._connect(klass, name=name, **kwargs)
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
-        context_id, name = via_context.call(_proxy_connect,
+        resp = via_context.call(_proxy_connect,
             name=name,
             method_name=method_name,
             kwargs=kwargs
         )
-        name = '%s.%s' % (via_context.name, name)
+        if resp['msg'] is not None:
+            raise mitogen.core.StreamError(resp['msg'])
 
-        context = self.context_class(self, context_id, name=name)
+        name = '%s.%s' % (via_context.name, resp['name'])
+        context = self.context_class(self, resp['id'], name=name)
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
@@ -862,7 +896,12 @@ class ModuleForwarder(object):
         self.router = router
         self.parent_context = parent_context
         self.importer = importer
-        router.add_handler(self._on_get_module, mitogen.core.GET_MODULE)
+        router.add_handler(
+            fn=self._on_get_module,
+            handle=mitogen.core.GET_MODULE,
+            persist=True,
+            policy=is_immediate_child,
+        )
 
     def __repr__(self):
         return 'ModuleForwarder(%r)' % (self.router,)

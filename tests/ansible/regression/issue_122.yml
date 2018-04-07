@@ -1,0 +1,5 @@
+- hosts: all
+  tasks:
+    - script: scripts/print_env.sh
+      register: env
+    - debug: msg={{env}}

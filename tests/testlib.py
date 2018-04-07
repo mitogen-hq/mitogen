@@ -1,4 +1,6 @@
 
+import StringIO
+import logging
 import os
 import random
 import re
@@ -9,7 +11,10 @@ import urlparse
 
 import unittest2
 
+import mitogen.core
 import mitogen.master
+import mitogen.utils
+
 if mitogen.is_master:  # TODO: shouldn't be necessary.
     import docker
 
@@ -17,10 +22,7 @@ if mitogen.is_master:  # TODO: shouldn't be necessary.
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 sys.path.append(DATA_DIR)
 
-
-def set_debug():
-    import logging
-    logging.getLogger('mitogen').setLevel(logging.DEBUG)
+mitogen.utils.log_to_file()
 
 
 def data_path(suffix):
@@ -114,6 +116,38 @@ def wait_for_port(
                                  % (host, port))
 
 
+def sync_with_broker(broker, timeout=10.0):
+    """
+    Insert a synchronization barrier between the calling thread and the Broker
+    thread, ensuring it has completed at least one full IO loop before
+    returning.
+
+    Used to block while asynchronous stuff (like defer()) happens on the
+    broker.
+    """
+    sem = mitogen.core.Latch()
+    broker.defer(sem.put, None)
+    sem.get(timeout=10.0)
+
+
+class LogCapturer(object):
+    def __init__(self, name=None):
+        self.sio = StringIO.StringIO()
+        self.logger = logging.getLogger(name)
+        self.handler = logging.StreamHandler(self.sio)
+        self.old_propagate = self.logger.propagate
+        self.old_handlers = self.logger.handlers
+
+    def start(self):
+        self.logger.handlers = [self.handler]
+        self.logger.propagate = False
+
+    def stop(self):
+        self.logger.handlers = self.old_handlers
+        self.logger.propagate = self.old_propagate
+        return self.sio.getvalue()
+
+
 class TestCase(unittest2.TestCase):
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
@@ -125,6 +159,14 @@ class TestCase(unittest2.TestCase):
         except BaseException, e:
             assert 0, '%r raised %r, not %r' % (func, e, exc)
         assert 0, '%r did not raise %r' % (func, exc)
+
+
+def get_docker_host(docker):
+    if docker.api.base_url == 'http+docker://localunixsocket':
+        return 'localhost'
+
+    parsed = urlparse.urlparse(docker.api.base_url)
+    return parsed.netloc.partition(':')[0]
 
 
 class DockerizedSshDaemon(object):
@@ -143,11 +185,7 @@ class DockerizedSshDaemon(object):
         self.host = self.get_host()
 
     def get_host(self):
-        if self.docker.api.base_url == 'http+docker://localunixsocket':
-            return 'localhost'
-
-        parsed = urlparse.urlparse(self.docker.api.base_url)
-        return parsed.netloc.partition(':')[0]
+        return get_docker_host(self.docker)
 
     def wait_for_sshd(self):
         wait_for_port(self.get_host(), int(self.port), pattern='OpenSSH')
@@ -157,19 +195,28 @@ class DockerizedSshDaemon(object):
         self.container.remove()
 
 
-class RouterMixin(object):
+class BrokerMixin(object):
     broker_class = mitogen.master.Broker
-    router_class = mitogen.master.Router
 
     def setUp(self):
-        super(RouterMixin, self).setUp()
+        super(BrokerMixin, self).setUp()
         self.broker = self.broker_class()
-        self.router = self.router_class(self.broker)
 
     def tearDown(self):
         self.broker.shutdown()
         self.broker.join()
-        super(RouterMixin, self).tearDown()
+        super(BrokerMixin, self).tearDown()
+
+    def sync_with_broker(self):
+        sync_with_broker(self.broker)
+
+
+class RouterMixin(BrokerMixin):
+    router_class = mitogen.master.Router
+
+    def setUp(self):
+        super(RouterMixin, self).setUp()
+        self.router = self.router_class(self.broker)
 
 
 class DockerMixin(RouterMixin):

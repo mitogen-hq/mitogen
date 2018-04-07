@@ -27,7 +27,15 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import logging
+import os.path
+import zlib
+
+import mitogen
 import mitogen.service
+
+
+LOG = logging.getLogger(__name__)
 
 
 class ContextService(mitogen.service.DeduplicatingService):
@@ -40,7 +48,7 @@ class ContextService(mitogen.service.DeduplicatingService):
         https://mitogen.readthedocs.io/en/latest/api.html#context-factories
 
     This concentrates all SSH connections in the top-level process, which may
-    become a bottleneck. There are multiple ways to fix that: 
+    become a bottleneck. There are multiple ways to fix that:
         * creating one .local() child context per CPU and sharding connections
           between them, using the master process to route messages, or
         * as above, but having each child create a unique UNIX listener and
@@ -55,7 +63,13 @@ class ContextService(mitogen.service.DeduplicatingService):
           existing connection, but popped from the list of arguments passed to
           the connection method.
 
-    :returns mitogen.master.Context:
+    :returns tuple:
+        Tuple of `(context, home_dir)`, where:
+            * `context` is the mitogen.master.Context referring to the target
+              context.
+            * `home_dir` is a cached copy of the remote directory.
+
+    mitogen.master.Context:
         Corresponding Context instance.
     """
     handle = 500
@@ -67,4 +81,86 @@ class ContextService(mitogen.service.DeduplicatingService):
     def get_response(self, args):
         args.pop('discriminator', None)
         method = getattr(self.router, args.pop('method'))
-        return method(**args)
+        try:
+            context = method(**args)
+        except mitogen.core.StreamError as e:
+            return {
+                'context': None,
+                'home_dir': None,
+                'msg': str(e),
+            }
+
+        home_dir = context.call(os.path.expanduser, '~')
+        return {
+            'context': context,
+            'home_dir': home_dir,
+            'msg': None,
+        }
+
+
+class FileService(mitogen.service.Service):
+    """
+    Primitive latency-inducing file server for old-style incantations of the
+    module runner. This is to be replaced later with a scheme that forwards
+    files known to be missing without the target having to ask for them,
+    avoiding a corresponding roundtrip per file.
+
+    Paths must be explicitly added to the service by a trusted context before
+    they will be served to an untrusted context.
+
+    :param tuple args:
+        Tuple of `(cmd, path)`, where:
+            - cmd: one of "register", "fetch", where:
+                - register: register a file that may be fetched
+                - fetch: fetch a file that was previously registered
+            - path: key of the file to fetch or register
+
+    :returns:
+        Returns ``None` for "register", or the file data for "fetch".
+
+    :raises mitogen.core.CallError:
+        Security violation occurred, either path not registered, or attempt to
+        register path from unprivileged context.
+    """
+    handle = 501
+    max_message_size = 1000
+    policies = (
+        mitogen.service.AllowAny(),
+    )
+
+    unprivileged_msg = 'Cannot register from unprivileged context.'
+    unregistered_msg = 'Path is not registered with FileService.'
+
+    def __init__(self, router):
+        super(FileService, self).__init__(router)
+        self._paths = {}
+
+    def validate_args(self, args):
+        return (
+            isinstance(args, tuple) and
+            len(args) == 2 and
+            args[0] in ('register', 'fetch') and
+            isinstance(args[1], basestring)
+        )
+
+    def dispatch(self, args, msg):
+        cmd, path = args
+        return getattr(self, cmd)(path, msg)
+
+    def register(self, path, msg):
+        if not mitogen.core.has_parent_authority(msg):
+            raise mitogen.core.CallError(self.unprivileged_msg)
+
+        if path in self._paths:
+            return
+
+        LOG.info('%r: registering %r', self, path)
+        with open(path, 'rb') as fp:
+            self._paths[path] = zlib.compress(fp.read())
+
+    def fetch(self, path, msg):
+        if path not in self._paths:
+            raise mitogen.core.CallError(self.unregistered_msg)
+
+        LOG.debug('Serving %r to context %r', path, msg.src_id)
+        return self._paths[path]

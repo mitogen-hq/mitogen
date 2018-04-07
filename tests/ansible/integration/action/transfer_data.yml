@@ -1,0 +1,47 @@
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+    - name: integration/action/transfer_data.yml
+      file:
+        path: /tmp/transfer-data
+        state: absent
+
+    # Ensure it JSON-encodes dicts.
+    - action_passthrough:
+        method: _transfer_data
+        kwargs:
+          remote_path: /tmp/transfer-data
+          data: {
+            "I am JSON": true
+          }
+
+    - slurp:
+        src: /tmp/transfer-data
+      register: out
+
+    - assert:
+        that: |
+          out.content.decode('base64') == '{"I am JSON": true}'
+
+
+    # Ensure it handles strings.
+    - action_passthrough:
+        method: _transfer_data
+        kwargs:
+          remote_path: /tmp/transfer-data
+          data: "I am text."
+
+    - slurp:
+        src: /tmp/transfer-data
+      register: out
+
+    - debug: msg={{out}}
+
+    - assert:
+        that:
+          out.content.decode('base64') == 'I am text.'
+
+    - file:
+        path: /tmp/transfer-data
+        state: absent

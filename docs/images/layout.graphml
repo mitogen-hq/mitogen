@@ -122,8 +122,8 @@ send(msg)</y:MethodLabel>
               </y:NodeLabel>
               <y:UML clipContent="true" constraint="" omitDetails="false" stereotype="" use3DEffect="true">
                 <y:AttributeLabel/>
-                <y:MethodLabel>start_transmit(strm)
-stop_transmit(strm)</y:MethodLabel>
+                <y:MethodLabel>_start_transmit(strm)
+_stop_transmit(strm)</y:MethodLabel>
               </y:UML>
             </y:UMLClassNode>
           </data>

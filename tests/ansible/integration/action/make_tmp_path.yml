@@ -1,0 +1,25 @@
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+    - name: integration/action/make_tmp_path.yml
+      assert:
+        that: true
+
+    - action_passthrough:
+        method: _make_tmp_path
+      register: out
+
+    - assert:
+        that: out.result.startswith(ansible_remote_tmp|expanduser)
+
+    - stat:
+        path: "{{out.result}}"
+      register: st
+
+    - assert:
+        that: st.stat.exists and st.stat.isdir and st.stat.mode == "0700"
+
+    - file:
+        path: "{{out.result}}"
+        state: absent

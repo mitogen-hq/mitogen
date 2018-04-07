@@ -1,8 +1,0 @@
----
-
-# Reproduction for issue #109.
-
-- hosts: all
-  roles:
-    - issue_109
-  gather_facts: no

@@ -1,0 +1,19 @@
+# issue #152 (b): local connections were not receiving
+# ansible_python_interpreter treatment, breaking virtualenvs.
+
+# To test:
+#   - Ensure system Python does not have boto3 installed.
+#   - Run /path/to/venv/ansible-playbook ... with the virtualenv deactivated.
+#     Observe success.
+#   - Run ansible-playbook ... with the virtualenv activated. Observe success.
+
+- hosts: all
+  tasks:
+  - name: regression/issue_152__local_action_wrong_interpreter.yml
+    connection: local
+    become: true
+    shell: pip uninstall boto3
+    ignore_errors: true
+
+  - cloudformation_facts:
+    connection: local

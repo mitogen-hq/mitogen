@@ -17,7 +17,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
     #   * 3.x starting 2.7
 
     def test_valid_syntax(self):
-        stream = mitogen.parent.Stream(self.router, 0)
+        stream = mitogen.parent.Stream(self.router, 0, max_message_size=123)
         args = stream.get_boot_command()
 
         # Executing the boot command will print "EC0" and expect to read from

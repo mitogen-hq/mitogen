@@ -1,0 +1,19 @@
+- hosts: all
+  tasks:
+    - name: integration/runner__custom_binary_producing_junk.yml
+      custom_binary_producing_junk:
+        foo: true
+      with_sequence: start=1 end={{end|default(1)}}
+      ignore_errors: true
+      register: out
+
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+    - assert:
+        that: |
+          out.failed and
+          out.results[0].failed and
+          out.results[0].msg == 'MODULE FAILURE' and
+          out.results[0].rc == 0

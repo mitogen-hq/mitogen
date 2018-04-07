@@ -62,14 +62,14 @@ class IoPump(mitogen.core.BasicStream):
 
     def write(self, s):
         self._output_buf += s
-        self._broker.start_transmit(self)
+        self._broker._start_transmit(self)
 
     def close(self):
         self._closed = True
         # If local process hasn't exitted yet, ensure its write buffer is
         # drained before lazily triggering disconnect in on_transmit.
         if self.transmit_side.fd is not None:
-            self._broker.start_transmit(self)
+            self._broker._start_transmit(self)
 
     def on_shutdown(self, broker):
         self.close()
@@ -83,7 +83,7 @@ class IoPump(mitogen.core.BasicStream):
             self._output_buf = self._output_buf[written:]
 
         if not self._output_buf:
-            broker.stop_transmit(self)
+            broker._stop_transmit(self)
             if self._closed:
                 self.on_disconnect(broker)
 
@@ -343,14 +343,15 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext().main(**%r)\n' % ({
-                'parent_ids': parent_ids,
                 'context_id': context_id,
-                'debug': getattr(router, 'debug', False),
-                'profiling': getattr(router, 'profiling', False),
-                'log_level': mitogen.parent.get_log_level(),
-                'in_fd': sock2.fileno(),
-                'out_fd': sock2.fileno(),
                 'core_src_fd': None,
+                'debug': getattr(router, 'debug', False),
+                'in_fd': sock2.fileno(),
+                'log_level': mitogen.parent.get_log_level(),
+                'max_message_size': router.max_message_size,
+                'out_fd': sock2.fileno(),
+                'parent_ids': parent_ids,
+                'profiling': getattr(router, 'profiling', False),
                 'setup_stdio': False,
             },))
         finally:
