@@ -44,6 +44,11 @@ import time
 import types
 import zlib
 
+try:
+    from functools import lru_cache
+except ImportError:
+    from mitogen.compat.functools import lru_cache
+
 import mitogen.core
 from mitogen.core import LOG
 from mitogen.core import IOLOG
@@ -84,6 +89,7 @@ def is_immediate_child(msg, stream):
     return msg.src_id == stream.remote_id
 
 
+@lru_cache()
 def minimize_source(source):
     """Remove most comments and docstrings from Python source code.
     """
@@ -152,6 +158,8 @@ def strip_docstrings(tokens):
 
 
 def reindent(tokens, indent=' '):
+    """Replace existing indentation in a token steam, with `indent`.
+    """
     old_levels = []
     old_level = 0
     new_level = 0
