@@ -1,3 +1,6 @@
+"""Selected backports from Python stdlib collections module
+"""
+
 __all__ = [
     'namedtuple',
 ]
@@ -5,6 +8,15 @@ __all__ = [
 from operator import itemgetter as _itemgetter
 from keyword import iskeyword as _iskeyword
 import sys as _sys
+
+try:
+    all([])
+except NameError:
+    def all(iterable):
+        for element in iterable:
+            if not element:
+                return False
+        return True
 
 def namedtuple(typename, field_names, verbose=False):
     """Returns a new subclass of tuple with named fields.

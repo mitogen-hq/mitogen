@@ -1,7 +1,14 @@
+# encoding: utf-8
+"""Selected backports from Python stdlib functools module
+"""
+# Written by Nick Coghlan <ncoghlan at gmail.com>,
+# Raymond Hettinger <python at rcn.com>,
+# and Łukasz Langa <lukasz at langa.pl>.
+#   Copyright (C) 2006-2013 Python Software Foundation.
 
 __all__ = [
     'update_wrapper', 'wraps', 'WRAPPER_ASSIGNMENTS', 'WRAPPER_UPDATES',
-    'lru_cache', 'reduce',
+    'lru_cache',
 ]
 
 try:
@@ -114,7 +121,7 @@ class _HashedSeq(list):
 
 def _make_key(args, kwds, typed,
              kwd_mark = (object(),),
-             fasttypes = {int, str, frozenset, type(None)},
+             fasttypes = set([int, str, frozenset, type(None)]),
              sorted=sorted, tuple=tuple, type=type, len=len):
     """Make a cache key from optionally typed positional and keyword arguments
     The key is constructed in a way that is flat as possible rather than
@@ -175,47 +182,46 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
     PREV, NEXT, KEY, RESULT = 0, 1, 2, 3   # names for the link fields
 
     cache = {}
-    hits = misses = 0
-    full = False
     cache_get = cache.get    # bound method to lookup a key or return None
     lock = RLock()           # because linkedlist updates aren't threadsafe
     root = []                # root of the circular doubly linked list
     root[:] = [root, root, None, None]     # initialize by pointing to self
+    hits_misses_full_root = [0, 0, False, root]
+    HITS,MISSES,FULL,ROOT = 0, 1, 2, 3
 
     if maxsize == 0:
 
         def wrapper(*args, **kwds):
             # No caching -- just a statistics update after a successful call
-            nonlocal misses
             result = user_function(*args, **kwds)
-            misses += 1
+            hits_misses_full_root[MISSES] += 1
             return result
 
     elif maxsize is None:
 
         def wrapper(*args, **kwds):
             # Simple caching without ordering or size limit
-            nonlocal hits, misses
             key = make_key(args, kwds, typed)
             result = cache_get(key, sentinel)
             if result is not sentinel:
-                hits += 1
+                hits_misses_full_root[HITS] += 1
                 return result
             result = user_function(*args, **kwds)
             cache[key] = result
-            misses += 1
+            hits_misses_full_root[MISSES] += 1
             return result
 
     else:
 
         def wrapper(*args, **kwds):
             # Size limited caching that tracks accesses by recency
-            nonlocal root, hits, misses, full
             key = make_key(args, kwds, typed)
-            with lock:
+            lock.acquire()
+            try:
                 link = cache_get(key)
                 if link is not None:
                     # Move the link to the front of the circular queue
+                    root = hits_misses_full_root[ROOT]
                     link_prev, link_next, _key, result = link
                     link_prev[NEXT] = link_next
                     link_next[PREV] = link_prev
@@ -223,19 +229,22 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                     last[NEXT] = root[PREV] = link
                     link[PREV] = last
                     link[NEXT] = root
-                    hits += 1
+                    hits_misses_full_root[HITS] += 1
                     return result
+            finally:
+                lock.release()
             result = user_function(*args, **kwds)
-            with lock:
+            lock.acquire()
+            try:
                 if key in cache:
                     # Getting here means that this same key was added to the
                     # cache while the lock was released.  Since the link
                     # update is already done, we need only return the
                     # computed result and update the count of misses.
                     pass
-                elif full:
+                elif hits_misses_full_root[FULL]:
                     # Use the old root to store the new key and result.
-                    oldroot = root
+                    oldroot = root = hits_misses_full_root[ROOT]
                     oldroot[KEY] = key
                     oldroot[RESULT] = result
                     # Empty the oldest link and make it the new root.
@@ -244,7 +253,7 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                     # update. That will prevent potentially arbitrary object
                     # clean-up code (i.e. __del__) from running while we're
                     # still adjusting the links.
-                    root = oldroot[NEXT]
+                    root = hits_misses_full_root[ROOT] = oldroot[NEXT]
                     oldkey = root[KEY]
                     oldresult = root[RESULT]
                     root[KEY] = root[RESULT] = None
@@ -256,28 +265,38 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                     cache[key] = oldroot
                 else:
                     # Put result in a new link at the front of the queue.
+                    root = hits_misses_full_root[ROOT]
                     last = root[PREV]
                     link = [last, root, key, result]
                     last[NEXT] = root[PREV] = cache[key] = link
                     # Use the __len__() method instead of the len() function
                     # which could potentially be wrapped in an lru_cache itself.
-                    full = (cache.__len__() >= maxsize)
-                misses += 1
+                    hits_misses_full_root[FULL] = (cache.__len__() >= maxsize)
+                hits_misses_full_root[MISSES]
+            finally:
+                lock.release()
             return result
 
     def cache_info():
         """Report cache statistics"""
-        with lock:
+        lock.acquire()
+        try:
             return _CacheInfo(hits, misses, maxsize, cache.__len__())
+        finally:
+            lock.release()
 
     def cache_clear():
         """Clear the cache and cache statistics"""
-        nonlocal hits, misses, full
-        with lock:
+        lock.acquire()
+        try:
             cache.clear()
+            root = hits_misses_full_root[ROOT]
             root[:] = [root, root, None, None]
-            hits = misses = 0
-            full = False
+            hits_misses_full[HITS] = 0
+            hits_misses_full[MISSES] = 0
+            hits_misses_full[FULL] = False
+        finally:
+            lock.release()
 
     wrapper.cache_info = cache_info
     wrapper.cache_clear = cache_clear
