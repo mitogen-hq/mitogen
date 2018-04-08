@@ -135,10 +135,6 @@ High Risk
   exhaust available RAM. This will be fixed soon as it's likely to be tickled
   by common playbooks.
 
-* `Asynchronous Actions And Polling
-  <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
-  minimal testing.
-
 * No mechanism exists to bound the number of interpreters created during a run.
   For some playbooks that parameterize ``become_user`` over many accounts,
   resource exhaustion may be triggered on the target machine.
@@ -194,7 +190,7 @@ Behavioural Differences
   experience artificial serialization, causing slowdown equivalent to
   `task_duration * num_targets`. This will be fixed soon.
 
-* Asynchronous job IDs exist only for the duration of a run, and cannot be
+* Asynchronous jobs exist only for the duration of a run, and cannot be
   queried by subsequent ansible-playbook invocations. Since the ability to
   query job IDs across runs relied on an implementation detail, it is not
   expected this will break any real-world playbooks.
