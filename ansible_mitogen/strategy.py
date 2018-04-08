@@ -55,6 +55,8 @@ def wrap_action_loader__get(name, *args, **kwargs):
     This is used instead of static subclassing as it generalizes to third party
     action modules outside the Ansible tree.
     """
+    # Necessary since async_status execution strategy is hard-wired in
+    # executor/task_executor.py::_poll_async_result().
     if ( name == 'normal' and 'task' in kwargs and
          kwargs['task'].action == 'async_status'):
         name = 'mitogen_async_status'

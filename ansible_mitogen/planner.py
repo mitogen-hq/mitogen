@@ -35,8 +35,10 @@ files/modules known missing.
 """
 
 from __future__ import absolute_import
+import json
 import logging
 import os
+import random
 
 from ansible.executor import module_common
 import ansible.errors
@@ -115,6 +117,8 @@ class Invocation(object):
         self.env = env
         #: Boolean, if :py:data:`True`, launch the module asynchronously.
         self.wrap_async = wrap_async
+        #: String Job ID.
+        self.job_id = self._make_job_id()
 
         #: Initially ``None``, but set by :func:`invoke`. The path on the
         #: master to the module's implementation file.
@@ -122,6 +126,9 @@ class Invocation(object):
         #: Initially ``None``, but set by :func:`invoke`. The raw source or
         #: binary contents of the module.
         self.module_source = None
+
+    def _make_job_id(self):
+        return '%016x' % random.randint(0, 2**64)
 
     def __repr__(self):
         return 'Invocation(module_name=%s)' % (self.module_name,)
@@ -140,7 +147,10 @@ class Planner(object):
         """
         raise NotImplementedError()
 
-    def plan(self, invocation):
+    def get_should_fork(self, invocation):
+        return invocation.wrap_async
+
+    def plan(self, invocation, **kwargs):
         """
         If :meth:`detect` returned :data:`True`, plan for the module's
         execution, including granting access to or delivering any files to it
@@ -155,7 +165,10 @@ class Planner(object):
                 # named by `runner_name`.
             }
         """
-        raise NotImplementedError()
+        kwargs.setdefault('job_id', invocation.job_id)
+        kwargs.setdefault('service_context', invocation.connection.parent)
+        kwargs.setdefault('should_fork', self.get_should_fork(invocation))
+        return kwargs
 
 
 class BinaryPlanner(Planner):
@@ -168,22 +181,26 @@ class BinaryPlanner(Planner):
     def detect(self, invocation):
         return module_common._is_binary(invocation.module_source)
 
-    def plan(self, invocation):
+    def plan(self, invocation, **kwargs):
         invocation.connection._connect()
         mitogen.service.call(
-            invocation.connection.parent,
-            ansible_mitogen.services.FileService.handle,
-            ('register', invocation.module_path)
+            context=invocation.connection.parent,
+            handle=ansible_mitogen.services.FileService.handle,
+            method='register',
+            kwargs={
+                'path': invocation.module_path
+            }
         )
-        return {
-            'runner_name': self.runner_name,
-            'module': invocation.module_name,
-            'service_context': invocation.connection.parent,
-            'path': invocation.module_path,
-            'args': invocation.module_args,
-            'env': invocation.env,
-            'remote_tmp': invocation.remote_tmp,
-        }
+        return super(BinaryPlanner, self).plan(
+            invocation=invocation,
+            runner_name=self.runner_name,
+            module=invocation.module_name,
+            path=invocation.module_path,
+            args=invocation.module_args,
+            env=invocation.env,
+            remote_tmp=invocation.remote_tmp,
+            **kwargs
+        )
 
 
 class ScriptPlanner(BinaryPlanner):
@@ -199,20 +216,21 @@ class ScriptPlanner(BinaryPlanner):
         except KeyError:
             return interpreter
 
-    def plan(self, invocation):
-        kwargs = super(ScriptPlanner, self).plan(invocation)
+    def plan(self, invocation, **kwargs):
         interpreter, arg = parse_script_interpreter(invocation.module_source)
         if interpreter is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
                 invocation.module_name,
             ))
 
-        return dict(kwargs,
+        return super(ScriptPlanner, self).plan(
+            invocation=invocation,
             interpreter_arg=arg,
             interpreter=self._rewrite_interpreter(
                 interpreter=interpreter,
                 invocation=invocation
-            )
+            ),
+            **kwargs
         )
 
 
@@ -283,6 +301,12 @@ class NewStylePlanner(ScriptPlanner):
     """
     runner_name = 'NewStyleRunner'
 
+    def get_should_fork(self, invocation):
+        return (
+            super(NewStylePlanner, self).get_should_fork(invocation) or
+            (invocation.task_vars.get('mitogen_task_isolation') == 'fork')
+        )
+
     def detect(self, invocation):
         return 'from ansible.module_utils.' in invocation.module_source
 
@@ -319,10 +343,7 @@ def get_module_data(name):
     return path, source
 
 
-def invoke(invocation):
-    """
-    Find a suitable Planner that knows how to run `invocation`.
-    """
+def _do_invoke(invocation):
     (invocation.module_path,
      invocation.module_source) = get_module_data(invocation.module_name)
 
@@ -333,17 +354,50 @@ def invoke(invocation):
     else:
         raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
-    kwargs = planner.plan(invocation)
-    if invocation.wrap_async:
-        helper = ansible_mitogen.target.run_module_async
-    else:
-        helper = ansible_mitogen.target.run_module
-
     try:
-        js = invocation.connection.call(helper, kwargs)
+        kwargs = planner.plan(invocation)
+        invocation.connection.call(ansible_mitogen.target.run_module, kwargs)
     except mitogen.core.CallError as e:
         LOG.exception('invocation crashed: %r', invocation)
         summary = str(e).splitlines()[0]
         raise ansible.errors.AnsibleInternalError(CRASHED_MSG + summary)
+
+
+def _invoke_async(invocation):
+    _do_invoke(invocation)
+    return {
+        'stdout': json.dumps({
+            # modules/utilities/logic/async_wrapper.py::_run_module().
+            'changed': True,
+            'started': 1,
+            'finished': 0,
+            'ansible_job_id': invocation.job_id,
+        })
+    }
+
+
+def _invoke_sync(invocation):
+    recv = mitogen.core.Receiver(invocation.connection.router)
+    mitogen.service.call_async(
+        context=invocation.connection.parent,
+        handle=ansible_mitogen.services.JobResultService.handle,
+        method='listen',
+        kwargs={
+            'job_id': invocation.job_id,
+            'sender': recv.to_sender(),
+        }
+    )
+    _do_invoke(invocation)
+    return recv.get().unpickle()
+
+
+def invoke(invocation):
+    """
+    Find a suitable Planner that knows how to run `invocation`.
+    """
+    if invocation.wrap_async:
+        js = _invoke_async(invocation)
+    else:
+        js = _invoke_sync(invocation)
 
     return invocation.action._postprocess_response(js)

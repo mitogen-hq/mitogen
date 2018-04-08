@@ -28,38 +28,51 @@
 
 import ansible.plugins.action
 import mitogen.core
+import mitogen.utils
+import ansible_mitogen.services
 import ansible_mitogen.target
-from mitogen.utils import cast
 
 
 class ActionModule(ansible.plugins.action.ActionBase):
-    def run(self, tmp=None, task_vars=None):
-        job_id = self._task.args['jid']
-        try:
-            result = self._connection.call(
-                ansible_mitogen.target.get_async_result,
-                cast(job_id),
-            )
-        except mitogen.core.CallError, e:
-            return {
-                'ansible_job_id': job_id,
-                'started': 1,
-                'failed': 1,
-                'finished': 1,
-                'msg': str(e),
+    def _get_async_result(self, job_id):
+        self._connection._connect()
+        return mitogen.service.call(
+            context=self._connection.parent,
+            handle=ansible_mitogen.services.JobResultService.handle,
+            method='get',
+            kwargs={
+                'job_id': job_id,
             }
+        )
 
-        if result is None:
-            return {
-                'ansible_job_id': job_id,
-                'started': 1,
-                'failed': 0,
-                'finished': 0,
-                'msg': '',
-            }
+    def _on_result_pending(self, job_id):
+        return {
+            '_ansible_parsed': True,
+            'ansible_job_id': job_id,
+            'started': 1,
+            'failed': 0,
+            'finished': 0,
+            'msg': '',
+        }
 
-        dct = self._parse_returned_data({'stdout': result})
+    def _on_result_available(self, job_id, result):
+        dct = self._parse_returned_data(result)
         dct['ansible_job_id'] = job_id
         dct['started'] = 1
         dct['finished'] = 1
+
+        # Cutpasted from the action.py.
+        if 'stdout' in dct and 'stdout_lines' not in dct:
+            dct['stdout_lines'] = (dct['stdout'] or u'').splitlines()
+        if 'stderr' in dct and 'stderr_lines' not in dct:
+            dct['stderr_lines'] = (dct['stderr'] or u'').splitlines()
         return dct
+
+    def run(self, tmp=None, task_vars=None):
+        job_id = mitogen.utils.cast(self._task.args['jid'])
+
+        result = self._get_async_result(job_id)
+        if result is None:
+            return self._on_result_pending(job_id)
+        else:
+            return self._on_result_available(job_id, result)

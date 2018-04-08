@@ -1,0 +1,45 @@
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+
+  # Verify non-async jobs run in-process.
+
+  - debug: msg={{is_mitogen}}
+
+  - name: get process ID.
+    custom_python_detect_environment:
+    register: sync_proc1
+    when: is_mitogen
+
+  - name: get process ID again.
+    custom_python_detect_environment:
+    register: sync_proc2
+    when: is_mitogen
+
+  - assert:
+      that:
+      - sync_proc1.pid == sync_proc2.pid
+    when: is_mitogen
+
+  # Verify mitogen_task_isolation=fork triggers forking.
+
+  - name: get force-forked process ID.
+    custom_python_detect_environment:
+    register: fork_proc1
+    vars:
+      mitogen_task_isolation: fork
+    when: is_mitogen
+
+  - name: get force-forked process ID again.
+    custom_python_detect_environment:
+    register: fork_proc2
+    vars:
+      mitogen_task_isolation: fork
+    when: is_mitogen
+
+  - assert:
+      that:
+      - fork_proc1.pid != sync_proc1.pid
+      - fork_proc1.pid != fork_proc2.pid
+    when: is_mitogen

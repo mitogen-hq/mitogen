@@ -13,6 +13,10 @@ import sys
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
+        pid=os.getpid(),
+        ppid=os.getppid(),
+        uid=os.getuid(),
+        euid=os.geteuid(),
         sys_executable=sys.executable,
         mitogen_loaded='mitogen.core' in sys.modules,
         hostname=socket.gethostname(),

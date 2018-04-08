@@ -137,11 +137,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def connected(self):
         return self.broker is not None
 
-    def _wrap_connect(self, args):
+    def _wrap_connect(self, kwargs):
         dct = mitogen.service.call(
             context=self.parent,
             handle=ContextService.handle,
-            obj=mitogen.utils.cast(args),
+            method='connect',
+            kwargs=mitogen.utils.cast(kwargs),
         )
 
         if dct['msg']:
@@ -155,7 +156,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         master process.
         """
         return self._wrap_connect({
-            'method': 'local',
+            'method_name': 'local',
             'python_path': self.python_path,
         })
 
@@ -165,7 +166,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         ContextService in the master process.
         """
         return self._wrap_connect({
-            'method': 'ssh',
+            'method_name': 'ssh',
             'check_host_keys': False,  # TODO
             'hostname': self._play_context.remote_addr,
             'discriminator': self.mitogen_ssh_discriminator,
@@ -189,7 +190,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     def _connect_docker(self):
         return self._wrap_connect({
-            'method': 'docker',
+            'method_name': 'docker',
             'container': self._play_context.remote_addr,
             'python_path': self.python_path,
             'connect_timeout': self._play_context.timeout,
@@ -205,7 +206,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             be a Context returned by _connect_ssh().
         """
         return self._wrap_connect({
-            'method': 'sudo',
+            'method_name': 'sudo',
             'username': self._play_context.become_user,
             'password': self._play_context.become_pass,
             'python_path': python_path or self.python_path,

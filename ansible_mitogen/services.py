@@ -29,13 +29,19 @@
 from __future__ import absolute_import
 import logging
 import os.path
+import threading
 import zlib
 
 import mitogen
 import mitogen.service
+import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
+
+
+class Error(Exception):
+    pass
 
 
 class ContextService(mitogen.service.DeduplicatingService):
@@ -74,15 +80,17 @@ class ContextService(mitogen.service.DeduplicatingService):
     """
     handle = 500
     max_message_size = 1000
-    required_args = {
-        'method': str
-    }
 
-    def get_response(self, args):
-        args.pop('discriminator', None)
-        method = getattr(self.router, args.pop('method'))
+    @mitogen.service.expose(mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'method_name': str
+    })
+    def connect(self, method_name, discriminator=None, **kwargs):
+        method = getattr(self.router, method_name, None)
+        if method is None:
+            raise Error('no such Router method: %s' % (method_name,))
         try:
-            context = method(**args)
+            context = method(**kwargs)
         except mitogen.core.StreamError as e:
             return {
                 'context': None,
@@ -91,6 +99,10 @@ class ContextService(mitogen.service.DeduplicatingService):
             }
 
         home_dir = context.call(os.path.expanduser, '~')
+
+        # We don't need to wait for the result of this. Ideally we'd check its
+        # return value somewhere, but logs will catch any failures anyway.
+        context.call_async(ansible_mitogen.target.start_fork_parent)
         return {
             'context': context,
             'home_dir': home_dir,
@@ -135,32 +147,77 @@ class FileService(mitogen.service.Service):
         super(FileService, self).__init__(router)
         self._paths = {}
 
-    def validate_args(self, args):
-        return (
-            isinstance(args, tuple) and
-            len(args) == 2 and
-            args[0] in ('register', 'fetch') and
-            isinstance(args[1], basestring)
-        )
+    @mitogen.service.expose(policy=mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'path': basestring
+    })
+    def register(self, path):
+        if path not in self._paths:
+            LOG.info('%r: registering %r', self, path)
+            with open(path, 'rb') as fp:
+                self._paths[path] = zlib.compress(fp.read())
 
-    def dispatch(self, args, msg):
-        cmd, path = args
-        return getattr(self, cmd)(path, msg)
-
-    def register(self, path, msg):
-        if not mitogen.core.has_parent_authority(msg):
-            raise mitogen.core.CallError(self.unprivileged_msg)
-
-        if path in self._paths:
-            return
-
-        LOG.info('%r: registering %r', self, path)
-        with open(path, 'rb') as fp:
-            self._paths[path] = zlib.compress(fp.read())
-
-    def fetch(self, path, msg):
+    @mitogen.service.expose(policy=mitogen.service.AllowAny())
+    @mitogen.service.arg_spec({
+        'path': basestring
+    })
+    def fetch(self, path):
         if path not in self._paths:
             raise mitogen.core.CallError(self.unregistered_msg)
 
-        LOG.debug('Serving %r to context %r', path, msg.src_id)
+        LOG.debug('Serving %r', path)
         return self._paths[path]
+
+
+class JobResultService(mitogen.service.Service):
+    """
+    Receive the result of a task from a child and forward it to interested
+    listeners. If no listener exists, store the result until it is requested.
+
+    Results are keyed by job ID.
+    """
+    handle = 502
+    max_message_size = 1048576 * 64
+
+    def __init__(self, router):
+        super(JobResultService, self).__init__(router)
+        self._lock = threading.Lock()
+        self._result_by_job_id = {}
+        self._sender_by_job_id = {}
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'job_id': str,
+        'sender': mitogen.core.Sender,
+    })
+    def listen(self, job_id, sender):
+        LOG.debug('%r.listen(job_id=%r, sender=%r)', self, job_id, sender)
+        with self._lock:
+            if job_id in self._sender_by_job_id:
+                raise Error('Listener already exists for job: %s' % (job_id,))
+            self._sender_by_job_id[job_id] = sender
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'job_id': basestring,
+    })
+    def get(self, job_id):
+        LOG.debug('%r.get(job_id=%r)', self, job_id)
+        with self._lock:
+            return self._result_by_job_id.pop(job_id, None)
+
+    @mitogen.service.expose(mitogen.service.AllowAny())
+    @mitogen.service.arg_spec({
+        'job_id': basestring,
+        'result': dict
+    })
+    def push(self, job_id, result):
+        LOG.debug('%r.push(job_id=%r, result=%r)', self, job_id, result)
+        with self._lock:
+            if job_id in self._result_by_job_id:
+                raise Error('Result already exists for job: %s' % (job_id,))
+            sender = self._sender_by_job_id.pop(job_id, None)
+            if sender:
+                sender.send(result)
+            else:
+                self._result_by_job_id[job_id] = result

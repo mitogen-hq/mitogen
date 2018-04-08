@@ -155,6 +155,7 @@ class MuxProcess(object):
             services=[
                 ansible_mitogen.services.ContextService(self.router),
                 ansible_mitogen.services.FileService(self.router),
+                ansible_mitogen.services.JobResultService(self.router),
             ],
             size=int(os.environ.get('MITOGEN_POOL_SIZE', '16')),
         )

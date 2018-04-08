@@ -45,6 +45,7 @@ import sys
 import tempfile
 import types
 
+import mitogen.service
 import ansible_mitogen.target  # TODO: circular import
 
 try:
@@ -82,14 +83,17 @@ class Runner(object):
 
     Subclasses may override `_run`()` and extend `setup()` and `revert()`.
     """
-    def __init__(self, module, remote_tmp, raw_params=None, args=None, env=None):
+    def __init__(self, module, job_id, remote_tmp, service_context,
+                 raw_params=None, args=None, env=None):
         if args is None:
             args = {}
         if raw_params is not None:
             args['_raw_params'] = raw_params
 
         self.module = module
+        self.job_id = job_id
         self.remote_tmp = os.path.expanduser(remote_tmp)
+        self.service_context = service_context
         self.raw_params = raw_params
         self.args = args
         self.env = env
@@ -131,6 +135,17 @@ class Runner(object):
         """
         raise NotImplementedError()
 
+    def _send_result(self, dct):
+        mitogen.service.call(
+            context=self.service_context,
+            handle=502,
+            method='push',
+            kwargs={
+                'job_id': self.job_id,
+                'result': dct
+            }
+        )
+
     def run(self):
         """
         Set up the process environment in preparation for running an Ansible
@@ -143,7 +158,7 @@ class Runner(object):
         """
         self.setup()
         try:
-            return self._run()
+            self._send_result(self._run())
         finally:
             self.revert()
 
@@ -193,10 +208,9 @@ class NewStyleStdio(object):
 
 
 class ProgramRunner(Runner):
-    def __init__(self, path, service_context, **kwargs):
+    def __init__(self, path, **kwargs):
         super(ProgramRunner, self).__init__(**kwargs)
         self.path = path
-        self.service_context = service_context
 
     def setup(self):
         super(ProgramRunner, self).setup()

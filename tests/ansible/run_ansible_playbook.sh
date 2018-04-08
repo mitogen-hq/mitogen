@@ -4,4 +4,11 @@
 # Used by delegate_to.yml to ensure "sudo -E" preserves environment.
 export I_WAS_PRESERVED=1
 
-exec ansible-playbook "$@"
+if [ "${ANSIBLE_STRATEGY:0:7}" = "mitogen" ]
+then
+    extra="-e is_mitogen=1"
+else
+    extra="-e is_mitogen=0"
+fi
+
+exec ansible-playbook $extra "$@"

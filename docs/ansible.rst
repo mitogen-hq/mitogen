@@ -128,25 +128,20 @@ This is a proof of concept: issues below are exclusively due to code immaturity.
 High Risk
 ~~~~~~~~~
 
-* Transfer of large (i.e. GB-sized) files using certain Ansible-internal APIs,
-  such as triggered via the ``copy`` module, will cause corresponding temporary
-  memory and CPU spikes on both host and target machine, due to delivering the
-  file as a single large message. If many machines are targetted with a large
-  file, the host machine could easily exhaust available RAM. This will be fixed
-  soon as it's likely to be tickled by common playbooks.
-
-* Local actions are single threaded. Any that execute for every target will
-  experience artificial serialization, causing slowdown equivalent to
-  `task_duration * num_targets`. This will be fixed soon.
+* Transfer of large files using certain Ansible-internal APIs, such as
+  triggered via the ``copy`` module, will cause corresponding memory and CPU
+  spikes on both host and target machine, due to delivering the file as a
+  single message. If many machines are targetted, the controller could easily
+  exhaust available RAM. This will be fixed soon as it's likely to be tickled
+  by common playbooks.
 
 * `Asynchronous Actions And Polling
   <https://docs.ansible.com/ansible/latest/playbooks_async.html>`_ has received
-  minimal testing. Jobs execute in a thread of the target Python interpreter.
-  This will fixed shortly.
+  minimal testing.
 
-* No mechanism exists yet to bound the number of interpreters created during a
-  run. For some playbooks that parameterize ``become_user`` over a large number
-  of user accounts, resource exhaustion may be triggered on the target machine.
+* No mechanism exists to bound the number of interpreters created during a run.
+  For some playbooks that parameterize ``become_user`` over many accounts,
+  resource exhaustion may be triggered on the target machine.
 
 * Only Ansible 2.4 is being used for development, with occasional tests under
   2.5, 2.3 and 2.2. It should be more than possible to fully support at least
@@ -189,18 +184,20 @@ Behavioural Differences
   following its parent SSH account, and try to emulate Ansible's existing
   timeout semantics.
 
-* Normally with Ansible, diagnostics and use of the :py:mod:`logging` package
-  output on the target machine are discarded. With Mitogen, all of this is
-  captured and returned to the host machine, where it can be viewed as desired
-  with ``-vvv``.
-
 * Local commands are executed in a reuseable Python interpreter created
   identically to interpreters used on remote hosts. At present only one such
-  interpreter per ``become_user`` exists, and so only one action may be
-  executed in each context simultaneously. Ansible usually permits up to
-  ``ansible.cfg:forks`` simultaneous local actions, which may trigger a
-  performance regression in some playbooks. This will be fixed in a future
-  release.
+  interpreter per ``become_user`` exists, and so only one local action may be
+  executed simultaneously per local user account.
+
+  Ansible usually permits up to ``ansible.cfg:forks`` simultaneous local
+  actions. Any long-running local actions that execute for every target will
+  experience artificial serialization, causing slowdown equivalent to
+  `task_duration * num_targets`. This will be fixed soon.
+
+* Asynchronous job IDs exist only for the duration of a run, and cannot be
+  queried by subsequent ansible-playbook invocations. Since the ability to
+  query job IDs across runs relied on an implementation detail, it is not
+  expected this will break any real-world playbooks.
 
 
 How Modules Execute
@@ -340,16 +337,18 @@ FreeNode IRC network.
 Debugging
 ---------
 
-Mitogen's logs are integrated into Ansible's display framework. Basic high
-level debug logs are produced with ``-vvv``, with logging of all IO activity on
-the controller machine when ``-vvvv`` or higher is specified.
+Normally with Ansible, diagnostics and use of the :py:mod:`logging` package
+output on the target machine are discarded. With Mitogen, all of this is
+captured and returned to the host machine, where it can be viewed as desired
+with ``-vvv``. Basic high level logs are produced with ``-vvv``, with logging
+of all IO on the controller with ``-vvvv`` or higher.
 
-Although any use of standard IO and the logging package on remote machines is
-forwarded to the controller machine, it is not possible to receive logs of all
-IO activity, as the processs of receiving those logs would would in turn
-generate more IO activity. To receive a complete trace of every process on
-every machine, file-based logging is required. File-based logging can be
-enabled by setting ``MITOGEN_ROUTER_DEBUG=1`` in your environment.
+Although use of standard IO and the logging package on the target is forwarded
+to the controller, it is not possible to receive IO activity logs, as the
+processs of receiving those logs would would itself generate IO activity. To
+receive a complete trace of every process on every machine, file-based logging
+is necessary. File-based logging can be enabled by setting
+``MITOGEN_ROUTER_DEBUG=1`` in your environment.
 
 When file-based logging is enabled, one file per context will be created on the
 local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.

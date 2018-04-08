@@ -7,8 +7,8 @@ Service Framework
 
 Mitogen includes a simple framework for implementing services exposed to other
 contexts, with built-in subclasses that capture some common service models.
-This is a work in progress, and new functionality will be added as a common use
-for it is is found.
+This is a work in progress, and new functionality will be added as common usage
+patterns emerge.
 
 
 Overview
@@ -71,6 +71,13 @@ Example
 
 Reference
 ---------
+
+.. autoclass:: mitogen.service.Policy
+.. autoclass:: mitogen.service.AllowParents
+.. autoclass:: mitogen.service.AllowAny
+
+.. autofunction:: mitogen.service.arg_spec
+.. autofunction:: mitogen.service.expose
 
 .. autofunction:: mitogen.service.Service
 

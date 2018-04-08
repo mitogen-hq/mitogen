@@ -1,0 +1,52 @@
+# Verify 'async: <timeout>' functions as desired.
+
+
+- hosts: all
+  any_errors_fatal: true
+  tasks:
+
+  # Verify async-with-polling-and-timeout behaviour.
+
+  - name: sleep for 7 seconds, but timeout after 1 second.
+    ignore_errors: true
+    shell: sleep 7
+    async: 1
+    poll: 1
+    register: job1
+
+  - assert:
+      that:
+        - job1.changed == False
+        - job1.failed == True
+        - job1.msg == "async task did not complete within the requested time"
+        - job1.keys()|sort == ['changed', 'failed', 'msg']
+
+  # Verify async-with-timeout-then-poll behaviour.
+  # This is broken in upstream Ansible, so disable the tests there.
+  #
+  # TODO: the tests below are totally broken, not clear what Ansible is
+  # supposed to do here, so can't emulate it in Mitogen.
+
+  - name: sleep for 7 seconds, but timeout after 1 second.
+    ignore_errors: true
+    shell: sleep 7
+    async: 1
+    poll: 0
+    register: job2
+    when: false  # is_mitogen
+
+  - name: poll up to 10 times.
+    async_status:
+      jid: "{{job2.ansible_job_id}}"
+    register: result2
+    until: result2.finished
+    retries: 10
+    delay: 1
+    when: false  # is_mitogen
+
+  - assert:
+      that:
+        - result1.rc == 0
+        - result2.rc == 0
+        - result2.stdout == 'im_alive'
+    when: false  # is_mitogen

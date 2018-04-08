@@ -26,6 +26,11 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+Helper functions intended to be executed on the target. These are entrypoints
+for file transfer, module execution and sundry bits like changing file modes.
+"""
+
 from __future__ import absolute_import
 import json
 import logging
@@ -40,10 +45,12 @@ import tempfile
 import threading
 import zlib
 
-import mitogen.core
-import mitogen.service
 import ansible_mitogen.runner
 import ansible_mitogen.services
+import mitogen.core
+import mitogen.fork
+import mitogen.parent
+import mitogen.service
 
 
 LOG = logging.getLogger(__name__)
@@ -51,17 +58,15 @@ LOG = logging.getLogger(__name__)
 #: Caching of fetched file data.
 _file_cache = {}
 
-#: Mapping of job_id<->result dict
-_result_by_job_id = {}
-
-#: Mapping of job_id<->threading.Thread
-_thread_by_job_id = {}
+#: Initialized to an econtext.parent.Context pointing at a pristine fork of
+#: the target Python interpreter before it executes any code or imports.
+_fork_parent = None
 
 
 def get_file(context, path):
     """
     Basic in-memory caching module fetcher. This generates an one roundtrip for
-    every previously unseen module, so it is only temporary.
+    every previously unseen file, so it is only a temporary solution.
 
     :param context:
         Context we should direct FileService requests to. For now (and probably
@@ -75,39 +80,64 @@ def get_file(context, path):
     if path not in _file_cache:
         _file_cache[path] = zlib.decompress(
             mitogen.service.call(
-                context,
-                ansible_mitogen.services.FileService.handle,
-                ('fetch', path)
+                context=context,
+                handle=ansible_mitogen.services.FileService.handle,
+                method='fetch',
+                kwargs={
+                    'path': path
+                }
             )
         )
 
     return _file_cache[path]
 
 
-def run_module(kwargs):
+@mitogen.core.takes_econtext
+def start_fork_parent(econtext):
+    """
+    Called by ContextService immediately after connection; arranges for the
+    (presently) spotless Python interpreter to be forked, where the newly
+    forked interpreter becomes the parent of any newly forked future
+    interpreters.
+
+    This is necessary to prevent modules that are executed in-process from
+    polluting the global interpreter state in a way that effects explicitly
+    isolated modules.
+    """
+    mitogen.parent.upgrade_router(econtext)
+
+    global _fork_parent
+    _fork_parent = econtext.router.fork()
+
+
+@mitogen.core.takes_econtext
+def start_fork_child(kwargs, econtext):
+    mitogen.parent.upgrade_router(econtext)
+    context = econtext.router.fork()
+    kwargs['shutdown_on_exit'] = True
+    context.call_async(run_module, kwargs)
+
+
+@mitogen.core.takes_econtext
+def run_module(kwargs, econtext):
     """
     Set up the process environment in preparation for running an Ansible
     module. This monkey-patches the Ansible libraries in various places to
     prevent it from trying to kill the process on completion, and to prevent it
     from reading sys.stdin.
     """
+    should_fork = kwargs.pop('should_fork', False)
+    shutdown_on_exit = kwargs.pop('shutdown_on_exit', False)
+    if should_fork:
+        _fork_parent.call(start_fork_child, kwargs)
+        return
+
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
     impl = klass(**kwargs)
-    return impl.run()
-
-
-def _async_main(job_id, runner_name, kwargs):
-    """
-    Implementation for the thread that implements asynchronous module
-    execution.
-    """
-    try:
-        rc = run_module(runner_name, kwargs)
-    except Exception, e:
-        rc = mitogen.core.CallError(e)
-
-    _result_by_job_id[job_id] = rc
+    impl.run()
+    if shutdown_on_exit:
+        econtext.broker.shutdown()
 
 
 def make_temp_directory(base_dir):
@@ -124,42 +154,6 @@ def make_temp_directory(base_dir):
         dir=base_dir,
         prefix='ansible-mitogen-tmp-',
     )
-
-def run_module_async(runner_name, kwargs):
-    """
-    Arrange for an Ansible module to be executed in a thread of the current
-    process, with results available via :py:func:`get_async_result`.
-    """
-    job_id = '%08x' % random.randint(0, 2**32-1)
-    _result_by_job_id[job_id] = None
-    _thread_by_job_id[job_id] = threading.Thread(
-        target=_async_main,
-        kwargs={
-            'job_id': job_id,
-            'runner_name': runner_name,
-            'kwargs': kwargs,
-        }
-    )
-    _thread_by_job_id[job_id].start()
-    return json.dumps({
-        'ansible_job_id': job_id,
-        'changed': True
-    })
-
-
-def get_async_result(job_id):
-    """
-    Poll for the result of an asynchronous task.
-
-    :param str job_id:
-        Job ID to poll for.
-    :returns:
-        ``None`` if job is still running, JSON-encoded result dictionary if
-        execution completed normally, or :py:class:`mitogen.core.CallError` if
-        an exception was thrown.
-    """
-    if not _thread_by_job_id[job_id].isAlive():
-        return _result_by_job_id[job_id]
 
 
 def get_user_shell():

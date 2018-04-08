@@ -54,6 +54,72 @@ class AllowParents(Policy):
                 msg.auth_id == mitogen.context_id)
 
 
+def validate_arg_spec(spec, args):
+    for name in spec:
+        try:
+            obj = args[name]
+        except KeyError:
+            raise mitogen.core.CallError(
+                'Required argument %r missing.' % (name,)
+            )
+
+        if not isinstance(obj, spec[name]):
+            raise mitogen.core.CallError(
+                'Argument %r type incorrect, got %r, expected %r' % (
+                    name,
+                    type(obj),
+                    spec[name]
+                )
+            )
+
+
+def arg_spec(spec):
+    """
+    Annotate a method as requiring arguments with a specific type. This only
+    validates required arguments. For optional arguments, write a manual check
+    within the function.
+
+    ::
+
+        @mitogen.service.arg_spec({
+            'path': str
+        })
+        def fetch_path(self, path, optional=None):
+            ...
+
+    :param dict spec:
+        Mapping from argument name to expected type.
+    """
+    def wrapper(func):
+        func.mitogen_service__arg_spec = spec
+        return func
+    return wrapper
+
+
+def expose(policy):
+    """
+    Annotate a method to permit access to contexts matching an authorization
+    policy. The annotation may be specified multiple times. Methods lacking any
+    authorization policy are not accessible.
+
+    ::
+
+        @mitogen.service.expose(policy=mitogen.service.AllowParents())
+        def unsafe_operation(self):
+            ...
+
+    :param mitogen.service.Policy policy:
+        The policy to require.
+    """
+    def wrapper(func):
+        func.mitogen_service__policies = (
+            [policy] +
+            getattr(func, 'mitogen_service__policies', [])
+        )
+        return func
+    return wrapper
+
+
 class Service(object):
     #: Sentinel object to suppress reply generation, since returning ``None``
     #: will trigger a response message containing the pickled ``None``.
@@ -63,17 +129,6 @@ class Service(object):
     #: integer handle to use.
     handle = None
     max_message_size = 0
-
-    #: Mapping from required key names to their required corresponding types,
-    #: used by the default :py:meth:`validate_args` implementation to validate
-    #: requests.
-    required_args = {}
-
-    #: Policies that must authorize each message. By default only parents are
-    #: authorized.
-    policies = (
-        AllowParents(),
-    )
 
     def __init__(self, router):
         self.router = router
@@ -88,57 +143,50 @@ class Service(object):
             self.__class__.__name__,
         )
 
-    def validate_args(self, args):
-        return (
-            isinstance(args, dict) and
-            all(isinstance(args.get(k), t)
-                for k, t in self.required_args.iteritems())
-        )
-
     def dispatch(self, args, msg):
         raise NotImplementedError()
 
-    def dispatch_one(self, msg):
-        if not all(p.is_authorized(self, msg) for p in self.policies):
-            LOG.error('%r: unauthorized message %r', self, msg)
-            msg.reply(mitogen.core.CallError('Unauthorized'))
-            return
-
+    def _validate_message(self, msg):
         if len(msg.data) > self.max_message_size:
-            LOG.error('%r: larger than permitted size: %r', self, msg)
-            msg.reply(mitogen.core.CallError('Message size exceeded'))
-            return
+            raise mitogen.core.CallError('Message size exceeded.')
 
-        args = msg.unpickle(throw=False)
-        if  (args == mitogen.core._DEAD or
-             isinstance(args, mitogen.core.CallError) or
-             not self.validate_args(args)):
-            LOG.warning('Received junk message: %r', args)
-            msg.reply(mitogen.core.CallError('Received junk message'))
-            return
+        pair = msg.unpickle(throw=False)
+        if not (isinstance(pair, tuple) and
+                len(pair) == 2 and
+                isinstance(pair[0], basestring)):
+            raise mitogen.core.CallError('Invalid message format.')
 
+        method_name, kwargs = pair
+        method = getattr(self, method_name, None)
+        if method is None:
+            raise mitogen.core.CallError('No such method exists.')
+
+        policies = getattr(method, 'mitogen_service__policies', None)
+        if not policies:
+            raise mitogen.core.CallError('Method has no policies set.')
+
+        if not all(p.is_authorized(self, msg) for p in policies):
+            raise mitogen.core.CallError('Unauthorized')
+
+        required = getattr(method, 'mitogen_service__arg_spec', {})
+        validate_arg_spec(required, kwargs)
+        return method_name, kwargs
+
+    def _on_receive_message(self, msg):
+        method_name, kwargs = self._validate_message(msg)
+        return getattr(self, method_name)(**kwargs)
+
+    def on_receive_message(self, msg):
         try:
-            response = self.dispatch(args, msg)
+            response = self._on_receive_message(msg)
             if response is not self.NO_REPLY:
                 msg.reply(response)
+        except mitogen.core.CallError, e:
+            LOG.warning('%r: %s', self, msg)
+            msg.reply(e)
         except Exception, e:
             LOG.exception('While invoking %r.dispatch()', self)
             msg.reply(mitogen.core.CallError(e))
-
-    def run_once(self):
-        try:
-            msg = self.recv.get()
-        except mitogen.core.ChannelError, e:
-            # Channel closed due to broker shutdown, exit gracefully.
-            LOG.debug('%r: channel closed: %s', self, e)
-            self.running = False
-            return
-
-        self.dispatch_one(msg)
-
-    def run(self):
-        while self.running:
-            self.run_once()
 
 
 class DeduplicatingService(Service):
@@ -159,13 +207,13 @@ class DeduplicatingService(Service):
         self._waiters = {}
         self._lock = threading.Lock()
 
-    def key_from_request(self, args):
+    def key_from_request(self, method_name, kwargs):
         """
         Generate a deduplication key from the request. The default
         implementation returns a string based on a stable representation of the
         input dictionary generated by :py:func:`pprint.pformat`.
         """
-        return pprint.pformat(args)
+        return pprint.pformat((method_name, kwargs))
 
     def get_response(self, args):
         raise NotImplementedError()
@@ -181,8 +229,9 @@ class DeduplicatingService(Service):
         finally:
             self._lock.release()
 
-    def dispatch(self, args, msg):
-        key = self.key_from_request(args)
+    def _on_receive_message(self, msg):
+        method_name, kwargs = self._validate_message(msg)
+        key = self.key_from_request(method_name, kwargs)
 
         self._lock.acquire()
         try:
@@ -199,7 +248,10 @@ class DeduplicatingService(Service):
 
         # I'm the unlucky thread that must generate the response.
         try:
-            self._produce_response(key, self.get_response(args))
+            response = getattr(self, method_name)(**kwargs)
+            self._produce_response(key, response)
+        except mitogen.core.CallError, e:
+            self._produce_response(key, e)
         except Exception, e:
             self._produce_response(key, mitogen.core.CallError(e))
 
@@ -260,7 +312,7 @@ class Pool(object):
 
             service = msg.receiver.service
             try:
-                service.dispatch_one(msg)
+                service.on_receive_message(msg)
             except Exception:
                 LOG.exception('While handling %r using %r', msg, service)
 
@@ -281,7 +333,12 @@ class Pool(object):
         )
 
 
-def call(context, handle, obj):
-    msg = mitogen.core.Message.pickled(obj, handle=handle)
-    recv = context.send_async(msg)
+def call_async(context, handle, method, kwargs):
+    pair = (method, kwargs)
+    msg = mitogen.core.Message.pickled(pair, handle=handle)
+    return context.send_async(msg)
+
+
+def call(context, handle, method, kwargs):
+    recv = call_async(context, handle, method, kwargs)
     return recv.get().unpickle()
