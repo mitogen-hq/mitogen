@@ -139,15 +139,13 @@ High Risk
   For some playbooks that parameterize ``become_user`` over many accounts,
   resource exhaustion may be triggered on the target machine.
 
-* Only Ansible 2.4 is being used for development, with occasional tests under
-  2.5, 2.3 and 2.2. It should be more than possible to fully support at least
-  2.3, if not also 2.2.
-
 
 Low Risk
 ~~~~~~~~
 
-* Only UNIX machines running Python 2.x are supported, Windows will come later.
+* Only Ansible 2.4 is being used for development, with occasional tests under
+  2.5, 2.3 and 2.2. It should be more than possible to fully support at least
+  2.3, if not also 2.2.
 
 * Only the ``sudo`` become method is available, however adding new methods is
   straightforward, and eventually at least ``su`` will be included.
