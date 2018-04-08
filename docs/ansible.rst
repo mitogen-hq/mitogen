@@ -357,11 +357,26 @@ Interpreter Reuse
 ~~~~~~~~~~~~~~~~~
 
 The extension aggressively reuses the single target Python interpreter to
-execute every module. While this works well, it violates an unwritten
+execute every module. While this generally works well, it violates an unwritten
 assumption regarding Ansible modules, and so it is possible a buggy module
 could cause a run to fail, or for unrelated modules to interact with each other
-due to bad hygiene. Mitigations (such as forking) will be added as necessary if
-problems of this sort ever actually manfest.
+due to bad hygiene.
+
+Before reporting a bug relating to a module behaving incorrectly, please re-run
+your playbook with ``-e mitogen_task_isolation=fork`` to see if the problem
+abates. This may also be set on a per-task basis:
+
+::
+
+    - name: My task.
+      broken_module:
+        some_option: true
+      vars:
+        mitogen_task_isolation: fork
+
+If forking fixes your problem, **please report a bug regardless**, as an
+internal list can be updated to prevent users bumping into the same problem in
+future.
 
 
 Runtime Patches
