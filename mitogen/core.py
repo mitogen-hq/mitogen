@@ -509,11 +509,6 @@ class Importer(object):
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
-        router.add_handler(
-            fn=self._on_load_module,
-            handle=LOAD_MODULE,
-            policy=has_parent_authority,
-        )
         self._cache = {}
         if core_src:
             self._cache['mitogen.core'] = (
@@ -523,6 +518,14 @@ class Importer(object):
                 zlib.compress(core_src, 9),
                 [],
             )
+        self._install_handler(router)
+
+    def _install_handler(self, router):
+        router.add_handler(
+            fn=self._on_load_module,
+            handle=LOAD_MODULE,
+            policy=has_parent_authority,
+        )
 
     def __repr__(self):
         return 'Importer()'
@@ -1542,7 +1545,10 @@ class ExternalContext(object):
             enable_debug_logging()
 
     def _setup_importer(self, importer, core_src_fd, whitelist, blacklist):
-        if not importer:
+        if importer:
+            importer._install_handler(self.router)
+            importer._context = self.parent
+        else:
             if core_src_fd:
                 fp = os.fdopen(101, 'r', 1)
                 try:
@@ -1559,7 +1565,6 @@ class ExternalContext(object):
                                 core_src, whitelist, blacklist)
 
         self.importer = importer
-        self.importer._context = self.parent  # for fork().
         self.router.importer = importer
         sys.meta_path.append(self.importer)
 

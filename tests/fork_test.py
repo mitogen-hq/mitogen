@@ -40,6 +40,15 @@ def RAND_pseudo_bytes(n=32):
     return buf[:]
 
 
+def exercise_importer(n):
+    """
+    Ensure the forked child has a sensible importer.
+    """
+    sys.path.remove(testlib.DATA_DIR)
+    import simple_pkg.a
+    return simple_pkg.a.subtract_one_add_two(n)
+
+
 class ForkTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
         context = self.router.fork()
@@ -57,6 +66,10 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertNotEqual(context.call(RAND_pseudo_bytes),
                             RAND_pseudo_bytes())
 
+    def test_importer(self):
+        context = self.router.fork()
+        self.assertEqual(2, context.call(exercise_importer, 1))
+
 
 class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
@@ -73,6 +86,11 @@ class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
         c1 = self.router.fork()
         c2 = self.router.fork(via=c1)
         self.assertEquals(123, c2.call(ping))
+
+    def test_importer(self):
+        c1 = self.router.fork(name='c1')
+        c2 = self.router.fork(name='c2', via=c1)
+        self.assertEqual(2, c2.call(exercise_importer, 1))
 
 
 if __name__ == '__main__':
