@@ -137,7 +137,26 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def connected(self):
         return self.broker is not None
 
-    def _wrap_connect(self, kwargs):
+    def _on_connection_error(self, msg):
+        raise ansible.errors.AnsibleConnectionFailure(msg)
+
+    def _on_become_error(self, msg):
+        # TODO: vanilla become failures yield this:
+        #   {
+        #       "changed": false,
+        #       "module_stderr": "sudo: sorry, you must have a tty to run sudo\n",
+        #       "module_stdout": "",
+        #       "msg": "MODULE FAILURE",
+        #       "rc": 1
+        #   }
+        #
+        # Currently we yield this:
+        #   {
+        #       "msg": "EOF on stream; last 300 bytes received: 'sudo: ....\n'"
+        #   }
+        raise ansible.errors.AnsibleModuleError(msg)
+
+    def _wrap_connect(self, on_error, kwargs):
         dct = mitogen.service.call(
             context=self.parent,
             handle=ContextService.handle,
@@ -146,7 +165,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         )
 
         if dct['msg']:
-            raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
+            on_error(dct['msg'])
 
         return dct['context'], dct['home_dir']
 
@@ -155,7 +174,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         Fetch a reference to the local() Context from ContextService in the
         master process.
         """
-        return self._wrap_connect({
+        return self._wrap_connect(self._on_connection_error, {
             'method_name': 'local',
             'python_path': self.python_path,
         })
@@ -165,7 +184,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         Fetch a reference to an SSH Context matching the play context from
         ContextService in the master process.
         """
-        return self._wrap_connect({
+        return self._wrap_connect(self._on_connection_error, {
             'method_name': 'ssh',
             'check_host_keys': False,  # TODO
             'hostname': self._play_context.remote_addr,
@@ -189,7 +208,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         })
 
     def _connect_docker(self):
-        return self._wrap_connect({
+        return self._wrap_connect(self._on_connection_error, {
             'method_name': 'docker',
             'container': self._play_context.remote_addr,
             'python_path': self.python_path,
@@ -205,7 +224,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Parent Context of the sudo Context. For Ansible, this should always
             be a Context returned by _connect_ssh().
         """
-        return self._wrap_connect({
+        return self._wrap_connect(self._on_become_error, {
             'method_name': 'sudo',
             'username': self._play_context.become_user,
             'password': self._play_context.become_pass,
@@ -213,10 +232,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'sudo_path': self.sudo_path,
             'connect_timeout': self._play_context.timeout,
             'via': via,
-            'sudo_args': shlex.split(
-                self._play_context.sudo_flags or
-                self._play_context.become_flags or ''
-            ),
+            'sudo_args': [
+                term
+                for s in (
+                    self._play_context.sudo_flags,
+                    self._play_context.become_flags
+                )
+                for term in shlex.split(s or '')
+            ],
         })
 
     def _connect(self):
