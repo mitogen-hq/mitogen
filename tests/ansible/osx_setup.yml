@@ -1,0 +1,63 @@
+
+#
+# Add users expected by tests to an OS X machine. Assumes passwordless sudo to
+# root.
+#
+# WARNING: this creates non-privilged accounts with pre-set passwords!
+#
+
+- hosts: all
+  become: true
+  tasks:
+    - name: Disable non-localhost SSH for Mitogen users
+      blockinfile:
+        path: /etc/ssh/sshd_config
+        block: |
+          Match User mitogen__* Address !127.0.0.1
+            DenyUsers *
+
+    - name: Create Mitogen test users
+      user:
+        name: "{{item}}"
+        shell: /bin/bash
+        password: mitogen__password
+      with_items:
+        - mitogen__require_tty
+        - mitogen__pw_required
+        - mitogen__require_tty_pw_required
+
+    - name: Hide test users from login window.
+      shell: >
+        defaults
+        write
+        /Library/Preferences/com.apple.loginwindow
+        HiddenUsersList
+        -array-add '{{item}}'
+      with_items:
+        - mitogen__require_tty
+        - mitogen__pw_required
+        - mitogen__require_tty_pw_required
+
+    - name: Require a TTY for two accounts
+      lineinfile:
+        path: /etc/sudoers
+        line: "{{item}}"
+      with_items:
+        - Defaults>mitogen__pw_required targetpw
+        - Defaults>mitogen__require_tty requiretty
+        - Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+
+    - name: Require password for two accounts
+      lineinfile:
+        path: /etc/sudoers
+        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}) ALL"
+      with_items:
+        - mitogen__pw_required
+        - mitogen__require_tty_pw_required
+
+    - name: Allow passwordless for one account
+      lineinfile:
+        path: /etc/sudoers
+        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}) NOPASSWD:ALL"
+      with_items:
+        - mitogen__require_tty

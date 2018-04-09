@@ -8,6 +8,11 @@ It will be tidied up over time, meanwhile, the playbooks here are a useful
 demonstrator for what does and doesn't work.
 
 
+## Preparation
+
+For OS X, run the ``osx_setup.yml`` script to create a bunch of users.
+
+
 ## ``run_ansible_playbook.sh``
 
 This is necessary to set some environment variables used by future tests, as
