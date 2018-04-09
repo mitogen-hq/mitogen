@@ -81,14 +81,13 @@ class ContextService(mitogen.service.DeduplicatingService):
         Return a Context referring to an established connection with the given
         configuration, establishing a new connection as necessary.
 
-        :param dict dct:
-            Parameters passed to `mitogen.master.Router.[method]()`.
-
-            * The `method` key is popped from the dictionary and used to look
-              up the Mitogen connection method.
-            * The `discriminator` key is mixed into the key used to select an
-              existing connection, but popped from the list of arguments passed
-              to the connection method.
+        :param str method_name:
+            The :class:`mitogen.parent.Router` connection method to use.
+        :param discriminator:
+            Mixed into the key used to select an existing connection, to allow
+            intentional duplicate connections to be created.
+        :param dict kwargs:
+            Keyword arguments passed to `mitogen.master.Router.[method_name]()`.
 
         :returns tuple:
             Tuple of `(context, home_dir)`, where:
