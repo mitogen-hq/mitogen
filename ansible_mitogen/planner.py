@@ -56,7 +56,6 @@ import ansible_mitogen.services
 
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
-CRASHED_MSG = 'Mitogen: internal error: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
 
 
@@ -148,6 +147,9 @@ class Planner(object):
         raise NotImplementedError()
 
     def get_should_fork(self, invocation):
+        """
+        Asynchronous tasks must always be forked.
+        """
         return invocation.wrap_async
 
     def plan(self, invocation, **kwargs):
@@ -302,6 +304,10 @@ class NewStylePlanner(ScriptPlanner):
     runner_name = 'NewStyleRunner'
 
     def get_should_fork(self, invocation):
+        """
+        In addition to asynchronous tasks, new-style modules should be forked
+        if mitogen_task_isolation=fork.
+        """
         return (
             super(NewStylePlanner, self).get_should_fork(invocation) or
             (invocation.task_vars.get('mitogen_task_isolation') == 'fork')
@@ -354,13 +360,10 @@ def _do_invoke(invocation):
     else:
         raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
-    try:
-        kwargs = planner.plan(invocation)
-        invocation.connection.call(ansible_mitogen.target.run_module, kwargs)
-    except mitogen.core.CallError as e:
-        LOG.exception('invocation crashed: %r', invocation)
-        summary = str(e).splitlines()[0]
-        raise ansible.errors.AnsibleInternalError(CRASHED_MSG + summary)
+    return invocation.connection.call_async(
+        ansible_mitogen.target.run_module,
+        planner.plan(invocation),
+    )
 
 
 def _invoke_async(invocation):
@@ -377,18 +380,18 @@ def _invoke_async(invocation):
 
 
 def _invoke_sync(invocation):
-    recv = mitogen.core.Receiver(invocation.connection.router)
+    result_recv = mitogen.core.Receiver(invocation.connection.router)
     mitogen.service.call_async(
         context=invocation.connection.parent,
         handle=ansible_mitogen.services.JobResultService.handle,
         method='listen',
         kwargs={
             'job_id': invocation.job_id,
-            'sender': recv.to_sender(),
+            'sender': result_recv.to_sender(),
         }
     )
     _do_invoke(invocation)
-    return recv.get().unpickle()
+    return result_recv.get().unpickle()
 
 
 def invoke(invocation):
