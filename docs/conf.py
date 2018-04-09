@@ -10,6 +10,10 @@ html_show_sphinx = False
 html_sidebars = {'**': ['globaltoc.html', 'github.html']}
 html_static_path = ['_static']
 html_theme = 'alabaster'
+html_theme_options = {
+    'font_family': "Georgia, serif",
+    'head_font_family': "Georgia, serif",
+}
 htmlhelp_basename = 'mitogendoc'
 intersphinx_mapping = {'python': ('https://docs.python.org/2', None)}
 language = None
