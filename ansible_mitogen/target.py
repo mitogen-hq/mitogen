@@ -104,9 +104,8 @@ def start_fork_parent(econtext):
     polluting the global interpreter state in a way that effects explicitly
     isolated modules.
     """
-    mitogen.parent.upgrade_router(econtext)
-
     global _fork_parent
+    mitogen.parent.upgrade_router(econtext)
     _fork_parent = econtext.router.fork()
 
 
