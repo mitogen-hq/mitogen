@@ -198,6 +198,9 @@ class FindRelatedTest(testlib.TestCase):
         related = self.call('mitogen.fakessh')
         self.assertEquals(related, [
             'mitogen',
+            'mitogen.compat',
+            'mitogen.compat.collections',
+            'mitogen.compat.functools',
             'mitogen.core',
             'mitogen.master',
             'mitogen.parent',

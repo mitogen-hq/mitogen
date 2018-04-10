@@ -26,12 +26,12 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import cStringIO
 import fcntl
 import getpass
 import inspect
 import logging
 import os
-import re
 import select
 import signal
 import socket
@@ -39,17 +39,20 @@ import sys
 import termios
 import textwrap
 import threading
+import tokenize
 import time
 import types
 import zlib
+
+try:
+    from functools import lru_cache
+except ImportError:
+    from mitogen.compat.functools import lru_cache
 
 import mitogen.core
 from mitogen.core import LOG
 from mitogen.core import IOLOG
 
-
-DOCSTRING_RE = re.compile(r'""".+?"""', re.M | re.S)
-COMMENT_RE = re.compile(r'^[ ]*#[^\n]*$', re.M)
 
 try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
@@ -86,11 +89,93 @@ def is_immediate_child(msg, stream):
     return msg.src_id == stream.remote_id
 
 
+@lru_cache()
 def minimize_source(source):
-    subber = lambda match: '""' + ('\n' * match.group(0).count('\n'))
-    source = DOCSTRING_RE.sub(subber, source)
-    source = COMMENT_RE.sub('', source)
-    return source.replace('    ', '\t')
+    """Remove most comments and docstrings from Python source code.
+    """
+    tokens = tokenize.generate_tokens(cStringIO.StringIO(source).readline)
+    tokens = strip_comments(tokens)
+    tokens = strip_docstrings(tokens)
+    tokens = reindent(tokens)
+    return tokenize.untokenize(tokens)
+
+
+def strip_comments(tokens):
+    """Drop comment tokens from a `tokenize` stream.
+
+    Comments on lines 1-2 are kept, to preserve hashbang and encoding.
+    Trailing whitespace is remove from all lines.
+    """
+    prev_typ = None
+    prev_end_col = 0
+    for typ, tok, (start_row, start_col), (end_row, end_col), line in tokens:
+        if typ in (tokenize.NL, tokenize.NEWLINE):
+            if prev_typ in (tokenize.NL, tokenize.NEWLINE):
+                start_col = 0
+            else:
+                start_col = prev_end_col
+            end_col = start_col + 1
+        elif typ == tokenize.COMMENT and start_row > 2:
+            continue
+        prev_typ = typ
+        prev_end_col = end_col
+        yield typ, tok, (start_row, start_col), (end_row, end_col), line
+
+
+def strip_docstrings(tokens):
+    """Replace docstring tokens with NL tokens in a `tokenize` stream.
+
+    Any STRING token not part of an expression is deemed a docstring.
+    Indented docstrings are not yet recognised.
+    """
+    stack = []
+    state = 'wait_string'
+    for t in tokens:
+        typ = t[0]
+        if state == 'wait_string':
+            if typ in (tokenize.NL, tokenize.COMMENT):
+                yield t
+            elif typ in (tokenize.DEDENT, tokenize.INDENT, tokenize.STRING):
+                stack.append(t)
+            elif typ == tokenize.NEWLINE:
+                stack.append(t)
+                start_line, end_line = stack[0][2][0], stack[-1][3][0]+1
+                for i in range(start_line, end_line):
+                    yield tokenize.NL, '\n', (i, 0), (i,1), '\n'
+                for t in stack:
+                    if t[0] in (tokenize.DEDENT, tokenize.INDENT):
+                        yield t[0], t[1], (i+1, t[2][1]), (i+1, t[3][1]), t[4]
+                del stack[:]
+            else:
+                stack.append(t)
+                for t in stack: yield t
+                del stack[:]
+                state = 'wait_newline'
+        elif state == 'wait_newline':
+            if typ == tokenize.NEWLINE:
+                state = 'wait_string'
+            yield t
+
+
+def reindent(tokens, indent=' '):
+    """Replace existing indentation in a token steam, with `indent`.
+    """
+    old_levels = []
+    old_level = 0
+    new_level = 0
+    for typ, tok, (start_row, start_col), (end_row, end_col), line in tokens:
+        if typ == tokenize.INDENT:
+            old_levels.append(old_level)
+            old_level = len(tok)
+            new_level += 1
+            tok = indent * new_level
+        elif typ == tokenize.DEDENT:
+            old_level = old_levels.pop()
+            new_level -= 1
+        start_col = max(0, start_col - old_level + new_level)
+        if start_row == end_row:
+            end_col = start_col + len(tok)
+        yield typ, tok, (start_row, start_col), (end_row, end_col), line
 
 
 def flags(names):
