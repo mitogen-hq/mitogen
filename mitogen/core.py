@@ -487,7 +487,6 @@ class Importer(object):
         self._context = context
         self._present = {'mitogen': [
             'compat',
-            'compat.pkgutil',
             'fakessh',
             'fork',
             'master',

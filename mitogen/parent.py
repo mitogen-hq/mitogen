@@ -39,10 +39,14 @@ import sys
 import termios
 import textwrap
 import threading
-import tokenize
 import time
 import types
 import zlib
+
+if sys.version_info < (2, 7, 11):
+    from mitogen.compat import tokenize
+else:
+    import tokenize
 
 try:
     from functools import lru_cache
