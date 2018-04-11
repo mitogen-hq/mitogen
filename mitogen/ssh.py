@@ -30,9 +30,13 @@
 Functionality to allow establishing new slave contexts over an SSH connection.
 """
 
-import commands
 import logging
 import time
+
+try:
+    from shlex import quote as shlex_quote
+except ImportError:
+    from pipes import quote as shlex_quote
 
 import mitogen.parent
 
@@ -108,7 +112,7 @@ class Stream(mitogen.parent.Stream):
             bits += self.ssh_args
         bits.append(self.hostname)
         base = super(Stream, self).get_boot_command()
-        return bits + [commands.mkarg(s).strip() for s in base]
+        return bits + [shlex_quote(s).strip() for s in base]
 
     def connect(self):
         super(Stream, self).connect()

@@ -26,8 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import cPickle
-import cStringIO
 import collections
 import errno
 import fcntl
@@ -40,13 +38,22 @@ import signal
 import socket
 import struct
 import sys
-import thread
 import threading
 import time
 import traceback
 import warnings
 import weakref
 import zlib
+
+try:
+    import cPickle
+except ImportError:
+    import pickle as cPickle
+
+try:
+    from cStringIO import StringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 
 # TODO: usage of 'import' after setting __name__, but before fixing up
 # sys.modules generates a warning. This happens when profiling = True.
@@ -68,6 +75,12 @@ DEL_ROUTE = 104
 ALLOCATE_ID = 105
 SHUTDOWN = 106
 LOAD_MODULE = 107
+
+PY3 = sys.version_info > (3,)
+if PY3:
+    b = lambda s: s.encode('latin-1')
+else:
+    b = str
 
 CHUNK_SIZE = 131072
 _tls = threading.local()
@@ -344,9 +357,12 @@ class Message(object):
         _vv and IOLOG.debug('%r.unpickle()', self)
         obj = self._unpickled
         if obj is Message._unpickled:
-            fp = cStringIO.StringIO(self.data)
+            fp = BytesIO(self.data)
             unpickler = cPickle.Unpickler(fp)
-            unpickler.find_global = self._find_global
+            try:
+                unpickler.find_global = self._find_global
+            except AttributeError:
+                unpickler.find_class = self._find_global
 
             try:
                 # Must occur off the broker thread.
@@ -679,7 +695,10 @@ class Importer(object):
             flags = 0x4000
         source = self.get_source(fullname)
         code = compile(source, mod.__file__, 'exec', flags, True)
-        exec code in vars(mod)
+        if PY3:
+            exec(code, vars(mod))
+        else:
+            exec('exec code in vars(mod)')
         return mod
 
     def get_filename(self, fullname):
@@ -1154,7 +1173,7 @@ class Waker(BasicStream):
                 self._broker.shutdown()
 
     def defer(self, func, *args, **kwargs):
-        if thread.get_ident() == self.broker_ident:
+        if threading.currentThread().ident == self.broker_ident:
             _vv and IOLOG.debug('%r.defer() [immediate]', self)
             return func(*args, **kwargs)
 
@@ -1169,7 +1188,7 @@ class Waker(BasicStream):
         # of tearing itself down, the waker fd may already have been closed, so
         # ignore EBADF here.
         try:
-            self.transmit_side.write(' ')
+            self.transmit_side.write(b(' '))
         except OSError:
             e = sys.exc_info()[1]
             if e[0] != errno.EBADF:

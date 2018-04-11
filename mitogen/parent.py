@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import cStringIO
 import fcntl
 import getpass
 import inspect
@@ -42,6 +41,11 @@ import threading
 import time
 import types
 import zlib
+
+try:
+    from cStringIO import StringIO as BytesIO
+except ImportError:
+    from io import BytesIO
 
 if sys.version_info < (2, 7, 11):
     from mitogen.compat import tokenize
@@ -97,7 +101,7 @@ def is_immediate_child(msg, stream):
 def minimize_source(source):
     """Remove most comments and docstrings from Python source code.
     """
-    tokens = tokenize.generate_tokens(cStringIO.StringIO(source).readline)
+    tokens = tokenize.generate_tokens(BytesIO(source).readline)
     tokens = strip_comments(tokens)
     tokens = strip_docstrings(tokens)
     tokens = reindent(tokens)
