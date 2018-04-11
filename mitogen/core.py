@@ -504,6 +504,9 @@ class Importer(object):
             # always a negative round-trip.
             'builtins',
             '__builtin__',
+            # org.python.core imported by copy, pickle, xml.sax; breaks Jython,
+            # but very unlikely to trigger a bug report.
+            'org',
         ]
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
