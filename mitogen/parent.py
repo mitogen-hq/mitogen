@@ -393,11 +393,11 @@ def _proxy_connect(name, method_name, kwargs, econtext):
             name=name,
             **kwargs
         )
-    except mitogen.core.StreamError, e:
+    except mitogen.core.StreamError:
         return {
             'id': None,
             'name': None,
-            'msg': str(e),
+            'msg': str(sys.exc_info()[1]),
         }
 
     return {

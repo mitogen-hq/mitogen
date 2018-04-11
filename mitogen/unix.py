@@ -37,6 +37,7 @@ import errno
 import os
 import socket
 import struct
+import sys
 import tempfile
 
 import mitogen.core
@@ -49,7 +50,8 @@ def is_path_dead(path):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         s.connect(path)
-    except socket.error, e:
+    except socket.error:
+        e = sys.exc_info()[1]
         return e[0] in (errno.ECONNREFUSED, errno.ENOENT)
     return False
 

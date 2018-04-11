@@ -181,11 +181,13 @@ class Service(object):
             response = self._on_receive_message(msg)
             if response is not self.NO_REPLY:
                 msg.reply(response)
-        except mitogen.core.CallError, e:
+        except mitogen.core.CallError:
             LOG.warning('%r: %s', self, msg)
+            e = sys.exc_info()[1]
             msg.reply(e)
-        except Exception, e:
+        except Exception:
             LOG.exception('While invoking %r.dispatch()', self)
+            e = sys.exc_info()[1]
             msg.reply(mitogen.core.CallError(e))
 
 
@@ -250,9 +252,11 @@ class DeduplicatingService(Service):
         try:
             response = getattr(self, method_name)(**kwargs)
             self._produce_response(key, response)
-        except mitogen.core.CallError, e:
+        except mitogen.core.CallError:
+            e = sys.exc_info()[1]
             self._produce_response(key, e)
-        except Exception, e:
+        except Exception:
+            e = sys.exc_info()[1]
             self._produce_response(key, mitogen.core.CallError(e))
 
         return self.NO_REPLY

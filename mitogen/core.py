@@ -215,7 +215,8 @@ def io_op(func, *args):
     while True:
         try:
             return func(*args), False
-        except (select.error, OSError), e:
+        except (select.error, OSError):
+            e = sys.exc_info()[1]
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
             if e[0] == errno.EINTR:
                 continue
@@ -327,7 +328,8 @@ class Message(object):
         self = cls(**kwargs)
         try:
             self.data = cPickle.dumps(obj, protocol=2)
-        except cPickle.PicklingError, e:
+        except cPickle.PicklingError:
+            e = sys.exc_info()[1]
             self.data = cPickle.dumps(CallError(e), protocol=2)
         return self
 
@@ -350,8 +352,9 @@ class Message(object):
                 # Must occur off the broker thread.
                 obj = unpickler.load()
                 self._unpickled = obj
-            except (TypeError, ValueError), ex:
-                raise StreamError('invalid message: %s', ex)
+            except (TypeError, ValueError):
+                e = sys.exc_info()[1]
+                raise StreamError('invalid message: %s', e)
 
         if throw:
             if obj == _DEAD and throw_dead:
@@ -1032,8 +1035,8 @@ class Latch(object):
         e = None
         try:
             io_op(select.select, [rsock], [], [], timeout)
-        except Exception, e:
-            pass
+        except Exception:
+            e = sys.exc_info()[1]
 
         self._lock.acquire()
         try:
@@ -1074,7 +1077,8 @@ class Latch(object):
     def _wake(self, sock):
         try:
             os.write(sock.fileno(), '\x7f')
-        except OSError, e:
+        except OSError:
+            e = sys.exc_info()[1]
             if e[0] != errno.EBADF:
                 raise
 
@@ -1166,7 +1170,8 @@ class Waker(BasicStream):
         # ignore EBADF here.
         try:
             self.transmit_side.write(' ')
-        except OSError, e:
+        except OSError:
+            e = sys.exc_info()[1]
             if e[0] != errno.EBADF:
                 raise
 
@@ -1626,7 +1631,8 @@ class ExternalContext(object):
         for msg in self.channel:
             try:
                 msg.reply(self._dispatch_one(msg))
-            except Exception, e:
+            except Exception:
+                e = sys.exc_info()[1]
                 _v and LOG.debug('_dispatch_calls: %s', e)
                 msg.reply(CallError(e))
         self.dispatch_stopped = True

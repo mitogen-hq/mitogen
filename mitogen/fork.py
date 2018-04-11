@@ -116,7 +116,7 @@ class Stream(mitogen.parent.Stream):
     def _wrap_child_main(self, childfp):
         try:
             self._child_main(childfp)
-        except BaseException, e:
+        except BaseException:
             handle_child_crash()
 
     def _child_main(self, childfp):
