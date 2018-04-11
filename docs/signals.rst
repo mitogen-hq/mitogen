@@ -48,11 +48,6 @@ These signals are used internally by Mitogen.
       - Fired on the Broker thread after Broker.shutdown() is called.
 
     * - :py:class:`mitogen.core.Broker`
-      - ``crash``
-      - Fired when a crash occurs on the broker thread. Used by client apps to
-        hasten shutdown (e.g. by disconnect
-
-    * - :py:class:`mitogen.core.Broker`
       - ``shutdown``
       - Fired after Broker.shutdown() is called.
 

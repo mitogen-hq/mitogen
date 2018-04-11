@@ -925,9 +925,6 @@ class Context(object):
         _v and LOG.debug('%r.on_disconnect()', self)
         fire(self, 'disconnect')
 
-    def on_shutdown(self, broker):
-        pass
-
     def send(self, msg):
         """send `obj` to `handle`, and tell the broker we have output. May
         be called from any thread."""
@@ -1221,8 +1218,7 @@ class Router(object):
 
     def __init__(self, broker):
         self.broker = broker
-        listen(broker, 'crash', self._cleanup_handlers)
-        listen(broker, 'shutdown', self.on_broker_shutdown)
+        listen(broker, 'exit', self._on_broker_exit)
 
         # Here seems as good a place as any.
         global _v, _vv
@@ -1247,13 +1243,7 @@ class Router(object):
                 del self._stream_by_id[context.context_id]
                 context.on_disconnect()
 
-    def on_broker_shutdown(self):
-        for context in self._context_by_id.itervalues():
-            context.on_shutdown(self.broker)
-
-        self._cleanup_handlers()
-
-    def _cleanup_handlers(self):
+    def _on_broker_exit(self):
         while self._handle_map:
             _, (_, func, _) = self._handle_map.popitem()
             func(_DEAD)
@@ -1465,7 +1455,6 @@ class Broker(object):
                 side.stream.on_disconnect(self)
         except Exception:
             LOG.exception('_broker_main() crashed')
-            fire(self, 'crash')
 
         fire(self, 'exit')
 
