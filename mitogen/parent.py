@@ -371,41 +371,25 @@ def make_call_msg(fn, *args, **kwargs):
     )
 
 
-def _docker_method():
-    import mitogen.docker
-    return mitogen.docker.Stream
-
-def _fork_method():
-    import mitogen.fork
-    return mitogen.fork.Stream
-
-def _local_method():
-    return mitogen.parent.Stream
-
-def _ssh_method():
-    import mitogen.ssh
-    return mitogen.ssh.Stream
-
-def _sudo_method():
-    import mitogen.sudo
-    return mitogen.sudo.Stream
-
-
-METHOD_NAMES = {
-    'docker': _docker_method,
-    'fork': _fork_method,
-    'local': _local_method,
-    'ssh': _ssh_method,
-    'sudo': _sudo_method,
-}
+def stream_by_method_name(name):
+    """
+    Given the name of a Mitogen connection method, import its implementation
+    module and return its Stream subclass.
+    """
+    if name == 'local':
+        name = 'parent'
+    Stream = None
+    exec('from mitogen.%s import Stream' % (name,))
+    return Stream
 
 
 @mitogen.core.takes_econtext
 def _proxy_connect(name, method_name, kwargs, econtext):
+
     mitogen.parent.upgrade_router(econtext)
     try:
         context = econtext.router._connect(
-            klass=METHOD_NAMES[method_name](),
+            klass=stream_by_method_name(method_name),
             name=name,
             **kwargs
         )
@@ -834,7 +818,7 @@ class Router(mitogen.core.Router):
         return context
 
     def connect(self, method_name, name=None, **kwargs):
-        klass = METHOD_NAMES[method_name]()
+        klass = stream_by_method_name(method_name)
         kwargs.setdefault('debug', self.debug)
         kwargs.setdefault('profiling', self.profiling)
 
