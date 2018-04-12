@@ -128,6 +128,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'sudo'
         )
 
+        self.close(new_task=True)
+
     @property
     def homedir(self):
         self._connect()
@@ -135,7 +137,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     @property
     def connected(self):
-        return self.broker is not None
+        return self.context is not None
 
     def _on_connection_error(self, msg):
         raise ansible.errors.AnsibleConnectionFailure(msg)
@@ -256,11 +258,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self.connected:
             return
 
-        self.broker = mitogen.master.Broker()
-        self.router, self.parent = mitogen.unix.connect(
-            path=ansible_mitogen.process.MuxProcess.unix_listener_path,
-            broker=self.broker,
-        )
+        if not self.broker:
+            self.broker = mitogen.master.Broker()
+            self.router, self.parent = mitogen.unix.connect(
+                path=ansible_mitogen.process.MuxProcess.unix_listener_path,
+                broker=self.broker,
+            )
 
         if self.original_transport == 'local':
             if self._play_context.become:
@@ -289,13 +292,15 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         return self.context.name
 
-    def close(self):
+    def close(self, new_task=False):
         """
         Arrange for the mitogen.master.Router running in the worker to
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
-        if self.broker:
+        self.host = None
+        self.context = None
+        if self.broker and not new_task:
             self.broker.shutdown()
             self.broker.join()
             self.broker = None
