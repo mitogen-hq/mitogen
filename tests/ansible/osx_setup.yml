@@ -26,6 +26,13 @@
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
 
+    - name: Create Mitogen test users
+      user:
+        name: "mitogen__user{{item}}"
+        shell: /bin/bash
+        password: mitogen__password
+      with_sequence: start=1 end=21
+
     - name: Hide test users from login window.
       shell: >
         defaults
@@ -37,6 +44,15 @@
         - mitogen__require_tty
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
+
+    - name: Hide test users from login window.
+      shell: >
+        defaults
+        write
+        /Library/Preferences/com.apple.loginwindow
+        HiddenUsersList
+        -array-add 'mitogen__user{{item}}'
+      with_sequence: start=1 end=21
 
     - name: Require a TTY for two accounts
       lineinfile:
@@ -61,3 +77,9 @@
         line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}) NOPASSWD:ALL"
       with_items:
         - mitogen__require_tty
+
+    - name: Allow passwordless for many accounts
+      lineinfile:
+        path: /etc/sudoers
+        line: "{{lookup('pipe', 'whoami')}} ALL = (mitogen__user{{item}}) NOPASSWD:ALL"
+      with_sequence: start=1 end=21

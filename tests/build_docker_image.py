@@ -27,7 +27,8 @@ RUN \
     ( echo 'has-sudo-pubkey:y' | chpasswd; ) && \
     ( echo 'has-sudo-nopw:y' | chpasswd; ) && \
     mkdir ~has-sudo-pubkey/.ssh && \
-    { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }
+    { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; } && \
+    { for i in `seq 1 21`; do useradd -s /bin/bash -m mitogen__user$i; done; }
 
 COPY data/docker/has-sudo-pubkey.key.pub /home/has-sudo-pubkey/.ssh/authorized_keys
 RUN \
