@@ -369,11 +369,11 @@ future.
 Interpreter Recycling
 ~~~~~~~~~~~~~~~~~~~~~
 
-To avoid accidental DoS of targets, the extension stops creating persistent
-interpreters after the 20th interpreter has been created. Instead the most
-recently created interpreter is shut down to make room for any new interpreter.
-This is to avoid situations like below from triggering memory exhaustion by
-spawning a huge number of interpreters.
+To prevent accidental DoS, the extension stops creating persistent interpreters
+after the 20th interpreter has been created. Instead the most recently created
+interpreter is shut down to make room for any new interpreter. This is to avoid
+situations like below from triggering memory exhaustion by spawning a huge
+number of interpreters.
 
 .. code-block:: yaml
 
@@ -392,7 +392,7 @@ spawning a huge number of interpreters.
             dest: "~{{item}}/.bashrc"
           with_items: "{{user_directory}}"
 
-The recycling behaviour does not occur for direct connections from the Ansible
+The recycling behaviour does not occur for direct connections from the
 controller, and it is keyed on a per-host basis, i.e. up to 20 interpreters may
 exist for each directly connected target host.
 
