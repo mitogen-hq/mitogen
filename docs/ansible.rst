@@ -135,10 +135,6 @@ High Risk
   exhaust available RAM. This will be fixed soon as it's likely to be tickled
   by common playbooks.
 
-* No mechanism exists to bound the number of interpreters created during a run.
-  For some playbooks that parameterize ``become_user`` over many accounts,
-  resource exhaustion may be triggered on the target machine.
-
 
 Low Risk
 ~~~~~~~~
@@ -291,9 +287,6 @@ This list will grow as more missing pieces are discovered.
 * ``ansible_ssh_private_key_file``
 * ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
-* ``mitogen_ssh_discriminator``: if present, a string mixed into the key used
-  to deduplicate connections. This permits intentional duplicate Mitogen
-  connections to a single host, which is probably only useful for testing.
 
 
 Sudo Variables
@@ -371,6 +364,43 @@ abates. This may also be set on a per-task basis:
 If forking fixes your problem, **please report a bug regardless**, as an
 internal list can be updated to prevent users bumping into the same problem in
 future.
+
+
+Interpreter Recycling
+~~~~~~~~~~~~~~~~~~~~~
+
+To avoid accidental DoS of targets, the extension stops creating persistent
+interpreters after the 20th interpreter has been created. Instead the most
+recently created interpreter is shut down to make room for any new interpreter.
+This is to avoid situations like below from triggering memory exhaustion by
+spawning a huge number of interpreters.
+
+.. code-block:: yaml
+
+    - hosts: corp_boxes
+      vars:
+        user_directory: [
+          # 10,000 corporate user accounts
+        ]
+      tasks:
+        - name: Create user bashrc
+          become: true
+          vars:
+            ansible_become_user: "{{item}}"
+          copy:
+            src: bashrc
+            dest: "~{{item}}/.bashrc"
+          with_items: "{{user_directory}}"
+
+The recycling behaviour does not occur for direct connections from the Ansible
+controller, and it is keyed on a per-host basis, i.e. up to 20 interpreters may
+exist for each directly connected target host.
+
+The newest interpreter is chosen to avoid recycling useful accounts, like
+"root" or "postgresql" that tend to appear early in a run, however it is simple
+to construct a playbook that defeats this strategy. A future version will key
+interpreters on the identity of the task, file and/or playbook that created
+them, avoiding the recycling of useful accounts in every scenario.
 
 
 Runtime Patches

@@ -619,6 +619,14 @@ class ChildIdAllocator(object):
 class Context(mitogen.core.Context):
     via = None
 
+    def __eq__(self, other):
+        return (isinstance(other, mitogen.core.Context) and
+                (other.context_id == self.context_id) and
+                (other.router == self.router))
+
+    def __hash__(self):
+        return hash((self.router, self.context_id))
+
     def call_async(self, fn, *args, **kwargs):
         LOG.debug('%r.call_async(%r, *%r, **%r)',
                   self, fn, args, kwargs)

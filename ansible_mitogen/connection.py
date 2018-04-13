@@ -58,7 +58,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: presently always the master process.
     parent = None
 
-    #: mitogen.master.Context used to communicate with the target user account.
+    #: mitogen.master.Context connected to the target machine's initial SSH
+    #: account.
+    host = None
+
+    #: mitogen.master.Context connected to the target user account on the
+    #: target machine (i.e. via sudo), or simply a copy of :attr:`host` if
+    #: become is not in use.
     context = None
 
     #: Only sudo is supported for now.
@@ -78,9 +84,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     #: Set to 'ansible_ssh_timeout' by on_action_run().
     ansible_ssh_timeout = None
-
-    #: Set to 'mitogen_ssh_discriminator' by on_action_run()
-    mitogen_ssh_discriminator = None
 
     #: Set after connection to the target context's home directory.
     _homedir = None
@@ -111,10 +114,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         executing. We use the opportunity to grab relevant bits from the
         task-specific data.
         """
-        self.mitogen_ssh_discriminator = task_vars.get(
-            'mitogen_ssh_discriminator',
-            None
-        )
         self.ansible_ssh_timeout = task_vars.get(
             'ansible_ssh_timeout',
             None
@@ -162,7 +161,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         dct = mitogen.service.call(
             context=self.parent,
             handle=ContextService.handle,
-            method='connect',
+            method='get',
             kwargs=mitogen.utils.cast(kwargs),
         )
 
@@ -190,7 +189,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             'method_name': 'ssh',
             'check_host_keys': False,  # TODO
             'hostname': self._play_context.remote_addr,
-            'discriminator': self.mitogen_ssh_discriminator,
             'username': self._play_context.remote_user,
             'password': self._play_context.password,
             'port': self._play_context.port,
@@ -298,6 +296,17 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
+        for context in set([self.host, self.context]):
+            if context:
+                mitogen.service.call(
+                    context=self.parent,
+                    handle=ContextService.handle,
+                    method='put',
+                    kwargs={
+                        'context': context
+                    }
+                )
+
         self.host = None
         self.context = None
         if self.broker and not new_task:
@@ -378,10 +387,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         Implement put_file() by caling the corresponding
         ansible_mitogen.target function in the target.
 
-        :param str in_path:
-            Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
+        :param byte data:
+            File contents to put.
         """
         self.call(ansible_mitogen.target.write_path,
                   mitogen.utils.cast(out_path),

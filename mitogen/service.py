@@ -174,7 +174,10 @@ class Service(object):
 
     def _on_receive_message(self, msg):
         method_name, kwargs = self._validate_message(msg)
-        return getattr(self, method_name)(**kwargs)
+        method = getattr(self, method_name)
+        if 'msg' in method.func_code.co_varnames:
+            kwargs['msg'] = msg  # TODO: hack
+        return method(**kwargs)
 
     def on_receive_message(self, msg):
         try:
