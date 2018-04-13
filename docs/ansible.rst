@@ -369,9 +369,9 @@ future.
 Interpreter Recycling
 ~~~~~~~~~~~~~~~~~~~~~
 
-The extension stops limits the number of persistent interpreters in use. When
-the limit is reached, the youngest interpreter is terminated before starting a
-new interpreter, preventing situations like below from triggering memory
+The extension limits the number of persistent interpreters in use. When the
+limit is reached, the youngest interpreter is terminated before starting a new
+interpreter, preventing situations like below from triggering memory
 exhaustion.
 
 .. code-block:: yaml
