@@ -369,11 +369,10 @@ future.
 Interpreter Recycling
 ~~~~~~~~~~~~~~~~~~~~~
 
-To prevent accidental DoS, the extension stops creating persistent interpreters
-after the 20th interpreter has been created. Instead the most recently created
-interpreter is shut down to make room for any new interpreter. This is to avoid
-situations like below from triggering memory exhaustion by spawning a huge
-number of interpreters.
+The extension stops limits the number of persistent interpreters in use. When
+the limit is reached, the youngest interpreter is terminated before starting a
+new interpreter, preventing situations like below from triggering memory
+exhaustion.
 
 .. code-block:: yaml
 
@@ -392,15 +391,18 @@ number of interpreters.
             dest: "~{{item}}/.bashrc"
           with_items: "{{user_directory}}"
 
-The recycling behaviour does not occur for direct connections from the
-controller, and it is keyed on a per-host basis, i.e. up to 20 interpreters may
-exist for each directly connected target host.
+This recycling does not occur for direct connections from the controller, and
+it is keyed on a per-target basis, i.e. up to 20 interpreters may exist for
+each directly connected target.
 
-The newest interpreter is chosen to avoid recycling useful accounts, like
-"root" or "postgresql" that tend to appear early in a run, however it is simple
-to construct a playbook that defeats this strategy. A future version will key
-interpreters on the identity of the task, file and/or playbook that created
-them, avoiding the recycling of useful accounts in every scenario.
+The youngest interpreter is chosen to preserve useful accounts, like "root" or
+"postgresql" that tend to appear early in a run, however it is simple to
+construct a playbook that defeats this strategy. A future version will key
+interpreters on the identity of their creating task, file and/or playbook,
+avoiding useful account recycling in every scenario.
+
+To raise or lower the limit from 20, set the ``MITOGEN_MAX_INTERPRETERS``
+environment variable to a new value.
 
 
 Runtime Patches

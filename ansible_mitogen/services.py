@@ -39,9 +39,10 @@ when a child has completed a job.
 
 from __future__ import absolute_import
 import logging
-import sys
+import os
 import os.path
 import pprint
+import sys
 import threading
 import zlib
 
@@ -73,7 +74,7 @@ class ContextService(mitogen.service.Service):
     """
     handle = 500
     max_message_size = 1000
-    max_contexts = 20
+    max_interpreters = int(os.getenv('MITOGEN_MAX_INTERPRETERS', '20'))
 
     def __init__(self, *args, **kwargs):
         super(ContextService, self).__init__(*args, **kwargs)
@@ -127,7 +128,7 @@ class ContextService(mitogen.service.Service):
             return
 
         lru = self._lru_by_via.setdefault(via, [])
-        if len(lru) < self.max_contexts:
+        if len(lru) < self.max_interpreters:
             lru.append(new_context)
             return
 

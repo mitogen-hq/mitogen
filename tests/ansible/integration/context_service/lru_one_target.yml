@@ -2,6 +2,10 @@
 
 - hosts: all
   any_errors_fatal: true
+  vars:
+    max_interps: "{{lookup('env', 'MITOGEN_MAX_INTERPRETERS')}}"
+    ubound: "{{max_interps|int + 1}}"
+
   tasks:
     - name: integration/context_service/lru_one_target.yml
       assert:
@@ -12,7 +16,7 @@
       become: true
       vars:
         ansible_become_user: "mitogen__user{{item}}"
-      with_sequence: start=1 end=21
+      with_sequence: start=1 end={{ubound}}
       register: first_run
 
     - name: Reuse them
@@ -20,14 +24,16 @@
       become: true
       vars:
         ansible_become_user: "mitogen__user{{item}}"
-      with_sequence: start=1 end=21
+      with_sequence: start=1 end={{ubound}}
       register: second_run
 
     - assert:
         that:
         - first_run.results[item|int].pid == second_run.results[item|int].pid
-      with_items: start=0 end=20
+      with_items: start=0 end={{max_interps}}
+      when: is_mitogen
 
     - assert:
         that:
         - first_run.results[-1].pid != second_run.results[-1].pid
+      when: is_mitogen
