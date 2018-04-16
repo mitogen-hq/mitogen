@@ -34,10 +34,10 @@ RUN \
     echo '%mitogen__sudo_nopw ALL=(ALL:ALL) NOPASSWD:ALL' > /etc/sudoers.d/001-mitogen__sudo_nopw && \
     echo i-am-mitogen-test-docker-image > /etc/sentinel && \
     groupadd mitogen__sudo_nopw && \
-    useradd -m mitogen__has_sudo -G SUDO_GROUP && \
-    useradd -m mitogen__has_sudo_pubkey -G SUDO_GROUP && \
-    useradd -m mitogen__has_sudo_nopw -G mitogen__sudo_nopw && \
-    useradd -m mitogen__webapp && \
+    useradd -s /bin/bash -m mitogen__has_sudo -G SUDO_GROUP && \
+    useradd -s /bin/bash -m mitogen__has_sudo_pubkey -G SUDO_GROUP && \
+    useradd -s /bin/bash -m mitogen__has_sudo_nopw -G mitogen__sudo_nopw && \
+    useradd -s /bin/bash -m mitogen__webapp && \
     ( echo 'root:rootpassword' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo:has_sudo_password' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo_pubkey:has_sudo_pubkey_password' | chpasswd; ) && \
