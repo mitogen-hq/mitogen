@@ -363,6 +363,9 @@ class ModuleFinder(object):
             fp.close()
 
     def _py_filename(self, path):
+        if not path:
+            return None
+
         if path[-4:] in ('.pyc', '.pyo'):
             path = path.rstrip('co')
 
