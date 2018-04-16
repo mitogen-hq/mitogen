@@ -66,6 +66,11 @@ do
         >> ansible/inventory/hosts
 done
 
+echo
+echo --- ansible/inventory/hosts: ----
+cat ansible/inventory/hosts
+echo ---
+
 echo travis_fold:end:job_setup
 
 
