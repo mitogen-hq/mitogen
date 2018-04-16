@@ -1,6 +1,7 @@
 
 - hosts: all
   any_errors_fatal: true
+  gather_facts: true
   tasks:
     - name: integration/action/make_tmp_path.yml
       assert:
@@ -12,7 +13,7 @@
 
     - assert:
         # This string must match ansible.cfg::remote_tmp
-        that: out.result.startswith("~/.ansible/mitogen-tests/"|expanduser)
+        that: out.result.startswith("{{ansible_user_dir}}/.ansible/mitogen-tests/")
 
     - stat:
         path: "{{out.result}}"
