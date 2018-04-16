@@ -170,11 +170,19 @@ def get_docker_host(docker):
 
 
 class DockerizedSshDaemon(object):
+    image = None
+
+    def get_image(self):
+        if not self.image:
+            distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
+            self.image = 'd2mw/mitogen-%s-test' % (distro,)
+        return self.image
+
     def __init__(self):
         self.docker = docker.from_env(version='auto')
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         self.container = self.docker.containers.run(
-            image='d2mw/mitogen-test',
+            image=self.get_image(),
             detach=True,
             privileged=True,
             publish_all_ports=True,
@@ -239,6 +247,6 @@ class DockerMixin(RouterMixin):
 
     def docker_ssh_any(self, **kwargs):
         return self.docker_ssh(
-            username='has-sudo-nopw',
-            password='y',
+            username='mitogen__has_sudo_nopw',
+            password='has_sudo_nopw_password',
         )

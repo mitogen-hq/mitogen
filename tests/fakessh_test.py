@@ -29,17 +29,17 @@ class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
 
     @timeoutcontext.timeout(5)
     def test_rsync_between_direct_children(self):
-        # master -> SSH -> has-sudo-pubkey -> rsync(.ssh) -> master ->
-        # has-sudo -> rsync
+        # master -> SSH -> mitogen__has_sudo_pubkey -> rsync(.ssh) -> master ->
+        # mitogen__has_sudo -> rsync
 
         pubkey_acct = self.docker_ssh(
-            username='has-sudo-pubkey',
-            identity_file=testlib.data_path('docker/has-sudo-pubkey.key'),
+            username='mitogen__has_sudo_pubkey',
+            identity_file=testlib.data_path('docker/mitogen__has_sudo_pubkey.key'),
         )
 
         nopw_acct = self.docker_ssh(
-            username='has-sudo-nopw',
-            password='y',
+            username='mitogen__has_sudo_nopw',
+            password='has_sudo_nopw_password',
         )
 
         webapp_acct = self.router.sudo(

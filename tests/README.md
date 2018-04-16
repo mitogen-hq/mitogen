@@ -28,3 +28,33 @@ and run the tests there.
 1. Enable the virtual environment we just built ``source ../venv/bin/activate``
 1. Install Mitogen in pip editable mode ``pip install -e .``
 1. Run ``test``
+
+
+# User Accounts
+
+A set of standard user account names are used by in the Docker container and
+also by Ansible's `osx_setup.yml`.
+
+`root`
+    In the Docker image only, the password is "rootpassword".
+
+`mitogen__has_sudo`
+    The login password is "has_sudo_password" and the account is capable of
+    sudoing to root, by supplying the account password to sudo.
+
+`mitogen__has_sudo_pubkey`
+    The login password is "has_sudo_pubkey_password". Additionally
+    `tests/data/docker/mitogen__has_sudo_pubkey.key` SSH key may be used to log
+    in. It can sudo the same as `mitogen__has_sudo`.
+
+`mitogen__has_sudo_nopw`
+    The login password is "has_sudo_nopw_password". It can sudo to root without
+    supplying a password.
+
+`mitogen__user1` .. `mitogen__user21`
+    These accounts do not have passwords set. They exist to test the Ansible
+    interpreter recycling logic.
+
+`mitogen__webapp`
+    A plain old account with no sudo access, used as the target for fakessh
+    tddests.

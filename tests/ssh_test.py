@@ -12,7 +12,7 @@ class FakeSshTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
         context = self.router.ssh(
                 hostname='hostname',
-                username='has-sudo',
+                username='mitogen__has_sudo',
                 ssh_path=testlib.data_path('fakessh.py'),
         )
         #context.call(mitogen.utils.log_to_file, '/tmp/log')
@@ -25,8 +25,8 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
 
     def test_stream_name(self):
         context = self.docker_ssh(
-            username='has-sudo',
-            password='y',
+            username='mitogen__has_sudo',
+            password='has_sudo_password',
         )
         name = 'ssh.%s:%s' % (
             self.dockerized_ssh.get_host(),
@@ -36,8 +36,8 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
 
     def test_via_stream_name(self):
         context = self.docker_ssh(
-            username='has-sudo-nopw',
-            password='y',
+            username='mitogen__has_sudo_nopw',
+            password='has_sudo_nopw_password',
         )
         sudo = self.router.sudo(via=context)
 
@@ -50,7 +50,7 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
     def test_password_required(self):
         try:
             context = self.docker_ssh(
-                username='has-sudo',
+                username='mitogen__has_sudo',
             )
             assert 0, 'exception not thrown'
         except mitogen.ssh.PasswordError, e:
@@ -61,7 +61,7 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
     def test_password_incorrect(self):
         try:
             context = self.docker_ssh(
-                username='has-sudo',
+                username='mitogen__has_sudo',
                 password='badpw',
             )
             assert 0, 'exception not thrown'
@@ -72,8 +72,8 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
 
     def test_password_specified(self):
         context = self.docker_ssh(
-            username='has-sudo',
-            password='y',
+            username='mitogen__has_sudo',
+            password='has_sudo_password',
         )
 
         self.assertEqual(
@@ -84,7 +84,7 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
     def test_pubkey_required(self):
         try:
             context = self.docker_ssh(
-                username='has-sudo-pubkey',
+                username='mitogen__has_sudo_pubkey',
             )
             assert 0, 'exception not thrown'
         except mitogen.ssh.PasswordError, e:
@@ -94,8 +94,8 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
 
     def test_pubkey_specified(self):
         context = self.docker_ssh(
-            username='has-sudo-pubkey',
-            identity_file=testlib.data_path('docker/has-sudo-pubkey.key'),
+            username='mitogen__has_sudo_pubkey',
+            identity_file=testlib.data_path('docker/mitogen__has_sudo_pubkey.key'),
         )
         self.assertEqual(
             'i-am-mitogen-test-docker-image\n',
