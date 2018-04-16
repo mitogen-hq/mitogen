@@ -4,6 +4,7 @@
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TMPDIR="/tmp/ansible-tests-$$"
 ANSIBLE_VERSION="${ANSIBLE_VERSION:-2.4.3.0}"
+MITOGEN_TEST_DISTRO="${MITOGEN_TEST_DISTRO:-debian}"
 
 function on_exit()
 {
@@ -16,7 +17,7 @@ mkdir "$TMPDIR"
 
 
 echo travis_fold:start:docker_setup
-docker run --rm --detach --name=target d2mw/mitogen-test /bin/sleep 86400
+docker run --rm --detach --name=target d2mw/mitogen-${MITOGEN_TEST_DISTRO}-test /bin/sleep 86400
 echo travis_fold:end:docker_setup
 
 
