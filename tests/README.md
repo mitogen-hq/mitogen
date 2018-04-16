@@ -30,6 +30,13 @@ and run the tests there.
 1. Run ``test``
 
 
+# Selecting a target distribution
+
+Docker target images exist for testing against CentOS and Debian, with the
+default being Debian. To select CentOS, specify `MITOGEN_TEST_DISTRO=centos` in
+the environment.
+
+
 # User Accounts
 
 A set of standard user account names are used by in the Docker container and
