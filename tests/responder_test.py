@@ -39,20 +39,26 @@ class BrokenModulesTest(unittest2.TestCase):
         # Ensure we don't crash in the case of a module legitimately being
         # unavailable. Should never happen in the real world.
 
+        stream = mock.Mock()
+        stream.sent_modules = set()
         router = mock.Mock()
-        responder = mitogen.master.ModuleResponder(router)
-        responder._on_get_module(
-            mitogen.core.Message(
-                data='non_existent_module',
-                reply_to=50,
-            )
+        router.stream_by_id = lambda n: stream
+
+        msg = mitogen.core.Message(
+            data='non_existent_module',
+            reply_to=50,
         )
+        msg.router = router
+
+        responder = mitogen.master.ModuleResponder(router)
+        responder._on_get_module(msg)
         self.assertEquals(1, len(router.route.mock_calls))
 
         call = router.route.mock_calls[0]
         msg, = call[1]
-        self.assertEquals(50, msg.handle)
-        self.assertIsNone(msg.unpickle())
+        self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
+        self.assertEquals(('non_existent_module', None, None, None, ()),
+                          msg.unpickle())
 
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
@@ -62,19 +68,24 @@ class BrokenModulesTest(unittest2.TestCase):
         # cause an attempt to request ansible.compat.six._six from the master.
         import six_brokenpkg
 
+        stream = mock.Mock()
+        stream.sent_modules = set()
         router = mock.Mock()
-        responder = mitogen.master.ModuleResponder(router)
-        responder._on_get_module(
-            mitogen.core.Message(
-                data='six_brokenpkg._six',
-                reply_to=50,
-            )
+        router.stream_by_id = lambda n: stream
+
+        msg = mitogen.core.Message(
+            data='six_brokenpkg._six',
+            reply_to=50,
         )
+        msg.router = router
+
+        responder = mitogen.master.ModuleResponder(router)
+        responder._on_get_module(msg)
         self.assertEquals(1, len(router.route.mock_calls))
 
         call = router.route.mock_calls[0]
         msg, = call[1]
-        self.assertEquals(50, msg.handle)
+        self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
         self.assertIsInstance(msg.unpickle(), tuple)
 
 

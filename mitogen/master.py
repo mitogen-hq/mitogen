@@ -646,7 +646,7 @@ class ModuleResponder(object):
 
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
-            msg.reply((fullname, None, None, None, []),
+            msg.reply((fullname, None, None, None, ()),
                       handle=mitogen.core.LOAD_MODULE)
 
 
