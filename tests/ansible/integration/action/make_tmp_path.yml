@@ -11,7 +11,8 @@
       register: out
 
     - assert:
-        that: out.result.startswith(ansible_remote_tmp|expanduser)
+        # This string must match ansible.cfg::remote_tmp
+        that: out.result.startswith("~/.ansible/mitogen-tests/"|expanduser)
 
     - stat:
         path: "{{out.result}}"
