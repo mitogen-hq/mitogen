@@ -5,6 +5,7 @@ TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TARGET_COUNT="${TARGET_COUNT:-4}"
 
+export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
 
 function on_exit()
 {
