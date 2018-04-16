@@ -34,6 +34,7 @@ import logging
 import os
 import pkgutil
 import re
+import string
 import sys
 import threading
 import types
@@ -349,9 +350,26 @@ class ModuleFinder(object):
 
         return False
 
+    def _looks_like_script(self, path):
+        """
+        Return :data:`True` if the (possibly extensionless) file at `path`
+        resembles a Python script. For now we simply verify the file contains
+        ASCII text.
+        """
+        fp = open(path, 'r')
+        try:
+            return not set(fp.read(512)).difference(string.printable)
+        finally:
+            fp.close()
+
     def _py_filename(self, path):
-        path = path.rstrip('co')
+        if path[-4:] in ('.pyc', '.pyo'):
+            path = path.rstrip('co')
+
         if path.endswith('.py'):
+            return path
+
+        if os.path.exists(path) and self._looks_like_script(path):
             return path
 
     def _get_module_via_pkgutil(self, fullname):
