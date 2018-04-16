@@ -18,19 +18,19 @@
 
     - name: Create Mitogen test users
       user:
-        name: "{{item}}"
+        name: "mitogen__{{item}}"
         shell: /bin/bash
-        password: mitogen__password
+        password: "{{item}}_password"
       with_items:
-        - mitogen__require_tty
-        - mitogen__pw_required
-        - mitogen__require_tty_pw_required
+        - require_tty
+        - pw_required
+        - require_tty_pw_required
 
     - name: Create Mitogen test users
       user:
         name: "mitogen__user{{item}}"
         shell: /bin/bash
-        password: mitogen__password
+        password: "user{{item}}_password"
       with_sequence: start=1 end=21
 
     - name: Hide test users from login window.

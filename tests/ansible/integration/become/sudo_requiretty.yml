@@ -27,7 +27,7 @@
       become: true
       become_user: mitogen__require_tty_pw_required
       vars:
-        ansible_become_pass: mitogen__password
+        ansible_become_pass: require_tty_pw_required_password
       register: out
       when: is_mitogen
 

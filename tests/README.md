@@ -58,6 +58,20 @@ also by Ansible's `osx_setup.yml`.
     The login password is "has_sudo_nopw_password". It can sudo to root without
     supplying a password.
 
+`mitogen__pw_required`
+    The login password is "pw_required_password". When "sudo -u" is used to
+    target this account, its password must be entered rather than the login
+    user's password.
+
+`mitogen__require_tty`
+    The login password is "require_tty_password". When "sudo -u" is used to
+    target this account, the parent session requires a TTY.
+
+`mitogen__require_tty_pw_required`
+    The login password is "require_tty_pw_required_password". When "sudo -u" is
+    used to target this account, the parent session requires a TTY and the
+    account password must be entered.
+
 `mitogen__user1` .. `mitogen__user21`
     These accounts do not have passwords set. They exist to test the Ansible
     interpreter recycling logic.
