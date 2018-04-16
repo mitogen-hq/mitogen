@@ -45,7 +45,6 @@ echo \
     ansible_port=2201 \
     ansible_python_interpreter=/usr/bin/python2.7 \
     ansible_user=mitogen__has_sudo_pubkey \
-    ansible_become_pass=has_sudo_pubkey_password \
     ansible_ssh_private_key_file=${TRAVIS_BUILD_DIR}/tests/data/docker/mitogen__has_sudo_pubkey.key \
     >> ${TMPDIR}/hosts
 echo travis_fold:end:job_setup
