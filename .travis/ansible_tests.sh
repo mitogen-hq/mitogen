@@ -26,21 +26,20 @@ pip install -U ansible=="${ANSIBLE_VERSION}"
 cd ${TRAVIS_BUILD_DIR}/tests/ansible
 
 cat >> ${TMPDIR}/hosts <<-EOF
-localhost
 target ansible_connection=docker ansible_python_interpreter=/usr/bin/python2.7
 EOF
 echo travis_fold:end:job_setup
 
 
 echo travis_fold:start:mitogen_linear
-ANSIBLE_STRATEGY=mitogen_linear /usr/bin/time ansible-playbook \
+/usr/bin/time ./mitogen_ansible_playbook.sh \
     integration/all.yml \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:mitogen_linear
 
 
 echo travis_fold:start:vanilla_ansible
-/usr/bin/time ansible-playbook \
+/usr/bin/time ./run_ansible_playbook.sh \
     integration/all.yml \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:vanilla_ansible
