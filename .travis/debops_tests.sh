@@ -36,6 +36,8 @@ strategy_plugins = ${TRAVIS_BUILD_DIR}/ansible_mitogen/plugins/strategy
 strategy = mitogen_linear
 EOF
 
+chmod go= ${TRAVIS_BUILD_DIR}/tests/data/docker/mitogen__has_sudo_pubkey.key
+
 cat > ansible/inventory/group_vars/debops_all_hosts.yml <<-EOF
 ansible_python_interpreter: /usr/bin/python2.7
 

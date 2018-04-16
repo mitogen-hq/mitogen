@@ -38,6 +38,7 @@ echo travis_fold:start:job_setup
 pip install -U ansible=="${ANSIBLE_VERSION}"
 cd ${TRAVIS_BUILD_DIR}/tests/ansible
 
+chmod go= ${TRAVIS_BUILD_DIR}/tests/data/docker/mitogen__has_sudo_pubkey.key
 echo \
     target \
     ansible_host=$DOCKER_HOSTNAME \
