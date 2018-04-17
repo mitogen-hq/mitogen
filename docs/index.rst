@@ -135,7 +135,7 @@ configuration.
 
     # myapp/__init__.py, myapp/mypkg/__init__.py, and myapp/mypkg/mymodule.py
     # are transferred automatically.
-    print context.call(myapp.mymodule.my_function)
+    print(context.call(myapp.mymodule.my_function))
 
 As the forwarder reuses the import mechanism, it should integrate cleanly with
 any tool such as `py2exe`_ that correctly implement the protocols in PEP-302,
@@ -323,10 +323,10 @@ available.
     total = 0
     for msg in Select(c.call_async(usage, '/tmp') for c in contexts):
         usage = msg.unpickle()
-        print 'Context %s /tmp usage: %d' % (recv.context, usage)
+        print('Context %s /tmp usage: %d' % (recv.context, usage))
         total += usage
 
-    print 'Total /tmp usage across all contexts: %d' % (total,)
+    print('Total /tmp usage across all contexts: %d' % (total,))
 
 
 Single File Programs
@@ -361,7 +361,7 @@ usual into the slave process.
 
     def main(broker):
         if len(sys.argv) != 2:
-            print __doc__
+            print(__doc__)
             sys.exit(1)
 
         context = mitogen.ssh.connect(broker, sys.argv[1])

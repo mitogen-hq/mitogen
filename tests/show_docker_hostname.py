@@ -6,4 +6,4 @@ daemon from the environment.
 """
 
 import testlib
-print testlib.get_docker_host()
+print(testlib.get_docker_host())

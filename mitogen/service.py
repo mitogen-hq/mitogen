@@ -38,6 +38,7 @@ import time
 
 import mitogen.core
 import mitogen.select
+from mitogen.core import b
 from mitogen.core import LOG
 
 
@@ -46,6 +47,14 @@ _pool = None
 _pool_pid = None
 #: Serialize pool construction.
 _pool_lock = threading.Lock()
+
+
+if mitogen.core.PY3:
+    def func_code(func):
+        return func.__code__
+else:
+    def func_code(func):
+        return func.func_code
 
 
 @mitogen.core.takes_router
@@ -221,7 +230,7 @@ class Invoker(object):
 
     def _invoke(self, method_name, kwargs, msg):
         method = getattr(self.service, method_name)
-        if 'msg' in method.func_code.co_varnames:
+        if 'msg' in func_code(method).co_varnames:
             kwargs['msg'] = msg  # TODO: hack
 
         no_reply = getattr(method, 'mitogen_service__no_reply', False)
@@ -371,7 +380,7 @@ class Service(object):
 
     @classmethod
     def name(cls):
-        return '%s.%s' % (cls.__module__, cls.__name__)
+        return u'%s.%s' % (cls.__module__, cls.__name__)
 
     def __init__(self, router):
         self.router = router
@@ -468,7 +477,7 @@ class Pool(object):
     def join(self):
         for th in self._threads:
             th.join()
-        for invoker in self._invoker_by_name.itervalues():
+        for invoker in self._invoker_by_name.values():
             invoker.service.on_shutdown()
 
     def get_invoker(self, name, msg):
@@ -490,17 +499,21 @@ class Pool(object):
 
     def _validate(self, msg):
         tup = msg.unpickle(throw=False)
+        LOG.debug('_validate(): %r', tup)
+        LOG.debug('_validate(): %r', mitogen.core.PY3)
+        LOG.debug('_validate(): %r', list(map(type, tup)))
+        LOG.debug('_validate(): UnicodeType=%r', mitogen.core.UnicodeType)
         if not (isinstance(tup, tuple) and
                 len(tup) == 3 and
-                isinstance(tup[0], basestring) and
-                isinstance(tup[1], basestring) and
+                isinstance(tup[0], mitogen.core.AnyTextType) and
+                isinstance(tup[1], mitogen.core.AnyTextType) and
                 isinstance(tup[2], dict)):
             raise mitogen.core.CallError('Invalid message format.')
 
     def _on_service_call(self, recv, msg):
-        self._validate(msg)
-        service_name, method_name, kwargs = msg.unpickle()
         try:
+            self._validate(msg)
+            service_name, method_name, kwargs = msg.unpickle()
             invoker = self.get_invoker(service_name, msg)
             return invoker.invoke(method_name, kwargs, msg)
         except mitogen.core.CallError:
@@ -628,7 +641,7 @@ class PushFileService(Service):
     @expose(policy=AllowParents())
     @arg_spec({
         'context': mitogen.core.Context,
-        'path': basestring,
+        'path': mitogen.core.FsPathTypes,
     })
     def propagate_to(self, context, path):
         LOG.debug('%r.propagate_to(%r, %r)', self, context, path)
@@ -651,7 +664,7 @@ class PushFileService(Service):
     @expose(policy=AllowParents())
     @no_reply()
     @arg_spec({
-        'path': basestring,
+        'path': mitogen.core.FsPathTypes,
         'data': mitogen.core.Blob,
         'context': mitogen.core.Context,
     })
@@ -667,7 +680,7 @@ class PushFileService(Service):
     @expose(policy=AllowParents())
     @no_reply()
     @arg_spec({
-        'path': basestring,
+        'path': mitogen.core.FsPathTypes,
         'context': mitogen.core.Context,
     })
     def forward(self, path, context):
@@ -752,7 +765,7 @@ class FileService(Service):
 
     @expose(policy=AllowParents())
     @arg_spec({
-        'path': basestring,
+        'path': mitogen.core.FsPathTypes,
     })
     def register(self, path):
         """
@@ -801,7 +814,7 @@ class FileService(Service):
     IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Stream.HEADER_LEN + (
         len(
             mitogen.core.Message.pickled(
-                mitogen.core.Blob(' ' * mitogen.core.CHUNK_SIZE)
+                mitogen.core.Blob(b(' ') * mitogen.core.CHUNK_SIZE)
             ).data
         ) - mitogen.core.CHUNK_SIZE
     ))
@@ -831,7 +844,7 @@ class FileService(Service):
     @expose(policy=AllowAny())
     @no_reply()
     @arg_spec({
-        'path': basestring,
+        'path': mitogen.core.FsPathTypes,
         'sender': mitogen.core.Sender,
     })
     def fetch(self, path, sender, msg):

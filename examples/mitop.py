@@ -182,7 +182,7 @@ def main(router):
     """
     argv = sys.argv[1:]
     if not len(argv):
-        print 'mitop: Need a list of SSH hosts to connect to.'
+        print('mitop: Need a list of SSH hosts to connect to.')
         sys.exit(1)
 
     delay = 2.0
@@ -193,7 +193,7 @@ def main(router):
     # connection, a Receiver to accept messages from the host, and finally
     # start child_main() on the host to pump messages into the receiver.
     for hostname in argv:
-        print 'Starting on', hostname
+        print('Starting on', hostname)
         host = Host()
         host.name = hostname
 

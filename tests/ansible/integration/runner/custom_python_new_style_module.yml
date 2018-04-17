@@ -21,4 +21,4 @@
 
     - assert:
         that:
-          - out.argv_types == ["<type 'str'>"]
+          - out.argv_types_correct

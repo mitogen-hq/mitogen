@@ -48,7 +48,6 @@ setup(
     license = 'New BSD',
     url = 'https://github.com/dw/mitogen/',
     packages = find_packages(exclude=['tests', 'examples']),
-    use_2to3=True,
     zip_safe = False,
     classifiers = [
         'Development Status :: 3 - Alpha',

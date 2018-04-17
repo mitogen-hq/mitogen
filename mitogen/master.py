@@ -56,8 +56,14 @@ import mitogen
 import mitogen.core
 import mitogen.minify
 import mitogen.parent
-from mitogen.core import IOLOG
+
+from mitogen.core import b
+from mitogen.core import to_text
 from mitogen.core import LOG
+from mitogen.core import IOLOG
+
+imap = getattr(itertools, 'imap', map)
+izip = getattr(itertools, 'izip', zip)
 
 
 RLOG = logging.getLogger('mitogen.ctx')
@@ -79,7 +85,7 @@ def _stdlib_paths():
 
 def get_child_modules(path):
     it = pkgutil.iter_modules([os.path.dirname(path)])
-    return [name for _, name, _ in it]
+    return [to_text(name) for _, name, _ in it]
 
 
 def get_core_source():
@@ -115,8 +121,12 @@ def scan_code_imports(co):
           `modname`.
     """
     # Yield `(op, oparg)` tuples from the code object `co`.
-    ordit = itertools.imap(ord, co.co_code)
-    nextb = ordit.next
+    if mitogen.core.PY3:
+        ordit = iter(co.co_code)
+        nextb = ordit.__next__
+    else:
+        ordit = imap(ord, co.co_code)
+        nextb = ordit.next
 
     opit = ((c, (None
                  if c < dis.HAVE_ARGUMENT else
@@ -131,7 +141,7 @@ def scan_code_imports(co):
     except StopIteration:
         return
 
-    for oparg1, oparg2, (op3, arg3) in itertools.izip(opit, opit2, opit3):
+    for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
         if op3 == IMPORT_NAME:
             op2, arg2 = oparg2
             op1, arg1 = oparg1
@@ -227,7 +237,7 @@ class LogForwarder(object):
             name = '%s.%s' % (RLOG.name, context.name)
             self._cache[msg.src_id] = logger = logging.getLogger(name)
 
-        name, level_s, s = msg.data.split('\x00', 2)
+        name, level_s, s = msg.data.decode('latin1').split('\x00', 2)
         logger.log(int(level_s), '%s: %s', name, s, extra={
             'mitogen_message': s,
             'mitogen_context': self._router.context_by_id(msg.src_id),
@@ -305,9 +315,18 @@ class ModuleFinder(object):
     def _get_module_via_pkgutil(self, fullname):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
         would be the only required implementation of get_module()."""
-        loader = pkgutil.find_loader(fullname)
-        IOLOG.debug('pkgutil._get_module_via_pkgutil(%r) -> %r',
-                    fullname, loader)
+        try:
+            # Pre-'import spec' this returned None, in Python3.6 it raises
+            # ImportError.
+            loader = pkgutil.find_loader(fullname)
+        except ImportError:
+            e = sys.exc_info()[1]
+            LOG.debug('%r._get_module_via_pkgutil(%r): %s',
+                      self, fullname, e)
+            return None
+
+        IOLOG.debug('%r._get_module_via_pkgutil(%r) -> %r',
+                    self, fullname, loader)
         if not loader:
             return
 
@@ -318,13 +337,21 @@ class ModuleFinder(object):
         except AttributeError:
             return
 
-        if path is not None and source is not None:
-            return path, source, is_pkg
+        if path is None or source is None:
+            return
+
+        if isinstance(source, mitogen.core.UnicodeType):
+            # get_source() returns "string" according to PEP-302, which was
+            # reinterpreted for Python 3 to mean a Unicode string.
+            source = source.encode('utf-8')
+
+        return path, source, is_pkg
 
     def _get_module_via_sys_modules(self, fullname):
         """Attempt to fetch source code via sys.modules. This is specifically
         to support __main__, but it may catch a few more cases."""
         module = sys.modules.get(fullname)
+        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
         if not isinstance(module, types.ModuleType):
             LOG.debug('sys.modules[%r] absent or not a regular module',
                       fullname)
@@ -343,6 +370,11 @@ class ModuleFinder(object):
             if not is_pkg:
                 raise
             source = '\n'
+
+        if isinstance(source, mitogen.core.UnicodeType):
+            # get_source() returns "string" according to PEP-302, which was
+            # reinterpreted for Python 3 to mean a Unicode string.
+            source = source.encode('utf-8')
 
         return path, source, is_pkg
 
@@ -483,7 +515,7 @@ class ModuleResponder(object):
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
 
-    MAIN_RE = re.compile(r'^if\s+__name__\s*==\s*.__main__.\s*:', re.M)
+    MAIN_RE = re.compile(b(r'^if\s+__name__\s*==\s*.__main__.\s*:'), re.M)
 
     def whitelist_prefix(self, fullname):
         if self.whitelist == ['']:
@@ -502,6 +534,9 @@ class ModuleResponder(object):
             return src[:match.start()]
         return src
 
+    def _make_negative_response(self, fullname):
+        return (fullname, None, None, None, ())
+
     def _build_tuple(self, fullname):
         if mitogen.core.is_blacklisted_import(self, fullname):
             raise ImportError('blacklisted')
@@ -512,12 +547,9 @@ class ModuleResponder(object):
         path, source, is_pkg = self._finder.get_module_source(fullname)
         if source is None:
             LOG.error('_build_tuple(%r): could not locate source', fullname)
-            tup = fullname, None, None, None, ()
+            tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
-
-        if source is None:
-            raise ImportError('could not find %r' % (fullname,))
 
         if is_pkg:
             pkg_present = get_child_modules(path)
@@ -528,14 +560,20 @@ class ModuleResponder(object):
 
         if fullname == '__main__':
             source = self.neutralize_main(source)
-        compressed = zlib.compress(source, 9)
+        compressed = mitogen.core.Blob(zlib.compress(source, 9))
         related = [
-            name
+            to_text(name)
             for name in self._finder.find_related(fullname)
             if not mitogen.core.is_blacklisted_import(self, name)
         ]
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
-        tup = fullname, pkg_present, path, compressed, related
+        tup = (
+            to_text(fullname),
+            pkg_present,
+            to_text(path),
+            compressed,
+            related
+        )
         self._cache[fullname] = tup
         return tup
 
@@ -563,6 +601,14 @@ class ModuleResponder(object):
     def _send_module_and_related(self, stream, fullname):
         try:
             tup = self._build_tuple(fullname)
+            if tup[2] and is_stdlib_path(tup[2]):
+                # Prevent loading of 2.x<->3.x stdlib modules! This costs one
+                # RTT per hit, so a client-side solution is also required.
+                LOG.warning('%r: refusing to serve stdlib module %r',
+                            self, fullname)
+                self._send_module_load_failed(stream, fullname)
+                return
+
             for name in tup[4]:  # related
                 parent, _, _ = name.partition('.')
                 if parent != fullname and parent not in stream.sent_modules:
@@ -581,7 +627,7 @@ class ModuleResponder(object):
 
         LOG.debug('%r._on_get_module(%r)', self, msg.data)
         stream = self._router.stream_by_id(msg.src_id)
-        fullname = msg.data
+        fullname = msg.data.decode()
         if fullname in stream.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
@@ -592,7 +638,7 @@ class ModuleResponder(object):
         if stream.remote_id != context.context_id:
             stream.send(
                 mitogen.core.Message(
-                    data='%s\x00%s' % (context.context_id, fullname),
+                    data=b('%s\x00%s' % (context.context_id, fullname)),
                     handle=mitogen.core.FORWARD_MODULE,
                     dst_id=stream.remote_id,
                 )

@@ -9,6 +9,10 @@ import mitogen.master
 import testlib
 
 
+class MyError(Exception):
+    pass
+
+
 class CrazyType(object):
     pass
 
@@ -18,7 +22,7 @@ def function_that_adds_numbers(x, y):
 
 
 def function_that_fails():
-    raise ValueError('exception text')
+    raise MyError('exception text')
 
 
 def func_with_bad_return_value():
@@ -49,7 +53,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
         s = str(exc)
         etype, _, s = s.partition(': ')
-        self.assertEqual(etype, 'exceptions.ValueError')
+        self.assertEqual(etype, '__main__.MyError')
 
         msg, _, s = s.partition('\n')
         self.assertEqual(msg, 'exception text')
@@ -61,7 +65,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         exc = self.assertRaises(mitogen.core.StreamError,
             lambda: self.local.call(func_with_bad_return_value))
         self.assertEquals(
-                exc[0],
+                exc.args[0],
                 "cannot unpickle '%s'/'CrazyType'" % (__name__,),
         )
 
@@ -72,7 +76,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.broker.defer(stream.on_disconnect, self.broker)
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(exc[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(exc.args[0], mitogen.core.ChannelError.local_msg)
 
     def test_aborted_on_local_broker_shutdown(self):
         stream = self.router._stream_by_id[self.local.context_id]
@@ -81,7 +85,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.broker.shutdown()
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(exc[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(exc.args[0], mitogen.core.ChannelError.local_msg)
 
     def test_accepts_returns_context(self):
         context = self.local.call(func_accepts_returns_context, self.local)

@@ -73,7 +73,7 @@ class Listener(mitogen.core.BasicStream):
             os.unlink(self.path)
 
         self._sock.bind(self.path)
-        os.chmod(self.path, 0600)
+        os.chmod(self.path, int('0600', 8))
         self._sock.listen(backlog)
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
@@ -87,7 +87,7 @@ class Listener(mitogen.core.BasicStream):
         context = mitogen.parent.Context(self._router, context_id)
         stream = mitogen.core.Stream(self._router, context_id)
         stream.accept(sock.fileno(), sock.fileno())
-        stream.name = 'unix_client.%d' % (pid,)
+        stream.name = u'unix_client.%d' % (pid,)
         stream.auth_id = mitogen.context_id
         stream.is_privileged = True
         self._router.register(context, stream)
@@ -111,7 +111,7 @@ def connect(path, broker=None):
     router = mitogen.master.Router(broker=broker)
     stream = mitogen.core.Stream(router, remote_id)
     stream.accept(sock.fileno(), sock.fileno())
-    stream.name = 'unix_listener.%d' % (pid,)
+    stream.name = u'unix_listener.%d' % (pid,)
 
     context = mitogen.parent.Context(router, remote_id)
     router.register(context, stream)

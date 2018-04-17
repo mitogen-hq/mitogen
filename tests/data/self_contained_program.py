@@ -12,4 +12,4 @@ def repr_stuff():
 @mitogen.main()
 def main(router):
     context = router.local()
-    print context.call(repr_stuff)
+    print(context.call(repr_stuff))

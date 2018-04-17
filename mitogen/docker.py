@@ -59,7 +59,7 @@ class Stream(mitogen.parent.Stream):
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'docker.' + (self.container or self.image)
+        self.name = u'docker.' + (self.container or self.image)
 
     def get_boot_command(self):
         args = ['--interactive']

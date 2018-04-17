@@ -13,8 +13,8 @@ def usage():
 
 input_json = sys.stdin.read()
 
-print "{"
-print "  \"changed\": false,"
-print "  \"msg\": \"Here is my input\","
-print "  \"input\": [%s]" % (input_json,)
-print "}"
+print("{")
+print("  \"changed\": false,")
+print("  \"msg\": \"Here is my input\",")
+print("  \"input\": [%s]" % (input_json,))
+print("}")

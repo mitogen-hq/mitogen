@@ -11,6 +11,7 @@ import unittest2
 
 import mitogen.core
 import mitogen.utils
+from mitogen.core import b
 
 import testlib
 
@@ -45,7 +46,7 @@ class ImporterMixin(testlib.RouterMixin):
 
 
 class LoadModuleTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress("data = 1\n\n")
+    data = zlib.compress(b("data = 1\n\n"))
     path = 'fake_module.py'
     modname = 'fake_module'
 
@@ -83,7 +84,7 @@ class LoadModuleTest(ImporterMixin, testlib.TestCase):
 
 
 class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress("data = 1\n\n")
+    data = zlib.compress(b("data = 1\n\n"))
     path = 'fake_module.py'
     modname = 'mypkg.fake_module'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
@@ -96,7 +97,7 @@ class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
 
 
 class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress("func = lambda: 1\n\n")
+    data = zlib.compress(b("func = lambda: 1\n\n"))
     path = 'fake_pkg/__init__.py'
     modname = 'fake_pkg'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related

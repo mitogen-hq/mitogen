@@ -3,6 +3,7 @@
 # interpreter I run within.
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils import six
 
 import os
 import pwd
@@ -16,7 +17,7 @@ def main():
         python_version=sys.version[:3],
         argv=sys.argv,
         __file__=__file__,
-        argv_types=[str(type(s)) for s in sys.argv],
+        argv_types_correct=all(type(s) is str for s in sys.argv),
         env=dict(os.environ),
         cwd=os.getcwd(),
         python_path=sys.path,

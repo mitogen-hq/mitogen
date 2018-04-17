@@ -225,13 +225,13 @@ caller until the return value is available or an exception is raised::
     >>> import os
 
     >>> # Returns the current time.
-    >>> print 'Time in remote context:', local.call(time.time)
+    >>> print('Time in remote context:', local.call(time.time))
 
     >>> try:
     ...     # Raises OSError.
     ...     local.call(os.chdir, '/nonexistent')
     ... except mitogen.core.CallError, e:
-    ...     print 'Call failed:', str(e)
+    ...     print('Call failed:', str(e))
 
 It is a simple wrapper around the more flexible :meth:`Context.call_async`,
 which immediately returns a :class:`Receiver <mitogen.core.Receiver>` wired up
@@ -242,7 +242,7 @@ is called to block the thread until the result arrives::
 
     >>> call = local.call_async(time.time)
     >>> msg = call.get()
-    >>> print msg.unpickle()
+    >>> print(msg.unpickle())
     1507292737.75547
 
 
@@ -259,12 +259,12 @@ We must therefore continue by writing our code as a script::
     import mitogen.utils
 
     def my_first_function():
-        print 'Hello from remote context!'
+        print('Hello from remote context!')
         return 123
 
     def main(router):
         local = router.local()
-        print local.call(my_first_function)
+        print(local.call(my_first_function))
 
     if __name__ == '__main__':
         mitogen.utils.log_to_file(main)
@@ -292,7 +292,7 @@ without the need for writing asynchronous code::
     calls = [context.call(my_func) for context in contexts]
 
     for msg in mitogen.select.Select(calls):
-        print 'Reply from %s: %s' % (recv.context, data)
+        print('Reply from %s: %s' % (recv.context, data))
 
 
 Running Code That May Hang

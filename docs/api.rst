@@ -848,9 +848,9 @@ Context Class
                 try:
                     # Prints output once it is received.
                     msg = recv.get()
-                    print msg.unpickle()
+                    print(msg.unpickle())
                 except mitogen.core.CallError, e:
-                    print 'Call failed:', str(e)
+                    print('Call failed:', str(e))
 
             Asynchronous calls may be dispatched in parallel to multiple
             contexts and consumed as they complete using
@@ -1038,11 +1038,11 @@ Select Class
         recvs = [c.call_async(long_running_operation) for c in contexts]
 
         for msg in mitogen.select.Select(recvs):
-            print 'Got %s from %s' % (msg, msg.receiver)
+            print('Got %s from %s' % (msg, msg.receiver))
             total += msg.unpickle()
 
         # Iteration ends when last Receiver yields a result.
-        print 'Received total %s from %s receivers' % (total, len(recvs))
+        print('Received total %s from %s receivers' % (total, len(recvs)))
 
     :py:class:`Select` may drive a long-running scheduler:
 
@@ -1069,7 +1069,7 @@ Select Class
         ]
 
         for msg in mitogen.select.Select(selects):
-            print msg.unpickle()
+            print(msg.unpickle())
 
     .. py:classmethod:: all (it)
 

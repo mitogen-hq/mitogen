@@ -45,7 +45,7 @@ def fixup_prngs():
     Add 256 bits of /dev/urandom to OpenSSL's PRNG in the child, and re-seed
     the random package with the same data.
     """
-    s = os.urandom(256 / 8)
+    s = os.urandom(256 // 8)
     random.seed(s)
     if 'ssl' in sys.modules:
         sys.modules['ssl'].RAND_add(s, 75.0)
@@ -112,7 +112,7 @@ class Stream(mitogen.parent.Stream):
         if isinstance(responder, mitogen.parent.ModuleForwarder):
             self.importer = responder.importer
 
-    name_prefix = 'fork'
+    name_prefix = u'fork'
 
     def start_child(self):
         parentfp, childfp = mitogen.parent.create_socketpair()

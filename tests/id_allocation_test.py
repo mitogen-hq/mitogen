@@ -15,7 +15,7 @@ def allocate_an_id(econtext):
 
 class SlaveTest(testlib.RouterMixin, testlib.TestCase):
     def test_slave_allocates_id(self):
-        context = self.router.local()
+        context = self.router.local(python_path='/users/dmw/src/cpython/build/bin/python2')
         # Master's allocator named the context 1.
         self.assertEquals(1, context.context_id)
 

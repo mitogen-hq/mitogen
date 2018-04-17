@@ -39,18 +39,19 @@ except ImportError:
     from pipes import quote as shlex_quote
 
 import mitogen.parent
+from mitogen.core import b
 
 
 LOG = logging.getLogger('mitogen')
 
 # sshpass uses 'assword' because it doesn't lowercase the input.
-PASSWORD_PROMPT = 'password'
-PERMDENIED_PROMPT = 'permission denied'
-HOSTKEY_REQ_PROMPT = 'are you sure you want to continue connecting (yes/no)?'
-HOSTKEY_FAIL = 'host key verification failed.'
+PASSWORD_PROMPT = b('password')
+PERMDENIED_PROMPT = b('permission denied')
+HOSTKEY_REQ_PROMPT = b('are you sure you want to continue connecting (yes/no)?')
+HOSTKEY_FAIL = b('host key verification failed.')
 
 
-DEBUG_PREFIXES = ('debug1:', 'debug2:', 'debug3:')
+DEBUG_PREFIXES = (b('debug1:'), b('debug2:'), b('debug3:'))
 
 
 def filter_debug(stream, it):
@@ -62,7 +63,7 @@ def filter_debug(stream, it):
     lines such as the password prompt.
     """
     state = 'start_of_line'
-    buf = ''
+    buf = b('')
     for chunk in it:
         buf += chunk
         while buf:
@@ -78,13 +79,13 @@ def filter_debug(stream, it):
                 else:
                     state = 'in_plain'
             elif state == 'in_debug':
-                if '\n' not in buf:
+                if b('\n') not in buf:
                     break
-                line, _, buf = buf.partition('\n')
+                line, _, buf = buf.partition(b('\n'))
                 LOG.debug('%r: %s', stream, line.rstrip())
                 state = 'start_of_line'
             elif state == 'in_plain':
-                line, nl, buf = buf.partition('\n')
+                line, nl, buf = buf.partition(b('\n'))
                 yield line + nl
                 if nl:
                     state = 'start_of_line'
@@ -189,9 +190,9 @@ class Stream(mitogen.parent.Stream):
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'ssh.' + self.hostname
+        self.name = u'ssh.' + mitogen.core.to_text(self.hostname)
         if self.port:
-            self.name += ':%s' % (self.port,)
+            self.name += u':%s' % (self.port,)
 
     auth_incorrect_msg = 'SSH authentication is incorrect'
     password_incorrect_msg = 'SSH password is incorrect'
@@ -249,7 +250,7 @@ class Stream(mitogen.parent.Stream):
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 LOG.debug('%r: sending password', self)
-                self.tty_stream.transmit_side.write(self.password + '\n')
+                self.tty_stream.transmit_side.write((self.password + '\n').encode())
                 password_sent = True
 
         raise mitogen.core.StreamError('bootstrap failed')

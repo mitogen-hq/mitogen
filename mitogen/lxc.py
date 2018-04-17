@@ -56,7 +56,7 @@ class Stream(mitogen.parent.Stream):
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'lxc.' + self.container
+        self.name = u'lxc.' + self.container
 
     def get_boot_command(self):
         bits = [

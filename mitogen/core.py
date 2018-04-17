@@ -33,6 +33,7 @@ bootstrap implementation sent to every new slave context.
 """
 
 import collections
+import encodings.latin_1
 import errno
 import fcntl
 import imp
@@ -54,9 +55,9 @@ import zlib
 select = __import__('select')
 
 try:
-    import cPickle
+    import cPickle as pickle
 except ImportError:
-    import pickle as cPickle
+    import pickle
 
 try:
     from cStringIO import StringIO as BytesIO
@@ -71,6 +72,8 @@ warnings.filterwarnings('ignore',
 LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
+
+LATIN1_CODEC = encodings.latin_1.Codec()
 
 _v = False
 _vv = False
@@ -95,13 +98,23 @@ except NameError:
 
 PY3 = sys.version_info > (3,)
 if PY3:
-    b = lambda s: s.encode('latin-1')
+    b = str.encode
     BytesType = bytes
-    UnicodeType = unicode
+    UnicodeType = str
+    FsPathTypes = (str,)
+    BufferType = lambda buf, start: memoryview(buf)[start:]
+    long = int
 else:
     b = str
     BytesType = str
+    FsPathTypes = (str, unicode)
+    BufferType = buffer
     UnicodeType = unicode
+
+AnyTextType = (BytesType, UnicodeType)
+
+if sys.version_info < (2, 5):
+    next = lambda it: it.next()
 
 CHUNK_SIZE = 131072
 _tls = threading.local()
@@ -121,6 +134,8 @@ class Error(Exception):
     def __init__(self, fmt=None, *args):
         if args:
             fmt %= args
+        if fmt and not isinstance(fmt, UnicodeType):
+            fmt = fmt.decode('utf-8')
         Exception.__init__(self, fmt)
 
 
@@ -140,11 +155,29 @@ class Secret(UnicodeType):
     def __repr__(self):
         return '[secret]'
 
-    def __str__(self):
-        return UnicodeType(self)
+    if not PY3:
+        # TODO: what is this needed for in 2.x?
+        def __str__(self):
+            return UnicodeType(self)
 
     def __reduce__(self):
         return (Secret, (UnicodeType(self),))
+
+
+class Kwargs(dict):
+    if PY3:
+        def __init__(self, dct):
+            for k, v in dct.items():
+                if type(k) is bytes:
+                    self[k.decode()] = v
+                else:
+                    self[k] = v
+
+    def __repr__(self):
+        return 'Kwargs(%s)' % (dict.__repr__(self),)
+
+    def __reduce__(self):
+        return (Kwargs, (dict(self),))
 
 
 class CallError(Error):
@@ -162,11 +195,11 @@ class CallError(Error):
             Error.__init__(self, fmt)
 
     def __reduce__(self):
-        return (_unpickle_call_error, (self[0],))
+        return (_unpickle_call_error, (self.args[0],))
 
 
 def _unpickle_call_error(s):
-    if not (type(s) is str and len(s) < 10000):
+    if not (type(s) is UnicodeType and len(s) < 10000):
         raise TypeError('cannot unpickle CallError: bad input')
     inst = CallError.__new__(CallError)
     Exception.__init__(inst, s)
@@ -184,6 +217,14 @@ class StreamError(Error):
 
 class TimeoutError(Error):
     pass
+
+
+def to_text(o):
+    if isinstance(o, UnicodeType):
+        return UnicodeType(o)
+    if isinstance(o, BytesType):
+        return o.decode('utf-8')
+    return UnicodeType(o)
 
 
 def has_parent_authority(msg, _stream=None):
@@ -247,9 +288,9 @@ def io_op(func, *args):
         except (select.error, OSError, IOError):
             e = sys.exc_info()[1]
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
-            if e[0] == errno.EINTR:
+            if e.args[0] == errno.EINTR:
                 continue
-            if e[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
+            if e.args[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
                 return None, True
             raise
 
@@ -326,13 +367,25 @@ def import_module(modname):
     return __import__(modname, None, None, [''])
 
 
+if PY3:
+    # In 3.x Unpickler is a class exposing find_class as an overridable, but it
+    # cannot be overridden without subclassing.
+    class _Unpickler(pickle.Unpickler):
+        def find_class(self, module, func):
+            return self.find_global(module, func)
+else:
+    # In 2.x Unpickler is a function exposing a writeable find_global
+    # attribute.
+    _Unpickler = pickle.Unpickler
+
+
 class Message(object):
     dst_id = None
     src_id = None
     auth_id = None
     handle = None
     reply_to = None
-    data = ''
+    data = b('')
     _unpickled = object()
 
     router = None
@@ -342,13 +395,17 @@ class Message(object):
         self.src_id = mitogen.context_id
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
-        assert isinstance(self.data, str)
+        assert isinstance(self.data, BytesType)
 
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(self.router, context_id, name)
 
     def _unpickle_sender(self, context_id, dst_handle):
         return _unpickle_sender(self.router, context_id, dst_handle)
+
+    def _unpickle_bytes(self, s, encoding):
+        s, n = LATIN1_CODEC.encode(s)
+        return s
 
     def _find_global(self, module, func):
         """Return the class implementing `module_name.class_name` or raise
@@ -364,6 +421,10 @@ class Message(object):
                 return Blob
             elif func == 'Secret':
                 return Secret
+            elif func == 'Kwargs':
+                return Kwargs
+        elif module == '_codecs' and func == 'encode':
+            return self._unpickle_bytes
         raise StreamError('cannot unpickle %r/%r', module, func)
 
     @property
@@ -378,10 +439,10 @@ class Message(object):
     def pickled(cls, obj, **kwargs):
         self = cls(**kwargs)
         try:
-            self.data = cPickle.dumps(obj, protocol=2)
-        except cPickle.PicklingError:
+            self.data = pickle.dumps(obj, protocol=2)
+        except pickle.PicklingError:
             e = sys.exc_info()[1]
-            self.data = cPickle.dumps(CallError(e), protocol=2)
+            self.data = pickle.dumps(CallError(e), protocol=2)
         return self
 
     def reply(self, msg, router=None, **kwargs):
@@ -395,6 +456,11 @@ class Message(object):
         else:
             LOG.debug('Message.reply(): discarding due to zero handle: %r', msg)
 
+    if PY3:
+        UNPICKLER_KWARGS = {'encoding': 'bytes'}
+    else:
+        UNPICKLER_KWARGS = {}
+
     def unpickle(self, throw=True, throw_dead=True):
         """Deserialize `data` into an object."""
         _vv and IOLOG.debug('%r.unpickle()', self)
@@ -404,12 +470,8 @@ class Message(object):
         obj = self._unpickled
         if obj is Message._unpickled:
             fp = BytesIO(self.data)
-            unpickler = cPickle.Unpickler(fp)
-            try:
-                unpickler.find_global = self._find_global
-            except AttributeError:
-                unpickler.find_class = self._find_global
-
+            unpickler = _Unpickler(fp, **self.UNPICKLER_KWARGS)
+            unpickler.find_global = self._find_global
             try:
                 # Must occur off the broker thread.
                 obj = unpickler.load()
@@ -513,12 +575,10 @@ class Receiver(object):
 
     def __iter__(self):
         while True:
-            try:
-                msg = self.get()
-                msg.unpickle()  # Cause .remote_msg to be thrown.
-                yield msg
-            except ChannelError:
+            msg = self.get()
+            if msg.is_dead:
                 return
+            yield msg
 
 
 class Channel(Sender, Receiver):
@@ -573,6 +633,8 @@ class Importer(object):
             # but very unlikely to trigger a bug report.
             'org',
         ]
+        if PY3:
+            self.blacklist += ['cStringIO']
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
@@ -619,8 +681,6 @@ class Importer(object):
             return None
 
         _tls.running = True
-        # TODO: hack: this is papering over a bug elsewhere.
-        fullname = fullname.rstrip('.')
         try:
             pkgname, dot, _ = fullname.rpartition('.')
             _vv and IOLOG.debug('%r.find_module(%r)', self, fullname)
@@ -707,7 +767,9 @@ class Importer(object):
                 else:
                     _v and LOG.debug('_request_module(%r): new request', fullname)
                     self._callbacks[fullname] = [callback]
-                    self._context.send(Message(data=fullname, handle=GET_MODULE))
+                    self._context.send(
+                        Message(data=b(fullname), handle=GET_MODULE)
+                    )
         finally:
             self._lock.release()
 
@@ -715,9 +777,8 @@ class Importer(object):
             callback()
 
     def load_module(self, fullname):
+        fullname = to_text(fullname)
         _v and LOG.debug('Importer.load_module(%r)', fullname)
-        # TODO: hack: this is papering over a bug elsewhere.
-        fullname = fullname.rstrip('.')
         self._refuse_imports(fullname)
 
         event = threading.Event()
@@ -739,14 +800,12 @@ class Importer(object):
         else:
             mod.__package__ = fullname.rpartition('.')[0] or None
 
-        # TODO: monster hack: work around modules now being imported as their
-        # actual name, so when Ansible "apt.py" tries to "import apt", it gets
-        # itself. Instead force absolute imports during compilation.
-        flags = 0
-        if fullname.startswith('ansible'):
-            flags = 0x4000
+        if mod.__package__ and not PY3:
+            # 2.x requires __package__ to be exactly a string.
+            mod.__package__ = mod.__package__.encode()
+
         source = self.get_source(fullname)
-        code = compile(source, mod.__file__, 'exec', flags, True)
+        code = compile(source, mod.__file__, 'exec', 0, 1)
         if PY3:
             exec(code, vars(mod))
         else:
@@ -755,11 +814,14 @@ class Importer(object):
 
     def get_filename(self, fullname):
         if fullname in self._cache:
-            return 'master:' + self._cache[fullname][2]
+            return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
-            return zlib.decompress(self._cache[fullname][3])
+            source = zlib.decompress(self._cache[fullname][3])
+            if PY3:
+                return to_text(source)
+            return source
 
 
 class LogHandler(logging.Handler):
@@ -777,7 +839,7 @@ class LogHandler(logging.Handler):
         try:
             msg = self.format(rec)
             encoded = '%s\x00%s\x00%s' % (rec.name, rec.levelno, msg)
-            if isinstance(encoded, unicode):
+            if isinstance(encoded, UnicodeType):
                 # Logging package emits both :(
                 encoded = encoded.encode('utf-8')
             self.context.send(Message(data=encoded, handle=FORWARD_LOG))
@@ -865,7 +927,7 @@ class Stream(BasicStream):
     def __init__(self, router, remote_id, **kwargs):
         self._router = router
         self.remote_id = remote_id
-        self.name = 'default'
+        self.name = u'default'
         self.sent_modules = set(['mitogen', 'mitogen.core'])
         self.construct(**kwargs)
         self._input_buf = collections.deque()
@@ -935,7 +997,7 @@ class Stream(BasicStream):
             prev_start = start
             start = 0
 
-        msg.data = ''.join(bits)
+        msg.data = b('').join(bits)
         self._input_buf.appendleft(buf[prev_start+len(bit):])
         self._input_buf_len -= total_len
         self._router._async_route(msg, self)
@@ -956,7 +1018,7 @@ class Stream(BasicStream):
                 self.on_disconnect(broker)
                 return
             elif written != len(buf):
-                self._output_buf.appendleft(buffer(buf, written))
+                self._output_buf.appendleft(BufferType(buf, written))
 
             _vv and IOLOG.debug('%r.on_transmit() -> len %d', self, written)
             self._output_buf_len -= written
@@ -1002,7 +1064,10 @@ class Context(object):
         self.name = name
 
     def __reduce__(self):
-        return _unpickle_context, (self.context_id, self.name)
+        name = self.name
+        if name and not isinstance(name, UnicodeType):
+            name = UnicodeType(name, 'utf-8')
+        return _unpickle_context, (self.context_id, name)
 
     def on_disconnect(self):
         _v and LOG.debug('%r.on_disconnect()', self)
@@ -1023,9 +1088,11 @@ class Context(object):
     def call_service_async(self, service_name, method_name, **kwargs):
         _v and LOG.debug('%r.call_service_async(%r, %r, %r)',
                          self, service_name, method_name, kwargs)
-        if not isinstance(service_name, basestring):
+        if isinstance(service_name, BytesType):
+            service_name = service_name.encode('utf-8')
+        elif not isinstance(service_name, UnicodeType):
             service_name = service_name.name()  # Service.name()
-        tup = (service_name, method_name, kwargs)
+        tup = (service_name, to_text(method_name), Kwargs(kwargs))
         msg = Message.pickled(tup, handle=CALL_SERVICE)
         return self.send_async(msg)
 
@@ -1055,7 +1122,7 @@ def _unpickle_context(router, context_id, name):
     if not (isinstance(router, Router) and
             isinstance(context_id, (int, long)) and context_id >= 0 and (
                 (name is None) or
-                (isinstance(name, basestring) and len(name) < 100))
+                (isinstance(name, UnicodeType) and len(name) < 100))
             ):
         raise TypeError('cannot unpickle Context: bad input')
     return router.context_class(router, context_id, name)
@@ -1193,7 +1260,7 @@ class Latch(object):
             if i >= self._waking:
                 raise e or TimeoutError()
             self._waking -= 1
-            if rsock.recv(2) != '\x7f':
+            if rsock.recv(2) != b('\x7f'):
                 raise LatchError('internal error: received >1 wakeups')
             if e:
                 raise e
@@ -1223,10 +1290,10 @@ class Latch(object):
 
     def _wake(self, sock):
         try:
-            os.write(sock.fileno(), '\x7f')
+            os.write(sock.fileno(), b('\x7f'))
         except OSError:
             e = sys.exc_info()[1]
-            if e[0] != errno.EBADF:
+            if e.args[0] != errno.EBADF:
                 raise
 
     def __repr__(self):
@@ -1319,7 +1386,7 @@ class Waker(BasicStream):
             self.transmit_side.write(b(' '))
         except OSError:
             e = sys.exc_info()[1]
-            if e[0] != errno.EBADF:
+            if e.args[0] != errno.EBADF:
                 raise
 
 
@@ -1363,7 +1430,7 @@ class IoLogger(BasicStream):
         if not buf:
             return self.on_disconnect(broker)
 
-        self._buf += buf
+        self._buf += buf.decode('latin1')
         self._log_lines()
 
 
@@ -1420,7 +1487,7 @@ class Router(object):
 
     def add_handler(self, fn, handle=None, persist=True,
                     policy=None, respondent=None):
-        handle = handle or self._last_handle.next()
+        handle = handle or next(self._last_handle)
         _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
 
         if respondent:
@@ -1761,12 +1828,12 @@ class ExternalContext(object):
         else:
             core_src_fd = self.config.get('core_src_fd', 101)
             if core_src_fd:
-                fp = os.fdopen(core_src_fd, 'r', 1)
+                fp = os.fdopen(core_src_fd, 'rb', 1)
                 try:
                     core_size = int(fp.readline())
                     core_src = fp.read(core_size)
                     # Strip "ExternalContext.main()" call from last line.
-                    core_src = '\n'.join(core_src.splitlines()[:-1])
+                    core_src = b('\n').join(core_src.splitlines()[:-1])
                 finally:
                     fp.close()
             else:

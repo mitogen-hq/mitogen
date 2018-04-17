@@ -36,7 +36,8 @@ how to build arguments for it, preseed related data, etc.
 """
 
 from __future__ import absolute_import
-import cStringIO
+from __future__ import unicode_literals
+
 import ctypes
 import errno
 import imp
@@ -49,6 +50,11 @@ import types
 
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 try:
     from shlex import quote as shlex_quote
@@ -71,6 +77,7 @@ for symbol in 'res_init', '__res_init':
     except AttributeError:
         pass
 
+iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
 
@@ -78,7 +85,7 @@ def utf8(s):
     """
     Coerce an object to bytes if it is Unicode.
     """
-    if isinstance(s, unicode):
+    if isinstance(s, mitogen.core.UnicodeType):
         s = s.encode('utf-8')
     return s
 
@@ -110,9 +117,13 @@ class Runner(object):
     :param mitogen.core.Context service_context:
         Context to which we should direct FileService calls. For now, always
         the connection multiplexer process on the controller.
-    :param dict args:
+    :param str json_args:
         Ansible module arguments. A mixture of user and internal keys created
         by :meth:`ansible.plugins.action.ActionBase._execute_module`.
+
+        This is passed as a string rather than a dict in order to mimic the
+        implicit bytes/str conversion behaviour of a 2.x controller running
+        against a 3.x target.
     :param dict env:
         Additional environment variables to set during the run.
 
@@ -123,16 +134,13 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, args=None, env=None,
+    def __init__(self, module, service_context, json_args, env=None,
                  econtext=None, detach=False):
-        if args is None:
-            args = {}
-
-        self.module = utf8(module)
+        self.module = module
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
-        self.args = args
+        self.args = json.loads(json_args)
         self.env = env
 
     def setup(self):
@@ -236,7 +244,7 @@ class ModuleUtilsImporter(object):
     def load_module(self, fullname):
         path, is_pkg = self._by_fullname[fullname]
         source = ansible_mitogen.target.get_small_file(self._context, path)
-        code = compile(source, path, 'exec')
+        code = compile(source, path, 'exec', 0, 1)
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = "master:%s" % (path,)
         mod.__loader__ = self
@@ -254,7 +262,7 @@ class TemporaryEnvironment(object):
     def __init__(self, env=None):
         self.original = os.environ.copy()
         self.env = env or {}
-        os.environ.update((k, str(v)) for k, v in self.env.iteritems())
+        os.environ.update((k, str(v)) for k, v in iteritems(self.env))
 
     def revert(self):
         os.environ.clear()
@@ -278,14 +286,11 @@ class NewStyleStdio(object):
         self.original_stdout = sys.stdout
         self.original_stderr = sys.stderr
         self.original_stdin = sys.stdin
-        sys.stdout = cStringIO.StringIO()
-        sys.stderr = cStringIO.StringIO()
-        ansible.module_utils.basic._ANSIBLE_ARGS = json.dumps({
-            'ANSIBLE_MODULE_ARGS': args
-        })
-        sys.stdin = cStringIO.StringIO(
-            ansible.module_utils.basic._ANSIBLE_ARGS
-        )
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+        encoded = json.dumps({'ANSIBLE_MODULE_ARGS': args})
+        ansible.module_utils.basic._ANSIBLE_ARGS = utf8(encoded)
+        sys.stdin = StringIO(mitogen.core.to_text(encoded))
 
     def revert(self):
         sys.stdout = self.original_stdout
@@ -309,7 +314,7 @@ class ProgramRunner(Runner):
     def __init__(self, path, emulate_tty=None, **kwargs):
         super(ProgramRunner, self).__init__(**kwargs)
         self.emulate_tty = emulate_tty
-        self.path = utf8(path)
+        self.path = path
 
     def setup(self):
         super(ProgramRunner, self).setup()
@@ -368,7 +373,7 @@ class ProgramRunner(Runner):
                 args=self._get_program_args(),
                 emulate_tty=self.emulate_tty,
             )
-        except Exception, e:
+        except Exception as e:
             LOG.exception('While running %s', self._get_program_args())
             return {
                 'rc': 1,
@@ -378,8 +383,8 @@ class ProgramRunner(Runner):
 
         return {
             'rc': rc,
-            'stdout': stdout,
-            'stderr': stderr
+            'stdout': mitogen.core.to_text(stdout),
+            'stderr': mitogen.core.to_text(stderr),
         }
 
 
@@ -398,7 +403,7 @@ class ArgsFileRunner(Runner):
             suffix='-args',
             dir=ansible_mitogen.target.temp_dir,
         )
-        self.args_fp.write(self._get_args_contents())
+        self.args_fp.write(utf8(self._get_args_contents()))
         self.args_fp.flush()
         reopen_readonly(self.program_fp)
 
@@ -449,17 +454,17 @@ class ScriptRunner(ProgramRunner):
         if not self.interpreter:
             return s
 
-        shebang = '#!' + utf8(self.interpreter)
+        shebang = b'#!' + utf8(self.interpreter)
         if self.interpreter_arg:
-            shebang += ' ' + utf8(self.interpreter_arg)
+            shebang += b' ' + utf8(self.interpreter_arg)
 
         new = [shebang]
         if os.path.basename(self.interpreter).startswith('python'):
             new.append(self.b_ENCODING_STRING)
 
-        _, _, rest = s.partition('\n')
+        _, _, rest = s.partition(b'\n')
         new.append(rest)
-        return '\n'.join(new)
+        return b'\n'.join(new)
 
 
 class NewStyleRunner(ScriptRunner):
@@ -533,15 +538,20 @@ class NewStyleRunner(ScriptRunner):
         except KeyError:
             return self._code_by_path.setdefault(self.path, compile(
                 source=self.source,
-                filename=self.path,
+                filename="master:" + self.path,
                 mode='exec',
                 dont_inherit=True,
             ))
 
+    if mitogen.core.PY3:
+        main_module_name = '__main__'
+    else:
+        main_module_name = b'__main__'
+
     def _run(self):
         code = self._get_code()
 
-        mod = types.ModuleType('__main__')
+        mod = types.ModuleType(self.main_module_name)
         mod.__package__ = None
         # Some Ansible modules use __file__ to find the Ansiballz temporary
         # directory. We must provide some temporary path in __file__, but we
@@ -551,25 +561,28 @@ class NewStyleRunner(ScriptRunner):
             ansible_mitogen.target.temp_dir,
             'ansible_module_' + os.path.basename(self.path),
         )
-        e = None
 
+        exc = None
         try:
-            exec code in vars(mod)
-        except SystemExit, e:
-            pass
+            if mitogen.core.PY3:
+                exec(code, vars(mod))
+            else:
+                exec('exec code in vars(mod)')
+        except SystemExit as e:
+            exc = e
 
         return {
-            'rc': e[0] if e else 2,
-            'stdout': sys.stdout.getvalue(),
-            'stderr': sys.stderr.getvalue(),
+            'rc': exc.args[0] if exc else 2,
+            'stdout': mitogen.core.to_text(sys.stdout.getvalue()),
+            'stderr': mitogen.core.to_text(sys.stderr.getvalue()),
         }
 
 
 class JsonArgsRunner(ScriptRunner):
-    JSON_ARGS = '<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
+    JSON_ARGS = b'<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
 
     def _get_args_contents(self):
-        return json.dumps(self.args)
+        return json.dumps(self.args).encode()
 
     def _rewrite_source(self, s):
         return (

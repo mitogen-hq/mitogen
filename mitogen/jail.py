@@ -54,7 +54,7 @@ class Stream(mitogen.parent.Stream):
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'jail.' + self.container
+        self.name = u'jail.' + self.container
 
     def get_boot_command(self):
         bits = [self.jexec_path]

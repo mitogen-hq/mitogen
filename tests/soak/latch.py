@@ -26,10 +26,10 @@ def cons():
     try:
         while 1:
             g = l.get()
-            print 'got=%s consumed=%s produced=%s crash=%s' % (g, consumed, produced, crash)
+            print('got=%s consumed=%s produced=%s crash=%s' % (g, consumed, produced, crash))
             consumed += 1
             time.sleep(g)
-            for x in xrange(int(g * 1000)):
+            for x in range(int(g * 1000)):
                 pass
     except:
         crash += 1

@@ -29,52 +29,52 @@ matrix:
     - python: "2.7"
       env: MODE=mitogen DISTRO=debian
     # 2.7 -> 2.6
-    - python: "2.7"
-      env: MODE=mitogen DISTRO=centos6
+    #- python: "2.7"
+      #env: MODE=mitogen DISTRO=centos6
     # 2.6 -> 2.7
-    - python: "2.6"
-      env: MODE=mitogen DISTRO=centos7
+    #- python: "2.6"
+      #env: MODE=mitogen DISTRO=centos7
     # 2.6 -> 2.6
-    - python: "2.6"
-      env: MODE=mitogen DISTRO=centos6
+    #- python: "2.6"
+      #env: MODE=mitogen DISTRO=centos6
     # 3.6 -> 2.7
     - python: "3.6"
       env: MODE=mitogen DISTRO=debian
 
     # Debops tests.
     # 2.4.3.0; 2.7 -> 2.7
-    - python: "2.7"
-      env: MODE=debops_common VER=2.4.3.0
+    #- python: "2.7"
+      #env: MODE=debops_common VER=2.4.3.0
     # 2.5.5; 2.7 -> 2.7
-    - python: "2.7"
-      env: MODE=debops_common VER=2.5.5
+    #- python: "2.7"
+      #env: MODE=debops_common VER=2.5.5
     # 2.5.5; 3.6 -> 2.7
-    - python: "3.6"
-      env: MODE=debops_common VER=2.5.5
+    #- python: "3.6"
+      #env: MODE=debops_common VER=2.5.5
 
     # ansible_mitogen tests.
     # 2.4.3.0; Debian; 2.7 -> 2.7
-    - python: "2.7"
-      env: MODE=ansible VER=2.4.3.0 DISTRO=debian
+    #- python: "2.7"
+      #env: MODE=ansible VER=2.4.3.0 DISTRO=debian
     # 2.5.5; Debian; 2.7 -> 2.7
     - python: "2.7"
       env: MODE=ansible VER=2.5.5 DISTRO=debian
     # 2.5.5; CentOS; 2.7 -> 2.7
-    - python: "2.7"
-      env: MODE=ansible VER=2.5.5 DISTRO=centos7
+    #- python: "2.7"
+      #env: MODE=ansible VER=2.5.5 DISTRO=centos7
     # 2.5.5; CentOS; 2.7 -> 2.6
-    - python: "2.7"
-      env: MODE=ansible VER=2.5.5 DISTRO=centos6
+    #- python: "2.7"
+      #env: MODE=ansible VER=2.5.5 DISTRO=centos6
     # 2.5.5; CentOS; 2.6 -> 2.7
-    - python: "2.6"
-      env: MODE=ansible VER=2.5.5 DISTRO=centos7
+    #- python: "2.6"
+      #env: MODE=ansible VER=2.5.5 DISTRO=centos7
     # 2.5.5; CentOS; 2.6 -> 2.6
-    - python: "2.6"
-      env: MODE=ansible VER=2.5.5 DISTRO=centos6
+    #- python: "2.6"
+      #env: MODE=ansible VER=2.5.5 DISTRO=centos6
     # 2.5.5; Debian; 3.6 -> 2.7
     - python: "3.6"
       env: MODE=ansible VER=2.5.5 DISTRO=centos6
 
     # Sanity check our tests against vanilla Ansible, they should pass.
-    - python: "2.7"
-      env: MODE=ansible VER=2.5.5 DISTRO=debian STRATEGY=linear
+    #- python: "2.7"
+      #env: MODE=ansible VER=2.5.5 DISTRO=debian STRATEGY=linear

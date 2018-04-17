@@ -1,4 +1,5 @@
 
+import sys
 import threading
 
 import unittest2
@@ -66,7 +67,8 @@ class ThreadedGetTest(testlib.TestCase):
     def _worker(self, func):
         try:
             self.results.append(func())
-        except Exception, e:
+        except Exception:
+            e = sys.exc_info()[1]
             self.results.append(None)
             self.excs.append(e)
 
@@ -89,12 +91,12 @@ class ThreadedGetTest(testlib.TestCase):
 
     def test_five_threads(self):
         latch = self.klass()
-        for x in xrange(5):
+        for x in range(5):
             self.start_one(lambda: latch.get(timeout=3.0))
-        for x in xrange(5):
+        for x in range(5):
             latch.put(x)
         self.join()
-        self.assertEquals(sorted(self.results), range(5))
+        self.assertEquals(sorted(self.results), list(range(5)))
         self.assertEquals(self.excs, [])
 
 
@@ -171,7 +173,8 @@ class ThreadedCloseTest(testlib.TestCase):
     def _worker(self, func):
         try:
             self.results.append(func())
-        except Exception, e:
+        except Exception:
+            e = sys.exc_info()[1]
             self.results.append(None)
             self.excs.append(e)
 
@@ -195,7 +198,7 @@ class ThreadedCloseTest(testlib.TestCase):
 
     def test_five_threads(self):
         latch = self.klass()
-        for x in xrange(5):
+        for x in range(5):
             self.start_one(lambda: latch.get(timeout=3.0))
         latch.close()
         self.join()

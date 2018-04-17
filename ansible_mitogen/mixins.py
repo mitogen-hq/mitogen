@@ -27,12 +27,16 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
-import commands
 import logging
 import os
 import pwd
 import shutil
 import traceback
+
+try:
+    from shlex import quote as shlex_quote
+except ImportError:
+    from pipes import quote as shlex_quote
 
 from ansible.module_utils._text import to_bytes
 from ansible.parsing.utils.jsonify import jsonify
@@ -321,7 +325,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             ansible_mitogen.planner.Invocation(
                 action=self,
                 connection=self._connection,
-                module_name=mitogen.utils.cast(module_name),
+                module_name=mitogen.core.to_text(module_name),
                 module_args=mitogen.utils.cast(module_args),
                 task_vars=task_vars,
                 templar=self._templar,
@@ -369,7 +373,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if executable is None:  # executable defaults to False
             executable = self._play_context.executable
         if executable:
-            cmd = executable + ' -c ' + commands.mkarg(cmd)
+            cmd = executable + ' -c ' + shlex_quote(cmd)
 
         rc, stdout, stderr = self._connection.exec_command(
             cmd=cmd,

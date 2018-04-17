@@ -92,7 +92,7 @@ def main(log_level='INFO', profiling=False):
         @mitogen.main()
         def main(router):
             z = router.ssh(hostname='k3')
-            print z.call(get_url, 'https://example.org/')
+            print(z.call(get_url, 'https://example.org/')))))
 
     """
 

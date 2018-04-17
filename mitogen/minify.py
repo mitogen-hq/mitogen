@@ -28,11 +28,12 @@
 
 import sys
 
-
 try:
-    from cStringIO import StringIO as BytesIO
+    from cStringIO import StringIO
 except ImportError:
-    from io import BytesIO
+    from io import StringIO
+
+import mitogen.core
 
 if sys.version_info < (2, 7, 11):
     from mitogen.compat import tokenize
@@ -49,7 +50,9 @@ except ImportError:
 def minimize_source(source):
     """Remove most comments and docstrings from Python source code.
     """
-    tokens = tokenize.generate_tokens(BytesIO(source).readline)
+    if not isinstance(source, mitogen.core.UnicodeType):
+        source = source.decode('utf-8')
+    tokens = tokenize.generate_tokens(StringIO(source).readline)
     tokens = strip_comments(tokens)
     tokens = strip_docstrings(tokens)
     tokens = reindent(tokens)

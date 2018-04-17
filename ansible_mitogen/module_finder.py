@@ -27,6 +27,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import collections
 import imp
 import os

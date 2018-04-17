@@ -188,7 +188,6 @@ class FindRelatedTest(testlib.TestCase):
     SIMPLE_EXPECT = set([
         'mitogen',
         'mitogen.compat',
-        'mitogen.compat.collections',
         'mitogen.compat.functools',
         'mitogen.core',
         'mitogen.master',

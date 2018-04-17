@@ -39,6 +39,11 @@ import mitogen.master
 LOG = logging.getLogger('mitogen')
 iteritems = getattr(dict, 'iteritems', dict.items)
 
+if mitogen.core.PY3:
+    iteritems = dict.items
+else:
+    iteritems = dict.iteritems
+
 
 def disable_site_packages():
     for entry in sys.path[:]:
@@ -118,9 +123,9 @@ def cast(obj):
         return [cast(v) for v in obj]
     if isinstance(obj, PASSTHROUGH):
         return obj
-    if isinstance(obj, unicode):
-        return unicode(obj)
-    if isinstance(obj, str):
-        return str(obj)
+    if isinstance(obj, mitogen.core.UnicodeType):
+        return mitogen.core.UnicodeType(obj)
+    if isinstance(obj, mitogen.core.BytesType):
+        return mitogen.core.BytesType(obj)
 
     raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))

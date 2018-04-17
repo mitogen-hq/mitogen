@@ -23,7 +23,7 @@
 
     - assert:
         that: |
-          out.content.decode('base64') == '{"I am JSON": true}'
+          out.content|b64decode == '{"I am JSON": true}'
 
 
     # Ensure it handles strings.
@@ -41,7 +41,7 @@
 
     - assert:
         that:
-          out.content.decode('base64') == 'I am text.'
+          out.content|b64decode == 'I am text.'
 
     - file:
         path: /tmp/transfer-data

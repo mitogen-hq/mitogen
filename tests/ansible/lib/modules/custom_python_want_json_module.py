@@ -25,9 +25,9 @@ try:
 except IOError:
     usage()
 
-print "{"
-print "  \"changed\": false,"
-print "  \"msg\": \"Here is my input\","
-print "  \"source\": [%s]," % (json.dumps(me),)
-print "  \"input\": [%s]" % (input_json,)
-print "}"
+print("{")
+print("  \"changed\": false,")
+print("  \"msg\": \"Here is my input\",")
+print("  \"source\": [%s]," % (json.dumps(me),))
+print("  \"input\": [%s]" % (input_json,))
+print("}")

@@ -32,6 +32,7 @@ sent to any child context that is due to become a parent, due to recursive
 connection.
 """
 
+import codecs
 import errno
 import fcntl
 import getpass
@@ -52,10 +53,24 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
+
+try:
+    from functools import lru_cache
+except ImportError:
+    from mitogen.compat.functools import lru_cache
+
 import mitogen.core
+from mitogen.core import b
 from mitogen.core import LOG
 from mitogen.core import IOLOG
 
+
+if mitogen.core.PY3:
+    xrange = range
 
 try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
@@ -281,9 +296,13 @@ def write_all(fd, s, deadline=None):
             if timeout == 0:
                 raise mitogen.core.TimeoutError('write timed out')
 
+            if mitogen.core.PY3:
+                window = memoryview(s)[written:]
+            else:
+                window = buffer(s, written)
+
             for fd in poller.poll(timeout):
-                n, disconnected = mitogen.core.io_op(
-                    os.write, fd, buffer(s, written))
+                n, disconnected = mitogen.core.io_op(os.write, fd, window)
                 if disconnected:
                     raise mitogen.core.StreamError('EOF on stream during write')
 
@@ -321,7 +340,7 @@ def iter_read(fds, deadline=None):
     if not poller.readers:
         raise mitogen.core.StreamError(
             'EOF on stream; last 300 bytes received: %r' %
-            (''.join(bits)[-300:],)
+            (b('').join(bits)[-300:],)
         )
     raise mitogen.core.TimeoutError('read timed out')
 
@@ -380,14 +399,18 @@ def upgrade_router(econtext):
 def make_call_msg(fn, *args, **kwargs):
     if isinstance(fn, types.MethodType) and \
        isinstance(fn.im_self, (type, types.ClassType)):
-        klass = fn.im_self.__name__
+        klass = mitogen.core.to_text(fn.im_self.__name__)
     else:
         klass = None
 
-    return mitogen.core.Message.pickled(
-        (fn.__module__, klass, fn.__name__, args, kwargs),
-        handle=mitogen.core.CALL_FUNCTION,
+    tup = (
+        mitogen.core.to_text(fn.__module__),
+        klass,
+        mitogen.core.to_text(fn.__name__),
+        args,
+        mitogen.core.Kwargs(kwargs)
     )
+    return mitogen.core.Message.pickled(tup, handle=mitogen.core.CALL_FUNCTION)
 
 
 def stream_by_method_name(name):
@@ -395,9 +418,9 @@ def stream_by_method_name(name):
     Given the name of a Mitogen connection method, import its implementation
     module and return its Stream subclass.
     """
-    if name == 'local':
-        name = 'parent'
-    module = mitogen.core.import_module('mitogen.' + name)
+    if name == u'local':
+        name = u'parent'
+    module = mitogen.core.import_module(u'mitogen.' + name)
     return module.Stream
 
 
@@ -412,18 +435,18 @@ def _proxy_connect(name, method_name, kwargs, econtext):
         )
     except mitogen.core.StreamError:
         return {
-            'id': None,
-            'name': None,
-            'msg': 'error occurred on host %s: %s' % (
+            u'id': None,
+            u'name': None,
+            u'msg': 'error occurred on host %s: %s' % (
                 socket.gethostname(),
                 sys.exc_info()[1],
             ),
         }
 
     return {
-        'id': context.context_id,
-        'name': context.name,
-        'msg': None,
+        u'id': context.context_id,
+        u'name': context.name,
+        u'msg': None,
     }
 
 
@@ -790,11 +813,15 @@ class Stream(mitogen.core.Stream):
                 sys.executable += sys.version[:3]
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
-        os.write(1,'MITO000\n')
+        os.write(1,'MITO000\n'.encode())
         C=_(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN),'zip')
-        os.fdopen(W,'w',0).write(C)
-        os.fdopen(w,'w',0).write('PREAMBLE_LEN\n'+C)
-        os.write(1,'MITO001\n')
+        wfp=os.fdopen(W,'wb',0)
+        wfp.write(C)
+        Wfp=os.fdopen(w,'wb',0)
+        Wfp.write('PREAMBLE_LEN\n'.encode()+C)
+        wfp.close()
+        Wfp.close()
+        os.write(1,'MITO001\n'.encode())
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
@@ -806,7 +833,8 @@ class Stream(mitogen.core.Stream):
                                 str(len(preamble_compressed)))
         source = source.replace('PREAMBLE_LEN',
                                 str(len(zlib.decompress(preamble_compressed))))
-        encoded = zlib.compress(source, 9).encode('base64').replace('\n', '')
+        compressed = zlib.compress(source.encode(), 9)
+        encoded = codecs.encode(compressed, 'base64').replace(b('\n'), b(''))
         # We can't use bytes.decode() in 3.x since it was restricted to always
         # return unicode, so codecs.decode() is used instead. In 3.x
         # codecs.decode() requires a bytes object. Since we must be compatible
@@ -815,7 +843,7 @@ class Stream(mitogen.core.Stream):
         return [
             self.python_path, '-c',
             'import codecs,os,sys;_=codecs.decode;'
-            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded,)
+            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
         ]
 
     def get_econtext_config(self):
@@ -840,11 +868,11 @@ class Stream(mitogen.core.Stream):
         source += '\nExternalContext(%r).main()\n' % (
             self.get_econtext_config(),
         )
-        return zlib.compress(source, 9)
+        return zlib.compress(source.encode('utf-8'), 9)
 
     create_child = staticmethod(create_child)
     create_child_args = {}
-    name_prefix = 'local'
+    name_prefix = u'local'
 
     def start_child(self):
         args = self.get_boot_command()
@@ -858,7 +886,7 @@ class Stream(mitogen.core.Stream):
     def connect(self):
         LOG.debug('%r.connect()', self)
         self.pid, fd, extra_fd = self.start_child()
-        self.name = '%s.%s' % (self.name_prefix, self.pid)
+        self.name = u'%s.%s' % (self.name_prefix, self.pid)
         self.receive_side = mitogen.core.Side(self, fd)
         self.transmit_side = mitogen.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
@@ -871,16 +899,18 @@ class Stream(mitogen.core.Stream):
             raise
 
     #: For ssh.py, this must be at least max(len('password'), len('debug1:'))
-    EC0_MARKER = 'MITO000\n'
-    EC1_MARKER = 'MITO001\n'
+    EC0_MARKER = mitogen.core.b('MITO000\n')
+    EC1_MARKER = mitogen.core.b('MITO001\n')
 
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)
         write_all(self.transmit_side.fd, self.get_preamble())
-        discard_until(self.receive_side.fd, 'MITO001\n', self.connect_deadline)
+        discard_until(self.receive_side.fd, self.EC1_MARKER,
+                      self.connect_deadline)
 
     def _connect_bootstrap(self, extra_fd):
-        discard_until(self.receive_side.fd, 'MITO000\n', self.connect_deadline)
+        discard_until(self.receive_side.fd, self.EC0_MARKER,
+                      self.connect_deadline)
         self._ec0_received()
 
 
@@ -976,7 +1006,7 @@ class RouteMonitor(object):
         self.parent.send(
             mitogen.core.Message(
                 handle=handle,
-                data=data,
+                data=data.encode('utf-8'),
             )
         )
 
@@ -986,7 +1016,8 @@ class RouteMonitor(object):
         stream, we're also responsible for broadcasting DEL_ROUTE upstream
         if/when that child disconnects.
         """
-        self.propagate(mitogen.core.ADD_ROUTE, stream.remote_id, stream.name)
+        self.propagate(mitogen.core.ADD_ROUTE, stream.remote_id,
+                       stream.name)
         mitogen.core.listen(
             obj=stream,
             name='disconnect',
@@ -1011,7 +1042,8 @@ class RouteMonitor(object):
         if msg.is_dead:
             return
 
-        target_id_s, _, target_name = msg.data.partition(':')
+        target_id_s, _, target_name = msg.data.partition(b(':'))
+        target_name = target_name.decode()
         target_id = int(target_id_s)
         self.router.context_by_id(target_id).name = target_name
         stream = self.router.stream_by_id(msg.auth_id)
@@ -1124,7 +1156,7 @@ class Router(mitogen.core.Router):
             self._context_by_id[context_id] = context
         return context
 
-    connection_timeout_msg = "Connection timed out."
+    connection_timeout_msg = u"Connection timed out."
 
     def _connect(self, klass, name=None, **kwargs):
         context_id = self.allocate_id()
@@ -1145,11 +1177,11 @@ class Router(mitogen.core.Router):
 
     def connect(self, method_name, name=None, **kwargs):
         klass = stream_by_method_name(method_name)
-        kwargs.setdefault('debug', self.debug)
-        kwargs.setdefault('profiling', self.profiling)
-        kwargs.setdefault('unidirectional', self.unidirectional)
+        kwargs.setdefault(u'debug', self.debug)
+        kwargs.setdefault(u'profiling', self.profiling)
+        kwargs.setdefault(u'unidirectional', self.unidirectional)
 
-        via = kwargs.pop('via', None)
+        via = kwargs.pop(u'via', None)
         if via is not None:
             return self.proxy_connect(via, method_name, name=name, **kwargs)
         return self._connect(klass, name=name, **kwargs)
@@ -1158,43 +1190,43 @@ class Router(mitogen.core.Router):
         resp = via_context.call(_proxy_connect,
             name=name,
             method_name=method_name,
-            kwargs=kwargs
+            kwargs=mitogen.core.Kwargs(kwargs),
         )
         if resp['msg'] is not None:
             raise mitogen.core.StreamError(resp['msg'])
 
-        name = '%s.%s' % (via_context.name, resp['name'])
+        name = u'%s.%s' % (via_context.name, resp['name'])
         context = self.context_class(self, resp['id'], name=name)
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
 
     def docker(self, **kwargs):
-        return self.connect('docker', **kwargs)
+        return self.connect(u'docker', **kwargs)
 
     def fork(self, **kwargs):
-        return self.connect('fork', **kwargs)
+        return self.connect(u'fork', **kwargs)
 
     def jail(self, **kwargs):
-        return self.connect('jail', **kwargs)
+        return self.connect(u'jail', **kwargs)
 
     def local(self, **kwargs):
-        return self.connect('local', **kwargs)
+        return self.connect(u'local', **kwargs)
 
     def lxc(self, **kwargs):
-        return self.connect('lxc', **kwargs)
+        return self.connect(u'lxc', **kwargs)
 
     def setns(self, **kwargs):
-        return self.connect('setns', **kwargs)
+        return self.connect(u'setns', **kwargs)
 
     def su(self, **kwargs):
-        return self.connect('su', **kwargs)
+        return self.connect(u'su', **kwargs)
 
     def sudo(self, **kwargs):
-        return self.connect('sudo', **kwargs)
+        return self.connect(u'sudo', **kwargs)
 
     def ssh(self, **kwargs):
-        return self.connect('ssh', **kwargs)
+        return self.connect(u'ssh', **kwargs)
 
 
 class ProcessMonitor(object):
@@ -1251,7 +1283,8 @@ class ModuleForwarder(object):
         if msg.is_dead:
             return
 
-        context_id_s, _, fullname = msg.data.partition('\x00')
+        context_id_s, _, fullname = msg.data.partition(b('\x00'))
+        fullname = mitogen.core.to_text(fullname)
         context_id = int(context_id_s)
         stream = self.router.stream_by_id(context_id)
         if stream.remote_id == mitogen.parent_id:
@@ -1279,9 +1312,17 @@ class ModuleForwarder(object):
         if msg.is_dead:
             return
 
-        fullname = msg.data
-        self.importer._request_module(fullname,
-            lambda: self._on_cache_callback(msg, fullname)
+        fullname = msg.data.decode('utf-8')
+        callback = lambda: self._on_cache_callback(msg, fullname)
+        self.importer._request_module(fullname, callback)
+
+    def _send_one_module(self, msg, tup):
+        self.router._async_route(
+            mitogen.core.Message.pickled(
+                tup,
+                dst_id=msg.src_id,
+                handle=mitogen.core.LOAD_MODULE,
+            )
         )
 
     def _on_cache_callback(self, msg, fullname):

@@ -6,8 +6,8 @@ import sys
 
 json_arguments = """<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>"""
 
-print "{"
-print "  \"changed\": false,"
-print "  \"msg\": \"Here is my input\","
-print "  \"input\": [%s]" % (json_arguments,)
-print "}"
+print("{")
+print("  \"changed\": false,")
+print("  \"msg\": \"Here is my input\",")
+print("  \"input\": [%s]" % (json_arguments,))
+print("}")
