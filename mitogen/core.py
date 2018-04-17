@@ -314,6 +314,7 @@ class Message(object):
         self.src_id = mitogen.context_id
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
+        assert isinstance(self.data, str)
 
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(self.router, context_id, name)

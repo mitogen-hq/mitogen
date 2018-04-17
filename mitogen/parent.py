@@ -675,7 +675,7 @@ class RouteMonitor(object):
 
         data = str(target_id)
         if name:
-            data = '%s:%s' % (target_id, name)
+            data = '%s:%s' % (target_id, mitogen.core.b(name))
         self.parent.send(
             mitogen.core.Message(
                 handle=handle,
