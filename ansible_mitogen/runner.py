@@ -367,7 +367,7 @@ class NewStyleRunner(ScriptRunner):
     def setup(self):
         super(NewStyleRunner, self).setup()
         self._stdio = NewStyleStdio(self.args)
-        self._argv = TemporaryArgv([self.path])
+        self._argv = TemporaryArgv([self.program_fp.name])
 
     def revert(self):
         self._argv.revert()
