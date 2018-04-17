@@ -12,9 +12,11 @@ python:
 env:
 - MODE=mitogen MITOGEN_TEST_DISTRO=debian
 - MODE=mitogen MITOGEN_TEST_DISTRO=centos
-- MODE=debops
+- MODE=debops_common
 - MODE=ansible ANSIBLE_VERSION=2.4.3.0 MITOGEN_TEST_DISTRO=debian
+- MODE=ansible ANSIBLE_VERSION=2.4.3.0 MITOGEN_TEST_DISTRO=centos
 - MODE=ansible ANSIBLE_VERSION=2.5.0 MITOGEN_TEST_DISTRO=centos
+- MODE=ansible ANSIBLE_VERSION=2.5.0 MITOGEN_TEST_DISTRO=debian
 
 install:
 - pip install -r dev_requirements.txt

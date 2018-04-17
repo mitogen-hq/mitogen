@@ -3,7 +3,7 @@
 
 TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
-TARGET_COUNT="${TARGET_COUNT:-4}"
+TARGET_COUNT="${TARGET_COUNT:-2}"
 MITOGEN_TEST_DISTRO=debian  # Naturally DebOps only supports Debian.
 
 export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
