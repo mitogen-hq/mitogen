@@ -15,14 +15,16 @@ DEBIAN_DOCKERFILE = r"""
 FROM debian:stable
 RUN apt-get update
 RUN \
-    apt-get install -y python2.7 openssh-server sudo rsync git strace && \
+    apt-get install -y python2.7 openssh-server sudo rsync git strace \
+                       libjson-perl && \
     apt-get clean
 """
 
 CENTOS_DOCKERFILE = r"""
 FROM centos:7
 RUN yum clean all && \
-    yum -y install -y python2.7 openssh-server sudo rsync git strace sudo && \
+    yum -y install -y python2.7 openssh-server sudo rsync git strace sudo \
+                      perl-JSON && \
     yum clean all && \
     groupadd sudo && \
     ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
