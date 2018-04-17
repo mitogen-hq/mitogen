@@ -7,6 +7,7 @@
 #
 
 - hosts: all
+  gather_facts: true
   become: true
   tasks:
     - name: Disable non-localhost SSH for Mitogen users
@@ -44,6 +45,7 @@
         - mitogen__require_tty
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
+      when: ansible_distribution == 'MacOSX'
 
     - name: Hide test users from login window.
       shell: >
@@ -53,6 +55,7 @@
         HiddenUsersList
         -array-add 'mitogen__user{{item}}'
       with_sequence: start=1 end=21
+      when: ansible_distribution == 'MacOSX'
 
     - name: Require a TTY for two accounts
       lineinfile:
