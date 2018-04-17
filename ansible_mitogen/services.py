@@ -435,7 +435,7 @@ class JobResultService(mitogen.service.Service):
     @mitogen.service.expose(mitogen.service.AllowAny())
     @mitogen.service.arg_spec({
         'job_id': basestring,
-        'result': dict
+        'result': (mitogen.core.CallError, dict)
     })
     def push(self, job_id, result):
         """
