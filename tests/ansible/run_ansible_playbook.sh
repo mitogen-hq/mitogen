@@ -7,9 +7,9 @@ export MITOGEN_MAX_INTERPRETERS=3
 
 if [ "${ANSIBLE_STRATEGY:0:7}" = "mitogen" ]
 then
-    extra="-e is_mitogen=1"
+    EXTRA='{"is_mitogen": true}'
 else
-    extra="-e is_mitogen=0"
+    EXTRA='{"is_mitogen": false}'
 fi
 
-exec ansible-playbook $extra "$@"
+exec ansible-playbook -e "$EXTRA" "$@"

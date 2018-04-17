@@ -28,7 +28,8 @@
     - debug: msg={{raw}}
     - name: Verify raw module output.
       assert:
-        that: |
-          raw.rc == 0 and
-          raw.stdout == "root\r\n" and
-          raw.stdout_lines == ["root"]
+        that:
+        - raw.rc == 0
+        # WHY DOES VANILLA ANSIBLE INSERT NEWLINES HERE!?!?!?!?!?!ONE
+        - raw.stdout in ("\r\nroot\r\n", "root\r\n")
+        - raw.stdout_lines in (["", "root"], ["root"])
