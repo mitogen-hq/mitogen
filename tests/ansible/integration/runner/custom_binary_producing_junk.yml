@@ -11,6 +11,7 @@
 - hosts: all
   any_errors_fatal: true
   tasks:
+    - debug: msg={{out}}
     - assert:
         that: |
           out.failed and
