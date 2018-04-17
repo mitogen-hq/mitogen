@@ -181,6 +181,7 @@ class BinaryPlanner(Planner):
     runner_name = 'BinaryRunner'
 
     def detect(self, invocation):
+        print 'DERP [[[[%s]]]]' % (invocation.module_source[:1024].encode('base64'),)
         return module_common._is_binary(invocation.module_source)
 
     def plan(self, invocation, **kwargs):
