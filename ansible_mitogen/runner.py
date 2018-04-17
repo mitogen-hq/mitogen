@@ -158,7 +158,10 @@ class Runner(object):
         """
         self.setup()
         try:
-            self._send_result(self._run())
+            try:
+                self._send_result(self._run())
+            except Exception as e:
+                self._send_result(mitogen.core.CallError(e))
         finally:
             self.revert()
 
