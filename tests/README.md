@@ -56,7 +56,8 @@ also by Ansible's `osx_setup.yml`.
 
 `mitogen__has_sudo_nopw`
     The login password is "has_sudo_nopw_password". It can sudo to root without
-    supplying a password.
+    supplying a password. It has explicit sudoers rules forcing it to require a
+    password for other accounts.
 
 `mitogen__pw_required`
     The login password is "pw_required_password". When "sudo -u" is used to
@@ -79,3 +80,11 @@ also by Ansible's `osx_setup.yml`.
 `mitogen__webapp`
     A plain old account with no sudo access, used as the target for fakessh
     tddests.
+
+
+# Ansible Integration Test Environment
+
+The integration tests expect to be run against a either one of the Docker
+images, or a similar target with the same set of UNIX accounts and sudo rules.
+
+The login account should be able to sudo to root witout a password.
