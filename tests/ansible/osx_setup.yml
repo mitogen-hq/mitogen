@@ -17,6 +17,31 @@
           Match User mitogen__* Address !127.0.0.1
             DenyUsers *
 
+    #
+    # Hashed passwords.
+    #
+    - name: Create Mitogen test users
+      user:
+        name: "mitogen__{{item}}"
+        shell: /bin/bash
+        password: "{{ (item + '_password') | password_hash('sha256') }}"
+      with_items:
+        - require_tty
+        - pw_required
+        - require_tty_pw_required
+      when: ansible_system != 'Darwin'
+
+    - name: Create Mitogen test users
+      user:
+        name: "mitogen__user{{item}}"
+        shell: /bin/bash
+        password: "{{ ('user' + item + '_password') | password_hash('sha256') }}"
+      with_sequence: start=1 end=21
+      when: ansible_system != 'Darwin'
+
+    #
+    # Plaintext passwords
+    #
     - name: Create Mitogen test users
       user:
         name: "mitogen__{{item}}"
@@ -26,6 +51,7 @@
         - require_tty
         - pw_required
         - require_tty_pw_required
+      when: ansible_system == 'Darwin'
 
     - name: Create Mitogen test users
       user:
@@ -33,6 +59,7 @@
         shell: /bin/bash
         password: "user{{item}}_password"
       with_sequence: start=1 end=21
+      when: ansible_system == 'Darwin'
 
     - name: Hide test users from login window.
       shell: >
@@ -45,7 +72,7 @@
         - mitogen__require_tty
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
-      when: ansible_distribution == 'MacOSX'
+      when: ansible_system == 'Darwin'
 
     - name: Hide test users from login window.
       shell: >
