@@ -185,7 +185,7 @@ class BinaryPlanner(Planner):
 
     def plan(self, invocation, **kwargs):
         invocation.connection._connect()
-        mitogen.service.call_async(
+        mitogen.service.call(
             context=invocation.connection.parent,
             handle=ansible_mitogen.services.FileService.handle,
             method='register',
