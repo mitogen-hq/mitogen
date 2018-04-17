@@ -1,11 +1,11 @@
-- import_playbook: issue_109.yml
+- import_playbook: issue_109__target_has_old_ansible_installed.yml
 - import_playbook: issue_113.yml
 - import_playbook: issue_118.yml
 - import_playbook: issue_122.yml
 - import_playbook: issue_131.yml
 - import_playbook: issue_140.yml
-- import_playbook: issue_152.yml
-- import_playbook: issue_152b.yml
+- import_playbook: issue_152__local_action_wrong_interpreter.yml
+- import_playbook: issue_152__virtualenv_python_fails.yml
 - import_playbook: issue_154.yml
 - import_playbook: issue_174.yml
 - import_playbook: issue_177.yml
