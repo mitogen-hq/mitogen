@@ -51,7 +51,8 @@ echo \
 # Build the binaries.
 make -C ${TRAVIS_BUILD_DIR}/tests/ansible
 
-sudo apt install -y sshpass
+sudo apt install -y sshpass bsdmainutils
+xxd ${TRAVIS_BUILD_DIR}/tests/ansible/lib/modules/custom_binary_producing_junk
 
 echo travis_fold:end:job_setup
 
