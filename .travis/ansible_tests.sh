@@ -47,6 +47,10 @@ echo \
     ansible_user=mitogen__has_sudo_nopw \
     ansible_password=has_sudo_nopw_password \
     >> ${TMPDIR}/hosts
+
+# Build the binaries.
+make -C ${TRAVIS_BUILD_DIR}/tests/ansible
+
 echo travis_fold:end:job_setup
 
 
