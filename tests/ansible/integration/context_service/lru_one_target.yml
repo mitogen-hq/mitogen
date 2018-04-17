@@ -11,6 +11,9 @@
       assert:
         that: true
 
+    - name: Reset all connections
+      mitogen_shutdown_all:
+
     - name: Spin up a bunch of interpreters
       custom_python_detect_environment:
       become: true

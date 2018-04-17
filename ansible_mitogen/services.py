@@ -92,7 +92,7 @@ class ContextService(mitogen.service.Service):
         #: List of contexts in creation order by via= parameter. When
         #: :attr:`max_interpreters` is reached, the most recently used context
         #: is destroyed to make room for any additional context.
-        self._update_lru_by_via = {}
+        self._lru_by_via = {}
         #: :meth:`key_from_kwargs` result by Context.
         self._key_by_context = {}
 
@@ -106,7 +106,10 @@ class ContextService(mitogen.service.Service):
         count reaches zero.
         """
         LOG.debug('%r.put(%r)', self, context)
-        assert self._refs_by_context[context] > 0
+        if self._refs_by_context.get(context, 0) == 0:
+            LOG.warning('%r.put(%r): refcount was 0. shutdown_all called?',
+                        self, context)
+            return
         self._refs_by_context[context] -= 1
 
     def key_from_kwargs(self, **kwargs):
@@ -139,6 +142,28 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
         return count
 
+    def _shutdown(self, context, lru=None, new_context=None):
+        """
+        Arrange for `context` to be shut down, and optionally add `new_context`
+        to the LRU list while holding the lock.
+        """
+        LOG.info('%r._shutdown(): shutting down %r', self, context)
+        context.shutdown()
+
+        key = self._key_by_context[context]
+
+        self._lock.acquire()
+        try:
+            del self._response_by_key[key]
+            del self._refs_by_context[context]
+            del self._key_by_context[context]
+            if lru:
+                lru.remove(context)
+            if new_context:
+                lru.append(new_context)
+        finally:
+            self._lock.release()
+
     def _update_lru(self, new_context, **kwargs):
         """
         Update the LRU ("MRU"?) list associated with the connection described
@@ -150,7 +175,7 @@ class ContextService(mitogen.service.Service):
             # We don't have a limit on the number of directly connections.
             return
 
-        lru = self._update_lru_by_via.setdefault(via, [])
+        lru = self._lru_by_via.setdefault(via, [])
         if len(lru) < self.max_interpreters:
             lru.append(new_context)
             return
@@ -163,20 +188,16 @@ class ContextService(mitogen.service.Service):
                         'but they are all marked as in-use.', via)
             return
 
-        LOG.info('%r._discard_one(): shutting down %r', self, context)
-        context.shutdown()
+        self._shutdown(context, lru=lru, new_context=new_context)
 
-        key = self._key_by_context[context]
-
-        self._lock.acquire()
-        try:
-            del self._response_by_key[key]
-            del self._refs_by_context[context]
-            del self._key_by_context[context]
-            lru.remove(context)
-            lru.append(new_context)
-        finally:
-            self._lock.release()
+    @mitogen.service.expose(mitogen.service.AllowParents())
+    def shutdown_all(self):
+        """
+        For testing use, arrange for all connections to be shut down.
+        """
+        for context in list(self._key_by_context):
+            self._shutdown(context)
+        self._lru_by_via = {}
 
     def _connect(self, key, method_name, **kwargs):
         """
