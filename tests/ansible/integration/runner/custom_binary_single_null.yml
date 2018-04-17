@@ -11,12 +11,14 @@
   any_errors_fatal: true
   tasks:
     - assert:
-        that: |
-          out.failed and
-          out.results[0].failed and
-          out.results[0].msg == 'MODULE FAILURE' and
-          out.results[0].module_stdout.startswith('/bin/sh: ') and
-          out.results[0].module_stdout.endswith('/custom_binary_single_null: cannot execute binary file\r\n')
+        that:
+          - "out.failed"
+          - "out.results[0].failed"
+          - "out.results[0].msg == 'MODULE FAILURE'"
+          - "out.results[0].module_stdout.startswith('/bin/sh: ')"
+          - |
+            out.results[0].module_stdout.endswith('/custom_binary_single_null: cannot execute binary file\r\n') or
+            out.results[0].module_stdout.endswith('/custom_binary_single_null: Exec format error\r\n')
 
 
 # Can't test this: Mitogen returns 126, 2.5.x returns 126, 2.4.x discarded the
