@@ -181,7 +181,6 @@ class BinaryPlanner(Planner):
     runner_name = 'BinaryRunner'
 
     def detect(self, invocation):
-        print 'DERP [[[[%s]]]]' % (invocation.module_source[:1024].encode('base64'),)
         return module_common._is_binary(invocation.module_source)
 
     def plan(self, invocation, **kwargs):
@@ -357,7 +356,8 @@ def _do_invoke(invocation):
     for klass in _planners:
         planner = klass()
         if planner.detect(invocation):
-            LOG.debug('%r accepted %r', planner, invocation.module_name)
+            LOG.debug('%r accepted %r (filename %r)', planner,
+                      invocation.module_name, invocation.module_path)
             break
         LOG.debug('%r rejected %r', planner, invocation.module_name)
     else:
