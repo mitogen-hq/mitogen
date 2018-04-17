@@ -185,8 +185,8 @@ class Service(object):
             if response is not self.NO_REPLY:
                 msg.reply(response)
         except mitogen.core.CallError:
-            LOG.warning('%r: call error: %s: %s', self, msg, e)
             e = sys.exc_info()[1]
+            LOG.warning('%r: call error: %s: %s', self, msg, e)
             msg.reply(e)
         except Exception:
             LOG.exception('While invoking %r.dispatch()', self)
