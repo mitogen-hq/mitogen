@@ -356,7 +356,9 @@ def _do_invoke(invocation):
     for klass in _planners:
         planner = klass()
         if planner.detect(invocation):
+            LOG.debug('%r accepted %r', planner, invocation.module_name)
             break
+        LOG.debug('%r rejected %r', planner, invocation.module_name)
     else:
         raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
