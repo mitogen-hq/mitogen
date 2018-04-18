@@ -379,10 +379,11 @@ def write_all(fd, s, deadline=None):
 
 
 def iter_read(fds, deadline=None):
+    fds = list(fds)
     bits = []
     timeout = None
 
-    while True:
+    while fds:
         if deadline is not None:
             timeout = max(0, deadline - time.time())
             if timeout == 0:
@@ -394,15 +395,19 @@ def iter_read(fds, deadline=None):
 
         for fd in rfds:
             s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
-            IOLOG.debug('iter_read(%r) -> %r', fd, s)
             if disconnected or not s:
-                raise mitogen.core.StreamError(
-                    'EOF on stream; last 300 bytes received: %r' %
-                    (''.join(bits)[-300:],)
-                )
+                IOLOG.debug('iter_read(%r) -> disconnected', fd)
+                fds.remove(fd)
+            else:
+                IOLOG.debug('iter_read(%r) -> %r', fd, s)
+                bits.append(s)
+                yield s
 
-            bits.append(s)
-            yield s
+    if not fds:
+        raise mitogen.core.StreamError(
+            'EOF on stream; last 300 bytes received: %r' %
+            (''.join(bits)[-300:],)
+        )
 
     raise mitogen.core.TimeoutError('read timed out')
 
