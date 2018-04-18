@@ -1,19 +1,21 @@
-- hosts: all
+- name: regression/issue_152__virtualenv_python_fails.yml
+  any_errors_fatal: true
+  hosts: all
   tasks:
-  - name: Make virtualenv
-    pip:
-      virtualenv: /tmp/issue_151_virtualenv
-      name: psycopg2
 
-  - name: Use virtualenv for the Python interpeter
-    set_fact: ansible_python_interpreter=/tmp/issue_151_virtualenv/bin/python
+    # Can't use pip module because you can't fricking just create a virtualenv,
+    # must call it directly.
+    - shell: virtualenv /tmp/issue_152_virtualenv
 
-  - name: Ensure the app DB user exists
-    postgresql_user:
-      db: postgres
-      login_host: localhost
-      login_user: "{{ansible_user_id}}"
-      login_password: "x"
-      name: fakeuser
-      state: present
+    - custom_python_detect_environment:
+      vars:
+        ansible_python_interpreter: /tmp/issue_152_virtualenv/bin/python
+      register: out
 
+    - assert:
+        that:
+          - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
+
+    - file:
+        path: /tmp/issue_152_virtualenv
+        state: absent

@@ -1,17 +1,15 @@
 # issue #109: ensure that any 'ansible' module or package on the remote machine
 # does not conflict with operation.
 
-- hosts: all
+- name: regression/issue_109__target_has_old_ansible_installed.yml
+  hosts: all
+  any_errors_fatal: true
   gather_facts: true
   become: true
   become_user: mitogen__user1
   tasks:
-    - name: regression/issue_109__target_has_old_ansible_installed.yml
-      assert:
-        that: true
 
     # Copy the naughty 'ansible' into place.
-
     - copy:
         dest: "{{ansible_user_dir}}/ansible.py"
         src: ansible.py
