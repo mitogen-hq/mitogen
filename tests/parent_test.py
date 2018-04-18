@@ -9,6 +9,51 @@ import testlib
 import mitogen.parent
 
 
+class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
+    def test_direct_eof(self):
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.local(
+                python_path='/bin/true',
+                connect_timeout=3,
+            )
+        )
+        self.assertEquals(e.args[0], "EOF on stream; last 300 bytes received: ''")
+
+    def test_via_eof(self):
+        # Verify FD leakage does not keep failed process open.
+        local = self.router.fork()
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.local(
+                via=local,
+                python_path='/bin/true',
+                connect_timeout=3,
+            )
+        )
+        self.assertEquals(e.args[0], "EOF on stream; last 300 bytes received: ''")
+
+    def test_direct_enoent(self):
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.local(
+                python_path='derp',
+                connect_timeout=3,
+            )
+        )
+        prefix = 'Child start failed: [Errno 2] No such file or directory.'
+        self.assertTrue(e.args[0].startswith(prefix))
+
+    def test_via_enoent(self):
+        local = self.router.fork()
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.local(
+                via=local,
+                python_path='derp',
+                connect_timeout=3,
+            )
+        )
+        prefix = 'Child start failed: [Errno 2] No such file or directory.'
+        self.assertTrue(e.args[0].startswith(prefix))
+
+
 class ContextTest(testlib.RouterMixin, unittest2.TestCase):
     def test_context_shutdown(self):
         local = self.router.local()

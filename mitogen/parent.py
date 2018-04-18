@@ -34,6 +34,7 @@ import os
 import select
 import signal
 import socket
+import subprocess
 import sys
 import termios
 import textwrap
@@ -243,56 +244,58 @@ def create_socketpair():
 
 def create_child(*args):
     parentfp, childfp = create_socketpair()
-    pid = os.fork()
-    if not pid:
-        # When running under a monkey patches-enabled gevent, the socket module
-        # yields file descriptors who already have O_NONBLOCK, which is
-        # persisted across fork, totally breaking Python. Therefore, drop
-        # O_NONBLOCK from Python's future stdin fd.
-        mitogen.core.set_block(childfp.fileno())
-        os.dup2(childfp.fileno(), 0)
-        os.dup2(childfp.fileno(), 1)
-        childfp.close()
-        parentfp.close()
-        os.execvp(args[0], args)
+    # When running under a monkey patches-enabled gevent, the socket module
+    # yields file descriptors who already have O_NONBLOCK, which is
+    # persisted across fork, totally breaking Python. Therefore, drop
+    # O_NONBLOCK from Python's future stdin fd.
+    mitogen.core.set_block(childfp.fileno())
 
+    proc = subprocess.Popen(
+        args=args,
+        stdin=childfp,
+        stdout=childfp,
+        close_fds=True,
+    )
     childfp.close()
     # Decouple the socket from the lifetime of the Python socket object.
     fd = os.dup(parentfp.fileno())
     parentfp.close()
 
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, fd, os.getpid(), Argv(args))
-    return pid, fd
+              proc.pid, fd, os.getpid(), Argv(args))
+    return proc.pid, fd
+
+
+def _acquire_controlling_tty():
+    os.setsid()
+    if sys.platform == 'linux2':
+        # On Linux, the controlling tty becomes the first tty opened by a
+        # process lacking any prior tty.
+        os.close(os.open(os.ttyname(0), os.O_RDWR))
+    if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
+        # On BSD an explicit ioctl is required.
+        fcntl.ioctl(0, termios.TIOCSCTTY)
 
 
 def tty_create_child(*args):
     master_fd, slave_fd = os.openpty()
+    mitogen.core.set_block(slave_fd)
     disable_echo(master_fd)
     disable_echo(slave_fd)
 
-    pid = os.fork()
-    if not pid:
-        mitogen.core.set_block(slave_fd)
-        os.dup2(slave_fd, 0)
-        os.dup2(slave_fd, 1)
-        os.dup2(slave_fd, 2)
-        close_nonstandard_fds()
-        os.setsid()
-        if sys.platform == 'linux2':
-            # On Linux, the controlling tty becomes the first tty opened by a
-            # process lacking any prior tty.
-            os.close(os.open(os.ttyname(1), os.O_RDWR))
-        if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
-            # On BSD an explicit ioctl is required.
-            fcntl.ioctl(0, termios.TIOCSCTTY)
-        os.execvp(args[0], args)
-        os._exit(1)
+    proc = subprocess.Popen(
+        args=args,
+        stdin=slave_fd,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        preexec_fn=_acquire_controlling_tty,
+        close_fds=True,
+    )
 
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, master_fd, os.getpid(), Argv(args))
-    return pid, master_fd
+              proc.pid, master_fd, os.getpid(), Argv(args))
+    return proc.pid, master_fd
 
 
 def write_all(fd, s, deadline=None):
@@ -584,7 +587,13 @@ class Stream(mitogen.core.Stream):
     name_prefix = 'local'
 
     def start_child(self):
-        return self.create_child(*self.get_boot_command())
+        args = self.get_boot_command()
+        try:
+            return self.create_child(*args)
+        except OSError:
+            e = sys.exc_info()[1]
+            msg = 'Child start failed: %s. Command was: %s' % (e, Argv(args))
+            raise mitogen.core.StreamError(msg)
 
     def connect(self):
         LOG.debug('%r.connect()', self)
