@@ -5,8 +5,6 @@
   hosts: all
   any_errors_fatal: true
   gather_facts: true
-  become: true
-  become_user: mitogen__user1
   tasks:
 
     # Copy the naughty 'ansible' into place.
