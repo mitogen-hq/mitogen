@@ -58,7 +58,7 @@ def format_stacks():
             threadId,
             stack,
         )]
-        stack = stack.f_back.f_back
+        #stack = stack.f_back.f_back
 
         for filename, lineno, name, line in traceback.extract_stack(stack):
             l += [
