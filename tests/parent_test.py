@@ -13,7 +13,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
     def test_direct_eof(self):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
-                python_path='/bin/true',
+                python_path='true',
                 connect_timeout=3,
             )
         )
@@ -25,7 +25,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
                 via=local,
-                python_path='/bin/true',
+                python_path='true',
                 connect_timeout=3,
             )
         )
@@ -77,11 +77,11 @@ class TtyCreateChildTest(unittest2.TestCase):
         # read a password.
         tf = tempfile.NamedTemporaryFile()
         try:
-            pid, fd = self.func(
+            pid, fd, _ = self.func(
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
             )
             deadline = time.time() + 5.0
-            for line in mitogen.parent.iter_read(fd, deadline):
+            for line in mitogen.parent.iter_read([fd], deadline):
                 self.assertEquals('hi\n', line)
                 break
             waited_pid, status = os.waitpid(pid, 0)
@@ -104,7 +104,7 @@ class IterReadTest(unittest2.TestCase):
     def test_no_deadline(self):
         proc = self.make_proc()
         try:
-            reader = self.func(proc.stdout.fileno())
+            reader = self.func([proc.stdout.fileno()])
             for i, chunk in enumerate(reader, 1):
                 self.assertEqual(i, int(chunk))
                 if i > 3:
@@ -114,7 +114,7 @@ class IterReadTest(unittest2.TestCase):
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
-        reader = self.func(proc.stdout.fileno(), 0)
+        reader = self.func([proc.stdout.fileno()], 0)
         try:
             got = []
             try:
@@ -128,7 +128,7 @@ class IterReadTest(unittest2.TestCase):
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
-        reader = self.func(proc.stdout.fileno(), time.time() + 0.4)
+        reader = self.func([proc.stdout.fileno()], time.time() + 0.4)
         try:
             got = []
             try:

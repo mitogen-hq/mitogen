@@ -103,7 +103,12 @@ class PasswordError(mitogen.core.StreamError):
 
 
 class Stream(mitogen.parent.Stream):
-    create_child = staticmethod(mitogen.parent.tty_create_child)
+    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+
+    #: Once connected, points to the corresponding TtyLogStream, allowing it to
+    #: be disconnected at the same time this stream is being torn down.
+    tty_stream = None
+
     sudo_path = 'sudo'
     username = 'root'
     password = None
@@ -131,6 +136,10 @@ class Stream(mitogen.parent.Stream):
         super(Stream, self).connect()
         self.name = 'sudo.' + self.username
 
+    def on_disconnect(self, broker):
+        self.tty_stream.on_disconnect(broker)
+        super(Stream, self).on_disconnect(broker)
+
     def get_boot_command(self):
         # Note: sudo did not introduce long-format option processing until July
         # 2013, so even though we parse long-format options, we always supply
@@ -147,10 +156,12 @@ class Stream(mitogen.parent.Stream):
     password_incorrect_msg = 'sudo password is incorrect'
     password_required_msg = 'sudo password is required'
 
-    def _connect_bootstrap(self):
+    def _connect_bootstrap(self, extra_fd):
+        self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
+
         password_sent = False
         it = mitogen.parent.iter_read(
-            fd=self.receive_side.fd,
+            fds=[self.receive_side.fd, extra_fd],
             deadline=self.connect_deadline,
         )
 
@@ -165,6 +176,6 @@ class Stream(mitogen.parent.Stream):
                 if password_sent:
                     raise PasswordError(self.password_incorrect_msg)
                 LOG.debug('sending password')
-                os.write(self.transmit_side.fd, self.password + '\n')
+                self.tty_stream.transmit_side.write(self.password + '\n')
                 password_sent = True
         raise mitogen.core.StreamError('bootstrap failed')

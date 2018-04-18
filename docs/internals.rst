@@ -402,27 +402,12 @@ Helper Functions
 
 .. currentmodule:: mitogen.master
 
-.. function:: create_child (\*args)
-
-    Create a child process whose stdin/stdout is connected to a socket,
-    returning `(pid, socket_obj)`.
+.. autofunction:: create_child
 
 
 .. currentmodule:: mitogen.master
 
-.. function:: tty_create_child (\*args)
-
-    Return a file descriptor connected to the master end of a pseudo-terminal,
-    whose slave end is connected to stdin/stdout/stderr of a new child process.
-    The child is created such that the pseudo-terminal becomes its controlling
-    TTY, ensuring access to /dev/tty returns a new file descriptor open on the
-    slave end.
-
-    :param list args:
-        :py:func:`os.execl` argument list.
-
-    :returns:
-        `(pid, fd)`
+.. autofunction:: tty_create_child
 
 
 .. currentmodule:: mitogen.master
