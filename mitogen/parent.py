@@ -483,14 +483,29 @@ class Stream(mitogen.core.Stream):
             )
         )
 
-    def on_disconnect(self, broker):
+    _reaped = False
+
+    def _reap_child(self):
+        """
+        Reap the child process during disconnection.
+        """
+        if self._reaped:
+            # on_disconnect() may be invoked more than once, for example, if
+            # there is still a pending message to be sent after the first
+            # on_disconnect() call.
+            return
+
         pid, status = os.waitpid(self.pid, os.WNOHANG)
         if pid:
             LOG.debug('%r: child process exit status was %d', self, status)
         else:
             LOG.debug('%r: child process still alive, sending SIGTERM', self)
             os.kill(self.pid, signal.SIGTERM)
-            pid, status = os.waitpid(self.pid, 0)
+            os.waitpid(self.pid, 0)
+        self._reaped = True
+
+    def on_disconnect(self, broker):
+        self._reap_child()
         super(Stream, self).on_disconnect(broker)
 
     # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
