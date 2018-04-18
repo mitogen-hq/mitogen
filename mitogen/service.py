@@ -341,6 +341,8 @@ class Pool(object):
 
 
 def call_async(context, handle, method, kwargs):
+    LOG.debug('service.call_async(%r, %r, %r, %r)',
+              context, handle, method, kwargs)
     pair = (method, kwargs)
     msg = mitogen.core.Message.pickled(pair, handle=handle)
     return context.send_async(msg)

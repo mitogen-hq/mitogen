@@ -78,6 +78,7 @@ def get_file(context, path):
         Bytestring file data.
     """
     if path not in _file_cache:
+        LOG.debug('target.get_file(): fetching %r from %r', path, context)
         _file_cache[path] = zlib.decompress(
             mitogen.service.call(
                 context=context,
@@ -88,6 +89,7 @@ def get_file(context, path):
                 }
             )
         )
+        LOG.debug('target.get_file(): fetched %r from %r', path, context)
 
     return _file_cache[path]
 
