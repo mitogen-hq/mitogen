@@ -16,15 +16,16 @@ FROM debian:stable
 RUN apt-get update
 RUN \
     apt-get install -y python2.7 openssh-server sudo rsync git strace \
-                       libjson-perl && \
-    apt-get clean
+                       libjson-perl python-virtualenv && \
+    apt-get clean && \
+    rm -rf /var/cache/apt
 """
 
 CENTOS_DOCKERFILE = r"""
 FROM centos:7
 RUN yum clean all && \
     yum -y install -y python2.7 openssh-server sudo rsync git strace sudo \
-                      perl-JSON && \
+                      perl-JSON python-virtualenv && \
     yum clean all && \
     groupadd sudo && \
     ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
