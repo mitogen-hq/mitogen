@@ -15,6 +15,11 @@ from ansible.plugins.action import ActionBase
 
 class ActionModule(ActionBase):
     def run(self, tmp=None, task_vars=None):
+        if not type(self._connection).__module__.startswith('ansible_mitogen'):
+            return {
+                'changed': False
+            }
+
         self._connection._connect()
         return {
             'changed': True,

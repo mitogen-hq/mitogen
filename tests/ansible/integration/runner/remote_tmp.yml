@@ -3,12 +3,12 @@
 # when generating temporary paths created by the runner.py code executing
 # remotely.
 #
-- hosts: all
+- name: integration/runner__remote_tmp.yml
+  hosts: all
   any_errors_fatal: true
   gather_facts: true
   tasks:
-    - name: integration/runner__remote_tmp.yml
-      bash_return_paths:
+    - bash_return_paths:
       register: output
 
     - assert:

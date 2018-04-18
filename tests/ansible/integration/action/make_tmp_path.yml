@@ -1,11 +1,9 @@
 
-- hosts: all
+- name: integration/action/make_tmp_path.yml
+  hosts: all
   any_errors_fatal: true
   gather_facts: true
   tasks:
-    - name: integration/action/make_tmp_path.yml
-      assert:
-        that: true
 
     - action_passthrough:
         method: _make_tmp_path

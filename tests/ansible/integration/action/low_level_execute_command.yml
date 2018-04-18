@@ -1,11 +1,9 @@
 # Verify the behaviour of _low_level_execute_command().
 
-- hosts: all
+- name: integration/action__low_level_execute_command.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/action__low_level_execute_command.yml
-      assert:
-        that: true
 
     # "echo -en" to test we actually hit bash shell too.
     - name: Run raw module without sudo

@@ -2,12 +2,10 @@
 # Test sudo_flags respects -E.
 #
 
-- hosts: all
+- name: integration/playbook_semantics/become_flags.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/playbook_semantics/become_flags.yml
-      assert:
-        that: true
 
     - name: "without -E"
       become: true

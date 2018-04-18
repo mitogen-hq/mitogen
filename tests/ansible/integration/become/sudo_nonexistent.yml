@@ -1,9 +1,7 @@
-- hosts: all
+- name: integration/become/sudo_nonexistent.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/become/sudo_nonexistent.yml
-      assert:
-        that: true
 
     - name: Verify behaviour for non-existent accounts.
       shell: whoami

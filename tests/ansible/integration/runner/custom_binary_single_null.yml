@@ -1,7 +1,7 @@
-- hosts: all
+- name: integration/runner__custom_binary_single_null.yml
+  hosts: all
   tasks:
-    - name: integration/runner__custom_binary_single_null.yml
-      custom_binary_single_null:
+    - custom_binary_single_null:
         foo: true
       with_sequence: start=1 end={{end|default(1)}}
       ignore_errors: true

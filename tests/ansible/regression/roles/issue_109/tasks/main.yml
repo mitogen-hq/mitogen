@@ -1,9 +1,0 @@
----
-
-- name: Decrypt SSH-Keys
-  include_role:
-    name: issue_109_add_ssh_key
-
-- name: Gather Facts
-  include_role:
-    name: issue_109_gather_facts

@@ -1,9 +1,10 @@
-- hosts: all
+
+- name: integration/runner__builtin_command_module.yml
+  hosts: all
   any_errors_fatal: true
   gather_facts: true
   tasks:
-    - name: integration/runner__builtin_command_module.yml
-      command: hostname
+    - command: hostname
       with_sequence: start=1 end={{end|default(1)}}
       register: out
 

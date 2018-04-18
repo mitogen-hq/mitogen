@@ -1,7 +1,7 @@
-- hosts: all
+- name: integration/runner__custom_binary_producing_junk.yml
+  hosts: all
   tasks:
-    - name: integration/runner__custom_binary_producing_junk.yml
-      custom_binary_producing_junk:
+    - custom_binary_producing_junk:
         foo: true
       with_sequence: start=1 end={{end|default(1)}}
       ignore_errors: true

@@ -1,5 +1,0 @@
-- hosts: all
-  tasks:
-    - name: add nginx ppa
-      become: yes
-      apt_repository: repo='ppa:nginx/stable' update_cache=yes

@@ -1,5 +1,5 @@
 #!/bin/bash -ex
-# Run tests/ansible/integration/all.yml under Ansible and Ansible-Mitogen
+# Run tests/ansible/all.yml under Ansible and Ansible-Mitogen
 
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TMPDIR="/tmp/ansible-tests-$$"
@@ -58,7 +58,7 @@ echo travis_fold:end:job_setup
 
 echo travis_fold:start:mitogen_linear
 /usr/bin/time ./mitogen_ansible_playbook.sh \
-    integration/all.yml \
+    all.yml \
     -vvv \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:mitogen_linear
@@ -66,7 +66,7 @@ echo travis_fold:end:mitogen_linear
 
 echo travis_fold:start:vanilla_ansible
 /usr/bin/time ./run_ansible_playbook.sh \
-    integration/all.yml \
+    all.yml \
     -vvv \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:vanilla_ansible
