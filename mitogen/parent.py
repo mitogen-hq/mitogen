@@ -243,6 +243,12 @@ def create_socketpair():
 
 
 def create_child(*args):
+    """
+    Create a child process whose stdin/stdout is connected to a socket.
+
+    :returns:
+        `(pid, socket_obj, :data:`None`)`
+    """
     parentfp, childfp = create_socketpair()
     # When running under a monkey patches-enabled gevent, the socket module
     # yields file descriptors who already have O_NONBLOCK, which is
@@ -263,7 +269,7 @@ def create_child(*args):
 
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
               proc.pid, fd, os.getpid(), Argv(args))
-    return proc.pid, fd
+    return proc.pid, fd, None
 
 
 def _acquire_controlling_tty():
@@ -271,13 +277,26 @@ def _acquire_controlling_tty():
     if sys.platform == 'linux2':
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
-        os.close(os.open(os.ttyname(0), os.O_RDWR))
+        os.close(os.open(os.ttyname(2), os.O_RDWR))
     if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
         # On BSD an explicit ioctl is required.
-        fcntl.ioctl(0, termios.TIOCSCTTY)
+        fcntl.ioctl(2, termios.TIOCSCTTY)
 
 
 def tty_create_child(*args):
+    """
+    Return a file descriptor connected to the master end of a pseudo-terminal,
+    whose slave end is connected to stdin/stdout/stderr of a new child process.
+    The child is created such that the pseudo-terminal becomes its controlling
+    TTY, ensuring access to /dev/tty returns a new file descriptor open on the
+    slave end.
+
+    :param list args:
+        :py:func:`os.execl` argument list.
+
+    :returns:
+        `(pid, tty_fd, None)`
+    """
     master_fd, slave_fd = os.openpty()
     mitogen.core.set_block(slave_fd)
     disable_echo(master_fd)
@@ -295,7 +314,47 @@ def tty_create_child(*args):
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
               proc.pid, master_fd, os.getpid(), Argv(args))
-    return proc.pid, master_fd
+    return proc.pid, master_fd, None
+
+
+def hybrid_tty_create_child(*args):
+    """
+    Like :func:`tty_create_child`, except attach stdin/stdout to a socketpair
+    like :func:`create_child`, but leave stderr and the controlling TTY
+    attached to a TTY.
+
+    :param list args:
+        :py:func:`os.execl` argument list.
+
+    :returns:
+        `(pid, socketpair_fd, tty_fd)`
+    """
+    master_fd, slave_fd = os.openpty()
+    parentfp, childfp = create_socketpair()
+
+    mitogen.core.set_block(slave_fd)
+    mitogen.core.set_block(childfp)
+    disable_echo(master_fd)
+    disable_echo(slave_fd)
+
+    proc = subprocess.Popen(
+        args=args,
+        stdin=childfp,
+        stdout=childfp,
+        stderr=slave_fd,
+        preexec_fn=_acquire_controlling_tty,
+        close_fds=True,
+    )
+
+    os.close(slave_fd)
+    childfp.close()
+    # Decouple the socket from the lifetime of the Python socket object.
+    stdio_fd = os.dup(parentfp.fileno())
+    parentfp.close()
+
+    LOG.debug('hybrid_tty_create_child() pid=%d stdio=%d, tty=%d, cmd: %s',
+              proc.pid, stdio_fd, master_fd, Argv(args))
+    return proc.pid, stdio_fd, master_fd
 
 
 def write_all(fd, s, deadline=None):
@@ -319,36 +378,42 @@ def write_all(fd, s, deadline=None):
         written += n
 
 
-def iter_read(fd, deadline=None):
+def iter_read(fds, deadline=None):
+    fds = list(fds)
     bits = []
     timeout = None
 
-    while True:
+    while fds:
         if deadline is not None:
             timeout = max(0, deadline - time.time())
             if timeout == 0:
                 break
 
-        rfds, _, _ = select.select([fd], [], [], timeout)
+        rfds, _, _ = select.select(fds, [], [], timeout)
         if not rfds:
             continue
 
-        s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
-        IOLOG.debug('iter_read(%r) -> %r', fd, s)
-        if disconnected or not s:
-            raise mitogen.core.StreamError(
-                'EOF on stream; last 300 bytes received: %r' %
-                (''.join(bits)[-300:],)
-            )
+        for fd in rfds:
+            s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
+            if disconnected or not s:
+                IOLOG.debug('iter_read(%r) -> disconnected', fd)
+                fds.remove(fd)
+            else:
+                IOLOG.debug('iter_read(%r) -> %r', fd, s)
+                bits.append(s)
+                yield s
 
-        bits.append(s)
-        yield s
+    if not fds:
+        raise mitogen.core.StreamError(
+            'EOF on stream; last 300 bytes received: %r' %
+            (''.join(bits)[-300:],)
+        )
 
     raise mitogen.core.TimeoutError('read timed out')
 
 
 def discard_until(fd, s, deadline):
-    for buf in iter_read(fd, deadline):
+    for buf in iter_read([fd], deadline):
         if IOLOG.level == logging.DEBUG:
             for line in buf.splitlines():
                 IOLOG.debug('discard_until: discarding %r', line)
@@ -412,6 +477,36 @@ def _proxy_connect(name, method_name, kwargs, econtext):
         'name': context.name,
         'msg': None,
     }
+
+
+class TtyLogStream(mitogen.core.BasicStream):
+    """
+    For "hybrid TTY/socketpair" mode, after a connection has been setup, a
+    spare TTY file descriptor will exist that cannot be closed, and to which
+    SSH or sudo may continue writing log messages.
+
+    The descriptor cannot be closed since the UNIX TTY layer will send a
+    termination signal to any processes whose controlling TTY is the TTY that
+    has been closed.
+
+    TtyLogStream takes over this descriptor and creates corresponding log
+    messages for anything written to it.
+    """
+
+    def __init__(self, tty_fd, stream):
+        self.receive_side = mitogen.core.Side(stream, tty_fd)
+        self.transmit_side = self.receive_side
+        self.stream = stream
+
+    def __repr__(self):
+        return 'mitogen.parent.TtyLogStream(%r)' % (self.stream,)
+
+    def on_receive(self, broker):
+        buf = self.receive_side.read()
+        if not buf:
+            return self.on_disconnect(broker)
+
+        LOG.debug('%r.on_receive(): %r', self, buf)
 
 
 class Stream(mitogen.core.Stream):
@@ -597,21 +692,21 @@ class Stream(mitogen.core.Stream):
 
     def connect(self):
         LOG.debug('%r.connect()', self)
-        self.pid, fd = self.start_child()
+        self.pid, fd, extra_fd = self.start_child()
         self.name = '%s.%s' % (self.name_prefix, self.pid)
         self.receive_side = mitogen.core.Side(self, fd)
         self.transmit_side = mitogen.core.Side(self, os.dup(fd))
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
-        self._connect_bootstrap()
+        self._connect_bootstrap(extra_fd)
 
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)
         write_all(self.transmit_side.fd, self.get_preamble())
         discard_until(self.receive_side.fd, 'EC1\n', time.time() + 10.0)
 
-    def _connect_bootstrap(self):
+    def _connect_bootstrap(self, extra_fd):
         deadline = time.time() + self.connect_timeout
         discard_until(self.receive_side.fd, 'EC0\n', deadline)
         self._ec0_received()

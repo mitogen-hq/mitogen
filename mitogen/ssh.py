@@ -52,8 +52,12 @@ class PasswordError(mitogen.core.StreamError):
 
 
 class Stream(mitogen.parent.Stream):
-    create_child = staticmethod(mitogen.parent.tty_create_child)
+    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     python_path = 'python2.7'
+
+    #: Once connected, points to the corresponding TtyLogStream, allowing it to
+    #: be disconnected at the same time this stream is being torn down.
+    tty_stream = None
 
     #: The path to the SSH binary.
     ssh_path = 'ssh'
@@ -82,6 +86,10 @@ class Stream(mitogen.parent.Stream):
             self.ssh_path = ssh_path
         if ssh_args:
             self.ssh_args = ssh_args
+
+    def on_disconnect(self, broker):
+        self.tty_stream.on_disconnect(broker)
+        super(Stream, self).on_disconnect(broker)
 
     def get_boot_command(self):
         bits = [self.ssh_path]
@@ -124,10 +132,12 @@ class Stream(mitogen.parent.Stream):
     password_incorrect_msg = 'SSH password is incorrect'
     password_required_msg = 'SSH password was requested, but none specified'
 
-    def _connect_bootstrap(self):
+    def _connect_bootstrap(self, extra_fd):
+        self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
+
         password_sent = False
         it = mitogen.parent.iter_read(
-            fd=self.receive_side.fd,
+            fds=[self.receive_side.fd, extra_fd],
             deadline=self.connect_deadline
         )
 
@@ -145,6 +155,7 @@ class Stream(mitogen.parent.Stream):
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 LOG.debug('sending password')
-                self.transmit_side.write(self.password + '\n')
+                self.tty_stream.transmit_side.write(self.password + '\n')
                 password_sent = True
+
         raise mitogen.core.StreamError('bootstrap failed')

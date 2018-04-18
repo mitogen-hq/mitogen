@@ -51,7 +51,7 @@ echo \
 # Build the binaries.
 make -C ${TRAVIS_BUILD_DIR}/tests/ansible
 
-sudo apt install -y sshpass
+[ ! "$(type -p sshpass)" ] && sudo apt install -y sshpass
 
 echo travis_fold:end:job_setup
 

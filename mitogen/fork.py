@@ -108,7 +108,7 @@ class Stream(mitogen.parent.Stream):
             # Decouple the socket from the lifetime of the Python socket object.
             fd = os.dup(parentfp.fileno())
             parentfp.close()
-            return self.pid, fd
+            return self.pid, fd, None
         else:
             parentfp.close()
             self._wrap_child_main(childfp)
@@ -155,6 +155,6 @@ class Stream(mitogen.parent.Stream):
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)
 
-    def _connect_bootstrap(self):
+    def _connect_bootstrap(self, extra_fd):
         # None required.
         pass
