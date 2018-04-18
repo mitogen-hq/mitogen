@@ -245,6 +245,9 @@ class ContextService(mitogen.service.Service):
         # We don't need to wait for the result of this. Ideally we'd check its
         # return value somewhere, but logs will catch a failure anyway.
         context.call_async(ansible_mitogen.target.start_fork_parent)
+        if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
+            import mitogen.debug
+            context.call(mitogen.debug.dump_to_logger)
         self._key_by_context[context] = key
         self._refs_by_context[context] = 0
         return {

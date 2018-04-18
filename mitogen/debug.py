@@ -31,6 +31,7 @@ Basic signal handler for dumping thread stacks.
 """
 
 import difflib
+import logging
 import os
 import signal
 import sys
@@ -39,6 +40,7 @@ import time
 import traceback
 
 
+LOG = logging.getLogger(__name__)
 _last = None
 
 
@@ -74,15 +76,13 @@ def format_stacks():
     return '\n'.join(l)
 
 
-def _handler(*_):
+def get_snapshot():
     global _last
 
     s = format_stacks()
-    fp = open('/dev/tty', 'w', 1)
-    fp.write(s)
-
+    snap = s
     if _last:
-        fp.write('\n')
+        snap += '\n'
         diff = list(difflib.unified_diff(
             a=_last.splitlines(),
             b=s.splitlines(),
@@ -91,25 +91,30 @@ def _handler(*_):
         ))
 
         if diff:
-            fp.write('\n'.join(diff) + '\n')
+            snap += '\n'.join(diff) + '\n'
         else:
-            fp.write('(no change since last time)\n')
+            snap += '(no change since last time)\n'
     _last = s
+    return snap
+
+
+def _handler(*_):
+    fp = open('/dev/tty', 'w', 1)
+    fp.write(get_snapshot())
+    fp.close()
 
 
 def install_handler():
     signal.signal(signal.SIGUSR2, _handler)
 
 
-def _thread_main():
+def _logging_main():
     while True:
-        time.sleep(7)
-        l = format_stacks()
-        open('/tmp/stack.%s.log' % (os.getpid(),), 'wb', 65535).write(l)
-        break
+        time.sleep(5)
+        LOG.info('PERIODIC THREAD DUMP\n\n%s', get_snapshot())
 
 
-def dump_periodically():
-    th = threading.Thread(target=main)
+def dump_to_logger():
+    th = threading.Thread(target=_logging_main)
     th.setDaemon(True)
     th.start()
