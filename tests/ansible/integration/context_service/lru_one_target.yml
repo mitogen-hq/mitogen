@@ -1,15 +1,13 @@
 # Verify a maximum number of contexts are possible on one machine.
 
-- hosts: all
+- name: integration/context_service/lru_one_target.yml
+  hosts: all
   any_errors_fatal: true
   vars:
     max_interps: "{{lookup('env', 'MITOGEN_MAX_INTERPRETERS')}}"
     ubound: "{{max_interps|int + 1}}"
 
   tasks:
-    - name: integration/context_service/lru_one_target.yml
-      assert:
-        that: true
 
     - name: Reset all connections
       mitogen_shutdown_all:

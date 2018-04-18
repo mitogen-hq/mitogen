@@ -1,11 +1,9 @@
 # Verify requiretty support
 
-- hosts: all
+- name: integration/become/sudo_requiretty.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/become/sudo_requiretty.yml
-      assert:
-        that: true
 
     - name: Verify we can login to a non-passworded requiretty account
       shell: whoami

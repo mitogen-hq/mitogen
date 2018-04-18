@@ -1,9 +1,7 @@
-- hosts: all
+- name: integration/become/sudo_flags_failure.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/become/sudo_flags_failure.yml
-      assert:
-        that: true
 
     - name: Verify behaviour for bad sudo flags.
       shell: whoami

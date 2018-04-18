@@ -1,11 +1,10 @@
 
-- hosts: all
+- name: integration/runner/forking_behaviour.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
 
   # Verify non-async jobs run in-process.
-
-  - debug: msg={{is_mitogen}}
 
   - name: get process ID.
     custom_python_detect_environment:

@@ -1,10 +1,10 @@
 # Ensure 'local' connections are grabbed.
 
-- hosts: all
+- name: integration/connection_loader__local_blemished.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/connection_loader__local_blemished.yml
-      determine_strategy:
+    - determine_strategy:
 
     - custom_python_detect_environment:
       connection: local

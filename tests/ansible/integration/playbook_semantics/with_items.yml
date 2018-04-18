@@ -1,12 +1,10 @@
 # Verify with_items that modifies the execution environment still executes in
 # the correct context.
 
-- hosts: all
+- name: integration/playbook_semantics/with_items.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/playbook_semantics/with_items.yml
-      assert:
-        that: true
 
     - name: Spin up a few interpreters
       shell: whoami

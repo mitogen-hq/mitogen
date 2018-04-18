@@ -1,9 +1,10 @@
 
-- hosts: all
+- name: integration/action/transfer_data.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
-    - name: integration/action/transfer_data.yml
-      file:
+
+    - file:
         path: /tmp/transfer-data
         state: absent
 

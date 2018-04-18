@@ -1,4 +1,5 @@
-- hosts: all
+- name: integration/playbook_semantics/delegate_to.yml
+  hosts: all
   any_errors_fatal: true
   tasks:
     #
