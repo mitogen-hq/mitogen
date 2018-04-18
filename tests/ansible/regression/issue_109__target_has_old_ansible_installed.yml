@@ -24,7 +24,7 @@
     - assert:
         that:
           - env.cwd == ansible_user_dir
-          - env.python_path.count("") == 1
+          - (not env.mitogen_loaded) or (env.python_path.count("") == 1)
 
     # Run some new-style modules that 'from ansible.module_utils...'
     - stat:

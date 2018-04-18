@@ -13,6 +13,7 @@ import sys
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
+        argv=sys.argv,
         env=dict(os.environ),
         cwd=os.getcwd(),
         python_path=sys.path,
