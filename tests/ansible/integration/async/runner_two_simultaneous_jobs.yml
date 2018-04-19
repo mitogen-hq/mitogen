@@ -1,5 +1,5 @@
 
-- name: integration/runner/async_two_simultaneous_jobs.yml
+- name: integration/async/runner_two_simultaneous_jobs.yml
   hosts: all
   any_errors_fatal: true
   tasks:

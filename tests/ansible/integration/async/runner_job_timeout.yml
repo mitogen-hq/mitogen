@@ -1,6 +1,6 @@
 # Verify 'async: <timeout>' functions as desired.
 
-- name: integration/runner/async_job_timeout.yml
+- name: integration/async/runner_job_timeout.yml
   hosts: all
   any_errors_fatal: true
   tasks:
