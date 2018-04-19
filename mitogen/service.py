@@ -314,7 +314,7 @@ class Pool(object):
                 msg = self._select.get()
             except (mitogen.core.ChannelError, mitogen.core.LatchError):
                 e = sys.exc_info()[1]
-                LOG.error('%r: channel or latch closed, exitting: %s', self, e)
+                LOG.info('%r: channel or latch closed, exitting: %s', self, e)
                 return
 
             service = msg.receiver.service
