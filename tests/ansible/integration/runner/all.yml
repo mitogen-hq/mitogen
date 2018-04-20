@@ -9,5 +9,6 @@
 - import_playbook: custom_python_json_args_module.yml
 - import_playbook: custom_python_new_style_module.yml
 - import_playbook: custom_python_want_json_module.yml
+- import_playbook: custom_script_interpreter.yml
 - import_playbook: forking_behaviour.yml
 - import_playbook: remote_tmp.yml

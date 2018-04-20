@@ -1,6 +1,10 @@
 #!/bin/bash
 # I am an Ansible old-style module.
 
+# This line is to encourage a UnicodeDecodeError in
+# integration/runner/custom_script_interpreter.yml
+#   see https://github.com/dw/mitogen/issues/195
+#   £££ 
 INPUT=$1
 
 [ ! -r "$INPUT" ] && {
