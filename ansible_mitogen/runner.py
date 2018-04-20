@@ -61,6 +61,15 @@ ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 LOG = logging.getLogger(__name__)
 
 
+def utf8(s):
+    """
+    Coerce an object to bytes if it is Unicode.
+    """
+    if isinstance(s, unicode):
+        s = s.encode('utf-8')
+    return s
+
+
 def reopen_readonly(fp):
     """
     Replace the file descriptor belonging to the file object `fp` with one
@@ -329,9 +338,9 @@ class ScriptRunner(ProgramRunner):
         if not self.interpreter:
             return s
 
-        shebang = '#!' + self.interpreter
+        shebang = '#!' + utf8(self.interpreter)
         if self.interpreter_arg:
-            shebang += ' ' + self.interpreter_arg
+            shebang += ' ' + utf8(self.interpreter_arg)
 
         new = [shebang]
         if os.path.basename(self.interpreter).startswith('python'):
