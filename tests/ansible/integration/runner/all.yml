@@ -1,6 +1,3 @@
-- import_playbook: async_job_timeout.yml
-- import_playbook: async_one_job.yml
-- import_playbook: async_two_simultaneous_jobs.yml
 - import_playbook: builtin_command_module.yml
 - import_playbook: custom_bash_old_style_module.yml
 - import_playbook: custom_bash_want_json_module.yml

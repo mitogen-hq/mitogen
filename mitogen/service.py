@@ -314,7 +314,7 @@ class Pool(object):
                 msg = self._select.get()
             except (mitogen.core.ChannelError, mitogen.core.LatchError):
                 e = sys.exc_info()[1]
-                LOG.error('%r: channel or latch closed, exitting: %s', self, e)
+                LOG.info('%r: channel or latch closed, exitting: %s', self, e)
                 return
 
             service = msg.receiver.service
@@ -341,6 +341,8 @@ class Pool(object):
 
 
 def call_async(context, handle, method, kwargs):
+    LOG.debug('service.call_async(%r, %r, %r, %r)',
+              context, handle, method, kwargs)
     pair = (method, kwargs)
     msg = mitogen.core.Message.pickled(pair, handle=handle)
     return context.send_async(msg)

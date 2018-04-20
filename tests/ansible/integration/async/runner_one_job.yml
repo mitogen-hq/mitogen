@@ -1,7 +1,7 @@
 # Verify behaviour of a single asynchronous task, and presence of all output
 # fields.
 
-- name: integration/runner/async_one_job.yml
+- name: integration/async/runner_one_job.yml
   hosts: all
   any_errors_fatal: true
   tasks:

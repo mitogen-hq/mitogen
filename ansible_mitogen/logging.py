@@ -39,14 +39,20 @@ class Handler(logging.Handler):
     """
     Use Mitogen's log format, but send the result to a Display method.
     """
-    def __init__(self, method):
+    def __init__(self, display, normal_method):
         super(Handler, self).__init__()
         self.formatter = mitogen.utils.log_get_formatter(usec=True)
-        self.method = method
+        self.display = display
+        self.normal_method = normal_method
 
     def emit(self, record):
-        msg = self.format(record)
-        self.method('[pid %d] %s' % (os.getpid(), msg))
+        s = '[pid %d] %s' % (os.getpid(), self.format(record))
+        if record.levelno >= logging.ERROR:
+            self.display.error(s, wrap_text=False)
+        elif record.levelno >= logging.WARNING:
+            self.display.warning(s, formatted=True)
+        else:
+            self.normal_method(s)
 
 
 def find_display():
@@ -69,9 +75,9 @@ def setup():
     """
     display = find_display()
 
-    logging.getLogger('ansible_mitogen').handlers = [Handler(display.vvv)]
-    mitogen.core.LOG.handlers = [Handler(display.vvv)]
-    mitogen.core.IOLOG.handlers = [Handler(display.vvvv)]
+    logging.getLogger('ansible_mitogen').handlers = [Handler(display, display.vvv)]
+    mitogen.core.LOG.handlers = [Handler(display, display.vvv)]
+    mitogen.core.IOLOG.handlers = [Handler(display, display.vvvv)]
     mitogen.core.IOLOG.propagate = False
 
     if display.verbosity > 2:

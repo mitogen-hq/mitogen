@@ -42,9 +42,10 @@ import re
 import stat
 import subprocess
 import tempfile
-import threading
+import traceback
 import zlib
 
+import ansible.module_utils.json_utils
 import ansible_mitogen.runner
 import ansible_mitogen.services
 import mitogen.core
@@ -78,6 +79,7 @@ def get_file(context, path):
         Bytestring file data.
     """
     if path not in _file_cache:
+        LOG.debug('target.get_file(): fetching %r from %r', path, context)
         _file_cache[path] = zlib.decompress(
             mitogen.service.call(
                 context=context,
@@ -88,6 +90,7 @@ def get_file(context, path):
                 }
             )
         )
+        LOG.debug('target.get_file(): fetched %r from %r', path, context)
 
     return _file_cache[path]
 
@@ -110,11 +113,26 @@ def start_fork_parent(econtext):
 
 
 @mitogen.core.takes_econtext
-def start_fork_child(kwargs, econtext):
+def start_fork_child(wrap_async, kwargs, econtext):
     mitogen.parent.upgrade_router(econtext)
     context = econtext.router.fork()
-    kwargs['shutdown_on_exit'] = True
-    context.call_async(run_module, kwargs)
+    if not wrap_async:
+        try:
+            return context.call(run_module, kwargs)
+        finally:
+            context.shutdown()
+
+    job_id = '%016x' % random.randint(0, 2**64)
+    context.call_async(run_module_async, job_id, kwargs)
+    return {
+        'stdout': json.dumps({
+            # modules/utilities/logic/async_wrapper.py::_run_module().
+            'changed': True,
+            'started': 1,
+            'finished': 0,
+            'ansible_job_id': job_id,
+        })
+    }
 
 
 @mitogen.core.takes_econtext
@@ -126,16 +144,91 @@ def run_module(kwargs, econtext):
     from reading sys.stdin.
     """
     should_fork = kwargs.pop('should_fork', False)
-    shutdown_on_exit = kwargs.pop('shutdown_on_exit', False)
+    wrap_async = kwargs.pop('wrap_async', False)
     if should_fork:
-        _fork_parent.call(start_fork_child, kwargs)
-        return
+        return _fork_parent.call(start_fork_child, wrap_async, kwargs)
 
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
     impl = klass(**kwargs)
-    impl.run()
-    if shutdown_on_exit:
+    return impl.run()
+
+
+def _get_async_dir():
+    return os.path.expanduser(
+        os.environ.get('ANSIBLE_ASYNC_DIR', '~/.ansible_async')
+    )
+
+
+def _write_job_status(job_id, dct):
+    """
+    Update an async job status file.
+    """
+    LOG.info('_write_job_status(%r, %r)', job_id, dct)
+    dct.setdefault('ansible_job_id', job_id)
+    dct.setdefault('data', '')
+
+    async_dir = _get_async_dir()
+    if not os.path.exists(async_dir):
+        os.makedirs(async_dir)
+
+    path = os.path.join(async_dir, job_id)
+    with open(path + '.tmp', 'w') as fp:
+        fp.write(json.dumps(dct))
+    os.rename(path + '.tmp', path)
+
+
+def _run_module_async(job_id, kwargs, econtext):
+    """
+    Body on run_module_async().
+
+    1. Immediately updates the status file to mark the job as started.
+    2. Installs a timer/signal handler to implement the time limit.
+    3. Runs as with run_module(), writing the result to the status file.
+    """
+    _write_job_status(job_id, {
+        'started': 1,
+        'finished': 0
+    })
+
+    kwargs['emulate_tty'] = False
+    dct = run_module(kwargs, econtext)
+    if mitogen.core.PY3:
+        for key in 'stdout', 'stderr':
+            dct[key] = dct[key].decode('utf-8', 'surrogateescape')
+
+    try:
+        filtered, warnings = (
+            ansible.module_utils.json_utils.
+            _filter_non_json_lines(dct['stdout'])
+        )
+        result = json.loads(filtered)
+        result.setdefault('warnings', []).extend(warnings)
+        result['stderr'] = dct['stderr']
+        _write_job_status(job_id, result)
+    except Exception:
+        _write_job_status(job_id, {
+            "failed": 1,
+            "msg": traceback.format_exc(),
+            "data": dct['stdout'],  # temporary notice only
+            "stderr": dct['stderr']
+        })
+
+
+@mitogen.core.takes_econtext
+def run_module_async(job_id, kwargs, econtext):
+    """
+    Since run_module_async() is invoked with .call_async(), with nothing to
+    read the result from the corresponding Receiver, wrap the body in an
+    exception logger, and wrap that in something that tears down the context on
+    completion.
+    """
+    try:
+        try:
+            _run_module_async(job_id, kwargs, econtext)
+        except Exception:
+            LOG.exception('_run_module_async crashed')
+    finally:
         econtext.broker.shutdown()
 
 
