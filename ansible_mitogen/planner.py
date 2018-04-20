@@ -38,7 +38,6 @@ from __future__ import absolute_import
 import json
 import logging
 import os
-import random
 
 from ansible.executor import module_common
 import ansible.errors
@@ -116,8 +115,6 @@ class Invocation(object):
         self.env = env
         #: Boolean, if :py:data:`True`, launch the module asynchronously.
         self.wrap_async = wrap_async
-        #: String Job ID.
-        self.job_id = self._make_job_id()
 
         #: Initially ``None``, but set by :func:`invoke`. The path on the
         #: master to the module's implementation file.
@@ -125,9 +122,6 @@ class Invocation(object):
         #: Initially ``None``, but set by :func:`invoke`. The raw source or
         #: binary contents of the module.
         self.module_source = None
-
-    def _make_job_id(self):
-        return '%016x' % random.randint(0, 2**64)
 
     def __repr__(self):
         return 'Invocation(module_name=%s)' % (self.module_name,)
@@ -167,9 +161,10 @@ class Planner(object):
                 # named by `runner_name`.
             }
         """
-        kwargs.setdefault('job_id', invocation.job_id)
+        kwargs.setdefault('emulate_tty', True)
         kwargs.setdefault('service_context', invocation.connection.parent)
         kwargs.setdefault('should_fork', self.get_should_fork(invocation))
+        kwargs.setdefault('wrap_async', invocation.wrap_async)
         return kwargs
 
 
@@ -349,7 +344,10 @@ def get_module_data(name):
     return path, source
 
 
-def _do_invoke(invocation):
+def invoke(invocation):
+    """
+    Find a suitable Planner that knows how to run `invocation`.
+    """
     (invocation.module_path,
      invocation.module_source) = get_module_data(invocation.module_name)
 
@@ -358,52 +356,12 @@ def _do_invoke(invocation):
         if planner.detect(invocation):
             LOG.debug('%r accepted %r (filename %r)', planner,
                       invocation.module_name, invocation.module_path)
-            break
+            return invocation.action._postprocess_response(
+                invocation.connection.call(
+                    ansible_mitogen.target.run_module,
+                    planner.plan(invocation),
+                )
+            )
         LOG.debug('%r rejected %r', planner, invocation.module_name)
-    else:
-        raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
-    return invocation.connection.call_async(
-        ansible_mitogen.target.run_module,
-        planner.plan(invocation),
-    )
-
-
-def _invoke_async(invocation):
-    _do_invoke(invocation)
-    return {
-        'stdout': json.dumps({
-            # modules/utilities/logic/async_wrapper.py::_run_module().
-            'changed': True,
-            'started': 1,
-            'finished': 0,
-            'ansible_job_id': invocation.job_id,
-        })
-    }
-
-
-def _invoke_sync(invocation):
-    result_recv = mitogen.core.Receiver(invocation.connection.router)
-    mitogen.service.call_async(
-        context=invocation.connection.parent,
-        handle=ansible_mitogen.services.JobResultService.handle,
-        method='listen',
-        kwargs={
-            'job_id': invocation.job_id,
-            'sender': result_recv.to_sender(),
-        }
-    )
-    _do_invoke(invocation)
-    return result_recv.get().unpickle()
-
-
-def invoke(invocation):
-    """
-    Find a suitable Planner that knows how to run `invocation`.
-    """
-    if invocation.wrap_async:
-        js = _invoke_async(invocation)
-    else:
-        js = _invoke_sync(invocation)
-
-    return invocation.action._postprocess_response(js)
+    raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))

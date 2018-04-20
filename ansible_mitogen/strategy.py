@@ -48,19 +48,9 @@ def wrap_action_loader__get(name, *args, **kwargs):
     helper methods inherited from ActionBase with implementations that avoid
     the use of shell fragments wherever possible.
 
-    Additionally catch attempts to instantiate the "normal" action with a task
-    argument whose action is "async_status", and redirect it to a special
-    implementation that fetches the task result via RPC.
-
     This is used instead of static subclassing as it generalizes to third party
     action modules outside the Ansible tree.
     """
-    # Necessary since async_status execution strategy is hard-wired in
-    # executor/task_executor.py::_poll_async_result().
-    if ( name == 'normal' and 'task' in kwargs and
-         kwargs['task'].action == 'async_status'):
-        name = 'mitogen_async_status'
-
     klass = action_loader__get(name, class_only=True)
     if klass:
         wrapped_name = 'MitogenActionModule_' + name
@@ -172,7 +162,6 @@ class StrategyMixin(object):
         """
         base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
         connection_loader.add_directory(os.path.join(base_dir, 'connection'))
-        action_loader.add_directory(os.path.join(base_dir, 'actions'))
 
     def run(self, iterator, play_context, result=0):
         """

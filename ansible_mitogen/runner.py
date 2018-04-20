@@ -83,17 +83,17 @@ class Runner(object):
 
     Subclasses may override `_run`()` and extend `setup()` and `revert()`.
     """
-    def __init__(self, module, job_id, remote_tmp, service_context,
-                 raw_params=None, args=None, env=None):
+    def __init__(self, module, remote_tmp, service_context,
+                 emulate_tty=None, raw_params=None, args=None, env=None):
         if args is None:
             args = {}
         if raw_params is not None:
             args['_raw_params'] = raw_params
 
         self.module = module
-        self.job_id = job_id
         self.remote_tmp = os.path.expanduser(remote_tmp)
         self.service_context = service_context
+        self.emulate_tty = emulate_tty
         self.raw_params = raw_params
         self.args = args
         self.env = env
@@ -135,17 +135,6 @@ class Runner(object):
         """
         raise NotImplementedError()
 
-    def _send_result(self, dct):
-        mitogen.service.call(
-            context=self.service_context,
-            handle=502,
-            method='push',
-            kwargs={
-                'job_id': self.job_id,
-                'result': dct
-            }
-        )
-
     def run(self):
         """
         Set up the process environment in preparation for running an Ansible
@@ -158,10 +147,7 @@ class Runner(object):
         """
         self.setup()
         try:
-            try:
-                self._send_result(self._run())
-            except Exception as e:
-                self._send_result(mitogen.core.CallError(e))
+            return self._run()
         finally:
             self.revert()
 
@@ -260,7 +246,7 @@ class ProgramRunner(Runner):
         try:
             rc, stdout, stderr = ansible_mitogen.target.exec_args(
                 args=self._get_program_args(),
-                emulate_tty=True,
+                emulate_tty=self.emulate_tty,
             )
         except Exception, e:
             LOG.exception('While running %s', self._get_program_args())

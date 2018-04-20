@@ -246,8 +246,8 @@ class ContextService(mitogen.service.Service):
         # return value somewhere, but logs will catch a failure anyway.
         context.call_async(ansible_mitogen.target.start_fork_parent)
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
-            import mitogen.debug
-            context.call(mitogen.debug.dump_to_logger)
+            from mitogen import debug
+            context.call(debug.dump_to_logger)
         self._key_by_context[context] = key
         self._refs_by_context[context] = 0
         return {
@@ -369,93 +369,3 @@ class FileService(mitogen.service.Service):
 
         LOG.debug('Serving %r', path)
         return self._paths[path]
-
-
-class JobResultService(mitogen.service.Service):
-    """
-    Receive the result of a task from a child and forward it to interested
-    listeners. If no listener exists, store the result until it is requested.
-
-    Storing results in an intermediary service allows:
-
-    * the lifetime of the worker to be decoupled from the lifetime of the job,
-    * for new and unrelated workers to request the job result after the original
-      worker that spawned it has exitted,
-    * for synchronous and asynchronous jobs to be treated identically,
-    * for latency-free polling and waiting on job results, and
-    * for Ansible job IDs to be be used to refer to a job in preference to
-      Mitogen-internal identifiers such as Sender and Context.
-
-    Results are keyed by job ID.
-    """
-    handle = 502
-    max_message_size = 1048576 * 64
-
-    def __init__(self, router):
-        super(JobResultService, self).__init__(router)
-        self._lock = threading.Lock()
-        self._result_by_job_id = {}
-        self._sender_by_job_id = {}
-
-    @mitogen.service.expose(mitogen.service.AllowParents())
-    @mitogen.service.arg_spec({
-        'job_id': str,
-        'sender': mitogen.core.Sender,
-    })
-    def listen(self, job_id, sender):
-        """
-        Register to receive the result of a job when it becomes available.
-
-        :param str job_id:
-            Job ID to listen for.
-        :param mitogen.core.Sender sender:
-            Sender on which to deliver the job result.
-        """
-        LOG.debug('%r.listen(job_id=%r, sender=%r)', self, job_id, sender)
-        with self._lock:
-            if job_id in self._sender_by_job_id:
-                raise Error('Listener already exists for job: %s' % (job_id,))
-            self._sender_by_job_id[job_id] = sender
-
-    @mitogen.service.expose(mitogen.service.AllowParents())
-    @mitogen.service.arg_spec({
-        'job_id': basestring,
-    })
-    def get(self, job_id):
-        """
-        Return a job's result if it is available, otherwise return immediately.
-        The job result is forgotten once it has been returned by this method.
-
-        :param str job_id:
-            Job ID to return.
-        :returns:
-            Job result dictionary, or :data:`None`.
-        """
-        LOG.debug('%r.get(job_id=%r)', self, job_id)
-        with self._lock:
-            return self._result_by_job_id.pop(job_id, None)
-
-    @mitogen.service.expose(mitogen.service.AllowAny())
-    @mitogen.service.arg_spec({
-        'job_id': basestring,
-        'result': (mitogen.core.CallError, dict)
-    })
-    def push(self, job_id, result):
-        """
-        Deliver a job's result from a child context, notifying any listener
-        registred via :meth:`listen` of the result.
-
-        :param str job_id:
-            Job ID whose result is being pushed.
-        :param dict result:
-            Job result dictionary.
-        """
-        LOG.debug('%r.push(job_id=%r, result=%r)', self, job_id, result)
-        with self._lock:
-            if job_id in self._result_by_job_id:
-                raise Error('Result already exists for job: %s' % (job_id,))
-            sender = self._sender_by_job_id.pop(job_id, None)
-            if sender:
-                sender.send(result)
-            else:
-                self._result_by_job_id[job_id] = result
