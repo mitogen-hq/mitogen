@@ -26,6 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import errno
 import fcntl
 import getpass
 import inspect
@@ -593,7 +594,15 @@ class Stream(mitogen.core.Stream):
             # on_disconnect() call.
             return
 
-        pid, status = os.waitpid(self.pid, os.WNOHANG)
+        try:
+            pid, status = os.waitpid(self.pid, os.WNOHANG)
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] == errno.ECHILD:
+                LOG.warn('%r: waitpid(%r) produced ECHILD', self.pid, self)
+                return
+            raise
+
         if pid:
             LOG.debug('%r: child process exit status was %d', self, status)
         else:
@@ -699,7 +708,11 @@ class Stream(mitogen.core.Stream):
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
-        self._connect_bootstrap(extra_fd)
+        try:
+            self._connect_bootstrap(extra_fd)
+        except Exception:
+            self._reap_child()
+            raise
 
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)

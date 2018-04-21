@@ -167,6 +167,9 @@ class Planner(object):
         kwargs.setdefault('wrap_async', invocation.wrap_async)
         return kwargs
 
+    def __repr__(self):
+        return '%s()' % (type(self).__name__,)
+
 
 class BinaryPlanner(Planner):
     """

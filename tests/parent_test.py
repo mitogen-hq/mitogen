@@ -1,3 +1,4 @@
+import errno
 import os
 import subprocess
 import tempfile
@@ -7,6 +8,26 @@ import unittest2
 import testlib
 
 import mitogen.parent
+
+
+class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
+    def test_connect_timeout(self):
+        # Ensure the child process is reaped if the connection times out.
+        stream = mitogen.parent.Stream(
+            router=self.router,
+            remote_id=1234,
+            old_router=self.router,
+            max_message_size=self.router.max_message_size,
+            python_path=testlib.data_path('python_never_responds.sh'),
+            connect_timeout=0.5,
+        )
+        self.assertRaises(mitogen.core.TimeoutError,
+            lambda: stream.connect()
+        )
+        e = self.assertRaises(OSError,
+            lambda: os.kill(stream.pid, 0)
+        )
+        self.assertEquals(e.args[0], errno.ESRCH)
 
 
 class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):

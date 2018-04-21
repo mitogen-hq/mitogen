@@ -199,6 +199,29 @@ class ContextService(mitogen.service.Service):
             self._shutdown(context)
         self._lru_by_via = {}
 
+    def _on_stream_disconnect(self, stream):
+        """
+        Respond to Stream disconnection by deleting any record of contexts
+        reached via that stream. This method runs in the Broker thread and must
+        not to block.
+        """
+        # TODO: there is a race between creation of a context and disconnection
+        # of its related stream. An error reply should be sent to any message
+        # in _waiters_by_key below.
+        self._lock.acquire()
+        try:
+            for context, key in list(self._key_by_context.items()):
+                if context.context_id in stream.routes:
+                    LOG.info('Dropping %r due to disconnect of %r',
+                             context, stream)
+                    self._response_by_key.pop(key, None)
+                    self._waiters_by_key.pop(key, None)
+                    self._refs_by_context.pop(context, None)
+                    self._lru_by_via.pop(context, None)
+                    self._refs_by_context.pop(context, None)
+        finally:
+            self._lock.release()
+
     def _connect(self, key, method_name, **kwargs):
         """
         Actual connect implementation. Arranges for the Mitogen connection to
@@ -240,14 +263,24 @@ class ContextService(mitogen.service.Service):
 
         if kwargs.get('via'):
             self._update_lru(context, method_name=method_name, **kwargs)
+        else:
+            # For directly connected contexts, listen to the associated
+            # Stream's disconnect event and use it to invalidate dependent
+            # Contexts.
+            stream = self.router.stream_by_id(context.context_id)
+            mitogen.core.listen(stream, 'disconnect',
+                                lambda: self._on_stream_disconnect(stream))
+
         home_dir = context.call(os.path.expanduser, '~')
 
         # We don't need to wait for the result of this. Ideally we'd check its
         # return value somewhere, but logs will catch a failure anyway.
         context.call_async(ansible_mitogen.target.start_fork_parent)
+
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug
             context.call(debug.dump_to_logger)
+
         self._key_by_context[context] = key
         self._refs_by_context[context] = 0
         return {
