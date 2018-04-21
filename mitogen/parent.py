@@ -699,7 +699,11 @@ class Stream(mitogen.core.Stream):
         LOG.debug('%r.connect(): child process stdin/stdout=%r',
                   self, self.receive_side.fd)
 
-        self._connect_bootstrap(extra_fd)
+        try:
+            self._connect_bootstrap(extra_fd)
+        except Exception:
+            self._reap_child()
+            raise
 
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)
