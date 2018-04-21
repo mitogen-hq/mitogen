@@ -13,3 +13,12 @@
           (not out.results[0].changed) and
           out.results[0].input[0].ANSIBLE_MODULE_ARGS.foo and
           out.results[0].msg == 'Here is my input'
+
+
+    # Verify sys.argv is not Unicode.
+    - custom_python_detect_environment:
+      register: out
+
+    - assert:
+        that:
+          - out.argv_types == ["<type 'str'>"]

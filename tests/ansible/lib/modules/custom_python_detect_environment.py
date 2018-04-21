@@ -14,6 +14,7 @@ def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
         argv=sys.argv,
+        argv_types=[str(type(s)) for s in sys.argv],
         env=dict(os.environ),
         cwd=os.getcwd(),
         python_path=sys.path,
