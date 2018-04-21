@@ -10,6 +10,23 @@ import testlib
 import mitogen.parent
 
 
+def wait_for_child(pid, timeout=1.0):
+    deadline = time.time() + timeout
+    while timeout < time.time():
+        try:
+            target_pid, status = os.waitpid(pid, os.WNOHANG)
+            if target_pid == pid:
+                return
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] == errno.ECHILD:
+                return
+
+        time.sleep(0.05)
+
+    assert False, "wait_for_child() timed out"
+
+
 class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
     def test_connect_timeout(self):
         # Ensure the child process is reaped if the connection times out.
@@ -24,6 +41,7 @@ class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
         self.assertRaises(mitogen.core.TimeoutError,
             lambda: stream.connect()
         )
+        wait_for_child(stream.pid)
         e = self.assertRaises(OSError,
             lambda: os.kill(stream.pid, 0)
         )
@@ -80,6 +98,7 @@ class ContextTest(testlib.RouterMixin, unittest2.TestCase):
         local = self.router.local()
         pid = local.call(os.getpid)
         local.shutdown(wait=True)
+        wait_for_child(pid)
         self.assertRaises(OSError, lambda: os.kill(pid, 0))
 
 
