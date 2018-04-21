@@ -134,20 +134,17 @@ class Process(object):
         self.control.put(('exit', status))
 
     def _on_stdin(self, msg):
-        if msg == mitogen.core._DEAD:
-            return
-
-        data = msg.unpickle(throw=False)
-        if data == mitogen.core._DEAD:
+        if msg.is_dead:
             IOLOG.debug('%r._on_stdin() -> %r', self, data)
             self.pump.close()
             return
 
+        data = msg.unpickle()
         IOLOG.debug('%r._on_stdin() -> len %d', self, len(data))
         self.pump.write(data)
 
     def _on_control(self, msg):
-        if msg != mitogen.core._DEAD:
+        if not msg.is_dead:
             command, arg = msg.unpickle(throw=False)
             LOG.debug('%r._on_control(%r, %s)', self, command, arg)
 

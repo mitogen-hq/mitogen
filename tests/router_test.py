@@ -159,8 +159,8 @@ class CrashTest(testlib.BrokerMixin, unittest2.TestCase):
         self.broker._loop_once = self._naughty
         self.broker.defer(lambda: None)
 
-        # sem should have received _DEAD.
-        self.assertEquals(mitogen.core._DEAD, sem.get())
+        # sem should have received dead message.
+        self.assertTrue(sem.get().is_dead)
 
         # Ensure it was logged.
         expect = '_broker_main() crashed'
@@ -176,7 +176,7 @@ class AddHandlerTest(unittest2.TestCase):
         queue = Queue.Queue()
         handle = router.add_handler(queue.put)
         router.broker.shutdown()
-        self.assertEquals(queue.get(timeout=5), mitogen.core._DEAD)
+        self.assertTrue(queue.get(timeout=5).is_dead)
 
 
 class MessageSizeTest(testlib.BrokerMixin, unittest2.TestCase):
@@ -216,6 +216,48 @@ class MessageSizeTest(testlib.BrokerMixin, unittest2.TestCase):
 
         expect = 'message too large (max 4096 bytes)'
         self.assertTrue(expect in logs.stop())
+
+
+class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
+    def test_invalid_handle_returns_dead(self):
+        # Verify sending a message to an invalid handle yields a dead message
+        # from the target context.
+        l1 = self.router.fork()
+        recv = l1.send_async(mitogen.core.Message(handle=999))
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get()
+        )
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.remote_msg)
+
+    def test_totally_invalid_context_returns_dead(self):
+        recv = mitogen.core.Receiver(self.router)
+        self.router.route(
+            mitogen.core.Message(
+                dst_id=1234,
+                handle=1234,
+                reply_to=recv.handle,
+            )
+        )
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get()
+        )
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+
+    def test_previously_alive_context_returns_dead(self):
+        l1 = self.router.fork()
+        l1.shutdown(wait=True)
+        recv = mitogen.core.Receiver(self.router)
+        self.router.route(
+            mitogen.core.Message(
+                dst_id=l1.context_id,
+                handle=mitogen.core.CALL_FUNCTION,
+                reply_to=recv.handle,
+            )
+        )
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get()
+        )
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
 
 
 if __name__ == '__main__':

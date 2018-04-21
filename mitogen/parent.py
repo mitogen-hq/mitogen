@@ -850,7 +850,7 @@ class RouteMonitor(object):
                 mitogen.core.fire(context, 'disconnect')
 
     def _on_add_route(self, msg):
-        if msg == mitogen.core._DEAD:
+        if msg.is_dead:
             return
 
         target_id_s, _, target_name = msg.data.partition(':')
@@ -870,7 +870,7 @@ class RouteMonitor(object):
         self.propagate(mitogen.core.ADD_ROUTE, target_id, target_name)
 
     def _on_del_route(self, msg):
-        if msg == mitogen.core._DEAD:
+        if msg.is_dead:
             return
 
         target_id = int(msg.data)
@@ -1055,7 +1055,7 @@ class ModuleForwarder(object):
 
     def _on_get_module(self, msg):
         LOG.debug('%r._on_get_module(%r)', self, msg)
-        if msg == mitogen.core._DEAD:
+        if msg.is_dead:
             return
 
         fullname = msg.data

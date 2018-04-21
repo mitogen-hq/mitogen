@@ -112,7 +112,6 @@ def cast(obj):
     if isinstance(obj, str):
         return str(obj)
     if isinstance(obj, (mitogen.core.Context,
-                        mitogen.core.Dead,
                         mitogen.core.CallError)):
         return obj
 

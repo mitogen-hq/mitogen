@@ -294,6 +294,7 @@ parent and child:
       - 4
       - Integer target handle to direct any reply to this message. Used to
         receive a one-time reply, such as the return value of a function call.
+        :data:`IS_DEAD` has a special meaning when it appears in this field.
 
     * - `length`
       - 4
@@ -341,6 +342,22 @@ Masters listen on the following handles:
     million parent contexts to be created and destroyed before the associated
     Router must be recreated.
 
+.. _IS_DEAD:
+.. currentmodule:: mitogen.core
+.. data:: IS_DEAD
+
+    Special value used to signal disconnection or the inability to route a
+    message, when it appears in the `reply_to` field. Usually causes
+    :class:`mitogen.core.ChannelError` to be raised when it is received.
+
+    It indicates the sender did not know how to process the message, or wishes
+    no further messages to be delivered to it. It is used when:
+
+    * a remote receiver is disconnected or explicitly closed.
+    * a related message could not be delivered due to no route existing for it.
+    * a router is being torn down, as a sentinel value to notify
+      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
+
 
 Children listen on the following handles:
 
@@ -373,7 +390,7 @@ Children listen on the following handles:
     imports ``mod_name``, then attempts to execute
     `class_name.func_name(\*args, \**kwargs)`.
 
-    When this channel is closed (by way of sending :py:data:`_DEAD` to it), the
+    When this channel is closed (by way of receiving a dead message), the
     child's main thread begins graceful shutdown of its own :py:class:`Broker`
     and :py:class:`Router`.
 
@@ -382,7 +399,7 @@ Children listen on the following handles:
 .. data:: SHUTDOWN
 
     When received from a child's immediate parent, causes the broker thread to
-    enter graceful shutdown, including writing :py:data:`_DEAD` to the child's
+    enter graceful shutdown, including sending a dead message to the child's
     main thread, causing it to join on the exit of the broker thread.
 
     The final step of a child's broker shutdown process sends
@@ -433,20 +450,6 @@ Additional handles are created to receive the result of every function call
 triggered by :py:meth:`call_async() <mitogen.parent.Context.call_async>`.
 
 
-Sentinel Value
-##############
-
-.. _DEAD:
-.. currentmodule:: mitogen.core
-.. data:: _DEAD
-
-    This special value is used to signal disconnection or closure of the remote
-    end. It is used internally by :py:class:`Channel <mitogen.core.Channel>`
-    and also passed to any function still registered with
-    :py:meth:`add_handler() <mitogen.core.Router.add_handler>` during Broker
-    shutdown.
-
-
 Use of Pickle
 #############
 
@@ -458,7 +461,7 @@ in the bootstrap.
 
 The pickler will instantiate only built-in types and one of 3 constructor
 functions, to support unpickling :py:class:`CallError
-<mitogen.core.CallError>`, :py:data:`_DEAD <mitogen.core._DEAD>`, and
+<mitogen.core.CallError>`, :py:class:`mitogen.core.Sender`,and
 :py:class:`Context <mitogen.core.Context>`.
 
 The choice of Pickle is one area to be revisited later. All accounts suggest it

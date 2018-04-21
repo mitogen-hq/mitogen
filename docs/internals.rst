@@ -400,14 +400,19 @@ Helper Functions
         disconnection was detected, otherwise ``False``.
 
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 
 .. autofunction:: create_child
 
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 
 .. autofunction:: tty_create_child
+
+
+.. currentmodule:: mitogen.parent
+
+.. autofunction:: hybrid_tty_create_child
 
 
 .. currentmodule:: mitogen.master

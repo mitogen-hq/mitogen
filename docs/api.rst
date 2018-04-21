@@ -338,6 +338,12 @@ Message Class
 
     .. attribute:: data
 
+    .. attribute:: is_dead
+
+        :data:`True` if :attr:`reply_to` is set to the magic value
+        :data:`mitogen.core.IS_DEAD`, indicating the sender considers the
+        channel dead.
+
     .. py:method:: __init__ (\**kwargs)
 
         Construct a message from from the supplied `kwargs`. :py:attr:`src_id`
@@ -362,15 +368,18 @@ Message Class
         :raises mitogen.core.CallError:
             The serialized data contained CallError exception.
         :raises mitogen.core.ChannelError:
-            The serialized data contained :py:data:`mitogen.core._DEAD`.
+            The `is_dead` field was set.
 
-    .. method:: reply (obj, \**kwargs)
+    .. method:: reply (obj, router=None, \**kwargs)
 
-        Compose a pickled reply to this message and send it using
-        :py:attr:`router`.
+        Compose a reply to this message and send it using :py:attr:`router`, or
+        `router` is :py:attr:`router` is :data:`None`.
 
         :param obj:
-            Object to serialize.
+            Either a :class:`Message`, or an object to be serialized in order
+            to construct a new message.
+        :param router:
+            Optional router to use if :attr:`router` is :data:`None`.
         :param kwargs:
             Optional keyword parameters overriding message fields in the reply.
 
@@ -429,7 +438,7 @@ Router Class
 
         :param mitogen.core.Context respondent:
             Context that messages to this handle are expected to be sent from.
-            If specified, arranges for :py:data:`_DEAD` to be delivered to `fn`
+            If specified, arranges for a dead message to be delivered to `fn`
             when disconnection of the context is detected.
 
             In future `respondent` will likely also be used to prevent other
@@ -943,7 +952,7 @@ Receiver Class
 
     :param mitogen.core.Context respondent:
         Reference to the context this receiver is receiving from. If not
-        ``None``, arranges for the receiver to receive :py:data:`_DEAD` if
+        ``None``, arranges for the receiver to receive a dead message if
         messages can no longer be routed to the context, due to disconnection
         or exit.
 
@@ -1046,8 +1055,8 @@ Sender Class
 
     .. py:method:: close ()
 
-        Send :py:data:`_DEAD` to the remote end, causing
-        :py:meth:`ChannelError` to be raised in any waiting thread.
+        Send a dead message to the remote end, causing :py:meth:`ChannelError`
+        to be raised in any waiting thread.
 
     .. py:method:: send (data)
 
