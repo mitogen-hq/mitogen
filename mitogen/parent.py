@@ -603,13 +603,20 @@ class Stream(mitogen.core.Stream):
                 return
             raise
 
+        self._reaped = True
         if pid:
             LOG.debug('%r: child process exit status was %d', self, status)
-        else:
-            LOG.debug('%r: child process still alive, sending SIGTERM', self)
+            return
+
+        # For processes like sudo we cannot actually send sudo a signal,
+        # because it is setuid, so this is best-effort only.
+        LOG.debug('%r: child process still alive, sending SIGTERM', self)
+        try:
             os.kill(self.pid, signal.SIGTERM)
-            os.waitpid(self.pid, 0)
-        self._reaped = True
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] != errno.EPERM:
+                raise
 
     def on_disconnect(self, broker):
         self._reap_child()
