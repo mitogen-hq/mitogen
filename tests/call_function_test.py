@@ -25,10 +25,6 @@ def func_with_bad_return_value():
     return CrazyType()
 
 
-def func_returns_dead():
-    return mitogen.core._DEAD
-
-
 def func_accepts_returns_context(context):
     return context
 
@@ -68,9 +64,6 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
                 exc[0],
                 "cannot unpickle '%s'/'CrazyType'" % (__name__,),
         )
-
-    def test_returns_dead(self):
-        self.assertEqual(mitogen.core._DEAD, self.local.call(func_returns_dead))
 
     def test_aborted_on_local_context_disconnect(self):
         stream = self.router._stream_by_id[self.local.context_id]

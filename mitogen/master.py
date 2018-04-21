@@ -295,7 +295,7 @@ class LogForwarder(object):
         )
 
     def _on_forward_log(self, msg):
-        if msg == mitogen.core._DEAD:
+        if msg.is_dead:
             return
 
         logger = self._cache.get(msg.src_id)
@@ -619,7 +619,7 @@ class ModuleResponder(object):
         stream.sent_modules.add(fullname)
 
     def _on_get_module(self, msg):
-        if msg == mitogen.core._DEAD:
+        if msg.is_dead:
             return
 
         LOG.debug('%r._on_get_module(%r)', self, msg.data)
@@ -742,7 +742,7 @@ class IdAllocator(object):
             self.lock.release()
 
     def on_allocate_id(self, msg):
-        if msg == mitogen.core._DEAD:
+        if msg.is_dead:
             return
 
         id_, last_id = self.allocate_block()
