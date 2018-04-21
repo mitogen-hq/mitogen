@@ -35,6 +35,7 @@ RUN yum clean all && \
 DOCKERFILE = r"""
 COPY data/001-mitogen.sudo /etc/sudoers.d/001-mitogen
 RUN \
+    chsh -s /bin/bash && \
     mkdir -p /var/run/sshd && \
     echo i-am-mitogen-test-docker-image > /etc/sentinel && \
     groupadd mitogen__sudo_nopw && \
