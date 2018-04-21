@@ -99,8 +99,8 @@ class Runner(object):
         if raw_params is not None:
             args['_raw_params'] = raw_params
 
-        self.module = module
-        self.remote_tmp = os.path.expanduser(remote_tmp)
+        self.module = utf8(module)
+        self.remote_tmp = utf8(os.path.expanduser(remote_tmp))
         self.service_context = service_context
         self.emulate_tty = emulate_tty
         self.raw_params = raw_params
