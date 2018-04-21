@@ -208,28 +208,26 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
-    def _rewrite_interpreter(self, invocation, interpreter):
-        key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
-        try:
-            template = invocation.task_vars[key].strip()
-            return invocation.templar.template(template)
-        except KeyError:
-            return interpreter
-
-    def plan(self, invocation, **kwargs):
+    def _get_interpreter(self, invocation):
         interpreter, arg = parse_script_interpreter(invocation.module_source)
         if interpreter is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
                 invocation.module_name,
             ))
 
+        key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
+        try:
+            template = invocation.task_vars[key].strip()
+            return invocation.templar.template(template), arg
+        except KeyError:
+            return interpreter, arg
+
+    def plan(self, invocation, **kwargs):
+        interpreter, arg = self._get_interpreter(invocation)
         return super(ScriptPlanner, self).plan(
             invocation=invocation,
             interpreter_arg=arg,
-            interpreter=self._rewrite_interpreter(
-                interpreter=interpreter,
-                invocation=invocation
-            ),
+            interpreter=interpreter,
             **kwargs
         )
 
@@ -300,6 +298,9 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
+
+    def _get_interpreter(self, invocation):
+        return None, None
 
     def get_should_fork(self, invocation):
         """
