@@ -363,7 +363,7 @@ class FileService(mitogen.service.Service):
     Transfers proceeed one-at-a-time per stream. When multiple contexts exist
     reachable over the same stream (e.g. one is the SSH account, another is a
     sudo account, and a third is a proxied SSH connection), each request is
-    satisfied in turn before chunks for subsuquent requests start flowing. This
+    satisfied in turn before chunks for subsequent requests start flowing. This
     ensures when a connection is contended, that preference is given to
     completing individual transfers, rather than potentially aborting many
     partially complete transfers, causing all the bandwidth used to be wasted.
@@ -379,7 +379,7 @@ class FileService(mitogen.service.Service):
            used to communicate with the untrusted context, and begins pumping
            128KiB-sized chunks until that stream's output queue reaches a
            limit (1MiB).
-        4. The thread sleeps for 10ms, wakes, and pumps new chunks as necesarry
+        4. The thread sleeps for 10ms, wakes, and pumps new chunks as necessary
            to refill any drained output queue, which are being asynchronously
            drained by the Stream implementation running on the Broker thread.
         5. Once the last chunk has been pumped for a single transfer,
@@ -500,11 +500,12 @@ class FileService(mitogen.service.Service):
             :meth:`on_shutdown` hasn't been called yet, otherwise
             :data:`False`.
         """
+        if self._schedule_pending:
+            timeout = self.sleep_delay_ms
+        else:
+            timeout = None
+
         try:
-            if self._schedule_pending:
-                timeout = self.sleep_delay_ms
-            else:
-                timeout = None
             sender, fp = self._queue.get(timeout=timeout)
         except mitogen.core.LatchError:
             return False
