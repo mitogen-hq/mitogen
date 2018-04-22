@@ -381,6 +381,14 @@ class FileService(mitogen.service.Service):
         self._thread = threading.Thread(target=self._scheduler_main)
         self._thread.start()
 
+    def on_shutdown(self):
+        """
+        Respond to shutdown of the service pool by marking our queue closed.
+        This causes :meth:`_sleep_on_queue` to wake immediately and return
+        :data:`False`, causing the scheduler thread main function to exit.
+        """
+        self._queue.close()
+
     def _pending_bytes(self, stream):
         """
         Defer a function call to the Broker thread in order to accurately
