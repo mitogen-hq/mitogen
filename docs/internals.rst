@@ -204,6 +204,25 @@ Stream Classes
 .. autoclass:: Stream
    :members:
 
+   .. method:: pending_bytes ()
+
+        Returns the number of bytes queued for transmission on this stream.
+        This can be used to limit the amount of data buffered in RAM by an
+        otherwise unlimited consumer.
+
+        For an accurate result, this method should be called from the Broker
+        thread, using a wrapper like:
+
+        ::
+
+            def get_pending_bytes(self, stream):
+                latch = mitogen.core.Latch()
+                self.broker.defer(
+                    lambda: latch.put(stream.pending_bytes())
+                )
+                return latch.get()
+
+
 .. currentmodule:: mitogen.fork
 
 .. autoclass:: Stream

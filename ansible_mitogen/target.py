@@ -32,6 +32,7 @@ for file transfer, module execution and sundry bits like changing file modes.
 """
 
 from __future__ import absolute_import
+import cStringIO
 import json
 import logging
 import operator
@@ -64,6 +65,48 @@ _file_cache = {}
 _fork_parent = None
 
 
+def _get_file(context, path, out_fp):
+    """
+    Streamily download a file from the connection multiplexer process in the
+    controller.
+
+    :param mitogen.core.Context context:
+        Reference to the context hosting the FileService that will be used to
+        fetch the file.
+    :param bytes in_path:
+        FileService registered name of the input file.
+    :param bytes out_path:
+        Name of the output path on the local disk.
+    :returns:
+        :data:`True` on success, or :data:`False` if the transfer was
+        interrupted and the output should be discarded.
+    """
+    LOG.debug('_get_file(): fetching %r from %r', path, context)
+    recv = mitogen.core.Receiver(router=context.router)
+    size = mitogen.service.call(
+        context=context,
+        handle=ansible_mitogen.services.FileService.handle,
+        method='fetch',
+        kwargs={
+            'path': path,
+            'sender': recv.to_sender()
+        }
+    )
+
+    for chunk in recv:
+        s = chunk.unpickle()
+        LOG.debug('_get_file(%r): received %d bytes', path, len(s))
+        out_fp.write(s)
+
+    if out_fp.tell() != size:
+        LOG.error('get_file(%r): receiver was closed early, controller '
+                  'is likely shutting down.', path)
+
+    LOG.debug('target.get_file(): fetched %d bytes of %r from %r',
+              size, path, context)
+    return out_fp.tell() == size
+
+
 def get_file(context, path):
     """
     Basic in-memory caching module fetcher. This generates an one roundtrip for
@@ -79,20 +122,38 @@ def get_file(context, path):
         Bytestring file data.
     """
     if path not in _file_cache:
-        LOG.debug('target.get_file(): fetching %r from %r', path, context)
-        _file_cache[path] = zlib.decompress(
-            mitogen.service.call(
-                context=context,
-                handle=ansible_mitogen.services.FileService.handle,
-                method='fetch',
-                kwargs={
-                    'path': path
-                }
-            )
-        )
-        LOG.debug('target.get_file(): fetched %r from %r', path, context)
-
+        io = cStringIO.StringIO()
+        if not _get_file(context, path, io):
+            raise IOError('transfer of %r was interrupted.' % (path,))
+        _file_cache[path] = io.getvalue()
     return _file_cache[path]
+
+
+def transfer_file(context, in_path, out_path):
+    """
+    Streamily download a file from the connection multiplexer process in the
+    controller.
+
+    :param mitogen.core.Context context:
+        Reference to the context hosting the FileService that will be used to
+        fetch the file.
+    :param bytes in_path:
+        FileService registered name of the input file.
+    :param bytes out_path:
+        Name of the output path on the local disk.
+    """
+    fp = open(out_path+'.tmp', 'wb', mitogen.core.CHUNK_SIZE)
+    try:
+        try:
+            if not _get_file(context, in_path, fp):
+                raise IOError('transfer of %r was interrupted.' % (in_path,))
+        except Exception:
+            os.unlink(fp.name)
+            raise
+    finally:
+        fp.close()
+
+    os.rename(out_path + '.tmp', out_path)
 
 
 @mitogen.core.takes_econtext

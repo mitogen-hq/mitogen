@@ -5,15 +5,15 @@ Ansible Extension
 .. image:: images/ansible/cell_division.png
     :align: right
 
-An experimental extension to `Ansible`_ is included that implements host
-connections over Mitogen, replacing embedded shell invocations with pure-Python
-equivalents invoked via highly efficient remote procedure calls tunnelled over
-SSH. No changes are required to the target hosts.
+An extension to `Ansible`_ is included that implements host connections over
+Mitogen, replacing embedded shell invocations with pure-Python equivalents
+invoked via highly efficient remote procedure calls tunnelled over SSH. No
+changes are required to the target hosts.
 
-The extension isn't nearly in a generally dependable state yet, however it
-already works well enough for testing against real-world playbooks. `Bug
-reports`_ in this area are very welcome – Ansible is a huge beast, and only
-significant testing will prove the extension's soundness.
+The extension is approaching a generally dependable state, and works well for
+many real-world playbooks. `Bug reports`_ in this area are very welcome –
+Ansible is a huge beast, and only significant testing will prove the
+extension's soundness.
 
 Divergence from Ansible's normal behaviour is considered a bug, so please
 report anything you notice, regardless of how inconsequential it may seem.
@@ -98,8 +98,7 @@ Installation
 
 .. caution::
 
-    Thoroughly review the list of limitations before use, and **do not test the
-    prototype in a live environment until this notice is removed**.
+    Please review the behavioural differences documented below prior to use.
 
 1. Verify Ansible 2.4 and Python 2.7 are listed in the output of ``ansible
    --version``
@@ -122,22 +121,6 @@ Installation
 
 Limitations
 -----------
-
-This is a proof of concept: issues below are exclusively due to code immaturity.
-
-High Risk
-~~~~~~~~~
-
-* Transfer of large files using certain Ansible-internal APIs, such as
-  triggered via the ``copy`` module, will cause corresponding memory and CPU
-  spikes on both host and target machine, due to delivering the file as a
-  single message. If many machines are targetted, the controller could easily
-  exhaust available RAM. This will be fixed soon as it's likely to be tickled
-  by common playbooks.
-
-
-Low Risk
-~~~~~~~~
 
 * Only Ansible 2.4 is being used for development, with occasional tests under
   2.5, 2.3 and 2.2. It should be more than possible to fully support at least
