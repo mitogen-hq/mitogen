@@ -224,39 +224,49 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         # from the target context.
         l1 = self.router.fork()
         recv = l1.send_async(mitogen.core.Message(handle=999))
+        msg = recv.get(throw_dead=False)
+        self.assertEquals(msg.is_dead, True)
+        self.assertEquals(msg.src_id, l1.context_id)
+
+        recv = l1.send_async(mitogen.core.Message(handle=999))
         e = self.assertRaises(mitogen.core.ChannelError,
-            lambda: recv.get()
-        )
+                              lambda: recv.get())
         self.assertEquals(e.args[0], mitogen.core.ChannelError.remote_msg)
 
     def test_totally_invalid_context_returns_dead(self):
         recv = mitogen.core.Receiver(self.router)
-        self.router.route(
-            mitogen.core.Message(
-                dst_id=1234,
-                handle=1234,
-                reply_to=recv.handle,
-            )
+        msg = mitogen.core.Message(
+            dst_id=1234,
+            handle=1234,
+            reply_to=recv.handle,
         )
+        self.router.route(msg)
+        rmsg = recv.get(throw_dead=False)
+        self.assertEquals(rmsg.is_dead, True)
+        self.assertEquals(rmsg.src_id, mitogen.context_id)
+
+        self.router.route(msg)
         e = self.assertRaises(mitogen.core.ChannelError,
-            lambda: recv.get()
-        )
+                              lambda: recv.get())
         self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
 
     def test_previously_alive_context_returns_dead(self):
         l1 = self.router.fork()
         l1.shutdown(wait=True)
         recv = mitogen.core.Receiver(self.router)
-        self.router.route(
-            mitogen.core.Message(
-                dst_id=l1.context_id,
-                handle=mitogen.core.CALL_FUNCTION,
-                reply_to=recv.handle,
-            )
+        msg = mitogen.core.Message(
+            dst_id=l1.context_id,
+            handle=mitogen.core.CALL_FUNCTION,
+            reply_to=recv.handle,
         )
+        self.router.route(msg)
+        rmsg = recv.get(throw_dead=False)
+        self.assertEquals(rmsg.is_dead, True)
+        self.assertEquals(rmsg.src_id, mitogen.context_id)
+
+        self.router.route(msg)
         e = self.assertRaises(mitogen.core.ChannelError,
-            lambda: recv.get()
-        )
+                              lambda: recv.get())
         self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
 
 
