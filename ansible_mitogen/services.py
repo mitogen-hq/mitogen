@@ -422,7 +422,7 @@ class FileService(mitogen.service.Service):
     #: max_queue_size=1MiB and a sleep of 10ms, maximum throughput on any
     #: single stream is 112MiB/sec, which is >5x what SSH can handle on my
     #: laptop.
-    sleep_delay_ms = 0.01
+    sleep_delay_secs = 0.01
 
     def __init__(self, router):
         super(FileService, self).__init__(router)
@@ -430,7 +430,7 @@ class FileService(mitogen.service.Service):
         self._size_by_path = {}
         #: Queue used to communicate from service to scheduler thread.
         self._queue = mitogen.core.Latch()
-        #: Mapping of Stream->[(sender, fp)].
+        #: Mapping of Stream->[(Sender, file object)].
         self._pending_by_stream = {}
         self._thread = threading.Thread(target=self._scheduler_main)
         self._thread.start()
@@ -488,9 +488,9 @@ class FileService(mitogen.service.Service):
 
     def _sleep_on_queue(self):
         """
-        Sleep indefinitely (no active transfers) or for :attr:`sleep_delay_ms`
-        (active transfers) waiting for a new transfer request to arrive from
-        the :meth:`fetch` method.
+        Sleep indefinitely (no active transfers) or for
+        :attr:`sleep_delay_secs` (active transfers) waiting for a new transfer
+        request to arrive from the :meth:`fetch` method.
 
         If a new request arrives, add it to the appropriate list in
         :attr:`_pending_by_stream`.
@@ -501,7 +501,7 @@ class FileService(mitogen.service.Service):
             :data:`False`.
         """
         if self._pending_by_stream:
-            timeout = self.sleep_delay_ms
+            timeout = self.sleep_delay_secs
         else:
             timeout = None
 
