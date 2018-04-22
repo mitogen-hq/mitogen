@@ -448,7 +448,7 @@ class FileService(mitogen.service.Service):
         Defer a function call to the Broker thread in order to accurately
         measure the bytes pending in `stream`'s queue.
 
-        This must be done synchronized with the Broker, as scheduler
+        This must be done synchronized with the Broker, as OS scheduler
         uncertainty could cause Sender.send()'s deferred enqueues to be
         processed very late, making the output queue look much emptier than it
         really is (or is about to become).
