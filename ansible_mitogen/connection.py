@@ -41,7 +41,7 @@ import mitogen.utils
 
 import ansible_mitogen.target
 import ansible_mitogen.process
-from ansible_mitogen.services import ContextService
+import ansible_mitogen.services
 
 
 LOG = logging.getLogger(__name__)
@@ -160,7 +160,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def _wrap_connect(self, on_error, kwargs):
         dct = mitogen.service.call(
             context=self.parent,
-            handle=ContextService.handle,
+            handle=ansible_mitogen.services.ContextService.handle,
             method='get',
             kwargs=mitogen.utils.cast(kwargs),
         )
@@ -300,7 +300,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             if context:
                 mitogen.service.call(
                     context=self.parent,
-                    handle=ContextService.handle,
+                    handle=ansible_mitogen.services.ContextService.handle,
                     method='put',
                     kwargs={
                         'context': context
@@ -398,12 +398,25 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     def put_file(self, in_path, out_path):
         """
-        Implement put_file() by caling the corresponding
-        ansible_mitogen.target function in the target.
+        Implement put_file() by streamily transferring the file via
+        FileService.
 
         :param str in_path:
             Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
         """
-        self.put_data(out_path, ansible_mitogen.target.read_path(in_path))
+        mitogen.service.call(
+            context=self.parent,
+            handle=ansible_mitogen.services.FileService.handle,
+            method='register',
+            kwargs={
+                'path': mitogen.utils.cast(in_path)
+            }
+        )
+        self.call(
+            ansible_mitogen.target.transfer_file,
+            context=self.parent,
+            in_path=in_path,
+            out_path=out_path
+        )

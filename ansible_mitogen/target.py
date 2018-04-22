@@ -66,7 +66,22 @@ _fork_parent = None
 
 
 def _get_file(context, path, out_fp):
-    LOG.debug('get_file(): fetching %r from %r', path, context)
+    """
+    Streamily download a file from the connection multiplexer process in the
+    controller.
+
+    :param mitogen.core.Context context:
+        Reference to the context hosting the FileService that will be used to
+        fetch the file.
+    :param bytes in_path:
+        FileService registered name of the input file.
+    :param bytes out_path:
+        Name of the output path on the local disk.
+    :returns:
+        :data:`True` on success, or :data:`False` if the transfer was
+        interrupted and the output should be discarded.
+    """
+    LOG.debug('_get_file(): fetching %r from %r', path, context)
     recv = mitogen.core.Receiver(router=context.router)
     size = mitogen.service.call(
         context=context,
@@ -85,12 +100,11 @@ def _get_file(context, path, out_fp):
 
     if out_fp.tell() != size:
         LOG.error('get_file(%r): receiver was closed early, controller '
-                  'is likely shutting down. Truncating output file.', path)
-        out_fp.truncate(0)
+                  'is likely shutting down.', path)
 
     LOG.debug('target.get_file(): fetched %d bytes of %r from %r',
               size, path, context)
-    return size
+    return out_fp.tell() == size
 
 
 def get_file(context, path):
@@ -109,9 +123,37 @@ def get_file(context, path):
     """
     if path not in _file_cache:
         io = cStringIO.StringIO()
-        _get_file(context, path, io)
+        if not _get_file(context, path, io):
+            raise IOError('transfer of %r was interrupted.' % (path,))
         _file_cache[path] = io.getvalue()
     return _file_cache[path]
+
+
+def transfer_file(context, in_path, out_path):
+    """
+    Streamily download a file from the connection multiplexer process in the
+    controller.
+
+    :param mitogen.core.Context context:
+        Reference to the context hosting the FileService that will be used to
+        fetch the file.
+    :param bytes in_path:
+        FileService registered name of the input file.
+    :param bytes out_path:
+        Name of the output path on the local disk.
+    """
+    fp = open(out_path+'.tmp', 'wb', mitogen.core.CHUNK_SIZE)
+    try:
+        try:
+            if not _get_file(context, in_path, fp):
+                raise IOError('transfer of %r was interrupted.' % (in_path,))
+        except Exception:
+            os.unlink(fp.name)
+            raise
+    finally:
+        fp.close()
+
+    os.rename(out_path + '.tmp', out_path)
 
 
 @mitogen.core.takes_econtext
