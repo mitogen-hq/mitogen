@@ -420,7 +420,7 @@ class FileService(mitogen.service.Service):
     #: Time spent by the scheduler thread asleep when it has no more data to
     #: pump, but while at least one transfer remains active. With
     #: max_queue_size=1MiB and a sleep of 10ms, maximum throughput on any
-    #: single stream is 100MiB/sec, which is 5x what SSH can handle on my
+    #: single stream is 112MiB/sec, which is >5x what SSH can handle on my
     #: laptop.
     sleep_delay_ms = 0.01
 
@@ -500,7 +500,7 @@ class FileService(mitogen.service.Service):
             :meth:`on_shutdown` hasn't been called yet, otherwise
             :data:`False`.
         """
-        if self._schedule_pending:
+        if self._pending_by_stream:
             timeout = self.sleep_delay_ms
         else:
             timeout = None
@@ -523,7 +523,7 @@ class FileService(mitogen.service.Service):
         """
         Scheduler thread's main function. Sleep until
         :meth:`_sleep_on_queue` indicates the queue has been shut down,
-        pending pending file chunks each time we wake.
+        pumping pending file chunks each time we wake.
         """
         while self._sleep_on_queue():
             for stream, pending in list(self._pending_by_stream.items()):
