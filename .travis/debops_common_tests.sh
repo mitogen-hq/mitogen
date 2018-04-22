@@ -4,6 +4,7 @@
 TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TARGET_COUNT="${TARGET_COUNT:-2}"
+ANSIBLE_VERSION="${ANSIBLE_VERSION:-2.4.3.0}"
 MITOGEN_TEST_DISTRO=debian  # Naturally DebOps only supports Debian.
 
 export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
@@ -26,7 +27,7 @@ mkdir "$TMPDIR"
 
 
 echo travis_fold:start:job_setup
-pip install -qqqU debops==0.7.2 ansible==2.4.3.0
+pip install -qqqU debops==0.7.2 ansible==${ANSIBLE_VERSION}
 debops-init "$TMPDIR/project"
 cd "$TMPDIR/project"
 

@@ -386,6 +386,8 @@ class NewStyleRunner(ScriptRunner):
     def _run(self):
         code = self._get_code()
         mod = types.ModuleType('__main__')
+        mod.__file__ = self.program_fp.name
+        mod.__package__ = None
         d = vars(mod)
         e = None
 

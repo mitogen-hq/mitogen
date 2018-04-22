@@ -441,10 +441,10 @@ class Receiver(object):
     def empty(self):
         return self._latch.empty()
 
-    def get(self, timeout=None, block=True):
+    def get(self, timeout=None, block=True, throw_dead=True):
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
         msg = self._latch.get(timeout=timeout, block=block)
-        if msg.is_dead:
+        if msg.is_dead and throw_dead:
             if msg.src_id == mitogen.context_id:
                 raise ChannelError(ChannelError.local_msg)
             else:
