@@ -368,7 +368,7 @@ class FileService(mitogen.service.Service):
     #: pump. With max_queue_size=1MiB and a sleep of 10ms, maximum throughput
     #: on any single stream is 100MiB/sec, which is 5x what SSH can handle on
     #: my laptop.
-    sleep_delay = 0.01
+    sleep_delay_ms = 0.01
 
     def __init__(self, router):
         super(FileService, self).__init__(router)

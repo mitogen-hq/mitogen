@@ -125,20 +125,6 @@ Limitations
 
 This is a proof of concept: issues below are exclusively due to code immaturity.
 
-High Risk
-~~~~~~~~~
-
-* Transfer of large files using certain Ansible-internal APIs, such as
-  triggered via the ``copy`` module, will cause corresponding memory and CPU
-  spikes on both host and target machine, due to delivering the file as a
-  single message. If many machines are targetted, the controller could easily
-  exhaust available RAM. This will be fixed soon as it's likely to be tickled
-  by common playbooks.
-
-
-Low Risk
-~~~~~~~~
-
 * Only Ansible 2.4 is being used for development, with occasional tests under
   2.5, 2.3 and 2.2. It should be more than possible to fully support at least
   2.3, if not also 2.2.
