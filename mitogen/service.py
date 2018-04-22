@@ -143,6 +143,11 @@ class Service(object):
             self.__class__.__name__,
         )
 
+    def on_shutdown(self):
+        """
+        Called by Pool.shutdown() once the last worker thread has exitted.
+        """
+
     def dispatch(self, args, msg):
         raise NotImplementedError()
 
@@ -307,6 +312,8 @@ class Pool(object):
         self._select.close()
         for th in self._threads:
             th.join()
+        for service in self.services:
+            service.on_shutdown()
 
     def _worker_run(self):
         while True:
