@@ -1,6 +1,6 @@
 
 - name: integration/runner/forking_behaviour.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
 

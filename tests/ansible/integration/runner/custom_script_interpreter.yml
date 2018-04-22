@@ -1,5 +1,5 @@
 - name: integration/runner/custom_script_interpreter.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
 

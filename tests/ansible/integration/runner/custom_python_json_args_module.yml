@@ -1,5 +1,5 @@
 - name: integration/runner__custom_python_json_args_module.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
     - custom_python_json_args_module:

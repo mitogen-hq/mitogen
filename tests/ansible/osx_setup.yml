@@ -6,7 +6,7 @@
 # WARNING: this creates non-privilged accounts with pre-set passwords!
 #
 
-- hosts: all
+- hosts: test-targets
   gather_facts: true
   become: true
   tasks:
