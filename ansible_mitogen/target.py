@@ -32,6 +32,7 @@ for file transfer, module execution and sundry bits like changing file modes.
 """
 
 from __future__ import absolute_import
+import cStringIO
 import json
 import logging
 import operator
@@ -64,6 +65,34 @@ _file_cache = {}
 _fork_parent = None
 
 
+def _get_file(context, path, out_fp):
+    LOG.debug('get_file(): fetching %r from %r', path, context)
+    recv = mitogen.core.Receiver(router=context.router)
+    size = mitogen.service.call(
+        context=context,
+        handle=ansible_mitogen.services.FileService.handle,
+        method='fetch',
+        kwargs={
+            'path': path,
+            'sender': recv.to_sender()
+        }
+    )
+
+    for chunk in recv:
+        s = chunk.unpickle()
+        LOG.debug('_get_file(%r): received %d bytes', path, len(s))
+        out_fp.write(s)
+
+    if out_fp.tell() != size:
+        LOG.error('get_file(%r): receiver was closed early, controller '
+                  'is likely shutting down. Truncating output file.', path)
+        out_fp.truncate(0)
+
+    LOG.debug('target.get_file(): fetched %d bytes of %r from %r',
+              size, path, context)
+    return size
+
+
 def get_file(context, path):
     """
     Basic in-memory caching module fetcher. This generates an one roundtrip for
@@ -79,19 +108,9 @@ def get_file(context, path):
         Bytestring file data.
     """
     if path not in _file_cache:
-        LOG.debug('target.get_file(): fetching %r from %r', path, context)
-        _file_cache[path] = zlib.decompress(
-            mitogen.service.call(
-                context=context,
-                handle=ansible_mitogen.services.FileService.handle,
-                method='fetch',
-                kwargs={
-                    'path': path
-                }
-            )
-        )
-        LOG.debug('target.get_file(): fetched %r from %r', path, context)
-
+        io = cStringIO.StringIO()
+        _get_file(context, path, io)
+        _file_cache[path] = io.getvalue()
     return _file_cache[path]
 
 
