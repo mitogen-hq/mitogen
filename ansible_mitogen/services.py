@@ -575,8 +575,6 @@ class FileService(mitogen.service.Service):
             raise mitogen.core.CallError(self.unregistered_msg)
 
         LOG.debug('Serving %r', path)
-        self._queue.put((
-            sender,
-            open(path, 'rb', mitogen.core.CHUNK_SIZE),
-        ))
+        fp = open(path, 'rb', mitogen.core.CHUNK_SIZE)
+        self._queue.put((sender, fp))
         return self._size_by_path[path]
