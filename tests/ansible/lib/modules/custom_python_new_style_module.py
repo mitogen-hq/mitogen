@@ -21,6 +21,11 @@ input_json = sys.stdin.read()
 
 print "{"
 print "  \"changed\": false,"
+# v2.5.1. apt.py started depending on this.
+# https://github.com/dw/mitogen/issues/210
+print "  \"__file__\": \"%s\"," % (__file__,)
+# Python sets this during a regular import.
+print "  \"__package__\": \"%s\"," % (__package__,)
 print "  \"msg\": \"Here is my input\","
 print "  \"source\": [%s]," % (json.dumps(me),)
 print "  \"input\": [%s]" % (input_json,)
