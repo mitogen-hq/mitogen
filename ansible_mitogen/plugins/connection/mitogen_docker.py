@@ -51,6 +51,6 @@ except ImportError:
     sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
     del base_dir
 
-from ansible_mitogen.connection import Connection
+from ansible_mitogen.connection import DockerConnection as Connection
 del os
 del sys
