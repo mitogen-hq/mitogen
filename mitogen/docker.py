@@ -38,9 +38,12 @@ LOG = logging.getLogger(__name__)
 class Stream(mitogen.parent.Stream):
     container = None
     image = None
+    username = None
     docker_path = 'docker'
 
-    def construct(self, container=None, image=None, docker_path=None, **kwargs):
+    def construct(self, container=None, image=None,
+                  docker_path=None, username=None,
+                  **kwargs):
         assert container or image
         super(Stream, self).construct(**kwargs)
         if container:
@@ -49,16 +52,22 @@ class Stream(mitogen.parent.Stream):
             self.image = image
         if docker_path:
             self.docker_path = docker_path
+        if username:
+            self.username = username
 
     def connect(self):
         super(Stream, self).connect()
         self.name = 'docker.' + (self.container or self.image)
 
     def get_boot_command(self):
+        args = ['--interactive']
+        if self.username:
+            args += ['--user=' + self.username]
+
         bits = [self.docker_path]
         if self.container:
-            bits += ['exec', '-i', self.container]
+            bits += ['exec'] + args + [self.container]
         elif self.image:
-            bits += ['run', '-i', '--rm', self.image]
-        bits += super(Stream, self).get_boot_command()
-        return bits
+            bits += ['run'] + args + ['--rm', self.image]
+
+        return bits + super(Stream, self).get_boot_command()

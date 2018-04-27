@@ -467,10 +467,10 @@ Sudo
 Docker
 ~~~~~~
 
-Docker support has received relatively little testing, expect increased
-probability of surprises for the time being.
+Docker support is fairly new, expect increased surprises for now.
 
-* ``ansible_host``
+* ``ansible_host``: Name of Docker container.
+* ``ansible_user``: Name of user within the container to execute as.
 
 
 Debugging
