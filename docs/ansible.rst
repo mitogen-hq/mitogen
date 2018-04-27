@@ -237,10 +237,11 @@ command line, or as host and group variables.
     [dc2:vars]
     mitogen_via = bastion.dc2
 
-    # Prod bastions are reachable via a corporate network gateway.
+    # Prod bastions are reachable via a magic account on a
+    # corporate network gateway.
     [bastions]
-    bastion.dc1 mitogen_via=corp-gateway.internal
-    bastion.dc2 mitogen_via=corp-gateway.internal
+    bastion.dc1 mitogen_via=prod-ssh-access@corp-gateway.internal
+    bastion.dc2 mitogen_via=prod-ssh-access@corp-gateway.internal
 
     [corp-gateway]
     corp-gateway.internal
