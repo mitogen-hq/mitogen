@@ -116,8 +116,14 @@ Noteworthy Differences
 * The ``sudo`` become method is available and ``su`` is planned. File bugs to
   register interest in additional methods.
 
-* The ``docker``, ``jail``, ``local``, ``lxc``, ``lxd`` and ``ssh`` connection
-  types are available, with more planned. File bugs to register interest.
+* The `docker <https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_,
+  `jail <https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_,
+  `local <https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_,
+  `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_,
+  `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
+  and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
+  connection types are available, with more planned. File bugs to register
+  interest.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -474,7 +480,7 @@ Docker
 FreeBSD Jails
 ~~~~~~~~~~~~~
 
-* ``ansible_host``: Name of Jail container (default: inventory hostname).
+* ``ansible_host``: Name of jail (default: inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
 
 
