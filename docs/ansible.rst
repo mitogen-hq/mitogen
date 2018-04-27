@@ -476,8 +476,13 @@ Docker support is fairly new, expect increased surprises for now.
 LXC
 ~~~
 
-LXC support is fairly new, expect increased surprises for now. The
-``lxc-attach`` command is required to be available on the host machine.
+LXC support is fairly new, expect increased surprises for now. Both ``lxc`` and
+``lxd`` connection plug-ins are hijacked, however the resulting implementation
+always uses the ``lxc-attach`` command line tool rather than th LXC Python
+bindings.
+
+Consequently the ``lxc-attach`` command is required to be available on the host
+machine.
 
 * ``ansible_host``: Name of LXC container.
 

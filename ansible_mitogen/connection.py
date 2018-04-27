@@ -117,6 +117,7 @@ CONNECTION_METHOD = {
     'docker': _connect_docker,
     'local': _connect_local,
     'lxc': _connect_lxc,
+    'lxd': _connect_lxc,
     'ssh': _connect_ssh,
     'sudo': _connect_sudo,
 }
@@ -510,3 +511,7 @@ class DockerConnection(Connection):
 
 class LxcConnection(Connection):
     transport = 'lxc'
+
+
+class LxdConnection(Connection):
+    transport = 'lxd'
