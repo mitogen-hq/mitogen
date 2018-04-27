@@ -685,6 +685,7 @@ class Stream(mitogen.core.Stream):
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.max_message_size,
+            'version': mitogen.__version__,
         }
 
     def get_preamble(self):

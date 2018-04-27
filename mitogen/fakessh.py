@@ -350,6 +350,7 @@ def run(dest, router, args, deadline=None, econtext=None):
                 'parent_ids': parent_ids,
                 'profiling': getattr(router, 'profiling', False),
                 'setup_stdio': False,
+                'version': mitogen.__version__,
             },))
         finally:
             fp.close()

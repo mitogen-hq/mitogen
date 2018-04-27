@@ -17,6 +17,7 @@ mitogen Package
 
 .. automodule:: mitogen
 
+.. autodata:: mitogen.__version__
 .. autodata:: mitogen.is_master
 .. autodata:: mitogen.context_id
 .. autodata:: mitogen.parent_id

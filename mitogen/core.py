@@ -1586,7 +1586,8 @@ class ExternalContext(object):
         sys.modules['mitogen.core'] = mitogen.core
         del sys.modules['__main__']
 
-    def _setup_globals(self, context_id, parent_ids):
+    def _setup_globals(self, version, context_id, parent_ids):
+        mitogen.__version__ = version
         mitogen.is_master = False
         mitogen.context_id = context_id
         mitogen.parent_ids = parent_ids
@@ -1646,7 +1647,7 @@ class ExternalContext(object):
         self.dispatch_stopped = True
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
-             max_message_size, in_fd=100, out_fd=1, core_src_fd=101,
+             max_message_size, version, in_fd=100, out_fd=1, core_src_fd=101,
              setup_stdio=True, setup_package=True, importer=None,
              whitelist=(), blacklist=()):
         self._setup_master(max_message_size, profiling, parent_ids[0],
@@ -1657,7 +1658,7 @@ class ExternalContext(object):
                 self._setup_importer(importer, core_src_fd, whitelist, blacklist)
                 if setup_package:
                     self._setup_package()
-                self._setup_globals(context_id, parent_ids)
+                self._setup_globals(version, context_id, parent_ids)
                 if setup_stdio:
                     self._setup_stdio()
 

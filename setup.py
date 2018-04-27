@@ -28,9 +28,19 @@
 
 from setuptools import find_packages, setup
 
+
+def grep_version():
+    path = os.path.join(os.path.dirname(__file__), 'mitogen/__init__.py')
+    with open(path) as fp:
+        for line in fp:
+            if line.startswith('__version__'):
+                _, _, s = line.partition('=')
+                return '.'.join(map(str, eval(s)))
+
+
 setup(
     name = 'mitogen',
-    version = '0.0.2',
+    version = grep_version(),
     description = 'Library for writing distributed self-replicating programs.',
     author = 'David Wilson',
     license = 'New BSD',
