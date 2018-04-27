@@ -243,7 +243,7 @@ def create_socketpair():
     return parentfp, childfp
 
 
-def create_child(*args):
+def create_child(args):
     """
     Create a child process whose stdin/stdout is connected to a socket.
 
@@ -284,7 +284,7 @@ def _acquire_controlling_tty():
         fcntl.ioctl(2, termios.TIOCSCTTY)
 
 
-def tty_create_child(*args):
+def tty_create_child(args):
     """
     Return a file descriptor connected to the master end of a pseudo-terminal,
     whose slave end is connected to stdin/stdout/stderr of a new child process.
@@ -318,7 +318,7 @@ def tty_create_child(*args):
     return proc.pid, master_fd, None
 
 
-def hybrid_tty_create_child(*args):
+def hybrid_tty_create_child(args):
     """
     Like :func:`tty_create_child`, except attach stdin/stdout to a socketpair
     like :func:`create_child`, but leave stderr and the controlling TTY
@@ -701,7 +701,7 @@ class Stream(mitogen.core.Stream):
     def start_child(self):
         args = self.get_boot_command()
         try:
-            return self.create_child(*args)
+            return self.create_child(args)
         except OSError:
             e = sys.exc_info()[1]
             msg = 'Child start failed: %s. Command was: %s' % (e, Argv(args))
