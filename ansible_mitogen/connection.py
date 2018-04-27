@@ -95,7 +95,7 @@ def _connect_sudo(spec):
             'username': spec['become_user'],
             'password': spec['become_pass'],
             'python_path': spec['python_path'],
-            'sudo_path': spec['sudo_exe'],
+            'sudo_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
             'sudo_args': spec['sudo_args'],
         }
@@ -141,7 +141,7 @@ def config_from_play_context(transport, inventory_name, connection):
             )
             for term in shlex.split(s or '')
         ],
-        'sudo_exe': connection._play_context.sudo_exe,
+        'become_exe': connection._play_context.become_exe,
         'sudo_args': [
             term
             for s in (
@@ -199,9 +199,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to 'ansible_python_interpreter' by on_action_run().
     python_path = None
 
-    #: Set to 'ansible_sudo_exe' by on_action_run().
-    sudo_exe = None
-
     #: Set to 'ansible_ssh_timeout' by on_action_run().
     ansible_ssh_timeout = None
 
@@ -242,7 +239,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.ansible_ssh_timeout = task_vars.get('ansible_ssh_timeout')
         self.python_path = task_vars.get('ansible_python_interpreter',
                                          '/usr/bin/python')
-        self.sudo_exe = task_vars.get('ansible_sudo_exe', C.DEFAULT_SUDO_EXE)
         self.mitogen_via = task_vars.get('mitogen_via')
         self.inventory_hostname = task_vars['inventory_hostname']
         self.host_vars = task_vars['hostvars']
