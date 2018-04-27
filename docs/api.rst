@@ -704,13 +704,32 @@ Router Class
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
         :param str container:
-            Existing container to connect to. Defaults to ``None``.
+            Existing container to connect to. Defaults to :data:`None`.
+        :param str username:
+            Username within the container to :func:`setuid` to. Defaults to
+            :data:`None`, which Docker interprets as ``root``.
         :param str image:
             Image tag to use to construct a temporary container. Defaults to
             ``None``.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
+
+    .. method:: jail (container, jexec_path=None, \**kwargs)
+
+        Construct a context on the local machine within a FreeBSD jail. The
+        ``jexec`` program must be available.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str container:
+            Existing container to connect to. Defaults to :data:`None`.
+        :param str username:
+            Username within the container to :func:`setuid` to. Defaults to
+            :data:`None`, which ``jexec`` interprets as ``root``.
+        :param str jexec_path:
+            Filename or complete path to the ``jexec`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``/usr/sbin/jexec``.
 
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 

@@ -26,42 +26,31 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import os.path
+import sys
 
-import mitogen.core
-import mitogen.parent
+#
+# This is not the real Connection implementation module, it simply exists as a
+# proxy to the real module, which is loaded using Python's regular import
+# mechanism, to prevent Ansible's PluginLoader from making up a fake name that
+# results in ansible_mitogen plugin modules being loaded twice: once by
+# PluginLoader with a name like "ansible.plugins.connection.mitogen", which is
+# stuffed into sys.modules even though attempting to import it will trigger an
+# ImportError, and once under its canonical name, "ansible_mitogen.connection".
+#
+# Therefore we have a proxy module that imports it under the real name, and
+# sets up the duff PluginLoader-imported module to just contain objects from
+# the real module, so duplicate types don't exist in memory, and things like
+# debuggers and isinstance() work predictably.
+#
 
+try:
+    import ansible_mitogen
+except ImportError:
+    base_dir = os.path.dirname(__file__)
+    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
+    del base_dir
 
-LOG = logging.getLogger(__name__)
-
-
-class Stream(mitogen.parent.Stream):
-    create_child_args = {
-        # If lxc-attach finds any of stdin, stdout, stderr connected to a TTY,
-        # to prevent input injection it creates a proxy pty, forcing all IO to
-        # be buffered in <4KiB chunks. So ensure stderr is also routed to the
-        # socketpair.
-        'merge_stdio': True
-    }
-
-    container = None
-    lxc_attach_path = 'lxc-attach'
-
-    def construct(self, container, lxc_attach_path=None, **kwargs):
-        super(Stream, self).construct(**kwargs)
-        self.container = container
-        if lxc_attach_path:
-            self.lxc_attach_path = lxc_attach_apth
-
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = 'lxc.' + self.container
-
-    def get_boot_command(self):
-        bits = [
-            self.lxc_attach_path,
-            '--clear-env',
-            '--name', self.container,
-            '--',
-        ]
-        return bits + super(Stream, self).get_boot_command()
+from ansible_mitogen.connection import JailConnection as Connection
+del os
+del sys

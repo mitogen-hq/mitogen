@@ -1008,23 +1008,26 @@ class Router(mitogen.core.Router):
         self._context_by_id[context.context_id] = context
         return context
 
-    def lxc(self, **kwargs):
-        return self.connect('lxc', **kwargs)
-
     def docker(self, **kwargs):
         return self.connect('docker', **kwargs)
-
-    def local(self, **kwargs):
-        return self.connect('local', **kwargs)
 
     def fork(self, **kwargs):
         return self.connect('fork', **kwargs)
 
-    def sudo(self, **kwargs):
-        return self.connect('sudo', **kwargs)
+    def jail(self, **kwargs):
+        return self.connect('jail', **kwargs)
+
+    def local(self, **kwargs):
+        return self.connect('local', **kwargs)
+
+    def lxc(self, **kwargs):
+        return self.connect('lxc', **kwargs)
 
     def ssh(self, **kwargs):
         return self.connect('ssh', **kwargs)
+
+    def sudo(self, **kwargs):
+        return self.connect('sudo', **kwargs)
 
 
 class ProcessMonitor(object):

@@ -88,6 +88,18 @@ def _connect_docker(spec):
     }
 
 
+def _connect_jail(spec):
+    return {
+        'method': 'jail',
+        'kwargs': {
+            'username': spec['remote_user'],
+            'container': spec['remote_addr'],
+            'python_path': spec['python_path'],
+            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+        }
+    }
+
+
 def _connect_lxc(spec):
     return {
         'method': 'lxc',
@@ -115,6 +127,7 @@ def _connect_sudo(spec):
 
 CONNECTION_METHOD = {
     'docker': _connect_docker,
+    'jail': _connect_jail,
     'local': _connect_local,
     'lxc': _connect_lxc,
     'lxd': _connect_lxc,
@@ -515,3 +528,7 @@ class LxcConnection(Connection):
 
 class LxdConnection(Connection):
     transport = 'lxd'
+
+
+class JailConnection(Connection):
+    transport = 'jail'

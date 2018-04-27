@@ -37,31 +37,27 @@ LOG = logging.getLogger(__name__)
 
 class Stream(mitogen.parent.Stream):
     create_child_args = {
-        # If lxc-attach finds any of stdin, stdout, stderr connected to a TTY,
-        # to prevent input injection it creates a proxy pty, forcing all IO to
-        # be buffered in <4KiB chunks. So ensure stderr is also routed to the
-        # socketpair.
         'merge_stdio': True
     }
 
     container = None
-    lxc_attach_path = 'lxc-attach'
+    username = None
+    jexec_path = '/usr/sbin/jexec'
 
-    def construct(self, container, lxc_attach_path=None, **kwargs):
+    def construct(self, container, jexec_path=None, username=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         self.container = container
-        if lxc_attach_path:
-            self.lxc_attach_path = lxc_attach_apth
+        self.username = username
+        if jexec_path:
+            self.jexec_path = jexec_path
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'lxc.' + self.container
+        self.name = 'jail.' + self.container
 
     def get_boot_command(self):
-        bits = [
-            self.lxc_attach_path,
-            '--clear-env',
-            '--name', self.container,
-            '--',
-        ]
+        bits = [self.jexec_path]
+        if self.username:
+            bits += ['-U', self.username]
+        bits += [self.container]
         return bits + super(Stream, self).get_boot_command()
