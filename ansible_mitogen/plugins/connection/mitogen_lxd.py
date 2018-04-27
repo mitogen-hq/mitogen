@@ -26,48 +26,31 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import logging
+import os.path
+import sys
 
-import mitogen.core
-import mitogen.parent
+#
+# This is not the real Connection implementation module, it simply exists as a
+# proxy to the real module, which is loaded using Python's regular import
+# mechanism, to prevent Ansible's PluginLoader from making up a fake name that
+# results in ansible_mitogen plugin modules being loaded twice: once by
+# PluginLoader with a name like "ansible.plugins.connection.mitogen", which is
+# stuffed into sys.modules even though attempting to import it will trigger an
+# ImportError, and once under its canonical name, "ansible_mitogen.connection".
+#
+# Therefore we have a proxy module that imports it under the real name, and
+# sets up the duff PluginLoader-imported module to just contain objects from
+# the real module, so duplicate types don't exist in memory, and things like
+# debuggers and isinstance() work predictably.
+#
 
+try:
+    import ansible_mitogen
+except ImportError:
+    base_dir = os.path.dirname(__file__)
+    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
+    del base_dir
 
-LOG = logging.getLogger(__name__)
-
-
-class Stream(mitogen.parent.Stream):
-    container = None
-    image = None
-    username = None
-    docker_path = 'docker'
-
-    def construct(self, container=None, image=None,
-                  docker_path=None, username=None,
-                  **kwargs):
-        assert container or image
-        super(Stream, self).construct(**kwargs)
-        if container:
-            self.container = container
-        if image:
-            self.image = image
-        if docker_path:
-            self.docker_path = docker_path
-        if username:
-            self.username = username
-
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = 'docker.' + (self.container or self.image)
-
-    def get_boot_command(self):
-        args = ['--interactive']
-        if self.username:
-            args += ['--user=' + self.username]
-
-        bits = [self.docker_path]
-        if self.container:
-            bits += ['exec'] + args + [self.container]
-        elif self.image:
-            bits += ['run'] + args + ['--rm', self.image]
-
-        return bits + super(Stream, self).get_boot_command()
+from ansible_mitogen.connection import LxdConnection as Connection
+del os
+del sys

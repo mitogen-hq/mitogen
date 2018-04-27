@@ -13,3 +13,4 @@ Table Of Contents
    examples
    internals
    shame
+   changelog

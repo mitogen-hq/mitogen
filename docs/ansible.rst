@@ -116,8 +116,8 @@ Noteworthy Differences
 * The ``sudo`` become method is available and ``su`` is planned. File bugs to
   register interest in additional methods.
 
-* The ``ssh``, ``local`` and ``docker`` connection types are available, with
-  more planned. File bugs to register interest.
+* The ``docker``, ``local``, ``lxc`` and ``ssh`` connection types are
+  available, with more planned. File bugs to register interest.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -167,7 +167,7 @@ Connection Delegation
 
 Included is a preview of **Connection Delegation**, a Mitogen-specific
 implementation of `stackable connection plug-ins`_. This enables multi-hop
-connections via a bastion, or Docker connections delegated via their host
+connections via a bastion, or Docker/LCX connections delegated via their host
 machine, where reaching the host may itself entail recursive delegation.
 
 .. _Stackable connection plug-ins: https://github.com/ansible/proposals/issues/25
@@ -467,10 +467,24 @@ Sudo
 Docker
 ~~~~~~
 
-Docker support has received relatively little testing, expect increased
-probability of surprises for the time being.
+Docker support is fairly new, expect increased surprises for now.
 
-* ``ansible_host``
+* ``ansible_host``: Name of Docker container.
+* ``ansible_user``: Name of user within the container to execute as.
+
+
+LXC
+~~~
+
+LXC support is fairly new, expect increased surprises for now. Both ``lxc`` and
+``lxd`` connection plug-ins are hijacked, however the resulting implementation
+always uses the ``lxc-attach`` command line tool rather than th LXC Python
+bindings.
+
+Consequently the ``lxc-attach`` command is required to be available on the host
+machine.
+
+* ``ansible_host``: Name of LXC container.
 
 
 Debugging

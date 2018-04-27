@@ -117,9 +117,9 @@ class TtyCreateChildTest(unittest2.TestCase):
         # read a password.
         tf = tempfile.NamedTemporaryFile()
         try:
-            pid, fd, _ = self.func(
+            pid, fd, _ = self.func([
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
-            )
+            ])
             deadline = time.time() + 5.0
             for line in mitogen.parent.iter_read([fd], deadline):
                 self.assertEquals('hi\n', line)

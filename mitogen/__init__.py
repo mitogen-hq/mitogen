@@ -31,6 +31,11 @@ On the Mitogen master, this is imported from ``mitogen/__init__.py`` as would
 be expected. On the slave, it is built dynamically during startup.
 """
 
+
+#: Library version as a tuple.
+__version__ = (0, 0, 2)
+
+
 #: This is ``False`` in slave contexts. It is used in single-file Python
 #: programs to avoid reexecuting the program's :py:func:`main` function in the
 #: slave. For example:

@@ -88,6 +88,17 @@ def _connect_docker(spec):
     }
 
 
+def _connect_lxc(spec):
+    return {
+        'method': 'lxc',
+        'kwargs': {
+            'container': spec['remote_addr'],
+            'python_path': spec['python_path'],
+            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+        }
+    }
+
+
 def _connect_sudo(spec):
     return {
         'method': 'sudo',
@@ -103,10 +114,12 @@ def _connect_sudo(spec):
 
 
 CONNECTION_METHOD = {
-    'sudo': _connect_sudo,
-    'ssh': _connect_ssh,
-    'local': _connect_local,
     'docker': _connect_docker,
+    'local': _connect_local,
+    'lxc': _connect_lxc,
+    'lxd': _connect_lxc,
+    'ssh': _connect_ssh,
+    'sudo': _connect_sudo,
 }
 
 
@@ -494,3 +507,11 @@ class LocalConnection(Connection):
 
 class DockerConnection(Connection):
     transport = 'docker'
+
+
+class LxcConnection(Connection):
+    transport = 'lxc'
+
+
+class LxdConnection(Connection):
+    transport = 'lxd'

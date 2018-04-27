@@ -309,7 +309,11 @@ class LogForwarder(object):
             self._cache[msg.src_id] = logger = logging.getLogger(name)
 
         name, level_s, s = msg.data.split('\x00', 2)
-        logger.log(int(level_s), '%s: %s', name, s)
+        logger.log(int(level_s), '%s: %s', name, s, extra={
+            'mitogen_message': s,
+            'mitogen_context': self._router.context_by_id(msg.src_id),
+            'mitogen_name': name,
+        })
 
     def __repr__(self):
         return 'LogForwarder(%r)' % (self._router,)
