@@ -712,6 +712,20 @@ Router Class
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
 
+    .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
+
+        Construct a context on the local machine within an LXC container. The
+        ``lxc-attach`` program must be available.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str container:
+            Existing container to connect to. Defaults to ``None``.
+        :param str lxc_attach_path:
+            Filename or complete path to the ``lxc-attach`` binary. ``PATH``
+            will be searched if given as a filename. Defaults to
+            ``lxc-attach``.
+
     .. method:: sudo (username=None, sudo_path=None, password=None, \**kwargs)
 
         Construct a context on the local machine over a ``sudo`` invocation.

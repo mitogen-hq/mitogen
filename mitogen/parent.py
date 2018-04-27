@@ -243,10 +243,17 @@ def create_socketpair():
     return parentfp, childfp
 
 
-def create_child(args):
+def create_child(args, merge_stdio=False):
     """
     Create a child process whose stdin/stdout is connected to a socket.
 
+    :param args:
+        Argument vector for execv() call.
+    :param bool merge_stdio:
+        If :data:`True`, arrange for `stderr` to be connected to the `stdout`
+        socketpair, rather than inherited from the parent process. This may be
+        necessary to ensure that not TTY is connected to any stdio handle, for
+        instance when using LXC.
     :returns:
         `(pid, socket_obj, :data:`None`)`
     """
@@ -257,11 +264,17 @@ def create_child(args):
     # O_NONBLOCK from Python's future stdin fd.
     mitogen.core.set_block(childfp.fileno())
 
+    if merge_stdio:
+        extra = {'stderr': childfp}
+    else:
+        extra = {}
+
     proc = subprocess.Popen(
         args=args,
         stdin=childfp,
         stdout=childfp,
         close_fds=True,
+        **extra
     )
     childfp.close()
     # Decouple the socket from the lifetime of the Python socket object.
@@ -696,12 +709,13 @@ class Stream(mitogen.core.Stream):
         return zlib.compress(minimize_source(source), 9)
 
     create_child = staticmethod(create_child)
+    create_child_args = {}
     name_prefix = 'local'
 
     def start_child(self):
         args = self.get_boot_command()
         try:
-            return self.create_child(args)
+            return self.create_child(args, **self.create_child_args)
         except OSError:
             e = sys.exc_info()[1]
             msg = 'Child start failed: %s. Command was: %s' % (e, Argv(args))
@@ -993,6 +1007,9 @@ class Router(mitogen.core.Router):
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
+
+    def lxc(self, **kwargs):
+        return self.connect('lxc', **kwargs)
 
     def docker(self, **kwargs):
         return self.connect('docker', **kwargs)

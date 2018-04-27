@@ -488,6 +488,7 @@ class Importer(object):
             'docker',
             'fakessh',
             'fork',
+            'lxc',
             'master',
             'parent',
             'service',
