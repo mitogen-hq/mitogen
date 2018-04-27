@@ -125,6 +125,19 @@ Logging Environment Variables
     logs of any IO interaction, which is useful when debugging deadlocks.
 
 
+
+Logging Records
+~~~~~~~~~~~~~~~
+
+Messages received from a child context via :class:`mitogen.master.LogForwarder`
+receive extra attributes:
+
+* `mitogen_context`: :class:`mitogen.master.Context` referring to the message
+  source.
+* `mitogen_name`: original logger name in the source context.
+* `mitogen_msg`: original message in the source context.
+
+
 Creating A Context
 ------------------
 

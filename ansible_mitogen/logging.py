@@ -46,6 +46,9 @@ class Handler(logging.Handler):
         self.normal_method = normal_method
 
     def emit(self, record):
+        if getattr(record, 'mitogen_name', '') == 'stderr':
+            record.levelno = logging.ERROR
+
         s = '[pid %d] %s' % (os.getpid(), self.format(record))
         if record.levelno >= logging.ERROR:
             self.display.error(s, wrap_text=False)
