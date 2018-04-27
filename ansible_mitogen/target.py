@@ -43,6 +43,7 @@ import re
 import stat
 import subprocess
 import tempfile
+import time
 import traceback
 import zlib
 
@@ -82,6 +83,7 @@ def _get_file(context, path, out_fp):
         interrupted and the output should be discarded.
     """
     LOG.debug('_get_file(): fetching %r from %r', path, context)
+    t0 = time.time()
     recv = mitogen.core.Receiver(router=context.router)
     size = mitogen.service.call(
         context=context,
@@ -102,8 +104,8 @@ def _get_file(context, path, out_fp):
         LOG.error('get_file(%r): receiver was closed early, controller '
                   'is likely shutting down.', path)
 
-    LOG.debug('target.get_file(): fetched %d bytes of %r from %r',
-              size, path, context)
+    LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
+              size, path, context, 1000*(time.time() - t0))
     return out_fp.tell() == size
 
 
