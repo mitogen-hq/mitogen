@@ -1,64 +1,57 @@
 
-Ansible Extension
-=================
-
 .. image:: images/ansible/cell_division.png
     :align: right
 
-An extension to `Ansible`_ is included that implements host connections over
+Mitogen for Ansible
+===================
+
+
+An extension to `Ansible`_ is included that implements connections over
 Mitogen, replacing embedded shell invocations with pure-Python equivalents
-invoked via highly efficient remote procedure calls tunnelled over SSH. No
-changes are required to the target hosts.
+invoked via highly efficient remote procedure calls to persistent interpreters
+tunnelled over SSH. No changes are required to target hosts.
 
-The extension is approaching a generally dependable state, and works well for
-many real-world playbooks. `Bug reports`_ in this area are very welcome –
-Ansible is a huge beast, and only significant testing will prove the
-extension's soundness.
-
-Divergence from Ansible's normal behaviour is considered a bug, so please
-report anything you notice, regardless of how inconsequential it may seem.
+The extension is approaching stability and real-world testing is now
+encouraged. `Bug reports`_ are welcome: Ansible is huge, and only wide testing
+will ensure soundness.
 
 .. _Ansible: https://www.ansible.com/
 
 .. _Bug reports: https://goo.gl/yLKZiJ
 
-
 Overview
 --------
 
-You should **expect a 1.25x - 7x speedup** and a **CPU usage reduction of at
-least 2x**, depending on network conditions, the specific modules executed, and
-time spent by the target host already doing useful work. Mitogen cannot speed
-up a module once it is executing, it can only ensure the module executes as
-quickly as possible.
+**Expect a 1.25x - 7x speedup** and a **CPU usage reduction of at least 2x**,
+depending on network conditions, modules executed, and time already spent by
+targets on useful work. Mitogen cannot improve a module once it is executing,
+it can only ensure the module executes as quickly as possible.
 
-* **A single SSH connection is used for each target host**, in addition to one
-  sudo invocation per distinct user account. Subsequent playbook steps always
-  reuse the same connection. This is much better than SSH multiplexing combined
-  with pipelining, as significant state can be maintained in RAM between steps,
-  and the system logs aren't filled with spam from repeat SSH and sudo
-  invocations.
+* **One connection is used per target**, in addition to one sudo invocation per
+  user account. This is much better than SSH multiplexing combined with
+  pipelining, as significant state can be maintained in RAM between steps, and
+  system logs aren't spammed with repeat authentication events.
 
-* **A single Python interpreter is used** per host and sudo account combination
-  for the duration of the run, avoiding the repeat cost of invoking multiple
-  interpreters and recompiling imports, saving 300-800 ms for every playbook
-  step.
+* **A single network roundtrip is used** to execute a step whose code already
+  exists in RAM on the target. Eliminating multiplexed SSH channel creation
+  saves 5 ms runtime per 1 ms of network latency for every playbook step.
 
-* Remote interpreters reuse Mitogen's module import mechanism, caching uploaded
-  dependencies between steps at the host and user account level. As a
-  consequence, **bandwidth usage is consistently an order of magnitude lower**
-  compared to SSH pipelining, and around 5x fewer frames are required to
-  traverse the wire for a run to complete successfully.
+* **Processes are aggressively reused**, avoiding the cost of invoking Python
+  and recompiling imports, saving 300-800 ms for every playbook step.
 
-* **No writes to the target host's filesystem occur**, unless explicitly
-  triggered by a playbook step. In all typical configurations, Ansible
-  repeatedly rewrites and extracts ZIP files to multiple temporary directories
-  on the target host. Since no temporary files are used, security issues
-  relating to those files in cross-account scenarios are entirely avoided.
+* Code is ephemerally cached in RAM, **reducing bandwidth usage by an order
+  of magnitude** compared to SSH pipelining, with around 5x fewer frames
+  traversing the network in a typical run.
+
+* **No writes to the target's filesystem occur**, unless explicitly triggered
+  by a playbook step. In all typical configurations, Ansible repeatedly
+  rewrites and extracts ZIP files to multiple temporary directories on the
+  target. Since no temporary files are used, security issues relating to those
+  files in cross-account scenarios are entirely avoided.
 
 
 Demo
-----
+~~~~
 
 This demonstrates Ansible running a subset of the Mitogen integration tests
 concurrent to an equivalent run using the extension.
@@ -71,7 +64,7 @@ concurrent to an equivalent run using the extension.
 
 
 Testimonials
-------------
+~~~~~~~~~~~~
 
 * "With mitogen **my playbook runtime went from 45 minutes to just under 3
   minutes**. Awesome work!"
@@ -96,14 +89,11 @@ Testimonials
 Installation
 ------------
 
-.. caution::
-
-    Please review the behavioural differences documented below prior to use.
-
-1. Verify Ansible 2.4 and Python 2.7 are listed in the output of ``ansible
-   --version``
-2. Download and extract https://github.com/dw/mitogen/archive/master.zip
-3. Modify ``ansible.cfg``:
+1. Thoroughly review the documented behavioural differences.
+2. Verify Ansible 2.4/2.5 and Python 2.7 are listed in ``ansible --version``
+   output.
+3. Download and extract https://github.com/dw/mitogen/archive/master.zip
+4. Modify ``ansible.cfg``:
 
    .. code-block:: dosini
 
@@ -111,70 +101,256 @@ Installation
         strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
         strategy = mitogen_linear
 
-   The ``strategy`` key is optional. If omitted, you can set the
-   ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable on a per-run basis.
-   Like ``mitogen_linear``, the ``mitogen_free`` strategy also exists to mimic
-   the built-in ``free`` strategy.
-
-4. Cross your fingers and try it.
+   The ``strategy`` key is optional. If omitted, the
+   ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable can be set on a
+   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
+   to mimic the ``free`` strategy.
 
 
-Limitations
------------
+Noteworthy Differences
+----------------------
 
-* Only Ansible 2.4 is being used for development, with occasional tests under
-  2.5, 2.3 and 2.2. It should be more than possible to fully support at least
-  2.3, if not also 2.2.
+* Ansible 2.4 and 2.5 are supported. File bugs to register interest in older
+  releases.
 
-* Only the ``sudo`` become method is available, however adding new methods is
-  straightforward, and eventually at least ``su`` will be included.
+* The ``sudo`` become method is available and ``su`` is planned. File bugs to
+  register interest in additional methods.
 
-* The extension's performance benefits do not scale perfectly linearly with the
-  number of targets. This is a subject of ongoing investigation and
-  improvements will appear in time.
+* The ``ssh``, ``local`` and ``docker`` connection types are available, with
+  more planned. File bugs to register interest.
 
-* "Module Replacer" style modules are not yet supported. These rarely appear in
-  practice, and light Github code searches failed to reveal many examples of
-  them.
+* Local commands execute in a reuseable interpreter created identically to
+  interpreters on targets. Presently one interpreter per ``become_user``
+  exists, and so only one local action may execute simultaneously.
+
+  Ansible usually permits up to ``forks`` simultaneous local actions. Any
+  long-running local actions that execute for every target will experience
+  artificial serialization, causing slowdown equivalent to `task_duration *
+  num_targets`. This will be fixed soon.
+
+* Asynchronous jobs presently exist only for the duration of a run, and time
+  limits are not implemented.
+
+* Due to use of :func:`select.select` the IO multiplexer breaks down around 100
+  targets, expect performance degradation as this number is approached and
+  errant behaviour as it is exceeded. A replacement will appear soon.
+
+* The undocumented ability to extend :mod:`ansible.module_utils` by supplying a
+  ``module_utils`` directory alongside a custom new-style module is not yet
+  supported.
+
+* "Module Replacer" style modules are not supported. These rarely appear in
+  practice, and light web searches failed to reveal many examples of them.
+
+* Ansible permits up to ``forks`` connections to be setup in parallel, whereas
+  in Mitogen this is handled by a fixed-size thread pool. Up to 16 connections
+  may be established in parallel by default, this can be modified by setting
+  the ``MITOGEN_POOL_SIZE`` environment variable.
+
+* Performance does not scale perfectly linearly with target count. This will
+  improve over time.
+
+* Timeouts normally apply to the combined runtime of the SSH and become steps
+  of a task. As Mitogen treats SSH and sudo distincly, during a failure the
+  effective timeout may appear to double.
 
 
-Behavioural Differences
------------------------
+New Features & Notes
+--------------------
 
-* Ansible permits up to ``forks`` SSH connections to be setup simultaneously,
-  whereas in Mitogen this is handled by a thread pool. Eventually this pool
-  will become per-CPU, but meanwhile, a maximum of 16 SSH connections may be
-  established simultaneously by default. This can be increased or decreased
-  setting the ``MITOGEN_POOL_SIZE`` environment variable.
 
-* Mitogen treats connection timeouts for the SSH and become steps of a task
-  invocation separately, meaning that in some circumstances the configured
-  timeout may appear to be doubled. This is since Mitogen internally treats the
-  creation of an SSH account context separately to the creation of a sudo
-  account context proxied via that SSH account.
+Connection Delegation
+~~~~~~~~~~~~~~~~~~~~~
 
-  A future revision may detect a sudo account context created immediately
-  following its parent SSH account, and try to emulate Ansible's existing
-  timeout semantics.
+.. image:: images/jumpbox.png
+    :align: right
 
-* Local commands are executed in a reuseable Python interpreter created
-  identically to interpreters used on remote hosts. At present only one such
-  interpreter per ``become_user`` exists, and so only one local action may be
-  executed simultaneously per local user account.
+Included is a preview of **Connection Delegation**, a Mitogen-specific
+implementation of `stackable connection plug-ins`_. This enables multi-hop
+connections via a bastion, or Docker connections delegated via their host
+machine, where reaching the host may itself entail recursive delegation.
 
-  Ansible usually permits up to ``ansible.cfg:forks`` simultaneous local
-  actions. Any long-running local actions that execute for every target will
-  experience artificial serialization, causing slowdown equivalent to
-  `task_duration * num_targets`. This will be fixed soon.
+.. _Stackable connection plug-ins: https://github.com/ansible/proposals/issues/25
 
-* Asynchronous jobs exist only for the duration of a run, and cannot be
-  queried by subsequent ansible-playbook invocations. Since the ability to
-  query job IDs across runs relied on an implementation detail, it is not
-  expected this will break any real-world playbooks.
+Unlike with SSH forwarding Ansible has complete visibility of the final
+topology, declarative configuration via static/dynamic inventory is possible,
+and data can be cached and re-served, and code executed on every intermediary.
+
+For example when targeting Docker containers on a remote machine, each module
+need only be uploaded once for the first task and container that requires it,
+then cached and served from the SSH account for every future task in any
+container.
+
+.. raw:: html
+
+    <div style="clear: both;"></div>
+
+
+.. caution::
+
+    Connection delegation is a work in progress, bug reports are welcome.
+
+    * While imports are cached on intermediaries, module scripts are needlessly
+      reuploaded for each target. Fixing this is equivalent to implementing
+      **Topology-Aware File Synchronization**, so it may remain unfixed until
+      that feature is started.
+
+    * Delegated connection setup is single-threaded; only one connection can be
+      constructed in parallel per intermediary.
+
+    * Unbounded queue RAM growth may occur in an intermediary during large file
+      transfers if the link between any two hops is slower than the link
+      between the controller and the first hop.
+
+    * Inferring the configuration of intermediaries may be buggy, manifesting
+      as duplicate connections between hops, due to not perfectly replicating
+      the configuration Ansible would normally use for the intermediary.
+
+    * The extension does not understand the difference between a delegated
+      connection and a ``become_user``. If interpreter recycling kicks in, a
+      delegated connection could be prematurely recycled.
+
+To enable connection delegation, set ``mitogen_via=<inventory name>`` on the
+command line, or as host and group variables.
+
+.. code-block:: ini
+
+    # Docker container on web1.dc1 is reachable via web1.dc1.
+    [app-containers.web1.dc1]
+    app1.web1.dc1 ansible_host=app1 ansible_connection=docker mitogen_via=web1.dc1
+
+    # Web servers in DC1 are reachable via bastion.dc1
+    [dc1]
+    web1.dc1
+    web2.dc1
+    web3.dc1
+
+    [dc1:vars]
+    mitogen_via = bastion.dc1
+
+    # Web servers in DC2 are reachable via bastion.dc2
+    [dc2]
+    web1.dc2
+    web2.dc2
+    web3.dc2
+
+    [dc2:vars]
+    mitogen_via = bastion.dc2
+
+    # Prod bastions are reachable via a corporate network gateway.
+    [bastions]
+    bastion.dc1 mitogen_via=corp-gateway.internal
+    bastion.dc2 mitogen_via=corp-gateway.internal
+
+    [corp-gateway]
+    corp-gateway.internal
+
+
+File Transfer
+~~~~~~~~~~~~~
+
+Normally a tool like ``scp`` is used to copy a file with the ``copy`` or
+``template`` actions, or when uploading modules with pipelining disabled. With
+Mitogen copies are implemented natively using the same interpreters, connection
+tree, and routed message bus that carries RPCs.
+
+This permits streaming directly between endpoints regardless of execution
+environment, without necessitating temporary copies in intermediary accounts or
+machines, for example when ``become`` is active, or in the presence of
+connection delegation. It also neatly avoids the problem of securely sharing
+temporary files between accounts and machines.
+
+One roundtrip is required to initiate a transfer. For any tool that operates
+via SSH multiplexing, 5 are required to configure the associated IO channel, in
+addition to the time needed to start the local and remote processes. A complete
+localhost invocation of ``scp`` requires around 15 ms.
+
+As the implementation is self-contained, it is simple to make future
+improvements like prioritizing transfers, supporting resume, or displaying
+progress bars.
+
+
+Interpreter Reuse
+~~~~~~~~~~~~~~~~~
+
+Python interpreters are aggressively reused to execute modules. While this
+works well, it violates an unwritten assumption, and so it is possible an
+earlier module execution could cause a subsequent module to fail, or for
+unrelated modules to interact poorly due to bad hygiene, such as
+monkey-patching that becomes stacked over repeat invocations.
+
+Before reporting a bug relating to a misbehaving module, please re-run with
+``-e mitogen_task_isolation=fork`` to see if the problem abates. This may be
+set per-task, paying attention to the possibility an earlier task may be the
+true cause of a failure.
+
+.. code-block:: yaml
+
+    - name: My task.
+      broken_module:
+        some_option: true
+      vars:
+        mitogen_task_isolation: fork
+
+If forking solves your problem, **please report a bug regardless**, as an
+internal list can be updated to prevent others bumping into the same problem.
+
+
+Interpreter Recycling
+~~~~~~~~~~~~~~~~~~~~~
+
+There is a per-target limit on the number of interpreters. Once 20 exist, the
+youngest is terminated before starting any new interpreter, preventing
+situations like below from triggering memory exhaustion.
+
+.. code-block:: yaml
+
+    - hosts: corp_boxes
+      vars:
+        user_directory: [
+          # 10,000 corporate user accounts
+        ]
+      tasks:
+        - name: Create user bashrc
+          become: true
+          vars:
+            ansible_become_user: "{{item}}"
+          copy:
+            src: bashrc
+            dest: "~{{item}}/.bashrc"
+          with_items: "{{user_directory}}"
+
+The youngest is chosen to preserve useful accounts like ``root`` and
+``postgresql`` that often appear early in a run, however it is simple to
+construct a playbook that defeats this strategy. A future version will key
+interpreters on the identity of their creating task, avoiding useful account
+recycling in every scenario.
+
+To modify the limit, set the ``MITOGEN_MAX_INTERPRETERS`` environment variable.
+
+
+Standard IO
+~~~~~~~~~~~
+
+Ansible uses pseudo TTYs for most invocations to allow it to type interactive
+passwords, however pseudo TTYs are disabled where standard input is required or
+``sudo`` is not in use. Additionally when SSH multiplexing is enabled, a string
+like ``Shared connection to localhost closed\r\n`` appears in ``stderr`` of
+every invocation.
+
+Mitogen does not naturally require either of these, as command output is always
+embedded within framed messages, and it can simply call :py:func:`pty.openpty`
+in any location an interactive password must be typed.
+
+A major downside to Ansible's behaviour is that ``stdout`` and ``stderr`` are
+merged together into a single ``stdout`` variable, with carriage returns
+inserted in the output by the TTY layer. However ugly, the extension emulates
+this precisely, to avoid breaking playbooks that expect text to appear in
+specific variables with a particular linefeed style.
 
 
 How Modules Execute
--------------------
+~~~~~~~~~~~~~~~~~~~
 
 Ansible usually modifies, recompresses and reuploads modules every time they
 run on a target, work that must be repeated by the controller for every
@@ -218,6 +394,111 @@ cached in RAM for the remainder of the run.
     key2=repr(value2)[ ..]] "``.
 
 
+Runtime Patches
+~~~~~~~~~~~~~~~
+
+Three small runtime patches are employed in ``strategy.py`` to hook into
+desirable locations, in order to override uses of shell, the module executor,
+and the mechanism for selecting a connection plug-in. While it is hoped the
+patches can be avoided in future, for interesting versions of Ansible deployed
+today this simply is not possible, and so they continue to be required.
+
+The patches are concise and behave conservatively, including by disabling
+themselves when non-Mitogen connections are in use. Additional third party
+plug-ins are unlikely to attempt similar patches, so the risk to an established
+configuration should be minimal.
+
+
+Flag Emulation
+~~~~~~~~~~~~~~
+
+Mitogen re-parses ``sudo_flags``, ``become_flags``, and ``ssh_flags`` using
+option parsers extracted from `sudo(1)` and `ssh(1)` in order to emulate their
+equivalent semantics. This allows:
+
+* robust support for common ``ansible.cfg`` tricks without reconfiguration,
+  such as forwarding SSH agents across ``sudo`` invocations,
+* reporting on conflicting flag combinations,
+* reporting on unsupported flag combinations,
+* internally special-casing certain behaviour (like recursive agent forwarding)
+  without boring the user with the details,
+* avoiding opening the extension up to untestable scenarios where users can
+  insert arbitrary garbage between Mitogen and the components it integrates
+  with,
+* precise emulation by an alternative implementation, for example if Mitogen
+  grew support for Paramiko.
+
+
+Supported Variables
+-------------------
+
+Matching Ansible's model, variables are treated on a per-task basis, causing
+establishment of additional reuseable interpreters as necessary to match the
+configuration of each task.
+
+
+SSH
+~~~
+
+This list will grow as more missing pieces are discovered.
+
+* ``ansible_ssh_timeout``
+* ``ansible_host``, ``ansible_ssh_host``
+* ``ansible_user``, ``ansible_ssh_user``
+* ``ansible_port``, ``ssh_port``
+* ``ansible_ssh_executable``, ``ssh_executable``
+* ``ansible_ssh_private_key_file``
+* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
+* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
+
+
+Sudo
+~~~~
+
+* ``ansible_python_interpreter``
+* ``ansible_sudo_exe``, ``ansible_become_exe``
+* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
+* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
+* ``sudo_flags``, ``become_flags``
+* ansible.cfg: ``timeout``
+
+
+Docker
+~~~~~~
+
+Docker support has received relatively little testing, expect increased
+probability of surprises for the time being.
+
+* ``ansible_host``
+
+
+Debugging
+---------
+
+Diagnostics and use of the :py:mod:`logging` package output on the target
+machine are usually discarded. With Mitogen, all of this is captured and
+returned to the controller, where it can be viewed as desired with ``-vvv``.
+Basic high level logs are produced with ``-vvv``, with logging of all IO on the
+controller with ``-vvvv`` or higher.
+
+Although use of standard IO and the logging package on the target is forwarded
+to the controller, it is not possible to receive IO activity logs, as the
+processs of receiving those logs would would itself generate IO activity. To
+receive a complete trace of every process on every machine, file-based logging
+is necessary. File-based logging can be enabled by setting
+``MITOGEN_ROUTER_DEBUG=1`` in your environment.
+
+When file-based logging is enabled, one file per context will be created on the
+local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
+
+
+Getting Help
+~~~~~~~~~~~~
+Some users and developers hang out on the
+`#mitogen <https://webchat.freenode.net/?channels=mitogen>`_ channel on the
+FreeNode IRC network.
+
+
 Sample Profiles
 ---------------
 
@@ -252,197 +533,4 @@ operation.
 
 .. image:: images/ansible/costapp.png
 
-
-SSH Variables
--------------
-
-Matching Ansible's existing model, these variables are treated on a per-task
-basis, causing establishment of additional reuseable interpreters as necessary
-to match the configuration of each task.
-
-This list will grow as more missing pieces are discovered.
-
-* ``ansible_ssh_timeout``
-* ``ansible_host``, ``ansible_ssh_host``
-* ``ansible_user``, ``ansible_ssh_user``
-* ``ansible_port``, ``ssh_port``
-* ``ansible_ssh_executable``, ``ssh_executable``
-* ``ansible_ssh_private_key_file``
-* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
-* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
-
-
-Sudo Variables
---------------
-
-* ``ansible_python_interpreter``
-* ``ansible_sudo_exe``, ``ansible_become_exe``
-* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
-* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
-* ``sudo_flags``, ``become_flags``
-* ansible.cfg: ``timeout``
-
-
-Docker Variables
-----------------
-
-Note: Docker support is only intended for developer testing, it might disappear
-entirely prior to a stable release.
-
-* ansible_host
-
-
-Chat on IRC
------------
-
-Some users and developers hang out on the
-`#mitogen <https://webchat.freenode.net/?channels=mitogen>`_ channel on the
-FreeNode IRC network.
-
-
-Debugging
----------
-
-Normally with Ansible, diagnostics and use of the :py:mod:`logging` package
-output on the target machine are discarded. With Mitogen, all of this is
-captured and returned to the host machine, where it can be viewed as desired
-with ``-vvv``. Basic high level logs are produced with ``-vvv``, with logging
-of all IO on the controller with ``-vvvv`` or higher.
-
-Although use of standard IO and the logging package on the target is forwarded
-to the controller, it is not possible to receive IO activity logs, as the
-processs of receiving those logs would would itself generate IO activity. To
-receive a complete trace of every process on every machine, file-based logging
-is necessary. File-based logging can be enabled by setting
-``MITOGEN_ROUTER_DEBUG=1`` in your environment.
-
-When file-based logging is enabled, one file per context will be created on the
-local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
-
-
-Implementation Notes
---------------------
-
-Interpreter Reuse
-~~~~~~~~~~~~~~~~~
-
-The extension aggressively reuses the single target Python interpreter to
-execute every module. While this generally works well, it violates an unwritten
-assumption regarding Ansible modules, and so it is possible a buggy module
-could cause a run to fail, or for unrelated modules to interact with each other
-due to bad hygiene.
-
-Before reporting a bug relating to a module behaving incorrectly, please re-run
-your playbook with ``-e mitogen_task_isolation=fork`` to see if the problem
-abates. This may also be set on a per-task basis:
-
-::
-
-    - name: My task.
-      broken_module:
-        some_option: true
-      vars:
-        mitogen_task_isolation: fork
-
-If forking fixes your problem, **please report a bug regardless**, as an
-internal list can be updated to prevent users bumping into the same problem in
-future.
-
-
-Interpreter Recycling
-~~~~~~~~~~~~~~~~~~~~~
-
-The extension limits the number of persistent interpreters in use. When the
-limit is reached, the youngest interpreter is terminated before starting a new
-interpreter, preventing situations like below from triggering memory
-exhaustion.
-
-.. code-block:: yaml
-
-    - hosts: corp_boxes
-      vars:
-        user_directory: [
-          # 10,000 corporate user accounts
-        ]
-      tasks:
-        - name: Create user bashrc
-          become: true
-          vars:
-            ansible_become_user: "{{item}}"
-          copy:
-            src: bashrc
-            dest: "~{{item}}/.bashrc"
-          with_items: "{{user_directory}}"
-
-This recycling does not occur for direct connections from the controller, and
-it is keyed on a per-target basis, i.e. up to 20 interpreters may exist for
-each directly connected target.
-
-The youngest interpreter is chosen to preserve useful accounts, like "root" or
-"postgresql" that tend to appear early in a run, however it is simple to
-construct a playbook that defeats this strategy. A future version will key
-interpreters on the identity of their creating task, file and/or playbook,
-avoiding useful account recycling in every scenario.
-
-To raise or lower the limit from 20, set the ``MITOGEN_MAX_INTERPRETERS``
-environment variable to a new value.
-
-
-Runtime Patches
-~~~~~~~~~~~~~~~
-
-Three small runtime patches are employed in ``strategy.py`` to hook into
-desirable locations, in order to override uses of shell, the module executor,
-and the mechanism for selecting a connection plug-in. While it is hoped the
-patches can be avoided in future, for interesting versions of Ansible deployed
-today this simply is not possible, and so they continue to be required.
-
-The patches are concise and behave conservatively, including by disabling
-themselves when non-Mitogen connections are in use. Additional third party
-plug-ins are unlikely to attempt similar patches, so the risk to an established
-configuration should be minimal.
-
-
-Standard IO
-~~~~~~~~~~~
-
-Ansible uses pseudo TTYs for most invocations, to allow it to handle typing
-passwords interactively, however it disables pseudo TTYs for certain commands
-where standard input is required or ``sudo`` is not in use. Additionally when
-SSH multiplexing is enabled, a string like ``Shared connection to localhost
-closed\r\n`` appears in ``stderr`` of every invocation.
-
-Mitogen does not naturally require either of these, as command output is
-embedded within the SSH stream, and it can simply call :py:func:`pty.openpty`
-in every location an interactive password must be typed.
-
-A major downside to Ansible's behaviour is that ``stdout`` and ``stderr`` are
-merged together into a single ``stdout`` variable, with carriage returns
-inserted in the output by the TTY layer. However ugly, the extension emulates
-all of this behaviour precisely, to avoid breaking playbooks that expect
-certain text to appear in certain variables with certain linefeed characters.
-
-See `Ansible#14377`_ for related discussion.
-
-.. _Ansible#14377: https://github.com/ansible/ansible/issues/14377
-
-
-Flag Emulation
-~~~~~~~~~~~~~~
-
-Mitogen re-parses ``sudo_flags``, ``become_flags``, and ``ssh_flags`` using
-option parsers extracted from `sudo(1)` and `ssh(1)` in order to emulate their
-equivalent semantics. This allows:
-
-* robust support for common ``ansible.cfg`` tricks without reconfiguration,
-  such as forwarding SSH agents across ``sudo`` invocations,
-* reporting on conflicting flag combinations,
-* reporting on unsupported flag combinations,
-* internally special-casing certain behaviour (like recursive agent forwarding)
-  without boring the user with the details,
-* avoiding opening the extension up to untestable scenarios where users can
-  insert arbitrary garbage between Mitogen and the components it integrates
-  with,
-* precise emulation by an alternative implementation, for example if Mitogen
-  grew support for Paramiko.
 
