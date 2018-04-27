@@ -1,5 +1,5 @@
 - name: integration/runner__custom_binary_producing_json.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
     - custom_binary_producing_json:

@@ -9,6 +9,7 @@ import zlib
 import mitogen.fakessh
 import mitogen.master
 import mitogen.parent
+import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
 
@@ -35,6 +36,7 @@ print(
 for mod in (
         mitogen.master,
         mitogen.parent,
+        mitogen.service,
         mitogen.ssh,
         mitogen.sudo,
         mitogen.fakessh,

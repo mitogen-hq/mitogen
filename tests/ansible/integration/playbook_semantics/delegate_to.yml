@@ -1,5 +1,5 @@
 - name: integration/playbook_semantics/delegate_to.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
     #

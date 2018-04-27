@@ -1,5 +1,5 @@
 - name: integration/runner__custom_binary_single_null.yml
-  hosts: all
+  hosts: test-targets
   tasks:
     - custom_binary_single_null:
         foo: true
@@ -7,7 +7,7 @@
       ignore_errors: true
       register: out
 
-- hosts: all
+- hosts: test-targets
   any_errors_fatal: true
   tasks:
     - assert:

@@ -2,7 +2,7 @@
 # cleanup of dependent (via=) contexts.
 
 - name: integration/context_service/reconnection.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
 

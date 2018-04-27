@@ -1,5 +1,5 @@
 - name: integration/runner__custom_binary_producing_junk.yml
-  hosts: all
+  hosts: test-targets
   tasks:
     - custom_binary_producing_junk:
         foo: true
@@ -8,7 +8,7 @@
       register: out
 
 
-- hosts: all
+- hosts: test-targets
   any_errors_fatal: true
   tasks:
     - debug: msg={{out}}

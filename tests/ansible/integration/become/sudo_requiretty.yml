@@ -1,7 +1,7 @@
 # Verify requiretty support
 
 - name: integration/become/sudo_requiretty.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   tasks:
 

@@ -82,9 +82,9 @@ class ContextService(mitogen.service.Service):
         #: Records the :meth:`get` result dict for successful calls, returned
         #: for identical subsequent calls. Keyed by :meth:`key_from_kwargs`.
         self._response_by_key = {}
-        #: List of :class:`mitogen.core.Message` waiting for the result dict
-        #: for a particular connection config. Keyed as sbove.
-        self._waiters_by_key = {}
+        #: List of :class:`mitogen.core.Latch` awaiting the result for a
+        #: particular key.
+        self._latches_by_key = {}
         #: Mapping of :class:`mitogen.core.Context` -> reference count. Each
         #: call to :meth:`get` increases this by one. Calls to :meth:`put`
         #: decrease it by one.
@@ -134,10 +134,10 @@ class ContextService(mitogen.service.Service):
         """
         self._lock.acquire()
         try:
-            waiters = self._waiters_by_key.pop(key)
-            count = len(waiters)
-            for msg in waiters:
-                msg.reply(response)
+            latches = self._latches_by_key.pop(key)
+            count = len(latches)
+            for latch in latches:
+                latch.put(response)
         finally:
             self._lock.release()
         return count
@@ -164,17 +164,12 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
-    def _update_lru(self, new_context, **kwargs):
+    def _update_lru(self, new_context, spec, via):
         """
         Update the LRU ("MRU"?) list associated with the connection described
         by `kwargs`, destroying the most recently created context if the list
         is full. Finally add `new_context` to the list.
         """
-        via = kwargs.get('via')
-        if via is None:
-            # We don't have a limit on the number of directly connections.
-            return
-
         lru = self._lru_by_via.setdefault(via, [])
         if len(lru) < self.max_interpreters:
             lru.append(new_context)
@@ -207,7 +202,7 @@ class ContextService(mitogen.service.Service):
         """
         # TODO: there is a race between creation of a context and disconnection
         # of its related stream. An error reply should be sent to any message
-        # in _waiters_by_key below.
+        # in _latches_by_key below.
         self._lock.acquire()
         try:
             for context, key in list(self._key_by_context.items()):
@@ -215,14 +210,14 @@ class ContextService(mitogen.service.Service):
                     LOG.info('Dropping %r due to disconnect of %r',
                              context, stream)
                     self._response_by_key.pop(key, None)
-                    self._waiters_by_key.pop(key, None)
+                    self._latches_by_key.pop(key, None)
                     self._refs_by_context.pop(context, None)
                     self._lru_by_via.pop(context, None)
                     self._refs_by_context.pop(context, None)
         finally:
             self._lock.release()
 
-    def _connect(self, key, method_name, **kwargs):
+    def _connect(self, key, spec, via=None):
         """
         Actual connect implementation. Arranges for the Mitogen connection to
         be created and enqueues an asynchronous call to start the forked task
@@ -230,11 +225,8 @@ class ContextService(mitogen.service.Service):
 
         :param key:
             Deduplication key representing the connection configuration.
-        :param method_name:
-            :class:`mitogen.parent.Router` method implementing the connection
-            type.
-        :param kwargs:
-            Keyword arguments passed to the router method.
+        :param spec:
+            Connection specification.
         :returns:
             Dict like::
 
@@ -248,21 +240,14 @@ class ContextService(mitogen.service.Service):
             :data:`None`, or `msg` is :data:`None` and the remaining fields are
             set.
         """
-        method = getattr(self.router, method_name, None)
-        if method is None:
-            raise Error('no such Router method: %s' % (method_name,))
-
         try:
-            context = method(**kwargs)
-        except mitogen.core.StreamError as e:
-            return {
-                'context': None,
-                'home_dir': None,
-                'msg': str(e),
-            }
+            method = getattr(self.router, spec['method'])
+        except AttributeError:
+            raise Error('unsupported method: %(transport)s' % spec)
 
-        if kwargs.get('via'):
-            self._update_lru(context, method_name=method_name, **kwargs)
+        context = method(via=via, **spec['kwargs'])
+        if via:
+            self._update_lru(context, spec, via)
         else:
             # For directly connected contexts, listen to the associated
             # Stream's disconnect event and use it to invalidate dependent
@@ -289,60 +274,74 @@ class ContextService(mitogen.service.Service):
             'msg': None,
         }
 
-    @mitogen.service.expose(mitogen.service.AllowParents())
-    @mitogen.service.arg_spec({
-        'method_name': str
-    })
-    def get(self, msg, **kwargs):
-        """
-        Return a Context referring to an established connection with the given
-        configuration, establishing a new connection as necessary.
-
-        :param str method_name:
-            The :class:`mitogen.parent.Router` connection method to use.
-        :param dict kwargs:
-            Keyword arguments passed to `mitogen.master.Router.[method_name]()`.
-
-        :returns tuple:
-            Tuple of `(context, home_dir)`, where:
-                * `context` is the mitogen.master.Context referring to the
-                  target context.
-                * `home_dir` is a cached copy of the remote directory.
-        """
-        key = self.key_from_kwargs(**kwargs)
+    def _wait_or_start(self, spec, via=None):
+        latch = mitogen.core.Latch()
+        key = self.key_from_kwargs(via=via, **spec)
         self._lock.acquire()
         try:
             response = self._response_by_key.get(key)
             if response is not None:
                 self._refs_by_context[response['context']] += 1
-                return response
+                latch.put(response)
+                return latch
 
-            waiters = self._waiters_by_key.get(key)
-            if waiters is not None:
-                waiters.append(msg)
-                return self.NO_REPLY
-
-            self._waiters_by_key[key] = [msg]
+            latches = self._latches_by_key.setdefault(key, [])
+            first = len(latches) == 0
+            latches.append(latch)
         finally:
             self._lock.release()
 
-        # I'm the first thread to wait, so I will create the connection.
-        try:
-            response = self._connect(key, **kwargs)
-            count = self._produce_response(key, response)
-            if response['msg'] is None:
+        if first:
+            # I'm the first requestee, so I will create the connection.
+            try:
+                response = self._connect(key, spec, via=via)
+                count = self._produce_response(key, response)
                 # Only record the response for non-error results.
                 self._response_by_key[key] = response
                 # Set the reference count to the number of waiters.
                 self._refs_by_context[response['context']] += count
-        except mitogen.core.CallError:
-            e = sys.exc_info()[1]
-            self._produce_response(key, e)
-        except Exception:
-            e = sys.exc_info()[1]
-            self._produce_response(key, mitogen.core.CallError(e))
+            except Exception:
+                self._produce_response(key, sys.exc_info())
 
-        return self.NO_REPLY
+        return latch
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'stack': list
+    })
+    def get(self, msg, stack):
+        """
+        Return a Context referring to an established connection with the given
+        configuration, establishing new connections as necessary.
+
+        :param list stack:
+            Connection descriptions. Each element is a dict containing 'method'
+            and 'kwargs' keys describing the Router method and arguments.
+            Subsequent elements are proxied via the previous.
+
+        :returns dict:
+            * context: mitogen.master.Context or None.
+            * homedir: Context's home directory or None.
+            * msg: StreamError exception text or None.
+            * method_name: string failing method name.
+        """
+        via = None
+        for spec in stack:
+            try:
+                result = self._wait_or_start(spec, via=via).get()
+                if isinstance(result, tuple):  # exc_info()
+                    e1, e2, e3 = result
+                    raise e1, e2, e3
+                via = result['context']
+            except mitogen.core.StreamError as e:
+                return {
+                    'context': None,
+                    'home_dir': None,
+                    'method_name': spec['method'],
+                    'msg': str(e),
+                }
+
+        return result
 
 
 class FileService(mitogen.service.Service):
@@ -420,9 +419,9 @@ class FileService(mitogen.service.Service):
     #: Time spent by the scheduler thread asleep when it has no more data to
     #: pump, but while at least one transfer remains active. With
     #: max_queue_size=1MiB and a sleep of 10ms, maximum throughput on any
-    #: single stream is 100MiB/sec, which is 5x what SSH can handle on my
+    #: single stream is 112MiB/sec, which is >5x what SSH can handle on my
     #: laptop.
-    sleep_delay_ms = 0.01
+    sleep_delay_secs = 0.01
 
     def __init__(self, router):
         super(FileService, self).__init__(router)
@@ -430,7 +429,7 @@ class FileService(mitogen.service.Service):
         self._size_by_path = {}
         #: Queue used to communicate from service to scheduler thread.
         self._queue = mitogen.core.Latch()
-        #: Mapping of Stream->[(sender, fp)].
+        #: Mapping of Stream->[(Sender, file object)].
         self._pending_by_stream = {}
         self._thread = threading.Thread(target=self._scheduler_main)
         self._thread.start()
@@ -488,9 +487,9 @@ class FileService(mitogen.service.Service):
 
     def _sleep_on_queue(self):
         """
-        Sleep indefinitely (no active transfers) or for :attr:`sleep_delay_ms`
-        (active transfers) waiting for a new transfer request to arrive from
-        the :meth:`fetch` method.
+        Sleep indefinitely (no active transfers) or for
+        :attr:`sleep_delay_secs` (active transfers) waiting for a new transfer
+        request to arrive from the :meth:`fetch` method.
 
         If a new request arrives, add it to the appropriate list in
         :attr:`_pending_by_stream`.
@@ -500,8 +499,8 @@ class FileService(mitogen.service.Service):
             :meth:`on_shutdown` hasn't been called yet, otherwise
             :data:`False`.
         """
-        if self._schedule_pending:
-            timeout = self.sleep_delay_ms
+        if self._pending_by_stream:
+            timeout = self.sleep_delay_secs
         else:
             timeout = None
 
@@ -523,7 +522,7 @@ class FileService(mitogen.service.Service):
         """
         Scheduler thread's main function. Sleep until
         :meth:`_sleep_on_queue` indicates the queue has been shut down,
-        pending pending file chunks each time we wake.
+        pumping pending file chunks each time we wake.
         """
         while self._sleep_on_queue():
             for stream, pending in list(self._pending_by_stream.items()):

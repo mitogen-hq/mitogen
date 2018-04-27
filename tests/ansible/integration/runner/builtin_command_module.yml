@@ -1,6 +1,6 @@
 
 - name: integration/runner__builtin_command_module.yml
-  hosts: all
+  hosts: test-targets
   any_errors_fatal: true
   gather_facts: true
   tasks:
