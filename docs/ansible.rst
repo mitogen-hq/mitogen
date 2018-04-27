@@ -167,7 +167,7 @@ Connection Delegation
 
 Included is a preview of **Connection Delegation**, a Mitogen-specific
 implementation of `stackable connection plug-ins`_. This enables multi-hop
-connections via a bastion, or Docker/LCX connections delegated via their host
+connections via a bastion, or Docker/LXC connections delegated via their host
 machine, where reaching the host may itself entail recursive delegation.
 
 .. _Stackable connection plug-ins: https://github.com/ansible/proposals/issues/25
