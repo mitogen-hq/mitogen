@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import errno
 import logging
 import os
 import socket
@@ -167,4 +168,9 @@ class MuxProcess(object):
         happen explicitly, but Ansible provides no hook to allow it.
         """
         self.pool.stop()
-        os.unlink(self.listener.path)
+        try:
+            os.unlink(self.listener.path)
+        except OSError, e:
+            # Prevent a shutdown race with the parent process.
+            if e.args[0] != errno.ENOENT:
+                raise
