@@ -33,6 +33,7 @@ for file transfer, module execution and sundry bits like changing file modes.
 
 from __future__ import absolute_import
 import cStringIO
+import grp
 import json
 import logging
 import operator
@@ -85,7 +86,7 @@ def _get_file(context, path, out_fp):
     LOG.debug('_get_file(): fetching %r from %r', path, context)
     t0 = time.time()
     recv = mitogen.core.Receiver(router=context.router)
-    size = mitogen.service.call(
+    metadata = mitogen.service.call(
         context=context,
         handle=ansible_mitogen.services.FileService.handle,
         method='fetch',
@@ -100,13 +101,14 @@ def _get_file(context, path, out_fp):
         LOG.debug('_get_file(%r): received %d bytes', path, len(s))
         out_fp.write(s)
 
-    if out_fp.tell() != size:
+    ok = out_fp.tell() == metadata['size']
+    if not ok:
         LOG.error('get_file(%r): receiver was closed early, controller '
                   'is likely shutting down.', path)
 
     LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-              size, path, context, 1000*(time.time() - t0))
-    return out_fp.tell() == size
+              metadata['size'], path, context, 1000*(time.time() - t0))
+    return ok, metadata
 
 
 def get_file(context, path):
@@ -125,13 +127,14 @@ def get_file(context, path):
     """
     if path not in _file_cache:
         io = cStringIO.StringIO()
-        if not _get_file(context, path, io):
+        ok, metadata = _get_file(context, path, io)
+        if not ok:
             raise IOError('transfer of %r was interrupted.' % (path,))
         _file_cache[path] = io.getvalue()
     return _file_cache[path]
 
 
-def transfer_file(context, in_path, out_path):
+def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
     """
     Streamily download a file from the connection multiplexer process in the
     controller.
@@ -143,19 +146,42 @@ def transfer_file(context, in_path, out_path):
         FileService registered name of the input file.
     :param bytes out_path:
         Name of the output path on the local disk.
+    :param bool sync:
+        If :data:`True`, ensure the file content and metadat are fully on disk
+        before renaming the temporary file over the existing file. This should
+        ensure in the case of system crash, either the entire old or new file
+        are visible post-reboot.
+    :param bool set_owner:
+        If :data:`True`, look up the metadata username and group on the local
+        system and file the file owner using :func:`os.fchmod`.
     """
-    fp = open(out_path+'.tmp', 'wb', mitogen.core.CHUNK_SIZE)
+    out_path = os.path.abspath(out_path)
+    fd, tmp_path = tempfile.mkstemp(suffix='.tmp',
+                                    prefix='.ansible_mitogen_transfer-',
+                                    dir=os.path.dirname(out_path))
+    fp = os.fdopen(fd, 'wb', mitogen.core.CHUNK_SIZE)
+    LOG.debug('transfer_file(out_path=%r) tempory file: %s', out_path, tmp_path)
+
     try:
         try:
-            if not _get_file(context, in_path, fp):
-                raise IOError('transfer of %r was interrupted.' % (in_path,))
-        except Exception:
-            os.unlink(fp.name)
-            raise
-    finally:
-        fp.close()
+            os.fchmod(tmp_path, metadata['mode'])
+            if set_owner:
+                set_fd_owner(fp.fileno(), metadata['owner'], metadata['group'])
 
-    os.rename(out_path + '.tmp', out_path)
+            ok, metadata = _get_file(context, in_path, fp)
+            if not ok:
+                raise IOError('transfer of %r was interrupted.' % (in_path,))
+        finally:
+            fp.close()
+
+        if sync:
+            os.fsync(fp.fileno())
+        os.rename(tmp_path, out_path)
+    except:
+        os.unlink(tmp_path)
+        raise
+
+    os.utime(out_path, (metadata['atime'], metadata['mtime']))
 
 
 @mitogen.core.takes_econtext
@@ -392,11 +418,51 @@ def read_path(path):
     return open(path, 'rb').read()
 
 
-def write_path(path, s):
+def set_fd_owner(fd, owner, group=None):
+    if owner:
+        uid = pwd.getpwnam(owner).pw_uid
+    else:
+        uid = os.geteuid()
+
+    if group:
+        gid = grp.getgrnam(group).gr_gid
+    else:
+        gid = os.getegid()
+
+    os.fchown(fd, (uid, gid))
+
+
+def write_path(path, s, owner=None, group=None, mode=None,
+               utimes=None, sync=False):
     """
     Writes bytes `s` to a filesystem `path`.
     """
-    open(path, 'wb').write(s)
+    path = os.path.abspath(path)
+    fd, tmp_path = tempfile.mkstemp(suffix='.tmp',
+                                    prefix='.ansible_mitogen_transfer-',
+                                    dir=os.path.dirname(path))
+    fp = os.fdopen(fd, 'wb', mitogen.core.CHUNK_SIZE)
+    LOG.debug('write_path(path=%r) tempory file: %s', path, tmp_path)
+
+    try:
+        try:
+            if mode:
+                os.fchmod(tmp_path, mode)
+            if owner or group:
+                set_fd_owner(fp.fileno(), owner, group)
+            fp.write(s)
+        finally:
+            fp.close()
+
+        if sync:
+            os.fsync(fp.fileno())
+        os.rename(tmp_path, out_path)
+    except:
+        os.unlink(tmp_path)
+        raise
+
+    if utimes:
+        os.utime(out_path, utimes)
 
 
 CHMOD_CLAUSE_PAT = re.compile(r'([uoga]*)([+\-=])([ugo]|[rwx]*)')

@@ -30,6 +30,7 @@ from __future__ import absolute_import
 import logging
 import os
 import shlex
+import stat
 import sys
 import time
 
@@ -470,7 +471,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                            mitogen.utils.cast(in_path))
         ansible_mitogen.target.write_path(out_path, output)
 
-    def put_data(self, out_path, data):
+    def put_data(self, out_path, data, mode=None, utimes=None):
         """
         Implement put_file() by caling the corresponding
         ansible_mitogen.target function in the target.
@@ -482,7 +483,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         self.call(ansible_mitogen.target.write_path,
                   mitogen.utils.cast(out_path),
-                  mitogen.utils.cast(data))
+                  mitogen.utils.cast(data),
+                  mode=mode,
+                  utimes=utimes)
 
     def put_file(self, in_path, out_path):
         """
@@ -494,6 +497,25 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Remote filesystem path to write.
         """
+        st = os.stat(in_path)
+        if not stat.S_ISREG(st.st_mode):
+            raise IOError('%r is not a regular file.' % (in_path,))
+
+        # If the file is sufficiently small, just ship it in the argument list
+        # rather than introducing an extra RTT for the child to request it from
+        # FileService.
+        if st.st_size <= 32768:
+            fp = open(in_path, 'rb')
+            try:
+                s = fp.read(32769)
+            finally:
+                fp.close()
+
+            # Ensure file was not growing during call.
+            if len(s) == st.st_size:
+                return self.put_data(out_path, s, mode=st.st_mode,
+                                     utimes=(st.st_atime, st.st_mtime))
+
         mitogen.service.call(
             context=self.parent,
             handle=ansible_mitogen.services.FileService.handle,

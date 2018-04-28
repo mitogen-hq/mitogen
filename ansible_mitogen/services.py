@@ -38,11 +38,12 @@ when a child has completed a job.
 """
 
 from __future__ import absolute_import
-import hashlib
+import grp
 import logging
 import os
 import os.path
-import pprint
+import pwd
+import stat
 import sys
 import threading
 import zlib
@@ -435,7 +436,7 @@ class FileService(mitogen.service.Service):
     def __init__(self, router):
         super(FileService, self).__init__(router)
         #: Mapping of registered path -> file size.
-        self._size_by_path = {}
+        self._metadata_by_path = {}
         #: Queue used to communicate from service to scheduler thread.
         self._queue = mitogen.core.Latch()
         #: Mapping of Stream->[(Sender, file object)].
@@ -545,6 +546,12 @@ class FileService(mitogen.service.Service):
                 sender.close()
                 fp.close()
 
+    def _name_or_none(self, func, n, attr):
+        try:
+            return getattr(func(n), attr)
+        except KeyError:
+            return None
+
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
         'path': basestring
@@ -557,9 +564,22 @@ class FileService(mitogen.service.Service):
         :param str path:
             File path.
         """
-        if path not in self._size_by_path:
-            LOG.debug('%r: registering %r', self, path)
-            self._size_by_path[path] = os.path.getsize(path)
+        if path in self._metadata_by_path:
+            return
+
+        st = os.stat(path)
+        if not stat.S_ISREG(st.st_mode):
+            raise IOError('%r is not a regular file.' % (in_path,))
+
+        LOG.debug('%r: registering %r', self, path)
+        self._metadata_by_path[path] = {
+            'size': st.st_size,
+            'mode': st.st_mode,
+            'owner': self._name_or_none(pwd.getpwuid, 0, 'pw_name'),
+            'group': self._name_or_none(grp.getgrgid, 0, 'gr_name'),
+            'mtime': st.st_mtime,
+            'atime': st.st_atime,
+        }
 
     @mitogen.service.expose(policy=mitogen.service.AllowAny())
     @mitogen.service.arg_spec({
@@ -575,15 +595,21 @@ class FileService(mitogen.service.Service):
         :param mitogen.core.Sender sender:
             Sender to receive file data.
         :returns:
-            File size. The target can decide whether to keep the file in RAM or
-            disk based on the return value.
+            Dict containing the file metadata:
+
+            * ``size``: File size in bytes.
+            * ``mode``: Integer file mode.
+            * ``owner``: Owner account name on host machine.
+            * ``group``: Owner group name on host machine.
+            * ``mtime``: Floating point modification time.
+            * ``ctime``: Floating point change time.
         :raises mitogen.core.CallError:
             The path was not registered.
         """
-        if path not in self._size_by_path:
+        if path not in self._metadata_by_path:
             raise mitogen.core.CallError(self.unregistered_msg)
 
         LOG.debug('Serving %r', path)
         fp = open(path, 'rb', mitogen.core.CHUNK_SIZE)
         self._queue.put((sender, fp))
-        return self._size_by_path[path]
+        return self._metadata_by_path[path]
