@@ -27,9 +27,12 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 import ctypes
+import grp
 import logging
 import os
+import pwd
 import subprocess
+import sys
 
 import mitogen.core
 import mitogen.parent
@@ -53,11 +56,16 @@ def setns(kind, fd):
 
 
 def _run_command(args):
-    proc = subprocess.Popen(
-        args=args,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
-    )
+    argv = mitogen.parent.Argv(args)
+    try:
+        proc = subprocess.Popen(
+            args=args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+    except OSError:
+        e = sys.exc_info()[1]
+        raise Error('could not execute %s: %s', argv, e)
 
     output, _ = proc.communicate()
     if not proc.returncode:
@@ -97,6 +105,7 @@ def get_machinectl_pid(path, name):
 
 class Stream(mitogen.parent.Stream):
     container = None
+    username = None
     kind = None
     docker_path = 'docker'
     lxc_info_path = 'lxc-info'
@@ -108,7 +117,7 @@ class Stream(mitogen.parent.Stream):
         'machinectl': ('machinectl_path', get_machinectl_pid),
     }
 
-    def construct(self, container, kind, docker_path=None,
+    def construct(self, container, kind, username=None, docker_path=None,
                   lxc_info_path=None, machinectl_path=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         if kind not in self.GET_LEADER_BY_KIND:
@@ -116,6 +125,8 @@ class Stream(mitogen.parent.Stream):
 
         self.container = container
         self.kind = kind
+        if username:
+            self.username = username
         if docker_path:
             self.docker_path = docker_path
         if lxc_info_path:
@@ -140,11 +151,42 @@ class Stream(mitogen.parent.Stream):
         except Exception, e:
             raise Error(str(e))
 
-        os.chroot('/proc/%s/root' % (self.leader_pid,))
+        os.chdir('/proc/%s/root' % (self.leader_pid,))
+        os.chroot('.')
         os.chdir('/')
         for fp in ns_fps:
             setns(fp.name, fp.fileno())
             fp.close()
+
+        for sym in 'endpwent', 'endgrent', 'endspent', 'endsgent':
+            try:
+                getattr(LIBC, sym)()
+            except AttributeError:
+                pass
+
+        if self.username:
+            try:
+                os.setgroups([grent.gr_gid
+                              for grent in grp.getgrall()
+                              if self.username in grent.gr_mem])
+                pwent = pwd.getpwnam(self.username)
+                os.setreuid(pwent.pw_uid, pwent.pw_uid)
+                # shadow-4.4/libmisc/setupenv.c. Not done: MAIL, PATH
+                os.environ.update({
+                    'HOME': pwent.pw_dir,
+                    'SHELL': pwent.pw_shell or '/bin/sh',
+                    'LOGNAME': self.username,
+                    'USER': self.username,
+                })
+                if ((os.path.exists(pwent.pw_dir) and
+                     os.access(pwent.pw_dir, os.X_OK))):
+                    os.chdir(pwent.pw_dir)
+            except Exception:
+                e = sys.exc_info()[1]
+                raise Error(self.username_msg, self.username, self.container,
+                            type(e).__name__, e)
+
+    username_msg = 'while transitioning to user %r in container %r: %s: %s'
 
     def get_boot_command(self):
         # With setns(CLONE_NEWPID), new children of the caller receive a new

@@ -112,6 +112,26 @@ def _connect_lxc(spec):
     }
 
 
+def _connect_machinectl(spec):
+    return _connect_setns(dict(spec, mitogen_kind='machinectl'))
+
+
+def _connect_setns(spec):
+    print 'ULTRAFLEEN', spec['remote_addr'], spec['remote_user']
+    return {
+        'method': 'setns',
+        'kwargs': {
+            'container': spec['remote_addr'],
+            'username': spec['remote_user'],
+            'python_path': spec['python_path'],
+            'kind': spec['mitogen_kind'],
+            'docker_path': spec['mitogen_docker_path'],
+            'lxc_info_path': spec['mitogen_lxc_info_path'],
+            'machinectl_path': spec['mitogen_machinectl_path'],
+        }
+    }
+
+
 def _connect_sudo(spec):
     return {
         'method': 'sudo',
@@ -132,6 +152,8 @@ CONNECTION_METHOD = {
     'local': _connect_local,
     'lxc': _connect_lxc,
     'lxd': _connect_lxc,
+    'machinectl': _connect_machinectl,
+    'setns': _connect_setns,
     'ssh': _connect_ssh,
     'sudo': _connect_sudo,
 }
@@ -178,6 +200,10 @@ def config_from_play_context(transport, inventory_name, connection):
             for term in shlex.split(s or '')
         ],
         'mitogen_via': connection.mitogen_via,
+        'mitogen_kind': connection.mitogen_kind,
+        'mitogen_docker_path': connection.mitogen_docker_path,
+        'mitogen_lxc_info_path': connection.mitogen_lxc_info_path,
+        'mitogen_machinectl_path': connection.mitogen_machinectl_path,
     }
 
 
@@ -202,6 +228,10 @@ def config_from_hostvars(transport, inventory_name, connection,
         'private_key_file': (hostvars.get('ansible_ssh_private_key_file') or
                              hostvars.get('ansible_private_key_file')),
         'mitogen_via': hostvars.get('mitogen_via'),
+        'mitogen_kind': hostvars.get('mitogen_kind'),
+        'mitogen_docker_path': hostvars.get('mitogen_docker_path'),
+        'mitogen_lxc_info_path': hostvars.get('mitogen_lxc_info_path'),
+        'mitogen_machinectl_path': hostvars.get('mitogen_machinctl_path'),
     })
 
 
@@ -231,6 +261,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     #: Set to 'mitogen_via' by on_action_run().
     mitogen_via = None
+
+    #: Set to 'mitogen_kind' by on_action_run().
+    mitogen_kind = None
+
+    #: Set to 'mitogen_docker_path' by on_action_run().
+    mitogen_docker_path = None
+
+    #: Set to 'mitogen_lxc_info_path' by on_action_run().
+    mitogen_lxc_info_path = None
+
+    #: Set to 'mitogen_lxc_info_path' by on_action_run().
+    mitogen_machinectl_path = None
 
     #: Set to 'inventory_hostname' by on_action_run().
     inventory_hostname = None
@@ -267,6 +309,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.python_path = task_vars.get('ansible_python_interpreter',
                                          '/usr/bin/python')
         self.mitogen_via = task_vars.get('mitogen_via')
+        self.mitogen_kind = task_vars.get('mitogen_kind')
+        self.mitogen_docker_path = task_vars.get('mitogen_docker_path')
+        self.mitogen_lxc_info_path = task_vars.get('mitogen_lxc_info_path')
+        self.mitogen_machinectl_path = task_vars.get('mitogen_machinectl_path')
         self.inventory_hostname = task_vars['inventory_hostname']
         self.host_vars = task_vars['hostvars']
         self.close(new_task=True)

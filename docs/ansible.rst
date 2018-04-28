@@ -455,6 +455,20 @@ connection delegation is supported.
 * ``ansible_user``: Name of user within the container to execute as.
 
 
+Machinectl
+~~~~~~~~~~
+
+Behaves like `machinectl
+<https://github.com/BaxterStockman/ansible-connection-machinectl>`_ except
+connection delegation is supported. This is a lightweight wrapper around the
+``setns`` method below.
+
+* ``ansible_host``: Name of Docker container (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
+  as ``/bin/machinectl``.
+
+
 Sudo
 ~~~~
 
@@ -478,9 +492,10 @@ supported.
 Utility programs must still be installed to discover the PID of the container's
 root process.
 
-* ``mitogen_container_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
+* ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
 * ``ansible_host``: Name of container as it is known to the corresponding tool
   (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_docker_path``: path to Docker if not available on the system path.
 * ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
   ``/usr/bin/lxc-info``.
@@ -537,6 +552,7 @@ rather than the LXC Python bindings, as is usual with the ``lxc`` method.
 
 The ``lxc-attach`` command must be available on the host machine.
 
+* ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
 
 
