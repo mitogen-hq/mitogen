@@ -164,7 +164,7 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
 
     try:
         try:
-            os.fchmod(tmp_path, metadata['mode'])
+            os.fchmod(fp.fileno(), metadata['mode'])
             if set_owner:
                 set_fd_owner(fp.fileno(), metadata['owner'], metadata['group'])
 
@@ -447,7 +447,7 @@ def write_path(path, s, owner=None, group=None, mode=None,
     try:
         try:
             if mode:
-                os.fchmod(tmp_path, mode)
+                os.fchmod(fp.fileno(), mode)
             if owner or group:
                 set_fd_owner(fp.fileno(), owner, group)
             fp.write(s)
