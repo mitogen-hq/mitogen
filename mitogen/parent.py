@@ -484,7 +484,10 @@ def _proxy_connect(name, method_name, kwargs, econtext):
         return {
             'id': None,
             'name': None,
-            'msg': str(sys.exc_info()[1]),
+            'msg': 'error occurred on host %s: %s' % (
+                socket.gethostname(),
+                sys.exc_info()[1],
+            ),
         }
 
     return {

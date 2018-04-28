@@ -159,7 +159,7 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
                                     prefix='.ansible_mitogen_transfer-',
                                     dir=os.path.dirname(out_path))
     fp = os.fdopen(fd, 'wb', mitogen.core.CHUNK_SIZE)
-    LOG.debug('transfer_file(%r) tempory file: %s', out_path, tmp_path)
+    LOG.debug('transfer_file(%r) temporary file: %s', out_path, tmp_path)
 
     try:
         try:
