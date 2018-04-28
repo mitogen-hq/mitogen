@@ -122,8 +122,8 @@ Noteworthy Differences
   `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_,
   `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
   and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
-  connection types are available, with more planned. File bugs to register
-  interest.
+  built-in connection types are supported, along with a Mitogen-specific
+  ``setns`` container type. File bugs to register interest in more.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -436,27 +436,23 @@ equivalent semantics. This allows:
   grew support for Paramiko.
 
 
-Supported Variables
--------------------
+Connection Types
+----------------
 
-Matching Ansible's model, variables are treated on a per-task basis, causing
+Matching Ansible, connection variables are treated on a per-task basis, causing
 establishment of additional reuseable interpreters as necessary to match the
 configuration of each task.
 
 
-SSH
-~~~
+Docker
+~~~~~~
 
-This list will grow as more missing pieces are discovered.
+Behaves like `docker
+<https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_ except
+connection delegation is supported.
 
-* ``ansible_ssh_timeout``
-* ``ansible_host``, ``ansible_ssh_host``
-* ``ansible_user``, ``ansible_ssh_user``
-* ``ansible_port``, ``ssh_port``
-* ``ansible_ssh_executable``, ``ssh_executable``
-* ``ansible_ssh_private_key_file``
-* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
-* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
+* ``ansible_host``: Name of Docker container (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
 
 
 Sudo
@@ -470,30 +466,76 @@ Sudo
 * ansible.cfg: ``timeout``
 
 
-Docker
-~~~~~~
+Setns
+~~~~~
 
-* ``ansible_host``: Name of Docker container (default: inventory hostname).
-* ``ansible_user``: Name of user within the container to execute as.
+The ``setns`` method connects to Linux containers via `setns(2)
+<https://linux.die.net/man/2/setns>`_. Unlike ``docker`` and ``lxc`` the
+namespace transition is handled directly, ensuring optimal throughput to the
+child. This is necessary for ``machinectl`` where only PTY channels are
+supported.
+
+Utility programs must still be installed to discover the PID of the container's
+root process.
+
+* ``mitogen_container_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
+* ``ansible_host``: Name of container as it is known to the corresponding tool
+  (default: inventory hostname).
+* ``mitogen_docker_path``: path to Docker if not available on the system path.
+* ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
+  ``/usr/bin/lxc-info``.
+* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
+  as ``/bin/machinectl``.
+
+
+SSH
+~~~
+
+Behaves like `ssh
+<https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_ except
+connection delegation is supported.
+
+* ``ansible_ssh_timeout``
+* ``ansible_host``, ``ansible_ssh_host``
+* ``ansible_user``, ``ansible_ssh_user``
+* ``ansible_port``, ``ssh_port``
+* ``ansible_ssh_executable``, ``ssh_executable``
+* ``ansible_ssh_private_key_file``
+* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
+* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 
 
 FreeBSD Jails
 ~~~~~~~~~~~~~
 
+Behaves like `jail
+<https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_ except
+connection delegation is supported.
+
 * ``ansible_host``: Name of jail (default: inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
+
+
+Local
+~~~~~
+
+Behaves like `local
+<https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_ except
+connection delegation is supported.
+
+* ``ansible_python_interpreter``
 
 
 LXC
 ~~~
 
-Both ``lxc`` and ``lxd`` connection plug-ins are hijacked, however the
-resulting implementation always uses the ``lxc-attach`` command line tool
-rather than the LXC Python bindings, as is usual with the Ansible ``lxd``
-plug-in.
+Behaves like `lxc
+<https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_ and `lxd
+<https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_ except
+conncetion delegation is supported, and the ``lxc-attach`` tool is always used
+rather than the LXC Python bindings, as is usual with the ``lxc`` method.
 
-Consequently the ``lxc-attach`` command is required to be available on the host
-machine.
+The ``lxc-attach`` command must be available on the host machine.
 
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
 
