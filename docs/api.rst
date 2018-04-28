@@ -698,8 +698,8 @@ Router Class
     .. method:: docker (container=None, image=None, docker_path=None, \**kwargs)
 
         Construct a context on the local machine within an existing or
-        temporary new Docker container. One of `container` or `image` must be
-        specified.
+        temporary new Docker container using the ``docker`` program. One of
+        `container` or `image` must be specified.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -717,8 +717,8 @@ Router Class
 
     .. method:: jail (container, jexec_path=None, \**kwargs)
 
-        Construct a context on the local machine within a FreeBSD jail. The
-        ``jexec`` program must be available.
+        Construct a context on the local machine within a FreeBSD jail using
+        the ``jexec`` program.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -733,8 +733,8 @@ Router Class
 
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 
-        Construct a context on the local machine within an LXC container. The
-        ``lxc-attach`` program must be available.
+        Construct a context on the local machine within an LXC container using
+        the ``lxc-attach`` program.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -744,6 +744,34 @@ Router Class
             Filename or complete path to the ``lxc-attach`` binary. ``PATH``
             will be searched if given as a filename. Defaults to
             ``lxc-attach``.
+
+    .. method:: setns (container, kind, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
+
+        Construct a context in the style of :meth:`local`, but change the
+        active Linux process namespaces via calls to `setns(1)` before
+        executing Python.
+
+        The namespaces to use, and the active root file system are taken from
+        the root PID of a running Docker, LXC, or systemd-nspawn container.
+
+        A program is required only to find the root PID, after which management
+        of the child Python interpreter is handled directly.
+
+        :param str container:
+            Container to connect to.
+        :param str kind:
+            One of ``docker``, ``lxc`` or ``machinectl``.
+        :param str docker_path:
+            Filename or complete path to the Docker binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``docker``.
+        :param str lxc_info_path:
+            Filename or complete path to the ``lxc-info`` binary. ``PATH``
+            will be searched if given as a filename. Defaults to
+            ``lxc-info``.
+        :param str machinectl_path:
+            Filename or complete path to the ``machinectl`` binary. ``PATH``
+            will be searched if given as a filename. Defaults to
+            ``machinectl``.
 
     .. method:: sudo (username=None, sudo_path=None, password=None, \**kwargs)
 
