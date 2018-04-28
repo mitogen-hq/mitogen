@@ -46,7 +46,6 @@ import subprocess
 import tempfile
 import time
 import traceback
-import zlib
 
 import ansible.module_utils.json_utils
 import ansible_mitogen.runner
@@ -107,7 +106,7 @@ def _get_file(context, path, out_fp):
                   'is likely shutting down.', path)
 
     LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-              metadata['size'], path, context, 1000*(time.time() - t0))
+              metadata['size'], path, context, 1000 * (time.time() - t0))
     return ok, metadata
 
 
@@ -160,24 +159,24 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
                                     prefix='.ansible_mitogen_transfer-',
                                     dir=os.path.dirname(out_path))
     fp = os.fdopen(fd, 'wb', mitogen.core.CHUNK_SIZE)
-    LOG.debug('transfer_file(out_path=%r) tempory file: %s', out_path, tmp_path)
+    LOG.debug('transfer_file(%r) tempory file: %s', out_path, tmp_path)
 
     try:
         try:
-            os.fchmod(fp.fileno(), metadata['mode'])
-            if set_owner:
-                set_fd_owner(fp.fileno(), metadata['owner'], metadata['group'])
-
             ok, metadata = _get_file(context, in_path, fp)
             if not ok:
                 raise IOError('transfer of %r was interrupted.' % (in_path,))
+
+            os.fchmod(fp.fileno(), metadata['mode'])
+            if set_owner:
+                set_fd_owner(fp.fileno(), metadata['owner'], metadata['group'])
         finally:
             fp.close()
 
         if sync:
             os.fsync(fp.fileno())
         os.rename(tmp_path, out_path)
-    except:
+    except BaseException:
         os.unlink(tmp_path)
         raise
 
@@ -456,13 +455,13 @@ def write_path(path, s, owner=None, group=None, mode=None,
 
         if sync:
             os.fsync(fp.fileno())
-        os.rename(tmp_path, out_path)
-    except:
+        os.rename(tmp_path, path)
+    except BaseException:
         os.unlink(tmp_path)
         raise
 
     if utimes:
-        os.utime(out_path, utimes)
+        os.utime(path, utimes)
 
 
 CHMOD_CLAUSE_PAT = re.compile(r'([uoga]*)([+\-=])([ugo]|[rwx]*)')
