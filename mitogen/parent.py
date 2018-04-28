@@ -243,7 +243,7 @@ def create_socketpair():
     return parentfp, childfp
 
 
-def create_child(args, merge_stdio=False):
+def create_child(args, merge_stdio=False, preexec_fn=None):
     """
     Create a child process whose stdin/stdout is connected to a socket.
 
@@ -274,6 +274,7 @@ def create_child(args, merge_stdio=False):
         stdin=childfp,
         stdout=childfp,
         close_fds=True,
+        preexec_fn=preexec_fn,
         **extra
     )
     childfp.close()
@@ -1022,6 +1023,9 @@ class Router(mitogen.core.Router):
 
     def lxc(self, **kwargs):
         return self.connect('lxc', **kwargs)
+
+    def setns(self, **kwargs):
+        return self.connect('setns', **kwargs)
 
     def ssh(self, **kwargs):
         return self.connect('ssh', **kwargs)

@@ -493,6 +493,7 @@ class Importer(object):
             'master',
             'parent',
             'service',
+            'setns',
             'ssh',
             'sudo',
             'utils',
