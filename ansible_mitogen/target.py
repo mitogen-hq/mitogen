@@ -98,6 +98,14 @@ def _get_file(context, path, out_fp):
     for chunk in recv:
         s = chunk.unpickle()
         LOG.debug('_get_file(%r): received %d bytes', path, len(s))
+        mitogen.service.call_async(
+            context=context,
+            handle=ansible_mitogen.services.FileService.handle,
+            method='acknowledge',
+            kwargs={
+                'size': len(s),
+            }
+        )
         out_fp.write(s)
 
     ok = out_fp.tell() == metadata['size']
