@@ -1008,12 +1008,14 @@ class Latch(object):
         return len(self._queue) == 0
 
     def _tls_init(self):
-        if self._sockets:
+        # pop() must be atomic, which is true for GIL-equipped interpreters.
+        try:
             return self._sockets.pop()
-        rsock, wsock = socket.socketpair()
-        set_cloexec(rsock.fileno())
-        set_cloexec(wsock.fileno())
-        return rsock, wsock
+        except IndexError:
+            rsock, wsock = socket.socketpair()
+            set_cloexec(rsock.fileno())
+            set_cloexec(wsock.fileno())
+            return rsock, wsock
 
     def get(self, timeout=None, block=True):
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)',
