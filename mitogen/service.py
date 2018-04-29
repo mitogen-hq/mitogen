@@ -138,10 +138,7 @@ class Service(object):
         self.running = True
 
     def __repr__(self):
-        return '%s.%s()' % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-        )
+        return '%s()' % (self.__class__.__name__,)
 
     def on_shutdown(self):
         """
