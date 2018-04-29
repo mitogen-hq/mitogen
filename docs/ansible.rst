@@ -213,10 +213,6 @@ container.
       as duplicate connections between hops, due to not perfectly replicating
       the configuration Ansible would normally use for the intermediary.
 
-    * The extension does not understand the difference between a delegated
-      connection and a ``become_user``. If interpreter recycling kicks in, a
-      delegated connection could be prematurely recycled.
-
 To enable connection delegation, set ``mitogen_via=<inventory name>`` on the
 command line, or as host and group variables.
 

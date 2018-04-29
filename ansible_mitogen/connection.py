@@ -134,6 +134,7 @@ def _connect_setns(spec):
 def _connect_sudo(spec):
     return {
         'method': 'sudo',
+        'enable_lru': True,
         'kwargs': {
             'username': spec['become_user'],
             'password': spec['become_pass'],

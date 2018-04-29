@@ -167,7 +167,7 @@ class ContextService(mitogen.service.Service):
             del self._response_by_key[key]
             del self._refs_by_context[context]
             del self._key_by_context[context]
-            if lru:
+            if lru and context in lru:
                 lru.remove(context)
             if new_context:
                 lru.append(new_context)
@@ -256,7 +256,7 @@ class ContextService(mitogen.service.Service):
             raise Error('unsupported method: %(transport)s' % spec)
 
         context = method(via=via, **spec['kwargs'])
-        if via:
+        if via and spec.get('enable_lru'):
             self._update_lru(context, spec, via)
         else:
             # For directly connected contexts, listen to the associated
