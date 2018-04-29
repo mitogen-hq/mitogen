@@ -489,8 +489,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         try:
             return self.call_async(func, *args, **kwargs).get().unpickle()
         finally:
-            LOG.debug('Call %s%r took %d ms', func.func_name, args,
-                      1000 * (time.time() - t0))
+            LOG.debug('Call took %d ms: %s%r', 1000 * (time.time() - t0),
+                      func.func_name, args)
 
     def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
