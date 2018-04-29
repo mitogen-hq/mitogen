@@ -29,6 +29,18 @@
 import os.path
 import sys
 
+DOCUMENTATION = """
+    author: David Wilson <dw@botanicus.net>
+    connection: mitogen_ssh
+    short_description: Connect over SSH via Mitogen
+    description:
+        - This connects using an OpenSSH client controlled by the Mitogen for
+          Ansible extension. It accepts every option the vanilla ssh plugin
+          accepts.
+    version_added: "2.5"
+    options:
+"""
+
 try:
     import ansible_mitogen.connection
 except ImportError:
