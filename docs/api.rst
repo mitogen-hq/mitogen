@@ -917,6 +917,11 @@ Context Class
         :param bool wait:
             If :py:data:`True`, block the calling thread until the context has
             completely terminated.
+        :returns:
+            If `wait` is :data:`False`, returns a :class:`mitogen.core.Latch`
+            whose :meth:`get() <mitogen.core.Latch.get>` method returns
+            :data:`None` when shutdown completes. The `timeout` parameter may
+            be used to implement graceful timeouts.
 
     .. method:: call_async (fn, \*args, \*\*kwargs)
 
