@@ -470,6 +470,13 @@ Router Class
         :return:
             `handle`, or if `handle` was ``None``, the newly allocated handle.
 
+    .. method:: del_handler (handle)
+
+        Remove the handle registered for `handle`
+
+        :raises KeyError:
+            The handle wasn't registered.
+
     .. method:: _async_route(msg, stream=None)
 
         Arrange for `msg` to be forwarded towards its destination. If its

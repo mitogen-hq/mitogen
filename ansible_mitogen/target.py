@@ -105,7 +105,7 @@ def _get_file(context, path, out_fp):
             kwargs={
                 'size': len(s),
             }
-        )
+        ).close()
         out_fp.write(s)
 
     ok = out_fp.tell() == metadata['size']
