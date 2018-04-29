@@ -34,7 +34,7 @@ it can only ensure the module executes as quickly as possible.
 
 * **A single network roundtrip is used** to execute a step whose code already
   exists in RAM on the target. Eliminating multiplexed SSH channel creation
-  saves 5 ms runtime per 1 ms of network latency for every playbook step.
+  saves 4 ms runtime per 1 ms of network latency for every playbook step.
 
 * **Processes are aggressively reused**, avoiding the cost of invoking Python
   and recompiling imports, saving 300-800 ms for every playbook step.
@@ -142,9 +142,9 @@ Noteworthy Differences
   targets, expect performance degradation as this number is approached and
   errant behaviour as it is exceeded. A replacement will appear soon.
 
-* The undocumented ability to extend :mod:`ansible.module_utils` by supplying a
-  ``module_utils`` directory alongside a custom new-style module is not yet
-  supported.
+* The undocumented ability to extend and override :mod:`ansible.module_utils`
+  by supplying a ``module_utils`` directory alongside a custom new-style module
+  is not yet supported.
 
 * "Module Replacer" style modules are not supported. These rarely appear in
   practice, and light web searches failed to reveal many examples of them.
@@ -173,9 +173,9 @@ Connection Delegation
     :align: right
 
 Included is a preview of **Connection Delegation**, a Mitogen-specific
-implementation of `stackable connection plug-ins`_. This enables multi-hop
-connections via a bastion, or Docker/LXC connections delegated via their host
-machine, where reaching the host may itself entail recursive delegation.
+implementation of `stackable connection plug-ins`_. This enables connections
+via a bastion, or container connections delegated via their host machine, where
+reaching the host may entail further delegation.
 
 .. _Stackable connection plug-ins: https://github.com/ansible/proposals/issues/25
 
@@ -258,7 +258,7 @@ File Transfer
 ~~~~~~~~~~~~~
 
 Normally `sftp <https://linux.die.net/man/1/sftp>`_ or
-`scp <https://linux.die.net/man/1/scp>`_ is used to copy a file by the
+`scp <https://linux.die.net/man/1/scp>`_ are used to copy files by the
 `assemble <http://docs.ansible.com/ansible/latest/modules/assemble_module.html>`_,
 `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_,
 `patch <http://docs.ansible.com/ansible/latest/modules/patch_module.html>`_,
@@ -269,43 +269,43 @@ actions, or when uploading modules with pipelining disabled. With Mitogen
 copies are implemented natively using the same interpreters, connection tree,
 and routed message bus that carries RPCs.
 
-This permits streaming directly between endpoints regardless of execution
+This permits direct streaming between endpoints regardless of execution
 environment, without necessitating temporary copies in intermediary accounts or
 machines, for example when ``become`` is active, or in the presence of
-connection delegation. It also neatly avoids the problem of securely sharing
-temporary files between accounts and machines.
+connection delegation. It also avoids the need to securely share temporary
+files between accounts and machines.
 
-As the implementation is self-contained, it is simple to make future
-improvements like prioritizing transfers, supporting resume, or displaying
-progress bars.
+As the implementation is self-contained, it is simple to make improvements like
+prioritizing transfers, supporting resume, or displaying progress bars.
 
 
 Safety
 ^^^^^^
 
-Incomplete transfers proceed to a hidden file in the destination directory,
-with content and metadata synced using `fsync(2)
-<https://linux.die.net/man/2/fsync>`_ prior to rename over any existing file.
-This ensures the file remains consistent in the event of a crash, or when
-overlapping `ansible-playbook` runs deploy differing file contents.
+Transfers proceed to a hidden file in the destination directory, with content
+and metadata synced using `fsync(2) <https://linux.die.net/man/2/fsync>`_ prior
+to rename over any existing file. This ensures the file remains consistent at
+all times, in the event of a crash, or when overlapping `ansible-playbook` runs
+deploy differing file contents.
 
 The `sftp <https://linux.die.net/man/1/sftp>`_ and `scp
-<https://linux.die.net/man/1/sftp>`_ tools may cause undetectable data
-corruption in the form of truncated files, or files containing intermingled
-data segments from overlapping runs. In normal operation both tools
-additionally expose a window where users of the file may observe inconsistent
-contents.
+<https://linux.die.net/man/1/sftp>`_ tools may cause undetected data corruption
+in the form of truncated files, or files containing intermingled data segments
+from overlapping runs. As part of normal operation, both tools expose a window
+where readers may observe inconsistent file contents.
 
 
 Performance
 ^^^^^^^^^^^
 
-One roundtrip in each direction is required to initiate a transfer larger than
-32KiB. For smaller transfers content is embedded in the RPC towards the target.
-For any tool that operates via SSH multiplexing, 5 roundtrips are required to
-configure the associated IO channel, in addition to the time needed to start
-the local and remote copy subprocesses. A complete localhost invocation of
-``scp`` with an empty ``.profile`` requires around 15 ms.
+One roundtrip initiates a transfer larger than 32KiB, while smaller transfers
+are embedded in the initiating RPC. For tools operating via SSH multiplexing, 4
+roundtrips are required to configure the IO channel, in addition to the time to
+start the local and remote processes.
+
+An invocation of ``scp`` with an empty ``.profile`` over a 30 ms link takes
+~140 ms, wasting 110 ms per invocation, rising to ~2,000 ms over a 400 ms
+UK-India link, wasting 1,600 ms per invocation.
 
 
 Interpreter Reuse
@@ -475,10 +475,12 @@ establishment of additional reuseable interpreters as necessary to match the
 configuration of each task.
 
 
+.. _method-docker:
+
 Docker
 ~~~~~~
 
-Behaves like `docker
+Like `docker
 <https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_ except
 connection delegation is supported.
 
@@ -491,7 +493,7 @@ connection delegation is supported.
 Machinectl
 ~~~~~~~~~~
 
-Behaves like `machinectl third party plugin
+Like the `machinectl third party plugin
 <https://github.com/BaxterStockman/ansible-connection-machinectl>`_ except
 connection delegation is supported. This is a light wrapper around the
 :ref:`setns <setns>` method.
@@ -502,10 +504,10 @@ connection delegation is supported. This is a light wrapper around the
   as ``/bin/machinectl``.
 
 
-FreeBSD Jails
-~~~~~~~~~~~~~
+FreeBSD Jail
+~~~~~~~~~~~~
 
-Behaves like `jail
+Like `jail
 <https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_ except
 connection delegation is supported.
 
@@ -516,21 +518,22 @@ connection delegation is supported.
 Local
 ~~~~~
 
-Behaves like `local
+Like `local
 <https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_ except
 connection delegation is supported.
 
 * ``ansible_python_interpreter``
 
 
+.. _method-lxc:
+
 LXC
 ~~~
 
-Behaves like `lxc
-<https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_ and `lxd
-<https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_ except
-connection delegation is supported, and the ``lxc-attach`` tool is always used
-rather than the LXC Python bindings, as is usual with the ``lxc`` method.
+Like `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_
+and `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_
+except connection delegation is supported, and ``lxc-attach`` is always used
+rather than the LXC Python bindings, as is usual with ``lxc``.
 
 The ``lxc-attach`` command must be available on the host machine.
 
@@ -544,10 +547,10 @@ Setns
 ~~~~~
 
 The ``setns`` method connects to Linux containers via `setns(2)
-<https://linux.die.net/man/2/setns>`_. Unlike :ref:`docker` and :ref:`LXC` the
-namespace transition is handled internally, ensuring optimal throughput to the
-child. This is necessary for :ref:`machinectl` where only PTY channels are
-supported.
+<https://linux.die.net/man/2/setns>`_. Unlike :ref:`method-docker` and
+:ref:`method-lxc` the namespace transition is handled internally, ensuring
+optimal throughput to the child. This is necessary for :ref:`machinectl` where
+only PTY channels are supported.
 
 A utility program must be installed to discover the PID of the container's root
 process.
@@ -582,7 +585,7 @@ When used as a become method:
 
 When used as the ``mitogen_sudo`` connection method:
 
-* The inventory hostname is ignored, and may be any value.
+* The inventory hostname has no special meaning.
 * ``ansible_user``: username to sudo as.
 * ``ansible_password``: password to sudo as.
 * ``sudo_flags``, ``become_flags``
@@ -592,9 +595,8 @@ When used as the ``mitogen_sudo`` connection method:
 SSH
 ~~~
 
-Behaves like `ssh
-<https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_ except
-connection delegation is supported.
+Like `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
+except connection delegation is supported.
 
 * ``ansible_ssh_timeout``
 * ``ansible_host``, ``ansible_ssh_host``
