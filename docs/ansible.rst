@@ -205,10 +205,6 @@ container.
     * Delegated connection setup is single-threaded; only one connection can be
       constructed in parallel per intermediary.
 
-    * Unbounded queue RAM growth may occur in an intermediary during large file
-      transfers if the link between any two hops is slower than the link
-      between the controller and the first hop.
-
     * Inferring the configuration of intermediaries may be buggy, manifesting
       as duplicate connections between hops, due to not perfectly replicating
       the configuration Ansible would normally use for the intermediary.
