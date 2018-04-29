@@ -10,20 +10,22 @@
   - name: Create file tree
     connection: local
     shell: >
-      mkdir filetree;
-      for i in `seq 1 1000` ; do echo $i > filetree/$i ; done
+      mkdir /tmp/filetree.in;
+      seq -f /tmp/filetree.in/%g 1 1000 | xargs touch;
     args:
-      creates: filetree
-
+      creates: /tmp/filetree.in
 
   - name: Delete remote file tree
-    shell: rm -rf /tmp/filetree
+    shell: rm -rf /tmp/filetree.out
 
+  - file:
+      state: directory
+      path: /tmp/filetree.out
 
   - name: Trigger nasty process pileup
-    synchronize:
-      src: "{{ item.src }}"
-      dest: "/tmp/filetree"
+    copy:
+      src: "{{item.src}}"
+      dest: "/tmp/filetree.out/{{item.path}}"
     with_filetree:
-      - filetree
+      - /tmp/filetree.in
     when: item.state == 'file'

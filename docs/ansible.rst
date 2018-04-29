@@ -122,8 +122,9 @@ Noteworthy Differences
   `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_,
   `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
   and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
-  built-in connection types are supported, along with a Mitogen-specific
-  ``setns`` container type. File bugs to register interest in more.
+  built-in connection types are supported, along with Mitogen-specific
+  :ref:`machinectl <machinectl>`, :ref:`mitogen_sudo <sudo>`, and
+  :ref:`setns <setns>` types. File bugs to register interest in others.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -256,10 +257,17 @@ command line, or as host and group variables.
 File Transfer
 ~~~~~~~~~~~~~
 
-Normally a tool like ``scp`` is used to copy a file with the ``copy`` or
-``template`` actions, or when uploading modules with pipelining disabled. With
-Mitogen copies are implemented natively using the same interpreters, connection
-tree, and routed message bus that carries RPCs.
+Normally `sftp <https://linux.die.net/man/1/sftp>`_ or
+`scp <https://linux.die.net/man/1/scp>`_ is used to copy a file by the
+`assemble <http://docs.ansible.com/ansible/latest/modules/assemble_module.html>`_,
+`copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_,
+`patch <http://docs.ansible.com/ansible/latest/modules/patch_module.html>`_,
+`script <http://docs.ansible.com/ansible/latest/modules/script_module.html>`_,
+`template <http://docs.ansible.com/ansible/latest/modules/template_module.html>`_, and
+`unarchive <http://docs.ansible.com/ansible/latest/modules/unarchive_module.html>`_
+actions, or when uploading modules with pipelining disabled. With Mitogen
+copies are implemented natively using the same interpreters, connection tree,
+and routed message bus that carries RPCs.
 
 This permits streaming directly between endpoints regardless of execution
 environment, without necessitating temporary copies in intermediary accounts or
@@ -267,14 +275,37 @@ machines, for example when ``become`` is active, or in the presence of
 connection delegation. It also neatly avoids the problem of securely sharing
 temporary files between accounts and machines.
 
-One roundtrip is required to initiate a transfer. For any tool that operates
-via SSH multiplexing, 5 are required to configure the associated IO channel, in
-addition to the time needed to start the local and remote processes. A complete
-localhost invocation of ``scp`` requires around 15 ms.
-
 As the implementation is self-contained, it is simple to make future
 improvements like prioritizing transfers, supporting resume, or displaying
 progress bars.
+
+
+Safety
+^^^^^^
+
+Incomplete transfers proceed to a hidden file in the destination directory,
+with content and metadata synced using `fsync(2)
+<https://linux.die.net/man/2/fsync>`_ prior to rename over any existing file.
+This ensures the file remains consistent in the event of a crash, or when
+overlapping `ansible-playbook` runs deploy differing file contents.
+
+The `sftp <https://linux.die.net/man/1/sftp>`_ and `scp
+<https://linux.die.net/man/1/sftp>`_ tools may cause undetectable data
+corruption in the form of truncated files, or files containing intermingled
+data segments from overlapping runs. In normal operation both tools
+additionally expose a window where users of the file may observe inconsistent
+contents.
+
+
+Performance
+^^^^^^^^^^^
+
+One roundtrip in each direction is required to initiate a transfer larger than
+32KiB. For smaller transfers content is embedded in the RPC towards the target.
+For any tool that operates via SSH multiplexing, 5 roundtrips are required to
+configure the associated IO channel, in addition to the time needed to start
+the local and remote copy subprocesses. A complete localhost invocation of
+``scp`` with an empty ``.profile`` requires around 15 ms.
 
 
 Interpreter Reuse
@@ -455,69 +486,20 @@ connection delegation is supported.
 * ``ansible_user``: Name of user within the container to execute as.
 
 
+.. _machinectl:
+
 Machinectl
 ~~~~~~~~~~
 
-Behaves like `machinectl
+Behaves like `machinectl third party plugin
 <https://github.com/BaxterStockman/ansible-connection-machinectl>`_ except
-connection delegation is supported. This is a lightweight wrapper around the
-``setns`` method below.
+connection delegation is supported. This is a light wrapper around the
+:ref:`setns <setns>` method.
 
 * ``ansible_host``: Name of Docker container (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
-
-
-Sudo
-~~~~
-
-* ``ansible_python_interpreter``
-* ``ansible_sudo_exe``, ``ansible_become_exe``
-* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
-* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
-* ``sudo_flags``, ``become_flags``
-* ansible.cfg: ``timeout``
-
-
-Setns
-~~~~~
-
-The ``setns`` method connects to Linux containers via `setns(2)
-<https://linux.die.net/man/2/setns>`_. Unlike ``docker`` and ``lxc`` the
-namespace transition is handled directly, ensuring optimal throughput to the
-child. This is necessary for ``machinectl`` where only PTY channels are
-supported.
-
-Utility programs must still be installed to discover the PID of the container's
-root process.
-
-* ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
-* ``ansible_host``: Name of container as it is known to the corresponding tool
-  (default: inventory hostname).
-* ``ansible_user``: Name of user within the container to execute as.
-* ``mitogen_docker_path``: path to Docker if not available on the system path.
-* ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
-  ``/usr/bin/lxc-info``.
-* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
-  as ``/bin/machinectl``.
-
-
-SSH
-~~~
-
-Behaves like `ssh
-<https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_ except
-connection delegation is supported.
-
-* ``ansible_ssh_timeout``
-* ``ansible_host``, ``ansible_ssh_host``
-* ``ansible_user``, ``ansible_ssh_user``
-* ``ansible_port``, ``ssh_port``
-* ``ansible_ssh_executable``, ``ssh_executable``
-* ``ansible_ssh_private_key_file``
-* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
-* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 
 
 FreeBSD Jails
@@ -547,13 +529,81 @@ LXC
 Behaves like `lxc
 <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_ and `lxd
 <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_ except
-conncetion delegation is supported, and the ``lxc-attach`` tool is always used
+connection delegation is supported, and the ``lxc-attach`` tool is always used
 rather than the LXC Python bindings, as is usual with the ``lxc`` method.
 
 The ``lxc-attach`` command must be available on the host machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+
+
+.. _setns:
+
+Setns
+~~~~~
+
+The ``setns`` method connects to Linux containers via `setns(2)
+<https://linux.die.net/man/2/setns>`_. Unlike ``docker`` and ``lxc`` the
+namespace transition is handled directly, ensuring optimal throughput to the
+child. This is necessary for ``machinectl`` where only PTY channels are
+supported.
+
+Utility programs must still be installed to discover the PID of the container's
+root process.
+
+* ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
+* ``ansible_host``: Name of container as it is known to the corresponding tool
+  (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_docker_path``: path to Docker if not available on the system path.
+* ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
+  ``/usr/bin/lxc-info``.
+* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
+  as ``/bin/machinectl``.
+
+
+.. _sudo:
+
+Sudo
+~~~~
+
+Sudo can be used as a connection method that supports connection delegation, or
+as a become method.
+
+When used as a become method:
+
+* ``ansible_python_interpreter``
+* ``ansible_sudo_exe``, ``ansible_become_exe``
+* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
+* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
+* ``sudo_flags``, ``become_flags``
+* ansible.cfg: ``timeout``
+
+When used as the ``mitogen_sudo`` connection method:
+
+* The inventory hostname is ignored, and may be any value.
+* ``ansible_user``: username to sudo as.
+* ``ansible_password``: password to sudo as.
+* ``sudo_flags``, ``become_flags``
+* ``ansible_python_interpreter``
+
+
+SSH
+~~~
+
+Behaves like `ssh
+<https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_ except
+connection delegation is supported.
+
+* ``ansible_ssh_timeout``
+* ``ansible_host``, ``ansible_ssh_host``
+* ``ansible_user``, ``ansible_ssh_user``
+* ``ansible_port``, ``ssh_port``
+* ``ansible_ssh_executable``, ``ssh_executable``
+* ``ansible_ssh_private_key_file``
+* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
+* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 
 
 Debugging

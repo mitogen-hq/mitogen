@@ -117,7 +117,6 @@ def _connect_machinectl(spec):
 
 
 def _connect_setns(spec):
-    print 'ULTRAFLEEN', spec['remote_addr'], spec['remote_user']
     return {
         'method': 'setns',
         'kwargs': {
@@ -146,6 +145,21 @@ def _connect_sudo(spec):
     }
 
 
+def _connect_mitogen_sudo(spec):
+    # sudo as a first-class proxied connection, not a become method.
+    return {
+        'method': 'sudo',
+        'kwargs': {
+            'username': spec['remote_user'],
+            'password': spec['password'],
+            'python_path': spec['python_path'],
+            'sudo_path': spec['become_exe'],
+            'connect_timeout': spec['timeout'],
+            'sudo_args': spec['sudo_args'],
+        }
+    }
+
+
 CONNECTION_METHOD = {
     'docker': _connect_docker,
     'jail': _connect_jail,
@@ -156,6 +170,7 @@ CONNECTION_METHOD = {
     'setns': _connect_setns,
     'ssh': _connect_ssh,
     'sudo': _connect_sudo,
+    'mitogen_sudo': _connect_mitogen_sudo,
 }
 
 
@@ -473,8 +488,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         try:
             return self.call_async(func, *args, **kwargs).get().unpickle()
         finally:
-            LOG.debug('Call %s%r took %d ms', func.func_name, args,
-                      1000 * (time.time() - t0))
+            LOG.debug('Call took %d ms: %s%r', 1000 * (time.time() - t0),
+                      func.func_name, args)
 
     def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
@@ -576,27 +591,3 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             in_path=in_path,
             out_path=out_path
         )
-
-
-class SshConnection(Connection):
-    transport = 'ssh'
-
-
-class LocalConnection(Connection):
-    transport = 'local'
-
-
-class DockerConnection(Connection):
-    transport = 'docker'
-
-
-class LxcConnection(Connection):
-    transport = 'lxc'
-
-
-class LxdConnection(Connection):
-    transport = 'lxd'
-
-
-class JailConnection(Connection):
-    transport = 'jail'

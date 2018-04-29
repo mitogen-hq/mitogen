@@ -30,7 +30,7 @@ import os.path
 import sys
 
 try:
-    import ansible_mitogen
+    import ansible_mitogen.connection
 except ImportError:
     base_dir = os.path.dirname(__file__)
     sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
@@ -40,4 +40,4 @@ import ansible_mitogen.connection
 
 
 class Connection(ansible_mitogen.connection.Connection):
-    transport = 'jail'
+    transport = 'setns'

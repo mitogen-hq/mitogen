@@ -33,15 +33,71 @@ Basic signal handler for dumping thread stacks.
 import difflib
 import logging
 import os
+import gc
 import signal
 import sys
 import threading
 import time
 import traceback
 
+import mitogen.core
+import mitogen.master
+import mitogen.parent
+
 
 LOG = logging.getLogger(__name__)
 _last = None
+
+
+def _hex(n):
+    return '%08x' % n
+
+
+def get_routers():
+    return {
+        _hex(id(router)): router
+        for klass in (
+            mitogen.core.Router,
+            mitogen.parent.Router,
+            mitogen.master.Router,
+        )
+        for router in gc.get_referrers(klass)
+        if isinstance(router, mitogen.core.Router)
+    }
+
+
+def get_router_info():
+    return {
+        'routers': {
+            id_: {
+                'id': id_,
+                'streams': len(set(router._stream_by_id.values())),
+                'contexts': len(set(router._context_by_id.values())),
+                'handles': len(router._handle_map),
+            }
+            for id_, router in get_routers().items()
+        }
+    }
+
+
+def get_router_info(router):
+    pass
+
+
+def get_stream_info(router_id):
+    router = get_routers().get(router_id)
+    return {
+        'streams': dict(
+            (_hex(id(stream)), ({
+                'name': stream.name,
+                'remote_id': stream.remote_id,
+                'sent_module_count': len(getattr(stream, 'sent_modules', [])),
+                'routes': sorted(getattr(stream, 'routes', [])),
+                'type': type(stream).__module__,
+            }))
+            for via_id, stream in router._stream_by_id.items()
+        )
+    }
 
 
 def format_stacks():
@@ -118,3 +174,42 @@ def dump_to_logger():
     th = threading.Thread(target=_logging_main)
     th.setDaemon(True)
     th.start()
+
+
+class ContextDebugger(object):
+    @classmethod
+    @mitogen.core.takes_econtext
+    def _configure_context(cls, econtext):
+        mitogen.parent.upgrade_router(econtext)
+        econtext.debugger = cls(econtext.router)
+
+    def __init__(self, router):
+        self.router = router
+        self.router.add_handler(
+            func=self._on_debug_msg,
+            handle=mitogen.core.DEBUG,
+            persist=True,
+            policy=mitogen.core.has_parent_authority,
+        )
+        mitogen.core.listen(router, 'register', self._on_stream_register)
+        LOG.debug('Context debugging configured.')
+
+    def _on_stream_register(self, context, stream):
+        LOG.debug('_on_stream_register: sending configure() to %r', stream)
+        context.call_async(ContextDebugger._configure_context)
+
+    def _on_debug_msg(self, msg):
+        if msg != mitogen.core._DEAD:
+            threading.Thread(
+                target=self._handle_debug_msg,
+                name='ContextDebuggerHandler',
+                args=(msg,)
+            ).start()
+
+    def _handle_debug_msg(self, msg):
+        try:
+            method, args, kwargs = msg.unpickle()
+            msg.reply(getattr(cls, method)(*args, **kwargs))
+        except Exception:
+            e = sys.exc_info()[1]
+            msg.reply(mitogen.core.CallError(e))
