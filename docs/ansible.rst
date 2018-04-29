@@ -268,14 +268,35 @@ machines, for example when ``become`` is active, or in the presence of
 connection delegation. It also neatly avoids the problem of securely sharing
 temporary files between accounts and machines.
 
-One roundtrip is required to initiate a transfer. For any tool that operates
-via SSH multiplexing, 5 are required to configure the associated IO channel, in
-addition to the time needed to start the local and remote processes. A complete
-localhost invocation of ``scp`` requires around 15 ms.
-
 As the implementation is self-contained, it is simple to make future
 improvements like prioritizing transfers, supporting resume, or displaying
 progress bars.
+
+
+Safety
+^^^^^^
+
+Incomplete transfers proceed to a hidden file in the destination directory,
+with content and metadata synced using `fsync(2)
+<https://linux.die.net/man/2/fsync>`_ prior to being renamed over any existing
+file. This ensures the file remains consistent in the event of a crash, or when
+overlapping `ansible-playbook` runs deploy differing file contents.
+
+The ``sftp`` and ``scp`` tools may cause undetectable data corruption in the
+form of truncated files, or files containing partial data copies from
+overlapping runs of `ansible-playbook`. Both tools additionally expose a window
+where users of the file may observe inconsistent contents.
+
+
+Performance
+^^^^^^^^^^^
+
+One roundtrip in each direction is required to initiate a transfer larger than
+32KiB. For smaller transfers content is embedded in the RPC towards the target.
+For any tool that operates via SSH multiplexing, 5 roundtrips are required to
+configure the associated IO channel, in addition to the time needed to start
+the local and remote copy subprocesses. A complete localhost invocation of
+``scp`` with an empty ``.profile`` requires around 15 ms.
 
 
 Interpreter Reuse
