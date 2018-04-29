@@ -29,21 +29,6 @@
 import os.path
 import sys
 
-#
-# This is not the real Connection implementation module, it simply exists as a
-# proxy to the real module, which is loaded using Python's regular import
-# mechanism, to prevent Ansible's PluginLoader from making up a fake name that
-# results in ansible_mitogen plugin modules being loaded twice: once by
-# PluginLoader with a name like "ansible.plugins.connection.mitogen", which is
-# stuffed into sys.modules even though attempting to import it will trigger an
-# ImportError, and once under its canonical name, "ansible_mitogen.connection".
-#
-# Therefore we have a proxy module that imports it under the real name, and
-# sets up the duff PluginLoader-imported module to just contain objects from
-# the real module, so duplicate types don't exist in memory, and things like
-# debuggers and isinstance() work predictably.
-#
-
 try:
     import ansible_mitogen
 except ImportError:
@@ -51,6 +36,8 @@ except ImportError:
     sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
     del base_dir
 
-from ansible_mitogen.connection import LxcConnection as Connection
-del os
-del sys
+import ansible_mitogen.connection
+
+
+class Connection(ansible_mitogen.connection.Connection):
+    transport = 'lxc'

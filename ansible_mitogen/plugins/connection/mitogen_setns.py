@@ -36,6 +36,8 @@ except ImportError:
     sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
     del base_dir
 
+import ansible_mitogen.connection
+
 
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'setns'

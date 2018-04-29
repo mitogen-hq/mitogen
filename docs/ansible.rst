@@ -122,8 +122,9 @@ Noteworthy Differences
   `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_,
   `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
   and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
-  built-in connection types are supported, along with a Mitogen-specific
-  ``setns`` container type. File bugs to register interest in more.
+  built-in connection types are supported, along with Mitogen-specific
+  :ref:`machinectl <machinectl>`, :ref:`mitogen_sudo <sudo>`, and
+  :ref:`setns <setns>` types. File bugs to register interest in others.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -455,69 +456,20 @@ connection delegation is supported.
 * ``ansible_user``: Name of user within the container to execute as.
 
 
+.. _machinectl:
+
 Machinectl
 ~~~~~~~~~~
 
-Behaves like `machinectl
+Behaves like `machinectl third party plugin
 <https://github.com/BaxterStockman/ansible-connection-machinectl>`_ except
-connection delegation is supported. This is a lightweight wrapper around the
-``setns`` method below.
+connection delegation is supported. This is a light wrapper around the
+:ref:`setns <setns>` method.
 
 * ``ansible_host``: Name of Docker container (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
-
-
-Sudo
-~~~~
-
-* ``ansible_python_interpreter``
-* ``ansible_sudo_exe``, ``ansible_become_exe``
-* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
-* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
-* ``sudo_flags``, ``become_flags``
-* ansible.cfg: ``timeout``
-
-
-Setns
-~~~~~
-
-The ``setns`` method connects to Linux containers via `setns(2)
-<https://linux.die.net/man/2/setns>`_. Unlike ``docker`` and ``lxc`` the
-namespace transition is handled directly, ensuring optimal throughput to the
-child. This is necessary for ``machinectl`` where only PTY channels are
-supported.
-
-Utility programs must still be installed to discover the PID of the container's
-root process.
-
-* ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
-* ``ansible_host``: Name of container as it is known to the corresponding tool
-  (default: inventory hostname).
-* ``ansible_user``: Name of user within the container to execute as.
-* ``mitogen_docker_path``: path to Docker if not available on the system path.
-* ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
-  ``/usr/bin/lxc-info``.
-* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
-  as ``/bin/machinectl``.
-
-
-SSH
-~~~
-
-Behaves like `ssh
-<https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_ except
-connection delegation is supported.
-
-* ``ansible_ssh_timeout``
-* ``ansible_host``, ``ansible_ssh_host``
-* ``ansible_user``, ``ansible_ssh_user``
-* ``ansible_port``, ``ssh_port``
-* ``ansible_ssh_executable``, ``ssh_executable``
-* ``ansible_ssh_private_key_file``
-* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
-* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 
 
 FreeBSD Jails
@@ -547,13 +499,81 @@ LXC
 Behaves like `lxc
 <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_ and `lxd
 <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_ except
-conncetion delegation is supported, and the ``lxc-attach`` tool is always used
+connection delegation is supported, and the ``lxc-attach`` tool is always used
 rather than the LXC Python bindings, as is usual with the ``lxc`` method.
 
 The ``lxc-attach`` command must be available on the host machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+
+
+.. _setns:
+
+Setns
+~~~~~
+
+The ``setns`` method connects to Linux containers via `setns(2)
+<https://linux.die.net/man/2/setns>`_. Unlike ``docker`` and ``lxc`` the
+namespace transition is handled directly, ensuring optimal throughput to the
+child. This is necessary for ``machinectl`` where only PTY channels are
+supported.
+
+Utility programs must still be installed to discover the PID of the container's
+root process.
+
+* ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
+* ``ansible_host``: Name of container as it is known to the corresponding tool
+  (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_docker_path``: path to Docker if not available on the system path.
+* ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
+  ``/usr/bin/lxc-info``.
+* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
+  as ``/bin/machinectl``.
+
+
+.. _sudo:
+
+Sudo
+~~~~
+
+Sudo can be used as a connection method that supports connection delegation, or
+as a become method.
+
+When used as a become method:
+
+* ``ansible_python_interpreter``
+* ``ansible_sudo_exe``, ``ansible_become_exe``
+* ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
+* ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
+* ``sudo_flags``, ``become_flags``
+* ansible.cfg: ``timeout``
+
+When used as the ``mitogen_sudo`` connection method:
+
+* The inventory hostname is ignored, and may be any value.
+* ``ansible_user``: username to sudo as.
+* ``ansible_password``: password to sudo as.
+* ``sudo_flags``, ``become_flags``
+* ``ansible_python_interpreter``
+
+
+SSH
+~~~
+
+Behaves like `ssh
+<https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_ except
+connection delegation is supported.
+
+* ``ansible_ssh_timeout``
+* ``ansible_host``, ``ansible_ssh_host``
+* ``ansible_user``, ``ansible_ssh_user``
+* ``ansible_port``, ``ssh_port``
+* ``ansible_ssh_executable``, ``ssh_executable``
+* ``ansible_ssh_private_key_file``
+* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
+* ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 
 
 Debugging
