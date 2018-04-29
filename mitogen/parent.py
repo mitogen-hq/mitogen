@@ -806,7 +806,8 @@ class Context(mitogen.core.Context):
 
         if wait:
             latch.get()
-        return latch
+        else:
+            return latch
 
 
 class RouteMonitor(object):

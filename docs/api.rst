@@ -470,6 +470,13 @@ Router Class
         :return:
             `handle`, or if `handle` was ``None``, the newly allocated handle.
 
+    .. method:: del_handler (handle)
+
+        Remove the handle registered for `handle`
+
+        :raises KeyError:
+            The handle wasn't registered.
+
     .. method:: _async_route(msg, stream=None)
 
         Arrange for `msg` to be forwarded towards its destination. If its
@@ -917,6 +924,11 @@ Context Class
         :param bool wait:
             If :py:data:`True`, block the calling thread until the context has
             completely terminated.
+        :returns:
+            If `wait` is :data:`False`, returns a :class:`mitogen.core.Latch`
+            whose :meth:`get() <mitogen.core.Latch.get>` method returns
+            :data:`None` when shutdown completes. The `timeout` parameter may
+            be used to implement graceful timeouts.
 
     .. method:: call_async (fn, \*args, \*\*kwargs)
 

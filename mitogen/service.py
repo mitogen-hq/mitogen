@@ -120,6 +120,18 @@ def expose(policy):
     return wrapper
 
 
+def no_reply():
+    """
+    Annotate a method as one that does not generate a response. Messages sent
+    by the method are done so explicitly. This can be used for fire-and-forget
+    endpoints where the requestee never receives a reply.
+    """
+    def wrapper(func):
+        func.mitogen_service__no_reply = True
+        return func
+    return wrapper
+
+
 class Service(object):
     #: Sentinel object to suppress reply generation, since returning ``None``
     #: will trigger a response message containing the pickled ``None``.
@@ -138,10 +150,7 @@ class Service(object):
         self.running = True
 
     def __repr__(self):
-        return '%s.%s()' % (
-            self.__class__.__module__,
-            self.__class__.__name__,
-        )
+        return '%s()' % (self.__class__.__name__,)
 
     def on_shutdown(self):
         """
@@ -182,7 +191,20 @@ class Service(object):
         method = getattr(self, method_name)
         if 'msg' in method.func_code.co_varnames:
             kwargs['msg'] = msg  # TODO: hack
-        return method(**kwargs)
+
+        no_reply = getattr(method, 'mitogen_service__no_reply', False)
+        ret = None
+        try:
+            ret = method(**kwargs)
+            if no_reply:
+                return self.NO_REPLY
+            return ret
+        except Exception:
+            if no_reply:
+                LOG.exception('While calling no-reply method %s.%s',
+                              type(self).__name__, method.func_name)
+            else:
+                raise
 
     def on_receive_message(self, msg):
         try:
@@ -347,10 +369,10 @@ class Pool(object):
         )
 
 
-def call_async(context, handle, method, kwargs):
+def call_async(context, handle, method, kwargs=None):
     LOG.debug('service.call_async(%r, %r, %r, %r)',
               context, handle, method, kwargs)
-    pair = (method, kwargs)
+    pair = (method, kwargs or {})
     msg = mitogen.core.Message.pickled(pair, handle=handle)
     return context.send_async(msg)
 

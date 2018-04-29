@@ -205,17 +205,9 @@ container.
     * Delegated connection setup is single-threaded; only one connection can be
       constructed in parallel per intermediary.
 
-    * Unbounded queue RAM growth may occur in an intermediary during large file
-      transfers if the link between any two hops is slower than the link
-      between the controller and the first hop.
-
     * Inferring the configuration of intermediaries may be buggy, manifesting
       as duplicate connections between hops, due to not perfectly replicating
       the configuration Ansible would normally use for the intermediary.
-
-    * The extension does not understand the difference between a delegated
-      connection and a ``become_user``. If interpreter recycling kicks in, a
-      delegated connection could be prematurely recycled.
 
 To enable connection delegation, set ``mitogen_via=<inventory name>`` on the
 command line, or as host and group variables.

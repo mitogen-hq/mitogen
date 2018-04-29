@@ -436,6 +436,9 @@ class Receiver(object):
             self.notify(self)
 
     def close(self):
+        if self.handle:
+            self.router.del_handler(self.handle)
+            self.handle = None
         self._latch.put(Message.dead())
 
     def empty(self):
@@ -1272,6 +1275,9 @@ class Router(object):
         self._context_by_id[context.context_id] = context
         self.broker.start_receive(stream)
         listen(stream, 'disconnect', lambda: self.on_stream_disconnect(stream))
+
+    def del_handler(self, handle):
+        del self._handle_map[handle]
 
     def add_handler(self, fn, handle=None, persist=True,
                     policy=None, respondent=None):
