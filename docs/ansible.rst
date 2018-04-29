@@ -544,13 +544,13 @@ Setns
 ~~~~~
 
 The ``setns`` method connects to Linux containers via `setns(2)
-<https://linux.die.net/man/2/setns>`_. Unlike ``docker`` and ``lxc`` the
-namespace transition is handled directly, ensuring optimal throughput to the
-child. This is necessary for ``machinectl`` where only PTY channels are
+<https://linux.die.net/man/2/setns>`_. Unlike :ref:`docker` and :ref:`LXC` the
+namespace transition is handled internally, ensuring optimal throughput to the
+child. This is necessary for :ref:`machinectl` where only PTY channels are
 supported.
 
-Utility programs must still be installed to discover the PID of the container's
-root process.
+A utility program must be installed to discover the PID of the container's root
+process.
 
 * ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
 * ``ansible_host``: Name of container as it is known to the corresponding tool

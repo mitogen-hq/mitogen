@@ -798,7 +798,6 @@ class Context(mitogen.core.Context):
         LOG.debug('%r.shutdown() sending SHUTDOWN', self)
         latch = mitogen.core.Latch()
         mitogen.core.listen(self, 'disconnect', lambda: latch.put(None))
-
         self.send(
             mitogen.core.Message(
                 handle=mitogen.core.SHUTDOWN,
@@ -807,6 +806,7 @@ class Context(mitogen.core.Context):
 
         if wait:
             latch.get()
+        return latch
 
 
 class RouteMonitor(object):

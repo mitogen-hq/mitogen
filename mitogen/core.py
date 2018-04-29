@@ -981,6 +981,7 @@ class Latch(object):
     closed = False
     _waking = 0
     _sockets = []
+    _allsockets = []
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -989,10 +990,9 @@ class Latch(object):
 
     @classmethod
     def _on_fork(cls):
-        while cls._sockets:
-            rsock, wsock = cls._sockets.pop()
-            rsock.close()
-            wsock.close()
+        cls._sockets = []
+        while cls._allsockets:
+            cls._allsockets.pop().close()
 
     def close(self):
         self._lock.acquire()
@@ -1008,12 +1008,15 @@ class Latch(object):
         return len(self._queue) == 0
 
     def _tls_init(self):
-        if self._sockets:
+        # pop() must be atomic, which is true for GIL-equipped interpreters.
+        try:
             return self._sockets.pop()
-        rsock, wsock = socket.socketpair()
-        set_cloexec(rsock.fileno())
-        set_cloexec(wsock.fileno())
-        return rsock, wsock
+        except IndexError:
+            rsock, wsock = socket.socketpair()
+            set_cloexec(rsock.fileno())
+            set_cloexec(wsock.fileno())
+            self._allsockets.extend((rsock, wsock))
+            return rsock, wsock
 
     def get(self, timeout=None, block=True):
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)',

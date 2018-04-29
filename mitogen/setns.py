@@ -77,8 +77,9 @@ def _run_command(args):
 
 def get_docker_pid(path, name):
     args = [path, 'inspect', '--format={{.State.Pid}}', name]
+    output = _run_command(args)
     try:
-        return int(_run_command(args))
+        return int(output)
     except ValueError:
         raise Error("could not find PID from docker output.\n%s", output)
 
@@ -132,7 +133,7 @@ class Stream(mitogen.parent.Stream):
         if lxc_info_path:
             self.lxc_info_path = lxc_info_path
         if machinectl_path:
-            self.machinectl_path = lxc_attach_apth
+            self.machinectl_path = machinectl_path
 
     # Order matters. https://github.com/karelzak/util-linux/commit/854d0fe/
     NS_ORDER = ('ipc', 'uts', 'net', 'pid', 'mnt', 'user')
