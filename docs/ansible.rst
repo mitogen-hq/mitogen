@@ -257,10 +257,17 @@ command line, or as host and group variables.
 File Transfer
 ~~~~~~~~~~~~~
 
-Normally a tool like ``scp`` is used to copy a file with the ``copy`` or
-``template`` actions, or when uploading modules with pipelining disabled. With
-Mitogen copies are implemented natively using the same interpreters, connection
-tree, and routed message bus that carries RPCs.
+Normally `sftp <https://linux.die.net/man/1/sftp>`_ or
+`scp <https://linux.die.net/man/1/scp>`_ is used to copy a file by the
+`assemble <http://docs.ansible.com/ansible/latest/modules/assemble_module.html>`_,
+`copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_,
+`patch <http://docs.ansible.com/ansible/latest/modules/patch_module.html>`_,
+`script <http://docs.ansible.com/ansible/latest/modules/script_module.html>`_,
+`template <http://docs.ansible.com/ansible/latest/modules/template_module.html>`_, and
+`unarchive <http://docs.ansible.com/ansible/latest/modules/unarchive_module.html>`_
+actions, or when uploading modules with pipelining disabled. With Mitogen
+copies are implemented natively using the same interpreters, connection tree,
+and routed message bus that carries RPCs.
 
 This permits streaming directly between endpoints regardless of execution
 environment, without necessitating temporary copies in intermediary accounts or
@@ -278,14 +285,16 @@ Safety
 
 Incomplete transfers proceed to a hidden file in the destination directory,
 with content and metadata synced using `fsync(2)
-<https://linux.die.net/man/2/fsync>`_ prior to being renamed over any existing
-file. This ensures the file remains consistent in the event of a crash, or when
+<https://linux.die.net/man/2/fsync>`_ prior to rename over any existing file.
+This ensures the file remains consistent in the event of a crash, or when
 overlapping `ansible-playbook` runs deploy differing file contents.
 
-The ``sftp`` and ``scp`` tools may cause undetectable data corruption in the
-form of truncated files, or files containing partial data copies from
-overlapping runs of `ansible-playbook`. Both tools additionally expose a window
-where users of the file may observe inconsistent contents.
+The `sftp <https://linux.die.net/man/1/sftp>`_ and `scp
+<https://linux.die.net/man/1/sftp>`_ tools may cause undetectable data
+corruption in the form of truncated files, or files containing intermingled
+data segments from overlapping runs. In normal operation both tools
+additionally expose a window where users of the file may observe inconsistent
+contents.
 
 
 Performance

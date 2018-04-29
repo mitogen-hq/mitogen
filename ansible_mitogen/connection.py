@@ -117,7 +117,6 @@ def _connect_machinectl(spec):
 
 
 def _connect_setns(spec):
-    print 'ULTRAFLEEN', spec['remote_addr'], spec['remote_user']
     return {
         'method': 'setns',
         'kwargs': {
