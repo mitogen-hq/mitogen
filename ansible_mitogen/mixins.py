@@ -50,7 +50,7 @@ except ImportError:  # Ansible<2.4
 
 import mitogen.core
 import mitogen.master
-from mitogen.utils import cast
+import mitogen.utils
 
 import ansible_mitogen.connection
 import ansible_mitogen.planner
@@ -292,7 +292,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             return os.path.join(self._connection.homedir, path[2:])
         if path.startswith('~'):
             # ~root/.ansible -> /root/.ansible
-            return self.call(os.path.expanduser, path)
+            return self.call(os.path.expanduser, mitogen.utils.cast(path))
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
