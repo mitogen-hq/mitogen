@@ -378,8 +378,8 @@ class FileService(mitogen.service.Service):
     chunks to fill that assumed pipe, then responding to delivery
     acknowledgements from the receiver by scheduling new chunks.
 
-    Transfers proceeed one-at-a-time per stream. When multiple contexts exist
-    on a stream (e.g. one is the SSH account, another is a sudo account, and a
+    Transfers proceed one-at-a-time per stream. When multiple contexts exist on
+    a stream (e.g. one is the SSH account, another is a sudo account, and a
     third is a proxied SSH connection), each request is satisfied in turn
     before subsequent requests start flowing. This ensures when a stream is
     contended, priority is given to completing individual transfers rather than
@@ -423,9 +423,8 @@ class FileService(mitogen.service.Service):
     unregistered_msg = 'Path is not registered with FileService.'
     context_mismatch_msg = 'sender= kwarg context must match requestee context'
 
-    #: Initial burst size. With 1MiB and a RTT of 10ms, maximum throughput is
-    #: 112MiB/sec, which is 5x what SSH can handle on a 2011 era 2.4Ghz Core
-    #: i5.
+    #: Burst size. With 1MiB and 10ms RTT max throughput is 100MiB/sec, which
+    #: is 5x what SSH can handle on a 2011 era 2.4Ghz Core i5.
     window_size_bytes = 1048576
 
     def __init__(self, router):
@@ -498,10 +497,10 @@ class FileService(mitogen.service.Service):
         while state.jobs and state.unacked < self.window_size_bytes:
             sender, fp = state.jobs[0]
             s = fp.read(mitogen.core.CHUNK_SIZE)
-            state.unacked += len(s)
-            sender.send(s)
-
-            if not s:
+            if s:
+                state.unacked += len(s)
+                sender.send(s)
+            else:
                 # File is done. Cause the target's receive loop to exit by
                 # closing the sender, close the file, and remove the job entry.
                 sender.close()
@@ -516,7 +515,7 @@ class FileService(mitogen.service.Service):
     })
     def fetch(self, path, sender, msg):
         """
-        Fetch a file's data.
+        Start a transfer for a registered path.
 
         :param str path:
             File path.
@@ -532,8 +531,7 @@ class FileService(mitogen.service.Service):
             * ``mtime``: Floating point modification time.
             * ``ctime``: Floating point change time.
         :raises Error:
-            Unregistered path, or attempt to send to context that was not the
-            requestee context.
+            Unregistered path, or Sender did not match requestee context.
         """
         if path not in self._metadata_by_path:
             raise Error(self.unregistered_msg)
