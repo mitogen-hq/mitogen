@@ -1,0 +1,21 @@
+# https://github.com/dw/mitogen/issues/239
+# While remote_tmp is used in the context of the SSH user by action code
+# running on the controller, Ansiballz ignores it and uses the system default
+# instead.
+
+- name: integration/remote_tmp/readonly_homedir.yml
+  hosts: test-targets
+  any_errors_fatal: true
+  tasks:
+    - custom_python_detect_environment:
+      become: true
+      become_user: mitogen__readonly_homedir
+      register: out
+      vars:
+        ansible_become_pass: readonly_homedir_password
+
+    - debug: msg={{out}}
+    - name: Verify system temp directory was used.
+      assert:
+        that:
+          - out.argv[0].startswith("/tmp/ansible_mitogen_")

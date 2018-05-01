@@ -51,6 +51,7 @@
         - require_tty
         - pw_required
         - require_tty_pw_required
+        - readonly_homedir
       when: ansible_system == 'Darwin'
 
     - name: Create Mitogen test users
@@ -84,6 +85,9 @@
       with_sequence: start=1 end=21
       when: ansible_distribution == 'MacOSX'
 
+    - name: Readonly homedir for one account
+      shell: "chown -R root: ~mitogen__readonly_homedir"
+
     - name: Require a TTY for two accounts
       lineinfile:
         path: /etc/sudoers
@@ -101,12 +105,13 @@
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
 
-    - name: Allow passwordless for one account
+    - name: Allow passwordless for two accounts
       lineinfile:
         path: /etc/sudoers
         line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}) NOPASSWD:ALL"
       with_items:
         - mitogen__require_tty
+        - mitogen__readonly_homedir
 
     - name: Allow passwordless for many accounts
       lineinfile:

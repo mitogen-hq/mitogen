@@ -9,4 +9,5 @@
 - import_playbook: connection_loader/all.yml
 - import_playbook: context_service/all.yml
 - import_playbook: playbook_semantics/all.yml
+- import_playbook: remote_tmp/all.yml
 - import_playbook: runner/all.yml

@@ -110,9 +110,9 @@ class Runner(object):
 
     def get_temp_dir(self):
         if not self._temp_dir:
-            self._temp_dir = ansible_mitogen.target.make_temp_directory(
-                self.remote_tmp,
-            )
+            self._temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_')
+            # https://github.com/dw/mitogen/issues/239
+            #ansible_mitogen.target.make_temp_directory(self.remote_tmp)
         return self._temp_dir
 
     def setup(self):
