@@ -485,6 +485,14 @@ class FileService(mitogen.service.Service):
             finally:
                 state.lock.release()
 
+    # The IO loop pumps 128KiB chunks. An ideal message is a multiple of this,
+    # odd-sized messages waste one tiny write() per message on the trailer.
+    # Therefore subtract 10 bytes pickle overhead + 24 bytes header.
+    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Stream.HEADER_LEN + (
+        len(mitogen.core.Message.pickled(' ' * mitogen.core.CHUNK_SIZE).data) -
+        mitogen.core.CHUNK_SIZE
+    ))
+
     def _schedule_pending_unlocked(self, state):
         """
         Consider the pending transfers for a stream, pumping new chunks while
@@ -496,7 +504,7 @@ class FileService(mitogen.service.Service):
         """
         while state.jobs and state.unacked < self.window_size_bytes:
             sender, fp = state.jobs[0]
-            s = fp.read(mitogen.core.CHUNK_SIZE)
+            s = fp.read(self.IO_SIZE)
             if s:
                 state.unacked += len(s)
                 sender.send(s)
@@ -539,7 +547,7 @@ class FileService(mitogen.service.Service):
             raise Error(self.context_mismatch_msg)
 
         LOG.debug('Serving %r', path)
-        fp = open(path, 'rb', mitogen.core.CHUNK_SIZE)
+        fp = open(path, 'rb', self.IO_SIZE)
         # Response must arrive first so requestee can begin receive loop,
         # otherwise first ack won't arrive until all pending chunks were
         # delivered. In that case max BDP would always be 128KiB, aka. max
