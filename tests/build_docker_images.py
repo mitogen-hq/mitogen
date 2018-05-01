@@ -46,6 +46,8 @@ RUN \
     useradd -s /bin/bash -m mitogen__pw_required && \
     useradd -s /bin/bash -m mitogen__require_tty && \
     useradd -s /bin/bash -m mitogen__require_tty_pw_required && \
+    useradd -s /bin/bash -m mitogen__readonly_homedir && \
+    chown -R root: ~mitogen__readonly_homedir && \
     { for i in `seq 1 21`; do useradd -s /bin/bash -m mitogen__user$i; done; } && \
     ( echo 'root:rootpassword' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo:has_sudo_password' | chpasswd; ) && \
@@ -55,6 +57,7 @@ RUN \
     ( echo 'mitogen__pw_required:pw_required_password' | chpasswd; ) && \
     ( echo 'mitogen__require_tty:require_tty_password' | chpasswd; ) && \
     ( echo 'mitogen__require_tty_pw_required:require_tty_pw_required_password' | chpasswd; ) && \
+    ( echo 'mitogen__readonly_homedir:readonly_homedir_password' | chpasswd; ) && \
     mkdir ~mitogen__has_sudo_pubkey/.ssh && \
     { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }
 

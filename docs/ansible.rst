@@ -90,7 +90,7 @@ Installation
 ------------
 
 1. Thoroughly review the documented behavioural differences.
-2. Verify Ansible 2.4/2.5 and Python 2.7 are listed in ``ansible --version``
+2. Verify Ansible 2.3/2.4/2.5 and Python 2.7 are listed in ``ansible --version``
    output.
 3. Download and extract https://github.com/dw/mitogen/archive/master.zip
 4. Modify ``ansible.cfg``:
@@ -110,8 +110,8 @@ Installation
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.4 and 2.5 are supported. File bugs to register interest in older
-  releases.
+* Ansible 2.3, 2.4 and 2.5 are supported. File bugs to register interest in
+  older releases.
 
 * The ``sudo`` become method is available and ``su`` is planned. File bugs to
   register interest in additional methods.
