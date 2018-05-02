@@ -859,14 +859,14 @@ Router Class
             Port number to connect to; default is unspecified, which causes SSH
             to pick the port number.
         :param str check_host_keys:
-            Specifies the SSH host key checking mode:
+            Specifies the SSH host key checking mode. Defaults to ``enforce``.
 
             * ``ignore``: no host key checking is performed. Connections never
               fail due to an unknown or changed host key.
             * ``accept``: known hosts keys are checked to ensure they match,
               new host keys are automatically accepted and verified in future
               connections.
-            * ``enforce``: known host keys are checke to ensure they match,
+            * ``enforce``: known host keys are checked to ensure they match,
               unknown hosts cause a connection failure.
         :param str password:
             Password to type if/when ``ssh`` requests it. If not specified and
@@ -886,6 +886,16 @@ Router Class
             are already compressed, however it has a large effect on every
             remaining message in the otherwise uncompressed stream protocol,
             such as function call arguments and return values.
+
+        :raises mitogen.ssh.PasswordError:
+            A password was requested but none was specified, or the specified
+            password was incorrect.
+
+        :raises mitogen.ssh.HostKeyError:
+            When `check_host_keys` is set to either ``accept``, indicates a
+            previously recorded key no longer matches the remote machine. When
+            set to ``enforce``, as above, but additionally indicates no
+            previously recorded key exists for the remote machine.
 
 
 Context Class
