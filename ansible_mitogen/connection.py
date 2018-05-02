@@ -131,6 +131,20 @@ def _connect_setns(spec):
     }
 
 
+def _connect_su(spec):
+    return {
+        'method': 'su',
+        'enable_lru': True,
+        'kwargs': {
+            'username': spec['become_user'],
+            'password': spec['become_pass'],
+            'python_path': spec['python_path'],
+            'su_path': spec['become_exe'],
+            'connect_timeout': spec['timeout'],
+        }
+    }
+
+
 def _connect_sudo(spec):
     return {
         'method': 'sudo',
@@ -142,6 +156,20 @@ def _connect_sudo(spec):
             'sudo_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
             'sudo_args': spec['sudo_args'],
+        }
+    }
+
+
+def _connect_mitogen_su(spec):
+    # su as a first-class proxied connection, not a become method.
+    return {
+        'method': 'su',
+        'kwargs': {
+            'username': spec['remote_user'],
+            'password': spec['password'],
+            'python_path': spec['python_path'],
+            'su_path': spec['become_exe'],
+            'connect_timeout': spec['timeout'],
         }
     }
 
@@ -170,7 +198,9 @@ CONNECTION_METHOD = {
     'machinectl': _connect_machinectl,
     'setns': _connect_setns,
     'ssh': _connect_ssh,
+    'su': _connect_su,
     'sudo': _connect_sudo,
+    'mitogen_su': _connect_mitogen_su,
     'mitogen_sudo': _connect_mitogen_sudo,
 }
 
@@ -266,8 +296,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: target machine (i.e. via sudo).
     context = None
 
-    #: Only sudo is supported for now.
-    become_methods = ['sudo']
+    #: Only sudo and su are supported for now.
+    become_methods = ['sudo', 'su']
 
     #: Set to 'ansible_python_interpreter' by on_action_run().
     python_path = None

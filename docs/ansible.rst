@@ -110,11 +110,10 @@ Installation
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3, 2.4 and 2.5 are supported. File bugs to register interest in
-  older releases.
+* Ansible 2.3, 2.4 and 2.5 are supported on Python 2.7.
 
-* The ``sudo`` become method is available and ``su`` is planned. File bugs to
-  register interest in additional methods.
+* The ``su`` and ``sudo`` become methods are available. File bugs to register
+  interest in more.
 
 * The `docker <https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_,
   `jail <https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_,
@@ -123,8 +122,9 @@ Noteworthy Differences
   `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
   and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
   built-in connection types are supported, along with Mitogen-specific
-  :ref:`machinectl <machinectl>`, :ref:`mitogen_sudo <sudo>`, and
-  :ref:`setns <setns>` types. File bugs to register interest in others.
+  :ref:`machinectl <machinectl>`, :ref:`mitogen_su <su>`, :ref:`mitogen_sudo
+  <sudo>`, and :ref:`setns <setns>` types. File bugs to register interest in
+  others.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -556,6 +556,31 @@ process.
   ``/usr/bin/lxc-info``.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
+
+
+.. _su:
+
+Su
+~~
+
+Su can be used as a connection method that supports connection delegation, or
+as a become method.
+
+When used as a become method:
+
+* ``ansible_python_interpreter``
+* ``ansible_su_exe``, ``ansible_become_exe``
+* ``ansible_su_user``, ``ansible_become_user`` (default: ``root``)
+* ``ansible_su_pass``, ``ansible_become_pass`` (default: assume passwordless)
+* ``su_flags``, ``become_flags``
+* ansible.cfg: ``timeout``
+
+When used as the ``mitogen_su`` connection method:
+
+* The inventory hostname has no special meaning.
+* ``ansible_user``: username to su as.
+* ``ansible_password``: password to su as.
+* ``ansible_python_interpreter``
 
 
 .. _sudo:
