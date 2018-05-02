@@ -13,7 +13,7 @@ def grep_version():
 
 
 author = u'David Wilson'
-copyright = u'2016, David Wilson'
+copyright = u'2018, David Wilson'
 exclude_patterns = ['_build']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.programoutput']
 html_show_sourcelink = False
