@@ -974,6 +974,8 @@ class Router(mitogen.core.Router):
             self._context_by_id[context_id] = context
         return context
 
+    connection_timeout_msg = "Connection timed out."
+
     def _connect(self, klass, name=None, **kwargs):
         context_id = self.allocate_id()
         context = self.context_class(self, context_id)
@@ -982,7 +984,11 @@ class Router(mitogen.core.Router):
         stream = klass(self, context_id, **kwargs)
         if name is not None:
             stream.name = name
-        stream.connect()
+        try:
+            stream.connect()
+        except mitogen.core.TimeoutError:
+            e = sys.exc_info()[1]
+            raise mitogen.core.StreamError(self.connection_timeout_msg)
         context.name = stream.name
         self.route_monitor.notice_stream(stream)
         self.register(context, stream)
