@@ -498,6 +498,7 @@ class Importer(object):
             'service',
             'setns',
             'ssh',
+            'su',
             'sudo',
             'utils',
         ]}

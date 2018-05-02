@@ -1031,11 +1031,14 @@ class Router(mitogen.core.Router):
     def setns(self, **kwargs):
         return self.connect('setns', **kwargs)
 
-    def ssh(self, **kwargs):
-        return self.connect('ssh', **kwargs)
+    def su(self, **kwargs):
+        return self.connect('su', **kwargs)
 
     def sudo(self, **kwargs):
         return self.connect('sudo', **kwargs)
+
+    def ssh(self, **kwargs):
+        return self.connect('ssh', **kwargs)
 
 
 class ProcessMonitor(object):
