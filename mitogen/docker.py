@@ -36,6 +36,8 @@ LOG = logging.getLogger(__name__)
 
 
 class Stream(mitogen.parent.Stream):
+    child_is_immediate_subprocess = False
+
     container = None
     image = None
     username = None

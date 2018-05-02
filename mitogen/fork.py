@@ -81,6 +81,8 @@ def handle_child_crash():
 
 
 class Stream(mitogen.parent.Stream):
+    child_is_immediate_subprocess = True
+
     #: Reference to the importer, if any, recovered from the parent.
     importer = None
 

@@ -59,6 +59,7 @@ class HostKeyError(mitogen.core.StreamError):
 
 class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    child_is_immediate_subprocess = False
     python_path = 'python2.7'
 
     #: Once connected, points to the corresponding TtyLogStream, allowing it to

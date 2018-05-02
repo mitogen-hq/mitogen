@@ -105,6 +105,8 @@ def get_machinectl_pid(path, name):
 
 
 class Stream(mitogen.parent.Stream):
+    child_is_immediate_subprocess = False
+
     container = None
     username = None
     kind = None

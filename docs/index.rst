@@ -237,6 +237,17 @@ uptime')** without further need to capture or manage output.
    18:17:56 I mitogen.ctx.k3: stdout: 17:37:10 up 562 days,  2:25,  5 users,  load average: 1.24, 1.13, 1.14
 
 
+Detached Subtrees
+#################
+
+.. image:: images/detached-subtree.png
+
+It is possible to dynamically construct and decouple individual contexts from
+the lifecycle of the running program without terminating them, while enabling
+communication with any descendents in the subtree to be maintained. This is
+intended to support implementing background tasks.
+
+
 Blocking Code Friendly
 ######################
 

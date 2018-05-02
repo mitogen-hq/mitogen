@@ -690,6 +690,11 @@ class Router(mitogen.parent.Router):
         self.responder = ModuleResponder(self)
         self.log_forwarder = LogForwarder(self)
         self.route_monitor = mitogen.parent.RouteMonitor(router=self)
+        self.add_handler(  # TODO: cutpaste.
+            fn=self._on_detaching,
+            handle=mitogen.core.DETACHING,
+            persist=True,
+        )
 
     def enable_debug(self):
         mitogen.core.enable_debug_logging()
