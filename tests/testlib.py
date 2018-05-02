@@ -242,7 +242,7 @@ class DockerMixin(RouterMixin):
     def docker_ssh(self, **kwargs):
         kwargs.setdefault('hostname', self.dockerized_ssh.host)
         kwargs.setdefault('port', self.dockerized_ssh.port)
-        kwargs.setdefault('check_host_keys', False)
+        kwargs.setdefault('check_host_keys', 'ignore')
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):

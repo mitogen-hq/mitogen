@@ -498,6 +498,7 @@ class Importer(object):
             'service',
             'setns',
             'ssh',
+            'su',
             'sudo',
             'utils',
         ]}
@@ -1287,7 +1288,7 @@ class Router(object):
         if respondent:
             assert policy is None
             def policy(msg, _stream):
-                return msg.src_id == respondent.context_id
+                return msg.is_dead or msg.src_id == respondent.context_id
             def on_disconnect():
                 if handle in self._handle_map:
                     fn(Message.dead())
@@ -1683,6 +1684,8 @@ class ExternalContext(object):
 
                 _profile_hook('main', self._dispatch_calls)
                 _v and LOG.debug('ExternalContext.main() normal exit')
+            except KeyboardInterrupt:
+                LOG.debug('KeyboardInterrupt received, exiting gracefully.')
             except BaseException:
                 LOG.exception('ExternalContext.main() crashed')
                 raise

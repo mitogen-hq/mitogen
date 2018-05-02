@@ -74,6 +74,9 @@ echo --- ansible/inventory/hosts: ----
 cat ansible/inventory/hosts
 echo ---
 
+# Now we have real host key checking, we need to turn it off. :)
+export ANSIBLE_HOST_KEY_CHECKING=False
+
 echo travis_fold:end:job_setup
 
 
