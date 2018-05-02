@@ -60,10 +60,15 @@ def _connect_local(spec):
 
 
 def _connect_ssh(spec):
+    if C.HOST_KEY_CHECKING:
+        check_host_keys = 'enforce'
+    else:
+        check_host_keys = 'ignore'
+
     return {
         'method': 'ssh',
         'kwargs': {
-            'check_host_keys': False,  # TODO
+            'check_host_keys': check_host_keys,
             'hostname': spec['remote_addr'],
             'username': spec['remote_user'],
             'password': spec['password'],

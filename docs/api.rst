@@ -842,7 +842,7 @@ Router Class
             :py:class:`mitogen.core.StreamError` to be raised, and that
             attributes of the stream match the actual behaviour of ``sudo``.
 
-    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys=True, password=None, identity_file=None, compression=True, \**kwargs)
+    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys='enforce', password=None, identity_file=None, compression=True, \**kwargs)
 
         Construct a remote context over a ``ssh`` invocation. The ``ssh``
         process is started in a newly allocated pseudo-terminal, and supports
@@ -858,10 +858,16 @@ Router Class
         :param int port:
             Port number to connect to; default is unspecified, which causes SSH
             to pick the port number.
-        :param bool check_host_keys:
-            If ``False``, arrange for SSH to perform no verification of host
-            keys. If ``True``, cause SSH to pick the default behaviour, which
-            is usually to verify host keys.
+        :param str check_host_keys:
+            Specifies the SSH host key checking mode:
+
+            * ``ignore``: no host key checking is performed. Connections never
+              fail due to an unknown or changed host key.
+            * ``accept``: known hosts keys are checked to ensure they match,
+              new host keys are automatically accepted and verified in future
+              connections.
+            * ``enforce``: known host keys are checke to ensure they match,
+              unknown hosts cause a connection failure.
         :param str password:
             Password to type if/when ``ssh`` requests it. If not specified and
             a password is requested, :py:class:`mitogen.ssh.PasswordError` is

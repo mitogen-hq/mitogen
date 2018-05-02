@@ -45,9 +45,15 @@ LOG = logging.getLogger('mitogen')
 
 PASSWORD_PROMPT = 'password:'
 PERMDENIED_PROMPT = 'permission denied'
+HOSTKEY_REQ_PROMPT = 'are you sure you want to continue connecting (yes/no)?'
+HOSTKEY_FAIL = 'host key verification failed.'
 
 
 class PasswordError(mitogen.core.StreamError):
+    pass
+
+
+class HostKeyError(mitogen.core.StreamError):
     pass
 
 
@@ -62,16 +68,24 @@ class Stream(mitogen.parent.Stream):
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
+    hostname = None
+    username = None
+    port = None
+
     identity_file = None
     password = None
-    port = None
     ssh_args = None
 
+    check_host_keys_msg = 'host_keys= must be set to accept, enforce or ignore'
+
     def construct(self, hostname, username=None, ssh_path=None, port=None,
-                  check_host_keys=True, password=None, identity_file=None,
+                  check_host_keys='enforce', password=None, identity_file=None,
                   compression=True, ssh_args=None, keepalive_enabled=True,
                   keepalive_count=3, keepalive_interval=15, **kwargs):
         super(Stream, self).construct(**kwargs)
+        if check_host_keys not in ('accept', 'enforce', 'ignore'):
+            raise ValueError(self.check_host_keys_msg)
+
         self.hostname = hostname
         self.username = username
         self.port = port
@@ -93,8 +107,6 @@ class Stream(mitogen.parent.Stream):
 
     def get_boot_command(self):
         bits = [self.ssh_path]
-        # bits += ['-o', 'BatchMode yes']
-
         if self.username:
             bits += ['-l', self.username]
         if self.port is not None:
@@ -110,7 +122,11 @@ class Stream(mitogen.parent.Stream):
                 '-o', 'ServerAliveInterval %s' % (self.keepalive_interval,),
                 '-o', 'ServerAliveCountMax %s' % (self.keepalive_count,),
             ]
-        if not self.check_host_keys:
+        if self.check_host_keys == 'enforce':
+            bits += ['-o', 'StrictHostKeyChecking yes']
+        if self.check_host_keys == 'accept':
+            bits += ['-o', 'StrictHostKeyChecking ask']
+        elif self.check_host_keys == 'ignore':
             bits += [
                 '-o', 'StrictHostKeyChecking no',
                 '-o', 'UserKnownHostsFile /dev/null',
@@ -131,6 +147,27 @@ class Stream(mitogen.parent.Stream):
     auth_incorrect_msg = 'SSH authentication is incorrect'
     password_incorrect_msg = 'SSH password is incorrect'
     password_required_msg = 'SSH password was requested, but none specified'
+    hostkey_config_msg = (
+        'SSH requested permission to accept unknown host key, but '
+        'check_host_keys=ignore. This is likely due to ssh_args=  '
+        'conflicting with check_host_keys=. Please correct your '
+        'configuration.'
+    )
+    hostkey_failed_msg = (
+        'check_host_keys is set to enforce, and SSH reported an unknown '
+        'or changed host key.'
+    )
+
+    def _host_key_prompt(self):
+        if self.check_host_keys == 'accept':
+            LOG.debug('%r: accepting host key', self)
+            self.tty_stream.transmit_side.write('y\n')
+            return
+
+        # _host_key_prompt() should never be reached with ignore or enforce
+        # mode, SSH should have handled that. User's ssh_args= is conflicting
+        # with ours.
+        raise HostKeyError(self.hostkey_config_msg)
 
     def _connect_bootstrap(self, extra_fd):
         self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
@@ -146,6 +183,10 @@ class Stream(mitogen.parent.Stream):
             if buf.endswith('EC0\n'):
                 self._ec0_received()
                 return
+            elif HOSTKEY_REQ_PROMPT in buf.lower():
+                self._host_key_prompt()
+            elif HOSTKEY_FAIL in buf.lower():
+                raise HostKeyError(self.hostkey_failed_msg)
             elif PERMDENIED_PROMPT in buf.lower():
                 if self.password is not None and password_sent:
                     raise PasswordError(self.password_incorrect_msg)
@@ -154,7 +195,7 @@ class Stream(mitogen.parent.Stream):
             elif PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
-                LOG.debug('sending password')
+                LOG.debug('%r: sending password', self)
                 self.tty_stream.transmit_side.write(self.password + '\n')
                 password_sent = True
 
