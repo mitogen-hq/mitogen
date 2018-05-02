@@ -1684,6 +1684,8 @@ class ExternalContext(object):
 
                 _profile_hook('main', self._dispatch_calls)
                 _v and LOG.debug('ExternalContext.main() normal exit')
+            except KeyboardInterrupt:
+                LOG.debug('KeyboardInterrupt received, exiting gracefully.')
             except BaseException:
                 LOG.exception('ExternalContext.main() crashed')
                 raise
