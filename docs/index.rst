@@ -95,15 +95,20 @@ to your network topology**.
         hostname='jump-box.mycorp.com'
     )
 
-    ssh_account = router.sudo(
+    docker_host = router.ssh(
         via=bastion_host,
+        hostname='docker-a.prod.mycorp.com'
+    )
+
+    sudo_account = router.sudo(
+        via=docker_host,
         username='user_with_magic_ssh_key',
         password='sudo password',
     )
 
-    internal_box = router.ssh(
-        via=ssh_account,
-        hostname='billing0.internal.mycorp.com'
+    internal_box = router.docker(
+        via=sudo_account,
+        container='billing0',
     )
 
     internal_box.call(os.system, './run-nightly-billing.py')
