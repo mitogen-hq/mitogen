@@ -154,8 +154,8 @@ class Stream(mitogen.parent.Stream):
         'configuration.'
     )
     hostkey_failed_msg = (
-        'check_host_keys is set to enforce, and SSH reported an unknown '
-        'or changed host key.'
+        'Host key checking is enabled, and SSH reported an unrecognized or '
+        'mismatching host key.'
     )
 
     def _host_key_prompt(self):
