@@ -2,6 +2,9 @@
 [test-targets]
 localhost
 
+[slow-connect-targets]
+slow-localhost ansible_host=localhost ansible_user=mitogen__slow_user ansible_password=slow_user_password
+
 [connection-delegation-test]
 cd-bastion
 cd-rack11 mitogen_via=ssh-user@cd-bastion

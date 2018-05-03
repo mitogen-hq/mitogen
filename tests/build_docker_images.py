@@ -47,6 +47,7 @@ RUN \
     useradd -s /bin/bash -m mitogen__require_tty && \
     useradd -s /bin/bash -m mitogen__require_tty_pw_required && \
     useradd -s /bin/bash -m mitogen__readonly_homedir && \
+    useradd -s /bin/bash -m mitogen__slow_user && \
     chown -R root: ~mitogen__readonly_homedir && \
     { for i in `seq 1 21`; do useradd -s /bin/bash -m mitogen__user$i; done; } && \
     ( echo 'root:rootpassword' | chpasswd; ) && \
@@ -58,10 +59,14 @@ RUN \
     ( echo 'mitogen__require_tty:require_tty_password' | chpasswd; ) && \
     ( echo 'mitogen__require_tty_pw_required:require_tty_pw_required_password' | chpasswd; ) && \
     ( echo 'mitogen__readonly_homedir:readonly_homedir_password' | chpasswd; ) && \
+    ( echo 'mitogen__slow_user:slow_user_password' | chpasswd; ) && \
     mkdir ~mitogen__has_sudo_pubkey/.ssh && \
     { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }
 
 COPY data/docker/mitogen__has_sudo_pubkey.key.pub /home/mitogen__has_sudo_pubkey/.ssh/authorized_keys
+COPY data/docker/mitogen__slow_user.profile /home/mitogen__slow_user/.profile
+COPY data/docker/mitogen__slow_user.profile /home/mitogen__slow_user/.bashrc
+
 RUN \
     chown -R mitogen__has_sudo_pubkey ~mitogen__has_sudo_pubkey && \
     chmod -R go= ~mitogen__has_sudo_pubkey
@@ -93,6 +98,6 @@ for (distro, wheel, prefix) in (('debian', 'sudo', DEBIAN_DOCKERFILE),
 
         subprocess.check_call(sh('docker build %s -t %s -f %s',
             mydir,
-            'd2mw/mitogen-%s-test' % (distro,),
+            'mitogen/%s-test' % (distro,),
             dockerfile_fp.name
         ))

@@ -11,3 +11,4 @@
 - import_playbook: playbook_semantics/all.yml
 - import_playbook: remote_tmp/all.yml
 - import_playbook: runner/all.yml
+- import_playbook: ssh/all.yml
