@@ -157,9 +157,16 @@ Noteworthy Differences
 * Performance does not scale perfectly linearly with target count. This will
   improve over time.
 
-* Timeouts normally apply to the combined runtime of the SSH and become steps
-  of a task. As Mitogen treats SSH and sudo distincly, during a failure the
-  effective timeout may appear to double.
+* SSH and ``become`` are treated distinctly when applying timeouts, and
+  timeouts apply up to the point when the new interpreter is ready to accept
+  messages. Ansible has two timeouts: ``ConnectTimeout`` for SSH, applying up
+  to when authentication completes, and a separate parallel timeout up to when
+  ``become`` authentication completes.
+
+  For busy targets, Ansible may successfully execute a module where Mitogen
+  would fail without increasing the timeout. For sick targets, Ansible may hang
+  indefinitely after authentication without executing a command, for example
+  due to a stuck filesystem IO appearing in ``$HOME/.profile``.
 
 
 New Features & Notes

@@ -242,10 +242,25 @@ Detached Subtrees
 
 .. image:: images/detached-subtree.png
 
-It is possible to dynamically construct and decouple individual contexts from
-the lifecycle of the running program without terminating them, while enabling
-communication with any descendents in the subtree to be maintained. This is
-intended to support implementing background tasks.
+Contexts may detach from and outlive the running program, while maintaining
+communication with descendents in their subtree. This enables persistent
+background tasks that reuse Mitogen features.
+
+.. code::
+
+    @mitogen.core.takes_econtext
+    def become_monitoring_master(children, econtext):
+        kill_old_process('/var/run/mydaemon.pid')
+        write_pid_file('/var/run/mydaemon.pid')
+        econtext.detach()
+
+        while True:
+            for child in children:
+                if child.call(get_cpu_load) > 0.9:
+                    alert_operator('Child is too busy! ' + str(child))
+            time.sleep(1)
+
+    dc1.call_async(become_monitoring_master, children)
 
 
 Blocking Code Friendly
