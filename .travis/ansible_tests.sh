@@ -39,6 +39,7 @@ pip install -U ansible=="${ANSIBLE_VERSION}"
 cd ${TRAVIS_BUILD_DIR}/tests/ansible
 
 chmod go= ${TRAVIS_BUILD_DIR}/tests/data/docker/mitogen__has_sudo_pubkey.key
+echo '[test-targets]' > ${TMPDIR}/hosts
 echo \
     target \
     ansible_host=$DOCKER_HOSTNAME \
