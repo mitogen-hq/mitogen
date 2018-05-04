@@ -92,15 +92,14 @@ class Runner(object):
 
     Subclasses may override `_run`()` and extend `setup()` and `revert()`.
     """
-    def __init__(self, module, remote_tmp, service_context,
-                 emulate_tty=None, raw_params=None, args=None, env=None):
+    def __init__(self, module, service_context, emulate_tty=None,
+                 raw_params=None, args=None, env=None):
         if args is None:
             args = {}
         if raw_params is not None:
             args['_raw_params'] = raw_params
 
         self.module = utf8(module)
-        self.remote_tmp = utf8(os.path.expanduser(remote_tmp))
         self.service_context = service_context
         self.emulate_tty = emulate_tty
         self.raw_params = raw_params

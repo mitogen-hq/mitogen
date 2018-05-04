@@ -319,7 +319,6 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 connection=self._connection,
                 module_name=mitogen.utils.cast(module_name),
                 module_args=mitogen.utils.cast(module_args),
-                remote_tmp=mitogen.utils.cast(self._get_remote_tmp()),
                 task_vars=task_vars,
                 templar=self._templar,
                 env=mitogen.utils.cast(env),

@@ -92,7 +92,7 @@ class Invocation(object):
     target.run_module() or helpers.run_module_async() in the target context.
     """
     def __init__(self, action, connection, module_name, module_args,
-                 remote_tmp, task_vars, templar, env, wrap_async):
+                 task_vars, templar, env, wrap_async):
         #: ActionBase instance invoking the module. Required to access some
         #: output postprocessing methods that don't belong in ActionBase at
         #: all.
@@ -104,9 +104,6 @@ class Invocation(object):
         self.module_name = module_name
         #: Final module arguments.
         self.module_args = module_args
-        #: Value of 'remote_tmp' parameter, to allow target to create temporary
-        #: files in correct location.
-        self.remote_tmp = remote_tmp
         #: Task variables, needed to extract ansible_*_interpreter.
         self.task_vars = task_vars
         #: Templar, needed to extract ansible_*_interpreter.
@@ -198,7 +195,6 @@ class BinaryPlanner(Planner):
             path=invocation.module_path,
             args=invocation.module_args,
             env=invocation.env,
-            remote_tmp=invocation.remote_tmp,
             **kwargs
         )
 

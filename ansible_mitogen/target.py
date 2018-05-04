@@ -239,8 +239,8 @@ def reset_temp_dir(econtext):
     """
     Create one temporary directory to be reused by all runner.py invocations
     for the lifetime of the process. The temporary directory is changed for
-    each forked job, and emptied as necessary runner.py::_cleanup_temp() after
-    each module invocation.
+    each forked job, and emptied as necessary by runner.py::_cleanup_temp()
+    after each module invocation.
 
     The result is that a context need only create and delete one directory
     during startup and shutdown, and no further filesystem writes need occur
