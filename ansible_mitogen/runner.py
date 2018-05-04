@@ -175,7 +175,7 @@ class TemporaryEnvironment(object):
 class TemporaryArgv(object):
     def __init__(self, argv):
         self.original = sys.argv[:]
-        sys.argv[:] = argv
+        sys.argv[:] = map(str, argv)
 
     def revert(self):
         sys.argv[:] = self.original
@@ -219,10 +219,9 @@ class ProgramRunner(Runner):
         Create a temporary file containing the program code. The code is
         fetched via :meth:`_get_program`.
         """
-        self.program_fp = open(
-            os.path.join(self.get_temp_dir(), self.module),
-            'wb'
-        )
+        name = 'ansible_module_' + os.path.basename(self.path)
+        path = os.path.join(self.get_temp_dir(), name)
+        self.program_fp = open(path, 'wb')
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
         os.chmod(self.program_fp.name, int('0700', 8))
