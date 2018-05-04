@@ -60,7 +60,6 @@ echo travis_fold:end:job_setup
 echo travis_fold:start:mitogen_linear
 /usr/bin/time ./mitogen_ansible_playbook.sh \
     all.yml \
-    -vvv \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:mitogen_linear
 
@@ -68,6 +67,5 @@ echo travis_fold:end:mitogen_linear
 echo travis_fold:start:vanilla_ansible
 /usr/bin/time ./run_ansible_playbook.sh \
     all.yml \
-    -vvv \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:vanilla_ansible
