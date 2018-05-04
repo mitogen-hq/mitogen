@@ -1,10 +1,19 @@
 
+.. _signals:
+
 Signals
 =======
 
-Mitogen exposes a simplistic signal mechanism to help decouple its internal
+Mitogen contains a simplistic signal mechanism to help decouple its internal
 components. When a signal is fired by a particular instance of a class, any
 functions registered to receive it will be called back.
+
+.. warning::
+
+    As signals execute on the Broker thread, and without exception handling,
+    they are generally unsafe for consumption by user code, as any bugs could
+    trigger crashes and hangs for which the broker is unable to forward logs,
+    or ensure the buggy context always shuts down on disconnect.
 
 
 Functions
