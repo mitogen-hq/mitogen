@@ -91,15 +91,24 @@ class Runner(object):
     returned by `run()`.
 
     Subclasses may override `_run`()` and extend `setup()` and `revert()`.
+
+    :param str module:
+        Name of the module to execute, e.g. "shell"
+    :param mitogen.core.Context service_context:
+        Context to which we should direct FileService calls. For now, always
+        the connection multiplexer process on the controller.
+    :param dict args:
+        Ansible module arguments. A strange mixture of user and internal keys
+        created by ActionBase._execute_module().
+    :param dict env:
+        Additional environment variables to set during the run.
     """
-    def __init__(self, module, service_context, emulate_tty=None,
-                 args=None, env=None):
+    def __init__(self, module, service_context, args=None, env=None):
         if args is None:
             args = {}
 
         self.module = utf8(module)
         self.service_context = service_context
-        self.emulate_tty = emulate_tty
         self.args = args
         self.env = env
 
@@ -119,6 +128,9 @@ class Runner(object):
         self._cleanup_temp()
 
     def _cleanup_temp(self):
+        """
+        Empty temp_dir in time for the next module invocation.
+        """
         for name in os.listdir(ansible_mitogen.target.temp_dir):
             if name in ('.', '..'):
                 continue
@@ -202,9 +214,21 @@ class NewStyleStdio(object):
 
 
 class ProgramRunner(Runner):
-    def __init__(self, path, **kwargs):
+    """
+    Base class for runners that run external programs.
+
+    :param str path:
+        Absolute path to the program file on the master, as it can be retrieved
+        via :class:`ansible_mitogen.services.FileService`.
+    :param bool emulate_tty:
+        If :data:`True`, execute the program with `stdout` and `stderr` merged
+        into a single pipe, emulating Ansible behaviour when an SSH TTY is in
+        use.
+    """
+    def __init__(self, path, emulate_tty=None, **kwargs):
         super(ProgramRunner, self).__init__(**kwargs)
-        self.path = path
+        self.emulate_tty = emulate_tty
+        self.path = utf8(path)
 
     def setup(self):
         super(ProgramRunner, self).setup()
