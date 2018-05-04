@@ -118,7 +118,7 @@ class Blob(BytesType):
         return '[blob: %d bytes]' % len(self)
 
     def __reduce__(self):
-        return (_unpickle_blob, (BytesType(self),))
+        return (Blob, (BytesType(self),))
 
 
 class Secret(UnicodeType):
@@ -129,7 +129,7 @@ class Secret(UnicodeType):
         return UnicodeType(self)
 
     def __reduce__(self):
-        return (_unpickle_secret, (UnicodeType(self),))
+        return (Secret, (UnicodeType(self),))
 
 
 class CallError(Error):
@@ -148,14 +148,6 @@ class CallError(Error):
 
     def __reduce__(self):
         return (_unpickle_call_error, (self[0],))
-
-
-def _unpickle_blob(s):
-    return Blob(s)
-
-
-def _unpickle_secret(s):
-    return Secret(s)
 
 
 def _unpickle_call_error(s):
@@ -341,10 +333,10 @@ class Message(object):
                 return self._unpickle_sender
             elif func == '_unpickle_context':
                 return self._unpickle_context
-            elif func == '_unpickle_blob':
-                return _unpickle_blob
-            elif func == '_unpickle_secret':
-                return _unpickle_secret
+            elif func == 'Blob':
+                return Blob
+            elif func == 'Secret':
+                return Secret
         raise StreamError('cannot unpickle %r/%r', module, func)
 
     @property
