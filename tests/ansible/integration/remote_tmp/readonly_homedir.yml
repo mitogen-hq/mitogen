@@ -14,8 +14,7 @@
       vars:
         ansible_become_pass: readonly_homedir_password
 
-    - debug: msg={{out}}
     - name: Verify system temp directory was used.
       assert:
         that:
-          - out.argv[0].startswith("/tmp/ansible_mitogen_")
+          - out.__file__.startswith("/tmp/ansible_mitogen_")
