@@ -58,6 +58,10 @@ def _connect_local(spec):
         }
     }
 
+def wrap_or_none(klass, value):
+    if value is not None:
+        return klass(value)
+
 
 def _connect_ssh(spec):
     if C.HOST_KEY_CHECKING:
@@ -71,7 +75,7 @@ def _connect_ssh(spec):
             'check_host_keys': check_host_keys,
             'hostname': spec['remote_addr'],
             'username': spec['remote_user'],
-            'password': spec['password'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
             'port': spec['port'],
             'python_path': spec['python_path'],
             'identity_file': spec['private_key_file'],
@@ -142,7 +146,7 @@ def _connect_su(spec):
         'enable_lru': True,
         'kwargs': {
             'username': spec['become_user'],
-            'password': spec['become_pass'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['become_pass']),
             'python_path': spec['python_path'],
             'su_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -156,7 +160,7 @@ def _connect_sudo(spec):
         'enable_lru': True,
         'kwargs': {
             'username': spec['become_user'],
-            'password': spec['become_pass'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['become_pass']),
             'python_path': spec['python_path'],
             'sudo_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -171,7 +175,7 @@ def _connect_mitogen_su(spec):
         'method': 'su',
         'kwargs': {
             'username': spec['remote_user'],
-            'password': spec['password'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
             'python_path': spec['python_path'],
             'su_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -185,7 +189,7 @@ def _connect_mitogen_sudo(spec):
         'method': 'sudo',
         'kwargs': {
             'username': spec['remote_user'],
-            'password': spec['password'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
             'python_path': spec['python_path'],
             'sudo_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -581,7 +585,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         self.call(ansible_mitogen.target.write_path,
                   mitogen.utils.cast(out_path),
-                  mitogen.utils.cast(data),
+                  mitogen.core.Blob(data),
                   mode=mode,
                   utimes=utimes)
 

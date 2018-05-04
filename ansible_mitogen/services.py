@@ -489,8 +489,11 @@ class FileService(mitogen.service.Service):
     # odd-sized messages waste one tiny write() per message on the trailer.
     # Therefore subtract 10 bytes pickle overhead + 24 bytes header.
     IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Stream.HEADER_LEN + (
-        len(mitogen.core.Message.pickled(' ' * mitogen.core.CHUNK_SIZE).data) -
-        mitogen.core.CHUNK_SIZE
+        len(
+            mitogen.core.Message.pickled(
+                mitogen.core.Blob(' ' * mitogen.core.CHUNK_SIZE)
+            ).data
+        ) - mitogen.core.CHUNK_SIZE
     ))
 
     def _schedule_pending_unlocked(self, state):
@@ -507,7 +510,7 @@ class FileService(mitogen.service.Service):
             s = fp.read(self.IO_SIZE)
             if s:
                 state.unacked += len(s)
-                sender.send(s)
+                sender.send(mitogen.core.Blob(s))
             else:
                 # File is done. Cause the target's receive loop to exit by
                 # closing the sender, close the file, and remove the job entry.
