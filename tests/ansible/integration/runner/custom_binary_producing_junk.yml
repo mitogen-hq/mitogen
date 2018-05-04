@@ -1,4 +1,4 @@
-- name: integration/runner__custom_binary_producing_junk.yml
+- name: integration/runner/custom_binary_producing_junk.yml
   hosts: test-targets
   tasks:
     - custom_binary_producing_junk:

@@ -1,10 +1,10 @@
 # Ensure 'ssh' connections time out correctly.
 
-- name: integration/ssh/timeouts_wrapper.yml
+- name: integration/ssh/timeouts.yml
   hosts: test-targets
   tasks:
     - connection: local
-      command: ansible slow-connect-targets -m custom_python_detect_environment #debug -a msg="--{{ 69 + 42 }}--"
+      command: ansible -vvv -i "{{inventory_file}}" test-targets -m custom_python_detect_environment -e ansible_user=mitogen__slow_user -e ansible_password=slow_user_password
       register: out
       ignore_errors: true
       when: is_mitogen

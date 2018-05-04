@@ -60,7 +60,7 @@ do
         --detach \
         --publish 0.0.0.0:$port:22/tcp \
         --name=target$i \
-        d2mw/mitogen-${MITOGEN_TEST_DISTRO}-test
+        mitogen/${MITOGEN_TEST_DISTRO}-test
 
     echo \
         target$i \

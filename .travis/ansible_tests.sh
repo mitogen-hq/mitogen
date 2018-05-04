@@ -30,7 +30,7 @@ docker run \
     --detach \
     --publish 0.0.0.0:2201:22/tcp \
     --name=target \
-    d2mw/mitogen-${MITOGEN_TEST_DISTRO}-test
+    mitogen/${MITOGEN_TEST_DISTRO}-test
 echo travis_fold:end:docker_setup
 
 
