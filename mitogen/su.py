@@ -46,6 +46,7 @@ class Stream(mitogen.parent.Stream):
     # for hybrid_tty_create_child(), there just needs to be either a shell
     # snippet or bootstrap support for fixing things up afterwards.
     create_child = staticmethod(mitogen.parent.tty_create_child)
+    child_is_immediate_subprocess = False
 
     #: Once connected, points to the corresponding TtyLogStream, allowing it to
     #: be disconnected at the same time this stream is being torn down.

@@ -599,12 +599,23 @@ class Stream(mitogen.core.Stream):
             )
         )
 
+    #: If :data:`True`, indicates the subprocess managed by us should not be
+    #: killed during graceful detachment, as it the actual process implementing
+    #: the child context. In all other cases, the subprocess is SSH, sudo, or a
+    #: similar tool that should be reminded to quit during disconnection.
+    child_is_immediate_subprocess = True
+
+    detached = False
     _reaped = False
 
     def _reap_child(self):
         """
         Reap the child process during disconnection.
         """
+        if self.detached and self.child_is_immediate_subprocess:
+            LOG.debug('%r: immediate child is detached, won\'t reap it', self)
+            return
+
         if self._reaped:
             # on_disconnect() may be invoked more than once, for example, if
             # there is still a pending message to be sent after the first
@@ -929,10 +940,22 @@ class Router(mitogen.core.Router):
             importer=importer,
         )
         self.route_monitor = RouteMonitor(self, parent)
+        self.add_handler(
+            fn=self._on_detaching,
+            handle=mitogen.core.DETACHING,
+            persist=True,
+        )
 
-    def stream_by_id(self, dst_id):
-        return self._stream_by_id.get(dst_id,
-            self._stream_by_id.get(mitogen.parent_id))
+    def _on_detaching(self, msg):
+        if msg.is_dead:
+            return
+        stream = self.stream_by_id(msg.src_id)
+        if stream.remote_id != msg.src_id or stream.detached:
+            LOG.warning('bad DETACHING received on %r: %r', stream, msg)
+            return
+        LOG.debug('%r: marking as detached', stream)
+        stream.detached = True
+        msg.reply(None)
 
     def add_route(self, target_id, stream):
         LOG.debug('%r.add_route(%r, %r)', self, target_id, stream)
@@ -974,6 +997,8 @@ class Router(mitogen.core.Router):
             self._context_by_id[context_id] = context
         return context
 
+    connection_timeout_msg = "Connection timed out."
+
     def _connect(self, klass, name=None, **kwargs):
         context_id = self.allocate_id()
         context = self.context_class(self, context_id)
@@ -982,7 +1007,11 @@ class Router(mitogen.core.Router):
         stream = klass(self, context_id, **kwargs)
         if name is not None:
             stream.name = name
-        stream.connect()
+        try:
+            stream.connect()
+        except mitogen.core.TimeoutError:
+            e = sys.exc_info()[1]
+            raise mitogen.core.StreamError(self.connection_timeout_msg)
         context.name = stream.name
         self.route_monitor.notice_stream(stream)
         self.register(context, stream)

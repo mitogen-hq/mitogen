@@ -95,15 +95,20 @@ to your network topology**.
         hostname='jump-box.mycorp.com'
     )
 
-    ssh_account = router.sudo(
+    docker_host = router.ssh(
         via=bastion_host,
+        hostname='docker-a.prod.mycorp.com'
+    )
+
+    sudo_account = router.sudo(
+        via=docker_host,
         username='user_with_magic_ssh_key',
         password='sudo password',
     )
 
-    internal_box = router.ssh(
-        via=ssh_account,
-        hostname='billing0.internal.mycorp.com'
+    internal_box = router.docker(
+        via=sudo_account,
+        container='billing0',
     )
 
     internal_box.call(os.system, './run-nightly-billing.py')
@@ -230,6 +235,32 @@ uptime')** without further need to capture or manage output.
    18:17:28 D mitogen.ctx.k3: mitogen: _dispatch_calls((1002L, False, 'posix', None, 'system', ('hostname; uptime',), {}))
    18:17:56 I mitogen.ctx.k3: stdout: k3
    18:17:56 I mitogen.ctx.k3: stdout: 17:37:10 up 562 days,  2:25,  5 users,  load average: 1.24, 1.13, 1.14
+
+
+Detached Subtrees
+#################
+
+.. image:: images/detached-subtree.png
+
+Contexts may detach from and outlive the running program, while maintaining
+communication with descendents in their subtree. This enables persistent
+background tasks that reuse Mitogen features.
+
+.. code::
+
+    @mitogen.core.takes_econtext
+    def become_monitoring_master(children, econtext):
+        kill_old_process('/var/run/mydaemon.pid')
+        write_pid_file('/var/run/mydaemon.pid')
+        econtext.detach()
+
+        while True:
+            for child in children:
+                if child.call(get_cpu_load) > 0.9:
+                    alert_operator('Child is too busy! ' + str(child))
+            time.sleep(1)
+
+    dc1.call_async(become_monitoring_master, children)
 
 
 Blocking Code Friendly

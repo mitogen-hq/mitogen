@@ -71,12 +71,13 @@ def log_to_file(path=None, io=False, usec=False, level='INFO'):
         fp = sys.stderr
 
     level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
+    io = level == 'IO'
+    if io:
+        level = 'DEBUG'
+        logging.getLogger('mitogen.io').setLevel(level)
+
     level = getattr(logging, level, logging.INFO)
     log.setLevel(level)
-
-    io = ('MITOGEN_LOG_IO' in os.environ) or io
-    if io:
-        logging.getLogger('mitogen.io').setLevel(level)
 
     handler = logging.StreamHandler(fp)
     handler.formatter = log_get_formatter(usec=usec)

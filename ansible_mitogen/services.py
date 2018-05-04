@@ -270,7 +270,7 @@ class ContextService(mitogen.service.Service):
 
         # We don't need to wait for the result of this. Ideally we'd check its
         # return value somewhere, but logs will catch a failure anyway.
-        context.call_async(ansible_mitogen.target.start_fork_parent)
+        context.call_async(ansible_mitogen.target.init_child)
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug

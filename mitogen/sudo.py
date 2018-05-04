@@ -104,6 +104,7 @@ class PasswordError(mitogen.core.StreamError):
 
 class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    child_is_immediate_subprocess = False
 
     #: Once connected, points to the corresponding TtyLogStream, allowing it to
     #: be disconnected at the same time this stream is being torn down.

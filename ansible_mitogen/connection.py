@@ -356,7 +356,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         executing. We use the opportunity to grab relevant bits from the
         task-specific data.
         """
-        self.ansible_ssh_timeout = task_vars.get('ansible_ssh_timeout')
+        self.ansible_ssh_timeout = task_vars.get('ansible_ssh_timeout',
+                                                 C.DEFAULT_TIMEOUT)
         self.python_path = task_vars.get('ansible_python_interpreter',
                                          '/usr/bin/python')
         self.mitogen_via = task_vars.get('mitogen_via')

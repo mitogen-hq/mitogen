@@ -115,14 +115,14 @@ Logging Environment Variables
     Overrides the :py:mod:`logging` package log level set by any call to
     :py:func:`mitogen.utils.log_to_file`. Defaults to ``INFO``.
 
+    If set to ``IO``, equivalent to ``DEBUG`` but additionally enabled IO
+    logging for any call to :py:func:`mitogen.utils.log_to_file`. IO logging
+    produces verbose records of any IO interaction, which is useful for
+    debugging hangs and deadlocks.
+
 ``MITOGEN_LOG_USEC``
     If present, forces microsecond-level timestamps for any call to
     :py:func:`mitogen.utils.log_to_file`.
-
-``MITOGEN_LOG_IO``
-    If present, forces IO logging for any call to
-    :py:func:`mitogen.utils.log_to_file`. IO logging produces extremely verbose
-    logs of any IO interaction, which is useful when debugging deadlocks.
 
 
 

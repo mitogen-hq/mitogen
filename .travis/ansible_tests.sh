@@ -30,7 +30,7 @@ docker run \
     --detach \
     --publish 0.0.0.0:2201:22/tcp \
     --name=target \
-    d2mw/mitogen-${MITOGEN_TEST_DISTRO}-test
+    mitogen/${MITOGEN_TEST_DISTRO}-test
 echo travis_fold:end:docker_setup
 
 
@@ -39,6 +39,7 @@ pip install -U ansible=="${ANSIBLE_VERSION}"
 cd ${TRAVIS_BUILD_DIR}/tests/ansible
 
 chmod go= ${TRAVIS_BUILD_DIR}/tests/data/docker/mitogen__has_sudo_pubkey.key
+echo '[test-targets]' > ${TMPDIR}/hosts
 echo \
     target \
     ansible_host=$DOCKER_HOSTNAME \
@@ -59,7 +60,6 @@ echo travis_fold:end:job_setup
 echo travis_fold:start:mitogen_linear
 /usr/bin/time ./mitogen_ansible_playbook.sh \
     all.yml \
-    -vvv \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:mitogen_linear
 
@@ -67,6 +67,5 @@ echo travis_fold:end:mitogen_linear
 echo travis_fold:start:vanilla_ansible
 /usr/bin/time ./run_ansible_playbook.sh \
     all.yml \
-    -vvv \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:vanilla_ansible

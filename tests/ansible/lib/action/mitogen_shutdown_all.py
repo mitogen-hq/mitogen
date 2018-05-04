@@ -6,6 +6,7 @@ required for reliable LRU tests.
 import traceback
 import sys
 
+import ansible_mitogen.connection
 import ansible_mitogen.services
 import mitogen.service
 
@@ -15,9 +16,10 @@ from ansible.plugins.action import ActionBase
 
 class ActionModule(ActionBase):
     def run(self, tmp=None, task_vars=None):
-        if not type(self._connection).__module__.startswith('ansible_mitogen'):
+        if not isinstance(self._connection,
+                          ansible_mitogen.connection.Connection):
             return {
-                'changed': False
+                'skipped': True,
             }
 
         self._connection._connect()

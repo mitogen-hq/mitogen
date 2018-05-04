@@ -36,6 +36,7 @@ LOG = logging.getLogger(__name__)
 
 
 class Stream(mitogen.parent.Stream):
+    child_is_immediate_subprocess = False
     create_child_args = {
         'merge_stdio': True
     }

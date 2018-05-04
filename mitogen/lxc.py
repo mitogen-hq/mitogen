@@ -36,6 +36,7 @@ LOG = logging.getLogger(__name__)
 
 
 class Stream(mitogen.parent.Stream):
+    child_is_immediate_subprocess = False
     create_child_args = {
         # If lxc-attach finds any of stdin, stdout, stderr connected to a TTY,
         # to prevent input injection it creates a proxy pty, forcing all IO to

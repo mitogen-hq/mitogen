@@ -59,6 +59,7 @@ class HostKeyError(mitogen.core.StreamError):
 
 class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    child_is_immediate_subprocess = False
     python_path = 'python2.7'
 
     #: Once connected, points to the corresponding TtyLogStream, allowing it to
@@ -154,8 +155,8 @@ class Stream(mitogen.parent.Stream):
         'configuration.'
     )
     hostkey_failed_msg = (
-        'check_host_keys is set to enforce, and SSH reported an unknown '
-        'or changed host key.'
+        'Host key checking is enabled, and SSH reported an unrecognized or '
+        'mismatching host key.'
     )
 
     def _host_key_prompt(self):

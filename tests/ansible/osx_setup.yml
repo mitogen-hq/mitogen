@@ -29,6 +29,7 @@
         - require_tty
         - pw_required
         - require_tty_pw_required
+        - slow_user
       when: ansible_system != 'Darwin'
 
     - name: Create Mitogen test users
@@ -52,6 +53,7 @@
         - pw_required
         - require_tty_pw_required
         - readonly_homedir
+        - slow_user
       when: ansible_system == 'Darwin'
 
     - name: Create Mitogen test users
@@ -87,6 +89,14 @@
 
     - name: Readonly homedir for one account
       shell: "chown -R root: ~mitogen__readonly_homedir"
+
+    - name: Slow bash profile for one account
+      copy:
+        dest: ~mitogen__slow_user/.{{item}}
+        src: ../data/docker/mitogen__slow_user.profile
+      with_items:
+      - bashrc
+      - profile
 
     - name: Require a TTY for two accounts
       lineinfile:

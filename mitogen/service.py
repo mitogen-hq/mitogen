@@ -330,7 +330,10 @@ class Pool(object):
             thread.start()
             self._threads.append(thread)
 
+    closed = False
+
     def stop(self):
+        self.closed = True
         self._select.close()
         for th in self._threads:
             th.join()
@@ -338,7 +341,7 @@ class Pool(object):
             service.on_shutdown()
 
     def _worker_run(self):
-        while True:
+        while not self.closed:
             try:
                 msg = self._select.get()
             except (mitogen.core.ChannelError, mitogen.core.LatchError):

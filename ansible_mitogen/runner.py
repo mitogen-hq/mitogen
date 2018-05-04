@@ -74,7 +74,7 @@ def reopen_readonly(fp):
     """
     Replace the file descriptor belonging to the file object `fp` with one
     open on the same file (`fp.name`), but opened with :py:data:`os.O_RDONLY`.
-    This enables temporary files to be executed on Linux, which usually theows
+    This enables temporary files to be executed on Linux, which usually throws
     ``ETXTBUSY`` if any writeable handle exists pointing to a file passed to
     `execve()`.
     """
@@ -91,34 +91,32 @@ class Runner(object):
     returned by `run()`.
 
     Subclasses may override `_run`()` and extend `setup()` and `revert()`.
+
+    :param str module:
+        Name of the module to execute, e.g. "shell"
+    :param mitogen.core.Context service_context:
+        Context to which we should direct FileService calls. For now, always
+        the connection multiplexer process on the controller.
+    :param dict args:
+        Ansible module arguments. A strange mixture of user and internal keys
+        created by ActionBase._execute_module().
+    :param dict env:
+        Additional environment variables to set during the run.
     """
-    def __init__(self, module, remote_tmp, service_context,
-                 emulate_tty=None, raw_params=None, args=None, env=None):
+    def __init__(self, module, service_context, args=None, env=None):
         if args is None:
             args = {}
-        if raw_params is not None:
-            args['_raw_params'] = raw_params
 
         self.module = utf8(module)
-        self.remote_tmp = utf8(os.path.expanduser(remote_tmp))
         self.service_context = service_context
-        self.emulate_tty = emulate_tty
-        self.raw_params = raw_params
         self.args = args
         self.env = env
-        self._temp_dir = None
-
-    def get_temp_dir(self):
-        if not self._temp_dir:
-            self._temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_')
-            # https://github.com/dw/mitogen/issues/239
-            #ansible_mitogen.target.make_temp_directory(self.remote_tmp)
-        return self._temp_dir
 
     def setup(self):
         """
-        Prepare the current process for running a module. The base
-        implementation simply prepares the environment.
+        Prepare for running a module, including fetching necessary dependencies
+        from the parent, as :meth:`run` may detach prior to beginning
+        execution. The base implementation simply prepares the environment.
         """
         self._env = TemporaryEnvironment(self.env)
 
@@ -128,8 +126,19 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
-        if self._temp_dir:
-            shutil.rmtree(self._temp_dir)
+        self._cleanup_temp()
+
+    def _cleanup_temp(self):
+        """
+        Empty temp_dir in time for the next module invocation.
+        """
+        for name in os.listdir(ansible_mitogen.target.temp_dir):
+            if name in ('.', '..'):
+                continue
+
+            path = os.path.join(ansible_mitogen.target.temp_dir, name)
+            LOG.debug('Deleting %r', path)
+            ansible_mitogen.target.prune_tree(path)
 
     def _run(self):
         """
@@ -175,7 +184,7 @@ class TemporaryEnvironment(object):
 class TemporaryArgv(object):
     def __init__(self, argv):
         self.original = sys.argv[:]
-        sys.argv[:] = argv
+        sys.argv[:] = map(str, argv)
 
     def revert(self):
         sys.argv[:] = self.original
@@ -206,23 +215,44 @@ class NewStyleStdio(object):
 
 
 class ProgramRunner(Runner):
-    def __init__(self, path, **kwargs):
+    """
+    Base class for runners that run external programs.
+
+    :param str path:
+        Absolute path to the program file on the master, as it can be retrieved
+        via :class:`ansible_mitogen.services.FileService`.
+    :param bool emulate_tty:
+        If :data:`True`, execute the program with `stdout` and `stderr` merged
+        into a single pipe, emulating Ansible behaviour when an SSH TTY is in
+        use.
+    """
+    def __init__(self, path, emulate_tty=None, **kwargs):
         super(ProgramRunner, self).__init__(**kwargs)
-        self.path = path
+        self.emulate_tty = emulate_tty
+        self.path = utf8(path)
 
     def setup(self):
         super(ProgramRunner, self).setup()
         self._setup_program()
+
+    def _get_program_filename(self):
+        """
+        Return the filename used for program on disk. Ansible uses the original
+        filename for non-Ansiballz runs, and "ansible_module_+filename for
+        Ansiballz runs.
+        """
+        return os.path.basename(self.path)
+
+    program_fp = None
 
     def _setup_program(self):
         """
         Create a temporary file containing the program code. The code is
         fetched via :meth:`_get_program`.
         """
-        self.program_fp = open(
-            os.path.join(self.get_temp_dir(), self.module),
-            'wb'
-        )
+        filename = self._get_program_filename()
+        path = os.path.join(ansible_mitogen.target.temp_dir, filename)
+        self.program_fp = open(path, 'wb')
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
         os.chmod(self.program_fp.name, int('0700', 8))
@@ -248,7 +278,8 @@ class ProgramRunner(Runner):
         """
         Delete the temporary program file.
         """
-        self.program_fp.close()
+        if self.program_fp:
+            self.program_fp.close()
         super(ProgramRunner, self).revert()
 
     def _run(self):
@@ -285,7 +316,7 @@ class ArgsFileRunner(Runner):
         self.args_fp = tempfile.NamedTemporaryFile(
             prefix='ansible_mitogen',
             suffix='-args',
-            dir=self.get_temp_dir(),
+            dir=ansible_mitogen.target.temp_dir,
         )
         self.args_fp.write(self._get_args_contents())
         self.args_fp.flush()
@@ -362,22 +393,39 @@ class NewStyleRunner(ScriptRunner):
     def setup(self):
         super(NewStyleRunner, self).setup()
         self._stdio = NewStyleStdio(self.args)
-        self._argv = TemporaryArgv([self.program_fp.name])
+        # It is possible that not supplying the script filename will break some
+        # module, but this has never been a bug report. Instead act like an
+        # interpreter that had its script piped on stdin.
+        self._argv = TemporaryArgv([''])
 
     def revert(self):
         self._argv.revert()
         self._stdio.revert()
         super(NewStyleRunner, self).revert()
 
+    def _get_program_filename(self):
+        """
+        See ProgramRunner._get_program_filename().
+        """
+        return 'ansible_module_' + os.path.basename(self.path)
+
+    def _setup_args(self):
+        pass
+
+    def _setup_program(self):
+        pass
+
     def _get_code(self):
+        self.source = ansible_mitogen.target.get_file(
+            context=self.service_context,
+            path=self.path,
+        )
+
         try:
             return self._code_by_path[self.path]
         except KeyError:
             return self._code_by_path.setdefault(self.path, compile(
-                source=ansible_mitogen.target.get_file(
-                    context=self.service_context,
-                    path=self.path,
-                ),
+                source=self.source,
                 filename=self.path,
                 mode='exec',
                 dont_inherit=True,
@@ -385,14 +433,21 @@ class NewStyleRunner(ScriptRunner):
 
     def _run(self):
         code = self._get_code()
+
         mod = types.ModuleType('__main__')
-        mod.__file__ = self.program_fp.name
         mod.__package__ = None
-        d = vars(mod)
+        # Some Ansible modules use __file__ to find the Ansiballz temporary
+        # directory. We must provide some temporary path in __file__, but we
+        # don't want to pointlessly write the module to disk when it never
+        # actually needs to exist. So just pass the filename as it would exist.
+        mod.__file__ = os.path.join(
+            ansible_mitogen.target.temp_dir,
+            'ansible_module_' + os.path.basename(self.path),
+        )
         e = None
 
         try:
-            exec code in d, d
+            exec code in vars(mod)
         except SystemExit, e:
             pass
 

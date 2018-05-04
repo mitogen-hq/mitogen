@@ -175,7 +175,7 @@ class DockerizedSshDaemon(object):
     def get_image(self):
         if not self.image:
             distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
-            self.image = 'd2mw/mitogen-%s-test' % (distro,)
+            self.image = 'mitogen/%s-test' % (distro,)
         return self.image
 
     def __init__(self):

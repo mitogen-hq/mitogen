@@ -75,6 +75,7 @@ DEL_ROUTE = 104
 ALLOCATE_ID = 105
 SHUTDOWN = 106
 LOAD_MODULE = 107
+DETACHING = 108
 IS_DEAD = 999
 
 PY3 = sys.version_info > (3,)
@@ -953,6 +954,7 @@ class Context(object):
             raise SystemError('Cannot making blocking call on broker thread')
 
         receiver = Receiver(self.router, persist=persist, respondent=self)
+        msg.dst_id = self.context_id
         msg.reply_to = receiver.handle
 
         _v and LOG.debug('%r.send_async(%r)', self, msg)
@@ -1277,6 +1279,10 @@ class Router(object):
         self.broker.start_receive(stream)
         listen(stream, 'disconnect', lambda: self.on_stream_disconnect(stream))
 
+    def stream_by_id(self, dst_id):
+        return self._stream_by_id.get(dst_id,
+            self._stream_by_id.get(mitogen.parent_id))
+
     def del_handler(self, handle):
         del self._handle_map[handle]
 
@@ -1501,6 +1507,8 @@ class Broker(object):
 
 
 class ExternalContext(object):
+    detached = False
+
     def _on_broker_shutdown(self):
         self.channel.close()
 
@@ -1514,8 +1522,34 @@ class ExternalContext(object):
             self.broker.shutdown()
 
     def _on_parent_disconnect(self):
-        _v and LOG.debug('%r: parent stream is gone, dying.', self)
-        self.broker.shutdown()
+        if self.detached:
+            mitogen.parent_ids = []
+            mitogen.parent_id = None
+            LOG.info('Detachment complete')
+        else:
+            _v and LOG.debug('%r: parent stream is gone, dying.', self)
+            self.broker.shutdown()
+
+    def _sync(self, func):
+        latch = Latch()
+        self.broker.defer(lambda: latch.put(func()))
+        return latch.get()
+
+    def detach(self):
+        self.detached = True
+        stream = self.router.stream_by_id(mitogen.parent_id)
+        if stream:  # not double-detach()'d
+            os.setsid()
+            self.parent.send_await(Message(handle=DETACHING))
+            LOG.info('Detaching from %r; parent is %s', stream, self.parent)
+            for x in range(20):
+                pending = self._sync(lambda: stream.pending_bytes())
+                if not pending:
+                    break
+                time.sleep(0.05)
+            if pending:
+                LOG.error('Stream had %d bytes after 2000ms', pending)
+            self.broker.defer(stream.on_disconnect, self.broker)
 
     def _setup_master(self, max_message_size, profiling, parent_id,
                       context_id, in_fd, out_fd):

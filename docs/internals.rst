@@ -2,6 +2,11 @@
 Internal API Reference
 **********************
 
+.. toctree::
+    :hidden:
+
+    signals
+
 
 mitogen.core
 ============
@@ -462,3 +467,9 @@ Helper Functions
 
     :returns str:
         The minimized source.
+
+
+Signals
+=======
+
+:ref:`Please refer to Signals <signals>`.
