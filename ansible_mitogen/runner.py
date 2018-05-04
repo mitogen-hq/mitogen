@@ -114,8 +114,9 @@ class Runner(object):
 
     def setup(self):
         """
-        Prepare the current process for running a module. The base
-        implementation simply prepares the environment.
+        Prepare for running a module, including fetching necessary dependencies
+        from the parent, as :meth:`run` may detach prior to beginning
+        execution. The base implementation simply prepares the environment.
         """
         self._env = TemporaryEnvironment(self.env)
 
@@ -234,6 +235,14 @@ class ProgramRunner(Runner):
         super(ProgramRunner, self).setup()
         self._setup_program()
 
+    def _get_program_filename(self):
+        """
+        Return the filename used for program on disk. Ansible uses the original
+        filename for non-Ansiballz runs, and "ansible_module_+filename for
+        Ansiballz runs.
+        """
+        return os.path.basename(self.path)
+
     program_fp = None
 
     def _setup_program(self):
@@ -241,8 +250,8 @@ class ProgramRunner(Runner):
         Create a temporary file containing the program code. The code is
         fetched via :meth:`_get_program`.
         """
-        name = 'ansible_module_' + os.path.basename(self.path)
-        path = os.path.join(ansible_mitogen.target.temp_dir, name)
+        filename = self._get_program_filename()
+        path = os.path.join(ansible_mitogen.target.temp_dir, filename)
         self.program_fp = open(path, 'wb')
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
@@ -393,6 +402,12 @@ class NewStyleRunner(ScriptRunner):
         self._argv.revert()
         self._stdio.revert()
         super(NewStyleRunner, self).revert()
+
+    def _get_program_filename(self):
+        """
+        See ProgramRunner._get_program_filename().
+        """
+        return 'ansible_module_' + os.path.basename(self.path)
 
     def _setup_args(self):
         pass

@@ -235,6 +235,7 @@ def _on_broker_shutdown():
     prune_tree(temp_dir)
 
 
+@mitogen.core.takes_econtext
 def reset_temp_dir(econtext):
     """
     Create one temporary directory to be reused by all runner.py invocations
@@ -277,6 +278,7 @@ def init_child(econtext):
 def start_fork_child(wrap_async, kwargs, econtext):
     mitogen.parent.upgrade_router(econtext)
     context = econtext.router.fork()
+    context.call(reset_temp_dir)
     if not wrap_async:
         try:
             return context.call(run_module, kwargs)
@@ -386,7 +388,6 @@ def run_module_async(job_id, kwargs, econtext):
     """
     try:
         try:
-            reset_temp_dir(econtext)
             _run_module_async(job_id, kwargs, econtext)
         except Exception:
             LOG.exception('_run_module_async crashed')
