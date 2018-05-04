@@ -81,8 +81,12 @@ IS_DEAD = 999
 PY3 = sys.version_info > (3,)
 if PY3:
     b = lambda s: s.encode('latin-1')
+    BytesType = bytes
+    UnicodeType = unicode
 else:
     b = str
+    BytesType = str
+    UnicodeType = unicode
 
 CHUNK_SIZE = 131072
 _tls = threading.local()
@@ -109,6 +113,25 @@ class LatchError(Error):
     pass
 
 
+class Blob(BytesType):
+    def __repr__(self):
+        return '[blob: %d bytes]' % len(self)
+
+    def __reduce__(self):
+        return (_unpickle_blob, (BytesType(self),))
+
+
+class Secret(UnicodeType):
+    def __repr__(self):
+        return '[secret]'
+
+    def __str__(self):
+        return UnicodeType(self)
+
+    def __reduce__(self):
+        return (_unpickle_secret, (UnicodeType(self),))
+
+
 class CallError(Error):
     def __init__(self, fmt=None, *args):
         if not isinstance(fmt, Exception):
@@ -125,6 +148,14 @@ class CallError(Error):
 
     def __reduce__(self):
         return (_unpickle_call_error, (self[0],))
+
+
+def _unpickle_blob(s):
+    return Blob(s)
+
+
+def _unpickle_secret(s):
+    return Secret(s)
 
 
 def _unpickle_call_error(s):
@@ -310,7 +341,10 @@ class Message(object):
                 return self._unpickle_sender
             elif func == '_unpickle_context':
                 return self._unpickle_context
-
+            elif func == '_unpickle_blob':
+                return _unpickle_blob
+            elif func == '_unpickle_secret':
+                return _unpickle_secret
         raise StreamError('cannot unpickle %r/%r', module, func)
 
     @property

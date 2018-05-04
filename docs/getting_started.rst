@@ -320,6 +320,8 @@ remote procedure calls:
 
 User-defined types may not be used, except for:
 
+* :py:class:`mitogen.core.Blob`
+* :py:class:`mitogen.core.Secret`
 * :py:class:`mitogen.core.CallError`
 * :py:class:`mitogen.core.Context`
 * :py:class:`mitogen.core.Sender`
