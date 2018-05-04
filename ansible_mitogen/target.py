@@ -33,6 +33,7 @@ for file transfer, module execution and sundry bits like changing file modes.
 
 from __future__ import absolute_import
 import cStringIO
+import errno
 import grp
 import json
 import logging
@@ -57,6 +58,10 @@ import mitogen.service
 
 
 LOG = logging.getLogger(__name__)
+
+#: Set by init_child() to the single temporary directory that will exist for
+#: the duration of the process.
+temp_dir = None
 
 #: Caching of fetched file data.
 _file_cache = {}
@@ -191,8 +196,67 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
     os.utime(out_path, (metadata['atime'], metadata['mtime']))
 
 
+def prune_tree(path):
+    """
+    Like shutil.rmtree(), but log errors rather than discard them, and do not
+    waste multiple os.stat() calls discovering whether the object can be
+    deleted, just try deleting it instead.
+    """
+    try:
+        os.unlink(path)
+        return
+    except OSError, e:
+        if not (os.path.isdir(path) and
+                e.args[0] in (errno.EPERM, errno.EISDIR)):
+            LOG.error('prune_tree(%r): %s', path, e)
+            return
+
+    try:
+        # Ensure write access for readonly directories. Ignore error in case
+        # path is on a weird filesystem (e.g. vfat).
+        os.chmod(path, int('0700', 8))
+    except OSError, e:
+        LOG.warning('prune_tree(%r): %s', path, e)
+
+    try:
+        for name in os.listdir(path):
+            if name not in ('.', '..'):
+                prune_tree(os.path.join(path, name))
+        os.rmdir(path)
+    except OSError, e:
+        LOG.error('prune_tree(%r): %s', path, e)
+
+
+def _on_broker_shutdown():
+    """
+    Respond to broker shutdown (graceful termination by parent, or loss of
+    connection to parent) by deleting our sole temporary directory.
+    """
+    prune_tree(temp_dir)
+
+
+def reset_temp_dir(econtext):
+    """
+    Create one temporary directory to be reused by all runner.py invocations
+    for the lifetime of the process. The temporary directory is changed for
+    each forked job, and emptied as necessary runner.py::_cleanup_temp() after
+    each module invocation.
+
+    The result is that a context need only create and delete one directory
+    during startup and shutdown, and no further filesystem writes need occur
+    assuming no modules execute that create temporary files.
+    """
+    global temp_dir
+    # https://github.com/dw/mitogen/issues/239
+    temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_')
+
+    # This must be reinstalled in forked children too, since the Broker
+    # instance from the parent process does not carry over to the new child.
+    mitogen.core.listen(econtext.broker, 'shutdown', _on_broker_shutdown)
+
+
 @mitogen.core.takes_econtext
-def start_fork_parent(econtext):
+def init_child(econtext):
     """
     Called by ContextService immediately after connection; arranges for the
     (presently) spotless Python interpreter to be forked, where the newly
@@ -206,6 +270,7 @@ def start_fork_parent(econtext):
     global _fork_parent
     mitogen.parent.upgrade_router(econtext)
     _fork_parent = econtext.router.fork()
+    reset_temp_dir(econtext)
 
 
 @mitogen.core.takes_econtext
@@ -321,6 +386,7 @@ def run_module_async(job_id, kwargs, econtext):
     """
     try:
         try:
+            reset_temp_dir(econtext)
             _run_module_async(job_id, kwargs, econtext)
         except Exception:
             LOG.exception('_run_module_async crashed')
@@ -331,7 +397,9 @@ def run_module_async(job_id, kwargs, econtext):
 def make_temp_directory(base_dir):
     """
     Handle creation of `base_dir` if it is absent, in addition to a unique
-    temporary directory within `base_dir`.
+    temporary directory within `base_dir`. This is the temporary directory that
+    becomes 'remote_tmp', not the one used by Ansiballz. It always uses the
+    system temporary directory.
 
     :returns:
         Newly created temporary directory.
