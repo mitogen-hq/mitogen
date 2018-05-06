@@ -4,8 +4,8 @@
 TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TARGET_COUNT="${TARGET_COUNT:-2}"
-ANSIBLE_VERSION="${ANSIBLE_VERSION:-2.4.3.0}"
-MITOGEN_TEST_DISTRO=debian  # Naturally DebOps only supports Debian.
+ANSIBLE_VERSION="${VER:-2.4.3.0}"
+DISTRO=debian  # Naturally DebOps only supports Debian.
 
 export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
 
@@ -60,7 +60,7 @@ do
         --detach \
         --publish 0.0.0.0:$port:22/tcp \
         --name=target$i \
-        mitogen/${MITOGEN_TEST_DISTRO}-test
+        mitogen/${DISTRO}-test
 
     echo \
         target$i \
