@@ -14,6 +14,7 @@
       vars:
         ansible_become_pass: readonly_homedir_password
 
+    - debug: msg={{out}}
     - name: Verify system temp directory was used.
       assert:
         that:
