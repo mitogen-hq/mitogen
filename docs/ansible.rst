@@ -50,6 +50,27 @@ it can only ensure the module executes as quickly as possible.
   files in cross-account scenarios are entirely avoided.
 
 
+Installation
+------------
+
+1. Thoroughly review the documented behavioural differences.
+2. Verify Ansible 2.3/2.4/2.5 and Python 2.7 are listed in ``ansible --version``
+   output.
+3. Download and extract https://github.com/dw/mitogen/archive/master.zip
+4. Modify ``ansible.cfg``:
+
+   .. code-block:: dosini
+
+        [defaults]
+        strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
+        strategy = mitogen_linear
+
+   The ``strategy`` key is optional. If omitted, the
+   ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable can be set on a
+   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
+   to mimic the ``free`` strategy.
+
+
 Demo
 ~~~~
 
@@ -84,27 +105,6 @@ Testimonials
 * "I don't know what kind of dark magic @dmw_83 has done, but his Mitogen
   strategy took Clojars' Ansible runs from **14 minutes to 2 minutes**. I still
   can't quite believe it."
-
-
-Installation
-------------
-
-1. Thoroughly review the documented behavioural differences.
-2. Verify Ansible 2.3/2.4/2.5 and Python 2.7 are listed in ``ansible --version``
-   output.
-3. Download and extract https://github.com/dw/mitogen/archive/master.zip
-4. Modify ``ansible.cfg``:
-
-   .. code-block:: dosini
-
-        [defaults]
-        strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
-        strategy = mitogen_linear
-
-   The ``strategy`` key is optional. If omitted, the
-   ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable can be set on a
-   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
-   to mimic the ``free`` strategy.
 
 
 Noteworthy Differences
