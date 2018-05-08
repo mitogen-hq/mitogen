@@ -1,1 +1,2 @@
 - import_playbook: timeouts.yml
+- import_playbook: variables.yml
