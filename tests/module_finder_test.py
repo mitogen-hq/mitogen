@@ -22,33 +22,30 @@ class ReprTest(testlib.TestCase):
 
 
 class IsStdlibNameTest(testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
-
-    def call(self, fullname):
-        return self.klass().is_stdlib_name(fullname)
+    func = staticmethod(mitogen.master.is_stdlib_name)
 
     def test_builtin(self):
         import sys
-        self.assertTrue(self.call('sys'))
+        self.assertTrue(self.func('sys'))
 
     def test_stdlib_1(self):
         import logging
-        self.assertTrue(self.call('logging'))
+        self.assertTrue(self.func('logging'))
 
     def test_stdlib_2(self):
         # virtualenv only symlinks some paths to its local site-packages
         # directory. Ensure both halves of the search path return the correct
         # result.
         import email
-        self.assertTrue(self.call('email'))
+        self.assertTrue(self.func('email'))
 
     def test_mitogen_core(self):
         import mitogen.core
-        self.assertFalse(self.call('mitogen.core'))
+        self.assertFalse(self.func('mitogen.core'))
 
     def test_mitogen_fakessh(self):
         import mitogen.fakessh
-        self.assertFalse(self.call('mitogen.fakessh'))
+        self.assertFalse(self.func('mitogen.fakessh'))
 
 
 class GetModuleViaPkgutilTest(testlib.TestCase):
