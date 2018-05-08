@@ -319,9 +319,34 @@ class LogForwarder(object):
         return 'LogForwarder(%r)' % (self._router,)
 
 
-class ModuleFinder(object):
-    _STDLIB_PATHS = _stdlib_paths()
+_STDLIB_PATHS = _stdlib_paths()
 
+
+def is_stdlib_path(path):
+    return any(
+        os.path.commonprefix((libpath, path)) == libpath
+        and 'site-packages' not in path
+        and 'dist-packages' not in path
+        for libpath in _STDLIB_PATHS
+    )
+
+
+def is_stdlib_name(modname):
+    """Return ``True`` if `modname` appears to come from the standard
+    library."""
+    if imp.is_builtin(modname) != 0:
+        return True
+
+    module = sys.modules.get(modname)
+    if module is None:
+        return False
+
+    # six installs crap with no __file__
+    modpath = os.path.abspath(getattr(module, '__file__', ''))
+    return is_stdlib_path(modpath)
+
+
+class ModuleFinder(object):
     def __init__(self):
         #: Import machinery is expensive, keep :py:meth`:get_module_source`
         #: results around.
@@ -332,27 +357,6 @@ class ModuleFinder(object):
 
     def __repr__(self):
         return 'ModuleFinder()'
-
-    def is_stdlib_name(self, modname):
-        """Return ``True`` if `modname` appears to come from the standard
-        library."""
-        if imp.is_builtin(modname) != 0:
-            return True
-
-        module = sys.modules.get(modname)
-        if module is None:
-            return False
-
-        # six installs crap with no __file__
-        modpath = os.path.abspath(getattr(module, '__file__', ''))
-        if 'site-packages' in modpath:
-            return False
-
-        for dirname in self._STDLIB_PATHS:
-            if os.path.commonprefix((dirname, modpath)) == dirname:
-                return True
-
-        return False
 
     def _looks_like_script(self, path):
         """
@@ -515,7 +519,7 @@ class ModuleFinder(object):
                 name
                 for name in maybe_names
                 if sys.modules.get(name) is not None
-                and not self.is_stdlib_name(name)
+                and not is_stdlib_name(name)
                 and 'six.moves' not in name  # TODO: crap
             )
         ))
