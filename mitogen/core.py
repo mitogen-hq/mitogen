@@ -823,6 +823,11 @@ class Stream(BasicStream):
     #: :py:attr:`Message.auth_id` of every message received on this stream.
     auth_id = None
 
+    #: If not :data:`False`, indicates the stream has :attr:`auth_id` set and
+    #: its value is the same as :data:`mitogen.context_id` or appears in
+    #: :data:`mitogen.parent_ids`.
+    is_privileged = False
+
     def __init__(self, router, remote_id, **kwargs):
         self._router = router
         self.remote_id = remote_id
@@ -1265,6 +1270,7 @@ class IoLogger(BasicStream):
 class Router(object):
     context_class = Context
     max_message_size = 128 * 1048576
+    unidirectional = False
 
     def __init__(self, broker):
         self.broker = broker
@@ -1369,47 +1375,57 @@ class Router(object):
         except Exception:
             LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
 
-    def _async_route(self, msg, stream=None):
-        _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, stream)
+    def _async_route(self, msg, in_stream=None):
+        _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
         if len(msg.data) > self.max_message_size:
             LOG.error('message too large (max %d bytes): %r',
                       self.max_message_size, msg)
             return
 
         # Perform source verification.
-        if stream:
+        if in_stream:
             parent = self._stream_by_id.get(mitogen.parent_id)
             expect = self._stream_by_id.get(msg.auth_id, parent)
-            if stream != expect:
+            if in_stream != expect:
                 LOG.error('%r: bad auth_id: got %r via %r, not %r: %r',
-                          self, msg.auth_id, stream, expect, msg)
+                          self, msg.auth_id, in_stream, expect, msg)
                 return
 
             if msg.src_id != msg.auth_id:
                 expect = self._stream_by_id.get(msg.src_id, parent)
-                if stream != expect:
+                if in_stream != expect:
                     LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
-                              self, msg.src_id, stream, expect, msg)
+                              self, msg.src_id, in_stream, expect, msg)
                     return
 
-            if stream.auth_id is not None:
-                msg.auth_id = stream.auth_id
+            if in_stream.auth_id is not None:
+                msg.auth_id = in_stream.auth_id
 
         if msg.dst_id == mitogen.context_id:
-            return self._invoke(msg, stream)
+            return self._invoke(msg, in_stream)
 
-        stream = self._stream_by_id.get(msg.dst_id)
-        if stream is None:
-            stream = self._stream_by_id.get(mitogen.parent_id)
+        out_stream = self._stream_by_id.get(msg.dst_id)
+        if out_stream is None:
+            out_stream = self._stream_by_id.get(mitogen.parent_id)
 
-        if stream is None:
+        dead = False
+        if out_stream is None:
             LOG.error('%r: no route for %r, my ID is %r',
                       self, msg, mitogen.context_id)
+            dead = True
+
+        if in_stream and self.unidirectional and not dead and \
+           not (in_stream.is_privileged or out_stream.is_privileged):
+            LOG.error('routing mode prevents forward of %r from %r -> %r',
+                      msg, in_stream, out_stream)
+            dead = True
+
+        if dead:
             if msg.reply_to and not msg.is_dead:
                 msg.reply(Message.dead(), router=self)
             return
 
-        stream._send(msg)
+        out_stream._send(msg)
 
     def route(self, msg):
         self.broker.defer(self._async_route, msg)
@@ -1577,14 +1593,15 @@ class ExternalContext(object):
                 LOG.error('Stream had %d bytes after 2000ms', pending)
             self.broker.defer(stream.on_disconnect, self.broker)
 
-    def _setup_master(self, max_message_size, profiling, parent_id,
-                      context_id, in_fd, out_fd):
+    def _setup_master(self, max_message_size, profiling, unidirectional,
+                      parent_id, context_id, in_fd, out_fd):
         Router.max_message_size = max_message_size
         self.profiling = profiling
         if profiling:
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
+        self.router.undirectional = unidirectional
         self.router.add_handler(
             fn=self._on_shutdown_msg,
             handle=SHUTDOWN,
@@ -1720,11 +1737,11 @@ class ExternalContext(object):
         self.dispatch_stopped = True
 
     def main(self, parent_ids, context_id, debug, profiling, log_level,
-             max_message_size, version, in_fd=100, out_fd=1, core_src_fd=101,
-             setup_stdio=True, setup_package=True, importer=None,
-             whitelist=(), blacklist=()):
-        self._setup_master(max_message_size, profiling, parent_ids[0],
-                           context_id, in_fd, out_fd)
+             unidirectional, max_message_size, version, in_fd=100, out_fd=1,
+             core_src_fd=101, setup_stdio=True, setup_package=True,
+             importer=None, whitelist=(), blacklist=()):
+        self._setup_master(max_message_size, profiling, unidirectional,
+                           parent_ids[0], context_id, in_fd, out_fd)
         try:
             try:
                 self._setup_logging(debug, log_level)

@@ -8,11 +8,18 @@ import unittest2
 
 import testlib
 import mitogen.master
+import mitogen.parent
 import mitogen.utils
 
 
 def ping():
     return True
+
+
+@mitogen.core.takes_router
+def ping_context(other, router):
+    other = mitogen.parent.Context(router, other.context_id)
+    other.call(ping)
 
 
 @mitogen.core.takes_router
@@ -50,7 +57,7 @@ class SourceVerifyTest(testlib.RouterMixin, unittest2.TestCase):
 
         self.broker.defer(self.router._async_route,
                           self.child2_msg,
-                          stream=self.child1_stream)
+                          in_stream=self.child1_stream)
 
         # Wait for IO loop to finish everything above.
         self.sync_with_broker()
@@ -268,6 +275,40 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
         self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+
+
+class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
+    def test_siblings_cant_talk(self):
+        self.router.unidirectional = True
+        l1 = self.router.fork()
+        l2 = self.router.fork()
+        logs = testlib.LogCapturer()
+        logs.start()
+        e = self.assertRaises(mitogen.core.CallError,
+                              lambda: l2.call(ping_context, l1))
+
+        msg = 'mitogen.core.ChannelError: Channel closed by remote end.'
+        self.assertTrue(msg in str(e))
+        self.assertTrue('routing mode prevents forward of ' in logs.stop())
+
+    def test_auth_id_can_talk(self):
+        self.router.unidirectional = True
+        # One stream has auth_id stamped to that of the master, so it should be
+        # treated like a parent.
+        l1 = self.router.fork()
+        l1s = self.router.stream_by_id(l1.context_id)
+        l1s.auth_id = mitogen.context_id
+        l1s.is_privileged = True
+
+        l2 = self.router.fork()
+        logs = testlib.LogCapturer()
+        logs.start()
+        e = self.assertRaises(mitogen.core.CallError,
+                              lambda: l2.call(ping_context, l1))
+
+        msg = 'mitogen.core.CallError: Refused by policy.'
+        self.assertTrue(msg in str(e))
+        self.assertTrue('policy refused message: ' in logs.stop())
 
 
 if __name__ == '__main__':

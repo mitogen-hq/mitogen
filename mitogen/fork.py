@@ -90,10 +90,11 @@ class Stream(mitogen.parent.Stream):
     on_fork = None
 
     def construct(self, old_router, max_message_size, on_fork=None,
-                  debug=False, profiling=False):
+                  debug=False, profiling=False, unidirectional=False):
         # fork method only supports a tiny subset of options.
         super(Stream, self).construct(max_message_size=max_message_size,
-                                      debug=debug, profiling=profiling)
+                                      debug=debug, profiling=profiling,
+                                      unidirectional=False)
         self.on_fork = on_fork
 
         responder = getattr(old_router, 'responder', None)

@@ -89,6 +89,7 @@ class Listener(mitogen.core.BasicStream):
         stream.accept(sock.fileno(), sock.fileno())
         stream.name = 'unix_client.%d' % (pid,)
         stream.auth_id = mitogen.context_id
+        stream.is_privileged = True
         self._router.register(context, stream)
         sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
                               os.getpid()))

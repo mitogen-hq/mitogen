@@ -349,6 +349,7 @@ def run(dest, router, args, deadline=None, econtext=None):
                 'out_fd': sock2.fileno(),
                 'parent_ids': parent_ids,
                 'profiling': getattr(router, 'profiling', False),
+                'unidirectional': getattr(router, 'unidirectional', False),
                 'setup_stdio': False,
                 'version': mitogen.__version__,
             },))

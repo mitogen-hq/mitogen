@@ -678,7 +678,6 @@ class Broker(mitogen.core.Broker):
 
 class Router(mitogen.parent.Router):
     broker_class = Broker
-    debug = False
     profiling = False
 
     def __init__(self, broker=None, max_message_size=None):
