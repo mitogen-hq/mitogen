@@ -43,11 +43,10 @@ it can only ensure the module executes as quickly as possible.
   of magnitude** compared to SSH pipelining, with around 5x fewer frames
   traversing the network in a typical run.
 
-* **No writes to the target's filesystem occur**, unless explicitly triggered
-  by a playbook step. In all typical configurations, Ansible repeatedly
-  rewrites and extracts ZIP files to multiple temporary directories on the
-  target. Since no temporary files are used, security issues relating to those
-  files in cross-account scenarios are entirely avoided.
+* **Fewer writes to the target filesystem occur**. In typical configurations,
+  Ansible repeatedly rewrites and extracts ZIP files to multiple temporary
+  directories on the target. Security issues relating to temporarily files in
+  cross-account scenarios are entirely avoided.
 
 
 Installation
