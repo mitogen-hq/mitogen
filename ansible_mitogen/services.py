@@ -255,7 +255,7 @@ class ContextService(mitogen.service.Service):
         except AttributeError:
             raise Error('unsupported method: %(transport)s' % spec)
 
-        context = method(via=via, **spec['kwargs'])
+        context = method(via=via, unidirectional=True, **spec['kwargs'])
         if via and spec.get('enable_lru'):
             self._update_lru(context, spec, via)
         else:
