@@ -101,19 +101,25 @@ def with_router(func):
     return wrapper
 
 
+PASSTHROUGH = (
+    int, float, bool,
+    type(None),
+    mitogen.core.Context,
+    mitogen.core.CallError,
+    mitogen.core.Blob,
+    mitogen.core.Secret,
+)
+
 def cast(obj):
     if isinstance(obj, dict):
         return {cast(k): cast(v) for k, v in obj.iteritems()}
     if isinstance(obj, (list, tuple)):
         return [cast(v) for v in obj]
-    if obj is None or isinstance(obj, (int, float)):
+    if isinstance(obj, PASSTHROUGH):
         return obj
     if isinstance(obj, unicode):
         return unicode(obj)
     if isinstance(obj, str):
         return str(obj)
-    if isinstance(obj, (mitogen.core.Context,
-                        mitogen.core.CallError)):
-        return obj
 
     raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))

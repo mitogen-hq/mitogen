@@ -3,8 +3,9 @@
 
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TMPDIR="/tmp/ansible-tests-$$"
-ANSIBLE_VERSION="${ANSIBLE_VERSION:-2.4.3.0}"
-MITOGEN_TEST_DISTRO="${MITOGEN_TEST_DISTRO:-debian}"
+ANSIBLE_VERSION="${VER:-2.4.3.0}"
+export ANSIBLE_STRATEGY="${STRATEGY:-mitogen_linear}"
+DISTRO="${DISTRO:-debian}"
 
 export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
 
@@ -30,7 +31,7 @@ docker run \
     --detach \
     --publish 0.0.0.0:2201:22/tcp \
     --name=target \
-    mitogen/${MITOGEN_TEST_DISTRO}-test
+    mitogen/${DISTRO}-test
 echo travis_fold:end:docker_setup
 
 
@@ -57,15 +58,8 @@ make -C ${TRAVIS_BUILD_DIR}/tests/ansible
 echo travis_fold:end:job_setup
 
 
-echo travis_fold:start:mitogen_linear
-/usr/bin/time ./mitogen_ansible_playbook.sh \
-    all.yml \
-    -i "${TMPDIR}/hosts"
-echo travis_fold:end:mitogen_linear
-
-
-echo travis_fold:start:vanilla_ansible
+echo travis_fold:start:ansible
 /usr/bin/time ./run_ansible_playbook.sh \
     all.yml \
     -i "${TMPDIR}/hosts"
-echo travis_fold:end:vanilla_ansible
+echo travis_fold:end:ansible

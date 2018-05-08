@@ -10,13 +10,16 @@ python:
 - "2.7"
 
 env:
-- MODE=mitogen MITOGEN_TEST_DISTRO=debian
-- MODE=mitogen MITOGEN_TEST_DISTRO=centos
-- MODE=debops_common ANSIBLE_VERSION=2.4.3.0
-- MODE=debops_common ANSIBLE_VERSION=2.5.1
-- MODE=ansible ANSIBLE_VERSION=2.4.3.0 MITOGEN_TEST_DISTRO=debian
-- MODE=ansible ANSIBLE_VERSION=2.5.1 MITOGEN_TEST_DISTRO=centos
-- MODE=ansible ANSIBLE_VERSION=2.5.1 MITOGEN_TEST_DISTRO=debian
+- MODE=mitogen DISTRO=debian
+- MODE=mitogen DISTRO=centos
+- MODE=debops_common VER=2.4.3.0
+- MODE=debops_common VER=2.5.1
+# Ansible tests.
+- MODE=ansible VER=2.4.3.0 DISTRO=debian
+- MODE=ansible VER=2.5.1 DISTRO=centos
+- MODE=ansible VER=2.5.1 DISTRO=debian
+# Sanity check our tests against vanilla Ansible, they should still pass.
+- MODE=ansible VER=2.5.1 DISTRO=debian STRATEGY=linear
 
 install:
 - pip install -r dev_requirements.txt

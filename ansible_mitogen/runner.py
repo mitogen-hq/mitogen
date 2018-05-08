@@ -37,6 +37,7 @@ how to build arguments for it, preseed related data, etc.
 
 from __future__ import absolute_import
 import cStringIO
+import ctypes
 import json
 import logging
 import os
@@ -57,6 +58,17 @@ except ImportError:
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 
+# For tasks that modify /etc/resolv.conf, non-Debian derivative glibcs cache
+# resolv.conf at startup and never implicitly reload it. Cope with that via an
+# explicit call to res_init() on each task invocation. BSD-alikes export it
+# directly, Linux #defines it as "__res_init".
+libc = ctypes.CDLL(None)
+libc__res_init = None
+for symbol in 'res_init', '__res_init':
+    try:
+        libc__res_init = getattr(libc, symbol)
+    except AttributeError:
+        pass
 
 LOG = logging.getLogger(__name__)
 
@@ -397,6 +409,8 @@ class NewStyleRunner(ScriptRunner):
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
         self._argv = TemporaryArgv([''])
+        if libc__res_init:
+            libc__res_init()
 
     def revert(self):
         self._argv.revert()
