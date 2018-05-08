@@ -22,7 +22,8 @@ if mitogen.is_master:  # TODO: shouldn't be necessary.
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 sys.path.append(DATA_DIR)
 
-mitogen.utils.log_to_file()
+if mitogen.is_master:
+    mitogen.utils.log_to_file()
 
 
 def data_path(suffix):
