@@ -756,11 +756,10 @@ class Stream(mitogen.core.Stream):
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)
         write_all(self.transmit_side.fd, self.get_preamble())
-        discard_until(self.receive_side.fd, 'EC1\n', time.time() + 10.0)
+        discard_until(self.receive_side.fd, 'EC1\n', self.connect_deadline)
 
     def _connect_bootstrap(self, extra_fd):
-        deadline = time.time() + self.connect_timeout
-        discard_until(self.receive_side.fd, 'EC0\n', deadline)
+        discard_until(self.receive_side.fd, 'EC0\n', self.connect_deadline)
         self._ec0_received()
 
 
