@@ -1626,6 +1626,8 @@ class ExternalContext(object):
         listen(self.broker, 'exit', self._on_broker_exit)
 
         os.close(in_fd)
+
+    def _reap_first_stage(self):
         try:
             os.wait()  # Reap first stage.
         except OSError:
@@ -1746,6 +1748,7 @@ class ExternalContext(object):
             try:
                 self._setup_logging(debug, log_level)
                 self._setup_importer(importer, core_src_fd, whitelist, blacklist)
+                self._reap_first_stage()
                 if setup_package:
                     self._setup_package()
                 self._setup_globals(version, context_id, parent_ids)
