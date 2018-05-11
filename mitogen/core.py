@@ -78,6 +78,11 @@ LOAD_MODULE = 107
 DETACHING = 108
 IS_DEAD = 999
 
+try:
+    BaseException
+except NameError:
+    BaseException = Exception
+
 PY3 = sys.version_info > (3,)
 if PY3:
     b = lambda s: s.encode('latin-1')
@@ -134,7 +139,7 @@ class Secret(UnicodeType):
 
 class CallError(Error):
     def __init__(self, fmt=None, *args):
-        if not isinstance(fmt, Exception):
+        if not isinstance(fmt, BaseException):
             Error.__init__(self, fmt, *args)
         else:
             e = fmt
