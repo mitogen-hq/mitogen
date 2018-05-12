@@ -402,6 +402,10 @@ class NewStyleRunner(ScriptRunner):
     #: path => new-style module bytecode.
     _code_by_path = {}
 
+    def __init__(self, module_utils, **kwargs):
+        super(NewStyleRunner, self).__init__(**kwargs)
+        self.module_utils = module_utils
+
     def setup(self):
         super(NewStyleRunner, self).setup()
         self._stdio = NewStyleStdio(self.args)

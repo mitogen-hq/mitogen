@@ -49,7 +49,9 @@ import threading
 import zlib
 
 import mitogen
+import mitogen.master
 import mitogen.service
+import ansible_mitogen.module_finder
 import ansible_mitogen.target
 
 
@@ -442,6 +444,17 @@ class FileService(mitogen.service.Service):
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
+        'paths': list
+    })
+    def register_many(self, paths):
+        """
+        Batch version of register().
+        """
+        for path in paths:
+            self.register(path)
+
+    @mitogen.service.expose(policy=mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
         'path': basestring
     })
     def register(self, path):
@@ -589,3 +602,32 @@ class FileService(mitogen.service.Service):
             self._schedule_pending_unlocked(state)
         finally:
             state.lock.release()
+
+
+class ModuleDepService(mitogen.service.Service):
+    """
+    Scan a new-style module and produce a cached mapping of module_utils names
+    to their resolved filesystem paths.
+    """
+    max_message_size = 1000
+    handle = 502
+
+    def __init__(self, *args, **kwargs):
+        super(ModuleDepService, self).__init__(*args, **kwargs)
+        self._cache = {}
+
+    @mitogen.service.expose(policy=mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'module_name': basestring,
+        'module_path': basestring,
+        'search_path': tuple,
+    })
+    def scan(self, module_name, module_path, search_path):
+        if (module_name, search_path) not in self._cache:
+            resolved = ansible_mitogen.module_finder.scan(
+                module_name=module_name,
+                module_path=module_path,
+                search_path=search_path,
+            )
+            self._cache[module_name, search_path] = resolved
+        return self._cache[module_name, search_path]

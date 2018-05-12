@@ -35,17 +35,19 @@ files/modules known missing.
 """
 
 from __future__ import absolute_import
-import json
 import logging
 import os
 
 from ansible.executor import module_common
 import ansible.errors
+import ansible.module_utils
 
 try:
     from ansible.plugins.loader import module_loader
+    from ansible.plugins.loader import module_utils_loader
 except ImportError:  # Ansible <2.4
     from ansible.plugins import module_loader
+    from ansible.plugins import module_utils_loader
 
 import mitogen
 import mitogen.service
@@ -280,6 +282,51 @@ class NewStylePlanner(ScriptPlanner):
 
     def detect(self, invocation):
         return 'from ansible.module_utils.' in invocation.module_source
+
+    def get_module_utils_path(self, invocation):
+        paths = [
+            path
+            for path in module_utils_loader._get_paths(subdirs=False)
+            if os.path.isdir(path)
+        ]
+        paths.append(module_common._MODULE_UTILS_PATH)
+        return tuple(paths)
+
+    def get_module_utils(self, invocation):
+        module_utils = mitogen.service.call(
+            context=invocation.connection.parent,
+            handle=ansible_mitogen.services.ModuleDepService.handle,
+            method='scan',
+            kwargs={
+                'module_name': 'ansible_module_%s' % (invocation.module_name,),
+                'module_path': invocation.module_path,
+                'search_path': self.get_module_utils_path(invocation),
+            }
+        )
+        modutils_dir = os.path.dirname(ansible.module_utils.__file__)
+        has_custom = not all(path.startswith(modutils_dir)
+                             for fullname, path, is_pkg in module_utils)
+        return module_utils, has_custom
+
+    def plan(self, invocation):
+        invocation.connection._connect()
+        module_utils, has_custom = self.get_module_utils(invocation)
+        mitogen.service.call(
+            context=invocation.connection.parent,
+            handle=ansible_mitogen.services.FileService.handle,
+            method='register_many',
+            kwargs={
+                'paths': [
+                    path
+                    for fullname, path, is_pkg in module_utils
+                ]
+            }
+        )
+        return super(NewStylePlanner, self).plan(
+            invocation,
+            module_utils=module_utils,
+            should_fork=(self.get_should_fork(invocation) or has_custom),
+        )
 
 
 class ReplacerPlanner(NewStylePlanner):
