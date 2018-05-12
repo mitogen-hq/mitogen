@@ -228,36 +228,6 @@ class ScriptPlanner(BinaryPlanner):
         )
 
 
-class ReplacerPlanner(BinaryPlanner):
-    """
-    The Module Replacer framework is the original framework implementing
-    new-style modules. It is essentially a preprocessor (like the C
-    Preprocessor for those familiar with that programming language). It does
-    straight substitutions of specific substring patterns in the module file.
-    There are two types of substitutions.
-
-    * Replacements that only happen in the module file. These are public
-      replacement strings that modules can utilize to get helpful boilerplate
-      or access to arguments.
-
-      "from ansible.module_utils.MOD_LIB_NAME import *" is replaced with the
-      contents of the ansible/module_utils/MOD_LIB_NAME.py. These should only
-      be used with new-style Python modules.
-
-      "#<<INCLUDE_ANSIBLE_MODULE_COMMON>>" is equivalent to
-      "from ansible.module_utils.basic import *" and should also only apply to
-      new-style Python modules.
-
-      "# POWERSHELL_COMMON" substitutes the contents of
-      "ansible/module_utils/powershell.ps1". It should only be used with
-      new-style Powershell modules.
-    """
-    runner_name = 'ReplacerRunner'
-
-    def detect(self, invocation):
-        return module_common.REPLACER in invocation.module_source
-
-
 class JsonArgsPlanner(ScriptPlanner):
     """
     Script that has its interpreter directive and the task arguments
@@ -313,6 +283,29 @@ class NewStylePlanner(ScriptPlanner):
 
 
 class ReplacerPlanner(NewStylePlanner):
+    """
+    The Module Replacer framework is the original framework implementing
+    new-style modules. It is essentially a preprocessor (like the C
+    Preprocessor for those familiar with that programming language). It does
+    straight substitutions of specific substring patterns in the module file.
+    There are two types of substitutions.
+
+    * Replacements that only happen in the module file. These are public
+      replacement strings that modules can utilize to get helpful boilerplate
+      or access to arguments.
+
+      "from ansible.module_utils.MOD_LIB_NAME import *" is replaced with the
+      contents of the ansible/module_utils/MOD_LIB_NAME.py. These should only
+      be used with new-style Python modules.
+
+      "#<<INCLUDE_ANSIBLE_MODULE_COMMON>>" is equivalent to
+      "from ansible.module_utils.basic import *" and should also only apply to
+      new-style Python modules.
+
+      "# POWERSHELL_COMMON" substitutes the contents of
+      "ansible/module_utils/powershell.ps1". It should only be used with
+      new-style Powershell modules.
+    """
     runner_name = 'ReplacerRunner'
 
     def detect(self, invocation):
