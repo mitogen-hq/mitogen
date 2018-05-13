@@ -80,9 +80,9 @@ contexts.
     :py:class:`mitogen.core.Receiver` or :py:class:`mitogen.master.Select`
     instances and returns the first value posted to any receiver or select.
 
-    If `oneshot` is ``True``, then remove each receiver as it yields a result;
-    since :py:meth:`__iter__` terminates once the final receiver is removed,
-    this makes it convenient to respond to calls made in parallel:
+    If `oneshot` is :data:`True`, then remove each receiver as it yields a
+    result; since :py:meth:`__iter__` terminates once the final receiver is
+    removed, this makes it convenient to respond to calls made in parallel:
 
     .. code-block:: python
 
@@ -173,7 +173,7 @@ contexts.
 
     .. py:method:: __bool__ ()
 
-        Return ``True`` if any receivers are registered with this select.
+        Return :data:`True` if any receivers are registered with this select.
 
     .. py:method:: close ()
 
@@ -188,11 +188,12 @@ contexts.
 
     .. py:method:: empty ()
 
-        Return ``True`` if calling :py:meth:`get` would block.
+        Return :data:`True` if calling :py:meth:`get` would block.
 
-        As with :py:class:`Queue.Queue`, ``True`` may be returned even though a
-        subsequent call to :py:meth:`get` will succeed, since a message may be
-        posted at any moment between :py:meth:`empty` and :py:meth:`get`.
+        As with :py:class:`Queue.Queue`, :data:`True` may be returned even
+        though a subsequent call to :py:meth:`get` will succeed, since a
+        message may be posted at any moment between :py:meth:`empty` and
+        :py:meth:`get`.
 
         :py:meth:`empty` may return ``False`` even when :py:meth:`get` would
         block if another thread has drained a receiver added to this select.
@@ -202,7 +203,7 @@ contexts.
     .. py:method:: __iter__ (self)
 
         Yield the result of :py:meth:`get` until no receivers remain in the
-        select, either because `oneshot` is ``True``, or each receiver was
+        select, either because `oneshot` is :data:`True`, or each receiver was
         explicitly removed via :py:meth:`remove`.
 
     .. py:method:: add (recv)
@@ -402,6 +403,24 @@ Router Class
     **Note:** This is the somewhat limited core version of the Router class
     used by child contexts. The master subclass is documented below this one.
 
+    .. attribute:: unidirectional
+
+        When :data:`True`, permit children to only communicate with the current
+        context or a parent of the current context. Routing between siblings or
+        children of parents is prohibited, ensuring no communication is
+        possible between intentionally partitioned networks, such as when a
+        program simultaneously manipulates hosts spread across a corporate and
+        a production network, or production networks that are otherwise
+        air-gapped.
+
+        Sending a prohibited message causes an error to be logged and a dead
+        message to be sent in reply to the errant message, if that message has
+        ``reply_to`` set.
+
+        The value of :data:`unidirectional` becomes the default for the
+        :meth:`local() <mitogen.master.Router.local>` `unidirectional`
+        parameter.
+
     .. method:: stream_by_id (dst_id)
 
         Return the :py:class:`mitogen.core.Stream` that should be used to
@@ -523,13 +542,13 @@ Router Class
         :py:class:`Broker` instance to use. If not specified, a private
         :py:class:`Broker` is created.
 
-    .. data:: profiling
+    .. attribute:: profiling
 
-        When enabled, causes the broker thread and any subsequent broker and
-        main threads existing in any child to write
+        When :data:`True`, cause the broker thread and any subsequent broker
+        and main threads existing in any child to write
         ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
-        :py:mod:`cProfile` dump on graceful exit. Must be set prior to any
-        :py:class:`Broker` being constructed, e.g. via:
+        :py:mod:`cProfile` dump on graceful exit. Must be set prior to
+        construction of any :py:class:`Broker`, e.g. via:
 
         .. code::
 
@@ -674,19 +693,26 @@ Router Class
             ``python2.7``. In future this may default to ``sys.executable``.
 
         :param bool debug:
-            If ``True``, arrange for debug logging (:py:meth:`enable_debug`) to
-            be enabled in the new context. Automatically ``True`` when
+            If :data:`True`, arrange for debug logging (:py:meth:`enable_debug`) to
+            be enabled in the new context. Automatically :data:`True` when
             :py:meth:`enable_debug` has been called, but may be used
             selectively otherwise.
+
+        :param bool unidirectional:
+            If :data:`True`, arrange for the child's router to be constructed
+            with :attr:`unidirectional routing
+            <mitogen.core.Router.unidirectional>` enabled. Automatically
+            :data:`True` when it was enabled for this router, but may still be
+            explicitly set to :data:`False`.
 
         :param float connect_timeout:
             Fractional seconds to wait for the subprocess to indicate it is
             healthy. Defaults to 30 seconds.
 
         :param bool profiling:
-            If ``True``, arrange for profiling (:py:data:`profiling`) to be
-            enabled in the new context. Automatically ``True`` when
-            :py:data:`profiling` is ``True``, but may be used selectively
+            If :data:`True`, arrange for profiling (:py:data:`profiling`) to be
+            enabled in the new context. Automatically :data:`True` when
+            :py:data:`profiling` is :data:`True`, but may be used selectively
             otherwise.
 
         :param mitogen.core.Context via:
@@ -1067,8 +1093,8 @@ Receiver Class
         handle is chosen.
 
     :param bool persist:
-        If ``True``, do not unregister the receiver's handler after the first
-        message.
+        If :data:`True`, do not unregister the receiver's handler after the
+        first message.
 
     :param mitogen.core.Context respondent:
         Reference to the context this receiver is receiving from. If not
@@ -1102,11 +1128,12 @@ Receiver Class
 
     .. py:method:: empty ()
 
-        Return ``True`` if calling :py:meth:`get` would block.
+        Return :data:`True` if calling :py:meth:`get` would block.
 
-        As with :py:class:`Queue.Queue`, ``True`` may be returned even though a
-        subsequent call to :py:meth:`get` will succeed, since a message may be
-        posted at any moment between :py:meth:`empty` and :py:meth:`get`.
+        As with :py:class:`Queue.Queue`, :data:`True` may be returned even
+        though a subsequent call to :py:meth:`get` will succeed, since a
+        message may be posted at any moment between :py:meth:`empty` and
+        :py:meth:`get`.
 
         :py:meth:`empty` is only useful to avoid a race while installing
         :py:attr:`notify`:
@@ -1256,10 +1283,10 @@ Broker Class
 
     .. method:: keep_alive
 
-        Return ``True`` if any reader's :py:attr:`Side.keep_alive` attribute is
-        ``True``, or any :py:class:`Context` is still registered that is not
-        the master. Used to delay shutdown while some important work is in
-        progress (e.g. log draining).
+        Return :data:`True` if any reader's :py:attr:`Side.keep_alive`
+        attribute is :data:`True`, or any :py:class:`Context` is still
+        registered that is not the master. Used to delay shutdown while some
+        important work is in progress (e.g. log draining).
 
     **Internal Methods**
 
@@ -1284,9 +1311,10 @@ Broker Class
         non-payment results in termination for one customer.
 
     :param bool install_watcher:
-        If ``True``, an additional thread is started to monitor the lifetime of
-        the main thread, triggering :py:meth:`shutdown` automatically in case
-        the user forgets to call it, or their code crashed.
+        If :data:`True`, an additional thread is started to monitor the
+        lifetime of the main thread, triggering :py:meth:`shutdown`
+        automatically in case the user forgets to call it, or their code
+        crashed.
 
         You should not rely on this functionality in your program, it is only
         intended as a fail-safe and to simplify the API for new users. In
@@ -1348,12 +1376,12 @@ A random assortment of utility functions useful on masters and children.
         are written to :py:data:`sys.stderr`.
 
     :param bool io:
-        If ``True``, include extremely verbose IO logs in the output. Useful
-        for debugging hangs, less useful for debugging application code.
+        If :data:`True`, include extremely verbose IO logs in the output.
+        Useful for debugging hangs, less useful for debugging application code.
 
     :parm bool usec:
-        If ``True``, include microsecond timestamps. This greatly helps when
-        debugging races and similar determinism issues.
+        If :data:`True`, include microsecond timestamps. This greatly helps
+        when debugging races and similar determinism issues.
 
     :param str level:
         Name of the :py:mod:`logging` package constant that is the minimum
