@@ -518,7 +518,7 @@ def write_path(path, s, owner=None, group=None, mode=None,
                                     prefix='.ansible_mitogen_transfer-',
                                     dir=os.path.dirname(path))
     fp = os.fdopen(fd, 'wb', mitogen.core.CHUNK_SIZE)
-    LOG.debug('write_path(path=%r) tempory file: %s', path, tmp_path)
+    LOG.debug('write_path(path=%r) temporary file: %s', path, tmp_path)
 
     try:
         try:

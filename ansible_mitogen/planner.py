@@ -292,38 +292,33 @@ class NewStylePlanner(ScriptPlanner):
     def detect(self, invocation):
         return 'from ansible.module_utils.' in invocation.module_source
 
-    def get_module_utils_path(self, invocation):
-        paths = [
+    def get_search_path(self, invocation):
+        return tuple(
             path
             for path in module_utils_loader._get_paths(subdirs=False)
             if os.path.isdir(path)
-        ]
-        paths.append(module_common._MODULE_UTILS_PATH)
-        return tuple(paths)
+        )
 
     def get_module_utils(self, invocation):
         invocation.connection._connect()
-        module_utils = mitogen.service.call(
+        return mitogen.service.call(
             context=invocation.connection.parent,
             handle=ansible_mitogen.services.ModuleDepService.handle,
             method='scan',
             kwargs={
                 'module_name': 'ansible_module_%s' % (invocation.module_name,),
                 'module_path': invocation.module_path,
-                'search_path': self.get_module_utils_path(invocation),
+                'search_path': self.get_search_path(invocation),
+                'builtin_path': module_common._MODULE_UTILS_PATH,
             }
         )
-        modutils_dir = os.path.dirname(ansible.module_utils.__file__)
-        has_custom = not all(path.startswith(modutils_dir)
-                             for fullname, path, is_pkg in module_utils)
-        return module_utils, has_custom
 
     def plan(self, invocation):
-        module_utils, has_custom = self.get_module_utils(invocation)
+        module_utils = self.get_module_utils(invocation)
         return super(NewStylePlanner, self).plan(
             invocation,
             module_utils=module_utils,
-            should_fork=(self.get_should_fork(invocation) or has_custom),
+            should_fork=(self.get_should_fork(invocation) or bool(module_utils)),
         )
 
 
