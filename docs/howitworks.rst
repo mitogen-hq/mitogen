@@ -435,6 +435,22 @@ also listen on the following handles:
     own parent.
 
 .. currentmodule:: mitogen.core
+.. data:: DETACHING
+
+    Sent to inform a parent that user code has invoked
+    :meth:`ExternalContext.detach` to decouple the lifecycle of a directly
+    connected context and its subtree from the running program.
+
+    A child usually shuts down immediately if it loses its parent connection,
+    and parents usually terminate any related Python/SSH subprocess on
+    disconnection. Receiving :data:`DETACHING` informs the parent the
+    connection will soon drop, but the process intends to continue life
+    independently, and to avoid terminating the related subprocess if that
+    subprocess is the child itself.
+
+Non-master parents also listen on the following handles:
+
+.. currentmodule:: mitogen.core
 .. data:: GET_MODULE
 
     As with master's ``GET_MODULE``, except this implementation
@@ -461,20 +477,6 @@ also listen on the following handles:
     This message is used to recursively preload indirect children with modules,
     ensuring they are cached and deduplicated at each hop in the chain leading
     to the target context.
-
-.. currentmodule:: mitogen.core
-.. data:: DETACHING
-
-    Sent to inform a parent that user code has invoked
-    :meth:`ExternalContext.detach` to decouple the lifecycle of a directly
-    connected context and its subtree from the running program.
-
-    A child usually shuts down immediately if it loses its parent connection,
-    and parents usually terminate any related Python/SSH subprocess on
-    disconnection. Receiving :data:`DETACHING` informs the parent the
-    connection will soon drop, but the process intends to continue life
-    independently, and to avoid terminating the related subprocess if that
-    subprocess is the child itself.
 
 
 Additional handles are created to receive the result of every function call
