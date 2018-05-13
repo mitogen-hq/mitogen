@@ -446,6 +446,23 @@ also listen on the following handles:
     a direct descendant.
 
 .. currentmodule:: mitogen.core
+.. data:: FORWARD_MODULE
+
+    Receives `(context, fullname)` tuples from its parent and arranges for a
+    :data:`LOAD_MODULE` to be sent towards `context` for the module `fullname`
+    and any related modules. The module must already have been delivered to the
+    current context by its parent in a prior :data:`LOAD_MODULE` message.
+
+    If the receiver is the immediate parent of `context`, then only
+    :data:`LOAD_MODULE` is sent to the child. Otherwise :data:`LOAD_MODULE` is
+    sent to the next closest parent if the module has not previously been sent
+    on that stream, followed by a copy of the :data:`FORWARD_MODULE` message.
+
+    This message is used to recursively preload indirect children with modules,
+    ensuring they are cached and deduplicated at each hop in the chain leading
+    to the target context.
+
+.. currentmodule:: mitogen.core
 .. data:: DETACHING
 
     Sent to inform a parent that user code has invoked
