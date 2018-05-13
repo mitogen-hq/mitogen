@@ -180,7 +180,7 @@ class BinaryPlanner(Planner):
     def detect(self, invocation):
         return module_common._is_binary(invocation.module_source)
 
-    def plan(self, invocation, **kwargs):
+    def _grant_file_service_access(self, invocation):
         invocation.connection._connect()
         mitogen.service.call(
             context=invocation.connection.parent,
@@ -190,6 +190,9 @@ class BinaryPlanner(Planner):
                 'path': invocation.module_path
             }
         )
+
+    def plan(self, invocation, **kwargs):
+        self._grant_file_service_access(invocation)
         return super(BinaryPlanner, self).plan(
             invocation=invocation,
             runner_name=self.runner_name,
@@ -270,6 +273,12 @@ class NewStylePlanner(ScriptPlanner):
     def _get_interpreter(self, invocation):
         return None, None
 
+    def _grant_file_service_access(self, invocation):
+        """
+        Stub out BinaryPlanner's method since ModuleDepService makes internal
+        calls to grant file access, avoiding 2 IPCs per task invocation.
+        """
+
     def get_should_fork(self, invocation):
         """
         In addition to asynchronous tasks, new-style modules should be forked
@@ -293,6 +302,7 @@ class NewStylePlanner(ScriptPlanner):
         return tuple(paths)
 
     def get_module_utils(self, invocation):
+        invocation.connection._connect()
         module_utils = mitogen.service.call(
             context=invocation.connection.parent,
             handle=ansible_mitogen.services.ModuleDepService.handle,
@@ -309,19 +319,7 @@ class NewStylePlanner(ScriptPlanner):
         return module_utils, has_custom
 
     def plan(self, invocation):
-        invocation.connection._connect()
         module_utils, has_custom = self.get_module_utils(invocation)
-        mitogen.service.call(
-            context=invocation.connection.parent,
-            handle=ansible_mitogen.services.FileService.handle,
-            method='register_many',
-            kwargs={
-                'paths': [
-                    path
-                    for fullname, path, is_pkg in module_utils
-                ]
-            }
-        )
         return super(NewStylePlanner, self).plan(
             invocation,
             module_utils=module_utils,

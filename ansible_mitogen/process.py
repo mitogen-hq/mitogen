@@ -151,12 +151,16 @@ class MuxProcess(object):
         Construct a ContextService and a thread to service requests for it
         arriving from worker processes.
         """
+        file_service = ansible_mitogen.services.FileService(router=self.router)
         self.pool = mitogen.service.Pool(
             router=self.router,
             services=[
+                file_service,
                 ansible_mitogen.services.ContextService(self.router),
-                ansible_mitogen.services.FileService(self.router),
-                ansible_mitogen.services.ModuleDepService(self.router),
+                ansible_mitogen.services.ModuleDepService(
+                    router=self.router,
+                    file_service=file_service,
+                ),
             ],
             size=int(os.environ.get('MITOGEN_POOL_SIZE', '16')),
         )

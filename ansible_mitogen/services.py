@@ -612,8 +612,9 @@ class ModuleDepService(mitogen.service.Service):
     max_message_size = 1000
     handle = 502
 
-    def __init__(self, *args, **kwargs):
-        super(ModuleDepService, self).__init__(*args, **kwargs)
+    def __init__(self, file_service, **kwargs):
+        super(ModuleDepService, self).__init__(**kwargs)
+        self._file_service = file_service
         self._cache = {}
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
@@ -630,4 +631,11 @@ class ModuleDepService(mitogen.service.Service):
                 search_path=search_path,
             )
             self._cache[module_name, search_path] = resolved
+
+            # Grant FileService access to paths in here to avoid another 2 IPCs
+            # from WorkerProcess.
+            self._file_service.register(path=module_path)
+            for fullname, path, is_pkg in resolved:
+                self._file_service.register(path=path)
+
         return self._cache[module_name, search_path]
