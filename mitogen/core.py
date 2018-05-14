@@ -1063,7 +1063,6 @@ class Latch(object):
     def get(self, timeout=None, block=True):
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)',
                             self, timeout, block)
-
         self._lock.acquire()
         try:
             if self.closed:

@@ -561,7 +561,7 @@ class KqueuePoller(Poller):
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
             del self._wfds[fd]
 
-    def poll(self, broker, timeout=None):
+    def poll(self, timeout=None):
         changelist = self._changelist
         self._changelist = []
         events, _ = mitogen.core.io_op(self._kqueue.control,
@@ -633,7 +633,7 @@ class EpollPoller(Poller):
         self._wfds.pop(fd, None)
         self._control(fd)
 
-    def poll(self, broker, timeout=None):
+    def poll(self, timeout=None):
         the_timeout = -1
         if timeout is not None:
             the_timeout = timeout
