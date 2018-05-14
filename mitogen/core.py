@@ -805,11 +805,11 @@ class BasicStream(object):
 
     def on_disconnect(self, broker):
         LOG.debug('%r.on_disconnect()', self)
-        broker.stop_receive(self)
-        broker._stop_transmit(self)
         if self.receive_side:
+            broker.stop_receive(self)
             self.receive_side.close()
         if self.transmit_side:
+            broker._stop_transmit(self)
             self.transmit_side.close()
         fire(self, 'disconnect')
 
