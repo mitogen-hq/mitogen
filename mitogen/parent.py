@@ -654,10 +654,16 @@ POLLER_BY_SYSNAME = {
     'FreeBSD': KqueuePoller,
     'Linux': EpollPoller,
 }
+
 PREFERRED_POLLER = POLLER_BY_SYSNAME.get(
     os.uname()[0],
     mitogen.core.Poller,
 )
+
+# For apps that start threads dynamically, it's possible Latch will also get
+# very high-numbered wait fds when there are many connections, and so select()
+# becomes useless there too. So swap in our favourite poller.
+mitogen.core.Latch.poller_class = PREFERRED_POLLER
 
 
 class TtyLogStream(mitogen.core.BasicStream):
