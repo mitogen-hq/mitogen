@@ -513,68 +513,61 @@ class KqueuePoller(Poller):
 
     def __init__(self):
         self._kqueue = select.kqueue()
-        self._reader_by_fd = {}
-        self._writer_by_fd = {}
+        self._rfds = {}
+        self._wfds = {}
         self._changelist = []
 
     @property
     def readers(self):
-        return list(self._reader_by_fd.values())
+        return list(self._rfds.items())
 
     @property
     def writers(self):
-        return list(self._writer_by_fd.values())
+        return list(self._wfds.items())
 
-    def _control(self, side, filters, flags):
+    def _control(self, fd, filters, flags):
         mitogen.core._vv and IOLOG.debug(
-            '%r._control(%r, %r, %r)', self, side, filters, flags)
-        self._changelist.append(select.kevent(side.fd, filters, flags))
+            '%r._control(%r, %r, %r)', self, fd, filters, flags)
+        self._changelist.append(select.kevent(fd, filters, flags))
 
-    def start_receive(self, stream):
-        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
-        side = stream.receive_side
-        assert side and side.fd is not None
-        if side.fd not in self._reader_by_fd:
-            self._reader_by_fd[side.fd] = side
-            self._control(side, select.KQ_FILTER_READ, select.KQ_EV_ADD)
+    def start_receive(self, fd, data=None):
+        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %d)',
+            self, fd, data)
+        if fd not in self._rfds:
+            self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
+        self._rfds[fd] = data or fd
 
-    def stop_receive(self, stream):
-        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, stream)
-        side = stream.receive_side
-        if side.fd in self._reader_by_fd:
-            del self._reader_by_fd[side.fd]
-            self._control(side, select.KQ_FILTER_READ, select.KQ_EV_DELETE)
+    def stop_receive(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd, data)
+        if fd in self._rfds:
+            self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_DELETE)
+            del self._rfds[fd]
 
-    def start_transmit(self, stream):
-        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r)', self, stream)
-        side = stream.transmit_side
-        assert side and side.fd is not None
-        if side.fd not in self._writer_by_fd:
-            self._writer_by_fd[side.fd] = side
-            self._control(side, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
+    def start_transmit(self, fd, data=None):
+        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r)', self, fd, data)
+        if fd not in self._wfds:
+            self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
+        self._wfds[fd] = data or fd
 
-    def stop_transmit(self, stream):
-        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, stream)
-        side = stream.transmit_side
-        if side.fd in self._writer_by_fd:
-            del self._writer_by_fd[side.fd]
-            self._control(side, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
+    def stop_transmit(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
+        if fd in self._wfds:
+            self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
+            del self._wfds[fd]
 
     def poll(self, broker, timeout=None):
         changelist = self._changelist
         self._changelist = []
         for event in self._kqueue.control(changelist, 32, timeout):
             if event.filter == select.KQ_FILTER_READ:
-                side = self._reader_by_fd.get(event.ident)
-                # Events can still be read for an already-discarded fd.
-                if side:
+                if event.ident in self._rfds:
+                    # Events can still be read for an already-discarded fd.
                     mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, side)
-                    self._call(broker, side.stream, side.stream.on_receive)
+                    yield self._rfds[event.ident]
             elif event.filter == select.KQ_FILTER_WRITE:
-                side = self._writer_by_fd.get(event.ident)
-                if side:
+                if event.ident in self._wfds:
                     mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, side)
-                    self._call(broker, side.stream, side.stream.on_transmit)
+                    yield self._wfds[event.ident]
 
 
 class EpollPoller(Poller):
@@ -660,7 +653,7 @@ class EpollPoller(Poller):
 POLLER_BY_SYSNAME = {
     'Darwin': KqueuePoller,
     'FreeBSD': KqueuePoller,
-    'Linux': EpollPoller,
+    #'Linux': EpollPoller,
 }
 PREFERRED_POLLER = POLLER_BY_SYSNAME.get(os.uname()[0], mitogen.core.Poller)
 
@@ -760,7 +753,7 @@ class Stream(mitogen.core.Stream):
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
-        self.send(
+        self._send(
             mitogen.core.Message(
                 src_id=mitogen.context_id,
                 dst_id=self.remote_id,
