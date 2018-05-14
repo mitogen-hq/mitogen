@@ -356,6 +356,8 @@ def hybrid_tty_create_child(args):
 
 
 def write_all(fd, s, deadline=None):
+    poller = PREFERRED_POLLER()
+    poller.start_transmit(fd)
     timeout = None
     written = 0
 
@@ -365,33 +367,28 @@ def write_all(fd, s, deadline=None):
         if timeout == 0:
             raise mitogen.core.TimeoutError('write timed out')
 
-        _, wfds, _ = select.select([], [fd], [], timeout)
-        if not wfds:
-            continue
-
-        n, disconnected = mitogen.core.io_op(os.write, fd, buffer(s, written))
-        if disconnected:
-            raise mitogen.core.StreamError('EOF on stream during write')
+        for fd in poller.poll(timeout):
+            n, disconnected = mitogen.core.io_op(os.write, fd, buffer(s, written))
+            if disconnected:
+                raise mitogen.core.StreamError('EOF on stream during write')
 
         written += n
 
 
 def iter_read(fds, deadline=None):
-    fds = list(fds)
+    poller = PREFERRED_POLLER()
+    for fd in fds:
+        poller.start_receive(fd)
+
     bits = []
     timeout = None
-
-    while fds:
+    while poller.readers:
         if deadline is not None:
             timeout = max(0, deadline - time.time())
             if timeout == 0:
                 break
 
-        rfds, _, _ = select.select(fds, [], [], timeout)
-        if not rfds:
-            continue
-
-        for fd in rfds:
+        for fd in poller.poll(timeout):
             s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
             if disconnected or not s:
                 IOLOG.debug('iter_read(%r) -> disconnected', fd)
@@ -530,7 +527,7 @@ class KqueuePoller(Poller):
         self._changelist.append(select.kevent(fd, filters, flags))
 
     def start_receive(self, fd, data=None):
-        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %d)',
+        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
             self, fd, data)
         if fd not in self._rfds:
             self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
@@ -543,7 +540,8 @@ class KqueuePoller(Poller):
             del self._rfds[fd]
 
     def start_transmit(self, fd, data=None):
-        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r)', self, fd, data)
+        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
+            self, fd, data)
         if fd not in self._wfds:
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
         self._wfds[fd] = data or fd
@@ -641,7 +639,10 @@ POLLER_BY_SYSNAME = {
     'FreeBSD': KqueuePoller,
     'Linux': EpollPoller,
 }
-PREFERRED_POLLER = POLLER_BY_SYSNAME.get(os.uname()[0], mitogen.core.Poller)
+PREFERRED_POLLER = POLLER_BY_SYSNAME.get(
+    os.uname()[0],
+    mitogen.core.Poller,
+)
 
 
 class TtyLogStream(mitogen.core.BasicStream):
