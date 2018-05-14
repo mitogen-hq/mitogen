@@ -397,7 +397,7 @@ def iter_read(fds, deadline=None):
                 s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
                 if disconnected or not s:
                     IOLOG.debug('iter_read(%r) -> disconnected', fd)
-                    fds.remove(fd)
+                    poller.stop_receive(fd)
                 else:
                     IOLOG.debug('iter_read(%r) -> %r', fd, s)
                     bits.append(s)
