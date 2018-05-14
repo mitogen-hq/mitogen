@@ -661,6 +661,7 @@ class ModuleResponder(object):
 class Broker(mitogen.core.Broker):
     shutdown_timeout = 5.0
     _watcher = None
+    poller_class = mitogen.parent.PREFERRED_POLLER
 
     def __init__(self, install_watcher=True):
         if install_watcher:

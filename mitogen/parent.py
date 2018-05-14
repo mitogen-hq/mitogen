@@ -70,23 +70,6 @@ except:
     SC_OPEN_MAX = 1024
 
 
-class Argv(object):
-    def __init__(self, argv):
-        self.argv = argv
-
-    def escape(self, x):
-        s = '"'
-        for c in x:
-            if c in '\\$"`':
-                s += '\\'
-            s += c
-        s += '"'
-        return s
-
-    def __str__(self):
-        return ' '.join(map(self.escape, self.argv))
-
-
 def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
 
@@ -495,6 +478,112 @@ def _proxy_connect(name, method_name, kwargs, econtext):
         'name': context.name,
         'msg': None,
     }
+
+
+class Argv(object):
+    def __init__(self, argv):
+        self.argv = argv
+
+    def escape(self, x):
+        s = '"'
+        for c in x:
+            if c in '\\$"`':
+                s += '\\'
+            s += c
+        s += '"'
+        return s
+
+    def __str__(self):
+        return ' '.join(map(self.escape, self.argv))
+
+
+
+class Poller(mitogen.core.Poller):
+    @classmethod
+    def from_existing(cls, poller):
+        self = cls()
+        for reader in poller.readers:
+            self.start_receive(reader.stream)
+        for writer in poller.writers:
+            self.start_transmit(writer.stream)
+
+
+class KqueuePoller(Poller):
+    _repr = 'KqueuePoller()'
+
+    def __init__(self):
+        self._kqueue = select.kqueue()
+        self._reader_by_fd = {}
+        self._writer_by_fd = {}
+        self._changelist = []
+
+    @property
+    def readers(self):
+        return list(self._reader_by_fd.values())
+
+    @property
+    def writers(self):
+        return list(self._writer_by_fd.values())
+
+    def _control(self, side, filters, flags):
+        mitogen.core._vv and IOLOG.debug(
+            '%r._control(%r, %r, %r)', self, side, filters, flags)
+        self._changelist.append(select.kevent(side.fd, filters, flags))
+
+    def start_receive(self, stream):
+        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
+        side = stream.receive_side
+        assert side and side.fd is not None
+        if side.fd not in self._reader_by_fd:
+            self._reader_by_fd[side.fd] = side
+            self._control(side, select.KQ_FILTER_READ, select.KQ_EV_ADD)
+
+    def stop_receive(self, stream):
+        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, stream)
+        side = stream.receive_side
+        if side.fd in self._reader_by_fd:
+            del self._reader_by_fd[stream.receive_side.fd]
+            self._control(side, select.KQ_FILTER_READ, select.KQ_EV_DELETE)
+
+    def start_transmit(self, stream):
+        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r)', self, stream)
+        side = stream.transmit_side
+        assert side and side.fd is not None
+        if side.fd not in self._writer_by_fd:
+            self._writer_by_fd[side.fd] = side
+            self._control(side, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
+
+    def stop_transmit(self, stream):
+        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, stream)
+        side = stream.transmit_side
+        if side.fd in self._writer_by_fd:
+            del self._writer_by_fd[side.fd]
+            self._control(side, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
+
+    def poll(self, broker, timeout=None):
+        changelist = self._changelist
+        self._changelist = []
+        for event in self._kqueue.control(changelist, 32, timeout):
+            if event.filter == select.KQ_FILTER_READ:
+                side = self._reader_by_fd.get(event.ident)
+                # Events can still be read for an already-discarded fd.
+                if side:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, side)
+                    self._call(broker, side.stream, side.stream.on_receive)
+            elif event.filter == select.KQ_FILTER_WRITE:
+                side = self._writer_by_fd.get(event.ident)
+                if side:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, side)
+                    self._call(broker, side.stream, side.stream.on_transmit)
+
+
+
+POLLER_BY_SYSNAME = {
+    'Darwin': KqueuePoller,
+    'FreeBSD': KqueuePoller,
+    #'Linux': EpollPoller,
+}
+PREFERRED_POLLER = POLLER_BY_SYSNAME.get(os.uname()[0], mitogen.core.Poller)
 
 
 class TtyLogStream(mitogen.core.BasicStream):

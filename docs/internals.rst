@@ -261,6 +261,19 @@ Other Stream Subclasses
    :members:
 
 
+Poller Class
+------------
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Poller
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: KqueuePoller
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: EpollPoller
+
+
 Importer Class
 --------------
 

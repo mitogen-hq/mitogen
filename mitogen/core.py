@@ -1437,24 +1437,15 @@ class Router(object):
         self.broker.defer(self._async_route, msg)
 
 
-class Broker(object):
-    _waker = None
-    _thread = None
-    shutdown_timeout = 3.0
-
+class Poller(object):
     def __init__(self):
-        self._alive = True
-        self._waker = Waker(self)
-        self.defer = self._waker.defer
-        self._readers = [self._waker.receive_side]
-        self._writers = []
-        self._thread = threading.Thread(
-            target=_profile_hook,
-            args=('broker', self._broker_main),
-            name='mitogen-broker'
-        )
-        self._thread.start()
-        self._waker.broker_ident = self._thread.ident
+        self.readers = []
+        self.writers = []
+
+    _repr = 'Poller()'
+
+    def __repr__(self):
+        return self._repr
 
     def _list_discard(self, lst, value):
         try:
@@ -1469,63 +1460,97 @@ class Broker(object):
     def start_receive(self, stream):
         _vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
         assert stream.receive_side and stream.receive_side.fd is not None
-        self.defer(self._list_add, self._readers, stream.receive_side)
+        self._list_add(self.readers, stream.receive_side)
 
     def stop_receive(self, stream):
-        IOLOG.debug('%r.stop_receive(%r)', self, stream)
-        self.defer(self._list_discard, self._readers, stream.receive_side)
+        _vv and IOLOG.debug('%r.stop_receive(%r)', self, stream)
+        self._list_discard(self.readers, stream.receive_side)
 
-    def _start_transmit(self, stream):
-        IOLOG.debug('%r._start_transmit(%r)', self, stream)
+    def start_transmit(self, stream):
+        _vv and IOLOG.debug('%r._start_transmit(%r)', self, stream)
         assert stream.transmit_side and stream.transmit_side.fd is not None
-        self._list_add(self._writers, stream.transmit_side)
+        self._list_add(self.writers, stream.transmit_side)
 
-    def _stop_transmit(self, stream):
-        IOLOG.debug('%r._stop_transmit(%r)', self, stream)
-        self._list_discard(self._writers, stream.transmit_side)
+    def stop_transmit(self, stream):
+        _vv and IOLOG.debug('%r._stop_transmit(%r)', self, stream)
+        self._list_discard(self.writers, stream.transmit_side)
 
-    def _call(self, stream, func):
+    def _call(self, broker, stream, func):
         try:
-            func(self)
+            func(broker)
         except Exception:
             LOG.exception('%r crashed', stream)
             stream.on_disconnect(self)
 
-    def _loop_once(self, timeout=None):
-        _vv and IOLOG.debug('%r._loop_once(%r)', self, timeout)
-
-        #IOLOG.debug('readers = %r', self._readers)
-        #IOLOG.debug('writers = %r', self._writers)
+    def poll(self, broker, timeout=None):
+        _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
+        #IOLOG.debug('readers = %r', self.readers)
+        #IOLOG.debug('writers = %r', self.writers)
         (rsides, wsides, _), _ = io_op(select.select,
-            self._readers,
-            self._writers,
+            self.readers,
+            self.writers,
             (), timeout
         )
 
         for side in rsides:
             _vv and IOLOG.debug('%r: POLLIN for %r', self, side)
-            self._call(side.stream, side.stream.on_receive)
+            self._call(broker, side.stream, side.stream.on_receive)
 
         for side in wsides:
             _vv and IOLOG.debug('%r: POLLOUT for %r', self, side)
-            self._call(side.stream, side.stream.on_transmit)
+            self._call(broker, side.stream, side.stream.on_transmit)
+
+
+class Broker(object):
+    poller_class = Poller
+    _waker = None
+    _thread = None
+    shutdown_timeout = 3.0
+
+    def __init__(self, poller_class=None):
+        self._alive = True
+        self._waker = Waker(self)
+        self.defer = self._waker.defer
+        self.poller = self.poller_class()
+        self.poller.start_receive(self._waker)
+        self.readers = [self._waker.receive_side]
+        self.writers = []
+        self._thread = threading.Thread(
+            target=_profile_hook,
+            args=('broker', self._broker_main),
+            name='mitogen-broker'
+        )
+        self._thread.start()
+        self._waker.broker_ident = self._thread.ident
+
+    def start_receive(self, stream):
+        self.defer(self.poller.start_receive, stream)
+
+    def stop_receive(self, stream):
+        self.defer(self.poller.stop_receive, stream)
+
+    def _start_transmit(self, stream):
+        self.poller.start_transmit(stream)
+
+    def _stop_transmit(self, stream):
+        self.poller.stop_transmit(stream)
 
     def keep_alive(self):
-        return sum((side.keep_alive for side in self._readers), 0)
+        return sum((side.keep_alive for side in self.poller.readers), 0)
 
     def _broker_main(self):
         try:
             while self._alive:
-                self._loop_once()
+                self.poller.poll(self)
 
             fire(self, 'shutdown')
 
-            for side in set(self._readers).union(self._writers):
-                self._call(side.stream, side.stream.on_shutdown)
+            for side in set(self.poller.readers).union(self.poller.writers):
+                self.poller._call(self, side.stream, side.stream.on_shutdown)
 
             deadline = time.time() + self.shutdown_timeout
             while self.keep_alive() and time.time() < deadline:
-                self._loop_once(max(0, deadline - time.time()))
+                self.poller.poll(self, max(0, deadline - time.time()))
 
             if self.keep_alive():
                 LOG.error('%r: some streams did not close gracefully. '
@@ -1533,7 +1558,7 @@ class Broker(object):
                           'more child processes still connected to '
                           'our stdout/stderr pipes.', self)
 
-            for side in set(self._readers).union(self._writers):
+            for side in set(self.readers).union(self.writers):
                 LOG.error('_broker_main() force disconnecting %r', side)
                 side.stream.on_disconnect(self)
         except Exception:
