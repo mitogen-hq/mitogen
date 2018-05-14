@@ -273,6 +273,9 @@ class PidfulStreamHandler(logging.StreamHandler):
 
 
 def enable_debug_logging():
+    global _v, _vv
+    _v = True
+    _vv = True
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
     IOLOG.setLevel(logging.DEBUG)
