@@ -504,10 +504,10 @@ class Poller(mitogen.core.Poller):
     @classmethod
     def from_existing(cls, poller):
         self = cls()
-        for reader in poller.readers:
-            self.start_receive(reader.stream)
-        for writer in poller.writers:
-            self.start_transmit(writer.stream)
+        for fd, data in poller.readers:
+            self.start_receive(fd, data)
+        for fd, data in poller.writers:
+            self.start_transmit(fd, data)
 
 
 class KqueuePoller(Poller):
