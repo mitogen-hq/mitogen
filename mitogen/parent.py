@@ -564,7 +564,9 @@ class KqueuePoller(Poller):
     def poll(self, broker, timeout=None):
         changelist = self._changelist
         self._changelist = []
-        for event in self._kqueue.control(changelist, 32, timeout):
+        events, _ = mitogen.core.io_op(self._kqueue.control,
+            changelist, 32, timeout)
+        for event in events:
             fd = event.ident
             if event.filter == select.KQ_FILTER_READ and fd in self._rfds:
                 # Events can still be read for an already-discarded fd.
@@ -636,7 +638,8 @@ class EpollPoller(Poller):
         if timeout is not None:
             the_timeout = timeout
 
-        for fd, event in self._epoll.poll(the_timeout):
+        events, _ = mitogen.core.io_op(self._epoll.poll, the_timeout)
+        for fd, event in events:
             if event & select.EPOLLIN and fd in self._rfds:
                 # Events can still be read for an already-discarded fd.
                 mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
