@@ -1454,6 +1454,9 @@ class Poller(object):
     def __repr__(self):
         return self._repr
 
+    def close(self):
+        pass
+
     def start_receive(self, fd, data=None):
         self._rfds[fd] = data or fd
 

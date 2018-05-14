@@ -356,23 +356,27 @@ def hybrid_tty_create_child(args):
 
 
 def write_all(fd, s, deadline=None):
-    poller = PREFERRED_POLLER()
-    poller.start_transmit(fd)
     timeout = None
     written = 0
+    poller = PREFERRED_POLLER()
+    poller.start_transmit(fd)
 
-    while written < len(s):
-        if deadline is not None:
-            timeout = max(0, deadline - time.time())
-        if timeout == 0:
-            raise mitogen.core.TimeoutError('write timed out')
+    try:
+        while written < len(s):
+            if deadline is not None:
+                timeout = max(0, deadline - time.time())
+            if timeout == 0:
+                raise mitogen.core.TimeoutError('write timed out')
 
-        for fd in poller.poll(timeout):
-            n, disconnected = mitogen.core.io_op(os.write, fd, buffer(s, written))
-            if disconnected:
-                raise mitogen.core.StreamError('EOF on stream during write')
+            for fd in poller.poll(timeout):
+                n, disconnected = mitogen.core.io_op(
+                    os.write, fd, buffer(s, written))
+                if disconnected:
+                    raise mitogen.core.StreamError('EOF on stream during write')
 
-        written += n
+                written += n
+    finally:
+        poller.close()
 
 
 def iter_read(fds, deadline=None):
@@ -382,28 +386,30 @@ def iter_read(fds, deadline=None):
 
     bits = []
     timeout = None
-    while poller.readers:
-        if deadline is not None:
-            timeout = max(0, deadline - time.time())
-            if timeout == 0:
-                break
+    try:
+        while poller.readers:
+            if deadline is not None:
+                timeout = max(0, deadline - time.time())
+                if timeout == 0:
+                    break
 
-        for fd in poller.poll(timeout):
-            s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
-            if disconnected or not s:
-                IOLOG.debug('iter_read(%r) -> disconnected', fd)
-                fds.remove(fd)
-            else:
-                IOLOG.debug('iter_read(%r) -> %r', fd, s)
-                bits.append(s)
-                yield s
+            for fd in poller.poll(timeout):
+                s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
+                if disconnected or not s:
+                    IOLOG.debug('iter_read(%r) -> disconnected', fd)
+                    fds.remove(fd)
+                else:
+                    IOLOG.debug('iter_read(%r) -> %r', fd, s)
+                    bits.append(s)
+                    yield s
+    finally:
+        poller.close()
 
-    if not fds:
+    if not poller.readers:
         raise mitogen.core.StreamError(
             'EOF on stream; last 300 bytes received: %r' %
             (''.join(bits)[-300:],)
         )
-
     raise mitogen.core.TimeoutError('read timed out')
 
 
@@ -513,6 +519,9 @@ class KqueuePoller(Poller):
         self._wfds = {}
         self._changelist = []
 
+    def close(self):
+        self._kqueue.close()
+
     @property
     def readers(self):
         return list(self._rfds.items())
@@ -574,6 +583,9 @@ class EpollPoller(Poller):
         self._registered_fds = set()
         self._rfds = {}
         self._wfds = {}
+
+    def close(self):
+        self._epoll.close()
 
     @property
     def readers(self):
