@@ -77,7 +77,7 @@ class Stream(mitogen.parent.Stream):
     password = None
     ssh_args = None
 
-    check_host_keys_msg = 'host_keys= must be set to accept, enforce or ignore'
+    check_host_keys_msg = 'check_host_keys= must be set to accept, enforce or ignore'
 
     def construct(self, hostname, username=None, ssh_path=None, port=None,
                   check_host_keys='enforce', password=None, identity_file=None,
