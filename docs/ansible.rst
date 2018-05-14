@@ -137,10 +137,6 @@ Noteworthy Differences
 * Asynchronous jobs presently exist only for the duration of a run, and time
   limits are not implemented.
 
-* Due to use of :func:`select.select` the IO multiplexer breaks down around 100
-  targets, expect performance degradation as this number is approached and
-  errant behaviour as it is exceeded. A replacement will appear soon.
-
 * The undocumented ability to extend and override :mod:`ansible.module_utils`
   by supplying a ``module_utils`` directory alongside a custom new-style module
   is not yet supported.
