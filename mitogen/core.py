@@ -1153,7 +1153,7 @@ class Latch(object):
             del self._sleeping[i]
             self._sockets.append((rsock, wsock))
             if i >= self._waking:
-                raise TimeoutError()
+                raise e or TimeoutError()
             self._waking -= 1
             if rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
