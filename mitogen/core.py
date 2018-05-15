@@ -235,7 +235,7 @@ def io_op(func, *args):
     while True:
         try:
             return func(*args), False
-        except (select.error, OSError):
+        except (select.error, OSError, IOError):
             e = sys.exc_info()[1]
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
             if e[0] == errno.EINTR:
