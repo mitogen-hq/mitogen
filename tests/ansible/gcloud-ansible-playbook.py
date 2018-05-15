@@ -27,7 +27,6 @@ def main():
     print 'Addresses:', ips
     os.execvp('ansible-playbook', [
         'anisble-playbook',
-        '--user=dw',
         '--inventory-file=' + ','.join(ips) + ','
     ] + sys.argv[1:])
 
