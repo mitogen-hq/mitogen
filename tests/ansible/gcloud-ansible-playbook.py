@@ -8,7 +8,7 @@ import googleapiclient.discovery
 
 def main():
     project = 'mitogen-load-testing'
-    zone = 'asia-south1-c'
+    zone = 'europe-west1-d'
     group_name = 'micro-debian9'
 
     client = googleapiclient.discovery.build('compute', 'v1')

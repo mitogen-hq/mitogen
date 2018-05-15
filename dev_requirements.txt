@@ -1,5 +1,5 @@
 -r docs/docs-requirements.txt
-ansible==2.3.1.0
+ansible==2.5.2
 coverage==4.5.1
 Django==1.6.11; python_version < '2.7'
 Django==1.11.5; python_version >= '2.7' # for module_finder_test
