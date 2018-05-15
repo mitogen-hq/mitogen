@@ -647,7 +647,7 @@ class EpollPoller(Poller):
                 # Events can still be read for an already-discarded fd.
                 mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
                 yield self._rfds[fd]
-            elif event & select.EPOLLOUT and fd in self._wfds:
+            if event & select.EPOLLOUT and fd in self._wfds:
                 mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
                 yield self._wfds[fd]
 
