@@ -1131,21 +1131,21 @@ class Latch(object):
         finally:
             self._lock.release()
 
-        return self._get_sleep(timeout, block, rsock, wsock)
-
-    def _get_sleep(self, timeout, block, rsock, wsock):
-        _vv and IOLOG.debug('%r._get_sleep(timeout=%r, block=%r)',
-                            self, timeout, block)
-        e = None
         poller = self.poller_class()
         poller.start_receive(rsock.fileno())
         try:
-            try:
-                list(poller.poll(timeout))
-            except Exception:
-                e = sys.exc_info()[1]
+            return self._get_sleep(poller, timeout, block, rsock, wsock)
         finally:
             poller.close()
+
+    def _get_sleep(self, poller, timeout, block, rsock, wsock):
+        _vv and IOLOG.debug('%r._get_sleep(timeout=%r, block=%r)',
+                            self, timeout, block)
+        e = None
+        try:
+            list(poller.poll(timeout))
+        except Exception:
+            e = sys.exc_info()[1]
 
         self._lock.acquire()
         try:
