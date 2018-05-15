@@ -137,10 +137,6 @@ Noteworthy Differences
 * Asynchronous jobs presently exist only for the duration of a run, and time
   limits are not implemented.
 
-* The undocumented ability to extend and override :mod:`ansible.module_utils`
-  by supplying a ``module_utils`` directory alongside a custom new-style module
-  is not yet supported.
-
 * "Module Replacer" style modules are not supported. These rarely appear in
   practice, and light web searches failed to reveal many examples of them.
 
