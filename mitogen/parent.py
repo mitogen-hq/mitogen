@@ -633,6 +633,9 @@ class EpollPoller(Poller):
         self._wfds.pop(fd, None)
         self._control(fd)
 
+    _inmask = (getattr(select, 'EPOLLIN', 0) |
+               getattr(select, 'EPOLLHUP', 0))
+
     def poll(self, timeout=None):
         the_timeout = -1
         if timeout is not None:
@@ -640,7 +643,7 @@ class EpollPoller(Poller):
 
         events, _ = mitogen.core.io_op(self._epoll.poll, the_timeout)
         for fd, event in events:
-            if event & select.EPOLLIN and fd in self._rfds:
+            if event & self._inmask and fd in self._rfds:
                 # Events can still be read for an already-discarded fd.
                 mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
                 yield self._rfds[fd]
