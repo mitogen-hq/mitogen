@@ -14,7 +14,7 @@ import googleapiclient.discovery
 def main():
     project = 'mitogen-load-testing'
     zone = 'europe-west1-d'
-    group_name = 'micro-debian9'
+    group_name = 'target'
 
     client = googleapiclient.discovery.build('compute', 'v1')
     resp = client.instances().list(project=project, zone=zone).execute()
@@ -30,11 +30,19 @@ def main():
             )
 
     sys.stderr.write('Addresses: %s\n' % (ips,))
-    sys.stdout.write(json.dumps({
-        os.environ['MITOGEN_GCLOUD_GROUP']: {
+    gname = os.environ['MITOGEN_GCLOUD_GROUP']
+    groups = {
+        gname: {
             'hosts': ips
         }
-    }, indent=4))
+    }
+
+    for i in 1, 10, 20, 50, 100:
+        groups['%s-%s' % (gname, i)] = {
+            'hosts': ips[:i]
+        }
+
+    sys.stdout.write(json.dumps(groups, indent=4))
 
 
 if __name__ == '__main__':
