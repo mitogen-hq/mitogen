@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
+import json
 import os
 import sys
+
+if not os.environ.get('MITOGEN_GCLOUD_GROUP'):
+    sys.stdout.write('{}')
+    sys.exit(0)
 
 import googleapiclient.discovery
 
@@ -24,11 +29,12 @@ def main():
                 #for config in interface['accessConfigs']
             )
 
-    print 'Addresses:', ips
-    os.execvp('ansible-playbook', [
-        'anisble-playbook',
-        '--inventory-file=' + ','.join(ips) + ','
-    ] + sys.argv[1:])
+    sys.stderr.write('Addresses: %s\n' % (ips,))
+    sys.stdout.write(json.dumps({
+        os.environ['MITOGEN_GCLOUD_GROUP']: {
+            'hosts': ips
+        }
+    }, indent=4))
 
 
 if __name__ == '__main__':
