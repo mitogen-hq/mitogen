@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-if not os.environ.get('MITOGEN_GCLOUD_GROUP'):
+if (not os.environ.get('MITOGEN_GCLOUD_GROUP')) or any('--host' in s for s in sys.argv):
     sys.stdout.write('{}')
     sys.exit(0)
 
