@@ -524,13 +524,23 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 broker=self.broker,
             )
 
-        stack, _ = self._stack_from_config(
-            config_from_play_context(
+        if hasattr(self._play_context, 'delegate_to'):
+            target_config = config_from_hostvars(
+                transport=self._play_context.connection,
+                inventory_name=self._play_context.delegate_to,
+                connection=self,
+                hostvars=self.host_vars[self._play_context.delegate_to],
+                become_user=(self._play_context.become_user
+                             if self._play_context.become
+                             else None),
+            )
+        else:
+            target_config = config_from_play_context(
                 transport=self.transport,
                 inventory_name=self.inventory_hostname,
                 connection=self
             )
-        )
+        stack, _ = self._stack_from_config(target_config)
 
         dct = self.parent.call_service(
             service_name='ansible_mitogen.services.ContextService',
