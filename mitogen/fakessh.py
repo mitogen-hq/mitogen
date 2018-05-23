@@ -304,6 +304,25 @@ def _fakessh_main(dest_context_id, econtext):
     process.control.put(('exit', None))
 
 
+def _get_econtext_config(context, sock2):
+    parent_ids = mitogen.parent_ids[:]
+    parent_ids.insert(0, mitogen.context_id)
+    return {
+        'context_id': context.context_id,
+        'core_src_fd': None,
+        'debug': getattr(context.router, 'debug', False),
+        'in_fd': sock2.fileno(),
+        'log_level': mitogen.parent.get_log_level(),
+        'max_message_size': context.router.max_message_size,
+        'out_fd': sock2.fileno(),
+        'parent_ids': parent_ids,
+        'profiling': getattr(context.router, 'profiling', False),
+        'unidirectional': getattr(context.router, 'unidirectional', False),
+        'setup_stdio': False,
+        'version': mitogen.__version__,
+    }
+
+
 #
 # Public API.
 #
@@ -328,9 +347,6 @@ def run(dest, router, args, deadline=None, econtext=None):
     # Held in socket buffer until process is booted.
     fakessh.call_async(_fakessh_main, dest.context_id)
 
-    parent_ids = mitogen.parent_ids[:]
-    parent_ids.insert(0, mitogen.context_id)
-
     tmp_path = tempfile.mkdtemp(prefix='mitogen_fakessh')
     try:
         ssh_path = os.path.join(tmp_path, 'ssh')
@@ -339,20 +355,9 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write('#!%s\n' % (sys.executable,))
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
-            fp.write('ExternalContext().main(**%r)\n' % ({
-                'context_id': context_id,
-                'core_src_fd': None,
-                'debug': getattr(router, 'debug', False),
-                'in_fd': sock2.fileno(),
-                'log_level': mitogen.parent.get_log_level(),
-                'max_message_size': router.max_message_size,
-                'out_fd': sock2.fileno(),
-                'parent_ids': parent_ids,
-                'profiling': getattr(router, 'profiling', False),
-                'unidirectional': getattr(router, 'unidirectional', False),
-                'setup_stdio': False,
-                'version': mitogen.__version__,
-            },))
+            fp.write('ExternalContext(%r).main()\n' % (
+                _get_econtext_config(context, sock2),
+            ))
         finally:
             fp.close()
 

@@ -148,12 +148,12 @@ class Stream(mitogen.parent.Stream):
             os.close(devnull)
         childfp.close()
 
-        kwargs = self.get_main_kwargs()
-        kwargs['core_src_fd'] = None
-        kwargs['importer'] = self.importer
-        kwargs['setup_package'] = False
+        config = self.get_econtext_config()
+        config['core_src_fd'] = None
+        config['importer'] = self.importer
+        config['setup_package'] = False
         try:
-            mitogen.core.ExternalContext().main(**kwargs)
+            mitogen.core.ExternalContext(config).main()
         finally:
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)

@@ -1596,11 +1596,14 @@ class Broker(object):
 class ExternalContext(object):
     detached = False
 
+    def __init__(self, config):
+        self.config = config
+
     def _on_broker_shutdown(self):
         self.channel.close()
 
     def _on_broker_exit(self):
-        if not self.profiling:
+        if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
     def _on_shutdown_msg(self, msg):
@@ -1638,29 +1641,31 @@ class ExternalContext(object):
                 LOG.error('Stream had %d bytes after 2000ms', pending)
             self.broker.defer(stream.on_disconnect, self.broker)
 
-    def _setup_master(self, max_message_size, profiling, unidirectional,
-                      parent_id, context_id, in_fd, out_fd):
-        Router.max_message_size = max_message_size
-        self.profiling = profiling
-        if profiling:
+    def _setup_master(self):
+        Router.max_message_size = self.config['max_message_size']
+        if self.config['profiling']:
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
-        self.router.undirectional = unidirectional
+        self.router.undirectional = self.config['unidirectional']
         self.router.add_handler(
             fn=self._on_shutdown_msg,
             handle=SHUTDOWN,
             policy=has_parent_authority,
         )
         self.master = Context(self.router, 0, 'master')
+        parent_id = self.config['parent_ids'][0]
         if parent_id == 0:
             self.parent = self.master
         else:
             self.parent = Context(self.router, parent_id, 'parent')
 
-        self.channel = Receiver(router=self.router,
-                                handle=CALL_FUNCTION,
-                                policy=has_parent_authority)
+        in_fd = self.config.get('in_fd', 100)
+        out_fd = self.config.get('out_fd', 1)
+
+        self.recv = Receiver(router=self.router,
+                             handle=CALL_FUNCTION,
+                             policy=has_parent_authority)
         self.stream = Stream(self.router, parent_id)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)
@@ -1678,20 +1683,22 @@ class ExternalContext(object):
         except OSError:
             pass  # No first stage exists (e.g. fakessh)
 
-    def _setup_logging(self, debug, log_level):
+    def _setup_logging(self):
         root = logging.getLogger()
-        root.setLevel(log_level)
+        root.setLevel(self.config['log_level'])
         root.handlers = [LogHandler(self.master)]
-        if debug:
+        if self.config['debug']:
             enable_debug_logging()
 
-    def _setup_importer(self, importer, core_src_fd, whitelist, blacklist):
+    def _setup_importer(self):
+        importer = self.config.get('importer')
         if importer:
             importer._install_handler(self.router)
             importer._context = self.parent
         else:
+            core_src_fd = self.config.get('core_src_fd', 101)
             if core_src_fd:
-                fp = os.fdopen(101, 'r', 1)
+                fp = os.fdopen(core_src_fd, 'r', 1)
                 try:
                     core_size = int(fp.readline())
                     core_src = fp.read(core_size)
@@ -1702,8 +1709,13 @@ class ExternalContext(object):
             else:
                 core_src = None
 
-            importer = Importer(self.router, self.parent,
-                                core_src, whitelist, blacklist)
+            importer = Importer(
+                self.router,
+                self.parent,
+                core_src,
+                self.config.get('whitelist', ()),
+                self.config.get('blacklist', ()),
+            )
 
         self.importer = importer
         self.router.importer = importer
@@ -1723,12 +1735,12 @@ class ExternalContext(object):
         sys.modules['mitogen.core'] = mitogen.core
         del sys.modules['__main__']
 
-    def _setup_globals(self, version, context_id, parent_ids):
-        mitogen.__version__ = version
+    def _setup_globals(self):
         mitogen.is_master = False
-        mitogen.context_id = context_id
-        mitogen.parent_ids = parent_ids
-        mitogen.parent_id = parent_ids[0]
+        mitogen.__version__ = self.config['version']
+        mitogen.context_id = self.config['context_id']
+        mitogen.parent_ids = self.config['parent_ids'][:]
+        mitogen.parent_id = mitogen.parent_ids[0]
 
     def _setup_stdio(self):
         # We must open this prior to closing stdout, otherwise it will recycle
@@ -1774,7 +1786,7 @@ class ExternalContext(object):
         return fn(*args, **kwargs)
 
     def _dispatch_calls(self):
-        for msg in self.channel:
+        for msg in self.recv:
             try:
                 msg.reply(self._dispatch_one(msg))
             except Exception:
@@ -1783,28 +1795,24 @@ class ExternalContext(object):
                 msg.reply(CallError(e))
         self.dispatch_stopped = True
 
-    def main(self, parent_ids, context_id, debug, profiling, log_level,
-             unidirectional, max_message_size, version, in_fd=100, out_fd=1,
-             core_src_fd=101, setup_stdio=True, setup_package=True,
-             importer=None, whitelist=(), blacklist=()):
-        self._setup_master(max_message_size, profiling, unidirectional,
-                           parent_ids[0], context_id, in_fd, out_fd)
+    def main(self):
+        self._setup_master()
         try:
             try:
-                self._setup_logging(debug, log_level)
-                self._setup_importer(importer, core_src_fd, whitelist, blacklist)
+                self._setup_logging()
+                self._setup_importer()
                 self._reap_first_stage()
-                if setup_package:
+                if self.config.get('setup_package', True):
                     self._setup_package()
-                self._setup_globals(version, context_id, parent_ids)
-                if setup_stdio:
+                self._setup_globals()
+                if self.config.get('setup_stdio', True):
                     self._setup_stdio()
 
                 self.router.register(self.parent, self.stream)
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Connected to %s; my ID is %r, PID is %r',
-                                 self.parent, context_id, os.getpid())
+                                 self.parent, mitogen.context_id, os.getpid())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 _profile_hook('main', self._dispatch_calls)

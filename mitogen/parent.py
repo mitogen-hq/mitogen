@@ -896,7 +896,7 @@ class Stream(mitogen.core.Stream):
             'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded,)
         ]
 
-    def get_main_kwargs(self):
+    def get_econtext_config(self):
         assert self.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
@@ -915,8 +915,8 @@ class Stream(mitogen.core.Stream):
 
     def get_preamble(self):
         source = inspect.getsource(mitogen.core)
-        source += '\nExternalContext().main(**%r)\n' % (
-            self.get_main_kwargs(),
+        source += '\nExternalContext(%r).main()\n' % (
+            self.get_econtext_config(),
         )
         return zlib.compress(minimize_source(source), 9)
 
