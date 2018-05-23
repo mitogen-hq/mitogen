@@ -90,12 +90,14 @@ class Stream(mitogen.parent.Stream):
     on_fork = None
 
     def construct(self, old_router, max_message_size, on_fork=None,
-                  debug=False, profiling=False, unidirectional=False):
+                  debug=False, profiling=False, unidirectional=False,
+                  on_start=None):
         # fork method only supports a tiny subset of options.
         super(Stream, self).construct(max_message_size=max_message_size,
                                       debug=debug, profiling=profiling,
                                       unidirectional=False)
         self.on_fork = on_fork
+        self.on_start = on_start
 
         responder = getattr(old_router, 'responder', None)
         if isinstance(responder, mitogen.parent.ModuleForwarder):
@@ -152,6 +154,8 @@ class Stream(mitogen.parent.Stream):
         config['core_src_fd'] = None
         config['importer'] = self.importer
         config['setup_package'] = False
+        if self.on_start:
+            config['on_start'] = self.on_start
         try:
             mitogen.core.ExternalContext(config).main()
         finally:

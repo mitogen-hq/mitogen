@@ -70,6 +70,13 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.fork()
         self.assertEqual(2, context.call(exercise_importer, 1))
 
+    def test_on_start(self):
+        recv = mitogen.core.Receiver(self.router)
+        def on_start(econtext):
+            sender = mitogen.core.Sender(econtext.parent, recv.handle)
+            sender.send(123)
+        context = self.router.fork(on_start=on_start)
+        self.assertEquals(123, recv.get().unpickle())
 
 class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):

@@ -1786,6 +1786,9 @@ class ExternalContext(object):
         return fn(*args, **kwargs)
 
     def _dispatch_calls(self):
+        if self.config.get('on_start'):
+            self.config['on_start'](self)
+
         for msg in self.recv:
             try:
                 msg.reply(self._dispatch_one(msg))

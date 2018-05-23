@@ -576,7 +576,7 @@ Router Class
 
     **Context Factories**
 
-    .. method:: fork (new_stack=False, on_fork=None, debug=False, profiling=False, via=None)
+    .. method:: fork (on_fork=None, on_start=None, debug=False, profiling=False, via=None)
 
         Construct a context on the local machine by forking the current
         process. The forked child receives a new identity, sets up a new broker
@@ -650,17 +650,18 @@ Router Class
         The associated stream implementation is
         :py:class:`mitogen.fork.Stream`.
 
-        :param bool new_stack:
-            If :py:data:`True`, arrange for the local thread stack to be
-            discarded, by forking from a new thread. Aside from clean
-            tracebacks, this has the effect of causing objects referenced by
-            the stack to cease existing in the child.
-
         :param function on_fork:
             Function invoked as `on_fork()` from within the child process. This
             permits supplying a program-specific cleanup function to break
             locks and close file descriptors belonging to the parent from
             within the child.
+
+        :param function on_start:
+            Invoked as `on_start(econtext)` from within the child process after
+            it has been set up, but before the function dispatch loop starts.
+            This permits supplying a custom child main function that inherits
+            rich data structures that cannot normally be passed via a
+            serialization.
 
         :param Context via:
             Same as the `via` parameter for :py:meth:`local`.
