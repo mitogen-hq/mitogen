@@ -1024,8 +1024,6 @@ class Poller(object):
         self._rfds = {}
         self._wfds = {}
 
-    _repr = 'Poller()'
-
     @property
     def readers(self):
         return list(self._rfds.items())
@@ -1035,7 +1033,7 @@ class Poller(object):
         return list(self._wfds.items())
 
     def __repr__(self):
-        return self._repr
+        return '%s(%#x)' % (type(self).__name__, id(self))
 
     def close(self):
         pass
