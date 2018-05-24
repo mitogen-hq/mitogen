@@ -49,7 +49,7 @@ except ImportError:  # Ansible<2.4
     from ansible.plugins import module_loader
 
 import mitogen.core
-import mitogen.master
+import mitogen.select
 import mitogen.utils
 
 import ansible_mitogen.connection
@@ -253,7 +253,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_remote_chmod(%r, mode=%r, sudoable=%r)',
                   paths, mode, sudoable)
-        return self.fake_shell(lambda: mitogen.master.Select.all(
+        return self.fake_shell(lambda: mitogen.select.Select.all(
             self._connection.call_async(
                 ansible_mitogen.target.set_file_mode, path, mode
             )
@@ -268,7 +268,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_remote_chown(%r, user=%r, sudoable=%r)',
                   paths, user, sudoable)
         ent = self.call(pwd.getpwnam, user)
-        return self.fake_shell(lambda: mitogen.master.Select.all(
+        return self.fake_shell(lambda: mitogen.select.Select.all(
             self._connection.call_async(
                 os.chown, path, ent.pw_uid, ent.pw_gid
             )

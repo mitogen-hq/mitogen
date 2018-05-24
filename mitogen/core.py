@@ -33,7 +33,6 @@ import imp
 import itertools
 import logging
 import os
-import select
 import signal
 import socket
 import struct
@@ -44,6 +43,9 @@ import traceback
 import warnings
 import weakref
 import zlib
+
+# Absolute imports for <2.5.
+select = __import__('select')
 
 try:
     import cPickle
@@ -531,6 +533,7 @@ class Importer(object):
             'lxc',
             'master',
             'parent',
+            'select',
             'service',
             'setns',
             'ssh',

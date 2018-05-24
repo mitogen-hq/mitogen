@@ -32,7 +32,6 @@ import getpass
 import inspect
 import logging
 import os
-import select
 import signal
 import socket
 import subprocess
@@ -43,6 +42,9 @@ import threading
 import time
 import types
 import zlib
+
+# Absolute imports for <2.5.
+select = __import__('select')
 
 try:
     from cStringIO import StringIO as BytesIO

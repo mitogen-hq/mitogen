@@ -31,7 +31,7 @@ import sys
 import threading
 
 import mitogen.core
-import mitogen.master
+import mitogen.select
 from mitogen.core import LOG
 
 
@@ -314,7 +314,7 @@ class Pool(object):
         self.router = router
         self.services = list(services)
         self.size = size
-        self._select = mitogen.master.Select(
+        self._select = mitogen.select.Select(
             receivers=[
                 service.recv
                 for service in self.services
