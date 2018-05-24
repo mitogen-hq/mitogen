@@ -151,7 +151,7 @@ contexts.
         Result processing happens concurrently to new results arriving, so
         :py:meth:`all` should always be faster.
 
-    .. py:method:: get (timeout=None)
+    .. py:method:: get (timeout=None, block=True)
 
         Fetch the next available value from any receiver, or raise
         :py:class:`mitogen.core.TimeoutError` if no value is available within
@@ -162,7 +162,9 @@ contexts.
 
         :param float timeout:
             Timeout in seconds.
-
+        :param bool block:
+            If :py:data:`False`, immediately raise
+            :py:class:`mitogen.core.TimeoutError` if the select is empty.
         :return:
             :py:class:`mitogen.core.Message`
         :raises mitogen.core.TimeoutError:

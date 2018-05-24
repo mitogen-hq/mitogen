@@ -113,12 +113,12 @@ class Select(object):
 
     empty_msg = 'Cannot get(), Select instance is empty'
 
-    def get(self, timeout=None):
+    def get(self, timeout=None, block=True):
         if not self._receivers:
             raise Error(self.empty_msg)
 
         while True:
-            recv = self._latch.get(timeout=timeout)
+            recv = self._latch.get(timeout=timeout, block=block)
             try:
                 msg = recv.get(block=False)
                 if self._oneshot:
