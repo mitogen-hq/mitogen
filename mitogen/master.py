@@ -26,6 +26,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+This module implements functionality required by master processes, such as
+starting new contexts via SSH. Its size is also restricted, since it must
+be sent to any context that will be used to establish additional child
+contexts.
+"""
+
 import dis
 import imp
 import inspect

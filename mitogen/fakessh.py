@@ -26,6 +26,70 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+:mod:`mitogen.fakessh` is a stream implementation that starts a subprocess with
+its environment modified such that ``PATH`` searches for `ssh` return a Mitogen
+implementation of SSH. When invoked, this implementation arranges for the
+command line supplied by the caller to be executed in a remote context, reusing
+the parent context's (possibly proxied) connection to that remote context.
+
+This allows tools like `rsync` and `scp` to transparently reuse the connections
+and tunnels already established by the host program to connect to a target
+machine, without wasteful redundant SSH connection setup, 3-way handshakes, or
+firewall hopping configurations, and enables these tools to be used in
+impossible scenarios, such as over `sudo` with ``requiretty`` enabled.
+
+The fake `ssh` command source is written to a temporary file on disk, and
+consists of a copy of the :py:mod:`mitogen.core` source code (just like any
+other child context), with a line appended to cause it to connect back to the
+host process over an FD it inherits. As there is no reliance on an existing
+filesystem file, it is possible for child contexts to use fakessh.
+
+As a consequence of connecting back through an inherited FD, only one SSH
+invocation is possible, which is fine for tools like `rsync`, however in future
+this restriction will be lifted.
+
+Sequence:
+
+    1. ``fakessh`` Context and Stream created by parent context. The stream's
+       buffer has a :py:func:`_fakessh_main` :py:data:`CALL_FUNCTION
+       <mitogen.core.CALL_FUNCTION>` enqueued.
+    2. Target program (`rsync/scp/sftp`) invoked, which internally executes
+       `ssh` from ``PATH``.
+    3. :py:mod:`mitogen.core` bootstrap begins, recovers the stream FD
+       inherited via the target program, established itself as the fakessh
+       context.
+    4. :py:func:`_fakessh_main` :py:data:`CALL_FUNCTION
+       <mitogen.core.CALL_FUNCTION>` is read by fakessh context,
+
+        a. sets up :py:class:`IoPump` for stdio, registers
+           stdin_handle for local context.
+        b. Enqueues :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>` for
+           :py:func:`_start_slave` invoked in target context,
+
+            i. the program from the `ssh` command line is started
+            ii. sets up :py:class:`IoPump` for `ssh` command line process's
+                stdio pipes
+            iii. returns `(control_handle, stdin_handle)` to
+                 :py:func:`_fakessh_main`
+
+    5. :py:func:`_fakessh_main` receives control/stdin handles from from
+       :py:func:`_start_slave`,
+
+        a. registers remote's stdin_handle with local :py:class:`IoPump`.
+        b. sends `("start", local_stdin_handle)` to remote's control_handle
+        c. registers local :py:class:`IoPump` with
+           :py:class:`mitogen.core.Broker`.
+        d. loops waiting for `local stdout closed && remote stdout closed`
+
+    6. :py:func:`_start_slave` control channel receives `("start", stdin_handle)`,
+
+        a. registers remote's stdin_handle with local :py:class:`IoPump`
+        b. registers local :py:class:`IoPump` with
+           :py:class:`mitogen.core.Broker`.
+        c. loops waiting for `local stdout closed && remote stdout closed`
+"""
+
 import getopt
 import inspect
 import os
@@ -330,6 +394,26 @@ def _get_econtext_config(context, sock2):
 @mitogen.core.takes_econtext
 @mitogen.core.takes_router
 def run(dest, router, args, deadline=None, econtext=None):
+    """
+    Run the command specified by `args` such that ``PATH`` searches for SSH by
+    the command will cause its attempt to use SSH to execute a remote program
+    to be redirected to use mitogen to execute that program using the context
+    `dest` instead.
+
+    :param list args:
+        Argument vector.
+    :param mitogen.core.Context dest:
+        The destination context to execute the SSH command line in.
+
+    :param mitogen.core.Router router:
+
+    :param list[str] args:
+        Command line arguments for local program, e.g.
+        ``['rsync', '/tmp', 'remote:/tmp']``
+
+    :returns:
+        Exit status of the child process.
+    """
     if econtext is not None:
         mitogen.parent.upgrade_router(econtext)
 

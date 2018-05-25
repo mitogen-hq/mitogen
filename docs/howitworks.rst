@@ -258,7 +258,7 @@ Stream Protocol
 .. currentmodule:: mitogen.core
 
 Once connected, a basic framing protocol is used to communicate between
-parent and child:
+parent and child. Integers use big endian in their encoded form.
 
 .. list-table::
     :header-rows: 1
@@ -341,23 +341,6 @@ Masters listen on the following handles:
     are allocated in batches of 1000 from a 32 bit range, allowing up to 4.2
     million parent contexts to be created and destroyed before the associated
     Router must be recreated.
-
-.. _IS_DEAD:
-.. currentmodule:: mitogen.core
-.. data:: IS_DEAD
-
-    Special value used to signal disconnection or the inability to route a
-    message, when it appears in the `reply_to` field. Usually causes
-    :class:`mitogen.core.ChannelError` to be raised when it is received.
-
-    It indicates the sender did not know how to process the message, or wishes
-    no further messages to be delivered to it. It is used when:
-
-    * a remote receiver is disconnected or explicitly closed.
-    * a related message could not be delivered due to no route existing for it.
-    * a router is being torn down, as a sentinel value to notify
-      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
-
 
 Children listen on the following handles:
 
@@ -477,6 +460,24 @@ Non-master parents also listen on the following handles:
     This message is used to recursively preload indirect children with modules,
     ensuring they are cached and deduplicated at each hop in the chain leading
     to the target context.
+
+Special values for the `reply_to` field:
+
+.. _IS_DEAD:
+.. currentmodule:: mitogen.core
+.. data:: IS_DEAD
+
+    Special value used to signal disconnection or the inability to route a
+    message, when it appears in the `reply_to` field. Usually causes
+    :class:`mitogen.core.ChannelError` to be raised when it is received.
+
+    It indicates the sender did not know how to process the message, or wishes
+    no further messages to be delivered to it. It is used when:
+
+    * a remote receiver is disconnected or explicitly closed.
+    * a related message could not be delivered due to no route existing for it.
+    * a router is being torn down, as a sentinel value to notify
+      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 
 
 Additional handles are created to receive the result of every function call
