@@ -1421,7 +1421,7 @@ class Router(object):
             return
 
         if policy and not policy(msg, stream):
-            LOG.error('%r: policy refused message: %r', self, msg)
+            LOG.error('%r: policy for %r refused message: %r', self, fn, msg)
             if msg.reply_to:
                 self.route(Message.pickled(
                     CallError(self.refused_msg),

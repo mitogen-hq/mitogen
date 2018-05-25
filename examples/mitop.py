@@ -18,6 +18,7 @@ import time
 
 import mitogen.core
 import mitogen.master
+import mitogen.select
 import mitogen.utils
 
 
@@ -185,7 +186,7 @@ def main(router):
         sys.exit(1)
 
     delay = 2.0
-    select = mitogen.master.Select(oneshot=False)
+    select = mitogen.select.Select(oneshot=False)
     hosts = []
 
     # For each hostname on the command line, create a Host instance, a Mitogen
