@@ -41,7 +41,6 @@ import time
 import traceback
 
 import mitogen.core
-import mitogen.master
 import mitogen.parent
 
 
@@ -53,14 +52,26 @@ def _hex(n):
     return '%08x' % n
 
 
+def get_subclasses(klass):
+    """
+    Rather than statically import every interesting subclass, forcing it all to
+    be transferred and potentially disrupting the debugged environment,
+    enumerate only those loaded in memory. Also returns the original class.
+    """
+    stack = [klass]
+    seen = set()
+    while stack:
+        klass = stack.pop()
+        seen.add(klass)
+        stack.extend(klass.__subclasses__())
+    return seen
+
+
 def get_routers():
+    kl
     return {
         _hex(id(router)): router
-        for klass in (
-            mitogen.core.Router,
-            mitogen.parent.Router,
-            mitogen.master.Router,
-        )
+        for klass in get_subclasses(mitogen.core.Router)
         for router in gc.get_referrers(klass)
         if isinstance(router, mitogen.core.Router)
     }
