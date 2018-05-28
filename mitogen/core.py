@@ -316,6 +316,13 @@ def enable_profiling():
                 fp.close()
 
 
+def import_module(modname):
+    """
+    Import `module` and return the attribute named `attr`.
+    """
+    return __import__(modname, None, None, [''])
+
+
 class Message(object):
     dst_id = None
     src_id = None
@@ -1784,7 +1791,7 @@ class ExternalContext(object):
         _v and LOG.debug('_dispatch_calls(%r)', data)
 
         modname, klass, func, args, kwargs = data
-        obj = __import__(modname, {}, {}, [''])
+        obj = import_module(modname)
         if klass:
             obj = getattr(obj, klass)
         fn = getattr(obj, func)
