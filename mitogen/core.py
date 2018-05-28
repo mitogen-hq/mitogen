@@ -75,6 +75,10 @@ IOLOG.setLevel(logging.INFO)
 _v = False
 _vv = False
 
+# Also taken by Broker, no blocking work can occur with it held.
+_service_call_lock = threading.Lock()
+_service_calls = []
+
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
@@ -85,6 +89,7 @@ SHUTDOWN = 106
 LOAD_MODULE = 107
 FORWARD_MODULE = 108
 DETACHING = 109
+CALL_SERVICE = 110
 IS_DEAD = 999
 
 try:
@@ -1000,12 +1005,6 @@ class Context(object):
         _v and LOG.debug('%r.on_disconnect()', self)
         fire(self, 'disconnect')
 
-    def send(self, msg):
-        """send `obj` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
-        msg.dst_id = self.context_id
-        self.router.route(msg)
-
     def send_async(self, msg, persist=False):
         if self.router.broker._thread == threading.currentThread():  # TODO
             raise SystemError('Cannot making blocking call on broker thread')
@@ -1017,6 +1016,25 @@ class Context(object):
         _v and LOG.debug('%r.send_async(%r)', self, msg)
         self.send(msg)
         return receiver
+
+    def call_service_async(self, service_name, method_name, **kwargs):
+        _v and LOG.debug('%r.call_service_async(%r, %r, %r)',
+                         self, service_name, method_name, kwargs)
+        if not isinstance(service_name, basestring):
+            service_name = service_name.name()  # Service.name()
+        tup = (service_name, method_name, kwargs)
+        msg = Message.pickled(tup, handle=CALL_SERVICE)
+        return self.send_async(msg)
+
+    def send(self, msg):
+        """send `obj` to `handle`, and tell the broker we have output. May
+        be called from any thread."""
+        msg.dst_id = self.context_id
+        self.router.route(msg)
+
+    def call_service(self, service_name, method_name, **kwargs):
+        recv = self.call_service_async(service_name, method_name, **kwargs)
+        return recv.get().unpickle()
 
     def send_await(self, msg, deadline=None):
         """Send `msg` and wait for a response with an optional timeout."""
@@ -1626,6 +1644,28 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
+    def _on_call_service_msg(self, msg):
+        """
+        Stub CALL_SERVICE handler, push message on temporary queue and invoke
+        _on_stub_call() from the main thread.
+        """
+        if msg.is_dead:
+            return
+        _service_call_lock.acquire()
+        try:
+            _service_calls.append(msg)
+        finally:
+            _service_call_lock.release()
+
+        self.router.route(
+            Message.pickled(
+                dst_id=mitogen.context_id,
+                handle=CALL_FUNCTION,
+                obj=('mitogen.service', None, '_on_stub_call', (), {}),
+                router=self.router,
+            )
+        )
+
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
         if not msg.is_dead:
@@ -1671,6 +1711,11 @@ class ExternalContext(object):
         self.router.add_handler(
             fn=self._on_shutdown_msg,
             handle=SHUTDOWN,
+            policy=has_parent_authority,
+        )
+        self.router.add_handler(
+            fn=self._on_call_service_msg,
+            handle=CALL_SERVICE,
             policy=has_parent_authority,
         )
         self.master = Context(self.router, 0, 'master')

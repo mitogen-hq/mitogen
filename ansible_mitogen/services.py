@@ -76,8 +76,6 @@ class ContextService(mitogen.service.Service):
     processes and arranging for the worker to select one according to a hash of
     the connection parameters (sharding).
     """
-    handle = 500
-    max_message_size = 1000
     max_interpreters = int(os.getenv('MITOGEN_MAX_INTERPRETERS', '20'))
 
     def __init__(self, *args, **kwargs):
@@ -420,8 +418,6 @@ class FileService(mitogen.service.Service):
            proceed normally, without the associated thread needing to be
            forcefully killed.
     """
-    handle = 501
-    max_message_size = 1000
     unregistered_msg = 'Path is not registered with FileService.'
     context_mismatch_msg = 'sender= kwarg context must match requestee context'
 
@@ -609,9 +605,6 @@ class ModuleDepService(mitogen.service.Service):
     Scan a new-style module and produce a cached mapping of module_utils names
     to their resolved filesystem paths.
     """
-    max_message_size = 1000
-    handle = 502
-
     def __init__(self, file_service, **kwargs):
         super(ModuleDepService, self).__init__(**kwargs)
         self._file_service = file_service

@@ -182,13 +182,10 @@ class BinaryPlanner(Planner):
 
     def _grant_file_service_access(self, invocation):
         invocation.connection._connect()
-        mitogen.service.call(
-            context=invocation.connection.parent,
-            handle=ansible_mitogen.services.FileService.handle,
-            method='register',
-            kwargs={
-                'path': invocation.module_path
-            }
+        invocation.connection.parent.call_service(
+            service_name='ansible_mitogen.services.FileService',
+            method_name='register',
+            path=invocation.module_path,
         )
 
     def plan(self, invocation, **kwargs):
@@ -301,16 +298,14 @@ class NewStylePlanner(ScriptPlanner):
 
     def get_module_utils(self, invocation):
         invocation.connection._connect()
-        return mitogen.service.call(
-            context=invocation.connection.parent,
-            handle=ansible_mitogen.services.ModuleDepService.handle,
-            method='scan',
-            kwargs={
-                'module_name': 'ansible_module_%s' % (invocation.module_name,),
-                'module_path': invocation.module_path,
-                'search_path': self.get_search_path(invocation),
-                'builtin_path': module_common._MODULE_UTILS_PATH,
-            }
+        return invocation.connection.parent.call_service(
+            service_name='ansible_mitogen.services.ModuleDepService',
+            method_name='scan',
+
+            module_name='ansible_module_%s' % (invocation.module_name,),
+            module_path=invocation.module_path,
+            search_path=self.get_search_path(invocation),
+            builtin_path=module_common._MODULE_UTILS_PATH,
         )
 
     def plan(self, invocation):

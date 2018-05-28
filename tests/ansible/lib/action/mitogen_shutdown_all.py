@@ -25,10 +25,8 @@ class ActionModule(ActionBase):
         self._connection._connect()
         return {
             'changed': True,
-            'result': mitogen.service.call(
-                context=self._connection.parent,
-                handle=ansible_mitogen.services.ContextService.handle,
-                method='shutdown_all',
-                kwargs={}
+            'result': self._connection.parent.call_service(
+                service_name='ansible_mitogen.services.ContextService',
+                method_name='shutdown_all',
             )
         }
