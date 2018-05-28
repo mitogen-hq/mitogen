@@ -830,7 +830,7 @@ class Stream(mitogen.core.Stream):
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] == errno.ECHILD:
-                LOG.warn('%r: waitpid(%r) produced ECHILD', self.pid, self)
+                LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
                 return
             raise
 
