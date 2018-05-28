@@ -2,7 +2,15 @@
 import unittest2
 
 import testlib
-import id_allocation
+
+import mitogen.core
+import mitogen.parent
+
+
+@mitogen.core.takes_econtext
+def allocate_an_id(econtext):
+    mitogen.parent.upgrade_router(econtext)
+    return econtext.router.allocate_id()
 
 
 class SlaveTest(testlib.RouterMixin, testlib.TestCase):
@@ -12,11 +20,11 @@ class SlaveTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(1, context.context_id)
 
         # First call from slave allocates a block (2..1001)
-        id_ = context.call(id_allocation.allocate_an_id)
+        id_ = context.call(allocate_an_id)
         self.assertEqual(id_, 2)
 
         # Second call from slave allocates from block (3..1001)
-        id_ = context.call(id_allocation.allocate_an_id)
+        id_ = context.call(allocate_an_id)
         self.assertEqual(id_, 3)
 
         # Subsequent master allocation does not collide
