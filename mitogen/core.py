@@ -1610,7 +1610,7 @@ class ExternalContext(object):
         self.config = config
 
     def _on_broker_shutdown(self):
-        self.channel.close()
+        self.recv.close()
 
     def _on_broker_exit(self):
         if not self.config['profiling']:
@@ -1672,7 +1672,6 @@ class ExternalContext(object):
 
         in_fd = self.config.get('in_fd', 100)
         out_fd = self.config.get('out_fd', 1)
-
         self.recv = Receiver(router=self.router,
                              handle=CALL_FUNCTION,
                              policy=has_parent_authority)
