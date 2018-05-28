@@ -29,8 +29,8 @@ sponsorship and outstanding future-thinking of its early adopters.
 
             <p>
             <br clear="all">
-            For global career opportunities, please visit <a
-            href="http://www.cgi.com/en/careers/working-at-cgi">http://www.cgi.com/en/careers/working-at-cgi</a>.
+            For career opportunities, please visit <a
+            href="http://cgi-group.co.uk/defence-and-intelligence-opportunities">cgi-group.co.uk/defence-and-intelligence-opportunities</a>.
             </p>
 
             <p style="margin-bottom: 0px;">

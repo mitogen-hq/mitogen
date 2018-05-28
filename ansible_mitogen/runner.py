@@ -38,6 +38,7 @@ how to build arguments for it, preseed related data, etc.
 from __future__ import absolute_import
 import cStringIO
 import ctypes
+import imp
 import json
 import logging
 import os
@@ -180,6 +181,46 @@ class Runner(object):
             return self._run()
         finally:
             self.revert()
+
+
+class ModuleUtilsImporter(object):
+    """
+    :param list module_utils:
+        List of `(fullname, path, is_pkg)` tuples.
+    """
+    def __init__(self, context, module_utils):
+        self._context = context
+        self._by_fullname = {
+            fullname: (path, is_pkg)
+            for fullname, path, is_pkg in module_utils
+        }
+        self._loaded = set()
+        sys.meta_path.insert(0, self)
+
+    def revert(self):
+        sys.meta_path.remove(self)
+        for fullname in self._loaded:
+            sys.modules.pop(fullname, None)
+
+    def find_module(self, fullname, path=None):
+        if fullname in self._by_fullname:
+            return self
+
+    def load_module(self, fullname):
+        path, is_pkg = self._by_fullname[fullname]
+        source = ansible_mitogen.target.get_file(self._context, path)
+        code = compile(source, path, 'exec')
+        mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
+        mod.__file__ = "master:%s" % (path,)
+        mod.__loader__ = self
+        if is_pkg:
+            mod.__path__ = []
+            mod.__package__ = fullname
+        else:
+            mod.__package__ = fullname.rpartition('.')[0]
+        exec(code, mod.__dict__)
+        self._loaded.add(fullname)
+        return mod
 
 
 class TemporaryEnvironment(object):
@@ -402,6 +443,10 @@ class NewStyleRunner(ScriptRunner):
     #: path => new-style module bytecode.
     _code_by_path = {}
 
+    def __init__(self, module_utils, **kwargs):
+        super(NewStyleRunner, self).__init__(**kwargs)
+        self.module_utils = module_utils
+
     def setup(self):
         super(NewStyleRunner, self).setup()
         self._stdio = NewStyleStdio(self.args)
@@ -409,6 +454,10 @@ class NewStyleRunner(ScriptRunner):
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
         self._argv = TemporaryArgv([''])
+        self._importer = ModuleUtilsImporter(
+            context=self.service_context,
+            module_utils=self.module_utils,
+        )
         if libc__res_init:
             libc__res_init()
 

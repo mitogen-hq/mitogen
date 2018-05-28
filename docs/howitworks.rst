@@ -258,7 +258,7 @@ Stream Protocol
 .. currentmodule:: mitogen.core
 
 Once connected, a basic framing protocol is used to communicate between
-parent and child:
+parent and child. Integers use big endian in their encoded form.
 
 .. list-table::
     :header-rows: 1
@@ -342,23 +342,6 @@ Masters listen on the following handles:
     million parent contexts to be created and destroyed before the associated
     Router must be recreated.
 
-.. _IS_DEAD:
-.. currentmodule:: mitogen.core
-.. data:: IS_DEAD
-
-    Special value used to signal disconnection or the inability to route a
-    message, when it appears in the `reply_to` field. Usually causes
-    :class:`mitogen.core.ChannelError` to be raised when it is received.
-
-    It indicates the sender did not know how to process the message, or wishes
-    no further messages to be delivered to it. It is used when:
-
-    * a remote receiver is disconnected or explicitly closed.
-    * a related message could not be delivered due to no route existing for it.
-    * a router is being torn down, as a sentinel value to notify
-      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
-
-
 Children listen on the following handles:
 
 .. _LOAD_MODULE:
@@ -435,17 +418,6 @@ also listen on the following handles:
     own parent.
 
 .. currentmodule:: mitogen.core
-.. data:: GET_MODULE
-
-    As with master's ``GET_MODULE``, except this implementation
-    (:py:class:`mitogen.master.ModuleForwarder`) serves responses using
-    :py:class:`mitogen.core.Importer`'s cache before forwarding the request to
-    its parent context. The response is cached by each context in turn before
-    being forwarded on to the child context that originally made the request.
-    In this way, the master need never re-send a module it has already sent to
-    a direct descendant.
-
-.. currentmodule:: mitogen.core
 .. data:: DETACHING
 
     Sent to inform a parent that user code has invoked
@@ -458,6 +430,54 @@ also listen on the following handles:
     connection will soon drop, but the process intends to continue life
     independently, and to avoid terminating the related subprocess if that
     subprocess is the child itself.
+
+Non-master parents also listen on the following handles:
+
+.. currentmodule:: mitogen.core
+.. data:: GET_MODULE
+
+    As with master's ``GET_MODULE``, except this implementation
+    (:py:class:`mitogen.master.ModuleForwarder`) serves responses using
+    :py:class:`mitogen.core.Importer`'s cache before forwarding the request to
+    its parent context. The response is cached by each context in turn before
+    being forwarded on to the child context that originally made the request.
+    In this way, the master need never re-send a module it has already sent to
+    a direct descendant.
+
+.. currentmodule:: mitogen.core
+.. data:: FORWARD_MODULE
+
+    Receives `(context, fullname)` tuples from its parent and arranges for a
+    :data:`LOAD_MODULE` to be sent towards `context` for the module `fullname`
+    and any related modules. The module must already have been delivered to the
+    current context by its parent in a prior :data:`LOAD_MODULE` message.
+
+    If the receiver is the immediate parent of `context`, then only
+    :data:`LOAD_MODULE` is sent to the child. Otherwise :data:`LOAD_MODULE` is
+    sent to the next closest parent if the module has not previously been sent
+    on that stream, followed by a copy of the :data:`FORWARD_MODULE` message.
+
+    This message is used to recursively preload indirect children with modules,
+    ensuring they are cached and deduplicated at each hop in the chain leading
+    to the target context.
+
+Special values for the `reply_to` field:
+
+.. _IS_DEAD:
+.. currentmodule:: mitogen.core
+.. data:: IS_DEAD
+
+    Special value used to signal disconnection or the inability to route a
+    message, when it appears in the `reply_to` field. Usually causes
+    :class:`mitogen.core.ChannelError` to be raised when it is received.
+
+    It indicates the sender did not know how to process the message, or wishes
+    no further messages to be delivered to it. It is used when:
+
+    * a remote receiver is disconnected or explicitly closed.
+    * a related message could not be delivered due to no route existing for it.
+    * a router is being torn down, as a sentinel value to notify
+      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 
 
 Additional handles are created to receive the result of every function call

@@ -90,12 +90,14 @@ class Stream(mitogen.parent.Stream):
     on_fork = None
 
     def construct(self, old_router, max_message_size, on_fork=None,
-                  debug=False, profiling=False, unidirectional=False):
+                  debug=False, profiling=False, unidirectional=False,
+                  on_start=None):
         # fork method only supports a tiny subset of options.
         super(Stream, self).construct(max_message_size=max_message_size,
                                       debug=debug, profiling=profiling,
                                       unidirectional=False)
         self.on_fork = on_fork
+        self.on_start = on_start
 
         responder = getattr(old_router, 'responder', None)
         if isinstance(responder, mitogen.parent.ModuleForwarder):
@@ -134,6 +136,7 @@ class Stream(mitogen.parent.Stream):
         # Expected by the ExternalContext.main().
         os.dup2(childfp.fileno(), 1)
         os.dup2(childfp.fileno(), 100)
+
         # Overwritten by ExternalContext.main(); we must replace the
         # parent-inherited descriptors that were closed by Side._on_fork() to
         # avoid ExternalContext.main() accidentally allocating new files over
@@ -146,14 +149,24 @@ class Stream(mitogen.parent.Stream):
         if devnull != 2:
             os.dup2(devnull, 2)
             os.close(devnull)
-        childfp.close()
 
-        kwargs = self.get_main_kwargs()
-        kwargs['core_src_fd'] = None
-        kwargs['importer'] = self.importer
-        kwargs['setup_package'] = False
+        # If we're unlucky, childfp.fileno() may coincidentally be one of our
+        # desired FDs. In that case closing it breaks ExternalContext.main().
+        if childfp.fileno() not in (0, 1, 100):
+            childfp.close()
+
+        config = self.get_econtext_config()
+        config['core_src_fd'] = None
+        config['importer'] = self.importer
+        config['setup_package'] = False
+        if self.on_start:
+            config['on_start'] = self.on_start
+
         try:
-            mitogen.core.ExternalContext().main(**kwargs)
+            mitogen.core.ExternalContext(config).main()
+        except Exception:
+            # TODO: report exception somehow.
+            os._exit(72)
         finally:
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)

@@ -22,6 +22,11 @@ class ConstructorTest(unittest2.TestCase):
         e = self.klass(ve)
         self.assertEquals(e[0], 'exceptions.ValueError: eek')
 
+    def test_form_base_exc(self):
+        ve = SystemExit('eek')
+        e = self.klass(ve)
+        self.assertEquals(e[0], 'exceptions.SystemExit: eek')
+
     def test_from_exc_tb(self):
         try:
             raise ValueError('eek')

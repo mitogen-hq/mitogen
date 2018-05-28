@@ -26,13 +26,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+This module defines functionality common to master and parent processes. It is
+sent to any child context that is due to become a parent, due to recursive
+connection.
+"""
+
 import errno
 import fcntl
 import getpass
 import inspect
 import logging
 import os
-import select
 import signal
 import socket
 import subprocess
@@ -43,6 +48,9 @@ import threading
 import time
 import types
 import zlib
+
+# Absolute imports for <2.5.
+select = __import__('select')
 
 try:
     from cStringIO import StringIO as BytesIO
@@ -68,23 +76,6 @@ try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
 except:
     SC_OPEN_MAX = 1024
-
-
-class Argv(object):
-    def __init__(self, argv):
-        self.argv = argv
-
-    def escape(self, x):
-        s = '"'
-        for c in x:
-            if c in '\\$"`':
-                s += '\\'
-            s += c
-        s += '"'
-        return s
-
-    def __str__(self):
-        return ' '.join(map(self.escape, self.argv))
 
 
 def get_log_level():
@@ -375,55 +366,58 @@ def hybrid_tty_create_child(args):
 def write_all(fd, s, deadline=None):
     timeout = None
     written = 0
+    poller = PREFERRED_POLLER()
+    poller.start_transmit(fd)
 
-    while written < len(s):
-        if deadline is not None:
-            timeout = max(0, deadline - time.time())
-        if timeout == 0:
-            raise mitogen.core.TimeoutError('write timed out')
+    try:
+        while written < len(s):
+            if deadline is not None:
+                timeout = max(0, deadline - time.time())
+            if timeout == 0:
+                raise mitogen.core.TimeoutError('write timed out')
 
-        _, wfds, _ = select.select([], [fd], [], timeout)
-        if not wfds:
-            continue
+            for fd in poller.poll(timeout):
+                n, disconnected = mitogen.core.io_op(
+                    os.write, fd, buffer(s, written))
+                if disconnected:
+                    raise mitogen.core.StreamError('EOF on stream during write')
 
-        n, disconnected = mitogen.core.io_op(os.write, fd, buffer(s, written))
-        if disconnected:
-            raise mitogen.core.StreamError('EOF on stream during write')
-
-        written += n
+                written += n
+    finally:
+        poller.close()
 
 
 def iter_read(fds, deadline=None):
-    fds = list(fds)
+    poller = PREFERRED_POLLER()
+    for fd in fds:
+        poller.start_receive(fd)
+
     bits = []
     timeout = None
+    try:
+        while poller.readers:
+            if deadline is not None:
+                timeout = max(0, deadline - time.time())
+                if timeout == 0:
+                    break
 
-    while fds:
-        if deadline is not None:
-            timeout = max(0, deadline - time.time())
-            if timeout == 0:
-                break
+            for fd in poller.poll(timeout):
+                s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
+                if disconnected or not s:
+                    IOLOG.debug('iter_read(%r) -> disconnected', fd)
+                    poller.stop_receive(fd)
+                else:
+                    IOLOG.debug('iter_read(%r) -> %r', fd, s)
+                    bits.append(s)
+                    yield s
+    finally:
+        poller.close()
 
-        rfds, _, _ = select.select(fds, [], [], timeout)
-        if not rfds:
-            continue
-
-        for fd in rfds:
-            s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
-            if disconnected or not s:
-                IOLOG.debug('iter_read(%r) -> disconnected', fd)
-                fds.remove(fd)
-            else:
-                IOLOG.debug('iter_read(%r) -> %r', fd, s)
-                bits.append(s)
-                yield s
-
-    if not fds:
+    if not poller.readers:
         raise mitogen.core.StreamError(
             'EOF on stream; last 300 bytes received: %r' %
             (''.join(bits)[-300:],)
         )
-
     raise mitogen.core.TimeoutError('read timed out')
 
 
@@ -436,8 +430,41 @@ def discard_until(fd, s, deadline):
             return
 
 
+def _upgrade_broker(broker):
+    """
+    Extract the poller state from Broker and replace it with the industrial
+    strength poller for this OS. Must run on the Broker thread.
+    """
+    # This function is deadly! The act of calling start_receive() generates log
+    # messages which must be silenced as the upgrade progresses, otherwise the
+    # poller state will change as it is copied, resulting in write fds that are
+    # lost. (Due to LogHandler->Router->Stream->Broker->Poller, where Stream
+    # only calls start_transmit() when transitioning from empty to non-empty
+    # buffer. If the start_transmit() is lost, writes from the child hang
+    # permanently).
+    root = logging.getLogger()
+    old_level = root.level
+    root.setLevel(logging.CRITICAL)
+
+    old = broker.poller
+    new = PREFERRED_POLLER()
+    for fd, data in old.readers:
+        new.start_receive(fd, data)
+    for fd, data in old.writers:
+        new.start_transmit(fd, data)
+
+    old.close()
+    broker.poller = new
+    root.setLevel(old_level)
+    LOG.debug('replaced %r with %r (new: %d readers, %d writers; '
+              'old: %d readers, %d writers)', old, new,
+              len(new.readers), len(new.writers),
+              len(old.readers), len(old.writers))
+
+
 def upgrade_router(econtext):
     if not isinstance(econtext.router, Router):  # TODO
+        econtext.broker.defer(_upgrade_broker, econtext.broker)
         econtext.router.__class__ = Router  # TODO
         econtext.router.upgrade(
             importer=econtext.importer,
@@ -465,9 +492,8 @@ def stream_by_method_name(name):
     """
     if name == 'local':
         name = 'parent'
-    Stream = None
-    exec('from mitogen.%s import Stream' % (name,))
-    return Stream
+    module = mitogen.core.import_module('mitogen.' + name)
+    return module.Stream
 
 
 @mitogen.core.takes_econtext
@@ -495,6 +521,182 @@ def _proxy_connect(name, method_name, kwargs, econtext):
         'name': context.name,
         'msg': None,
     }
+
+
+class Argv(object):
+    def __init__(self, argv):
+        self.argv = argv
+
+    def escape(self, x):
+        s = '"'
+        for c in x:
+            if c in '\\$"`':
+                s += '\\'
+            s += c
+        s += '"'
+        return s
+
+    def __str__(self):
+        return ' '.join(map(self.escape, self.argv))
+
+
+class KqueuePoller(mitogen.core.Poller):
+    _repr = 'KqueuePoller()'
+
+    def __init__(self):
+        self._kqueue = select.kqueue()
+        self._rfds = {}
+        self._wfds = {}
+        self._changelist = []
+
+    def close(self):
+        self._kqueue.close()
+
+    @property
+    def readers(self):
+        return list(self._rfds.items())
+
+    @property
+    def writers(self):
+        return list(self._wfds.items())
+
+    def _control(self, fd, filters, flags):
+        mitogen.core._vv and IOLOG.debug(
+            '%r._control(%r, %r, %r)', self, fd, filters, flags)
+        self._changelist.append(select.kevent(fd, filters, flags))
+
+    def start_receive(self, fd, data=None):
+        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
+            self, fd, data)
+        if fd not in self._rfds:
+            self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
+        self._rfds[fd] = data or fd
+
+    def stop_receive(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd)
+        if fd in self._rfds:
+            self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_DELETE)
+            del self._rfds[fd]
+
+    def start_transmit(self, fd, data=None):
+        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
+            self, fd, data)
+        if fd not in self._wfds:
+            self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
+        self._wfds[fd] = data or fd
+
+    def stop_transmit(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
+        if fd in self._wfds:
+            self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
+            del self._wfds[fd]
+
+    def poll(self, timeout=None):
+        changelist = self._changelist
+        self._changelist = []
+        events, _ = mitogen.core.io_op(self._kqueue.control,
+            changelist, 32, timeout)
+        for event in events:
+            fd = event.ident
+            if event.filter == select.KQ_FILTER_READ and fd in self._rfds:
+                # Events can still be read for an already-discarded fd.
+                mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                yield self._rfds[fd]
+            elif event.filter == select.KQ_FILTER_WRITE and fd in self._wfds:
+                mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                yield self._wfds[fd]
+
+
+class EpollPoller(mitogen.core.Poller):
+    _repr = 'EpollPoller()'
+
+    def __init__(self):
+        self._epoll = select.epoll(32)
+        self._registered_fds = set()
+        self._rfds = {}
+        self._wfds = {}
+
+    def close(self):
+        self._epoll.close()
+
+    @property
+    def readers(self):
+        return list(self._rfds.items())
+
+    @property
+    def writers(self):
+        return list(self._wfds.items())
+
+    def _control(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r._control(%r)', self, fd)
+        mask = (((fd in self._rfds) and select.EPOLLIN) |
+                ((fd in self._wfds) and select.EPOLLOUT))
+        if mask:
+            if fd in self._registered_fds:
+                self._epoll.modify(fd, mask)
+            else:
+                self._epoll.register(fd, mask)
+                self._registered_fds.add(fd)
+        elif fd in self._registered_fds:
+            self._epoll.unregister(fd)
+            self._registered_fds.remove(fd)
+
+    def start_receive(self, fd, data=None):
+        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
+            self, fd, data)
+        self._rfds[fd] = data or fd
+        self._control(fd)
+
+    def stop_receive(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd)
+        self._rfds.pop(fd, None)
+        self._control(fd)
+
+    def start_transmit(self, fd, data=None):
+        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
+            self, fd, data)
+        self._wfds[fd] = data or fd
+        self._control(fd)
+
+    def stop_transmit(self, fd):
+        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
+        self._wfds.pop(fd, None)
+        self._control(fd)
+
+    _inmask = (getattr(select, 'EPOLLIN', 0) |
+               getattr(select, 'EPOLLHUP', 0))
+
+    def poll(self, timeout=None):
+        the_timeout = -1
+        if timeout is not None:
+            the_timeout = timeout
+
+        events, _ = mitogen.core.io_op(self._epoll.poll, the_timeout, 32)
+        for fd, event in events:
+            if event & self._inmask and fd in self._rfds:
+                # Events can still be read for an already-discarded fd.
+                mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                yield self._rfds[fd]
+            if event & select.EPOLLOUT and fd in self._wfds:
+                mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                yield self._wfds[fd]
+
+
+POLLER_BY_SYSNAME = {
+    'Darwin': KqueuePoller,
+    'FreeBSD': KqueuePoller,
+    'Linux': EpollPoller,
+}
+
+PREFERRED_POLLER = POLLER_BY_SYSNAME.get(
+    os.uname()[0],
+    mitogen.core.Poller,
+)
+
+# For apps that start threads dynamically, it's possible Latch will also get
+# very high-numbered wait fds when there are many connections, and so select()
+# becomes useless there too. So swap in our favourite poller.
+mitogen.core.Latch.poller_class = PREFERRED_POLLER
 
 
 class TtyLogStream(mitogen.core.BasicStream):
@@ -592,7 +794,7 @@ class Stream(mitogen.core.Stream):
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
-        self.send(
+        self._send(
             mitogen.core.Message(
                 src_id=mitogen.context_id,
                 dst_id=self.remote_id,
@@ -628,7 +830,7 @@ class Stream(mitogen.core.Stream):
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] == errno.ECHILD:
-                LOG.warn('%r: waitpid(%r) produced ECHILD', self.pid, self)
+                LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
                 return
             raise
 
@@ -701,7 +903,7 @@ class Stream(mitogen.core.Stream):
             'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded,)
         ]
 
-    def get_main_kwargs(self):
+    def get_econtext_config(self):
         assert self.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
@@ -720,8 +922,8 @@ class Stream(mitogen.core.Stream):
 
     def get_preamble(self):
         source = inspect.getsource(mitogen.core)
-        source += '\nExternalContext().main(**%r)\n' % (
-            self.get_main_kwargs(),
+        source += '\nExternalContext(%r).main()\n' % (
+            self.get_econtext_config(),
         )
         return zlib.compress(minimize_source(source), 9)
 
@@ -869,7 +1071,7 @@ class RouteMonitor(object):
 
     def _on_stream_disconnect(self, stream):
         """
-        Respond to disconnection of a local stream by 
+        Respond to disconnection of a local stream by
         """
         LOG.debug('%r is gone; propagating DEL_ROUTE for %r',
                   stream, stream.routes)
@@ -1011,7 +1213,6 @@ class Router(mitogen.core.Router):
         try:
             stream.connect()
         except mitogen.core.TimeoutError:
-            e = sys.exc_info()[1]
             raise mitogen.core.StreamError(self.connection_timeout_msg)
         context.name = stream.name
         self.route_monitor.notice_stream(stream)
@@ -1107,6 +1308,12 @@ class ModuleForwarder(object):
         self.parent_context = parent_context
         self.importer = importer
         router.add_handler(
+            fn=self._on_forward_module,
+            handle=mitogen.core.FORWARD_MODULE,
+            persist=True,
+            policy=mitogen.core.has_parent_authority,
+        )
+        router.add_handler(
             fn=self._on_get_module,
             handle=mitogen.core.GET_MODULE,
             persist=True,
@@ -1116,34 +1323,64 @@ class ModuleForwarder(object):
     def __repr__(self):
         return 'ModuleForwarder(%r)' % (self.router,)
 
+    def _on_forward_module(self, msg):
+        if msg.is_dead:
+            return
+
+        context_id_s, fullname = msg.data.partition('\x00')
+        context_id = int(context_id_s)
+        stream = self.router.stream_by_id(context_id)
+        if stream.remote_id == mitogen.parent_id:
+            LOG.error('%r: dropping FORWARD_MODULE(%d, %r): no route to child',
+                      self, context_id, fullname)
+            return
+
+        LOG.debug('%r._on_forward_module() sending %r to %r via %r',
+                  self, fullname, context_id, stream.remote_id)
+        self._send_module_and_related(stream, fullname)
+        if stream.remote_id != context_id:
+            stream._send(
+                mitogen.core.Message(
+                    dst_id=stream.remote_id,
+                    handle=mitogen.core.FORWARD_MODULE,
+                    data=msg.data,
+                )
+            )
+
     def _on_get_module(self, msg):
         LOG.debug('%r._on_get_module(%r)', self, msg)
         if msg.is_dead:
             return
 
         fullname = msg.data
-        callback = lambda: self._on_cache_callback(msg, fullname)
-        self.importer._request_module(fullname, callback)
-
-    def _send_one_module(self, msg, tup):
-        self.router._async_route(
-            mitogen.core.Message.pickled(
-                tup,
-                dst_id=msg.src_id,
-                handle=mitogen.core.LOAD_MODULE,
-            )
+        self.importer._request_module(fullname,
+            lambda: self._on_cache_callback(msg, fullname)
         )
 
     def _on_cache_callback(self, msg, fullname):
         LOG.debug('%r._on_get_module(): sending %r', self, fullname)
-        tup = self.importer._cache[fullname]
-        if tup is not None:
-            for related in tup[4]:
-                rtup = self.importer._cache.get(related)
-                if not rtup:
-                    LOG.debug('%r._on_get_module(): skipping absent %r',
-                               self, related)
-                    continue
-                self._send_one_module(msg, rtup)
+        stream = self.router.stream_by_id(msg.src_id)
+        self._send_module_and_related(stream, fullname)
 
-        self._send_one_module(msg, tup)
+    def _send_module_and_related(self, stream, fullname):
+        tup = self.importer._cache[fullname]
+        for related in tup[4]:
+            rtup = self.importer._cache.get(related)
+            if rtup:
+                self._send_one_module(stream, rtup)
+            else:
+                LOG.debug('%r._send_module_and_related(%r): absent: %r',
+                           self, fullname, related)
+
+        self._send_one_module(stream, tup)
+
+    def _send_one_module(self, stream, tup):
+        if tup[0] not in stream.sent_modules:
+            stream.sent_modules.add(tup[0])
+            self.router._async_route(
+                mitogen.core.Message.pickled(
+                    tup,
+                    dst_id=stream.remote_id,
+                    handle=mitogen.core.LOAD_MODULE,
+                )
+            )

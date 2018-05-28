@@ -1,13 +1,13 @@
 
 import unittest2
 
-import mitogen.master
+import mitogen.select
 
 import testlib
 
 
 class AddTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_receiver(self):
         recv = mitogen.core.Receiver(self.router)
@@ -47,7 +47,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_subselect_loop_direct(self):
         select = self.klass()
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.add(select))
         self.assertEquals(str(exc), self.klass.loop_msg)
 
@@ -58,7 +58,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
 
         s0.add(s1)
         s1.add(s2)
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: s2.add(s0))
         self.assertEquals(str(exc), self.klass.loop_msg)
 
@@ -66,7 +66,7 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         select = self.klass()
         recv = mitogen.core.Receiver(self.router)
         select.add(recv)
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.add(recv))
         self.assertEquals(str(exc), self.klass.owned_msg)
 
@@ -74,18 +74,18 @@ class AddTest(testlib.RouterMixin, testlib.TestCase):
         select = self.klass()
         select2 = self.klass()
         select.add(select2)
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.add(select2))
         self.assertEquals(str(exc), self.klass.owned_msg)
 
 
 class RemoveTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_empty(self):
         select = self.klass()
         recv = mitogen.core.Receiver(self.router)
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.remove(recv))
         self.assertEquals(str(exc), self.klass.not_present_msg)
 
@@ -94,7 +94,7 @@ class RemoveTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         recv2 = mitogen.core.Receiver(self.router)
         select.add(recv2)
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.remove(recv))
         self.assertEquals(str(exc), self.klass.not_present_msg)
 
@@ -108,7 +108,7 @@ class RemoveTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class CloseTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_empty(self):
         select = self.klass()
@@ -147,7 +147,7 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class EmptyTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_no_receivers(self):
         select = self.klass()
@@ -172,7 +172,7 @@ class EmptyTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class IterTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_empty(self):
         select = self.klass()
@@ -187,7 +187,7 @@ class IterTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class OneShotTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_true_removed_after_get(self):
         recv = mitogen.core.Receiver(self.router)
@@ -212,17 +212,17 @@ class OneShotTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class GetTest(testlib.RouterMixin, testlib.TestCase):
-    klass = mitogen.master.Select
+    klass = mitogen.select.Select
 
     def test_no_receivers(self):
         select = self.klass()
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.get())
         self.assertEquals(str(exc), self.klass.empty_msg)
 
     def test_timeout_no_receivers(self):
         select = self.klass()
-        exc = self.assertRaises(mitogen.master.SelectError,
+        exc = self.assertRaises(mitogen.select.Error,
             lambda: select.get(timeout=1.0))
         self.assertEquals(str(exc), self.klass.empty_msg)
 

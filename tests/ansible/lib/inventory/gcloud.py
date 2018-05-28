@@ -1,15 +1,20 @@
 #!/usr/bin/env python
 
+import json
 import os
 import sys
+
+if (not os.environ.get('MITOGEN_GCLOUD_GROUP')) or any('--host' in s for s in sys.argv):
+    sys.stdout.write('{}')
+    sys.exit(0)
 
 import googleapiclient.discovery
 
 
 def main():
     project = 'mitogen-load-testing'
-    zone = 'asia-south1-c'
-    group_name = 'micro-debian9'
+    zone = 'europe-west1-d'
+    group_name = 'target'
 
     client = googleapiclient.discovery.build('compute', 'v1')
     resp = client.instances().list(project=project, zone=zone).execute()
@@ -24,12 +29,20 @@ def main():
                 #for config in interface['accessConfigs']
             )
 
-    print 'Addresses:', ips
-    os.execvp('ansible-playbook', [
-        'anisble-playbook',
-        '--user=dw',
-        '--inventory-file=' + ','.join(ips) + ','
-    ] + sys.argv[1:])
+    sys.stderr.write('Addresses: %s\n' % (ips,))
+    gname = os.environ['MITOGEN_GCLOUD_GROUP']
+    groups = {
+        gname: {
+            'hosts': ips
+        }
+    }
+
+    for i in 1, 10, 20, 50, 100:
+        groups['%s-%s' % (gname, i)] = {
+            'hosts': ips[:i]
+        }
+
+    sys.stdout.write(json.dumps(groups, indent=4))
 
 
 if __name__ == '__main__':

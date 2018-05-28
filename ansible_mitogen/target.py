@@ -90,26 +90,20 @@ def _get_file(context, path, out_fp):
     LOG.debug('_get_file(): fetching %r from %r', path, context)
     t0 = time.time()
     recv = mitogen.core.Receiver(router=context.router)
-    metadata = mitogen.service.call(
-        context=context,
-        handle=ansible_mitogen.services.FileService.handle,
-        method='fetch',
-        kwargs={
-            'path': path,
-            'sender': recv.to_sender()
-        }
+    metadata = context.call_service(
+        service_name='ansible_mitogen.services.FileService',
+        method_name='fetch',
+        path=path,
+        sender=recv.to_sender(),
     )
 
     for chunk in recv:
         s = chunk.unpickle()
         LOG.debug('_get_file(%r): received %d bytes', path, len(s))
-        mitogen.service.call_async(
-            context=context,
-            handle=ansible_mitogen.services.FileService.handle,
-            method='acknowledge',
-            kwargs={
-                'size': len(s),
-            }
+        context.call_service_async(
+            service_name='ansible_mitogen.services.FileService',
+            method_name='acknowledge',
+            size=len(s),
         ).close()
         out_fp.write(s)
 
@@ -518,7 +512,7 @@ def write_path(path, s, owner=None, group=None, mode=None,
                                     prefix='.ansible_mitogen_transfer-',
                                     dir=os.path.dirname(path))
     fp = os.fdopen(fd, 'wb', mitogen.core.CHUNK_SIZE)
-    LOG.debug('write_path(path=%r) tempory file: %s', path, tmp_path)
+    LOG.debug('write_path(path=%r) temporary file: %s', path, tmp_path)
 
     try:
         try:

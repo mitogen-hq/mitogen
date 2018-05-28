@@ -458,13 +458,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
         )
 
-        dct = mitogen.service.call(
-            context=self.parent,
-            handle=ansible_mitogen.services.ContextService.handle,
-            method='get',
-            kwargs=mitogen.utils.cast({
-                'stack': stack,
-            })
+        dct = self.parent.call_service(
+            service_name='ansible_mitogen.services.ContextService',
+            method_name='get',
+            stack=mitogen.utils.cast(list(stack)),
         )
 
         if dct['msg']:
@@ -490,13 +487,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         multiple times.
         """
         if self.context:
-            mitogen.service.call(
-                context=self.parent,
-                handle=ansible_mitogen.services.ContextService.handle,
-                method='put',
-                kwargs={
-                    'context': self.context
-                }
+            self.parent.call_service(
+                service_name='ansible_mitogen.services.ContextService',
+                method_name='put',
+                context=self.context
             )
 
         self.context = None
@@ -618,13 +612,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 return self.put_data(out_path, s, mode=st.st_mode,
                                      utimes=(st.st_atime, st.st_mtime))
 
-        mitogen.service.call(
-            context=self.parent,
-            handle=ansible_mitogen.services.FileService.handle,
-            method='register',
-            kwargs={
-                'path': mitogen.utils.cast(in_path)
-            }
+        self.parent.call_service(
+            service_name='ansible_mitogen.services.FileService',
+            method_name='register',
+            path=mitogen.utils.cast(in_path)
         )
         self.call(
             ansible_mitogen.target.transfer_file,

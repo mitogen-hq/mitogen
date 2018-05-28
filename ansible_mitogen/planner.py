@@ -35,17 +35,19 @@ files/modules known missing.
 """
 
 from __future__ import absolute_import
-import json
 import logging
 import os
 
 from ansible.executor import module_common
 import ansible.errors
+import ansible.module_utils
 
 try:
     from ansible.plugins.loader import module_loader
+    from ansible.plugins.loader import module_utils_loader
 except ImportError:  # Ansible <2.4
     from ansible.plugins import module_loader
+    from ansible.plugins import module_utils_loader
 
 import mitogen
 import mitogen.service
@@ -178,16 +180,16 @@ class BinaryPlanner(Planner):
     def detect(self, invocation):
         return module_common._is_binary(invocation.module_source)
 
-    def plan(self, invocation, **kwargs):
+    def _grant_file_service_access(self, invocation):
         invocation.connection._connect()
-        mitogen.service.call(
-            context=invocation.connection.parent,
-            handle=ansible_mitogen.services.FileService.handle,
-            method='register',
-            kwargs={
-                'path': invocation.module_path
-            }
+        invocation.connection.parent.call_service(
+            service_name='ansible_mitogen.services.FileService',
+            method_name='register',
+            path=invocation.module_path,
         )
+
+    def plan(self, invocation, **kwargs):
+        self._grant_file_service_access(invocation)
         return super(BinaryPlanner, self).plan(
             invocation=invocation,
             runner_name=self.runner_name,
@@ -226,36 +228,6 @@ class ScriptPlanner(BinaryPlanner):
             interpreter=interpreter,
             **kwargs
         )
-
-
-class ReplacerPlanner(BinaryPlanner):
-    """
-    The Module Replacer framework is the original framework implementing
-    new-style modules. It is essentially a preprocessor (like the C
-    Preprocessor for those familiar with that programming language). It does
-    straight substitutions of specific substring patterns in the module file.
-    There are two types of substitutions.
-
-    * Replacements that only happen in the module file. These are public
-      replacement strings that modules can utilize to get helpful boilerplate
-      or access to arguments.
-
-      "from ansible.module_utils.MOD_LIB_NAME import *" is replaced with the
-      contents of the ansible/module_utils/MOD_LIB_NAME.py. These should only
-      be used with new-style Python modules.
-
-      "#<<INCLUDE_ANSIBLE_MODULE_COMMON>>" is equivalent to
-      "from ansible.module_utils.basic import *" and should also only apply to
-      new-style Python modules.
-
-      "# POWERSHELL_COMMON" substitutes the contents of
-      "ansible/module_utils/powershell.ps1". It should only be used with
-      new-style Powershell modules.
-    """
-    runner_name = 'ReplacerRunner'
-
-    def detect(self, invocation):
-        return module_common.REPLACER in invocation.module_source
 
 
 class JsonArgsPlanner(ScriptPlanner):
@@ -298,6 +270,12 @@ class NewStylePlanner(ScriptPlanner):
     def _get_interpreter(self, invocation):
         return None, None
 
+    def _grant_file_service_access(self, invocation):
+        """
+        Stub out BinaryPlanner's method since ModuleDepService makes internal
+        calls to grant file access, avoiding 2 IPCs per task invocation.
+        """
+
     def get_should_fork(self, invocation):
         """
         In addition to asynchronous tasks, new-style modules should be forked
@@ -311,8 +289,58 @@ class NewStylePlanner(ScriptPlanner):
     def detect(self, invocation):
         return 'from ansible.module_utils.' in invocation.module_source
 
+    def get_search_path(self, invocation):
+        return tuple(
+            path
+            for path in module_utils_loader._get_paths(subdirs=False)
+            if os.path.isdir(path)
+        )
+
+    def get_module_utils(self, invocation):
+        invocation.connection._connect()
+        return invocation.connection.parent.call_service(
+            service_name='ansible_mitogen.services.ModuleDepService',
+            method_name='scan',
+
+            module_name='ansible_module_%s' % (invocation.module_name,),
+            module_path=invocation.module_path,
+            search_path=self.get_search_path(invocation),
+            builtin_path=module_common._MODULE_UTILS_PATH,
+        )
+
+    def plan(self, invocation):
+        module_utils = self.get_module_utils(invocation)
+        return super(NewStylePlanner, self).plan(
+            invocation,
+            module_utils=module_utils,
+            should_fork=(self.get_should_fork(invocation) or bool(module_utils)),
+        )
+
 
 class ReplacerPlanner(NewStylePlanner):
+    """
+    The Module Replacer framework is the original framework implementing
+    new-style modules. It is essentially a preprocessor (like the C
+    Preprocessor for those familiar with that programming language). It does
+    straight substitutions of specific substring patterns in the module file.
+    There are two types of substitutions.
+
+    * Replacements that only happen in the module file. These are public
+      replacement strings that modules can utilize to get helpful boilerplate
+      or access to arguments.
+
+      "from ansible.module_utils.MOD_LIB_NAME import *" is replaced with the
+      contents of the ansible/module_utils/MOD_LIB_NAME.py. These should only
+      be used with new-style Python modules.
+
+      "#<<INCLUDE_ANSIBLE_MODULE_COMMON>>" is equivalent to
+      "from ansible.module_utils.basic import *" and should also only apply to
+      new-style Python modules.
+
+      "# POWERSHELL_COMMON" substitutes the contents of
+      "ansible/module_utils/powershell.ps1". It should only be used with
+      new-style Powershell modules.
+    """
     runner_name = 'ReplacerRunner'
 
     def detect(self, invocation):

@@ -26,6 +26,12 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+"""
+This module implements most package functionality, but remains separate from
+non-essential code in order to reduce its size, since it is also serves as the
+bootstrap implementation sent to every new slave context.
+"""
+
 import collections
 import errno
 import fcntl
@@ -33,7 +39,6 @@ import imp
 import itertools
 import logging
 import os
-import select
 import signal
 import socket
 import struct
@@ -44,6 +49,9 @@ import traceback
 import warnings
 import weakref
 import zlib
+
+# Absolute imports for <2.5.
+select = __import__('select')
 
 try:
     import cPickle
@@ -67,6 +75,10 @@ IOLOG.setLevel(logging.INFO)
 _v = False
 _vv = False
 
+# Also taken by Broker, no blocking work can occur with it held.
+_service_call_lock = threading.Lock()
+_service_calls = []
+
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
@@ -75,8 +87,15 @@ DEL_ROUTE = 104
 ALLOCATE_ID = 105
 SHUTDOWN = 106
 LOAD_MODULE = 107
-DETACHING = 108
+FORWARD_MODULE = 108
+DETACHING = 109
+CALL_SERVICE = 110
 IS_DEAD = 999
+
+try:
+    BaseException
+except NameError:
+    BaseException = Exception
 
 PY3 = sys.version_info > (3,)
 if PY3:
@@ -134,7 +153,7 @@ class Secret(UnicodeType):
 
 class CallError(Error):
     def __init__(self, fmt=None, *args):
-        if not isinstance(fmt, Exception):
+        if not isinstance(fmt, BaseException):
             Error.__init__(self, fmt, *args)
         else:
             e = fmt
@@ -229,7 +248,7 @@ def io_op(func, *args):
     while True:
         try:
             return func(*args), False
-        except (select.error, OSError):
+        except (select.error, OSError, IOError):
             e = sys.exc_info()[1]
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
             if e[0] == errno.EINTR:
@@ -267,6 +286,9 @@ class PidfulStreamHandler(logging.StreamHandler):
 
 
 def enable_debug_logging():
+    global _v, _vv
+    _v = True
+    _vv = True
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
     IOLOG.setLevel(logging.DEBUG)
@@ -280,9 +302,11 @@ def enable_debug_logging():
 
 _profile_hook = lambda name, func, *args: func(*args)
 
+
 def enable_profiling():
     global _profile_hook
-    import cProfile, pstats
+    import cProfile
+    import pstats
     def _profile_hook(name, func, *args):
         profiler = cProfile.Profile()
         profiler.enable()
@@ -297,6 +321,13 @@ def enable_profiling():
                 stats.print_stats()
             finally:
                 fp.close()
+
+
+def import_module(modname):
+    """
+    Import `module` and return the attribute named `attr`.
+    """
+    return __import__(modname, None, None, [''])
 
 
 class Message(object):
@@ -363,7 +394,10 @@ class Message(object):
         msg.dst_id = self.src_id
         msg.handle = self.reply_to
         vars(msg).update(kwargs)
-        (self.router or router).route(msg)
+        if msg.handle:
+            (self.router or router).route(msg)
+        else:
+            LOG.debug('Message.reply(): discarding due to zero handle: %r', msg)
 
     def unpickle(self, throw=True, throw_dead=True):
         """Deserialize `data` into an object."""
@@ -522,6 +556,7 @@ class Importer(object):
             'lxc',
             'master',
             'parent',
+            'select',
             'service',
             'setns',
             'ssh',
@@ -753,6 +788,7 @@ class Side(object):
     def __init__(self, stream, fd, cloexec=True, keep_alive=True):
         self.stream = stream
         self.fd = fd
+        self.closed = False
         self.keep_alive = keep_alive
         self._fork_refs[id(self)] = self
         if cloexec:
@@ -762,21 +798,16 @@ class Side(object):
     def __repr__(self):
         return '<Side of %r fd %s>' % (self.stream, self.fd)
 
-    def fileno(self):
-        if self.fd is None:
-            raise StreamError('%r.fileno() called but no FD set', self)
-        return self.fd
-
     @classmethod
     def _on_fork(cls):
         for side in list(cls._fork_refs.values()):
             side.close()
 
     def close(self):
-        if self.fd is not None:
+        if not self.closed:
             _vv and IOLOG.debug('%r.close()', self)
             os.close(self.fd)
-            self.fd = None
+            self.closed = True
 
     def read(self, n=CHUNK_SIZE):
         s, disconnected = io_op(os.read, self.fd, n)
@@ -800,11 +831,11 @@ class BasicStream(object):
 
     def on_disconnect(self, broker):
         LOG.debug('%r.on_disconnect()', self)
-        broker.stop_receive(self)
-        broker._stop_transmit(self)
         if self.receive_side:
+            broker.stop_receive(self)
             self.receive_side.close()
         if self.transmit_side:
+            broker._stop_transmit(self)
             self.transmit_side.close()
         fire(self, 'disconnect')
 
@@ -974,12 +1005,6 @@ class Context(object):
         _v and LOG.debug('%r.on_disconnect()', self)
         fire(self, 'disconnect')
 
-    def send(self, msg):
-        """send `obj` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
-        msg.dst_id = self.context_id
-        self.router.route(msg)
-
     def send_async(self, msg, persist=False):
         if self.router.broker._thread == threading.currentThread():  # TODO
             raise SystemError('Cannot making blocking call on broker thread')
@@ -991,6 +1016,25 @@ class Context(object):
         _v and LOG.debug('%r.send_async(%r)', self, msg)
         self.send(msg)
         return receiver
+
+    def call_service_async(self, service_name, method_name, **kwargs):
+        _v and LOG.debug('%r.call_service_async(%r, %r, %r)',
+                         self, service_name, method_name, kwargs)
+        if not isinstance(service_name, basestring):
+            service_name = service_name.name()  # Service.name()
+        tup = (service_name, method_name, kwargs)
+        msg = Message.pickled(tup, handle=CALL_SERVICE)
+        return self.send_async(msg)
+
+    def send(self, msg):
+        """send `obj` to `handle`, and tell the broker we have output. May
+        be called from any thread."""
+        msg.dst_id = self.context_id
+        self.router.route(msg)
+
+    def call_service(self, service_name, method_name, **kwargs):
+        recv = self.call_service_async(service_name, method_name, **kwargs)
+        return recv.get().unpickle()
 
     def send_await(self, msg, deadline=None):
         """Send `msg` and wait for a response with an optional timeout."""
@@ -1014,7 +1058,56 @@ def _unpickle_context(router, context_id, name):
     return router.context_class(router, context_id, name)
 
 
+class Poller(object):
+    def __init__(self):
+        self._rfds = {}
+        self._wfds = {}
+
+    @property
+    def readers(self):
+        return list(self._rfds.items())
+
+    @property
+    def writers(self):
+        return list(self._wfds.items())
+
+    def __repr__(self):
+        return '%s(%#x)' % (type(self).__name__, id(self))
+
+    def close(self):
+        pass
+
+    def start_receive(self, fd, data=None):
+        self._rfds[fd] = data or fd
+
+    def stop_receive(self, fd):
+        self._rfds.pop(fd, None)
+
+    def start_transmit(self, fd, data=None):
+        self._wfds[fd] = data or fd
+
+    def stop_transmit(self, fd):
+        self._wfds.pop(fd, None)
+
+    def poll(self, timeout=None):
+        _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
+        (rfds, wfds, _), _ = io_op(select.select,
+            self._rfds,
+            self._wfds,
+            (), timeout
+        )
+
+        for fd in rfds:
+            _vv and IOLOG.debug('%r: POLLIN for %r', self, fd)
+            yield self._rfds[fd]
+
+        for fd in wfds:
+            _vv and IOLOG.debug('%r: POLLOUT for %r', self, fd)
+            yield self._wfds[fd]
+
+
 class Latch(object):
+    poller_class = Poller
     closed = False
     _waking = 0
     _sockets = []
@@ -1058,7 +1151,6 @@ class Latch(object):
     def get(self, timeout=None, block=True):
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)',
                             self, timeout, block)
-
         self._lock.acquire()
         try:
             if self.closed:
@@ -1074,14 +1166,19 @@ class Latch(object):
         finally:
             self._lock.release()
 
-        return self._get_sleep(timeout, block, rsock, wsock)
+        poller = self.poller_class()
+        poller.start_receive(rsock.fileno())
+        try:
+            return self._get_sleep(poller, timeout, block, rsock, wsock)
+        finally:
+            poller.close()
 
-    def _get_sleep(self, timeout, block, rsock, wsock):
+    def _get_sleep(self, poller, timeout, block, rsock, wsock):
         _vv and IOLOG.debug('%r._get_sleep(timeout=%r, block=%r)',
                             self, timeout, block)
         e = None
         try:
-            io_op(select.select, [rsock], [], [], timeout)
+            list(poller.poll(timeout))
         except Exception:
             e = sys.exc_info()[1]
 
@@ -1091,7 +1188,7 @@ class Latch(object):
             del self._sleeping[i]
             self._sockets.append((rsock, wsock))
             if i >= self._waking:
-                raise TimeoutError()
+                raise e or TimeoutError()
             self._waking -= 1
             if rsock.recv(2) != '\x7f':
                 raise LatchError('internal error: received >1 wakeups')
@@ -1348,7 +1445,7 @@ class Router(object):
     refused_msg = 'Refused by policy.'
 
     def _invoke(self, msg, stream):
-        #IOLOG.debug('%r._invoke(%r)', self, msg)
+        # IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
             persist, fn, policy = self._handle_map[msg.handle]
         except KeyError:
@@ -1432,16 +1529,20 @@ class Router(object):
 
 
 class Broker(object):
+    poller_class = Poller
     _waker = None
     _thread = None
     shutdown_timeout = 3.0
 
-    def __init__(self):
+    def __init__(self, poller_class=None):
         self._alive = True
         self._waker = Waker(self)
         self.defer = self._waker.defer
-        self._readers = [self._waker.receive_side]
-        self._writers = []
+        self.poller = self.poller_class()
+        self.poller.start_receive(
+            self._waker.receive_side.fd,
+            (self._waker.receive_side, self._waker.on_receive)
+        )
         self._thread = threading.Thread(
             target=_profile_hook,
             args=('broker', self._broker_main),
@@ -1450,33 +1551,30 @@ class Broker(object):
         self._thread.start()
         self._waker.broker_ident = self._thread.ident
 
-    def _list_discard(self, lst, value):
-        try:
-            lst.remove(value)
-        except ValueError:
-            pass
-
-    def _list_add(self, lst, value):
-        if value not in lst:
-            lst.append(value)
-
     def start_receive(self, stream):
         _vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
-        assert stream.receive_side and stream.receive_side.fd is not None
-        self.defer(self._list_add, self._readers, stream.receive_side)
+        side = stream.receive_side
+        assert side and side.fd is not None
+        self.defer(self.poller.start_receive,
+                   side.fd, (side, stream.on_receive))
 
     def stop_receive(self, stream):
-        IOLOG.debug('%r.stop_receive(%r)', self, stream)
-        self.defer(self._list_discard, self._readers, stream.receive_side)
+        _vv and IOLOG.debug('%r.stop_receive(%r)', self, stream)
+        self.defer(self.poller.stop_receive, stream.receive_side.fd)
 
     def _start_transmit(self, stream):
-        IOLOG.debug('%r._start_transmit(%r)', self, stream)
-        assert stream.transmit_side and stream.transmit_side.fd is not None
-        self._list_add(self._writers, stream.transmit_side)
+        _vv and IOLOG.debug('%r._start_transmit(%r)', self, stream)
+        side = stream.transmit_side
+        assert side and side.fd is not None
+        self.poller.start_transmit(side.fd, (side, stream.on_transmit))
 
     def _stop_transmit(self, stream):
-        IOLOG.debug('%r._stop_transmit(%r)', self, stream)
-        self._list_discard(self._writers, stream.transmit_side)
+        _vv and IOLOG.debug('%r._stop_transmit(%r)', self, stream)
+        self.poller.stop_transmit(stream.transmit_side.fd)
+
+    def keep_alive(self):
+        it = (side.keep_alive for (_, (side, _)) in self.poller.readers)
+        return sum(it, 0)
 
     def _call(self, stream, func):
         try:
@@ -1486,26 +1584,12 @@ class Broker(object):
             stream.on_disconnect(self)
 
     def _loop_once(self, timeout=None):
-        _vv and IOLOG.debug('%r._loop_once(%r)', self, timeout)
-
-        #IOLOG.debug('readers = %r', self._readers)
-        #IOLOG.debug('writers = %r', self._writers)
-        (rsides, wsides, _), _ = io_op(select.select,
-            self._readers,
-            self._writers,
-            (), timeout
-        )
-
-        for side in rsides:
-            _vv and IOLOG.debug('%r: POLLIN for %r', self, side)
-            self._call(side.stream, side.stream.on_receive)
-
-        for side in wsides:
-            _vv and IOLOG.debug('%r: POLLOUT for %r', self, side)
-            self._call(side.stream, side.stream.on_transmit)
-
-    def keep_alive(self):
-        return sum((side.keep_alive for side in self._readers), 0)
+        _vv and IOLOG.debug('%r._loop_once(%r, %r)',
+                            self, timeout, self.poller)
+        #IOLOG.debug('readers =\n%s', pformat(self.poller.readers))
+        #IOLOG.debug('writers =\n%s', pformat(self.poller.writers))
+        for (side, func) in self.poller.poll(timeout):
+            self._call(side.stream, func)
 
     def _broker_main(self):
         try:
@@ -1513,8 +1597,7 @@ class Broker(object):
                 self._loop_once()
 
             fire(self, 'shutdown')
-
-            for side in set(self._readers).union(self._writers):
+            for _, (side, _) in self.poller.readers + self.poller.writers:
                 self._call(side.stream, side.stream.on_shutdown)
 
             deadline = time.time() + self.shutdown_timeout
@@ -1527,7 +1610,7 @@ class Broker(object):
                           'more child processes still connected to '
                           'our stdout/stderr pipes.', self)
 
-            for side in set(self._readers).union(self._writers):
+            for _, (side, _) in self.poller.readers + self.poller.writers:
                 LOG.error('_broker_main() force disconnecting %r', side)
                 side.stream.on_disconnect(self)
         except Exception:
@@ -1551,12 +1634,37 @@ class Broker(object):
 class ExternalContext(object):
     detached = False
 
+    def __init__(self, config):
+        self.config = config
+
     def _on_broker_shutdown(self):
-        self.channel.close()
+        self.recv.close()
 
     def _on_broker_exit(self):
-        if not self.profiling:
+        if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
+
+    def _on_call_service_msg(self, msg):
+        """
+        Stub CALL_SERVICE handler, push message on temporary queue and invoke
+        _on_stub_call() from the main thread.
+        """
+        if msg.is_dead:
+            return
+        _service_call_lock.acquire()
+        try:
+            _service_calls.append(msg)
+        finally:
+            _service_call_lock.release()
+
+        self.router.route(
+            Message.pickled(
+                dst_id=mitogen.context_id,
+                handle=CALL_FUNCTION,
+                obj=('mitogen.service', None, '_on_stub_call', (), {}),
+                router=self.router,
+            )
+        )
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
@@ -1593,29 +1701,35 @@ class ExternalContext(object):
                 LOG.error('Stream had %d bytes after 2000ms', pending)
             self.broker.defer(stream.on_disconnect, self.broker)
 
-    def _setup_master(self, max_message_size, profiling, unidirectional,
-                      parent_id, context_id, in_fd, out_fd):
-        Router.max_message_size = max_message_size
-        self.profiling = profiling
-        if profiling:
+    def _setup_master(self):
+        Router.max_message_size = self.config['max_message_size']
+        if self.config['profiling']:
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
-        self.router.undirectional = unidirectional
+        self.router.undirectional = self.config['unidirectional']
         self.router.add_handler(
             fn=self._on_shutdown_msg,
             handle=SHUTDOWN,
             policy=has_parent_authority,
         )
+        self.router.add_handler(
+            fn=self._on_call_service_msg,
+            handle=CALL_SERVICE,
+            policy=has_parent_authority,
+        )
         self.master = Context(self.router, 0, 'master')
+        parent_id = self.config['parent_ids'][0]
         if parent_id == 0:
             self.parent = self.master
         else:
             self.parent = Context(self.router, parent_id, 'parent')
 
-        self.channel = Receiver(router=self.router,
-                                handle=CALL_FUNCTION,
-                                policy=has_parent_authority)
+        in_fd = self.config.get('in_fd', 100)
+        out_fd = self.config.get('out_fd', 1)
+        self.recv = Receiver(router=self.router,
+                             handle=CALL_FUNCTION,
+                             policy=has_parent_authority)
         self.stream = Stream(self.router, parent_id)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)
@@ -1633,20 +1747,22 @@ class ExternalContext(object):
         except OSError:
             pass  # No first stage exists (e.g. fakessh)
 
-    def _setup_logging(self, debug, log_level):
+    def _setup_logging(self):
         root = logging.getLogger()
-        root.setLevel(log_level)
+        root.setLevel(self.config['log_level'])
         root.handlers = [LogHandler(self.master)]
-        if debug:
+        if self.config['debug']:
             enable_debug_logging()
 
-    def _setup_importer(self, importer, core_src_fd, whitelist, blacklist):
+    def _setup_importer(self):
+        importer = self.config.get('importer')
         if importer:
             importer._install_handler(self.router)
             importer._context = self.parent
         else:
+            core_src_fd = self.config.get('core_src_fd', 101)
             if core_src_fd:
-                fp = os.fdopen(101, 'r', 1)
+                fp = os.fdopen(core_src_fd, 'r', 1)
                 try:
                     core_size = int(fp.readline())
                     core_src = fp.read(core_size)
@@ -1657,8 +1773,13 @@ class ExternalContext(object):
             else:
                 core_src = None
 
-            importer = Importer(self.router, self.parent,
-                                core_src, whitelist, blacklist)
+            importer = Importer(
+                self.router,
+                self.parent,
+                core_src,
+                self.config.get('whitelist', ()),
+                self.config.get('blacklist', ()),
+            )
 
         self.importer = importer
         self.router.importer = importer
@@ -1678,12 +1799,12 @@ class ExternalContext(object):
         sys.modules['mitogen.core'] = mitogen.core
         del sys.modules['__main__']
 
-    def _setup_globals(self, version, context_id, parent_ids):
-        mitogen.__version__ = version
+    def _setup_globals(self):
         mitogen.is_master = False
-        mitogen.context_id = context_id
-        mitogen.parent_ids = parent_ids
-        mitogen.parent_id = parent_ids[0]
+        mitogen.__version__ = self.config['version']
+        mitogen.context_id = self.config['context_id']
+        mitogen.parent_ids = self.config['parent_ids'][:]
+        mitogen.parent_id = mitogen.parent_ids[0]
 
     def _setup_stdio(self):
         # We must open this prior to closing stdout, otherwise it will recycle
@@ -1718,7 +1839,7 @@ class ExternalContext(object):
         _v and LOG.debug('_dispatch_calls(%r)', data)
 
         modname, klass, func, args, kwargs = data
-        obj = __import__(modname, {}, {}, [''])
+        obj = import_module(modname)
         if klass:
             obj = getattr(obj, klass)
         fn = getattr(obj, func)
@@ -1729,7 +1850,10 @@ class ExternalContext(object):
         return fn(*args, **kwargs)
 
     def _dispatch_calls(self):
-        for msg in self.channel:
+        if self.config.get('on_start'):
+            self.config['on_start'](self)
+
+        for msg in self.recv:
             try:
                 msg.reply(self._dispatch_one(msg))
             except Exception:
@@ -1738,28 +1862,24 @@ class ExternalContext(object):
                 msg.reply(CallError(e))
         self.dispatch_stopped = True
 
-    def main(self, parent_ids, context_id, debug, profiling, log_level,
-             unidirectional, max_message_size, version, in_fd=100, out_fd=1,
-             core_src_fd=101, setup_stdio=True, setup_package=True,
-             importer=None, whitelist=(), blacklist=()):
-        self._setup_master(max_message_size, profiling, unidirectional,
-                           parent_ids[0], context_id, in_fd, out_fd)
+    def main(self):
+        self._setup_master()
         try:
             try:
-                self._setup_logging(debug, log_level)
-                self._setup_importer(importer, core_src_fd, whitelist, blacklist)
+                self._setup_logging()
+                self._setup_importer()
                 self._reap_first_stage()
-                if setup_package:
+                if self.config.get('setup_package', True):
                     self._setup_package()
-                self._setup_globals(version, context_id, parent_ids)
-                if setup_stdio:
+                self._setup_globals()
+                if self.config.get('setup_stdio', True):
                     self._setup_stdio()
 
                 self.router.register(self.parent, self.stream)
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Connected to %s; my ID is %r, PID is %r',
-                                 self.parent, context_id, os.getpid())
+                                 self.parent, mitogen.context_id, os.getpid())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 _profile_hook('main', self._dispatch_calls)

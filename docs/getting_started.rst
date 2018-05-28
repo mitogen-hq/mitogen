@@ -256,7 +256,7 @@ without the need for writing asynchronous code::
     contexts = [router.ssh(hostname=hn) for hn in hostnames]
     calls = [context.call(my_func) for context in contexts]
 
-    for recv, (msg, data) in mitogen.master.Select(calls):
+    for msg in mitogen.select.Select(calls):
         print 'Reply from %s: %s' % (recv.context, data)
 
 

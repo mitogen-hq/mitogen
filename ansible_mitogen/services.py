@@ -49,7 +49,9 @@ import threading
 import zlib
 
 import mitogen
+import mitogen.master
 import mitogen.service
+import ansible_mitogen.module_finder
 import ansible_mitogen.target
 
 
@@ -74,8 +76,6 @@ class ContextService(mitogen.service.Service):
     processes and arranging for the worker to select one according to a hash of
     the connection parameters (sharding).
     """
-    handle = 500
-    max_message_size = 1000
     max_interpreters = int(os.getenv('MITOGEN_MAX_INTERPRETERS', '20'))
 
     def __init__(self, *args, **kwargs):
@@ -418,8 +418,6 @@ class FileService(mitogen.service.Service):
            proceed normally, without the associated thread needing to be
            forcefully killed.
     """
-    handle = 501
-    max_message_size = 1000
     unregistered_msg = 'Path is not registered with FileService.'
     context_mismatch_msg = 'sender= kwarg context must match requestee context'
 
@@ -439,6 +437,17 @@ class FileService(mitogen.service.Service):
             return getattr(func(n), attr)
         except KeyError:
             return None
+
+    @mitogen.service.expose(policy=mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'paths': list
+    })
+    def register_many(self, paths):
+        """
+        Batch version of register().
+        """
+        for path in paths:
+            self.register(path)
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
@@ -589,3 +598,44 @@ class FileService(mitogen.service.Service):
             self._schedule_pending_unlocked(state)
         finally:
             state.lock.release()
+
+
+class ModuleDepService(mitogen.service.Service):
+    """
+    Scan a new-style module and produce a cached mapping of module_utils names
+    to their resolved filesystem paths.
+    """
+    def __init__(self, file_service, **kwargs):
+        super(ModuleDepService, self).__init__(**kwargs)
+        self._file_service = file_service
+        self._cache = {}
+
+    @mitogen.service.expose(policy=mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'module_name': basestring,
+        'module_path': basestring,
+        'search_path': tuple,
+        'builtin_path': basestring,
+    })
+    def scan(self, module_name, module_path, search_path, builtin_path):
+        if (module_name, search_path) not in self._cache:
+            resolved = ansible_mitogen.module_finder.scan(
+                module_name=module_name,
+                module_path=module_path,
+                search_path=tuple(search_path) + (builtin_path,),
+            )
+            builtin_path = os.path.abspath(builtin_path)
+            filtered = [
+                (fullname, path, is_pkg)
+                for fullname, path, is_pkg in resolved
+                if not os.path.abspath(path).startswith(builtin_path)
+            ]
+            self._cache[module_name, search_path] = filtered
+
+            # Grant FileService access to paths in here to avoid another 2 IPCs
+            # from WorkerProcess.
+            self._file_service.register(path=module_path)
+            for fullname, path, is_pkg in filtered:
+                self._file_service.register(path=path)
+
+        return self._cache[module_name, search_path]

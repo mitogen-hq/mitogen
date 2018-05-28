@@ -11,9 +11,6 @@ import mitogen.unix
 
 
 class PingService(mitogen.service.Service):
-    well_known_id = 500
-    max_message_size = 1000
-
     def dispatch(self, dct, msg):
         return 'Hello, world'
 
