@@ -136,6 +136,7 @@ class Stream(mitogen.parent.Stream):
         # Expected by the ExternalContext.main().
         os.dup2(childfp.fileno(), 1)
         os.dup2(childfp.fileno(), 100)
+
         # Overwritten by ExternalContext.main(); we must replace the
         # parent-inherited descriptors that were closed by Side._on_fork() to
         # avoid ExternalContext.main() accidentally allocating new files over
@@ -148,7 +149,11 @@ class Stream(mitogen.parent.Stream):
         if devnull != 2:
             os.dup2(devnull, 2)
             os.close(devnull)
-        childfp.close()
+
+        # If we're unlucky, childfp.fileno() may coincidentally be one of our
+        # desired FDs. In that case closing it breaks ExternalContext.main().
+        if childfp.fileno() not in (0, 1, 100):
+            childfp.close()
 
         config = self.get_econtext_config()
         config['core_src_fd'] = None
@@ -156,8 +161,12 @@ class Stream(mitogen.parent.Stream):
         config['setup_package'] = False
         if self.on_start:
             config['on_start'] = self.on_start
+
         try:
             mitogen.core.ExternalContext(config).main()
+        except Exception:
+            # TODO: report exception somehow.
+            os._exit(72)
         finally:
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)
