@@ -297,9 +297,11 @@ def enable_debug_logging():
 
 _profile_hook = lambda name, func, *args: func(*args)
 
+
 def enable_profiling():
     global _profile_hook
-    import cProfile, pstats
+    import cProfile
+    import pstats
     def _profile_hook(name, func, *args):
         profiler = cProfile.Profile()
         profiler.enable()
@@ -1071,8 +1073,6 @@ class Poller(object):
 
     def poll(self, timeout=None):
         _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
-        IOLOG.debug('readers = %r', self._rfds)
-        IOLOG.debug('writers = %r', self._wfds)
         (rfds, wfds, _), _ = io_op(select.select,
             self._rfds,
             self._wfds,
@@ -1427,7 +1427,7 @@ class Router(object):
     refused_msg = 'Refused by policy.'
 
     def _invoke(self, msg, stream):
-        #IOLOG.debug('%r._invoke(%r)', self, msg)
+        # IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
             persist, fn, policy = self._handle_map[msg.handle]
         except KeyError:
@@ -1566,7 +1566,10 @@ class Broker(object):
             stream.on_disconnect(self)
 
     def _loop_once(self, timeout=None):
-        _vv and IOLOG.debug('%r._loop_once(%r)', self, timeout)
+        _vv and IOLOG.debug('%r._loop_once(%r, %r)',
+                            self, timeout, self.poller)
+        #IOLOG.debug('readers =\n%s', pformat(self.poller.readers))
+        #IOLOG.debug('writers =\n%s', pformat(self.poller.writers))
         for (side, func) in self.poller.poll(timeout):
             self._call(side.stream, func)
 
