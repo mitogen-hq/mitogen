@@ -69,6 +69,12 @@ Installation
    per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
    to mimic the ``free`` strategy.
 
+5. If targets have a restrictive ``sudoers`` file, add a rule like:
+
+   .. code-block:: plain
+
+       deploy = (ALL) NOPASSWD:/usr/bin/python -c*
+
 
 Demo
 ~~~~
