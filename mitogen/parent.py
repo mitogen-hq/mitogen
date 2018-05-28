@@ -492,9 +492,8 @@ def stream_by_method_name(name):
     """
     if name == 'local':
         name = 'parent'
-    Stream = None
-    exec('from mitogen.%s import Stream' % (name,))
-    return Stream
+    module = mitogen.core.import_module('mitogen.' + name)
+    return module.Stream
 
 
 @mitogen.core.takes_econtext
