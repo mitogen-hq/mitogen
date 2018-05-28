@@ -380,7 +380,10 @@ class Message(object):
         msg.dst_id = self.src_id
         msg.handle = self.reply_to
         vars(msg).update(kwargs)
-        (self.router or router).route(msg)
+        if msg.handle:
+            (self.router or router).route(msg)
+        else:
+            LOG.debug('Message.reply(): discarding due to zero handle: %r', msg)
 
     def unpickle(self, throw=True, throw_dead=True):
         """Deserialize `data` into an object."""
