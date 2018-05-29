@@ -49,7 +49,6 @@ import threading
 import zlib
 
 import mitogen
-import mitogen.master
 import mitogen.service
 import ansible_mitogen.module_finder
 import ansible_mitogen.target
