@@ -40,6 +40,41 @@ and possibly your team and its successors with:
   appropriate, prefer a higher level solution instead.
 
 
+First Principles
+----------------
+
+Before starting, take a moment to reflect on writing a program that will
+operate across machines and privilege domains:
+
+* As with multithreaded programming, writing a program that spans multiple
+  hosts is exposed to many asynchrony issues. Unlike multithreaded programming,
+  the margin for unexpected failures is much higher, even between only two
+  peers, as communication may be fail at any moment, since that communication
+  depends on reliability of an external network.
+
+* Since a multi-host program always spans trust and privilege domains, trust
+  must be taken into consideration in your design from the outset. Mitogen
+  attempts to protect the consuming application by default where possible,
+  however it is paramount that trust considerations are always in mind when
+  exposing any privileged functionality to a potentially untrusted network of
+  peers.
+
+  A parent must always assume data received from a child is suspect, and must
+  not base privileged control decisions on that data. As a small example, a
+  parent should not form a command to execute in a subprocess using strings
+  received from a child.
+
+* As the program spans multiple hosts, its design will benefit from a strict
+  separation of program and data. This entails avoiding some common Python
+  idioms that rely on its ability to manipulate functions and closures as if
+  they were data, such as passing a lambda closed over some program state as a
+  callback parameter.
+
+  In the general case this is both difficult and unsafe to support in a
+  distributed program, and so (for now at least) it should be assumed this
+  functionality is unlikely to appear in future.
+
+
 Broker And Router
 -----------------
 
@@ -328,6 +363,12 @@ User-defined types may not be used, except for:
 
 Subclasses of built-in types must be undecorated using
 :py:func:`mitogen.utils.cast`.
+
+
+Test Your Design
+----------------
+
+``tc qdisc add dev eth0 root netem delay 250ms``
 
 
 .. _troubleshooting:
