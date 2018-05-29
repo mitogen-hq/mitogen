@@ -227,6 +227,19 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
+    ALWAYS_PRELOAD = (
+        'ansible_mitogen.target',
+        'ansible.release',
+        'ansible.module_utils.json_utils',
+        'ansible_mitogen.runner',
+        'mitogen.fork',
+        'ansible.module_utils.basic',
+    )
+
+    def _send_module_forwards(self, context):
+        for fullname in self.ALWAYS_PRELOAD:
+            self.router.responder.forward_module(context, fullname)
+
     def _connect(self, key, spec, via=None):
         """
         Actual connect implementation. Arranges for the Mitogen connection to
@@ -266,6 +279,7 @@ class ContextService(mitogen.service.Service):
             mitogen.core.listen(stream, 'disconnect',
                                 lambda: self._on_stream_disconnect(stream))
 
+        self._send_module_forwards(context)
         home_dir = context.call(os.path.expanduser, '~')
 
         # We don't need to wait for the result of this. Ideally we'd check its
