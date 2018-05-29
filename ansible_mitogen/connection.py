@@ -613,7 +613,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                                      utimes=(st.st_atime, st.st_mtime))
 
         self.parent.call_service(
-            service_name='ansible_mitogen.services.FileService',
+            service_name='mitogen.service.FileService',
             method_name='register',
             path=mitogen.utils.cast(in_path)
         )

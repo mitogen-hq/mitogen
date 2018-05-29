@@ -182,7 +182,7 @@ class BinaryPlanner(Planner):
 
     def _grant_file_service_access(self, invocation):
         invocation.connection.parent.call_service(
-            service_name='ansible_mitogen.services.FileService',
+            service_name='mitogen.service.FileService',
             method_name='register',
             path=invocation.module_path,
         )

@@ -89,7 +89,7 @@ def _get_file(context, path, out_fp):
     t0 = time.time()
     recv = mitogen.core.Receiver(router=context.router)
     metadata = context.call_service(
-        service_name='ansible_mitogen.services.FileService',
+        service_name='mitogen.service.FileService',
         method_name='fetch',
         path=path,
         sender=recv.to_sender(),
@@ -99,7 +99,7 @@ def _get_file(context, path, out_fp):
         s = chunk.unpickle()
         LOG.debug('_get_file(%r): received %d bytes', path, len(s))
         context.call_service_async(
-            service_name='ansible_mitogen.services.FileService',
+            service_name='mitogen.service.FileService',
             method_name='acknowledge',
             size=len(s),
         ).close()

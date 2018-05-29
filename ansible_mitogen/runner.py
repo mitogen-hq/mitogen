@@ -272,7 +272,7 @@ class ProgramRunner(Runner):
 
     :param str path:
         Absolute path to the program file on the master, as it can be retrieved
-        via :class:`ansible_mitogen.services.FileService`.
+        via :class:`mitogen.service.FileService`.
     :param bool emulate_tty:
         If :data:`True`, execute the program with `stdout` and `stderr` merged
         into a single pipe, emulating Ansible behaviour when an SSH TTY is in
