@@ -704,7 +704,7 @@ class IdAllocator(object):
             id_ = self.next_id
             self.next_id += self.BLOCK_SIZE
             end_id = id_ + self.BLOCK_SIZE
-            LOG.debug('%r: allocating (%d..%d]', self, id_, end_id)
+            LOG.debug('%r: allocating [%d..%d)', self, id_, end_id)
             return id_, end_id
         finally:
             self.lock.release()
@@ -718,5 +718,5 @@ class IdAllocator(object):
         allocated = self.router.context_by_id(id_, msg.src_id)
 
         LOG.debug('%r: allocating [%r..%r) to %r',
-                  self, allocated, requestee, msg.src_id)
+                  self, id_, last_id, requestee)
         msg.reply((id_, last_id))
