@@ -50,11 +50,9 @@ import traceback
 
 import ansible.module_utils.json_utils
 import ansible_mitogen.runner
-import ansible_mitogen.services
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
-import mitogen.service
 
 
 LOG = logging.getLogger(__name__)

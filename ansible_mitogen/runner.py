@@ -47,7 +47,6 @@ import sys
 import tempfile
 import types
 
-import mitogen.service
 import ansible_mitogen.target  # TODO: circular import
 
 try:
