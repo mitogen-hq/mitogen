@@ -52,9 +52,9 @@ class BrokenModulesTest(unittest2.TestCase):
 
         responder = mitogen.master.ModuleResponder(router)
         responder._on_get_module(msg)
-        self.assertEquals(1, len(router.route.mock_calls))
+        self.assertEquals(1, len(router._async_route.mock_calls))
 
-        call = router.route.mock_calls[0]
+        call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
         self.assertEquals(('non_existent_module', None, None, None, ()),
@@ -81,9 +81,9 @@ class BrokenModulesTest(unittest2.TestCase):
 
         responder = mitogen.master.ModuleResponder(router)
         responder._on_get_module(msg)
-        self.assertEquals(1, len(router.route.mock_calls))
+        self.assertEquals(1, len(router._async_route.mock_calls))
 
-        call = router.route.mock_calls[0]
+        call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
         self.assertIsInstance(msg.unpickle(), tuple)

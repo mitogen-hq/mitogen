@@ -200,6 +200,7 @@ class FindRelatedTest(testlib.TestCase):
             'mitogen.compat.functools',
             'mitogen.core',
             'mitogen.master',
+            'mitogen.minify',
             'mitogen.parent',
         ])
 

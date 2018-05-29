@@ -593,6 +593,7 @@ class ModuleResponder(object):
                 mitogen.core.Message(
                     data='%s\x00%s' % (context.context_id, fullname),
                     handle=mitogen.core.FORWARD_MODULE,
+                    dst_id=stream.remote_id,
                 )
             )
 

@@ -1231,12 +1231,15 @@ class ModuleForwarder(object):
         if msg.is_dead:
             return
 
-        context_id_s, fullname = msg.data.partition('\x00')
+        context_id_s, _, fullname = msg.data.partition('\x00')
         context_id = int(context_id_s)
         stream = self.router.stream_by_id(context_id)
         if stream.remote_id == mitogen.parent_id:
             LOG.error('%r: dropping FORWARD_MODULE(%d, %r): no route to child',
                       self, context_id, fullname)
+            return
+
+        if fullname in stream.sent_modules:
             return
 
         LOG.debug('%r._on_forward_module() sending %r to %r via %r',
@@ -1245,9 +1248,9 @@ class ModuleForwarder(object):
         if stream.remote_id != context_id:
             stream._send(
                 mitogen.core.Message(
-                    dst_id=stream.remote_id,
-                    handle=mitogen.core.FORWARD_MODULE,
                     data=msg.data,
+                    handle=mitogen.core.FORWARD_MODULE,
+                    dst_id=stream.remote_id,
                 )
             )
 

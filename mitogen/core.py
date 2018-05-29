@@ -864,7 +864,7 @@ class Stream(BasicStream):
         self._router = router
         self.remote_id = remote_id
         self.name = 'default'
-        self.sent_modules = set()
+        self.sent_modules = set(['mitogen', 'mitogen.core'])
         self.construct(**kwargs)
         self._input_buf = collections.deque()
         self._output_buf = collections.deque()
