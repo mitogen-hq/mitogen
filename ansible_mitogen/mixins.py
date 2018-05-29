@@ -313,6 +313,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         env = {}
         self._compute_environment_string(env)
 
+        self._connection._connect()
         return ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
                 action=self,

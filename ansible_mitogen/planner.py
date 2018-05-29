@@ -181,7 +181,6 @@ class BinaryPlanner(Planner):
         return module_common._is_binary(invocation.module_source)
 
     def _grant_file_service_access(self, invocation):
-        invocation.connection._connect()
         invocation.connection.parent.call_service(
             service_name='ansible_mitogen.services.FileService',
             method_name='register',
@@ -297,7 +296,6 @@ class NewStylePlanner(ScriptPlanner):
         )
 
     def get_module_utils(self, invocation):
-        invocation.connection._connect()
         return invocation.connection.parent.call_service(
             service_name='ansible_mitogen.services.ModuleDepService',
             method_name='scan',
@@ -306,6 +304,7 @@ class NewStylePlanner(ScriptPlanner):
             module_path=invocation.module_path,
             search_path=self.get_search_path(invocation),
             builtin_path=module_common._MODULE_UTILS_PATH,
+            context=invocation.connection.context,
         )
 
     def plan(self, invocation):

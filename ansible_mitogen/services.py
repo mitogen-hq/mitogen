@@ -624,32 +624,50 @@ class ModuleDepService(mitogen.service.Service):
         self._file_service = file_service
         self._cache = {}
 
+    def _get_builtin_names(self, builtin_path, resolved):
+        return [
+            fullname
+            for fullname, path, is_pkg in resolved
+            if os.path.abspath(path).startswith(builtin_path)
+        ]
+
+    def _get_custom_tups(self, builtin_path, resolved):
+        return [
+            (fullname, path, is_pkg)
+            for fullname, path, is_pkg in resolved
+            if not os.path.abspath(path).startswith(builtin_path)
+        ]
+
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
         'module_name': basestring,
         'module_path': basestring,
         'search_path': tuple,
         'builtin_path': basestring,
+        'context': mitogen.core.Context,
     })
-    def scan(self, module_name, module_path, search_path, builtin_path):
-        if (module_name, search_path) not in self._cache:
+    def scan(self, module_name, module_path, search_path, builtin_path, context):
+        key = (module_name, search_path)
+        if key not in self._cache:
             resolved = ansible_mitogen.module_finder.scan(
                 module_name=module_name,
                 module_path=module_path,
                 search_path=tuple(search_path) + (builtin_path,),
             )
             builtin_path = os.path.abspath(builtin_path)
-            filtered = [
-                (fullname, path, is_pkg)
-                for fullname, path, is_pkg in resolved
-                if not os.path.abspath(path).startswith(builtin_path)
-            ]
-            self._cache[module_name, search_path] = filtered
+            builtin = self._get_builtin_names(builtin_path, resolved)
+            custom = self._get_custom_tups(builtin_path, resolved)
+            self._cache[key] = {
+                'builtin': builtin,
+                'custom': custom,
+            }
 
             # Grant FileService access to paths in here to avoid another 2 IPCs
             # from WorkerProcess.
             self._file_service.register(path=module_path)
-            for fullname, path, is_pkg in filtered:
+            for fullname, path, is_pkg in custom:
                 self._file_service.register(path=path)
 
-        return self._cache[module_name, search_path]
+        for name in self._cache[key]['builtin']:
+            self.router.responder.forward_module(context, name)
+        return self._cache[key]['custom']
