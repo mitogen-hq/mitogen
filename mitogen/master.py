@@ -52,7 +52,9 @@ if not hasattr(pkgutil, 'find_loader'):
     # been kept intentionally 2.3 compatible so we can reuse it.
     from mitogen.compat import pkgutil
 
+import mitogen
 import mitogen.core
+import mitogen.minify
 import mitogen.parent
 from mitogen.core import LOG
 
@@ -77,6 +79,19 @@ def _stdlib_paths():
 def get_child_modules(path):
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return [name for _, name, _ in it]
+
+
+def get_core_source():
+    """
+    Master version of parent.get_core_source().
+    """
+    source = inspect.getsource(mitogen.core)
+    return mitogen.minify.minimize_source(source)
+
+
+if mitogen.is_master:
+    # TODO: find a less surprising way of installing this.
+    mitogen.parent.get_core_source = get_core_source
 
 
 LOAD_CONST = dis.opname.index('LOAD_CONST')

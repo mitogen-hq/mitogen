@@ -149,6 +149,7 @@ class Error(Exception):
     """
     Raised when an error occurs configuring a service or pool.
     """
+    pass  # cope with minify_source() bug.
 
 
 class Policy(object):

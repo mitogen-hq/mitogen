@@ -555,6 +555,7 @@ class Importer(object):
             'jail',
             'lxc',
             'master',
+            'minify',
             'parent',
             'select',
             'service',
