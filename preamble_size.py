@@ -10,6 +10,7 @@ import mitogen.fakessh
 import mitogen.master
 import mitogen.minify
 import mitogen.parent
+import mitogen.select
 import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
@@ -38,6 +39,7 @@ for mod in (
         mitogen.parent,
         mitogen.ssh,
         mitogen.sudo,
+        mitogen.select,
         mitogen.service,
         mitogen.fakessh,
         mitogen.master,
