@@ -35,6 +35,7 @@ import sys
 
 import mitogen
 import mitogen.core
+import mitogen.debug
 import mitogen.master
 import mitogen.parent
 import mitogen.service
@@ -145,6 +146,8 @@ class MuxProcess(object):
         )
         if 'MITOGEN_ROUTER_DEBUG' in os.environ:
             self.router.enable_debug()
+        if 'MITOGEN_DUMP_THREAD_STACKS' in os.environ:
+            mitogen.debug.dump_to_logger()
 
     def _setup_services(self):
         """

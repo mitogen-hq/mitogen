@@ -648,6 +648,9 @@ is necessary. File-based logging can be enabled by setting
 When file-based logging is enabled, one file per context will be created on the
 local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
 
+If you are experiencing a hang, ``MITOGEN_DUMP_THREAD_STACKS=1`` causes every
+process to dump every thread stack into the logging framework every 5 seconds.
+
 
 Getting Help
 ~~~~~~~~~~~~
