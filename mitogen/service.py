@@ -42,14 +42,20 @@ from mitogen.core import LOG
 
 DEFAULT_POOL_SIZE = 16
 _pool = None
+#: Serialize pool construction.
+_pool_lock = threading.Lock()
 
 
 @mitogen.core.takes_router
 def get_or_create_pool(size=None, router=None):
     global _pool
-    if _pool is None:
-        _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE)
-    return _pool
+    _pool_lock.acquire()
+    try:
+        if _pool is None:
+            _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE)
+        return _pool
+    finally:
+        _pool_lock.release()
 
 
 @mitogen.core.takes_router
