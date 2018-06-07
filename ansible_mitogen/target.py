@@ -278,6 +278,8 @@ def start_fork_child(wrap_async, kwargs, econtext):
             context.shutdown()
 
     job_id = '%016x' % random.randint(0, 2**64)
+    kwargs['detach'] = True
+    kwargs['econtext'] = econtext
     context.call_async(run_module_async, job_id, kwargs)
     return {
         'stdout': json.dumps({

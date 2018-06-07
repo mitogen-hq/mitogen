@@ -115,12 +115,15 @@ class Runner(object):
     :param dict env:
         Additional environment variables to set during the run.
     """
-    def __init__(self, module, service_context, args=None, env=None):
+    def __init__(self, module, service_context, econtext=None, detach=False,
+                 args=None, env=None):
         if args is None:
             args = {}
 
         self.module = utf8(module)
         self.service_context = service_context
+        self.econtext = econtext
+        self.detach = detach
         self.args = args
         self.env = env
 
@@ -176,6 +179,9 @@ class Runner(object):
             Module result dictionary.
         """
         self.setup()
+        if self.detach:
+            self.econtext.detach()
+
         try:
             return self._run()
         finally:
