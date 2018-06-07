@@ -17,8 +17,9 @@ Overview
 Service
 
 * User-supplied class with explicitly exposed methods.
-* Identified in calls by its canonical name (e.g. mypkg.mymod.MyClass).
 * May be auto-imported/constructed in a child from a parent simply by calling it
+* Identified in calls by its canonical name (e.g. mypkg.mymod.MyClass) by
+  default, but may use any naming scheme the configured activator understands.
 * Children receive refusals if the class is not already activated by a aprent
 * Has an associated Select instance which may be dynamically loaded with
   receivers over time, on_message_received() invoked if any receiver becomes
@@ -28,9 +29,12 @@ Invoker
 
 * Abstracts mechanism for calling a service method and verifying permissions.
 * Built-in 'service.Invoker': concurrent execution of all methods on the thread pool.
+* Built-in 'service.SerializedInvoker': serialization of all calls on a single
+  thread borrowed from the pool while any request is pending.
 * Built-in 'service.DeduplicatingInvoker': requests are aggregated by distinct
-  (method, kwargs) key, only one such method executes, return value is cached
-  and broadcast to all requesters.
+  (method, kwargs) key, only one such method ever executes, return value is
+  cached and broadcast to all request waiters. Waiters do not block additional
+  pool threads.
 
 Activator
 
