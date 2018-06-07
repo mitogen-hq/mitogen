@@ -623,7 +623,6 @@ class Importer(object):
             return None
 
         _tls.running = True
-        fullname = fullname.rstrip('.')
         try:
             pkgname, dot, _ = fullname.rpartition('.')
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
