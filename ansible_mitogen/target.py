@@ -53,6 +53,7 @@ import ansible_mitogen.runner
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
+import mitogen.service
 
 
 LOG = logging.getLogger(__name__)
@@ -168,7 +169,11 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
 
     try:
         try:
-            ok, metadata = _get_file(context, in_path, fp)
+            ok, metadata = mitogen.service.FileService.get(
+                context=context,
+                path=in_path,
+                out_fp=fp,
+            )
             if not ok:
                 raise IOError('transfer of %r was interrupted.' % (in_path,))
 
