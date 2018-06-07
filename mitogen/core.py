@@ -1856,7 +1856,9 @@ class ExternalContext(object):
 
         for msg in self.recv:
             try:
-                msg.reply(self._dispatch_one(msg))
+                ret = self._dispatch_one(msg)
+                if msg.reply_to:
+                    msg.reply(ret)
             except Exception:
                 e = sys.exc_info()[1]
                 _v and LOG.debug('_dispatch_calls: %s', e)
