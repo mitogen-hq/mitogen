@@ -47,6 +47,7 @@ import sys
 import tempfile
 import types
 
+import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 
 try:
@@ -213,7 +214,7 @@ class ModuleUtilsImporter(object):
 
     def load_module(self, fullname):
         path, is_pkg = self._by_fullname[fullname]
-        source = ansible_mitogen.target.get_file(self._context, path)
+        source = ansible_mitogen.target.get_small_file(self._context, path)
         code = compile(source, path, 'exec')
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = "master:%s" % (path,)
@@ -320,7 +321,7 @@ class ProgramRunner(Runner):
         """
         Fetch the module binary from the master if necessary.
         """
-        return ansible_mitogen.target.get_file(
+        return ansible_mitogen.target.get_small_file(
             context=self.service_context,
             path=self.path,
         )
@@ -448,12 +449,30 @@ class NewStyleRunner(ScriptRunner):
     #: path => new-style module bytecode.
     _code_by_path = {}
 
-    def __init__(self, module_utils, **kwargs):
+    def __init__(self, module_map, **kwargs):
         super(NewStyleRunner, self).__init__(**kwargs)
-        self.module_utils = module_utils
+        self.module_map = module_map
+
+    def _setup_imports(self):
+        """
+        Ensure the local importer has loaded every module needed by the Ansible
+        module before setup() completes, but before detach() is called in an
+        asynchronous task.
+
+        The master automatically streams modules towards us concurrent to the
+        runner invocation, however there is no public API to synchronize on the
+        completion of those preloads. Instead simply reuse the importer's
+        synchronization mechanism by importing everything the module will need
+        prior to detaching.
+        """
+        for fullname, _, _ in self.module_map['custom']:
+            mitogen.core.import_module(fullname)
+        for fullname in self.module_map['builtin']:
+            mitogen.core.import_module(fullname)
 
     def setup(self):
         super(NewStyleRunner, self).setup()
+
         self._stdio = NewStyleStdio(self.args)
         # It is possible that not supplying the script filename will break some
         # module, but this has never been a bug report. Instead act like an
@@ -461,8 +480,9 @@ class NewStyleRunner(ScriptRunner):
         self._argv = TemporaryArgv([''])
         self._importer = ModuleUtilsImporter(
             context=self.service_context,
-            module_utils=self.module_utils,
+            module_utils=self.module_map['custom'],
         )
+        self._setup_imports()
         if libc__res_init:
             libc__res_init()
 
@@ -484,7 +504,7 @@ class NewStyleRunner(ScriptRunner):
         pass
 
     def _get_code(self):
-        self.source = ansible_mitogen.target.get_file(
+        self.source = ansible_mitogen.target.get_small_file(
             context=self.service_context,
             path=self.path,
         )

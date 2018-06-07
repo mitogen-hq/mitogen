@@ -62,61 +62,12 @@ LOG = logging.getLogger(__name__)
 #: the duration of the process.
 temp_dir = None
 
-#: Caching of fetched file data.
-_file_cache = {}
-
 #: Initialized to an econtext.parent.Context pointing at a pristine fork of
 #: the target Python interpreter before it executes any code or imports.
 _fork_parent = None
 
 
-def _get_file(context, path, out_fp):
-    """
-    Streamily download a file from the connection multiplexer process in the
-    controller.
-
-    :param mitogen.core.Context context:
-        Reference to the context hosting the FileService that will be used to
-        fetch the file.
-    :param bytes in_path:
-        FileService registered name of the input file.
-    :param bytes out_path:
-        Name of the output path on the local disk.
-    :returns:
-        :data:`True` on success, or :data:`False` if the transfer was
-        interrupted and the output should be discarded.
-    """
-    LOG.debug('_get_file(): fetching %r from %r', path, context)
-    t0 = time.time()
-    recv = mitogen.core.Receiver(router=context.router)
-    metadata = context.call_service(
-        service_name='mitogen.service.FileService',
-        method_name='fetch',
-        path=path,
-        sender=recv.to_sender(),
-    )
-
-    for chunk in recv:
-        s = chunk.unpickle()
-        LOG.debug('_get_file(%r): received %d bytes', path, len(s))
-        context.call_service_async(
-            service_name='mitogen.service.FileService',
-            method_name='acknowledge',
-            size=len(s),
-        ).close()
-        out_fp.write(s)
-
-    ok = out_fp.tell() == metadata['size']
-    if not ok:
-        LOG.error('get_file(%r): receiver was closed early, controller '
-                  'is likely shutting down.', path)
-
-    LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-              metadata['size'], path, context, 1000 * (time.time() - t0))
-    return ok, metadata
-
-
-def get_file(context, path):
+def get_small_file(context, path):
     """
     Basic in-memory caching module fetcher. This generates an one roundtrip for
     every previously unseen file, so it is only a temporary solution.
@@ -130,13 +81,9 @@ def get_file(context, path):
     :returns:
         Bytestring file data.
     """
-    if path not in _file_cache:
-        io = cStringIO.StringIO()
-        ok, metadata = _get_file(context, path, io)
-        if not ok:
-            raise IOError('transfer of %r was interrupted.' % (path,))
-        _file_cache[path] = io.getvalue()
-    return _file_cache[path]
+    pool = mitogen.service.get_or_create_pool()
+    service = pool.get_service('mitogen.service.PushFileService')
+    return service.get(path)
 
 
 def transfer_file(context, in_path, out_path, sync=False, set_owner=False):

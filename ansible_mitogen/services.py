@@ -369,9 +369,9 @@ class ModuleDepService(mitogen.service.Service):
     Scan a new-style module and produce a cached mapping of module_utils names
     to their resolved filesystem paths.
     """
-    def __init__(self, file_service, **kwargs):
+    def __init__(self, push_file_service, **kwargs):
         super(ModuleDepService, self).__init__(**kwargs)
-        self._file_service = file_service
+        self._push_file_service = push_file_service
         self._cache = {}
 
     def _get_builtin_names(self, builtin_path, resolved):
@@ -414,10 +414,17 @@ class ModuleDepService(mitogen.service.Service):
 
             # Grant FileService access to paths in here to avoid another 2 IPCs
             # from WorkerProcess.
-            self._file_service.register(path=module_path)
+            self._push_file_service.propagate_to(
+                path=module_path,
+                context=context,
+            )
+
             for fullname, path, is_pkg in custom:
-                self._file_service.register(path=path)
+                self._push_file_service.propagate_to(
+                    path=path,
+                    context=context,
+                )
 
         for name in self._cache[key]['builtin']:
             self.router.responder.forward_module(context, name)
-        return self._cache[key]['custom']
+        return self._cache[key]

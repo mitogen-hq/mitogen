@@ -182,9 +182,10 @@ class BinaryPlanner(Planner):
 
     def _grant_file_service_access(self, invocation):
         invocation.connection.parent.call_service(
-            service_name='mitogen.service.FileService',
-            method_name='register',
+            service_name='mitogen.service.PushFileService',
+            method_name='propagate_to',
             path=invocation.module_path,
+            context=invocation.connection.context,
         )
 
     def plan(self, invocation, **kwargs):
@@ -295,7 +296,7 @@ class NewStylePlanner(ScriptPlanner):
             if os.path.isdir(path)
         )
 
-    def get_module_utils(self, invocation):
+    def get_module_map(self, invocation):
         return invocation.connection.parent.call_service(
             service_name='ansible_mitogen.services.ModuleDepService',
             method_name='scan',
@@ -308,11 +309,14 @@ class NewStylePlanner(ScriptPlanner):
         )
 
     def plan(self, invocation):
-        module_utils = self.get_module_utils(invocation)
+        module_map = self.get_module_map(invocation)
         return super(NewStylePlanner, self).plan(
             invocation,
-            module_utils=module_utils,
-            should_fork=(self.get_should_fork(invocation) or bool(module_utils)),
+            module_map=module_map,
+            should_fork=(
+                self.get_should_fork(invocation) or
+                len(module_map['custom']) > 0
+            )
         )
 
 
