@@ -72,35 +72,42 @@ def is_pkg(module):
 def find(name, path=(), parent=None):
     """
     Return a Module instance describing the first matching module found on the
-    given search path.
+    search path.
 
     :param str name:
         Module name.
-    :param str path:
-        Search path.
+    :param list path:
+        List of directory names to search for the module.
     :param Module parent:
-        If given, make the found module a child of this module.
+        Optional module parent.
     """
+    assert isinstance(path, tuple)
     head, _, tail = name.partition('.')
     try:
         tup = imp.find_module(head, list(path))
-    except ImportError:
+    except ImportError as e:
         return parent
 
-    fp, path, (suffix, mode, kind) = tup
+    fp, modpath, (suffix, mode, kind) = tup
+    if parent and modpath == parent.path:
+        # 'from timeout import timeout', where 'timeout' is a function but also
+        # the name of the module being imported.
+        return None
+
     if fp:
         fp.close()
 
     if kind == imp.PKG_DIRECTORY:
-        path = os.path.join(path, '__init__.py')
-    module = Module(head, path, kind, parent)
+        modpath = os.path.join(modpath, '__init__.py')
+    module = Module(head, modpath, kind, parent)
     if tail:
         return find_relative(module, tail, path)
     return module
 
 
 def find_relative(parent, name, path=()):
-    path = [os.path.dirname(parent.path)] + list(path)
+    if parent.kind == imp.PKG_DIRECTORY:
+        path = (os.path.dirname(parent.path),) + path
     return find(name, path, parent=parent)
 
 
