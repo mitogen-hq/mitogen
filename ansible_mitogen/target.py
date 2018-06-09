@@ -302,8 +302,8 @@ def _run_module_async(kwargs, job_id, econtext):
         'pid': os.getpid()
     })
 
-    #kwargs['detach'] = True
-    #kwargs['econtext'] = econtext
+    kwargs['detach'] = True
+    kwargs['econtext'] = econtext
     kwargs['emulate_tty'] = False
     dct = run_module(kwargs)
     if mitogen.core.PY3:

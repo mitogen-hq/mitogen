@@ -462,9 +462,9 @@ class NewStyleRunner(ScriptRunner):
 
     def _setup_imports(self):
         """
-        Ensure the local importer has loaded every module needed by the Ansible
-        module before setup() completes, but before detach() is called in an
-        asynchronous task.
+        Ensure the local importer and PushFileService has everything for the
+        Ansible module before setup() completes, but before detach() is called
+        in an asynchronous task.
 
         The master automatically streams modules towards us concurrent to the
         runner invocation, however there is no public API to synchronize on the
@@ -476,6 +476,10 @@ class NewStyleRunner(ScriptRunner):
             mitogen.core.import_module(fullname)
         for fullname in self.module_map['builtin']:
             mitogen.core.import_module(fullname)
+        self.source = ansible_mitogen.target.get_small_file(
+            context=self.service_context,
+            path=self.path,
+        )
 
     def setup(self):
         super(NewStyleRunner, self).setup()
@@ -511,11 +515,6 @@ class NewStyleRunner(ScriptRunner):
         pass
 
     def _get_code(self):
-        self.source = ansible_mitogen.target.get_small_file(
-            context=self.service_context,
-            path=self.path,
-        )
-
         try:
             return self._code_by_path[self.path]
         except KeyError:
