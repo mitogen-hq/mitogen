@@ -42,6 +42,7 @@ from mitogen.core import LOG
 
 DEFAULT_POOL_SIZE = 16
 _pool = None
+_pool_pid = None
 #: Serialize pool construction.
 _pool_lock = threading.Lock()
 
@@ -49,10 +50,12 @@ _pool_lock = threading.Lock()
 @mitogen.core.takes_router
 def get_or_create_pool(size=None, router=None):
     global _pool
+    global _pool_pid
     _pool_lock.acquire()
     try:
-        if _pool is None:
+        if _pool_pid != os.getpid():
             _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE)
+            _pool_pid = os.getpid()
         return _pool
     finally:
         _pool_lock.release()
@@ -434,6 +437,8 @@ class Pool(object):
             )
             thread.start()
             self._threads.append(thread)
+
+        LOG.debug('%r: initialized', self)
 
     @property
     def size(self):
