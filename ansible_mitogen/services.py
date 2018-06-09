@@ -251,13 +251,18 @@ class ContextService(mitogen.service.Service):
 
                 {
                     'context': mitogen.core.Context or None,
-                    'home_dir': str or None,
+                    'init_child_result': {
+                        'fork_context': mitogen.core.Context,
+                        'home_dir': str or None,
+                    },
                     'msg': str or None
                 }
 
-            Where either `msg` is an error message and the remaining fields are
-            :data:`None`, or `msg` is :data:`None` and the remaining fields are
-            set.
+            Where `context` is a reference to the newly constructed context,
+            `init_child_result` is the result of executing
+            :func:`ansible_mitogen.target.init_child` in that context, `msg` is
+            an error message and the remaining fields are :data:`None`, or
+            `msg` is :data:`None` and the remaining fields are set.
         """
         try:
             method = getattr(self.router, spec['method'])
@@ -276,11 +281,7 @@ class ContextService(mitogen.service.Service):
                                 lambda: self._on_stream_disconnect(stream))
 
         self._send_module_forwards(context)
-        home_dir = context.call(os.path.expanduser, '~')
-
-        # We don't need to wait for the result of this. Ideally we'd check its
-        # return value somewhere, but logs will catch a failure anyway.
-        context.call_async(ansible_mitogen.target.init_child)
+        init_child_result = context.call(ansible_mitogen.target.init_child)
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug
@@ -290,7 +291,7 @@ class ContextService(mitogen.service.Service):
         self._refs_by_context[context] = 0
         return {
             'context': context,
-            'home_dir': home_dir,
+            'init_child_result': init_child_result,
             'msg': None,
         }
 
@@ -341,7 +342,7 @@ class ContextService(mitogen.service.Service):
 
         :returns dict:
             * context: mitogen.master.Context or None.
-            * homedir: Context's home directory or None.
+            * init_child_result: Result of :func:`init_child`.
             * msg: StreamError exception text or None.
             * method_name: string failing method name.
         """
@@ -356,7 +357,7 @@ class ContextService(mitogen.service.Service):
             except mitogen.core.StreamError as e:
                 return {
                     'context': None,
-                    'home_dir': None,
+                    'init_child_result': None,
                     'method_name': spec['method'],
                     'msg': str(e),
                 }
@@ -369,9 +370,8 @@ class ModuleDepService(mitogen.service.Service):
     Scan a new-style module and produce a cached mapping of module_utils names
     to their resolved filesystem paths.
     """
-    def __init__(self, push_file_service, **kwargs):
-        super(ModuleDepService, self).__init__(**kwargs)
-        self._push_file_service = push_file_service
+    def __init__(self, *args, **kwargs):
+        super(ModuleDepService, self).__init__(*args, **kwargs)
         self._cache = {}
 
     def _get_builtin_names(self, builtin_path, resolved):
@@ -411,20 +411,4 @@ class ModuleDepService(mitogen.service.Service):
                 'builtin': builtin,
                 'custom': custom,
             }
-
-            # Grant FileService access to paths in here to avoid another 2 IPCs
-            # from WorkerProcess.
-            self._push_file_service.propagate_to(
-                path=module_path,
-                context=context,
-            )
-
-            for fullname, path, is_pkg in custom:
-                self._push_file_service.propagate_to(
-                    path=path,
-                    context=context,
-                )
-
-        for name in self._cache[key]['builtin']:
-            self.router.responder.forward_module(context, name)
         return self._cache[key]

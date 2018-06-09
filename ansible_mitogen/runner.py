@@ -111,13 +111,20 @@ class Runner(object):
         Context to which we should direct FileService calls. For now, always
         the connection multiplexer process on the controller.
     :param dict args:
-        Ansible module arguments. A strange mixture of user and internal keys
-        created by ActionBase._execute_module().
+        Ansible module arguments. A mixture of user and internal keys created
+        by :meth:`ansible.plugins.action.ActionBase._execute_module`.
     :param dict env:
         Additional environment variables to set during the run.
+
+    :param mitogen.core.ExternalContext econtext:
+        When `detach` is :data:`True`, a reference to the ExternalContext the
+        runner is executing in.
+    :param bool detach:
+        When :data:`True`, indicate the runner should detach the context from
+        its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, econtext=None, detach=False,
-                 args=None, env=None):
+    def __init__(self, module, service_context, args=None, env=None,
+                 econtext=None, detach=False):
         if args is None:
             args = {}
 
