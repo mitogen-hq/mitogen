@@ -623,6 +623,8 @@ class Importer(object):
             return None
 
         _tls.running = True
+        # TODO: hack: this is papering over a bug elsewhere.
+        fullname = fullname.rstrip('.')
         try:
             pkgname, dot, _ = fullname.rpartition('.')
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
@@ -715,6 +717,8 @@ class Importer(object):
 
     def load_module(self, fullname):
         _v and LOG.debug('Importer.load_module(%r)', fullname)
+        # TODO: hack: this is papering over a bug elsewhere.
+        fullname = fullname.rstrip('.')
         self._refuse_imports(fullname)
 
         event = threading.Event()
