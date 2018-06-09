@@ -56,6 +56,7 @@ import mitogen
 import mitogen.core
 import mitogen.minify
 import mitogen.parent
+from mitogen.core import IOLOG
 from mitogen.core import LOG
 
 
@@ -305,8 +306,8 @@ class ModuleFinder(object):
         """Attempt to fetch source code via pkgutil. In an ideal world, this
         would be the only required implementation of get_module()."""
         loader = pkgutil.find_loader(fullname)
-        LOG.debug('pkgutil._get_module_via_pkgutil(%r) -> %r',
-                  fullname, loader)
+        IOLOG.debug('pkgutil._get_module_via_pkgutil(%r) -> %r',
+                    fullname, loader)
         if not loader:
             return
 
@@ -598,7 +599,7 @@ class ModuleResponder(object):
             )
 
     def _forward_module(self, context, fullname):
-        LOG.debug('%r._forward_module(%r, %r)', self, context, fullname)
+        IOLOG.debug('%r._forward_module(%r, %r)', self, context, fullname)
         path = []
         while fullname:
             path.append(fullname)
