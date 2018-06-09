@@ -1707,6 +1707,7 @@ class ExternalContext(object):
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
+        self.router.debug = self.config.get('debug', False)
         self.router.undirectional = self.config['unidirectional']
         self.router.add_handler(
             fn=self._on_shutdown_msg,
