@@ -75,10 +75,6 @@ IOLOG.setLevel(logging.INFO)
 _v = False
 _vv = False
 
-# Also taken by Broker, no blocking work can occur with it held.
-_service_call_lock = threading.Lock()
-_service_calls = []
-
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
@@ -1648,27 +1644,22 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
+    def _service_stub_main(self, msg):
+        import mitogen.service
+        pool = mitogen.service.get_or_create_pool(router=self.router)
+        pool._receiver._on_receive(msg)
+
     def _on_call_service_msg(self, msg):
         """
-        Stub CALL_SERVICE handler, push message on temporary queue and invoke
-        _on_stub_call() from the main thread.
+        Stub service handler. Start a thread to import the mitogen.service
+        implementation from, and deliver the message to the newly constructed
+        pool. This must be done as CALL_SERVICE for e.g. PushFileService may
+        race with a CALL_FUNCTION blocking the main thread waiting for a result
+        from that service.
         """
-        if msg.is_dead:
-            return
-        _service_call_lock.acquire()
-        try:
-            _service_calls.append(msg)
-        finally:
-            _service_call_lock.release()
-
-        self.router.route(
-            Message.pickled(
-                dst_id=mitogen.context_id,
-                handle=CALL_FUNCTION,
-                obj=('mitogen.service', None, '_on_stub_call', (), {}),
-                router=self.router,
-            )
-        )
+        if not msg.is_dead:
+            th = threading.Thread(target=self._service_stub_main, args=(msg,))
+            th.start()
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)

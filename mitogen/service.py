@@ -58,26 +58,6 @@ def get_or_create_pool(size=None, router=None):
         _pool_lock.release()
 
 
-@mitogen.core.takes_router
-def _on_stub_call(router):
-    """
-    Called for each message received by the core.py stub CALL_SERVICE handler.
-    Create the pool if it doesn't already exist, and push enqueued messages
-    into the pool's receiver. This may be called more than once as the stub
-    service handler runs in asynchronous context, while _on_stub_call() happens
-    on the main thread. Multiple CALL_SERVICE may end up enqueued before Pool
-    has a chance to install the real CALL_SERVICE handler.
-    """
-    pool = get_or_create_pool(router=router)
-    mitogen.core._service_call_lock.acquire()
-    try:
-        for msg in mitogen.core._service_calls:
-            pool._receiver._on_receive(msg)
-        del mitogen.core._service_calls[:]
-    finally:
-        mitogen.core._service_call_lock.release()
-
-
 def validate_arg_spec(spec, args):
     for name in spec:
         try:
@@ -250,7 +230,8 @@ class Invoker(object):
         except Exception:
             if no_reply:
                 LOG.exception('While calling no-reply method %s.%s',
-                              type(self).__name__, method.func_name)
+                              type(self.service).__name__,
+                              method.func_name)
             else:
                 raise
 
