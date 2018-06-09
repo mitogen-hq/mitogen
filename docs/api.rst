@@ -857,11 +857,19 @@ Context Class
 
     .. method:: call (fn, \*args, \*\*kwargs)
 
-        Equivalent to :py:meth:`call_async(fn, \*args, \**kwargs).get_data()
+        Equivalent to :py:meth:`call_async(fn, \*args, \**kwargs).get().unpickle()
         <call_async>`.
 
         :returns:
             The function's return value.
+
+        :raises mitogen.core.CallError:
+            An exception was raised in the remote context during execution.
+
+    .. method:: call_no_reply (fn, \*args, \*\*kwargs)
+
+        Send a function call, but expect no return value. If the call fails,
+        the full exception will be logged to the target context's logging framework.
 
         :raises mitogen.core.CallError:
             An exception was raised in the remote context during execution.

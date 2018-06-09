@@ -1857,12 +1857,16 @@ class ExternalContext(object):
         for msg in self.recv:
             try:
                 ret = self._dispatch_one(msg)
+                _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
                 if msg.reply_to:
                     msg.reply(ret)
             except Exception:
                 e = sys.exc_info()[1]
-                _v and LOG.debug('_dispatch_calls: %s', e)
-                msg.reply(CallError(e))
+                if msg.reply_to:
+                    _v and LOG.debug('_dispatch_calls: %s', e)
+                    msg.reply(CallError(e))
+                else:
+                    LOG.exception('_dispatch_calls: %r', msg)
         self.dispatch_stopped = True
 
     def main(self):

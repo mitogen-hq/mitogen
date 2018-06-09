@@ -912,6 +912,11 @@ class Context(mitogen.core.Context):
         receiver = self.call_async(fn, *args, **kwargs)
         return receiver.get().unpickle(throw_dead=False)
 
+    def call_no_reply(self, fn, *args, **kwargs):
+        LOG.debug('%r.call_no_reply(%r, *%r, **%r)',
+                  self, fn, args, kwargs)
+        self.send(make_call_msg(fn, *args, **kwargs))
+
     def shutdown(self, wait=False):
         LOG.debug('%r.shutdown() sending SHUTDOWN', self)
         latch = mitogen.core.Latch()
