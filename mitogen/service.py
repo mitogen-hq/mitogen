@@ -590,6 +590,7 @@ class PushFileService(Service):
         finally:
             self._lock.release()
 
+        LOG.debug('%r.get(%r) waiting for uncached file to arrive', self, path)
         latch.get()
         LOG.debug('%r.get(%r) -> %r', self, path, self._cache[path])
         return self._cache[path]
@@ -613,6 +614,22 @@ class PushFileService(Service):
                 data=self._cache[path],
                 context=context
             ).close()
+
+    @expose(policy=AllowParents())
+    @arg_spec({
+        'context': mitogen.core.Context,
+        'paths': list,
+        'modules': list,
+    })
+    def propagate_paths_and_modules(self, context, paths, modules):
+        """
+        One size fits all method to ensure a target context has been preloaded
+        with a set of small files and Python modules.
+        """
+        for path in paths:
+            self.propagate_to(context, path)
+        for fullname in modules:
+            self.router.responder.forward_module(context, fullname)
 
     @expose(policy=AllowParents())
     @arg_spec({
@@ -649,7 +666,7 @@ class PushFileService(Service):
                   self, path, data, context)
         waiters = self._store(path, data)
         if context.context_id != mitogen.context_id:
-            self._forward(path, context)
+            self._forward(context, path)
         for callback in waiters:
             callback()
 
