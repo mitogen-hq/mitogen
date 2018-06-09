@@ -476,10 +476,6 @@ class NewStyleRunner(ScriptRunner):
             mitogen.core.import_module(fullname)
         for fullname in self.module_map['builtin']:
             mitogen.core.import_module(fullname)
-        self.source = ansible_mitogen.target.get_small_file(
-            context=self.service_context,
-            path=self.path,
-        )
 
     def setup(self):
         super(NewStyleRunner, self).setup()
@@ -512,7 +508,10 @@ class NewStyleRunner(ScriptRunner):
         pass
 
     def _setup_program(self):
-        pass
+        self.source = ansible_mitogen.target.get_small_file(
+            context=self.service_context,
+            path=self.path,
+        )
 
     def _get_code(self):
         try:
