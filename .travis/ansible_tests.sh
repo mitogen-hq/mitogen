@@ -59,7 +59,7 @@ echo travis_fold:end:job_setup
 
 
 echo travis_fold:start:ansible
-/usr/bin/time ./run_ansible_playbook.sh \
+/usr/bin/time ./run_ansible_playbook.sh -vvv \
     all.yml \
     -i "${TMPDIR}/hosts"
 echo travis_fold:end:ansible
