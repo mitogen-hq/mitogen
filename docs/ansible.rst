@@ -140,8 +140,7 @@ Noteworthy Differences
   artificial serialization, causing slowdown equivalent to `task_duration *
   num_targets`. This will be fixed soon.
 
-* Asynchronous jobs presently exist only for the duration of a run, and time
-  limits are not implemented.
+* Asynchronous job time limits are not implemented.
 
 * "Module Replacer" style modules are not supported. These rarely appear in
   practice, and light web searches failed to reveal many examples of them.
@@ -151,8 +150,8 @@ Noteworthy Differences
   may be established in parallel by default, this can be modified by setting
   the ``MITOGEN_POOL_SIZE`` environment variable.
 
-* Performance does not scale perfectly linearly with target count. This will
-  improve over time.
+* Performance does not scale linearly with target count. This will improve over
+  time.
 
 * SSH and ``become`` are treated distinctly when applying timeouts, and
   timeouts apply up to the point when the new interpreter is ready to accept
@@ -200,11 +199,6 @@ container.
 .. caution::
 
     Connection delegation is a work in progress, bug reports are welcome.
-
-    * While imports are cached on intermediaries, module scripts are needlessly
-      reuploaded for each target. Fixing this is equivalent to implementing
-      **Topology-Aware File Synchronization**, so it may remain unfixed until
-      that feature is started.
 
     * Delegated connection setup is single-threaded; only one connection can be
       constructed in parallel per intermediary.
