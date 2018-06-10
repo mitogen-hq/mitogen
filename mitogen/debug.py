@@ -190,7 +190,10 @@ def _logging_main():
 
 
 def dump_to_logger():
-    th = threading.Thread(target=_logging_main)
+    th = threading.Thread(
+        target=_logging_main,
+        name='mitogen.debug.dump_to_logger',
+    )
     th.setDaemon(True)
     th.start()
 
