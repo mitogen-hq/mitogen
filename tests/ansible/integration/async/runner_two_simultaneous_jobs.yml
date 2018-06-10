@@ -6,16 +6,20 @@
 
   # Start 2 duplicate jobs, verify they run concurrently.
 
+  - file:
+      path: /tmp/flurp
+      state: absent
+
   - name: create semaphore file and sleep for 5 seconds.
     shell: |
       exec 2>/dev/null;
       bash -c '
-        echo im_alive $$ > /tmp/flurp
+        echo im_alive $$ > /tmp/flurp;
         sleep 60;
       ';
       rm -f /tmp/flurp;
       echo alldone
-    async: 1000
+    async: 30
     poll: 0
     register: job1
 
@@ -24,30 +28,29 @@
   # below compltes quickly.
   - name: verify semaphore file exists while this job exists.
     shell: |
-      [ -f /tmp/flurp ] && {
-        read im_alive pid < /tmp/flurp
-        echo $im_alive
-        kill $pid &>/dev/null
-      }
-    async: 1000
+      while [ ! -f /tmp/flurp ]; do sleep 0.1; done;
+      read im_alive pid < /tmp/flurp
+      echo $im_alive
+      kill $pid &>/dev/null
+    async: 30
     poll: 0
     register: job2
 
-  - name: (job1) busy-poll up to 100000 times
+  - name: (job1) poll
     async_status:
       jid: "{{job1.ansible_job_id}}"
     register: result1
     until: result1.finished
-    retries: 100000
-    delay: 0
+    retries: 5
+    delay: 1
 
-  - name: (job2) busy-poll up to 100000 times
+  - name: (job2) poll
     async_status:
       jid: "{{job2.ansible_job_id}}"
     register: result2
     until: result2.finished
-    retries: 100000
-    delay: 0
+    retries: 5
+    delay: 1
 
   - assert:
       that:
