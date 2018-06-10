@@ -288,6 +288,15 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # ~root/.ansible -> /root/.ansible
             return self.call(os.path.expanduser, mitogen.utils.cast(path))
 
+    def get_task_timeout_secs(self):
+        """
+        Return the task "async:" value, portable across 2.4-2.5.
+        """
+        try:
+            return self._task.async_val
+        except AttributeError:
+            return getattr(self._task, 'async')
+
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
                         delete_remote_tmp=True, wrap_async=False):
@@ -318,6 +327,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 templar=self._templar,
                 env=mitogen.utils.cast(env),
                 wrap_async=wrap_async,
+                timeout_secs=self.get_task_timeout_secs(),
             )
         )
 

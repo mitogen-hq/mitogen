@@ -40,6 +40,7 @@ import operator
 import os
 import pwd
 import re
+import signal
 import stat
 import subprocess
 import tempfile
@@ -283,7 +284,27 @@ def _write_job_status(job_id, dct):
     os.rename(path + '.tmp', path)
 
 
-def _run_module_async(kwargs, job_id, econtext):
+def _sigalrm(broker, timeout_secs, job_id):
+    """
+    Respond to SIGALRM (job timeout) by updating the job file and killing the
+    process.
+    """
+    msg = "Job reached maximum time limit of %d seconds." % (timeout_secs,)
+    _write_job_status(job_id, {
+        "failed": 1,
+        "finished": 1,
+        "msg": msg,
+    })
+    broker.shutdown()
+
+
+def _install_alarm(broker, timeout_secs, job_id):
+    handler = lambda *_: _sigalrm(broker, timeout_secs, job_id)
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_secs)
+
+
+def _run_module_async(kwargs, job_id, timeout_secs, econtext):
     """
     1. Immediately updates the status file to mark the job as started.
     2. Installs a timer/signal handler to implement the time limit.
@@ -293,12 +314,17 @@ def _run_module_async(kwargs, job_id, econtext):
         Runner keyword arguments.
     :param str job_id:
         String job ID.
+    :param int timeout_secs:
+        If >0, limit the task's maximum run time.
     """
     _write_job_status(job_id, {
         'started': 1,
         'finished': 0,
         'pid': os.getpid()
     })
+
+    if timeout_secs > 0:
+        _install_alarm(econtext.broker, timeout_secs, job_id)
 
     kwargs['detach'] = True
     kwargs['econtext'] = econtext
@@ -327,7 +353,7 @@ def _run_module_async(kwargs, job_id, econtext):
 
 
 @mitogen.core.takes_econtext
-def run_module_async(kwargs, job_id, econtext):
+def run_module_async(kwargs, job_id, timeout_secs, econtext):
     """
     Arrange for a module to be executed with its run status and result
     serialized to a disk file. This function expects to run in a child forked
@@ -335,7 +361,7 @@ def run_module_async(kwargs, job_id, econtext):
     """
     try:
         try:
-            _run_module_async(kwargs, job_id, econtext)
+            _run_module_async(kwargs, job_id, timeout_secs, econtext)
         except Exception:
             # Catch any (ansible_mitogen) bugs and write them to the job file.
             _write_job_status(job_id, {

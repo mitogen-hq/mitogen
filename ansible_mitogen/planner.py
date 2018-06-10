@@ -94,7 +94,7 @@ class Invocation(object):
     target.run_module() or helpers.run_module_async() in the target context.
     """
     def __init__(self, action, connection, module_name, module_args,
-                 task_vars, templar, env, wrap_async):
+                 task_vars, templar, env, wrap_async, timeout_secs):
         #: ActionBase instance invoking the module. Required to access some
         #: output postprocessing methods that don't belong in ActionBase at
         #: all.
@@ -114,7 +114,8 @@ class Invocation(object):
         self.env = env
         #: Boolean, if :py:data:`True`, launch the module asynchronously.
         self.wrap_async = wrap_async
-
+        #: Integer, if >0, limit the time an asynchronous job may run for.
+        self.timeout_secs = timeout_secs
         #: Initially ``None``, but set by :func:`invoke`. The path on the
         #: master to the module's implementation file.
         self.module_path = None
@@ -403,6 +404,7 @@ def _invoke_async_task(invocation, planner):
     context.call_no_reply(
         ansible_mitogen.target.run_module_async,
         job_id=job_id,
+        timeout_secs=invocation.timeout_secs,
         kwargs=planner.get_kwargs(),
     )
 

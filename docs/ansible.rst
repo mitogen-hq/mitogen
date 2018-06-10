@@ -140,8 +140,6 @@ Noteworthy Differences
   artificial serialization, causing slowdown equivalent to `task_duration *
   num_targets`. This will be fixed soon.
 
-* Asynchronous job time limits are not implemented.
-
 * "Module Replacer" style modules are not supported. These rarely appear in
   practice, and light web searches failed to reveal many examples of them.
 
