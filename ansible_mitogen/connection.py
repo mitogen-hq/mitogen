@@ -31,7 +31,6 @@ import logging
 import os
 import shlex
 import stat
-import sys
 import time
 
 import jinja2.runtime
@@ -57,6 +56,7 @@ def _connect_local(spec):
             'python_path': spec['python_path'],
         }
     }
+
 
 def wrap_or_none(klass, value):
     if value is not None:
@@ -298,12 +298,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     router = None
 
     #: mitogen.master.Context representing the parent Context, which is
-    #: presently always the master process.
+    #: presently always the connection multiplexer process.
     parent = None
 
     #: mitogen.master.Context connected to the target user account on the
     #: target machine (i.e. via sudo).
     context = None
+
+    #: mitogen.master.Context connected to the fork parent process in the
+    #: target user account.
+    fork_context = None
 
     #: Only sudo and su are supported for now.
     become_methods = ['sudo', 'su']
@@ -336,7 +340,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     host_vars = None
 
     #: Set after connection to the target context's home directory.
-    _homedir = None
+    home_dir = None
 
     def __init__(self, play_context, new_stdin, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
@@ -376,7 +380,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     @property
     def homedir(self):
         self._connect()
-        return self._homedir
+        return self.home_dir
 
     @property
     def connected(self):
@@ -389,7 +393,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(
                 self.unknown_via_msg % (
                     self.mitogen_via,
-                    config['inventory_name'],
+                    inventory_name,
                 )
             )
 
@@ -470,15 +474,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
 
         self.context = dct['context']
-        self._homedir = dct['home_dir']
-
-    def get_context_name(self):
-        """
-        Return the name of the target context we issue commands against, i.e. a
-        unique string useful as a key for related data, such as a list of
-        modules uploaded to the target.
-        """
-        return self.context.name
+        self.fork_context = dct['init_child_result']['fork_context']
+        self.home_dir = dct['init_child_result']['home_dir']
 
     def close(self, new_task=False):
         """
@@ -525,6 +522,17 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         finally:
             LOG.debug('Call took %d ms: %s%r', 1000 * (time.time() - t0),
                       func.func_name, args)
+
+    def create_fork_child(self):
+        """
+        Fork a new child off the target context. The actual fork occurs from
+        the 'virginal fork parent', which does not any Ansible modules prior to
+        fork, to avoid conflicts resulting from custom module_utils paths.
+
+        :returns:
+            mitogen.core.Context of the new child.
+        """
+        return self.call(ansible_mitogen.target.create_fork_child)
 
     def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
@@ -613,7 +621,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                                      utimes=(st.st_atime, st.st_mtime))
 
         self.parent.call_service(
-            service_name='ansible_mitogen.services.FileService',
+            service_name='mitogen.service.FileService',
             method_name='register',
             path=mitogen.utils.cast(in_path)
         )

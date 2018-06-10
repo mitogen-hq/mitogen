@@ -51,7 +51,7 @@ def fixup_prngs():
         sys.modules['ssl'].RAND_add(s, 75.0)
 
 
-def break_logging_locks():
+def reset_logging_framework():
     """
     After fork, ensure any logging.Handler locks are recreated, as a variety of
     threads in the parent may have been using the logging package at the moment
@@ -61,9 +61,18 @@ def break_logging_locks():
     https://github.com/dw/mitogen/issues/150 for a full discussion.
     """
     logging._lock = threading.RLock()
-    for name in logging.Logger.manager.loggerDict:
+
+    # The root logger does not appear in the loggerDict.
+    for name in [None] + list(logging.Logger.manager.loggerDict):
         for handler in logging.getLogger(name).handlers:
             handler.createLock()
+
+    root = logging.getLogger()
+    root.handlers = [
+        handler
+        for handler in root.handlers
+        if not isinstance(handler, mitogen.core.LogHandler)
+    ]
 
 
 def handle_child_crash():
@@ -125,10 +134,10 @@ class Stream(mitogen.parent.Stream):
             handle_child_crash()
 
     def _child_main(self, childfp):
+        reset_logging_framework()  # Must be first!
+        fixup_prngs()
         mitogen.core.Latch._on_fork()
         mitogen.core.Side._on_fork()
-        break_logging_locks()
-        fixup_prngs()
         if self.on_fork:
             self.on_fork()
         mitogen.core.set_block(childfp.fileno())

@@ -38,18 +38,13 @@ when a child has completed a job.
 """
 
 from __future__ import absolute_import
-import grp
 import logging
 import os
 import os.path
-import pwd
-import stat
 import sys
 import threading
-import zlib
 
 import mitogen
-import mitogen.master
 import mitogen.service
 import ansible_mitogen.module_finder
 import ansible_mitogen.target
@@ -227,6 +222,20 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
+    ALWAYS_PRELOAD = (
+        'ansible.module_utils.basic',
+        'ansible.module_utils.json_utils',
+        'ansible.release',
+        'ansible_mitogen.runner',
+        'ansible_mitogen.target',
+        'mitogen.fork',
+        'mitogen.service',
+    )
+
+    def _send_module_forwards(self, context):
+        for fullname in self.ALWAYS_PRELOAD:
+            self.router.responder.forward_module(context, fullname)
+
     def _connect(self, key, spec, via=None):
         """
         Actual connect implementation. Arranges for the Mitogen connection to
@@ -242,13 +251,18 @@ class ContextService(mitogen.service.Service):
 
                 {
                     'context': mitogen.core.Context or None,
-                    'home_dir': str or None,
+                    'init_child_result': {
+                        'fork_context': mitogen.core.Context,
+                        'home_dir': str or None,
+                    },
                     'msg': str or None
                 }
 
-            Where either `msg` is an error message and the remaining fields are
-            :data:`None`, or `msg` is :data:`None` and the remaining fields are
-            set.
+            Where `context` is a reference to the newly constructed context,
+            `init_child_result` is the result of executing
+            :func:`ansible_mitogen.target.init_child` in that context, `msg` is
+            an error message and the remaining fields are :data:`None`, or
+            `msg` is :data:`None` and the remaining fields are set.
         """
         try:
             method = getattr(self.router, spec['method'])
@@ -266,11 +280,8 @@ class ContextService(mitogen.service.Service):
             mitogen.core.listen(stream, 'disconnect',
                                 lambda: self._on_stream_disconnect(stream))
 
-        home_dir = context.call(os.path.expanduser, '~')
-
-        # We don't need to wait for the result of this. Ideally we'd check its
-        # return value somewhere, but logs will catch a failure anyway.
-        context.call_async(ansible_mitogen.target.init_child)
+        self._send_module_forwards(context)
+        init_child_result = context.call(ansible_mitogen.target.init_child)
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug
@@ -280,7 +291,7 @@ class ContextService(mitogen.service.Service):
         self._refs_by_context[context] = 0
         return {
             'context': context,
-            'home_dir': home_dir,
+            'init_child_result': init_child_result,
             'msg': None,
         }
 
@@ -331,7 +342,7 @@ class ContextService(mitogen.service.Service):
 
         :returns dict:
             * context: mitogen.master.Context or None.
-            * homedir: Context's home directory or None.
+            * init_child_result: Result of :func:`init_child`.
             * msg: StreamError exception text or None.
             * method_name: string failing method name.
         """
@@ -346,7 +357,7 @@ class ContextService(mitogen.service.Service):
             except mitogen.core.StreamError as e:
                 return {
                     'context': None,
-                    'home_dir': None,
+                    'init_child_result': None,
                     'method_name': spec['method'],
                     'msg': str(e),
                 }
@@ -354,261 +365,28 @@ class ContextService(mitogen.service.Service):
         return result
 
 
-class StreamState(object):
-    def __init__(self):
-        #: List of [(Sender, file object)]
-        self.jobs = []
-        self.completing = {}
-        #: In-flight byte count.
-        self.unacked = 0
-        #: Lock.
-        self.lock = threading.Lock()
-
-
-class FileService(mitogen.service.Service):
-    """
-    Streaming file server, used to serve small files like Ansible modules and
-    huge files like ISO images. Paths must be registered by a trusted context
-    before they will be served to a child.
-
-    Transfers are divided among the physical streams that connect external
-    contexts, ensuring each stream never has excessive data buffered in RAM,
-    while still maintaining enough to fully utilize available bandwidth. This
-    is achieved by making an initial bandwidth assumption, enqueueing enough
-    chunks to fill that assumed pipe, then responding to delivery
-    acknowledgements from the receiver by scheduling new chunks.
-
-    Transfers proceed one-at-a-time per stream. When multiple contexts exist on
-    a stream (e.g. one is the SSH account, another is a sudo account, and a
-    third is a proxied SSH connection), each request is satisfied in turn
-    before subsequent requests start flowing. This ensures when a stream is
-    contended, priority is given to completing individual transfers rather than
-    potentially aborting many partial transfers, causing the bandwidth to be
-    wasted.
-
-    Theory of operation:
-        1. Trusted context (i.e. WorkerProcess) calls register(), making a
-           file available to any untrusted context.
-        2. Requestee context creates a mitogen.core.Receiver() to receive
-           chunks, then calls fetch(path, recv.to_sender()), to set up the
-           transfer.
-        3. fetch() replies to the call with the file's metadata, then
-           schedules an initial burst up to the window size limit (1MiB).
-        4. Chunks begin to arrive in the requestee, which calls acknowledge()
-           for each 128KiB received.
-        5. The acknowledge() call arrives at FileService, which scheduled a new
-           chunk to refill the drained window back to the size limit.
-        6. When the last chunk has been pumped for a single transfer,
-           Sender.close() is called causing the receive loop in
-           target.py::_get_file() to exit, allowing that code to compare the
-           transferred size with the total file size from the metadata.
-        7. If the sizes mismatch, _get_file()'s caller is informed which will
-           discard the result and log/raise an error.
-
-    Shutdown:
-        1. process.py calls service.Pool.shutdown(), which arranges for the
-           service pool threads to exit and be joined, guranteeing no new
-           requests can arrive, before calling Service.on_shutdown() for each
-           registered service.
-        2. FileService.on_shutdown() walks every in-progress transfer and calls
-           Sender.close(), causing Receiver loops in the requestees to exit
-           early. The size check fails and any partially downloaded file is
-           discarded.
-        3. Control exits _get_file() in every target, and graceful shutdown can
-           proceed normally, without the associated thread needing to be
-           forcefully killed.
-    """
-    unregistered_msg = 'Path is not registered with FileService.'
-    context_mismatch_msg = 'sender= kwarg context must match requestee context'
-
-    #: Burst size. With 1MiB and 10ms RTT max throughput is 100MiB/sec, which
-    #: is 5x what SSH can handle on a 2011 era 2.4Ghz Core i5.
-    window_size_bytes = 1048576
-
-    def __init__(self, router):
-        super(FileService, self).__init__(router)
-        #: Mapping of registered path -> file size.
-        self._metadata_by_path = {}
-        #: Mapping of Stream->StreamState.
-        self._state_by_stream = {}
-
-    def _name_or_none(self, func, n, attr):
-        try:
-            return getattr(func(n), attr)
-        except KeyError:
-            return None
-
-    @mitogen.service.expose(policy=mitogen.service.AllowParents())
-    @mitogen.service.arg_spec({
-        'paths': list
-    })
-    def register_many(self, paths):
-        """
-        Batch version of register().
-        """
-        for path in paths:
-            self.register(path)
-
-    @mitogen.service.expose(policy=mitogen.service.AllowParents())
-    @mitogen.service.arg_spec({
-        'path': basestring
-    })
-    def register(self, path):
-        """
-        Authorize a path for access by children. Repeat calls with the same
-        path is harmless.
-
-        :param str path:
-            File path.
-        """
-        if path in self._metadata_by_path:
-            return
-
-        st = os.stat(path)
-        if not stat.S_ISREG(st.st_mode):
-            raise IOError('%r is not a regular file.' % (in_path,))
-
-        LOG.debug('%r: registering %r', self, path)
-        self._metadata_by_path[path] = {
-            'size': st.st_size,
-            'mode': st.st_mode,
-            'owner': self._name_or_none(pwd.getpwuid, 0, 'pw_name'),
-            'group': self._name_or_none(grp.getgrgid, 0, 'gr_name'),
-            'mtime': st.st_mtime,
-            'atime': st.st_atime,
-        }
-
-    def on_shutdown(self):
-        """
-        Respond to shutdown by sending close() to every target, allowing their
-        receive loop to exit and clean up gracefully.
-        """
-        LOG.debug('%r.on_shutdown()', self)
-        for stream, state in self._state_by_stream.items():
-            state.lock.acquire()
-            try:
-                for sender, fp in reversed(state.jobs):
-                    sender.close()
-                    fp.close()
-                    state.jobs.pop()
-            finally:
-                state.lock.release()
-
-    # The IO loop pumps 128KiB chunks. An ideal message is a multiple of this,
-    # odd-sized messages waste one tiny write() per message on the trailer.
-    # Therefore subtract 10 bytes pickle overhead + 24 bytes header.
-    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Stream.HEADER_LEN + (
-        len(
-            mitogen.core.Message.pickled(
-                mitogen.core.Blob(' ' * mitogen.core.CHUNK_SIZE)
-            ).data
-        ) - mitogen.core.CHUNK_SIZE
-    ))
-
-    def _schedule_pending_unlocked(self, state):
-        """
-        Consider the pending transfers for a stream, pumping new chunks while
-        the unacknowledged byte count is below :attr:`window_size_bytes`. Must
-        be called with the StreamState lock held.
-
-        :param StreamState state:
-            Stream to schedule chunks for.
-        """
-        while state.jobs and state.unacked < self.window_size_bytes:
-            sender, fp = state.jobs[0]
-            s = fp.read(self.IO_SIZE)
-            if s:
-                state.unacked += len(s)
-                sender.send(mitogen.core.Blob(s))
-            else:
-                # File is done. Cause the target's receive loop to exit by
-                # closing the sender, close the file, and remove the job entry.
-                sender.close()
-                fp.close()
-                state.jobs.pop(0)
-
-    @mitogen.service.expose(policy=mitogen.service.AllowAny())
-    @mitogen.service.no_reply()
-    @mitogen.service.arg_spec({
-        'path': basestring,
-        'sender': mitogen.core.Sender,
-    })
-    def fetch(self, path, sender, msg):
-        """
-        Start a transfer for a registered path.
-
-        :param str path:
-            File path.
-        :param mitogen.core.Sender sender:
-            Sender to receive file data.
-        :returns:
-            Dict containing the file metadata:
-
-            * ``size``: File size in bytes.
-            * ``mode``: Integer file mode.
-            * ``owner``: Owner account name on host machine.
-            * ``group``: Owner group name on host machine.
-            * ``mtime``: Floating point modification time.
-            * ``ctime``: Floating point change time.
-        :raises Error:
-            Unregistered path, or Sender did not match requestee context.
-        """
-        if path not in self._metadata_by_path:
-            raise Error(self.unregistered_msg)
-        if msg.src_id != sender.context.context_id:
-            raise Error(self.context_mismatch_msg)
-
-        LOG.debug('Serving %r', path)
-        fp = open(path, 'rb', self.IO_SIZE)
-        # Response must arrive first so requestee can begin receive loop,
-        # otherwise first ack won't arrive until all pending chunks were
-        # delivered. In that case max BDP would always be 128KiB, aka. max
-        # ~10Mbit/sec over a 100ms link.
-        msg.reply(self._metadata_by_path[path])
-
-        stream = self.router.stream_by_id(sender.context.context_id)
-        state = self._state_by_stream.setdefault(stream, StreamState())
-        state.lock.acquire()
-        try:
-            state.jobs.append((sender, fp))
-            self._schedule_pending_unlocked(state)
-        finally:
-            state.lock.release()
-
-    @mitogen.service.expose(policy=mitogen.service.AllowAny())
-    @mitogen.service.no_reply()
-    @mitogen.service.arg_spec({
-        'size': int,
-    })
-    @mitogen.service.no_reply()
-    def acknowledge(self, size, msg):
-        """
-        Acknowledge bytes received by a transfer target, scheduling new chunks
-        to keep the window full. This should be called for every chunk received
-        by the target.
-        """
-        stream = self.router.stream_by_id(msg.src_id)
-        state = self._state_by_stream[stream]
-        state.lock.acquire()
-        try:
-            if state.unacked < size:
-                LOG.error('%r.acknowledge(src_id %d): unacked=%d < size %d',
-                          self, msg.src_id, state.unacked, size)
-            state.unacked -= min(state.unacked, size)
-            self._schedule_pending_unlocked(state)
-        finally:
-            state.lock.release()
-
-
 class ModuleDepService(mitogen.service.Service):
     """
     Scan a new-style module and produce a cached mapping of module_utils names
     to their resolved filesystem paths.
     """
-    def __init__(self, file_service, **kwargs):
-        super(ModuleDepService, self).__init__(**kwargs)
-        self._file_service = file_service
+    def __init__(self, *args, **kwargs):
+        super(ModuleDepService, self).__init__(*args, **kwargs)
         self._cache = {}
+
+    def _get_builtin_names(self, builtin_path, resolved):
+        return [
+            fullname
+            for fullname, path, is_pkg in resolved
+            if os.path.abspath(path).startswith(builtin_path)
+        ]
+
+    def _get_custom_tups(self, builtin_path, resolved):
+        return [
+            (fullname, path, is_pkg)
+            for fullname, path, is_pkg in resolved
+            if not os.path.abspath(path).startswith(builtin_path)
+        ]
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
@@ -616,26 +394,21 @@ class ModuleDepService(mitogen.service.Service):
         'module_path': basestring,
         'search_path': tuple,
         'builtin_path': basestring,
+        'context': mitogen.core.Context,
     })
-    def scan(self, module_name, module_path, search_path, builtin_path):
-        if (module_name, search_path) not in self._cache:
+    def scan(self, module_name, module_path, search_path, builtin_path, context):
+        key = (module_name, search_path)
+        if key not in self._cache:
             resolved = ansible_mitogen.module_finder.scan(
                 module_name=module_name,
                 module_path=module_path,
                 search_path=tuple(search_path) + (builtin_path,),
             )
             builtin_path = os.path.abspath(builtin_path)
-            filtered = [
-                (fullname, path, is_pkg)
-                for fullname, path, is_pkg in resolved
-                if not os.path.abspath(path).startswith(builtin_path)
-            ]
-            self._cache[module_name, search_path] = filtered
-
-            # Grant FileService access to paths in here to avoid another 2 IPCs
-            # from WorkerProcess.
-            self._file_service.register(path=module_path)
-            for fullname, path, is_pkg in filtered:
-                self._file_service.register(path=path)
-
-        return self._cache[module_name, search_path]
+            builtin = self._get_builtin_names(builtin_path, resolved)
+            custom = self._get_custom_tups(builtin_path, resolved)
+            self._cache[key] = {
+                'builtin': builtin,
+                'custom': custom,
+            }
+        return self._cache[key]

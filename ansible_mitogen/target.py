@@ -32,7 +32,6 @@ for file transfer, module execution and sundry bits like changing file modes.
 """
 
 from __future__ import absolute_import
-import cStringIO
 import errno
 import grp
 import json
@@ -40,17 +39,15 @@ import logging
 import operator
 import os
 import pwd
-import random
 import re
+import signal
 import stat
 import subprocess
 import tempfile
-import time
 import traceback
 
 import ansible.module_utils.json_utils
 import ansible_mitogen.runner
-import ansible_mitogen.services
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
@@ -63,61 +60,12 @@ LOG = logging.getLogger(__name__)
 #: the duration of the process.
 temp_dir = None
 
-#: Caching of fetched file data.
-_file_cache = {}
-
 #: Initialized to an econtext.parent.Context pointing at a pristine fork of
 #: the target Python interpreter before it executes any code or imports.
 _fork_parent = None
 
 
-def _get_file(context, path, out_fp):
-    """
-    Streamily download a file from the connection multiplexer process in the
-    controller.
-
-    :param mitogen.core.Context context:
-        Reference to the context hosting the FileService that will be used to
-        fetch the file.
-    :param bytes in_path:
-        FileService registered name of the input file.
-    :param bytes out_path:
-        Name of the output path on the local disk.
-    :returns:
-        :data:`True` on success, or :data:`False` if the transfer was
-        interrupted and the output should be discarded.
-    """
-    LOG.debug('_get_file(): fetching %r from %r', path, context)
-    t0 = time.time()
-    recv = mitogen.core.Receiver(router=context.router)
-    metadata = context.call_service(
-        service_name='ansible_mitogen.services.FileService',
-        method_name='fetch',
-        path=path,
-        sender=recv.to_sender(),
-    )
-
-    for chunk in recv:
-        s = chunk.unpickle()
-        LOG.debug('_get_file(%r): received %d bytes', path, len(s))
-        context.call_service_async(
-            service_name='ansible_mitogen.services.FileService',
-            method_name='acknowledge',
-            size=len(s),
-        ).close()
-        out_fp.write(s)
-
-    ok = out_fp.tell() == metadata['size']
-    if not ok:
-        LOG.error('get_file(%r): receiver was closed early, controller '
-                  'is likely shutting down.', path)
-
-    LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-              metadata['size'], path, context, 1000 * (time.time() - t0))
-    return ok, metadata
-
-
-def get_file(context, path):
+def get_small_file(context, path):
     """
     Basic in-memory caching module fetcher. This generates an one roundtrip for
     every previously unseen file, so it is only a temporary solution.
@@ -131,13 +79,9 @@ def get_file(context, path):
     :returns:
         Bytestring file data.
     """
-    if path not in _file_cache:
-        io = cStringIO.StringIO()
-        ok, metadata = _get_file(context, path, io)
-        if not ok:
-            raise IOError('transfer of %r was interrupted.' % (path,))
-        _file_cache[path] = io.getvalue()
-    return _file_cache[path]
+    pool = mitogen.service.get_or_create_pool(router=context.router)
+    service = pool.get_service('mitogen.service.PushFileService')
+    return service.get(path)
 
 
 def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
@@ -170,7 +114,11 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
 
     try:
         try:
-            ok, metadata = _get_file(context, in_path, fp)
+            ok, metadata = mitogen.service.FileService.get(
+                context=context,
+                path=in_path,
+                out_fp=fp,
+            )
             if not ok:
                 raise IOError('transfer of %r was interrupted.' % (in_path,))
 
@@ -261,50 +209,51 @@ def init_child(econtext):
     This is necessary to prevent modules that are executed in-process from
     polluting the global interpreter state in a way that effects explicitly
     isolated modules.
+
+    :returns:
+        Dict like::
+
+            {
+                'fork_context': mitogen.core.Context.
+                'home_dir': str.
+            }
+
+        Where `fork_context` refers to the newly forked 'fork parent' context
+        the controller will use to start forked jobs, and `home_dir` is the
+        home directory for the active user account.
     """
     global _fork_parent
     mitogen.parent.upgrade_router(econtext)
     _fork_parent = econtext.router.fork()
     reset_temp_dir(econtext)
 
-
-@mitogen.core.takes_econtext
-def start_fork_child(wrap_async, kwargs, econtext):
-    mitogen.parent.upgrade_router(econtext)
-    context = econtext.router.fork()
-    context.call(reset_temp_dir)
-    if not wrap_async:
-        try:
-            return context.call(run_module, kwargs)
-        finally:
-            context.shutdown()
-
-    job_id = '%016x' % random.randint(0, 2**64)
-    context.call_async(run_module_async, job_id, kwargs)
     return {
-        'stdout': json.dumps({
-            # modules/utilities/logic/async_wrapper.py::_run_module().
-            'changed': True,
-            'started': 1,
-            'finished': 0,
-            'ansible_job_id': job_id,
-        })
+        'fork_context': _fork_parent,
+        'home_dir': os.path.expanduser('~'),
     }
 
 
 @mitogen.core.takes_econtext
-def run_module(kwargs, econtext):
+def create_fork_child(econtext):
+    """
+    For helper functions executed in the fork parent context, arrange for
+    the context's router to be upgraded as necessary and for a new child to be
+    prepared.
+    """
+    mitogen.parent.upgrade_router(econtext)
+    context = econtext.router.fork()
+    context.call(reset_temp_dir)
+    LOG.debug('create_fork_child() -> %r', context)
+    return context
+
+
+def run_module(kwargs):
     """
     Set up the process environment in preparation for running an Ansible
     module. This monkey-patches the Ansible libraries in various places to
     prevent it from trying to kill the process on completion, and to prevent it
     from reading sys.stdin.
     """
-    should_fork = kwargs.pop('should_fork', False)
-    wrap_async = kwargs.pop('wrap_async', False)
-    if should_fork:
-        return _fork_parent.call(start_fork_child, wrap_async, kwargs)
-
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
     impl = klass(**kwargs)
@@ -335,21 +284,52 @@ def _write_job_status(job_id, dct):
     os.rename(path + '.tmp', path)
 
 
-def _run_module_async(job_id, kwargs, econtext):
+def _sigalrm(broker, timeout_secs, job_id):
     """
-    Body on run_module_async().
+    Respond to SIGALRM (job timeout) by updating the job file and killing the
+    process.
+    """
+    msg = "Job reached maximum time limit of %d seconds." % (timeout_secs,)
+    _write_job_status(job_id, {
+        "failed": 1,
+        "finished": 1,
+        "msg": msg,
+    })
+    broker.shutdown()
 
+
+def _install_alarm(broker, timeout_secs, job_id):
+    handler = lambda *_: _sigalrm(broker, timeout_secs, job_id)
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_secs)
+
+
+def _run_module_async(kwargs, job_id, timeout_secs, econtext):
+    """
     1. Immediately updates the status file to mark the job as started.
     2. Installs a timer/signal handler to implement the time limit.
     3. Runs as with run_module(), writing the result to the status file.
+
+    :param dict kwargs:
+        Runner keyword arguments.
+    :param str job_id:
+        String job ID.
+    :param int timeout_secs:
+        If >0, limit the task's maximum run time.
     """
     _write_job_status(job_id, {
         'started': 1,
-        'finished': 0
+        'finished': 0,
+        'pid': os.getpid()
     })
 
+    if timeout_secs > 0:
+        _install_alarm(econtext.broker, timeout_secs, job_id)
+
+    kwargs['detach'] = True
+    kwargs['econtext'] = econtext
     kwargs['emulate_tty'] = False
-    dct = run_module(kwargs, econtext)
+    dct = run_module(kwargs)
     if mitogen.core.PY3:
         for key in 'stdout', 'stderr':
             dct[key] = dct[key].decode('utf-8', 'surrogateescape')
@@ -373,18 +353,21 @@ def _run_module_async(job_id, kwargs, econtext):
 
 
 @mitogen.core.takes_econtext
-def run_module_async(job_id, kwargs, econtext):
+def run_module_async(kwargs, job_id, timeout_secs, econtext):
     """
-    Since run_module_async() is invoked with .call_async(), with nothing to
-    read the result from the corresponding Receiver, wrap the body in an
-    exception logger, and wrap that in something that tears down the context on
-    completion.
+    Arrange for a module to be executed with its run status and result
+    serialized to a disk file. This function expects to run in a child forked
+    using :func:`create_fork_child`.
     """
     try:
         try:
-            _run_module_async(job_id, kwargs, econtext)
+            _run_module_async(kwargs, job_id, timeout_secs, econtext)
         except Exception:
-            LOG.exception('_run_module_async crashed')
+            # Catch any (ansible_mitogen) bugs and write them to the job file.
+            _write_job_status(job_id, {
+                "failed": 1,
+                "msg": traceback.format_exc(),
+            })
     finally:
         econtext.broker.shutdown()
 

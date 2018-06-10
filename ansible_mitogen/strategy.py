@@ -29,7 +29,6 @@
 from __future__ import absolute_import
 import os
 
-import ansible.errors
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 

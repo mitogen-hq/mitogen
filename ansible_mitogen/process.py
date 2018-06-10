@@ -35,6 +35,7 @@ import sys
 
 import mitogen
 import mitogen.core
+import mitogen.debug
 import mitogen.master
 import mitogen.parent
 import mitogen.service
@@ -135,7 +136,7 @@ class MuxProcess(object):
         """
         Construct a Router, Broker, and mitogen.unix listener
         """
-        self.router = mitogen.master.Router(max_message_size=4096*1048576)
+        self.router = mitogen.master.Router(max_message_size=4096 * 1048576)
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
         mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)
@@ -145,22 +146,21 @@ class MuxProcess(object):
         )
         if 'MITOGEN_ROUTER_DEBUG' in os.environ:
             self.router.enable_debug()
+        if 'MITOGEN_DUMP_THREAD_STACKS' in os.environ:
+            mitogen.debug.dump_to_logger()
 
     def _setup_services(self):
         """
         Construct a ContextService and a thread to service requests for it
         arriving from worker processes.
         """
-        file_service = ansible_mitogen.services.FileService(router=self.router)
         self.pool = mitogen.service.Pool(
             router=self.router,
             services=[
-                file_service,
+                mitogen.service.FileService(router=self.router),
+                mitogen.service.PushFileService(router=self.router),
                 ansible_mitogen.services.ContextService(self.router),
-                ansible_mitogen.services.ModuleDepService(
-                    router=self.router,
-                    file_service=file_service,
-                ),
+                ansible_mitogen.services.ModuleDepService(self.router),
             ],
             size=int(os.environ.get('MITOGEN_POOL_SIZE', '16')),
         )

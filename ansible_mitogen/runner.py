@@ -42,12 +42,11 @@ import imp
 import json
 import logging
 import os
-import shutil
 import sys
 import tempfile
 import types
 
-import mitogen.service
+import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 
 try:
@@ -111,17 +110,27 @@ class Runner(object):
         Context to which we should direct FileService calls. For now, always
         the connection multiplexer process on the controller.
     :param dict args:
-        Ansible module arguments. A strange mixture of user and internal keys
-        created by ActionBase._execute_module().
+        Ansible module arguments. A mixture of user and internal keys created
+        by :meth:`ansible.plugins.action.ActionBase._execute_module`.
     :param dict env:
         Additional environment variables to set during the run.
+
+    :param mitogen.core.ExternalContext econtext:
+        When `detach` is :data:`True`, a reference to the ExternalContext the
+        runner is executing in.
+    :param bool detach:
+        When :data:`True`, indicate the runner should detach the context from
+        its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, args=None, env=None):
+    def __init__(self, module, service_context, args=None, env=None,
+                 econtext=None, detach=False):
         if args is None:
             args = {}
 
         self.module = utf8(module)
         self.service_context = service_context
+        self.econtext = econtext
+        self.detach = detach
         self.args = args
         self.env = env
 
@@ -177,6 +186,9 @@ class Runner(object):
             Module result dictionary.
         """
         self.setup()
+        if self.detach:
+            self.econtext.detach()
+
         try:
             return self._run()
         finally:
@@ -208,7 +220,7 @@ class ModuleUtilsImporter(object):
 
     def load_module(self, fullname):
         path, is_pkg = self._by_fullname[fullname]
-        source = ansible_mitogen.target.get_file(self._context, path)
+        source = ansible_mitogen.target.get_small_file(self._context, path)
         code = compile(source, path, 'exec')
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = "master:%s" % (path,)
@@ -273,7 +285,7 @@ class ProgramRunner(Runner):
 
     :param str path:
         Absolute path to the program file on the master, as it can be retrieved
-        via :class:`ansible_mitogen.services.FileService`.
+        via :class:`mitogen.service.FileService`.
     :param bool emulate_tty:
         If :data:`True`, execute the program with `stdout` and `stderr` merged
         into a single pipe, emulating Ansible behaviour when an SSH TTY is in
@@ -315,7 +327,7 @@ class ProgramRunner(Runner):
         """
         Fetch the module binary from the master if necessary.
         """
-        return ansible_mitogen.target.get_file(
+        return ansible_mitogen.target.get_small_file(
             context=self.service_context,
             path=self.path,
         )
@@ -443,12 +455,30 @@ class NewStyleRunner(ScriptRunner):
     #: path => new-style module bytecode.
     _code_by_path = {}
 
-    def __init__(self, module_utils, **kwargs):
+    def __init__(self, module_map, **kwargs):
         super(NewStyleRunner, self).__init__(**kwargs)
-        self.module_utils = module_utils
+        self.module_map = module_map
+
+    def _setup_imports(self):
+        """
+        Ensure the local importer and PushFileService has everything for the
+        Ansible module before setup() completes, but before detach() is called
+        in an asynchronous task.
+
+        The master automatically streams modules towards us concurrent to the
+        runner invocation, however there is no public API to synchronize on the
+        completion of those preloads. Instead simply reuse the importer's
+        synchronization mechanism by importing everything the module will need
+        prior to detaching.
+        """
+        for fullname, _, _ in self.module_map['custom']:
+            mitogen.core.import_module(fullname)
+        for fullname in self.module_map['builtin']:
+            mitogen.core.import_module(fullname)
 
     def setup(self):
         super(NewStyleRunner, self).setup()
+
         self._stdio = NewStyleStdio(self.args)
         # It is possible that not supplying the script filename will break some
         # module, but this has never been a bug report. Instead act like an
@@ -456,8 +486,9 @@ class NewStyleRunner(ScriptRunner):
         self._argv = TemporaryArgv([''])
         self._importer = ModuleUtilsImporter(
             context=self.service_context,
-            module_utils=self.module_utils,
+            module_utils=self.module_map['custom'],
         )
+        self._setup_imports()
         if libc__res_init:
             libc__res_init()
 
@@ -476,14 +507,12 @@ class NewStyleRunner(ScriptRunner):
         pass
 
     def _setup_program(self):
-        pass
-
-    def _get_code(self):
-        self.source = ansible_mitogen.target.get_file(
+        self.source = ansible_mitogen.target.get_small_file(
             context=self.service_context,
             path=self.path,
         )
 
+    def _get_code(self):
         try:
             return self._code_by_path[self.path]
         except KeyError:

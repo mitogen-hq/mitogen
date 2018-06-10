@@ -35,8 +35,10 @@ files/modules known missing.
 """
 
 from __future__ import absolute_import
+import json
 import logging
 import os
+import random
 
 from ansible.executor import module_common
 import ansible.errors
@@ -50,9 +52,7 @@ except ImportError:  # Ansible <2.4
     from ansible.plugins import module_utils_loader
 
 import mitogen
-import mitogen.service
 import ansible_mitogen.target
-import ansible_mitogen.services
 
 
 LOG = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class Invocation(object):
     target.run_module() or helpers.run_module_async() in the target context.
     """
     def __init__(self, action, connection, module_name, module_args,
-                 task_vars, templar, env, wrap_async):
+                 task_vars, templar, env, wrap_async, timeout_secs):
         #: ActionBase instance invoking the module. Required to access some
         #: output postprocessing methods that don't belong in ActionBase at
         #: all.
@@ -114,7 +114,8 @@ class Invocation(object):
         self.env = env
         #: Boolean, if :py:data:`True`, launch the module asynchronously.
         self.wrap_async = wrap_async
-
+        #: Integer, if >0, limit the time an asynchronous job may run for.
+        self.timeout_secs = timeout_secs
         #: Initially ``None``, but set by :func:`invoke`. The path on the
         #: master to the module's implementation file.
         self.module_path = None
@@ -132,20 +133,36 @@ class Planner(object):
     file, indicates whether or not it understands how to run the module, and
     exports a method to run the module.
     """
-    def detect(self, invocation):
+    def __init__(self, invocation):
+        self._inv = invocation
+
+    def detect(self):
         """
         Return true if the supplied `invocation` matches the module type
         implemented by this planner.
         """
         raise NotImplementedError()
 
-    def get_should_fork(self, invocation):
+    def should_fork(self):
         """
         Asynchronous tasks must always be forked.
         """
-        return invocation.wrap_async
+        return self._inv.wrap_async
 
-    def plan(self, invocation, **kwargs):
+    def get_push_files(self):
+        """
+        Return a list of files that should be propagated to the target context
+        using PushFileService. The default implementation pushes nothing.
+        """
+        return []
+
+    def get_module_deps(self):
+        """
+        Return a list of the Python module names imported by the module.
+        """
+        return []
+
+    def get_kwargs(self, **kwargs):
         """
         If :meth:`detect` returned :data:`True`, plan for the module's
         execution, including granting access to or delivering any files to it
@@ -161,9 +178,7 @@ class Planner(object):
             }
         """
         kwargs.setdefault('emulate_tty', True)
-        kwargs.setdefault('service_context', invocation.connection.parent)
-        kwargs.setdefault('should_fork', self.get_should_fork(invocation))
-        kwargs.setdefault('wrap_async', invocation.wrap_async)
+        kwargs.setdefault('service_context', self._inv.connection.parent)
         return kwargs
 
     def __repr__(self):
@@ -177,26 +192,19 @@ class BinaryPlanner(Planner):
     """
     runner_name = 'BinaryRunner'
 
-    def detect(self, invocation):
-        return module_common._is_binary(invocation.module_source)
+    def detect(self):
+        return module_common._is_binary(self._inv.module_source)
 
-    def _grant_file_service_access(self, invocation):
-        invocation.connection._connect()
-        invocation.connection.parent.call_service(
-            service_name='ansible_mitogen.services.FileService',
-            method_name='register',
-            path=invocation.module_path,
-        )
+    def get_push_files(self):
+        return [self._inv.module_path]
 
-    def plan(self, invocation, **kwargs):
-        self._grant_file_service_access(invocation)
-        return super(BinaryPlanner, self).plan(
-            invocation=invocation,
+    def get_kwargs(self, **kwargs):
+        return super(BinaryPlanner, self).get_kwargs(
             runner_name=self.runner_name,
-            module=invocation.module_name,
-            path=invocation.module_path,
-            args=invocation.module_args,
-            env=invocation.env,
+            module=self._inv.module_name,
+            path=self._inv.module_path,
+            args=self._inv.module_args,
+            env=self._inv.env,
             **kwargs
         )
 
@@ -206,24 +214,25 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
-    def _get_interpreter(self, invocation):
-        interpreter, arg = parse_script_interpreter(invocation.module_source)
+    def _get_interpreter(self):
+        interpreter, arg = parse_script_interpreter(
+            self._inv.module_source
+        )
         if interpreter is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
-                invocation.module_name,
+                self._inv.module_name,
             ))
 
         key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
         try:
-            template = invocation.task_vars[key].strip()
-            return invocation.templar.template(template), arg
+            template = self._inv.task_vars[key].strip()
+            return self._inv.templar.template(template), arg
         except KeyError:
             return interpreter, arg
 
-    def plan(self, invocation, **kwargs):
-        interpreter, arg = self._get_interpreter(invocation)
-        return super(ScriptPlanner, self).plan(
-            invocation=invocation,
+    def get_kwargs(self, **kwargs):
+        interpreter, arg = self._get_interpreter()
+        return super(ScriptPlanner, self).get_kwargs(
             interpreter_arg=arg,
             interpreter=interpreter,
             **kwargs
@@ -237,8 +246,8 @@ class JsonArgsPlanner(ScriptPlanner):
     """
     runner_name = 'JsonArgsRunner'
 
-    def detect(self, invocation):
-        return module_common.REPLACER_JSONARGS in invocation.module_source
+    def detect(self):
+        return module_common.REPLACER_JSONARGS in self._inv.module_source
 
 
 class WantJsonPlanner(ScriptPlanner):
@@ -255,8 +264,8 @@ class WantJsonPlanner(ScriptPlanner):
     """
     runner_name = 'WantJsonRunner'
 
-    def detect(self, invocation):
-        return 'WANT_JSON' in invocation.module_source
+    def detect(self):
+        return 'WANT_JSON' in self._inv.module_source
 
 
 class NewStylePlanner(ScriptPlanner):
@@ -267,53 +276,59 @@ class NewStylePlanner(ScriptPlanner):
     """
     runner_name = 'NewStyleRunner'
 
-    def _get_interpreter(self, invocation):
+    def detect(self):
+        return 'from ansible.module_utils.' in self._inv.module_source
+
+    def _get_interpreter(self):
         return None, None
 
-    def _grant_file_service_access(self, invocation):
-        """
-        Stub out BinaryPlanner's method since ModuleDepService makes internal
-        calls to grant file access, avoiding 2 IPCs per task invocation.
-        """
+    def get_push_files(self):
+        return super(NewStylePlanner, self).get_push_files() + [
+            path
+            for fullname, path, is_pkg in self.get_module_map()['custom']
+        ]
 
-    def get_should_fork(self, invocation):
+    def get_module_deps(self):
+        return self.get_module_map()['builtin']
+
+    def should_fork(self):
         """
         In addition to asynchronous tasks, new-style modules should be forked
-        if mitogen_task_isolation=fork.
+        if the user specifies mitogen_task_isolation=fork, or if the new-style
+        module has a custom module search path.
         """
         return (
-            super(NewStylePlanner, self).get_should_fork(invocation) or
-            (invocation.task_vars.get('mitogen_task_isolation') == 'fork')
+            super(NewStylePlanner, self).should_fork() or
+            (self._inv.task_vars.get('mitogen_task_isolation') == 'fork') or
+            (len(self.get_module_map()['custom']) > 0)
         )
 
-    def detect(self, invocation):
-        return 'from ansible.module_utils.' in invocation.module_source
-
-    def get_search_path(self, invocation):
+    def get_search_path(self):
         return tuple(
             path
             for path in module_utils_loader._get_paths(subdirs=False)
             if os.path.isdir(path)
         )
 
-    def get_module_utils(self, invocation):
-        invocation.connection._connect()
-        return invocation.connection.parent.call_service(
-            service_name='ansible_mitogen.services.ModuleDepService',
-            method_name='scan',
+    _module_map = None
 
-            module_name='ansible_module_%s' % (invocation.module_name,),
-            module_path=invocation.module_path,
-            search_path=self.get_search_path(invocation),
-            builtin_path=module_common._MODULE_UTILS_PATH,
-        )
+    def get_module_map(self):
+        if self._module_map is None:
+            self._module_map = self._inv.connection.parent.call_service(
+                service_name='ansible_mitogen.services.ModuleDepService',
+                method_name='scan',
 
-    def plan(self, invocation):
-        module_utils = self.get_module_utils(invocation)
-        return super(NewStylePlanner, self).plan(
-            invocation,
-            module_utils=module_utils,
-            should_fork=(self.get_should_fork(invocation) or bool(module_utils)),
+                module_name='ansible_module_%s' % (self._inv.module_name,),
+                module_path=self._inv.module_path,
+                search_path=self.get_search_path(),
+                builtin_path=module_common._MODULE_UTILS_PATH,
+                context=self._inv.connection.context,
+            )
+        return self._module_map
+
+    def get_kwargs(self):
+        return super(NewStylePlanner, self).get_kwargs(
+            module_map=self.get_module_map(),
         )
 
 
@@ -343,14 +358,14 @@ class ReplacerPlanner(NewStylePlanner):
     """
     runner_name = 'ReplacerRunner'
 
-    def detect(self, invocation):
-        return module_common.REPLACER in invocation.module_source
+    def detect(self):
+        return module_common.REPLACER in self._inv.module_source
 
 
 class OldStylePlanner(ScriptPlanner):
     runner_name = 'OldStyleRunner'
 
-    def detect(self, invocation):
+    def detect(self):
         # Everything else.
         return True
 
@@ -372,24 +387,85 @@ def get_module_data(name):
     return path, source
 
 
+def _propagate_deps(invocation, planner, context):
+    invocation.connection.parent.call_service(
+        service_name='mitogen.service.PushFileService',
+        method_name='propagate_paths_and_modules',
+        context=context,
+        paths=planner.get_push_files(),
+        modules=planner.get_module_deps(),
+    )
+
+
+def _invoke_async_task(invocation, planner):
+    job_id = '%016x' % random.randint(0, 2**64)
+    context = invocation.connection.create_fork_child()
+    _propagate_deps(invocation, planner, context)
+    context.call_no_reply(
+        ansible_mitogen.target.run_module_async,
+        job_id=job_id,
+        timeout_secs=invocation.timeout_secs,
+        kwargs=planner.get_kwargs(),
+    )
+
+    return {
+        'stdout': json.dumps({
+            # modules/utilities/logic/async_wrapper.py::_run_module().
+            'changed': True,
+            'started': 1,
+            'finished': 0,
+            'ansible_job_id': job_id,
+        })
+    }
+
+
+def _invoke_forked_task(invocation, planner):
+    context = invocation.connection.create_fork_child()
+    _propagate_deps(invocation, planner, context)
+    try:
+        return context.call(
+            ansible_mitogen.target.run_module,
+            kwargs=planner.get_kwargs(),
+        )
+    finally:
+        context.shutdown()
+
+
+def _get_planner(invocation):
+    for klass in _planners:
+        planner = klass(invocation)
+        if planner.detect():
+            LOG.debug('%r accepted %r (filename %r)', planner,
+                      invocation.module_name, invocation.module_path)
+            return planner
+        LOG.debug('%r rejected %r', planner, invocation.module_name)
+    raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
+
+
 def invoke(invocation):
     """
-    Find a suitable Planner that knows how to run `invocation`.
+    Find a Planner subclass corresnding to `invocation` and use it to invoke
+    the module.
+
+    :param Invocation invocation:
+    :returns:
+        Module return dict.
+    :raises ansible.errors.AnsibleError:
+        Unrecognized/unsupported module type.
     """
     (invocation.module_path,
      invocation.module_source) = get_module_data(invocation.module_name)
+    planner = _get_planner(invocation)
 
-    for klass in _planners:
-        planner = klass()
-        if planner.detect(invocation):
-            LOG.debug('%r accepted %r (filename %r)', planner,
-                      invocation.module_name, invocation.module_path)
-            return invocation.action._postprocess_response(
-                invocation.connection.call(
-                    ansible_mitogen.target.run_module,
-                    planner.plan(invocation),
-                )
-            )
-        LOG.debug('%r rejected %r', planner, invocation.module_name)
+    if invocation.wrap_async:
+        response = _invoke_async_task(invocation, planner)
+    elif planner.should_fork():
+        response = _invoke_forked_task(invocation, planner)
+    else:
+        _propagate_deps(invocation, planner, invocation.connection.context)
+        response = invocation.connection.call(
+            ansible_mitogen.target.run_module,
+            kwargs=planner.get_kwargs(),
+        )
 
-    raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
+    return invocation.action._postprocess_response(response)

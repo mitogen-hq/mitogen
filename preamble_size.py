@@ -8,7 +8,9 @@ import zlib
 
 import mitogen.fakessh
 import mitogen.master
+import mitogen.minify
 import mitogen.parent
+import mitogen.select
 import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
@@ -34,16 +36,17 @@ print(
 )
 
 for mod in (
-        mitogen.master,
         mitogen.parent,
-        mitogen.service,
         mitogen.ssh,
         mitogen.sudo,
+        mitogen.select,
+        mitogen.service,
         mitogen.fakessh,
+        mitogen.master,
     ):
     original = inspect.getsource(mod)
     original_size = len(original)
-    minimized = mitogen.parent.minimize_source(original)
+    minimized = mitogen.minify.minimize_source(original)
     minimized_size = len(minimized)
     compressed = zlib.compress(minimized, 9)
     compressed_size = len(compressed)

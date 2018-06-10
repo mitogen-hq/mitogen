@@ -75,10 +75,6 @@ IOLOG.setLevel(logging.INFO)
 _v = False
 _vv = False
 
-# Also taken by Broker, no blocking work can occur with it held.
-_service_call_lock = threading.Lock()
-_service_calls = []
-
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
@@ -555,6 +551,7 @@ class Importer(object):
             'jail',
             'lxc',
             'master',
+            'minify',
             'parent',
             'select',
             'service',
@@ -622,6 +619,7 @@ class Importer(object):
             return None
 
         _tls.running = True
+        # TODO: hack: this is papering over a bug elsewhere.
         fullname = fullname.rstrip('.')
         try:
             pkgname, dot, _ = fullname.rpartition('.')
@@ -715,6 +713,8 @@ class Importer(object):
 
     def load_module(self, fullname):
         _v and LOG.debug('Importer.load_module(%r)', fullname)
+        # TODO: hack: this is papering over a bug elsewhere.
+        fullname = fullname.rstrip('.')
         self._refuse_imports(fullname)
 
         event = threading.Event()
@@ -863,7 +863,7 @@ class Stream(BasicStream):
         self._router = router
         self.remote_id = remote_id
         self.name = 'default'
-        self.sent_modules = set()
+        self.sent_modules = set(['mitogen', 'mitogen.core'])
         self.construct(**kwargs)
         self._input_buf = collections.deque()
         self._output_buf = collections.deque()
@@ -1644,27 +1644,22 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
+    def _service_stub_main(self, msg):
+        import mitogen.service
+        pool = mitogen.service.get_or_create_pool(router=self.router)
+        pool._receiver._on_receive(msg)
+
     def _on_call_service_msg(self, msg):
         """
-        Stub CALL_SERVICE handler, push message on temporary queue and invoke
-        _on_stub_call() from the main thread.
+        Stub service handler. Start a thread to import the mitogen.service
+        implementation from, and deliver the message to the newly constructed
+        pool. This must be done as CALL_SERVICE for e.g. PushFileService may
+        race with a CALL_FUNCTION blocking the main thread waiting for a result
+        from that service.
         """
-        if msg.is_dead:
-            return
-        _service_call_lock.acquire()
-        try:
-            _service_calls.append(msg)
-        finally:
-            _service_call_lock.release()
-
-        self.router.route(
-            Message.pickled(
-                dst_id=mitogen.context_id,
-                handle=CALL_FUNCTION,
-                obj=('mitogen.service', None, '_on_stub_call', (), {}),
-                router=self.router,
-            )
-        )
+        if not msg.is_dead:
+            th = threading.Thread(target=self._service_stub_main, args=(msg,))
+            th.start()
 
     def _on_shutdown_msg(self, msg):
         _v and LOG.debug('_on_shutdown_msg(%r)', msg)
@@ -1707,6 +1702,7 @@ class ExternalContext(object):
             enable_profiling()
         self.broker = Broker()
         self.router = Router(self.broker)
+        self.router.debug = self.config.get('debug', False)
         self.router.undirectional = self.config['unidirectional']
         self.router.add_handler(
             fn=self._on_shutdown_msg,
@@ -1855,11 +1851,17 @@ class ExternalContext(object):
 
         for msg in self.recv:
             try:
-                msg.reply(self._dispatch_one(msg))
+                ret = self._dispatch_one(msg)
+                _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
+                if msg.reply_to:
+                    msg.reply(ret)
             except Exception:
                 e = sys.exc_info()[1]
-                _v and LOG.debug('_dispatch_calls: %s', e)
-                msg.reply(CallError(e))
+                if msg.reply_to:
+                    _v and LOG.debug('_dispatch_calls: %s', e)
+                    msg.reply(CallError(e))
+                else:
+                    LOG.exception('_dispatch_calls: %r', msg)
         self.dispatch_stopped = True
 
     def main(self):
