@@ -38,6 +38,7 @@ how to build arguments for it, preseed related data, etc.
 from __future__ import absolute_import
 import cStringIO
 import ctypes
+import errno
 import imp
 import json
 import logging
@@ -148,7 +149,7 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
-        self._cleanup_temp()
+        self._try_cleanup_temp()
 
     def _cleanup_temp(self):
         """
@@ -161,6 +162,20 @@ class Runner(object):
             path = os.path.join(ansible_mitogen.target.temp_dir, name)
             LOG.debug('Deleting %r', path)
             ansible_mitogen.target.prune_tree(path)
+
+    def _try_cleanup_temp(self):
+        """
+        During broker shutdown triggered by async task timeout or loss of
+        connection to the parent, it is possible for prune_tree() in
+        target.py::_on_broker_shutdown() to run before _cleanup_temp(), so skip
+        cleanup if the directory or a file disappears from beneath us.
+        """
+        try:
+            self._cleanup_temp()
+        except (IOError, OSError) as e:
+            if e.args[0] == errno.ENOENT:
+                return
+            raise
 
     def _run(self):
         """
