@@ -110,7 +110,7 @@ class MuxProcess(object):
         if cls.child_pid:
             cls.child_sock.close()
             cls.child_sock = None
-            cls.worker_sock.recv(1)
+            mitogen.core.io_op(cls.worker_sock.recv, 1)
         else:
             cls.worker_sock.close()
             cls.worker_sock = None
@@ -128,9 +128,9 @@ class MuxProcess(object):
         self._setup_services()
 
         # Let the parent know our listening socket is ready.
-        self.child_sock.send('1')
+        mitogen.core.io_op(self.child_sock.send, '1')
         # Block until the socket is closed, which happens on parent exit.
-        self.child_sock.recv(1)
+        mitogen.core.io_op(self.child_sock.recv, 1)
 
     def _setup_master(self):
         """
