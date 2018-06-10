@@ -48,6 +48,15 @@ LOG = logging.getLogger(__name__)
 _last = None
 
 
+def enable_evil_interrupts():
+    signal.signal(signal.SIGALRM, (lambda a, b: None))
+    signal.setitimer(signal.ITIMER_REAL, 0.01, 0.01)
+
+
+def disable_evil_interrupts():
+    signal.setitimer(signal.ITIMER_REAL, 0, 0)
+
+
 def _hex(n):
     return '%08x' % n
 

@@ -35,6 +35,7 @@
         - has_sudo_pubkey
         - require_tty
         - pw_required
+        - readonly_homedir
         - require_tty_pw_required
         - slow_user
       when: ansible_system != 'Darwin'

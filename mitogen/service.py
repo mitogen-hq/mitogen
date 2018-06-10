@@ -271,9 +271,12 @@ class SerializedInvoker(Invoker):
             method_name, kwargs, msg = tup
             try:
                 super(SerializedInvoker, self).invoke(method_name, kwargs, msg)
+            except mitogen.core.CallError:
+                e = sys.exc_info()[1]
+                LOG.warning('%r: call error: %s: %s', self, msg, e)
+                msg.reply(e)
             except Exception:
-                LOG.exception('%r: while invoking %r of %r',
-                              self, method_name, self.service)
+                LOG.exception('%r: while invoking %s()', self, method_name)
                 msg.reply(mitogen.core.Message.dead())
 
     def invoke(self, method_name, kwargs, msg):
@@ -456,9 +459,13 @@ class Pool(object):
 
     closed = False
 
-    def stop(self):
+    def stop(self, join=True):
         self.closed = True
         self._select.close()
+        if join:
+            self.join()
+
+    def join(self):
         for th in self._threads:
             th.join()
         for invoker in self._invoker_by_name.itervalues():
