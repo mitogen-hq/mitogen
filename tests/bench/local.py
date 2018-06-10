@@ -2,13 +2,11 @@
 Measure latency of .local() setup.
 """
 
-import os
-import socket
 import mitogen
 import time
 
 
-@mitogen.main() #(log_level='DEBUG')
+@mitogen.main()
 def main(router):
     for x in range(1000):
         t = time.time()
