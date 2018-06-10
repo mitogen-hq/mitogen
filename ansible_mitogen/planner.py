@@ -51,7 +51,6 @@ except ImportError:  # Ansible <2.4
     from ansible.plugins import module_loader
     from ansible.plugins import module_utils_loader
 
-import mitogen
 import ansible_mitogen.target
 
 
