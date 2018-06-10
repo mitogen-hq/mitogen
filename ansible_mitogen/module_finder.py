@@ -85,7 +85,7 @@ def find(name, path=(), parent=None):
     head, _, tail = name.partition('.')
     try:
         tup = imp.find_module(head, list(path))
-    except ImportError as e:
+    except ImportError:
         return parent
 
     fp, modpath, (suffix, mode, kind) = tup

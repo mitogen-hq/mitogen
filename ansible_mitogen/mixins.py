@@ -32,7 +32,6 @@ import logging
 import os
 import pwd
 import shutil
-import tempfile
 import traceback
 
 from ansible.module_utils._text import to_bytes
@@ -42,11 +41,6 @@ import ansible
 import ansible.constants
 import ansible.plugins
 import ansible.plugins.action
-
-try:
-    from ansible.plugins.loader import module_loader
-except ImportError:  # Ansible<2.4
-    from ansible.plugins import module_loader
 
 import mitogen.core
 import mitogen.select

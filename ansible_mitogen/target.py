@@ -32,7 +32,6 @@ for file transfer, module execution and sundry bits like changing file modes.
 """
 
 from __future__ import absolute_import
-import cStringIO
 import errno
 import grp
 import json
@@ -44,7 +43,6 @@ import re
 import stat
 import subprocess
 import tempfile
-import time
 import traceback
 
 import ansible.module_utils.json_utils

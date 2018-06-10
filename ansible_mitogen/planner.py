@@ -52,9 +52,7 @@ except ImportError:  # Ansible <2.4
     from ansible.plugins import module_utils_loader
 
 import mitogen
-import mitogen.service
 import ansible_mitogen.target
-import ansible_mitogen.services
 
 
 LOG = logging.getLogger(__name__)

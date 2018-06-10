@@ -31,7 +31,6 @@ import logging
 import os
 import shlex
 import stat
-import sys
 import time
 
 import jinja2.runtime
@@ -57,6 +56,7 @@ def _connect_local(spec):
             'python_path': spec['python_path'],
         }
     }
+
 
 def wrap_or_none(klass, value):
     if value is not None:
@@ -393,7 +393,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(
                 self.unknown_via_msg % (
                     self.mitogen_via,
-                    config['inventory_name'],
+                    inventory_name,
                 )
             )
 
