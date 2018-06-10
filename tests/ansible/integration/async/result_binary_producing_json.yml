@@ -10,7 +10,21 @@
     poll: 0
     register: job
 
-  - shell: sleep 1
+  - assert:
+      that: |
+        job.ansible_job_id and
+        (job.changed == True) and
+        (job.started == 1) and
+        (job.changed == True) and
+        (job.finished == 0)
+
+  - name: busy-poll up to 100000 times
+    async_status:
+      jid: "{{job.ansible_job_id}}"
+    register: result
+    until: result.finished
+    retries: 100000
+    delay: 0
 
   - slurp:
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
