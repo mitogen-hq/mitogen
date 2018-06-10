@@ -456,9 +456,13 @@ class Pool(object):
 
     closed = False
 
-    def stop(self):
+    def stop(self, join=True):
         self.closed = True
         self._select.close()
+        if join:
+            self.join()
+
+    def join(self):
         for th in self._threads:
             th.join()
         for invoker in self._invoker_by_name.itervalues():

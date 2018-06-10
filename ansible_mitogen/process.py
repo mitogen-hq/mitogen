@@ -30,6 +30,7 @@ from __future__ import absolute_import
 import errno
 import logging
 import os
+import signal
 import socket
 import sys
 
@@ -140,6 +141,7 @@ class MuxProcess(object):
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
         mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)
+        mitogen.core.listen(self.router.broker, 'exit', self.on_broker_exit)
         self.listener = mitogen.unix.Listener(
             router=self.router,
             path=self.unix_listener_path,
@@ -168,14 +170,23 @@ class MuxProcess(object):
 
     def on_broker_shutdown(self):
         """
-        Respond to the Router shutdown (indirectly triggered through exit of
-        the main thread) by unlinking the listening socket. Ideally this would
-        happen explicitly, but Ansible provides no hook to allow it.
+        Respond to broker shutdown by beginning service pool shutdown. Do not
+        join on the pool yet, since that would block the broker thread which
+        then cannot clean up pending handlers, which is required for the
+        threads to exit gracefully.
         """
-        self.pool.stop()
+        self.pool.stop(join=False)
         try:
             os.unlink(self.listener.path)
         except OSError, e:
             # Prevent a shutdown race with the parent process.
             if e.args[0] != errno.ENOENT:
                 raise
+
+    def on_broker_exit(self):
+        """
+        Respond to the broker thread about to exit by sending SIGTERM to
+        ourself. In future this should gracefully join the pool, but TERM is
+        fine for now.
+        """
+        os.kill(os.getpid(), signal.SIGTERM)
