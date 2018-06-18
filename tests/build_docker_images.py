@@ -50,7 +50,7 @@ RUN \
     useradd -s /bin/bash -m mitogen__slow_user && \
     chown -R root: ~mitogen__readonly_homedir && \
     { for i in `seq 1 21`; do useradd -s /bin/bash -m mitogen__user$i; done; } && \
-    { for i in `seq 1 21`; do echo mitogen__user$i:user$i_password | chpasswd; } && \
+    { for i in `seq 1 21`; do echo mitogen__user$i:user$i_password | chpasswd; done; } && \
     ( echo 'root:rootpassword' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo:has_sudo_password' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo_pubkey:has_sudo_pubkey_password' | chpasswd; ) && \
