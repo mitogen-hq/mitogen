@@ -217,10 +217,10 @@ class ModuleUtilsImporter(object):
     """
     def __init__(self, context, module_utils):
         self._context = context
-        self._by_fullname = {
-            fullname: (path, is_pkg)
+        self._by_fullname = dict(
+            (fullname, (path, is_pkg))
             for fullname, path, is_pkg in module_utils
-        }
+        )
         self._loaded = set()
         sys.meta_path.insert(0, self)
 
