@@ -40,7 +40,7 @@ class Handler(logging.Handler):
     Use Mitogen's log format, but send the result to a Display method.
     """
     def __init__(self, display, normal_method):
-        super(Handler, self).__init__()
+        logging.Handler.__init__(self)
         self.formatter = mitogen.utils.log_get_formatter(usec=True)
         self.display = display
         self.normal_method = normal_method

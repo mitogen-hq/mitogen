@@ -37,6 +37,7 @@ import mitogen.master
 
 
 LOG = logging.getLogger('mitogen')
+iteritems = getattr(dict, 'iteritems', dict.items)
 
 
 def disable_site_packages():
@@ -112,7 +113,7 @@ PASSTHROUGH = (
 
 def cast(obj):
     if isinstance(obj, dict):
-        return {cast(k): cast(v) for k, v in obj.iteritems()}
+        return dict((cast(k), cast(v)) for k, v in iteritems(obj))
     if isinstance(obj, (list, tuple)):
         return [cast(v) for v in obj]
     if isinstance(obj, PASSTHROUGH):

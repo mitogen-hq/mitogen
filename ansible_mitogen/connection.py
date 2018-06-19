@@ -37,6 +37,7 @@ import jinja2.runtime
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
+import ansible.utils.shlex
 
 import mitogen.unix
 import mitogen.utils
@@ -243,7 +244,7 @@ def config_from_play_context(transport, inventory_name, connection):
                 getattr(connection._play_context, 'ssh_common_args', ''),
                 getattr(connection._play_context, 'ssh_extra_args', '')
             )
-            for term in shlex.split(s or '')
+            for term in ansible.utils.shlex.shlex_split(s or '')
         ],
         'become_exe': connection._play_context.become_exe,
         'sudo_args': [
@@ -252,7 +253,7 @@ def config_from_play_context(transport, inventory_name, connection):
                 connection._play_context.sudo_flags,
                 connection._play_context.become_flags
             )
-            for term in shlex.split(s or '')
+            for term in ansible.utils.shlex.shlex_split(s or '')
         ],
         'mitogen_via': connection.mitogen_via,
         'mitogen_kind': connection.mitogen_kind,

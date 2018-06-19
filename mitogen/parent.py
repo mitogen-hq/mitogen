@@ -247,7 +247,6 @@ def hybrid_tty_create_child(args):
     mitogen.core.set_block(childfp)
     disable_echo(master_fd)
     disable_echo(slave_fd)
-
     proc = subprocess.Popen(
         args=args,
         stdin=childfp,

@@ -77,26 +77,25 @@ def get_subclasses(klass):
 
 
 def get_routers():
-    kl
-    return {
-        _hex(id(router)): router
+    return dict(
+        (_hex(id(router)), router)
         for klass in get_subclasses(mitogen.core.Router)
         for router in gc.get_referrers(klass)
         if isinstance(router, mitogen.core.Router)
-    }
+    )
 
 
 def get_router_info():
     return {
-        'routers': {
-            id_: {
+        'routers': dict(
+            (id_, {
                 'id': id_,
                 'streams': len(set(router._stream_by_id.values())),
                 'contexts': len(set(router._context_by_id.values())),
                 'handles': len(router._handle_map),
-            }
+            })
             for id_, router in get_routers().items()
-        }
+        )
     }
 
 
@@ -121,10 +120,10 @@ def get_stream_info(router_id):
 
 
 def format_stacks():
-    name_by_id = {
-        t.ident: t.name
+    name_by_id = dict(
+        (t.ident, t.name)
         for t in threading.enumerate()
-    }
+    )
 
     l = ['', '']
     for threadId, stack in sys._current_frames().items():
