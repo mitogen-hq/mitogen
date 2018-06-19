@@ -188,7 +188,10 @@ class Stream(mitogen.parent.Stream):
                 self._host_key_prompt()
             elif HOSTKEY_FAIL in buf.lower():
                 raise HostKeyError(self.hostkey_failed_msg)
-            elif PERMDENIED_PROMPT in buf.lower():
+            elif buf.lower().startswith(PERMDENIED_PROMPT):
+                # issue #271: work around conflict with user shell reporting
+                # 'permission denied' e.g. during chdir($HOME) by only matching
+                # it at the start of the line.
                 if self.password is not None and password_sent:
                     raise PasswordError(self.password_incorrect_msg)
                 else:
