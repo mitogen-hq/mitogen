@@ -623,7 +623,7 @@ class Importer(object):
         fullname = fullname.rstrip('.')
         try:
             pkgname, dot, _ = fullname.rpartition('.')
-            _v and LOG.debug('%r.find_module(%r)', self, fullname)
+            _vv and IOLOG.debug('%r.find_module(%r)', self, fullname)
             suffix = fullname[len(pkgname+dot):]
             if suffix not in self._present.get(pkgname, (suffix,)):
                 _v and LOG.debug('%r: master doesn\'t know %r', self, fullname)
@@ -631,8 +631,10 @@ class Importer(object):
 
             pkg = sys.modules.get(pkgname)
             if pkg and getattr(pkg, '__loader__', None) is not self:
-                _v and LOG.debug('%r: %r is submodule of a package we did not load',
-                          self, fullname)
+                _vv and IOLOG.debug(
+                    '%r: %r is submodule of a package we did not load',
+                    self, fullname
+                )
                 return None
 
             # #114: explicitly whitelisted prefixes override any
@@ -643,9 +645,10 @@ class Importer(object):
 
             try:
                 self.builtin_find_module(fullname)
-                _v and LOG.debug('%r: %r is available locally', self, fullname)
+                _vv and IOLOG.debug('%r: %r is available locally',
+                                    self, fullname)
             except ImportError:
-                _v and LOG.debug('find_module(%r) returning self', fullname)
+                _vv and IOLOG.debug('find_module(%r) returning self', fullname)
                 return self
         finally:
             del _tls.running
