@@ -290,15 +290,26 @@ class NewStylePlanner(ScriptPlanner):
     def get_module_deps(self):
         return self.get_module_map()['builtin']
 
+    #: Module names appearing in this set always require forking, usually due
+    #: to some terminal leakage that cannot be worked around in any sane
+    #: manner.
+    ALWAYS_FORK_MODULES = frozenset([
+        'dnf',  # issue #280; py-dnf/hawkey need therapy
+    ])
+
     def should_fork(self):
         """
         In addition to asynchronous tasks, new-style modules should be forked
-        if the user specifies mitogen_task_isolation=fork, or if the new-style
-        module has a custom module search path.
+        if:
+
+        * the user specifies mitogen_task_isolation=fork, or
+        * the new-style module has a custom module search path, or
+        * the module is known to leak like a sieve.
         """
         return (
             super(NewStylePlanner, self).should_fork() or
             (self._inv.task_vars.get('mitogen_task_isolation') == 'fork') or
+            (self._inv.module_name in self.ALWAYS_FORK_MODULES) or
             (len(self.get_module_map()['custom']) > 0)
         )
 
