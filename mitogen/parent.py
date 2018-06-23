@@ -617,7 +617,7 @@ class TtyLogStream(mitogen.core.BasicStream):
     """
 
     def __init__(self, tty_fd, stream):
-        self.receive_side = mitogen.core.Side(stream, tty_fd)
+        self.receive_side = mitogen.core.Side(self, tty_fd)
         self.transmit_side = self.receive_side
         self.stream = stream
         self.buf = ''
