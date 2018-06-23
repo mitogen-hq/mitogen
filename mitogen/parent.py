@@ -686,11 +686,6 @@ class Stream(mitogen.core.Stream):
         self.max_message_size = max_message_size
         if python_path:
             self.python_path = python_path
-        if sys.platform == 'darwin' and self.python_path == '/usr/bin/python':
-            # OS X installs a craptacular argv0-introspecting Python version
-            # switcher as /usr/bin/python. Override attempts to call it with an
-            # explicit call to python2.7
-            self.python_path = '/usr/bin/python2.7'
         if connect_timeout:
             self.connect_timeout = connect_timeout
         if remote_name is None:
@@ -775,6 +770,9 @@ class Stream(mitogen.core.Stream):
     #     substituted with their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
+    #   * For Darwin, OS X installs a craptacular argv0-introspecting Python
+    #     version switcher as /usr/bin/python. Override attempts to call it
+    #     with an explicit call to python2.7
     @staticmethod
     def _first_stage():
         R,W=os.pipe()
@@ -787,6 +785,8 @@ class Stream(mitogen.core.Stream):
             os.close(r)
             os.close(W)
             os.close(w)
+            if sys.platform == 'darwin' and sys.executable == '/usr/bin/python':
+                sys.executable += sys.version[:3]
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'EC0\n')

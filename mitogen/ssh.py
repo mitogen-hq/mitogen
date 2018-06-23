@@ -91,7 +91,6 @@ class HostKeyError(mitogen.core.StreamError):
 class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
-    python_path = 'python2.7'
 
     #: Number of -v invocations to pass on command line.
     ssh_debug_level = 0
