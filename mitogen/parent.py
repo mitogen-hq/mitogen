@@ -617,19 +617,30 @@ class TtyLogStream(mitogen.core.BasicStream):
     """
 
     def __init__(self, tty_fd, stream):
-        self.receive_side = mitogen.core.Side(stream, tty_fd)
+        self.receive_side = mitogen.core.Side(self, tty_fd)
         self.transmit_side = self.receive_side
         self.stream = stream
+        self.buf = ''
 
     def __repr__(self):
-        return 'mitogen.parent.TtyLogStream(%r)' % (self.stream,)
+        return 'mitogen.parent.TtyLogStream(%r)' % (self.stream.name,)
 
     def on_receive(self, broker):
+        """
+        This handler is only called after the stream is registered with the IO
+        loop, the descriptor is manually read/written by _connect_bootstrap()
+        prior to that.
+        """
         buf = self.receive_side.read()
         if not buf:
             return self.on_disconnect(broker)
 
-        LOG.debug('%r.on_receive(): %r', self, buf)
+        self.buf += buf
+        while '\n' in self.buf:
+            lines = self.buf.split('\n')
+            self.buf = lines[-1]
+            for line in lines[:-1]:
+                LOG.debug('%r:  %r', self, line.rstrip())
 
 
 class Stream(mitogen.core.Stream):

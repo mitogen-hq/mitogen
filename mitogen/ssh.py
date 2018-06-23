@@ -43,10 +43,41 @@ import mitogen.parent
 
 LOG = logging.getLogger('mitogen')
 
-PASSWORD_PROMPT = 'password:'
+# sshpass uses 'assword' because it doesn't lowercase the input.
+PASSWORD_PROMPT = 'password'
 PERMDENIED_PROMPT = 'permission denied'
 HOSTKEY_REQ_PROMPT = 'are you sure you want to continue connecting (yes/no)?'
 HOSTKEY_FAIL = 'host key verification failed.'
+
+
+DEBUG_PREFIXES = ('debug1:', 'debug2:', 'debug3:')
+
+
+def _filter_debug(stream, it, buf):
+    while True:
+        if not buf.startswith(DEBUG_PREFIXES):
+            return buf
+        while '\n' in buf:
+            line, _, buf = buf.partition('\n')
+            LOG.debug('%r: received %r', stream, line.rstrip())
+        try:
+            buf += next(it)
+        except StopIteration:
+            return buf
+
+
+def filter_debug(stream, it):
+    """
+    Read line chunks from it, either yielding them directly, or building up and
+    logging individual lines if they look like SSH debug output.
+
+    This contains the mess of dealing with both line-oriented input, and partial
+    lines such as the password prompt.
+    """
+    for chunk in it:
+        chunk = _filter_debug(stream, it, chunk)
+        if chunk:
+            yield chunk
 
 
 class PasswordError(mitogen.core.StreamError):
@@ -61,6 +92,9 @@ class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
     python_path = 'python2.7'
+
+    #: Number of -v invocations to pass on command line.
+    ssh_debug_level = 0
 
     #: Once connected, points to the corresponding TtyLogStream, allowing it to
     #: be disconnected at the same time this stream is being torn down.
@@ -82,7 +116,8 @@ class Stream(mitogen.parent.Stream):
     def construct(self, hostname, username=None, ssh_path=None, port=None,
                   check_host_keys='enforce', password=None, identity_file=None,
                   compression=True, ssh_args=None, keepalive_enabled=True,
-                  keepalive_count=3, keepalive_interval=15, **kwargs):
+                  keepalive_count=3, keepalive_interval=15,
+                  ssh_debug_level=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         if check_host_keys not in ('accept', 'enforce', 'ignore'):
             raise ValueError(self.check_host_keys_msg)
@@ -101,6 +136,8 @@ class Stream(mitogen.parent.Stream):
             self.ssh_path = ssh_path
         if ssh_args:
             self.ssh_args = ssh_args
+        if ssh_debug_level:
+            self.ssh_debug_level = ssh_debug_level
 
     def on_disconnect(self, broker):
         self.tty_stream.on_disconnect(broker)
@@ -108,6 +145,8 @@ class Stream(mitogen.parent.Stream):
 
     def get_boot_command(self):
         bits = [self.ssh_path]
+        if self.ssh_debug_level:
+            bits += ['-' + ('v' * min(3, self.ssh_debug_level))]
         if self.username:
             bits += ['-l', self.username]
         if self.port is not None:
@@ -179,9 +218,10 @@ class Stream(mitogen.parent.Stream):
             deadline=self.connect_deadline
         )
 
-        for buf in it:
+        for buf in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith('EC0\n'):
+                self._router.broker.start_receive(self.tty_stream)
                 self._ec0_received()
                 return
             elif HOSTKEY_REQ_PROMPT in buf.lower():

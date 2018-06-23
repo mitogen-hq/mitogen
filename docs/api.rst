@@ -707,7 +707,8 @@ Router Class
             are already compressed, however it has a large effect on every
             remaining message in the otherwise uncompressed stream protocol,
             such as function call arguments and return values.
-
+        :parama int ssh_debug_level:
+            Optional integer `0..3` indicating the SSH client debug level.
         :raises mitogen.ssh.PasswordError:
             A password was requested but none was specified, or the specified
             password was incorrect.

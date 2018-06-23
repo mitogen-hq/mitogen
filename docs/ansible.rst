@@ -619,6 +619,8 @@ except connection delegation is supported.
 * ``ansible_ssh_private_key_file``
 * ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
+* ``mitogen_ssh_debug_level``: integer between `0..3` indicating the SSH client
+  debug level. Ansible must also be run with '-vvv' to view the output.
 
 
 Debugging
