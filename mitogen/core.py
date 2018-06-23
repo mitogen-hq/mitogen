@@ -469,6 +469,7 @@ class Receiver(object):
                  respondent=None, policy=None):
         self.router = router
         self.handle = handle  # Avoid __repr__ crash in add_handler()
+        self._latch = Latch()  # Must exist prior to .add_handler()
         self.handle = router.add_handler(
             fn=self._on_receive,
             handle=handle,
@@ -476,7 +477,6 @@ class Receiver(object):
             persist=persist,
             respondent=respondent,
         )
-        self._latch = Latch()
 
     def __repr__(self):
         return 'Receiver(%r, %r)' % (self.router, self.handle)
