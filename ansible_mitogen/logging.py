@@ -45,9 +45,20 @@ class Handler(logging.Handler):
         self.display = display
         self.normal_method = normal_method
 
+    #: Set of target loggers that produce warnings and errors that spam the
+    #: console needlessly. Their log level is forced to INFO. A better strategy
+    #: may simply be to bury all target logs in DEBUG output, but not by
+    #: overriding their log level as done here.
+    NOISY_LOGGERS = frozenset([
+        'dnf',  # issue #272; warns when a package is already installed.
+    ])
+
     def emit(self, record):
-        if getattr(record, 'mitogen_name', '') == 'stderr':
+        mitogen_name = getattr(record, 'mitogen_name', '')
+        if mitogen_name == 'stderr':
             record.levelno = logging.ERROR
+        if mitogen_name in self.NOISY_LOGGERS and record.levelno >= logging.WARNING:
+            record.levelno = logging.DEBUG
 
         s = '[pid %d] %s' % (os.getpid(), self.format(record))
         if record.levelno >= logging.ERROR:
