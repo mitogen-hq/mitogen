@@ -58,8 +58,10 @@ def _filter_debug(stream, it, buf):
         if not buf.startswith(DEBUG_PREFIXES):
             return buf
         while '\n' in buf:
+            if not buf.startswith(DEBUG_PREFIXES):
+                return buf
             line, _, buf = buf.partition('\n')
-            LOG.debug('%r: received %r', stream, line.rstrip())
+            LOG.debug('%r: %s', stream, line.rstrip())
         try:
             buf += next(it)
         except StopIteration:
@@ -77,7 +79,8 @@ def filter_debug(stream, it):
     for chunk in it:
         chunk = _filter_debug(stream, it, chunk)
         if chunk:
-            yield chunk
+            for line in chunk.splitlines():
+                yield line
 
 
 class PasswordError(mitogen.core.StreamError):
@@ -219,7 +222,7 @@ class Stream(mitogen.parent.Stream):
 
         for buf in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
-            if buf.endswith('EC0\n'):
+            if buf.endswith('EC0'):
                 self._router.broker.start_receive(self.tty_stream)
                 self._ec0_received()
                 return
