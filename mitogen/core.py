@@ -278,7 +278,7 @@ class PidfulStreamHandler(logging.StreamHandler):
     def emit(self, record):
         if self.open_pid != os.getpid():
             self._reopen()
-        return super(PidfulStreamHandler, self).emit(record)
+        logging.StreamHandler.emit(self, record)
 
 
 def enable_debug_logging():
