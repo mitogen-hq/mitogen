@@ -648,7 +648,7 @@ class Stream(mitogen.core.Stream):
     Base for streams capable of starting new slaves.
     """
     #: The path to the remote Python interpreter.
-    python_path = 'python2.7'
+    python_path = 'python'
 
     #: Maximum time to wait for a connection attempt.
     connect_timeout = 30.0
