@@ -45,7 +45,6 @@ echo \
     target \
     ansible_host=$DOCKER_HOSTNAME \
     ansible_port=2201 \
-    ansible_python_interpreter=/usr/bin/python2.7 \
     ansible_user=mitogen__has_sudo_nopw \
     ansible_password=has_sudo_nopw_password \
     >> ${TMPDIR}/hosts
