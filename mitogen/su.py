@@ -58,6 +58,7 @@ class Stream(mitogen.parent.Stream):
     incorrect_prompts = (
         'su: sorry',                    # BSD
         'su: authentication failure',   # Linux
+        'su: incorrect password',       # CentOS 6
     )
 
     def construct(self, username=None, password=None, su_path=None,
