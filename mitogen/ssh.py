@@ -68,10 +68,10 @@ def filter_debug(stream, it):
         while buf:
             if state == 'start_of_line':
                 if len(buf) < 8:
-                    # short read near the buffer limit, block waiting for at
-                    # least 8 bytes so we can discern either a debug line, or
-                    # the minimum desired interesting token from above
-                    # ('password').
+                    # short read near buffer limit, block awaiting at least 8
+                    # bytes so we can discern a debug line, or the minimum
+                    # interesting token from above or the bootstrap
+                    # ('password', 'MITO000\n').
                     break
                 elif buf.startswith(DEBUG_PREFIXES):
                     state = 'in_debug'
@@ -229,7 +229,7 @@ class Stream(mitogen.parent.Stream):
 
         for buf in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
-            if buf.endswith('EC0\n'):
+            if buf.endswith(self.EC0_MARKER):
                 self._router.broker.start_receive(self.tty_stream)
                 self._ec0_received()
                 return

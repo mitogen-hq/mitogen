@@ -97,7 +97,7 @@ class Stream(mitogen.parent.Stream):
 
         for buf in it:
             LOG.debug('%r: received %r', self, buf)
-            if buf.endswith('EC0\n'):
+            if buf.endswith(self.EC0_MARKER):
                 self._ec0_received()
                 return
             if any(s in buf.lower() for s in self.incorrect_prompts):
