@@ -1,4 +1,5 @@
 import inspect
+import os
 import sys
 
 import unittest2
@@ -143,13 +144,6 @@ class FindRelatedImportsTest(testlib.TestCase):
             'mitogen.parent',
         ])
 
-    def test_django_pkg(self):
-        import django
-        related = self.call('django')
-        self.assertEquals(related, [
-            'django.utils.version',
-        ])
-
     def test_django_db(self):
         import django.db
         related = self.call('django.db')
@@ -158,6 +152,7 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.core',
             'django.core.signals',
             'django.db.utils',
+            'django.utils.functional',
         ])
 
     def test_django_db_models(self):
@@ -175,10 +170,9 @@ class FindRelatedImportsTest(testlib.TestCase):
             'django.db.models.expressions',
             'django.db.models.fields',
             'django.db.models.fields.files',
-            'django.db.models.fields.proxy',
             'django.db.models.fields.related',
-            'django.db.models.indexes',
-            'django.db.models.lookups',
+            'django.db.models.fields.subclassing',
+            'django.db.models.loading',
             'django.db.models.manager',
             'django.db.models.query',
             'django.db.models.signals',
@@ -210,14 +204,27 @@ class FindRelatedTest(testlib.TestCase):
         related = self.call('mitogen.fakessh')
         self.assertEquals(set(related), self.SIMPLE_EXPECT)
 
-    def test_django_pkg(self):
-        import django
-        related = self.call('django')
-        self.assertEquals(related, [
-            'django.utils',
-            'django.utils.lru_cache',
-            'django.utils.version',
-        ])
+
+class DjangoFindRelatedTest(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+    maxDiff = None
+
+    def call(self, fullname):
+        return self.klass().find_related(fullname)
+
+    WEBPROJECT_PATH = testlib.data_path('webproject')
+
+    @classmethod
+    def setUpClass(cls):
+        super(DjangoFindRelatedTest, cls).setUpClass()
+        sys.path.append(cls.WEBPROJECT_PATH)
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
+
+    @classmethod
+    def tearDownClass(cls):
+        sys.path.remove(cls.WEBPROJECT_PATH)
+        del os.environ['DJANGO_SETTINGS_MODULE']
+        super(DjangoFindRelatedTest, cls).tearDownClass()
 
     def test_django_db(self):
         import django.db
@@ -232,17 +239,14 @@ class FindRelatedTest(testlib.TestCase):
             'django.db.utils',
             'django.dispatch',
             'django.dispatch.dispatcher',
-            'django.dispatch.weakref_backports',
+            'django.dispatch.saferef',
             'django.utils',
             'django.utils._os',
-            'django.utils.deprecation',
             'django.utils.encoding',
             'django.utils.functional',
-            'django.utils.inspect',
-            'django.utils.lru_cache',
+            'django.utils.importlib',
             'django.utils.module_loading',
             'django.utils.six',
-            'django.utils.version',
         ])
 
     def test_django_db_models(self):
@@ -250,31 +254,9 @@ class FindRelatedTest(testlib.TestCase):
         related = self.call('django.db.models')
         self.assertEquals(related, [
             'django',
-            'django.apps',
-            'django.apps.config',
-            'django.apps.registry',
             'django.conf',
             'django.conf.global_settings',
             'django.core',
-            'django.core.cache',
-            'django.core.cache.backends',
-            'django.core.cache.backends.base',
-            'django.core.checks',
-            'django.core.checks.caches',
-            'django.core.checks.compatibility',
-            'django.core.checks.compatibility.django_1_10',
-            'django.core.checks.compatibility.django_1_8_0',
-            'django.core.checks.database',
-            'django.core.checks.messages',
-            'django.core.checks.model_checks',
-            'django.core.checks.registry',
-            'django.core.checks.security',
-            'django.core.checks.security.base',
-            'django.core.checks.security.csrf',
-            'django.core.checks.security.sessions',
-            'django.core.checks.templates',
-            'django.core.checks.urls',
-            'django.core.checks.utils',
             'django.core.exceptions',
             'django.core.files',
             'django.core.files.base',
@@ -287,7 +269,8 @@ class FindRelatedTest(testlib.TestCase):
             'django.core.validators',
             'django.db',
             'django.db.backends',
-            'django.db.backends.utils',
+            'django.db.backends.signals',
+            'django.db.backends.util',
             'django.db.models.aggregates',
             'django.db.models.base',
             'django.db.models.constants',
@@ -297,88 +280,44 @@ class FindRelatedTest(testlib.TestCase):
             'django.db.models.fields.files',
             'django.db.models.fields.proxy',
             'django.db.models.fields.related',
-            'django.db.models.fields.related_descriptors',
-            'django.db.models.fields.related_lookups',
-            'django.db.models.fields.reverse_related',
-            'django.db.models.functions',
-            'django.db.models.functions.base',
-            'django.db.models.functions.datetime',
-            'django.db.models.indexes',
-            'django.db.models.lookups',
+            'django.db.models.fields.subclassing',
+            'django.db.models.loading',
             'django.db.models.manager',
             'django.db.models.options',
             'django.db.models.query',
             'django.db.models.query_utils',
+            'django.db.models.related',
             'django.db.models.signals',
             'django.db.models.sql',
-            'django.db.models.sql.constants',
-            'django.db.models.sql.datastructures',
-            'django.db.models.sql.query',
-            'django.db.models.sql.subqueries',
-            'django.db.models.sql.where',
-            'django.db.models.utils',
             'django.db.transaction',
             'django.db.utils',
             'django.dispatch',
             'django.dispatch.dispatcher',
-            'django.dispatch.weakref_backports',
+            'django.dispatch.saferef',
             'django.forms',
-            'django.forms.boundfield',
-            'django.forms.fields',
-            'django.forms.forms',
-            'django.forms.formsets',
-            'django.forms.models',
-            'django.forms.renderers',
-            'django.forms.utils',
-            'django.forms.widgets',
-            'django.template',
-            'django.template.backends',
-            'django.template.backends.base',
-            'django.template.backends.django',
-            'django.template.backends.jinja2',
-            'django.template.base',
-            'django.template.context',
-            'django.template.engine',
-            'django.template.exceptions',
-            'django.template.library',
-            'django.template.loader',
-            'django.template.utils',
-            'django.templatetags',
-            'django.templatetags.static',
             'django.utils',
             'django.utils._os',
             'django.utils.crypto',
             'django.utils.datastructures',
-            'django.utils.dateformat',
             'django.utils.dateparse',
-            'django.utils.dates',
-            'django.utils.datetime_safe',
-            'django.utils.deconstruct',
             'django.utils.decorators',
             'django.utils.deprecation',
-            'django.utils.duration',
             'django.utils.encoding',
-            'django.utils.formats',
             'django.utils.functional',
-            'django.utils.html',
-            'django.utils.html_parser',
-            'django.utils.http',
-            'django.utils.inspect',
+            'django.utils.importlib',
             'django.utils.ipv6',
             'django.utils.itercompat',
-            'django.utils.lru_cache',
             'django.utils.module_loading',
-            'django.utils.numberformat',
             'django.utils.safestring',
             'django.utils.six',
             'django.utils.text',
             'django.utils.timezone',
             'django.utils.translation',
             'django.utils.tree',
-            'django.utils.version',
+            'django.utils.tzinfo',
+            'pkg_resources',
             'pytz',
             'pytz.exceptions',
-            'pytz.lazy',
             'pytz.tzfile',
             'pytz.tzinfo',
         ])
