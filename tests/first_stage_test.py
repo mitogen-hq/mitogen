@@ -35,7 +35,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         )
         stdout, stderr = proc.communicate()
         self.assertEquals(0, proc.returncode)
-        self.assertEquals("EC0\n", stdout)
+        self.assertEquals(mitogen.parent.Stream.EC0_MARKER, stdout)
         self.assertIn("Error -5 while decompressing data: incomplete or truncated stream", stderr)
 
 
