@@ -1,4 +1,5 @@
 import inspect
+import sys
 
 import unittest2
 
@@ -190,19 +191,24 @@ class FindRelatedTest(testlib.TestCase):
     def call(self, fullname):
         return self.klass().find_related(fullname)
 
+    SIMPLE_EXPECT = set([
+        'mitogen',
+        'mitogen.compat',
+        'mitogen.compat.collections',
+        'mitogen.compat.functools',
+        'mitogen.core',
+        'mitogen.master',
+        'mitogen.minify',
+        'mitogen.parent',
+    ])
+
+    if sys.version_info < (2, 7):
+        SIMPLE_EXPECT.add('mitogen.compat.tokenize')
+
     def test_simple(self):
         import mitogen.fakessh
         related = self.call('mitogen.fakessh')
-        self.assertEquals(related, [
-            'mitogen',
-            'mitogen.compat',
-            'mitogen.compat.collections',
-            'mitogen.compat.functools',
-            'mitogen.core',
-            'mitogen.master',
-            'mitogen.minify',
-            'mitogen.parent',
-        ])
+        self.assertEquals(set(related), self.SIMPLE_EXPECT)
 
     def test_django_pkg(self):
         import django
