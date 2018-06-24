@@ -41,8 +41,11 @@ def subprocess__check_output(*popenargs, **kwargs):
         cmd = kwargs.get("args")
         if cmd is None:
             cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd, output=output)
+        raise subprocess.CalledProcessError(retcode, cmd)
     return output
+
+if hasattr(subprocess, 'check_output'):
+    subprocess__check_output = subprocess.check_output
 
 
 def wait_for_port(
