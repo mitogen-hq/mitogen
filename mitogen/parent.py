@@ -189,8 +189,9 @@ def _acquire_controlling_tty():
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
-        # On BSD an explicit ioctl is required.
+    if hasattr(termios, 'TIOCSCTTY'):
+        # On BSD an explicit ioctl is required. For some inexplicable reason,
+        # Python 2.6 on Travis also requires it.
         fcntl.ioctl(2, termios.TIOCSCTTY)
 
 
