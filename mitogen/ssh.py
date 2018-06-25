@@ -53,19 +53,6 @@ HOSTKEY_FAIL = 'host key verification failed.'
 DEBUG_PREFIXES = ('debug1:', 'debug2:', 'debug3:')
 
 
-def _filter_debug(stream, it, buf):
-    while True:
-        if not buf.startswith(DEBUG_PREFIXES):
-            return buf
-        while '\n' in buf:
-            line, _, buf = buf.partition('\n')
-            LOG.debug('%r: received %r', stream, line.rstrip())
-        try:
-            buf += next(it)
-        except StopIteration:
-            return buf
-
-
 def filter_debug(stream, it):
     """
     Read line chunks from it, either yielding them directly, or building up and
@@ -74,10 +61,33 @@ def filter_debug(stream, it):
     This contains the mess of dealing with both line-oriented input, and partial
     lines such as the password prompt.
     """
+    state = 'start_of_line'
+    buf = ''
     for chunk in it:
-        chunk = _filter_debug(stream, it, chunk)
-        if chunk:
-            yield chunk
+        buf += chunk
+        while buf:
+            if state == 'start_of_line':
+                if len(buf) < 8:
+                    # short read near buffer limit, block awaiting at least 8
+                    # bytes so we can discern a debug line, or the minimum
+                    # interesting token from above or the bootstrap
+                    # ('password', 'MITO000\n').
+                    break
+                elif buf.startswith(DEBUG_PREFIXES):
+                    state = 'in_debug'
+                else:
+                    state = 'in_plain'
+            elif state == 'in_debug':
+                if '\n' not in buf:
+                    break
+                line, _, buf = buf.partition('\n')
+                LOG.debug('%r: %s', stream, line.rstrip())
+                state = 'start_of_line'
+            elif state == 'in_plain':
+                line, nl, buf = buf.partition('\n')
+                yield line + nl
+                if nl:
+                    state = 'start_of_line'
 
 
 class PasswordError(mitogen.core.StreamError):
@@ -219,7 +229,7 @@ class Stream(mitogen.parent.Stream):
 
         for buf in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
-            if buf.endswith('EC0\n'):
+            if buf.endswith(self.EC0_MARKER):
                 self._router.broker.start_receive(self.tty_stream)
                 self._ec0_received()
                 return

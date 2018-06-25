@@ -5,6 +5,7 @@ import os
 import random
 import re
 import socket
+import subprocess
 import sys
 import time
 import urlparse
@@ -14,9 +15,6 @@ import unittest2
 import mitogen.core
 import mitogen.master
 import mitogen.utils
-
-if mitogen.is_master:  # TODO: shouldn't be necessary.
-    import docker
 
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -32,6 +30,22 @@ def data_path(suffix):
         # SSH is funny about private key permissions.
         os.chmod(path, 0600)
     return path
+
+
+def subprocess__check_output(*popenargs, **kwargs):
+    # Missing from 2.6.
+    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+    output, _ = process.communicate()
+    retcode = process.poll()
+    if retcode:
+        cmd = kwargs.get("args")
+        if cmd is None:
+            cmd = popenargs[0]
+        raise subprocess.CalledProcessError(retcode, cmd)
+    return output
+
+if hasattr(subprocess, 'check_output'):
+    subprocess__check_output = subprocess.check_output
 
 
 def wait_for_port(
@@ -162,11 +176,12 @@ class TestCase(unittest2.TestCase):
         assert 0, '%r did not raise %r' % (func, exc)
 
 
-def get_docker_host(docker):
-    if docker.api.base_url == 'http+docker://localunixsocket':
+def get_docker_host():
+    url = os.environ.get('DOCKER_HOST')
+    if url in (None, 'http+docker://localunixsocket'):
         return 'localhost'
 
-    parsed = urlparse.urlparse(docker.api.base_url)
+    parsed = urlparse.urlparse(url)
     return parsed.netloc.partition(':')[0]
 
 
@@ -179,29 +194,47 @@ class DockerizedSshDaemon(object):
             self.image = 'mitogen/%s-test' % (distro,)
         return self.image
 
-    def __init__(self):
-        self.docker = docker.from_env(version='auto')
-        self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
-        self.container = self.docker.containers.run(
-            image=self.get_image(),
-            detach=True,
-            privileged=True,
-            publish_all_ports=True,
-        )
-        self.container.reload()
-        self.port = (self.container.attrs['NetworkSettings']['Ports']
-                                         ['22/tcp'][0]['HostPort'])
+    # 22/tcp -> 0.0.0.0:32771
+    PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
+    port = None
+
+    def _get_container_port(self):
+        s = subprocess__check_output(['docker', 'port', self.container_name])
+        for line in s.splitlines():
+            dport, proto, baddr, bport = self.PORT_RE.match(line).groups()
+            if dport == '22' and proto == 'tcp':
+                self.port = int(bport)
+
         self.host = self.get_host()
+        if self.port is None:
+            raise ValueError('could not find SSH port in: %r' % (s,))
+
+    def start_container(self):
+        self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
+        args = [
+            'docker',
+            'run',
+            '--detach',
+            '--privileged',
+            '--publish-all',
+            '--name', self.container_name,
+            self.get_image()
+        ]
+        subprocess__check_output(args)
+        self._get_container_port()
+
+    def __init__(self):
+        self.start_container()
 
     def get_host(self):
-        return get_docker_host(self.docker)
+        return get_docker_host()
 
     def wait_for_sshd(self):
-        wait_for_port(self.get_host(), int(self.port), pattern='OpenSSH')
+        wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
 
     def close(self):
-        self.container.stop()
-        self.container.remove()
+        args = ['docker', 'rm', '-f', self.container_name]
+        subprocess__check_output(args)
 
 
 class BrokerMixin(object):
@@ -244,6 +277,7 @@ class DockerMixin(RouterMixin):
         kwargs.setdefault('hostname', self.dockerized_ssh.host)
         kwargs.setdefault('port', self.dockerized_ssh.port)
         kwargs.setdefault('check_host_keys', 'ignore')
+        kwargs.setdefault('ssh_debug_level', '3')
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):

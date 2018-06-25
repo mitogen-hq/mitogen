@@ -51,7 +51,7 @@ can be recovered by the bootstrapped process later. It then forks into a new
 process.
 
 After fork, the parent half overwrites its ``stdin`` with the read end of the
-pipe, and the child half writes the string ``EC0\n``, then begins reading the
+pipe, and the child half writes the string ``MITOGEN0\n``, then begins reading the
 :py:mod:`zlib`-compressed payload supplied on ``stdin`` by the master, and
 writing the decompressed result to the write-end of the UNIX pipe.
 
@@ -112,12 +112,17 @@ fetched from the master a second time.
 Signalling Success
 ##################
 
-Once the first stage has signalled ``EC0\n``, the master knows it is ready to
-receive the compressed bootstrap. After decompressing and writing the bootstrap
-source to its parent Python interpreter, the first stage writes the string
-``EC1\n`` to ``stdout`` before exiting. The master process waits for this
-string before considering bootstrap successful and the child's ``stdio`` ready
-to receive messages.
+Once the first stage has signalled ``MITO000\n``, the master knows it is ready
+to receive the compressed bootstrap. After decompressing and writing the
+bootstrap source to its parent Python interpreter, the first stage writes the
+string ``MITO001\n`` to ``stdout`` before exiting. The master process waits for
+this string before considering bootstrap successful and the child's ``stdio``
+ready to receive messages.
+
+The signal value is 8 bytes to match the minimum chunk size required to
+disambiguate between lines containing an interesting token during SSH password
+authentication, a debug message from the SSH client itself, or a message from
+the first stage.
 
 
 ExternalContext.main()

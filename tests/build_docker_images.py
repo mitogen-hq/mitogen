@@ -12,7 +12,7 @@ import tempfile
 
 
 DEBIAN_DOCKERFILE = r"""
-FROM debian:stable
+FROM debian:stretch
 RUN apt-get update
 RUN \
     apt-get install -y python2.7 openssh-server sudo rsync git strace \
@@ -21,7 +21,18 @@ RUN \
     rm -rf /var/cache/apt
 """
 
-CENTOS_DOCKERFILE = r"""
+CENTOS6_DOCKERFILE = r"""
+FROM centos:6
+RUN yum clean all && \
+    yum -y install -y python2.6 openssh-server sudo rsync git strace sudo \
+                      perl-JSON python-virtualenv && \
+    yum clean all && \
+    groupadd sudo && \
+    ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
+
+"""
+
+CENTOS7_DOCKERFILE = r"""
 FROM centos:7
 RUN yum clean all && \
     yum -y install -y python2.7 openssh-server sudo rsync git strace sudo \
@@ -49,8 +60,8 @@ RUN \
     useradd -s /bin/bash -m mitogen__readonly_homedir && \
     useradd -s /bin/bash -m mitogen__slow_user && \
     chown -R root: ~mitogen__readonly_homedir && \
-    { for i in `seq 1 21`; do useradd -s /bin/bash -m mitogen__user$i; done; } && \
-    { for i in `seq 1 21`; do echo mitogen__user$i:user$i_password | chpasswd; done; } && \
+    ( for i in `seq 1 21`; do useradd -s /bin/bash -m mitogen__user${i}; done; ) && \
+    ( for i in `seq 1 21`; do echo mitogen__user${i}:user${i}_password | chpasswd; done; ) && \
     ( echo 'root:rootpassword' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo:has_sudo_password' | chpasswd; ) && \
     ( echo 'mitogen__has_sudo_pubkey:has_sudo_pubkey_password' | chpasswd; ) && \
@@ -62,7 +73,7 @@ RUN \
     ( echo 'mitogen__readonly_homedir:readonly_homedir_password' | chpasswd; ) && \
     ( echo 'mitogen__slow_user:slow_user_password' | chpasswd; ) && \
     mkdir ~mitogen__has_sudo_pubkey/.ssh && \
-    { echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; }
+    ( echo '#!/bin/bash\nexec strace -ff -o /tmp/pywrap$$.trace python2.7 "$@"' > /usr/local/bin/pywrap; chmod +x /usr/local/bin/pywrap; )
 
 COPY data/docker/mitogen__has_sudo_pubkey.key.pub /home/mitogen__has_sudo_pubkey/.ssh/authorized_keys
 COPY data/docker/mitogen__slow_user.profile /home/mitogen__slow_user/.profile
@@ -89,8 +100,11 @@ def sh(s, *args):
     return shlex.split(s)
 
 
-for (distro, wheel, prefix) in (('debian', 'sudo', DEBIAN_DOCKERFILE),
-                                ('centos', 'wheel', CENTOS_DOCKERFILE)):
+for (distro, wheel, prefix) in (
+        ('debian', 'sudo', DEBIAN_DOCKERFILE),
+        ('centos6', 'wheel', CENTOS6_DOCKERFILE),
+        ('centos7', 'wheel', CENTOS7_DOCKERFILE),
+    ):
     mydir = os.path.abspath(os.path.dirname(__file__))
     with tempfile.NamedTemporaryFile(dir=mydir) as dockerfile_fp:
         dockerfile_fp.write(prefix)

@@ -189,8 +189,9 @@ def _acquire_controlling_tty():
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if sys.platform.startswith('freebsd') or sys.platform == 'darwin':
-        # On BSD an explicit ioctl is required.
+    if hasattr(termios, 'TIOCSCTTY'):
+        # On BSD an explicit ioctl is required. For some inexplicable reason,
+        # Python 2.6 on Travis also requires it.
         fcntl.ioctl(2, termios.TIOCSCTTY)
 
 
@@ -648,7 +649,7 @@ class Stream(mitogen.core.Stream):
     Base for streams capable of starting new slaves.
     """
     #: The path to the remote Python interpreter.
-    python_path = 'python2.7'
+    python_path = 'python'
 
     #: Maximum time to wait for a connection attempt.
     connect_timeout = 30.0
@@ -789,11 +790,11 @@ class Stream(mitogen.core.Stream):
                 sys.executable += sys.version[:3]
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
-        os.write(1,'EC0\n')
+        os.write(1,'MITO000\n')
         C=_(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN),'zip')
         os.fdopen(W,'w',0).write(C)
         os.fdopen(w,'w',0).write('PREAMBLE_LEN\n'+C)
-        os.write(1,'EC1\n')
+        os.write(1,'MITO001\n')
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
@@ -869,13 +870,17 @@ class Stream(mitogen.core.Stream):
             self._reap_child()
             raise
 
+    #: For ssh.py, this must be at least max(len('password'), len('debug1:'))
+    EC0_MARKER = 'MITO000\n'
+    EC1_MARKER = 'MITO001\n'
+
     def _ec0_received(self):
         LOG.debug('%r._ec0_received()', self)
         write_all(self.transmit_side.fd, self.get_preamble())
-        discard_until(self.receive_side.fd, 'EC1\n', self.connect_deadline)
+        discard_until(self.receive_side.fd, 'MITO001\n', self.connect_deadline)
 
     def _connect_bootstrap(self, extra_fd):
-        discard_until(self.receive_side.fd, 'EC0\n', self.connect_deadline)
+        discard_until(self.receive_side.fd, 'MITO000\n', self.connect_deadline)
         self._ec0_received()
 
 

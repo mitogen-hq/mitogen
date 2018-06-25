@@ -13,6 +13,7 @@ import sys
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
+        python_version=sys.version[:3],
         argv=sys.argv,
         __file__=__file__,
         argv_types=[str(type(s)) for s in sys.argv],

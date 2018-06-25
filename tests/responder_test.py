@@ -30,7 +30,7 @@ class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
         # Ensure a program composed of a single script can be imported
         # successfully.
         args = [sys.executable, testlib.data_path('self_contained_program.py')]
-        output = subprocess.check_output(args)
+        output = testlib.subprocess__check_output(args)
         self.assertEquals(output, "['__main__', 50]\n")
 
 

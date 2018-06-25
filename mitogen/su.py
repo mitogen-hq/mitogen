@@ -58,6 +58,7 @@ class Stream(mitogen.parent.Stream):
     incorrect_prompts = (
         'su: sorry',                    # BSD
         'su: authentication failure',   # Linux
+        'su: incorrect password',       # CentOS 6
     )
 
     def construct(self, username=None, password=None, su_path=None,
@@ -97,7 +98,7 @@ class Stream(mitogen.parent.Stream):
 
         for buf in it:
             LOG.debug('%r: received %r', self, buf)
-            if buf.endswith('EC0\n'):
+            if buf.endswith(self.EC0_MARKER):
                 self._ec0_received()
                 return
             if any(s in buf.lower() for s in self.incorrect_prompts):
