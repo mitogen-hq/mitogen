@@ -436,7 +436,7 @@ class ModuleFinder(object):
             # This would be an ImportError in real code.
             return ''
 
-        return '.'.join(bits[:-level])
+        return '.'.join(bits[:-level]) + '.'
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
@@ -471,7 +471,7 @@ class ModuleFinder(object):
                 modnames = [modname, '%s.%s' % (fullname, modname)]
             else:
                 modnames = [
-                    '%s.%s' % (self.resolve_relpath(fullname, level), modname)
+                    '%s%s' % (self.resolve_relpath(fullname, level), modname)
                 ]
 
             maybe_names.extend(modnames)

@@ -120,7 +120,7 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 0))
 
     def test_rel1(self):
-        self.assertEquals('email', self.call('email.utils', 1))
+        self.assertEquals('email.', self.call('email.utils', 1))
 
     def test_rel2(self):
         self.assertEquals('', self.call('email.utils', 2))
@@ -188,14 +188,15 @@ class FindRelatedTest(testlib.TestCase):
 
     SIMPLE_EXPECT = set([
         'mitogen',
-        'mitogen.compat',
-        'mitogen.compat.functools',
         'mitogen.core',
         'mitogen.master',
         'mitogen.minify',
         'mitogen.parent',
     ])
 
+    if sys.version_info < (3, 2):
+        SIMPLE_EXPECT.add('mitogen.compat')
+        SIMPLE_EXPECT.add('mitogen.compat.functools')
     if sys.version_info < (2, 7):
         SIMPLE_EXPECT.add('mitogen.compat.tokenize')
 
@@ -289,25 +290,45 @@ class DjangoFindRelatedTest(testlib.TestCase):
             'django.db.models.related',
             'django.db.models.signals',
             'django.db.models.sql',
+            'django.db.models.sql.aggregates',
+            'django.db.models.sql.constants',
+            'django.db.models.sql.datastructures',
+            'django.db.models.sql.expressions',
+            'django.db.models.sql.query',
+            'django.db.models.sql.subqueries',
+            'django.db.models.sql.where',
             'django.db.transaction',
             'django.db.utils',
             'django.dispatch',
             'django.dispatch.dispatcher',
             'django.dispatch.saferef',
             'django.forms',
+            'django.forms.fields',
+            'django.forms.forms',
+            'django.forms.formsets',
+            'django.forms.models',
+            'django.forms.util',
+            'django.forms.widgets',
             'django.utils',
             'django.utils._os',
             'django.utils.crypto',
             'django.utils.datastructures',
+            'django.utils.dateformat',
             'django.utils.dateparse',
+            'django.utils.dates',
+            'django.utils.datetime_safe',
             'django.utils.decorators',
             'django.utils.deprecation',
             'django.utils.encoding',
+            'django.utils.formats',
             'django.utils.functional',
+            'django.utils.html',
+            'django.utils.html_parser',
             'django.utils.importlib',
             'django.utils.ipv6',
             'django.utils.itercompat',
             'django.utils.module_loading',
+            'django.utils.numberformat',
             'django.utils.safestring',
             'django.utils.six',
             'django.utils.text',
@@ -316,6 +337,10 @@ class DjangoFindRelatedTest(testlib.TestCase):
             'django.utils.tree',
             'django.utils.tzinfo',
             'pkg_resources',
+            'pkg_resources.extern',
+            'pkg_resources.extern.appdirs',
+            'pkg_resources.extern.packaging',
+            'pkg_resources.extern.six',
             'pytz',
             'pytz.exceptions',
             'pytz.tzfile',
