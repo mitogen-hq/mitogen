@@ -41,7 +41,7 @@ class Handler(logging.Handler):
     """
     def __init__(self, display, normal_method):
         logging.Handler.__init__(self)
-        self.formatter = mitogen.utils.log_get_formatter(usec=True)
+        self.formatter = mitogen.utils.log_get_formatter()
         self.display = display
         self.normal_method = normal_method
 

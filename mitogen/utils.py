@@ -56,19 +56,15 @@ def _formatTime(record, datefmt=None):
     return dt.strftime(datefmt)
 
 
-def log_get_formatter(usec=False):
-    usec = ('MITOGEN_LOG_USEC' in os.environ) or usec
-    datefmt = '%H:%M:%S'
-    if usec:
-        datefmt += '.%f'
-
+def log_get_formatter():
+    datefmt = '%H:%M:%S.%f'
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     formatter = logging.Formatter(fmt, datefmt)
     formatter.formatTime = _formatTime
     return formatter
 
 
-def log_to_file(path=None, io=False, usec=False, level='INFO'):
+def log_to_file(path=None, io=False, level='INFO'):
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
@@ -86,7 +82,7 @@ def log_to_file(path=None, io=False, usec=False, level='INFO'):
     log.setLevel(level)
 
     handler = logging.StreamHandler(fp)
-    handler.formatter = log_get_formatter(usec=usec)
+    handler.formatter = log_get_formatter()
     log.handlers.insert(0, handler)
 
 

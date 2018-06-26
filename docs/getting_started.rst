@@ -155,10 +155,6 @@ Logging Environment Variables
     produces verbose records of any IO interaction, which is useful for
     debugging hangs and deadlocks.
 
-``MITOGEN_LOG_USEC``
-    If present, forces microsecond-level timestamps for any call to
-    :py:func:`mitogen.utils.log_to_file`.
-
 
 
 Logging Records
