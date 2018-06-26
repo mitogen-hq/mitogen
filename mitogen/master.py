@@ -105,6 +105,33 @@ LOAD_CONST = dis.opname.index('LOAD_CONST')
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 
 
+if sys.version_info < (3, 0):
+    def iter_opcodes(co):
+        # Yield `(op, oparg)` tuples from the code object `co`.
+        ordit = imap(ord, co.co_code)
+        nextb = ordit.next
+        return ((c, (None
+                     if c < dis.HAVE_ARGUMENT else
+                     (nextb() | (nextb() << 8))))
+                    for c in ordit)
+elif sys.version_info < (3, 6):
+    def iter_opcodes(co):
+        # Yield `(op, oparg)` tuples from the code object `co`.
+        ordit = iter(co.co_code)
+        nextb = ordit.__next__
+        return ((c, (None
+                     if c < dis.HAVE_ARGUMENT else
+                     (nextb() | (nextb() << 8))))
+                    for c in ordit)
+else:
+    def iter_opcodes(co):
+        # Yield `(op, oparg)` tuples from the code object `co`.
+        ordit = iter(co.co_code)
+        nextb = ordit.__next__
+        # https://github.com/abarnert/cpython/blob/c095a32f/Python/wordcode.md
+        return ((c, nextb()) for c in ordit)
+
+
 def scan_code_imports(co):
     """Given a code object `co`, scan its bytecode yielding any
     ``IMPORT_NAME`` and associated prior ``LOAD_CONST`` instructions
@@ -120,19 +147,7 @@ def scan_code_imports(co):
         * `namelist`: for `ImportFrom`, the list of names to be imported from
           `modname`.
     """
-    # Yield `(op, oparg)` tuples from the code object `co`.
-    if mitogen.core.PY3:
-        ordit = iter(co.co_code)
-        nextb = ordit.__next__
-    else:
-        ordit = imap(ord, co.co_code)
-        nextb = ordit.next
-
-    opit = ((c, (None
-                 if c < dis.HAVE_ARGUMENT else
-                 (nextb() | (nextb() << 8))))
-            for c in ordit)
-
+    opit = iter_opcodes(co)
     opit, opit2, opit3 = itertools.tee(opit, 3)
     try:
         next(opit2)
