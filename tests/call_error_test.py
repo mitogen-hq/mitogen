@@ -6,9 +6,8 @@ import unittest2
 
 import mitogen.core
 
-
-class MyError(Exception):
-    pass
+import testlib
+import plain_old_module
 
 
 class ConstructorTest(unittest2.TestCase):
@@ -23,9 +22,9 @@ class ConstructorTest(unittest2.TestCase):
         self.assertEquals(e.args[0], '11')
 
     def test_from_exc(self):
-        ve = MyError('eek')
+        ve = plain_old_module.MyError('eek')
         e = self.klass(ve)
-        self.assertEquals(e.args[0], '__main__.MyError: eek')
+        self.assertEquals(e.args[0], 'plain_old_module.MyError: eek')
 
     def test_form_base_exc(self):
         ve = SystemExit('eek')
@@ -34,12 +33,12 @@ class ConstructorTest(unittest2.TestCase):
 
     def test_from_exc_tb(self):
         try:
-            raise MyError('eek')
-        except MyError:
+            raise plain_old_module.MyError('eek')
+        except plain_old_module.MyError:
             ve = sys.exc_info()[1]
             e = self.klass(ve)
 
-        self.assertTrue(e.args[0].startswith('__main__.MyError: eek'))
+        self.assertTrue(e.args[0].startswith('plain_old_module.MyError: eek'))
         self.assertTrue('test_from_exc_tb' in e.args[0])
 
 
@@ -57,20 +56,20 @@ class PickleTest(unittest2.TestCase):
         self.assertEquals(e2.args[0], '11')
 
     def test_from_exc(self):
-        ve = MyError('eek')
+        ve = plain_old_module.MyError('eek')
         e = self.klass(ve)
         e2 = pickle.loads(pickle.dumps(e))
-        self.assertEquals(e2.args[0], '__main__.MyError: eek')
+        self.assertEquals(e2.args[0], 'plain_old_module.MyError: eek')
 
     def test_from_exc_tb(self):
         try:
-            raise MyError('eek')
-        except MyError:
+            raise plain_old_module.MyError('eek')
+        except plain_old_module.MyError:
             ve = sys.exc_info()[1]
             e = self.klass(ve)
 
         e2 = pickle.loads(pickle.dumps(e))
-        self.assertTrue(e2.args[0].startswith('__main__.MyError: eek'))
+        self.assertTrue(e2.args[0].startswith('plain_old_module.MyError: eek'))
         self.assertTrue('test_from_exc_tb' in e2.args[0])
 
 

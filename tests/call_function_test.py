@@ -7,10 +7,7 @@ import mitogen.core
 import mitogen.master
 
 import testlib
-
-
-class MyError(Exception):
-    pass
+import plain_old_module
 
 
 class CrazyType(object):
@@ -22,7 +19,7 @@ def function_that_adds_numbers(x, y):
 
 
 def function_that_fails():
-    raise MyError('exception text')
+    raise plain_old_module.MyError('exception text')
 
 
 def func_with_bad_return_value():
@@ -53,7 +50,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
         s = str(exc)
         etype, _, s = s.partition(': ')
-        self.assertEqual(etype, '__main__.MyError')
+        self.assertEqual(etype, 'plain_old_module.MyError')
 
         msg, _, s = s.partition('\n')
         self.assertEqual(msg, 'exception text')
