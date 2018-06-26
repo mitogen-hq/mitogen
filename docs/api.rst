@@ -485,7 +485,7 @@ Router Class
 
         :param str python_path:
             Path to the Python interpreter to use for bootstrap. Defaults to
-            ``python2.7``. In future this may default to ``sys.executable``.
+            :data:`sys.executable`. For SSH, defaults to ``python``.
 
         :param bool debug:
             If :data:`True`, arrange for debug logging (:py:meth:`enable_debug`) to

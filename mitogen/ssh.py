@@ -103,6 +103,10 @@ class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
 
+    #: Default to whatever is available as 'python' on the remote machine,
+    #: overriding sys.executable use.
+    python_path = 'python'
+
     #: Number of -v invocations to pass on command line.
     ssh_debug_level = 0
 
