@@ -471,7 +471,7 @@ class ModuleFinder(object):
                 for name in maybe_names
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
-                and 'six.moves' not in name  # TODO: crap
+                and u'six.moves' not in name  # TODO: crap
             )
         ))
 
