@@ -60,14 +60,14 @@ class GetModuleViaPkgutilTest(testlib.TestCase):
         path, src, is_pkg = self.call('module_finder_testmod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/__init__.py'))
-        self.assertEquals('', src)
+        self.assertEquals(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
         path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/empty_mod.py'))
-        self.assertEquals('', src)
+        self.assertEquals(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
     def test_regular_mod(self):
@@ -75,7 +75,8 @@ class GetModuleViaPkgutilTest(testlib.TestCase):
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/regular_mod.py'))
-        self.assertEquals(src, inspect.getsource(regular_mod))
+        self.assertEquals(mitogen.core.to_text(src),
+                          inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
 
 
@@ -89,7 +90,7 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         import __main__
         path, src, is_pkg = self.call('__main__')
         self.assertEquals(path, __main__.__file__)
-        self.assertEquals(src, open(path).read())
+        self.assertEquals(src, open(path, 'rb').read())
         self.assertFalse(is_pkg)
 
     def test_dylib_fails(self):

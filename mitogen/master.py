@@ -308,9 +308,10 @@ class ModuleFinder(object):
         resembles a Python script. For now we simply verify the file contains
         ASCII text.
         """
-        fp = open(path, 'r')
+        fp = open(path, 'rb')
         try:
-            return not set(fp.read(512)).difference(string.printable)
+            sample = fp.read(512).decode('latin-1')
+            return not set(sample).difference(string.printable)
         finally:
             fp.close()
 
