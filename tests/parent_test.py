@@ -78,7 +78,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
                 connect_timeout=3,
             )
         )
-        prefix = 'Child start failed: [Errno 2] No such file or directory.'
+        prefix = 'Child start failed: [Errno 2] No such file or directory'
         self.assertTrue(e.args[0].startswith(prefix))
 
     def test_via_enoent(self):
@@ -90,7 +90,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
                 connect_timeout=3,
             )
         )
-        s = 'Child start failed: [Errno 2] No such file or directory.'
+        s = 'Child start failed: [Errno 2] No such file or directory'
         self.assertTrue(s in e.args[0])
 
 
@@ -123,12 +123,12 @@ class TtyCreateChildTest(unittest2.TestCase):
             ])
             deadline = time.time() + 5.0
             for line in mitogen.parent.iter_read([fd], deadline):
-                self.assertEquals('hi\n', line)
+                self.assertEquals(mitogen.core.b('hi\n'), line)
                 break
             waited_pid, status = os.waitpid(pid, 0)
             self.assertEquals(pid, waited_pid)
             self.assertEquals(0, status)
-            self.assertEquals('', tf.read())
+            self.assertEquals(mitogen.core.b(''), tf.read())
         finally:
             tf.close()
 
@@ -194,7 +194,7 @@ class WriteAllTest(unittest2.TestCase):
         mitogen.core.set_nonblock(proc.stdin.fileno())
         return proc
 
-    ten_ms_chunk = ('x' * 65535)
+    ten_ms_chunk = (mitogen.core.b('x') * 65535)
 
     def test_no_deadline(self):
         proc = self.make_proc()

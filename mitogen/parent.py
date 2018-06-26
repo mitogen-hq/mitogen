@@ -340,7 +340,7 @@ def iter_read(fds, deadline=None):
     if not poller.readers:
         raise mitogen.core.StreamError(
             'EOF on stream; last 300 bytes received: %r' %
-            (b('').join(bits)[-300:],)
+            (b('').join(bits)[-300:].decode('latin1'),)
         )
     raise mitogen.core.TimeoutError('read timed out')
 
