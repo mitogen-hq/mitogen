@@ -683,12 +683,6 @@ class Importer(object):
         _tls.running = True
         try:
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
-            # #114: explicitly whitelisted prefixes override any
-            # system-installed package.
-            if self.whitelist != ['']:
-                if any(fullname.startswith(s) for s in self.whitelist):
-                    return self
-
             pkgname, dot, _ = fullname.rpartition('.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
@@ -700,6 +694,12 @@ class Importer(object):
             if pkgname and suffix not in self._present.get(pkgname, ()):
                 _v and LOG.debug('%r: master doesn\'t know %r', self, fullname)
                 return None
+
+            # #114: explicitly whitelisted prefixes override any
+            # system-installed package.
+            if self.whitelist != ['']:
+                if any(fullname.startswith(s) for s in self.whitelist):
+                    return self
 
             try:
                 self.builtin_find_module(fullname)
