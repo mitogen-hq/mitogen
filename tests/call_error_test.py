@@ -29,7 +29,9 @@ class ConstructorTest(unittest2.TestCase):
     def test_form_base_exc(self):
         ve = SystemExit('eek')
         e = self.klass(ve)
-        self.assertEquals(e[0], 'exceptions.SystemExit: eek')
+        self.assertEquals(e.args[0],
+            # varies across 2/3.
+            '%s.%s: eek' % (type(ve).__module__, type(ve).__name__))
 
     def test_from_exc_tb(self):
         try:
