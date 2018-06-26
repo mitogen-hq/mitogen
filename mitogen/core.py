@@ -575,7 +575,7 @@ class Receiver(object):
 
     def __iter__(self):
         while True:
-            msg = self.get()
+            msg = self.get(throw_dead=False)
             if msg.is_dead:
                 return
             yield msg
