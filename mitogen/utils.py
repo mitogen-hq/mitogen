@@ -99,7 +99,10 @@ def run_with_router(func, *args, **kwargs):
 def with_router(func):
     def wrapper(*args, **kwargs):
         return run_with_router(func, *args, **kwargs)
-    wrapper.func_name = func.func_name
+    if mitogen.core.PY3:
+        wrapper.func_name = func.__name__
+    else:
+        wrapper.func_name = func.func_name
     return wrapper
 
 

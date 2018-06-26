@@ -83,7 +83,7 @@ class PermissionTest(testlib.RouterMixin, testlib.TestCase):
         exc = self.assertRaises(mitogen.core.CallError, lambda:
             l2.call(call_service_in, l1, MyService.name(), 'privileged_op'))
         msg = mitogen.service.Invoker.unauthorized_msg % (
-            'privileged_op',
+            u'privileged_op',
             MyService.name(),
         )
         self.assertTrue(msg in exc.args[0])

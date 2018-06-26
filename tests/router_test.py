@@ -1,4 +1,3 @@
-import StringIO
 import logging
 import subprocess
 import time
@@ -146,7 +145,7 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         # Verify CallError received by reply_to target.
         e = self.assertRaises(mitogen.core.CallError,
                               lambda: reply_target.get().unpickle())
-        self.assertEquals(e[0], self.router.refused_msg)
+        self.assertEquals(e.args[0], self.router.refused_msg)
 
 
 class CrashTest(testlib.BrokerMixin, unittest2.TestCase):

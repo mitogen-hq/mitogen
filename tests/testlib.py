@@ -214,7 +214,7 @@ class DockerizedSshDaemon(object):
 
     def _get_container_port(self):
         s = subprocess__check_output(['docker', 'port', self.container_name])
-        for line in s.splitlines():
+        for line in s.decode().splitlines():
             dport, proto, baddr, bport = self.PORT_RE.match(line).groups()
             if dport == '22' and proto == 'tcp':
                 self.port = int(bport)
@@ -291,7 +291,7 @@ class DockerMixin(RouterMixin):
         kwargs.setdefault('hostname', self.dockerized_ssh.host)
         kwargs.setdefault('port', self.dockerized_ssh.port)
         kwargs.setdefault('check_host_keys', 'ignore')
-        kwargs.setdefault('ssh_debug_level', '3')
+        kwargs.setdefault('ssh_debug_level', 3)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):
