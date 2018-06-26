@@ -57,7 +57,8 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
                 connect_timeout=3,
             )
         )
-        self.assertEquals(e.args[0], "EOF on stream; last 300 bytes received: ''")
+        prefix = "EOF on stream; last 300 bytes received: "
+        self.assertTrue(e.args[0].startswith(prefix))
 
     def test_via_eof(self):
         # Verify FD leakage does not keep failed process open.
@@ -69,7 +70,8 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
                 connect_timeout=3,
             )
         )
-        self.assertTrue("EOF on stream; last 300 bytes received: ''" in e.args[0])
+        s = "EOF on stream; last 300 bytes received: "
+        self.assertTrue(s in e.args[0])
 
     def test_direct_enoent(self):
         e = self.assertRaises(mitogen.core.StreamError,
