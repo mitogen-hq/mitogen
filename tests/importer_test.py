@@ -118,7 +118,8 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
         source = mod.__loader__.get_source(self.modname)
-        self.assertEquals(source, zlib.decompress(self.data))
+        self.assertEquals(source,
+            mitogen.core.to_text(zlib.decompress(self.data)))
 
     def test_module_loader_set(self):
         self.set_get_module_response(self.response)
