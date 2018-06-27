@@ -451,6 +451,9 @@ def _proxy_connect(name, method_name, kwargs, econtext):
 
 
 class Argv(object):
+    """
+    Wrapper to defer argv formatting when debug logging is disabled.
+    """
     def __init__(self, argv):
         self.argv = argv
 
@@ -465,6 +468,38 @@ class Argv(object):
 
     def __str__(self):
         return ' '.join(map(self.escape, self.argv))
+
+
+class CallSpec(object):
+    """
+    Wrapper to defer call argument formatting when debug logging is disabled.
+    """
+    def __init__(self, func, args, kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def _get_name(self):
+        return u'%s.%s' % (self.func.__module__,
+                           self.func.__name__)
+
+    def _get_args(self):
+        return u', '.join(repr(a) for a in self.args)
+
+    def _get_kwargs(self):
+        s = u''
+        if self.kwargs:
+            s = u', '.join('%s=%r' % (k, v) for k, v in self.kwargs.items())
+            if self.args:
+                s = u', ' + s
+        return s
+
+    def __repr__(self):
+        return '%s(%s%s)' % (
+            self._get_name(),
+            self._get_args(),
+            self._get_kwargs(),
+        )
 
 
 class KqueuePoller(mitogen.core.Poller):
@@ -949,8 +984,7 @@ class Context(mitogen.core.Context):
         return hash((self.router, self.context_id))
 
     def call_async(self, fn, *args, **kwargs):
-        LOG.debug('%r.call_async(%r, *%r, **%r)',
-                  self, fn, args, kwargs)
+        LOG.debug('%r.call_async(): %r', self, CallSpec(fn, args, kwargs))
         return self.send_async(make_call_msg(fn, *args, **kwargs))
 
     def call(self, fn, *args, **kwargs):
