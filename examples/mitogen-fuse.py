@@ -1,9 +1,13 @@
 #!/usr/bin/env python
+#
+# pip install fusepy
+#
 # This implementation could improve a /lot/, but the core library is missing
 # some functionality (#213) to make that easy. Additionally it needs a set of
 # Python bindings for FUSE that stupidly require use of a thread pool.
 
 from __future__ import absolute_import, division
+from __future__ import unicode_literals
 
 import errno
 import logging
@@ -23,13 +27,25 @@ import os
 LOG = logging.getLogger(__name__)
 
 
+def to_text(p):
+    """
+    On 3.x, fusepy returns paths as bytes.
+    """
+    if isinstance(p, bytes):
+        return p.decode('utf-8')
+    return p
+
+
 def errno_wrap(modname, func, *args):
     try:
         return getattr(globals()[modname], func)(*args), None
     except (IOError, OSError):
-        LOG.exception('While running %r(**%r)', func, args)
         e = sys.exc_info()[1]
-        return None, errno.errorcode[e.args[0]]
+        if e.args[0] == errno.ENOENT:
+            LOG.error('%r(**%r): %s', func, args, e)
+        else:
+            LOG.exception('While running %r(**%r)', func, args)
+        return None, to_text(errno.errorcode[e.args[0]])
 
 
 def errno_call(context, func, *args):
@@ -128,14 +144,17 @@ class Operations(fuse.Operations):  # fuse.LoggingMixIn,
         return self._context
 
     def chmod(self, path, mode):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.chmod, path, mode)
 
     def chown(self, path, uid, gid):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.chown, path, uid, gid)
 
     def create(self, path, mode):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, _create, path, mode) or 0
 
@@ -156,10 +175,12 @@ class Operations(fuse.Operations):  # fuse.LoggingMixIn,
         return errno_call(self._context, _stat, path)
 
     def mkdir(self, path, mode):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.mkdir, path, mode)
 
     def read(self, path, size, offset, fh):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, _read, path, size, offset)
 
@@ -176,41 +197,52 @@ class Operations(fuse.Operations):  # fuse.LoggingMixIn,
         return errno_call(self._context, os.readlink, path)
 
     def rename(self, old, new):
+        old = old.decode(self.encoding)
+        new = new.decode(self.encoding)
         return errno_call(self._context, os.rename, old, new)
         # TODO return self.sftp.rename(old, self.root + new)
 
     def rmdir(self, path):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.rmdir, path)
 
     def symlink(self, target, source):
+        target = target.decode(self.encoding)
+        source = source.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.symlink, source, target)
 
     def truncate(self, path, length, fh=None):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, _truncate, path, length)
 
     def unlink(self, path):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.unlink, path)
 
     def utimens(self, path, times=None):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, os.utime, path, times)
 
     def write(self, path, data, offset, fh):
+        path = path.decode(self.encoding)
         _evil_name(path)
         return errno_call(self._context, _write, path, data, offset)
 
 
-if __name__ == '__main__':
+@mitogen.main(log_level='DEBUG')
+def main(router):
     if len(sys.argv) != 3:
         print('usage: %s <host> <mountpoint>' % sys.argv[0])
         sys.exit(1)
 
-    ops = Operations(sys.argv[1])
-    mount_point = sys.argv[2]
-
-    mitogen.utils.log_to_file(level='DEBUG')
-    blerp = fuse.FUSE(ops, mount_point, foreground=True)
+    blerp = fuse.FUSE(
+        operations=Operations(sys.argv[1]),
+        mountpoint=sys.argv[2],
+        foreground=True,
+        volname='%s (Mitogen)' % (sys.argv[1],),
+    )
