@@ -81,7 +81,14 @@ def log_to_file(path=None, io=False, level='INFO'):
     level = getattr(logging, level, logging.INFO)
     log.setLevel(level)
 
+    # Prevent accidental duplicate log_to_file() calls from generating
+    # duplicate output.
+    for handler_ in reversed(log.handlers):
+        if getattr(handler_, 'is_mitogen', None):
+            log.handlers.remove(handler_)
+
     handler = logging.StreamHandler(fp)
+    handler.is_mitogen = True
     handler.formatter = log_get_formatter()
     log.handlers.insert(0, handler)
 
