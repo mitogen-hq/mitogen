@@ -499,10 +499,6 @@ class Pool(object):
 
     def _validate(self, msg):
         tup = msg.unpickle(throw=False)
-        LOG.debug('_validate(): %r', tup)
-        LOG.debug('_validate(): %r', mitogen.core.PY3)
-        LOG.debug('_validate(): %r', list(map(type, tup)))
-        LOG.debug('_validate(): UnicodeType=%r', mitogen.core.UnicodeType)
         if not (isinstance(tup, tuple) and
                 len(tup) == 3 and
                 isinstance(tup[0], mitogen.core.AnyTextType) and
