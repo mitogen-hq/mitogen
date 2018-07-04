@@ -17,69 +17,8 @@ Latch Class
 
 .. currentmodule:: mitogen.core
 
-.. class:: Latch ()
+.. autoclass:: Latch ()
 
-    A latch is a :py:class:`Queue.Queue`-like object that supports mutation and
-    waiting from multiple threads, however unlike :py:class:`Queue.Queue`,
-    waiting threads always remain interruptible, so CTRL+C always succeeds, and
-    waits where a timeout is set experience no wake up latency. These
-    properties are not possible in combination using the built-in threading
-    primitives available in Python 2.x.
-
-    Latches implement queues using the UNIX self-pipe trick, and a per-thread
-    :py:func:`socket.socketpair` that is lazily created the first time any
-    latch attempts to sleep on a thread, and dynamically associated with the
-    waiting Latch only for duration of the wait.
-
-    See :ref:`waking-sleeping-threads` for further discussion.
-
-    .. method:: empty ()
-
-        Return :py:data:`True` if calling :py:meth:`get` would block.
-
-        As with :py:class:`Queue.Queue`, :py:data:`True` may be returned even
-        though a subsequent call to :py:meth:`get` will succeed, since a
-        message may be posted at any moment between :py:meth:`empty` and
-        :py:meth:`get`.
-
-        As with :py:class:`Queue.Queue`, :py:data:`False` may be returned even
-        though a subsequent call to :py:meth:`get` will block, since another
-        waiting thread may be woken at any moment between :py:meth:`empty` and
-        :py:meth:`get`.
-
-    .. method:: get (timeout=None, block=True)
-
-        Return the next object enqueued on this latch, or sleep waiting for
-        one.
-
-        :param float timeout:
-            If not :py:data:`None`, specifies a timeout in seconds.
-
-        :param bool block:
-            If :py:data:`False`, immediately raise
-            :py:class:`mitogen.core.TimeoutError` if the latch is empty.
-
-        :raises mitogen.core.LatchError:
-            :py:meth:`close` has been called, and the object is no longer valid.
-
-        :raises mitogen.core.TimeoutError:
-            Timeout was reached.
-
-        :returns:
-            The de-queued object.
-
-    .. method:: put (obj)
-
-        Enqueue an object on this latch, waking the first thread that is asleep
-        waiting for a result, if one exists.
-
-        :raises mitogen.core.LatchError:
-            :py:meth:`close` has been called, and the object is no longer valid.
-
-    .. method:: close ()
-
-        Mark the latch as closed, and cause every sleeping thread to be woken,
-        with :py:class:`mitogen.core.LatchError` raised in each thread.
 
 
 Side Class
