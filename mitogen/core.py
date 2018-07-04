@@ -1258,8 +1258,10 @@ class Latch(object):
             if i >= self._waking:
                 raise e or TimeoutError()
             self._waking -= 1
-            if rsock.recv(2) != b('\x7f'):
-                raise LatchError('internal error: received >1 wakeups')
+            byte = rsock.recv(10)
+            if byte != b('\x7f'):
+                raise LatchError('internal error: received >1 wakeups: %r'
+                                 % (byte,))
             if e:
                 raise e
             if self.closed:
