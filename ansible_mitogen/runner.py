@@ -52,7 +52,8 @@ import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 
 try:
-    from cStringIO import StringIO
+    # Cannot use cStringIO as it does not support Unicode.
+    from StringIO import StringIO
 except ImportError:
     from io import StringIO
 
