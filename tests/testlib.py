@@ -25,6 +25,7 @@ except ImportError:
     from io import StringIO
 
 
+LOG = logging.getLogger(__name__)
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 sys.path.append(DATA_DIR)
 
@@ -185,6 +186,7 @@ class TestCase(unittest2.TestCase):
             e = sys.exc_info()[1]
             return e
         except BaseException:
+            LOG.exception('Original exception')
             e = sys.exc_info()[1]
             assert 0, '%r raised %r, not %r' % (func, e, exc)
         assert 0, '%r did not raise %r' % (func, exc)
