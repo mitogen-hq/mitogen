@@ -425,6 +425,8 @@ class Message(object):
                 return Kwargs
         elif module == '_codecs' and func == 'encode':
             return self._unpickle_bytes
+        elif module == '__builtin__' and func == 'bytes':
+            return BytesType
         raise StreamError('cannot unpickle %r/%r', module, func)
 
     @property
