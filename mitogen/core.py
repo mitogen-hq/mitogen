@@ -869,17 +869,23 @@ class Side(object):
     def close(self):
         if not self.closed:
             _vv and IOLOG.debug('%r.close()', self)
-            os.close(self.fd)
             self.closed = True
+            os.close(self.fd)
 
     def read(self, n=CHUNK_SIZE):
+        if self.closed:
+            # Refuse to touch the handle after closed, it may have been reused
+            # by another thread. TODO: synchronize read()/write()/close().
+            return b('')
         s, disconnected = io_op(os.read, self.fd, n)
         if disconnected:
-            return ''
+            return b('')
         return s
 
     def write(self, s):
-        if self.fd is None:
+        if self.closed or self.fd is None:
+            # Refuse to touch the handle after closed, it may have been reused
+            # by another thread.
             return None
 
         written, disconnected = io_op(os.write, self.fd, s)
@@ -1303,11 +1309,13 @@ class Latch(object):
         When a result is not immediately available, sleep waiting for
         :meth:`put` to write a byte to our socket pair.
         """
-        _vv and IOLOG.debug('%r._get_sleep(timeout=%r, block=%r)',
-                            self, timeout, block)
+        _vv and IOLOG.debug('%r._get_sleep(timeout=%r, block=%r, rfd=%d, wfd=%d)',
+                            self, timeout, block, rsock.fileno(),
+                            wsock.fileno())
         e = None
+        woken = None
         try:
-            l = list(poller.poll(timeout))
+            woken = list(poller.poll(timeout))
         except Exception:
             e = sys.exc_info()[1]
 
@@ -1317,7 +1325,9 @@ class Latch(object):
             del self._sleeping[i]
             self._sockets.append((rsock, wsock))
             if i >= self._waking:
-                raise e or TimeoutError(repr(l))
+                recv = rsock.recv(10) if woken else None
+                s = '%r: woken=%r, recv=%r' % (self, woken, recv)
+                raise e or TimeoutError(s)
             self._waking -= 1
             byte = rsock.recv(10)
             if byte != b('\x7f'):
