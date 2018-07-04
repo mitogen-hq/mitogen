@@ -20,7 +20,6 @@ class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
         python_path = 'python3'
 
     def test_succeeds(self):
-        self.router.enable_debug()
         spare = self.router.fork()
         target = self.router.local(python_path=self.python_path)
 
