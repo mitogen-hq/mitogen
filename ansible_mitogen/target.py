@@ -35,6 +35,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import errno
+import functools
 import grp
 import json
 import logging
@@ -573,7 +574,7 @@ def apply_mode_spec(spec, mode):
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
+            new_perm_bits = functools.reduce(operator.or_, (bits[p] for p in perms), 0)
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
