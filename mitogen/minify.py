@@ -29,9 +29,9 @@
 import sys
 
 try:
-    from cStringIO import StringIO
-except ImportError:
     from io import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 import mitogen.core
 
