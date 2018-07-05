@@ -1910,8 +1910,7 @@ class ExternalContext(object):
             if core_src_fd:
                 fp = os.fdopen(core_src_fd, 'rb', 1)
                 try:
-                    core_size = int(fp.readline())
-                    core_src = fp.read(core_size)
+                    core_src = fp.read()
                     # Strip "ExternalContext.main()" call from last line.
                     core_src = b('\n').join(core_src.splitlines()[:-1])
                 finally:

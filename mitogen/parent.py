@@ -825,13 +825,20 @@ class Stream(mitogen.core.Stream):
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
     # with a custom argv.
     #   * Optimized for minimum byte count after minification & compression.
-    #   * 'CONTEXT_NAME', 'PREAMBLE_COMPRESSED_LEN', and 'PREAMBLE_LEN' are
-    #     substituted with their respective values.
+    #   * 'CONTEXT_NAME' and 'PREAMBLE_COMPRESSED_LEN' are substituted with
+    #     their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
     #   * For Darwin, OS X installs a craptacular argv0-introspecting Python
     #     version switcher as /usr/bin/python. Override attempts to call it
     #     with an explicit call to python2.7
+    #
+    # Locals:
+    #   R: read side of interpreter stdin.
+    #   W: write side of interpreter stdin.
+    #   r: read side of core_src FD.
+    #   w: write side of core_src FD.
+    #   C: the decompressed core source.
     @staticmethod
     def _first_stage():
         R,W=os.pipe()
@@ -850,12 +857,12 @@ class Stream(mitogen.core.Stream):
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
         C=_(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN),'zip')
-        wfp=os.fdopen(W,'wb',0)
-        wfp.write(C)
-        Wfp=os.fdopen(w,'wb',0)
-        Wfp.write('PREAMBLE_LEN\n'.encode()+C)
-        wfp.close()
-        Wfp.close()
+        fp=os.fdopen(W,'wb',0)
+        fp.write(C)
+        fp.close()
+        fp=os.fdopen(w,'wb',0)
+        fp.write(C)
+        fp.close()
         os.write(1,'MITO001\n'.encode())
 
     def get_boot_command(self):
@@ -866,8 +873,6 @@ class Stream(mitogen.core.Stream):
         preamble_compressed = self.get_preamble()
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
                                 str(len(preamble_compressed)))
-        source = source.replace('PREAMBLE_LEN',
-                                str(len(zlib.decompress(preamble_compressed))))
         compressed = zlib.compress(source.encode(), 9)
         encoded = codecs.encode(compressed, 'base64').replace(b('\n'), b(''))
         # We can't use bytes.decode() in 3.x since it was restricted to always
