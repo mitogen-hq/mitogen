@@ -7,8 +7,8 @@ Table Of Contents
 
    index
    ansible
-   howitworks
    contributors
+   howitworks
    getting_started
    api
    examples
