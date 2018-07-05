@@ -55,7 +55,7 @@ Installation
 1. Thoroughly review the documented behavioural differences.
 2. Verify Ansible 2.3/2.4/2.5 and Python 2.7 are listed in ``ansible --version``
    output.
-3. Download and extract https://github.com/dw/mitogen/archive/master.zip
+3. Download and extract https://github.com/dw/mitogen/archive/stable.zip
 4. Modify ``ansible.cfg``:
 
    .. code-block:: dosini
