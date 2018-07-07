@@ -694,7 +694,7 @@ class Importer(object):
 
             suffix = fullname[len(pkgname+dot):]
             if pkgname and suffix not in self._present.get(pkgname, ()):
-                _v and LOG.debug('%r: master doesn\'t know %r', self, fullname)
+                LOG.debug('%r: master doesn\'t know %r', self, fullname)
                 return None
 
             # #114: explicitly whitelisted prefixes override any
@@ -1396,7 +1396,7 @@ class Latch(object):
                 wsock, cookie = self._sleeping[self._waking]
                 self._waking += 1
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
-                                    self, sock.fileno())
+                                    self, wsock.fileno())
                 self._wake(wsock, cookie)
         finally:
             self._lock.release()

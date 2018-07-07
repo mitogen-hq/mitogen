@@ -778,7 +778,7 @@ class FileService(Service):
 
         st = os.stat(path)
         if not stat.S_ISREG(st.st_mode):
-            raise IOError('%r is not a regular file.' % (in_path,))
+            raise IOError('%r is not a regular file.' % (path,))
 
         LOG.debug('%r: registering %r', self, path)
         self._metadata_by_path[path] = {
@@ -920,7 +920,7 @@ class FileService(Service):
         :param mitogen.core.Context context:
             Reference to the context hosting the FileService that will be used
             to fetch the file.
-        :param bytes in_path:
+        :param bytes path:
             FileService registered name of the input file.
         :param bytes out_path:
             Name of the output path on the local disk.
