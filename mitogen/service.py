@@ -507,6 +507,8 @@ class Pool(object):
             raise mitogen.core.CallError('Invalid message format.')
 
     def _on_service_call(self, recv, msg):
+        service_name = None
+        method_name = None
         try:
             self._validate(msg)
             service_name, method_name, kwargs = msg.unpickle()
