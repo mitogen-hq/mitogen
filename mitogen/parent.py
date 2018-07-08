@@ -694,7 +694,7 @@ class TtyLogStream(mitogen.core.BasicStream):
         if not buf:
             return self.on_disconnect(broker)
 
-        self.buf += buf
+        self.buf += buf.decode('utf-8', 'replace')
         while '\n' in self.buf:
             lines = self.buf.split('\n')
             self.buf = lines[-1]
