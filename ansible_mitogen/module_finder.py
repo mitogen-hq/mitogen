@@ -27,6 +27,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import collections
 import imp
 import os
@@ -89,18 +91,22 @@ def find(name, path=(), parent=None):
         return parent
 
     fp, modpath, (suffix, mode, kind) = tup
+    if fp:
+        fp.close()
+
     if parent and modpath == parent.path:
         # 'from timeout import timeout', where 'timeout' is a function but also
         # the name of the module being imported.
         return None
 
-    if fp:
-        fp.close()
-
     if kind == imp.PKG_DIRECTORY:
         modpath = os.path.join(modpath, '__init__.py')
+
     module = Module(head, modpath, kind, parent)
-    if tail:
+    # TODO: this code is entirely wrong on Python 3.x, but works well enough
+    # for Ansible. We need a new find_child() that only looks in the package
+    # directory, never falling back to the parent search path.
+    if tail and kind == imp.PKG_DIRECTORY:
         return find_relative(module, tail, path)
     return module
 

@@ -48,7 +48,6 @@ setup(
     license = 'New BSD',
     url = 'https://github.com/dw/mitogen/',
     packages = find_packages(exclude=['tests', 'examples']),
-    use_2to3=True,
     zip_safe = False,
     classifiers = [
         'Development Status :: 3 - Alpha',
@@ -61,7 +60,7 @@ setup(
         'Programming Language :: Python :: 2.5',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: System :: Distributed Computing',
         'Topic :: System :: Systems Administration',

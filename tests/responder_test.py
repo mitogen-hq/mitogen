@@ -30,7 +30,7 @@ class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
         # Ensure a program composed of a single script can be imported
         # successfully.
         args = [sys.executable, testlib.data_path('self_contained_program.py')]
-        output = testlib.subprocess__check_output(args)
+        output = testlib.subprocess__check_output(args).decode()
         self.assertEquals(output, "['__main__', 50]\n")
 
 
@@ -45,7 +45,7 @@ class BrokenModulesTest(unittest2.TestCase):
         router.stream_by_id = lambda n: stream
 
         msg = mitogen.core.Message(
-            data='non_existent_module',
+            data=mitogen.core.b('non_existent_module'),
             reply_to=50,
         )
         msg.router = router
@@ -74,7 +74,7 @@ class BrokenModulesTest(unittest2.TestCase):
         router.stream_by_id = lambda n: stream
 
         msg = mitogen.core.Message(
-            data='six_brokenpkg._six',
+            data=mitogen.core.b('six_brokenpkg._six'),
             reply_to=50,
         )
         msg.router = router

@@ -55,8 +55,8 @@ for suffix in suffixes:
         tofile='mitogen-output.txt',
     ))
     if diff:
-        print '++ differ! suffix: %r' % (suffix,)
+        print('++ differ! suffix: %r' % (suffix,))
         for line in diff:
-            print line
+            print(line)
         print
         print

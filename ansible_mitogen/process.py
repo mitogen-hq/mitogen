@@ -46,6 +46,8 @@ import mitogen.utils
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
+from mitogen.core import b
+
 
 LOG = logging.getLogger(__name__)
 
@@ -103,8 +105,8 @@ class MuxProcess(object):
 
         cls.unix_listener_path = mitogen.unix.make_socket_path()
         cls.worker_sock, cls.child_sock = socket.socketpair()
-        mitogen.core.set_cloexec(cls.worker_sock)
-        mitogen.core.set_cloexec(cls.child_sock)
+        mitogen.core.set_cloexec(cls.worker_sock.fileno())
+        mitogen.core.set_cloexec(cls.child_sock.fileno())
 
         cls.child_pid = os.fork()
         ansible_mitogen.logging.setup()
@@ -129,7 +131,8 @@ class MuxProcess(object):
         self._setup_services()
 
         # Let the parent know our listening socket is ready.
-        mitogen.core.io_op(self.child_sock.send, '1')
+        mitogen.core.io_op(self.child_sock.send, b('1'))
+        self.child_sock.send(b('1'))
         # Block until the socket is closed, which happens on parent exit.
         mitogen.core.io_op(self.child_sock.recv, 1)
 
@@ -178,7 +181,7 @@ class MuxProcess(object):
         self.pool.stop(join=False)
         try:
             os.unlink(self.listener.path)
-        except OSError, e:
+        except OSError as e:
             # Prevent a shutdown race with the parent process.
             if e.args[0] != errno.ENOENT:
                 raise

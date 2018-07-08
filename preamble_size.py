@@ -19,11 +19,11 @@ router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
 stream = mitogen.ssh.Stream(router, 0, max_message_size=0, hostname='foo')
 
-print 'SSH command size: %s' % (len(' '.join(stream.get_boot_command())),)
-print 'Preamble size: %s (%.2fKiB)' % (
+print('SSH command size: %s' % (len(' '.join(stream.get_boot_command())),))
+print('Preamble size: %s (%.2fKiB)' % (
     len(stream.get_preamble()),
     len(stream.get_preamble()) / 1024.0,
-)
+))
 
 print(
     '               '

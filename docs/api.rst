@@ -485,7 +485,7 @@ Router Class
 
         :param str python_path:
             Path to the Python interpreter to use for bootstrap. Defaults to
-            ``python2.7``. In future this may default to ``sys.executable``.
+            :data:`sys.executable`. For SSH, defaults to ``python``.
 
         :param bool debug:
             If :data:`True`, arrange for debug logging (:py:meth:`enable_debug`) to
@@ -848,9 +848,9 @@ Context Class
                 try:
                     # Prints output once it is received.
                     msg = recv.get()
-                    print msg.unpickle()
+                    print(msg.unpickle())
                 except mitogen.core.CallError, e:
-                    print 'Call failed:', str(e)
+                    print('Call failed:', str(e))
 
             Asynchronous calls may be dispatched in parallel to multiple
             contexts and consumed as they complete using
@@ -1038,11 +1038,11 @@ Select Class
         recvs = [c.call_async(long_running_operation) for c in contexts]
 
         for msg in mitogen.select.Select(recvs):
-            print 'Got %s from %s' % (msg, msg.receiver)
+            print('Got %s from %s' % (msg, msg.receiver))
             total += msg.unpickle()
 
         # Iteration ends when last Receiver yields a result.
-        print 'Received total %s from %s receivers' % (total, len(recvs))
+        print('Received total %s from %s receivers' % (total, len(recvs)))
 
     :py:class:`Select` may drive a long-running scheduler:
 
@@ -1069,7 +1069,7 @@ Select Class
         ]
 
         for msg in mitogen.select.Select(selects):
-            print msg.unpickle()
+            print(msg.unpickle())
 
     .. py:classmethod:: all (it)
 
@@ -1323,7 +1323,7 @@ A random assortment of utility functions useful on masters and children.
     OS X bundles some ancient version of the :py:mod:`six` module.
 
 .. currentmodule:: mitogen.utils
-.. function:: log_to_file (path=None, io=False, usec=False, level='INFO')
+.. function:: log_to_file (path=None, io=False, level='INFO')
 
     Install a new :py:class:`logging.Handler` writing applications logs to the
     filesystem. Useful when debugging slave IO problems.
@@ -1338,10 +1338,6 @@ A random assortment of utility functions useful on masters and children.
     :param bool io:
         If :data:`True`, include extremely verbose IO logs in the output.
         Useful for debugging hangs, less useful for debugging application code.
-
-    :parm bool usec:
-        If :data:`True`, include microsecond timestamps. This greatly helps
-        when debugging races and similar determinism issues.
 
     :param str level:
         Name of the :py:mod:`logging` package constant that is the minimum

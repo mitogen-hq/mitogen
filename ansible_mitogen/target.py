@@ -32,7 +32,10 @@ for file transfer, module execution and sundry bits like changing file modes.
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import errno
+import functools
 import grp
 import json
 import logging
@@ -147,7 +150,7 @@ def prune_tree(path):
     try:
         os.unlink(path)
         return
-    except OSError, e:
+    except OSError as e:
         if not (os.path.isdir(path) and
                 e.args[0] in (errno.EPERM, errno.EISDIR)):
             LOG.error('prune_tree(%r): %s', path, e)
@@ -157,7 +160,7 @@ def prune_tree(path):
         # Ensure write access for readonly directories. Ignore error in case
         # path is on a weird filesystem (e.g. vfat).
         os.chmod(path, int('0700', 8))
-    except OSError, e:
+    except OSError as e:
         LOG.warning('prune_tree(%r): %s', path, e)
 
     try:
@@ -165,7 +168,7 @@ def prune_tree(path):
             if name not in ('.', '..'):
                 prune_tree(os.path.join(path, name))
         os.rmdir(path)
-    except OSError, e:
+    except OSError as e:
         LOG.error('prune_tree(%r): %s', path, e)
 
 
@@ -229,7 +232,7 @@ def init_child(econtext):
 
     return {
         'fork_context': _fork_parent,
-        'home_dir': os.path.expanduser('~'),
+        'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
     }
 
 
@@ -319,12 +322,7 @@ class AsyncRunner(object):
             'econtext': self.econtext,
             'emulate_tty': False,
         })
-
-        dct = run_module(kwargs)
-        if mitogen.core.PY3:
-            for key in 'stdout', 'stderr':
-                dct[key] = dct[key].decode('utf-8', 'surrogateescape')
-        return dct
+        return run_module(kwargs)
 
     def _parse_result(self, dct):
         filtered, warnings = (
@@ -465,7 +463,7 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     stdout, stderr = proc.communicate(in_data)
 
     if emulate_tty:
-        stdout = stdout.replace('\n', '\r\n')
+        stdout = stdout.replace(b'\n', b'\r\n')
     return proc.returncode, stdout, stderr or ''
 
 
@@ -481,7 +479,7 @@ def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
     :return:
         (return code, stdout bytes, stderr bytes)
     """
-    assert isinstance(cmd, basestring)
+    assert isinstance(cmd, mitogen.core.UnicodeType)
     return exec_args(
         args=[get_user_shell(), '-c', cmd],
         in_data=in_data,
@@ -576,7 +574,7 @@ def apply_mode_spec(spec, mode):
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
+            new_perm_bits = functools.reduce(operator.or_, (bits[p] for p in perms), 0)
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits

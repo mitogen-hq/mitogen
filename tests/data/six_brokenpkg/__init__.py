@@ -30,8 +30,8 @@ import os.path
 try:
     import six as _system_six
     print('six_brokenpkg: using system six:', _system_six)
-except ImportError, e:
-    print('six_brokenpkg: no system six available', e)
+except ImportError:
+    print('six_brokenpkg: no system six available')
     _system_six = None
 
 if _system_six:

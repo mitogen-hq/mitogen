@@ -39,6 +39,11 @@ import mitogen.master
 LOG = logging.getLogger('mitogen')
 iteritems = getattr(dict, 'iteritems', dict.items)
 
+if mitogen.core.PY3:
+    iteritems = dict.items
+else:
+    iteritems = dict.iteritems
+
 
 def disable_site_packages():
     for entry in sys.path[:]:
@@ -51,19 +56,15 @@ def _formatTime(record, datefmt=None):
     return dt.strftime(datefmt)
 
 
-def log_get_formatter(usec=False):
-    usec = ('MITOGEN_LOG_USEC' in os.environ) or usec
-    datefmt = '%H:%M:%S'
-    if usec:
-        datefmt += '.%f'
-
+def log_get_formatter():
+    datefmt = '%H:%M:%S.%f'
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     formatter = logging.Formatter(fmt, datefmt)
     formatter.formatTime = _formatTime
     return formatter
 
 
-def log_to_file(path=None, io=False, usec=False, level='INFO'):
+def log_to_file(path=None, io=False, level='INFO'):
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
@@ -80,8 +81,15 @@ def log_to_file(path=None, io=False, usec=False, level='INFO'):
     level = getattr(logging, level, logging.INFO)
     log.setLevel(level)
 
+    # Prevent accidental duplicate log_to_file() calls from generating
+    # duplicate output.
+    for handler_ in reversed(log.handlers):
+        if getattr(handler_, 'is_mitogen', None):
+            log.handlers.remove(handler_)
+
     handler = logging.StreamHandler(fp)
-    handler.formatter = log_get_formatter(usec=usec)
+    handler.is_mitogen = True
+    handler.formatter = log_get_formatter()
     log.handlers.insert(0, handler)
 
 
@@ -98,7 +106,10 @@ def run_with_router(func, *args, **kwargs):
 def with_router(func):
     def wrapper(*args, **kwargs):
         return run_with_router(func, *args, **kwargs)
-    wrapper.func_name = func.func_name
+    if mitogen.core.PY3:
+        wrapper.func_name = func.__name__
+    else:
+        wrapper.func_name = func.func_name
     return wrapper
 
 
@@ -118,9 +129,9 @@ def cast(obj):
         return [cast(v) for v in obj]
     if isinstance(obj, PASSTHROUGH):
         return obj
-    if isinstance(obj, unicode):
-        return unicode(obj)
-    if isinstance(obj, str):
-        return str(obj)
+    if isinstance(obj, mitogen.core.UnicodeType):
+        return mitogen.core.UnicodeType(obj)
+    if isinstance(obj, mitogen.core.BytesType):
+        return mitogen.core.BytesType(obj)
 
     raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))

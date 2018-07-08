@@ -1,6 +1,8 @@
 from __future__ import unicode_literals
 import io
 
+from ansible.module_utils import six
+
 try:
     from ansible.plugins import callback_loader
 except ImportError:
@@ -25,15 +27,17 @@ def printi(tio, obj, key=None, indent=0):
         write(']')
     elif isinstance(obj, dict):
         write('{')
-        for key2, obj2 in sorted(obj.iteritems()):
+        for key2, obj2 in sorted(six.iteritems(obj)):
             if not (key2.startswith('_ansible_') or
                     key2.endswith('_lines')):
                 printi(tio, obj2, key=key2, indent=indent+1)
         key = None
         write('}')
-    elif isinstance(obj, basestring):
-        if isinstance(obj, str):
-            obj = obj.decode('utf-8', 'replace')
+    elif isinstance(obj, six.text_type):
+        for line in obj.splitlines():
+            write('%s', line.rstrip('\r\n'))
+    elif isinstance(obj, six.binary_type):
+        obj = obj.decode('utf-8', 'replace')
         for line in obj.splitlines():
             write('%s', line.rstrip('\r\n'))
     else:
@@ -47,7 +51,7 @@ class CallbackModule(DefaultModule):
         try:
             tio = io.StringIO()
             printi(tio, result)
-            return tio.getvalue().encode('ascii', 'replace')
+            return tio.getvalue() #.encode('ascii', 'replace')
         except:
             import traceback
             traceback.print_exc()

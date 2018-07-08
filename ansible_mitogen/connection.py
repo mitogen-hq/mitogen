@@ -27,6 +27,8 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 import os
 import shlex
@@ -239,7 +241,7 @@ def config_from_play_context(transport, inventory_name, connection):
         'timeout': connection._play_context.timeout,
         'ansible_ssh_timeout': connection.ansible_ssh_timeout,
         'ssh_args': [
-            term
+            mitogen.core.to_text(term)
             for s in (
                 getattr(connection._play_context, 'ssh_args', ''),
                 getattr(connection._play_context, 'ssh_common_args', ''),
@@ -249,7 +251,7 @@ def config_from_play_context(transport, inventory_name, connection):
         ],
         'become_exe': connection._play_context.become_exe,
         'sudo_args': [
-            term
+            mitogen.core.to_text(term)
             for s in (
                 connection._play_context.sudo_flags,
                 connection._play_context.become_flags
@@ -351,7 +353,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def __init__(self, play_context, new_stdin, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'Mitogen connection types may only be instantiated '
-             'while the "mitogen" strategy is active.'
+            'while the "mitogen" strategy is active.'
         )
         super(Connection, self).__init__(play_context, new_stdin)
 
@@ -528,7 +530,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             return self.call_async(func, *args, **kwargs).get().unpickle()
         finally:
             LOG.debug('Call took %d ms: %s%r', 1000 * (time.time() - t0),
-                      func.func_name, args)
+                      func.__name__, args)
 
     def create_fork_child(self):
         """

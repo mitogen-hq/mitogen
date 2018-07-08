@@ -11,10 +11,6 @@ __all__ = [
     'lru_cache',
 ]
 
-try:
-    from collections import namedtuple
-except ImportError:
-    from mitogen.compat.collections import namedtuple
 from threading import RLock
 
 
@@ -102,8 +98,6 @@ def partial(func, *args, **keywords):
 ### LRU Cache function decorator
 ################################################################################
 
-_CacheInfo = namedtuple("CacheInfo", ["hits", "misses", "maxsize", "currsize"])
-
 class _HashedSeq(list):
     """ This class guarantees that hash() will be called no more than once
         per element.  This is important because the lru_cache() will hash
@@ -170,12 +164,12 @@ def lru_cache(maxsize=128, typed=False):
         raise TypeError('Expected maxsize to be an integer or None')
 
     def decorating_function(user_function):
-        wrapper = _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo)
+        wrapper = _lru_cache_wrapper(user_function, maxsize, typed)
         return update_wrapper(wrapper, user_function)
 
     return decorating_function
 
-def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
+def _lru_cache_wrapper(user_function, maxsize, typed):
     # Constants shared by all lru cache instances:
     sentinel = object()          # unique object used to signal cache misses
     make_key = _make_key         # build a key from the function arguments
@@ -277,14 +271,6 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
                 lock.release()
             return result
 
-    def cache_info():
-        """Report cache statistics"""
-        lock.acquire()
-        try:
-            return _CacheInfo(hits, misses, maxsize, cache.__len__())
-        finally:
-            lock.release()
-
     def cache_clear():
         """Clear the cache and cache statistics"""
         lock.acquire()
@@ -298,6 +284,5 @@ def _lru_cache_wrapper(user_function, maxsize, typed, _CacheInfo):
         finally:
             lock.release()
 
-    wrapper.cache_info = cache_info
     wrapper.cache_clear = cache_clear
     return wrapper

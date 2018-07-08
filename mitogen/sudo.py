@@ -33,10 +33,11 @@ import time
 
 import mitogen.core
 import mitogen.parent
+from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
-PASSWORD_PROMPT = 'password'
+PASSWORD_PROMPT = b('password')
 SUDO_OPTIONS = [
     #(False, 'bool', '--askpass', '-A')
     #(False, 'str', '--auth-type', '-a')
@@ -135,7 +136,7 @@ class Stream(mitogen.parent.Stream):
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'sudo.' + self.username
+        self.name = u'sudo.' + mitogen.core.to_text(self.username)
 
     def on_disconnect(self, broker):
         self.tty_stream.on_disconnect(broker)
@@ -176,7 +177,8 @@ class Stream(mitogen.parent.Stream):
                     raise PasswordError(self.password_required_msg)
                 if password_sent:
                     raise PasswordError(self.password_incorrect_msg)
-                LOG.debug('sending password')
-                self.tty_stream.transmit_side.write(self.password + '\n')
+                self.tty_stream.transmit_side.write(
+                    mitogen.core.to_text(self.password + '\n').encode('utf-8')
+                )
                 password_sent = True
         raise mitogen.core.StreamError('bootstrap failed')

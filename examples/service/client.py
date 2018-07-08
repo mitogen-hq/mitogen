@@ -14,4 +14,4 @@ mitogen.utils.log_to_file()
 
 router, parent = mitogen.unix.connect('/tmp/mitosock')
 with router:
-    print mitogen.service.call(parent, CONNECT_BY_ID, {})
+    print(mitogen.service.call(parent, CONNECT_BY_ID, {}))

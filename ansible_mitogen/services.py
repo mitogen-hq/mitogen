@@ -38,6 +38,8 @@ when a child has completed a job.
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 import os
 import os.path
@@ -51,6 +53,20 @@ import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
+
+
+if sys.version_info[0] == 3:
+    def reraise(tp, value, tb):
+        if value is None:
+            value = tp()
+        if value.__traceback__ is not tb:
+            raise value.with_traceback(tb)
+        raise value
+else:
+    exec(
+        "def reraise(tp, value, tb=None):\n"
+        "    raise tp, value, tb\n"
+     )
 
 
 class Error(Exception):
@@ -118,7 +134,7 @@ class ContextService(mitogen.service.Service):
         while stack:
             obj = stack.pop()
             if isinstance(obj, dict):
-                stack.extend(sorted(obj.iteritems()))
+                stack.extend(sorted(obj.items()))
             elif isinstance(obj, (list, tuple)):
                 stack.extend(obj)
             else:
@@ -351,8 +367,7 @@ class ContextService(mitogen.service.Service):
             try:
                 result = self._wait_or_start(spec, via=via).get()
                 if isinstance(result, tuple):  # exc_info()
-                    e1, e2, e3 = result
-                    raise e1, e2, e3
+                    reraise(*result)
                 via = result['context']
             except mitogen.core.StreamError as e:
                 return {
@@ -390,10 +405,10 @@ class ModuleDepService(mitogen.service.Service):
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
-        'module_name': basestring,
-        'module_path': basestring,
+        'module_name': mitogen.core.UnicodeType,
+        'module_path': mitogen.core.FsPathTypes,
         'search_path': tuple,
-        'builtin_path': basestring,
+        'builtin_path': mitogen.core.FsPathTypes,
         'context': mitogen.core.Context,
     })
     def scan(self, module_name, module_path, search_path, builtin_path, context):

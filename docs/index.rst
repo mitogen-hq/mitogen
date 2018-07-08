@@ -135,7 +135,7 @@ configuration.
 
     # myapp/__init__.py, myapp/mypkg/__init__.py, and myapp/mypkg/mymodule.py
     # are transferred automatically.
-    print context.call(myapp.mymodule.my_function)
+    print(context.call(myapp.mymodule.my_function))
 
 As the forwarder reuses the import mechanism, it should integrate cleanly with
 any tool such as `py2exe`_ that correctly implement the protocols in PEP-302,
@@ -323,10 +323,10 @@ available.
     total = 0
     for msg in Select(c.call_async(usage, '/tmp') for c in contexts):
         usage = msg.unpickle()
-        print 'Context %s /tmp usage: %d' % (recv.context, usage)
+        print('Context %s /tmp usage: %d' % (recv.context, usage))
         total += usage
 
-    print 'Total /tmp usage across all contexts: %d' % (total,)
+    print('Total /tmp usage across all contexts: %d' % (total,))
 
 
 Single File Programs
@@ -361,7 +361,7 @@ usual into the slave process.
 
     def main(broker):
         if len(sys.argv) != 2:
-            print __doc__
+            print(__doc__)
             sys.exit(1)
 
         context = mitogen.ssh.connect(broker, sys.argv[1])
@@ -406,14 +406,12 @@ a large fleet of machines, or to alert the parent of unexpected state changes.
 Compatibility
 #############
 
-The package is written using syntax compatible all the way back to **Python
-2.4** released November 2004, making it suitable for managing a fleet of
-potentially ancient corporate hardware. For example Mitogen can be used out of
-the box against Red Hat Enterprise Linux 5, released in 2007.
+Mitogen is syntax-compatible with **Python 2.4** released November 2004, making
+it suitable for managing a fleet of potentially ancient corporate hardware,
+such as Red Hat Enterprise Linux 5, released in 2007.
 
-Support for Python 3 is included using 2to3 triggered during setup.py, however
-such a Mitogen install does not support communicating with older 2.x systems. A
-future revision will support full cross 2/3 compatibility.
+Every combination of Python 3.x/2.x parent and child should be possible,
+however at present only Python 2.6, 2.7 and 3.6 are tested automatically.
 
 
 Zero Dependencies

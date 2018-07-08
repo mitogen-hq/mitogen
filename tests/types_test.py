@@ -1,16 +1,22 @@
 
-import cStringIO
+try:
+    from io import StringIO
+    from io import BytesIO
+except ImportError:
+    from StringIO import StringIO as StringIO
+    from StringIO import StringIO as BytesIO
 
 import unittest2
 
 import mitogen.core
+from mitogen.core import b
 
 
 class BlobTest(unittest2.TestCase):
     klass = mitogen.core.Blob
 
     def make(self):
-        return self.klass('x' * 128)
+        return self.klass(b('x') * 128)
 
     def test_repr(self):
         blob = self.make()
@@ -18,14 +24,14 @@ class BlobTest(unittest2.TestCase):
 
     def test_decays_on_constructor(self):
         blob = self.make()
-        self.assertEquals('x'*128, mitogen.core.BytesType(blob))
+        self.assertEquals(b('x')*128, mitogen.core.BytesType(blob))
 
     def test_decays_on_write(self):
         blob = self.make()
-        io = cStringIO.StringIO()
+        io = BytesIO()
         io.write(blob)
         self.assertEquals(128, io.tell())
-        self.assertEquals('x'*128, io.getvalue())
+        self.assertEquals(b('x')*128, io.getvalue())
 
     def test_message_roundtrip(self):
         blob = self.make()
@@ -53,7 +59,7 @@ class SecretTest(unittest2.TestCase):
 
     def test_decays_on_write(self):
         secret = self.make()
-        io = cStringIO.StringIO()
+        io = StringIO()
         io.write(secret)
         self.assertEquals(8, io.tell())
         self.assertEquals('password', io.getvalue())
@@ -64,8 +70,8 @@ class SecretTest(unittest2.TestCase):
         secret2 = msg.unpickle()
         self.assertEquals(type(secret), type(secret2))
         self.assertEquals(repr(secret), repr(secret2))
-        self.assertEquals(mitogen.core.BytesType(secret),
-                          mitogen.core.BytesType(secret2))
+        self.assertEquals(mitogen.core.b(secret),
+                          mitogen.core.b(secret2))
 
 
 if __name__ == '__main__':

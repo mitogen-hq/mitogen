@@ -60,14 +60,14 @@ class GetModuleViaPkgutilTest(testlib.TestCase):
         path, src, is_pkg = self.call('module_finder_testmod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/__init__.py'))
-        self.assertEquals('', src)
+        self.assertEquals(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
         path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/empty_mod.py'))
-        self.assertEquals('', src)
+        self.assertEquals(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
     def test_regular_mod(self):
@@ -75,7 +75,8 @@ class GetModuleViaPkgutilTest(testlib.TestCase):
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
         self.assertEquals(path,
             testlib.data_path('module_finder_testmod/regular_mod.py'))
-        self.assertEquals(src, inspect.getsource(regular_mod))
+        self.assertEquals(mitogen.core.to_text(src),
+                          inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
 
 
@@ -89,7 +90,7 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         import __main__
         path, src, is_pkg = self.call('__main__')
         self.assertEquals(path, __main__.__file__)
-        self.assertEquals(src, open(path).read())
+        self.assertEquals(src, open(path, 'rb').read())
         self.assertFalse(is_pkg)
 
     def test_dylib_fails(self):
@@ -119,7 +120,7 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 0))
 
     def test_rel1(self):
-        self.assertEquals('email', self.call('email.utils', 1))
+        self.assertEquals('email.', self.call('email.utils', 1))
 
     def test_rel2(self):
         self.assertEquals('', self.call('email.utils', 2))
@@ -128,7 +129,35 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 3))
 
 
-class FindRelatedImportsTest(testlib.TestCase):
+class DjangoMixin(object):
+    WEBPROJECT_PATH = testlib.data_path('webproject')
+
+    # TODO: rip out Django and replace with a static tree of weird imports that
+    # don't depend on .. Django! The hack below is because the version of
+    # Django we need to test against 2.6 doesn't actually run on 3.6. But we
+    # don't care, we just need to be able to import it.
+    #
+    #   File "django/utils/html_parser.py", line 12, in <module>
+    # AttributeError: module 'html.parser' has no attribute 'HTMLParseError'
+    #
+    import pkg_resources._vendor.six
+    from django.utils.six.moves import html_parser as _html_parser
+    _html_parser.HTMLParseError = Exception
+
+    @classmethod
+    def setUpClass(cls):
+        super(DjangoMixin, cls).setUpClass()
+        sys.path.append(cls.WEBPROJECT_PATH)
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
+
+    @classmethod
+    def tearDownClass(cls):
+        sys.path.remove(cls.WEBPROJECT_PATH)
+        del os.environ['DJANGO_SETTINGS_MODULE']
+        super(DjangoMixin, cls).tearDownClass()
+
+
+class FindRelatedImportsTest(DjangoMixin, testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def call(self, fullname):
@@ -179,7 +208,7 @@ class FindRelatedImportsTest(testlib.TestCase):
         ])
 
 
-class FindRelatedTest(testlib.TestCase):
+class FindRelatedTest(DjangoMixin, testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def call(self, fullname):
@@ -187,15 +216,15 @@ class FindRelatedTest(testlib.TestCase):
 
     SIMPLE_EXPECT = set([
         'mitogen',
-        'mitogen.compat',
-        'mitogen.compat.collections',
-        'mitogen.compat.functools',
         'mitogen.core',
         'mitogen.master',
         'mitogen.minify',
         'mitogen.parent',
     ])
 
+    if sys.version_info < (3, 2):
+        SIMPLE_EXPECT.add('mitogen.compat')
+        SIMPLE_EXPECT.add('mitogen.compat.functools')
     if sys.version_info < (2, 7):
         SIMPLE_EXPECT.add('mitogen.compat.tokenize')
 
@@ -205,26 +234,12 @@ class FindRelatedTest(testlib.TestCase):
         self.assertEquals(set(related), self.SIMPLE_EXPECT)
 
 
-class DjangoFindRelatedTest(testlib.TestCase):
+class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
     klass = mitogen.master.ModuleFinder
     maxDiff = None
 
     def call(self, fullname):
         return self.klass().find_related(fullname)
-
-    WEBPROJECT_PATH = testlib.data_path('webproject')
-
-    @classmethod
-    def setUpClass(cls):
-        super(DjangoFindRelatedTest, cls).setUpClass()
-        sys.path.append(cls.WEBPROJECT_PATH)
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
-
-    @classmethod
-    def tearDownClass(cls):
-        sys.path.remove(cls.WEBPROJECT_PATH)
-        del os.environ['DJANGO_SETTINGS_MODULE']
-        super(DjangoFindRelatedTest, cls).tearDownClass()
 
     def test_django_db(self):
         import django.db
@@ -250,6 +265,9 @@ class DjangoFindRelatedTest(testlib.TestCase):
         ])
 
     def test_django_db_models(self):
+        if sys.version_info >= (3, 0):
+            raise unittest2.SkipTest('broken due to ancient vendored six.py')
+
         import django.db.models
         related = self.call('django.db.models')
         self.assertEquals(related, [
@@ -289,25 +307,45 @@ class DjangoFindRelatedTest(testlib.TestCase):
             'django.db.models.related',
             'django.db.models.signals',
             'django.db.models.sql',
+            'django.db.models.sql.aggregates',
+            'django.db.models.sql.constants',
+            'django.db.models.sql.datastructures',
+            'django.db.models.sql.expressions',
+            'django.db.models.sql.query',
+            'django.db.models.sql.subqueries',
+            'django.db.models.sql.where',
             'django.db.transaction',
             'django.db.utils',
             'django.dispatch',
             'django.dispatch.dispatcher',
             'django.dispatch.saferef',
             'django.forms',
+            'django.forms.fields',
+            'django.forms.forms',
+            'django.forms.formsets',
+            'django.forms.models',
+            'django.forms.util',
+            'django.forms.widgets',
             'django.utils',
             'django.utils._os',
             'django.utils.crypto',
             'django.utils.datastructures',
+            'django.utils.dateformat',
             'django.utils.dateparse',
+            'django.utils.dates',
+            'django.utils.datetime_safe',
             'django.utils.decorators',
             'django.utils.deprecation',
             'django.utils.encoding',
+            'django.utils.formats',
             'django.utils.functional',
+            'django.utils.html',
+            'django.utils.html_parser',
             'django.utils.importlib',
             'django.utils.ipv6',
             'django.utils.itercompat',
             'django.utils.module_loading',
+            'django.utils.numberformat',
             'django.utils.safestring',
             'django.utils.six',
             'django.utils.text',
@@ -316,6 +354,10 @@ class DjangoFindRelatedTest(testlib.TestCase):
             'django.utils.tree',
             'django.utils.tzinfo',
             'pkg_resources',
+            'pkg_resources.extern',
+            'pkg_resources.extern.appdirs',
+            'pkg_resources.extern.packaging',
+            'pkg_resources.extern.six',
             'pytz',
             'pytz.exceptions',
             'pytz.tzfile',

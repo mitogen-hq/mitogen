@@ -151,7 +151,8 @@ class Stream(mitogen.parent.Stream):
                     os.readlink(nspath + name) != os.readlink(selfpath + name)
                 )
             ]
-        except Exception, e:
+        except Exception:
+            e = sys.exc_info()[1]
             raise Error(str(e))
 
         os.chdir('/proc/%s/root' % (self.leader_pid,))
@@ -214,4 +215,4 @@ class Stream(mitogen.parent.Stream):
         LOG.debug('Leader PID for %s container %r: %d',
                   self.kind, self.container, self.leader_pid)
         super(Stream, self).connect()
-        self.name = 'setns.' + self.container
+        self.name = u'setns.' + self.container

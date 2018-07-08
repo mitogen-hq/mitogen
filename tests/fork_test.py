@@ -19,8 +19,12 @@ PLATFORM_TO_PATH = {
     ('darwin', True): '/usr/lib/libssl.dylib',
     ('linux2', False): '/usr/lib/libssl.so',
     ('linux2', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
+    # Python 2.6
     ('linux3', False): '/usr/lib/libssl.so',
     ('linux3', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
+    # Python 3
+    ('linux', False): '/usr/lib/libssl.so',
+    ('linux', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
 }
 
 c_ssl = ctypes.CDLL(PLATFORM_TO_PATH[sys.platform, IS_64BIT])

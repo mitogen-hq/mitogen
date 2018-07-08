@@ -31,6 +31,7 @@ import os
 
 import mitogen.core
 import mitogen.parent
+from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
@@ -54,11 +55,11 @@ class Stream(mitogen.parent.Stream):
     username = 'root'
     password = None
     su_path = 'su'
-    password_prompt = 'password:'
+    password_prompt = b('password:')
     incorrect_prompts = (
-        'su: sorry',                    # BSD
-        'su: authentication failure',   # Linux
-        'su: incorrect password',       # CentOS 6
+        b('su: sorry'),                    # BSD
+        b('su: authentication failure'),   # Linux
+        b('su: incorrect password'),       # CentOS 6
     )
 
     def construct(self, username=None, password=None, su_path=None,
@@ -77,7 +78,7 @@ class Stream(mitogen.parent.Stream):
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = 'su.' + self.username
+        self.name = u'su.' + mitogen.core.to_text(self.username)
 
     def on_disconnect(self, broker):
         super(Stream, self).on_disconnect(broker)
@@ -110,6 +111,8 @@ class Stream(mitogen.parent.Stream):
                 if password_sent:
                     raise PasswordError(self.password_incorrect_msg)
                 LOG.debug('sending password')
-                self.transmit_side.write(self.password + '\n')
+                self.transmit_side.write(
+                    mitogen.core.to_text(self.password + '\n').encode('utf-8')
+                )
                 password_sent = True
         raise mitogen.core.StreamError('bootstrap failed')

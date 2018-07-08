@@ -35,6 +35,8 @@ files/modules known missing.
 """
 
 from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import json
 import logging
 import os
@@ -43,6 +45,7 @@ import random
 from ansible.executor import module_common
 import ansible.errors
 import ansible.module_utils
+import mitogen.core
 
 try:
     from ansible.plugins.loader import module_loader
@@ -71,11 +74,11 @@ def parse_script_interpreter(source):
     """
     # Linux requires first 2 bytes with no whitespace, pretty sure it's the
     # same everywhere. See binfmt_script.c.
-    if not source.startswith('#!'):
+    if not source.startswith(b'#!'):
         return None, None
 
     # Find terminating newline. Assume last byte of binprm_buf if absent.
-    nl = source.find('\n', 0, 128)
+    nl = source.find(b'\n', 0, 128)
     if nl == -1:
         nl = min(128, len(source))
 
@@ -83,8 +86,8 @@ def parse_script_interpreter(source):
     # bits just contains the interpreter filename.
     bits = source[2:nl].strip().split(None, 1)
     if len(bits) == 1:
-        return bits[0], None
-    return bits[0], bits[1]
+        return mitogen.core.to_text(bits[0]), None
+    return mitogen.core.to_text(bits[0]), mitogen.core.to_text(bits[1])
 
 
 class Invocation(object):
@@ -176,9 +179,11 @@ class Planner(object):
                 # named by `runner_name`.
             }
         """
-        kwargs.setdefault('emulate_tty', True)
-        kwargs.setdefault('service_context', self._inv.connection.parent)
-        return kwargs
+        new = dict((mitogen.core.UnicodeType(k), kwargs[k])
+                   for k in kwargs)
+        new.setdefault('emulate_tty', True)
+        new.setdefault('service_context', self._inv.connection.parent)
+        return new
 
     def __repr__(self):
         return '%s()' % (type(self).__name__,)
@@ -202,7 +207,7 @@ class BinaryPlanner(Planner):
             runner_name=self.runner_name,
             module=self._inv.module_name,
             path=self._inv.module_path,
-            args=self._inv.module_args,
+            json_args=json.dumps(self._inv.module_args),
             env=self._inv.env,
             **kwargs
         )
@@ -264,7 +269,7 @@ class WantJsonPlanner(ScriptPlanner):
     runner_name = 'WantJsonRunner'
 
     def detect(self):
-        return 'WANT_JSON' in self._inv.module_source
+        return b'WANT_JSON' in self._inv.module_source
 
 
 class NewStylePlanner(ScriptPlanner):
@@ -274,9 +279,10 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
+    marker = b'from ansible.module_utils.'
 
     def detect(self):
-        return 'from ansible.module_utils.' in self._inv.module_source
+        return self.marker in self._inv.module_source
 
     def _get_interpreter(self):
         return None, None
@@ -394,7 +400,7 @@ def get_module_data(name):
     path = module_loader.find_plugin(name, '')
     with open(path, 'rb') as fp:
         source = fp.read()
-    return path, source
+    return mitogen.core.to_text(path), source
 
 
 def _propagate_deps(invocation, planner, context):

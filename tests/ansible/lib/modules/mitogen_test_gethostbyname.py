@@ -9,7 +9,7 @@ def main():
     module = AnsibleModule(argument_spec={'name': {'type': 'str'}})
     try:
         module.exit_json(addr=socket.gethostbyname(module.params['name']))
-    except socket.error, e:
+    except socket.error as e:
         module.fail_json(msg=str(e))
 
 if __name__ == '__main__':

@@ -5,7 +5,6 @@
 Mitogen for Ansible
 ===================
 
-
 An extension to `Ansible`_ is included that implements connections over
 Mitogen, replacing embedded shell invocations with pure-Python equivalents
 invoked via highly efficient remote procedure calls to persistent interpreters
@@ -18,6 +17,7 @@ will ensure soundness.
 .. _Ansible: https://www.ansible.com/
 
 .. _Bug reports: https://goo.gl/yLKZiJ
+
 
 Overview
 --------
@@ -53,8 +53,8 @@ Installation
 ------------
 
 1. Thoroughly review the documented behavioural differences.
-2. Verify Ansible 2.3/2.4/2.5 and Python 2.7 are listed in ``ansible --version``
-   output.
+2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
+   --version`` output.
 3. Download and extract https://github.com/dw/mitogen/archive/stable.zip
 4. Modify ``ansible.cfg``:
 
@@ -71,7 +71,7 @@ Installation
 
 5. If targets have a restrictive ``sudoers`` file, add a rule like:
 
-   .. code-block:: plain
+::
 
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
 

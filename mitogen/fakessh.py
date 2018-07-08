@@ -299,7 +299,7 @@ def exit():
 def die(msg, *args):
     if args:
         msg %= args
-    print msg
+    sys.stderr.write('%s\n' % (msg,))
     exit()
 
 
@@ -419,12 +419,12 @@ def run(dest, router, args, deadline=None, econtext=None):
 
     context_id = router.allocate_id()
     fakessh = mitogen.parent.Context(router, context_id)
-    fakessh.name = 'fakessh.%d' % (context_id,)
+    fakessh.name = u'fakessh.%d' % (context_id,)
 
     sock1, sock2 = socket.socketpair()
 
     stream = mitogen.core.Stream(router, context_id)
-    stream.name = 'fakessh'
+    stream.name = u'fakessh'
     stream.accept(sock1.fileno(), sock1.fileno())
     router.register(fakessh, stream)
 
@@ -445,7 +445,7 @@ def run(dest, router, args, deadline=None, econtext=None):
         finally:
             fp.close()
 
-        os.chmod(ssh_path, 0755)
+        os.chmod(ssh_path, int('0755', 8))
         env = os.environ.copy()
         env.update({
             'PATH': '%s:%s' % (tmp_path, env.get('PATH', '')),
