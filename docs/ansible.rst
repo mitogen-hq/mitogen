@@ -5,7 +5,6 @@
 Mitogen for Ansible
 ===================
 
-
 An extension to `Ansible`_ is included that implements connections over
 Mitogen, replacing embedded shell invocations with pure-Python equivalents
 invoked via highly efficient remote procedure calls to persistent interpreters
@@ -18,6 +17,7 @@ will ensure soundness.
 .. _Ansible: https://www.ansible.com/
 
 .. _Bug reports: https://goo.gl/yLKZiJ
+
 
 Overview
 --------
@@ -71,7 +71,7 @@ Installation
 
 5. If targets have a restrictive ``sudoers`` file, add a rule like:
 
-   .. code-block:: plain
+::
 
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
 

@@ -407,7 +407,7 @@ Helper Functions
         List of submodule name suffixes.
 
 
-.. currentmodule:: mitogen.parent
+.. currentmodule:: mitogen.minify
 
 .. autofunction:: minimize_source (source)
 

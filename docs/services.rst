@@ -119,10 +119,11 @@ Reference
 
 .. autofunction:: mitogen.service.Service
 
-.. autoclass:: mitogen.service.Service
-    :members:
+.. autoclass:: mitogen.service.Invoker
+.. autoclass:: mitogen.service.SerializedInvoker
+.. autoclass:: mitogen.service.DeduplicatingInvoker
 
-.. autoclass:: mitogen.service.DeduplicatingService
+.. autoclass:: mitogen.service.Service
     :members:
 
 .. autoclass:: mitogen.service.Pool
