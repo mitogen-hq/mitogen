@@ -350,7 +350,17 @@ class ModuleFinder(object):
             path = self._py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
             is_pkg = loader.is_package(fullname)
-        except AttributeError:
+        except (AttributeError, ImportError):
+            # - Per PEP-302, get_source() and is_package() are optional,
+            #   calling them may throw AttributeError.
+            # - get_filename() may throw ImportError if pkgutil.find_loader()
+            #   picks a "parent" package's loader for some crap that's been
+            #   stuffed in sys.modules, for example in the case of urllib3:
+            #       "loader for urllib3.contrib.pyopenssl cannot handle
+            #        requests.packages.urllib3.contrib.pyopenssl"
+            e = sys.exc_info()[1]
+            LOG.debug('%r: loading %r using %r failed: %s',
+                      self, fullname, loader)
             return
 
         if path is None or source is None:
