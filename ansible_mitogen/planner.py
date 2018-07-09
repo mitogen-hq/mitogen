@@ -47,13 +47,7 @@ import ansible.errors
 import ansible.module_utils
 import mitogen.core
 
-try:
-    from ansible.plugins.loader import module_loader
-    from ansible.plugins.loader import module_utils_loader
-except ImportError:  # Ansible <2.4
-    from ansible.plugins import module_loader
-    from ansible.plugins import module_utils_loader
-
+import ansible_mitogen.loaders
 import ansible_mitogen.target
 
 
@@ -322,7 +316,9 @@ class NewStylePlanner(ScriptPlanner):
     def get_search_path(self):
         return tuple(
             path
-            for path in module_utils_loader._get_paths(subdirs=False)
+            for path in ansible_mitogen.loaders.module_utils_loader._get_paths(
+                subdirs=False
+            )
             if os.path.isdir(path)
         )
 
@@ -397,7 +393,7 @@ _planners = [
 
 
 def get_module_data(name):
-    path = module_loader.find_plugin(name, '')
+    path = ansible_mitogen.loaders.module_loader.find_plugin(name, '')
     with open(path, 'rb') as fp:
         source = fp.read()
     return mitogen.core.to_text(path), source

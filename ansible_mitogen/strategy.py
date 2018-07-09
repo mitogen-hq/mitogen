@@ -29,15 +29,9 @@
 from __future__ import absolute_import
 import os
 
+import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
-
-try:
-    from ansible.plugins.loader import action_loader
-    from ansible.plugins.loader import connection_loader
-except ImportError:  # Ansible <2.4
-    from ansible.plugins import action_loader
-    from ansible.plugins import connection_loader
 
 
 def wrap_action_loader__get(name, *args, **kwargs):
@@ -138,19 +132,19 @@ class StrategyMixin(object):
         with references to the real functions.
         """
         global action_loader__get
-        action_loader__get = action_loader.get
-        action_loader.get = wrap_action_loader__get
+        action_loader__get = ansible_mitogen.loaders.action_loader.get
+        ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
 
         global connection_loader__get
-        connection_loader__get = connection_loader.get
-        connection_loader.get = wrap_connection_loader__get
+        connection_loader__get = ansible_mitogen.loaders.connection_loader.get
+        ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
 
     def _remove_wrappers(self):
         """
         Uninstall the PluginLoader monkey patches.
         """
-        action_loader.get = action_loader__get
-        connection_loader.get = connection_loader__get
+        ansible_mitogen.loaders.action_loader.get = action_loader__get
+        ansible_mitogen.loaders.connection_loader.get = connection_loader__get
 
     def _add_connection_plugin_path(self):
         """
@@ -158,7 +152,9 @@ class StrategyMixin(object):
         avoiding the need for manual configuration.
         """
         base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
-        connection_loader.add_directory(os.path.join(base_dir, 'connection'))
+        ansible_mitogen.loaders.connection_loader.add_directory(
+            os.path.join(base_dir, 'connection')
+        )
 
     def run(self, iterator, play_context, result=0):
         """
