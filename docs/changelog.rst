@@ -55,9 +55,25 @@ Mitogen for Ansible
 
 **Known Issues**
 
-* The Ansible ``raw`` action executes as a regular Mitogen connection,
-  precluding its use for installing Python on a target. This will be addressed
-  in a future 0.2 release.
+* The ``raw`` action executes as a regular Mitogen connection, which requires
+  Python on the target, precluding its use for installing Python. This will be
+  addressed in a future 0.2 release. For now, simply mix Mitogen and vanilla
+  Ansible strategies in your playbook:
+
+  .. code-block:: yaml
+
+    - hosts: web-servers
+      strategy: linear
+      tasks:
+      - name: Install Python if necessary.
+        raw: test -e /usr/bin/python || apt install -y python-minimal
+
+    - hosts: web-servers
+      strategy: mitogen_linear
+      roles:
+      - nginx
+      - initech_app
+      - y2k_fix
 
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
@@ -72,10 +88,10 @@ Mitogen for Ansible
 * *Module Replacer* style Ansible modules are not supported.
 
 * Actions are single-threaded for each `(host, user account)` combination,
-  including actions that execute on the local machine. Certain styles of
-  playbook may experience slowdown compared to vanilla Ansible if they employ
-  long-running ``local_action`` or ``delegate_to`` tasks delegating many target
-  hosts to a single machine and user account.
+  including actions that execute on the local machine. Playbooks may experience
+  slowdown compared to vanilla Ansible if they employ long-running
+  ``local_action`` or ``delegate_to`` tasks delegating many target hosts to a
+  single machine and user account.
 
 * Connection Delegation remains in preview and has bugs around how it infers
   connections. Connection establishment will remain single-threaded for the 0.2
@@ -83,8 +99,13 @@ Mitogen for Ansible
   release.
 
 * Connection Delegation does not support automatic tunnelling of SSH-dependent
-  actions, such as the ``synchronize`` module. This will be added in the 0.3
-  series.
+  actions, such as the ``synchronize`` module. This will be addressed in the
+  0.3 series.
+
+* Configurations will break that rely on the `hashbang argument splitting
+  behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
+  ``ansible_python_interpreter`` setting, contrary to the Ansible
+  documentation. This will be addressed in a future 0.2 release.
 
 
 Core Library

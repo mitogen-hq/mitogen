@@ -13,4 +13,5 @@
 - import_playbook: remote_tmp/all.yml
 - import_playbook: runner/all.yml
 - import_playbook: ssh/all.yml
+- import_playbook: strategy/all.yml
 - import_playbook: glibc_caches/all.yml

@@ -26,36 +26,21 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import os.path
-import sys
+"""
+Stable names for PluginLoader instances across Ansible versions.
+"""
 
-#
-# This is not the real Strategy implementation module, it simply exists as a
-# proxy to the real module, which is loaded using Python's regular import
-# mechanism, to prevent Ansible's PluginLoader from making up a fake name that
-# results in ansible_mitogen plugin modules being loaded twice: once by
-# PluginLoader with a name like "ansible.plugins.strategy.mitogen", which is
-# stuffed into sys.modules even though attempting to import it will trigger an
-# ImportError, and once under its canonical name, "ansible_mitogen.strategy".
-#
-# Therefore we have a proxy module that imports it under the real name, and
-# sets up the duff PluginLoader-imported module to just contain objects from
-# the real module, so duplicate types don't exist in memory, and things like
-# debuggers and isinstance() work predictably.
-#
+from __future__ import absolute_import
 
 try:
-    import ansible_mitogen
-except ImportError:
-    base_dir = os.path.dirname(__file__)
-    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
-    del base_dir
-
-import ansible_mitogen.loaders
-import ansible_mitogen.strategy
-
-
-Base = ansible_mitogen.loaders.strategy_loader.get('free', class_only=True)
-
-class StrategyModule(ansible_mitogen.strategy.StrategyMixin, Base):
-    pass
+    from ansible.plugins.loader import action_loader
+    from ansible.plugins.loader import connection_loader
+    from ansible.plugins.loader import module_loader
+    from ansible.plugins.loader import module_utils_loader
+    from ansible.plugins.loader import strategy_loader
+except ImportError:  # Ansible <2.4
+    from ansible.plugins import action_loader
+    from ansible.plugins import connection_loader
+    from ansible.plugins import module_loader
+    from ansible.plugins import module_utils_loader
+    from ansible.plugins import strategy_loader

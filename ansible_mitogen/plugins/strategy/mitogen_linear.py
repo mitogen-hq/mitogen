@@ -51,10 +51,11 @@ except ImportError:
     sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
     del base_dir
 
+import ansible_mitogen.loaders
 import ansible_mitogen.strategy
-import ansible.plugins.strategy.linear
 
 
-class StrategyModule(ansible_mitogen.strategy.StrategyMixin,
-                     ansible.plugins.strategy.linear.StrategyModule):
+Base = ansible_mitogen.loaders.strategy_loader.get('linear', class_only=True)
+
+class StrategyModule(ansible_mitogen.strategy.StrategyMixin, Base):
     pass
