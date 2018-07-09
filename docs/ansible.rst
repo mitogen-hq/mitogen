@@ -52,7 +52,7 @@ it can only ensure the module executes as quickly as possible.
 Installation
 ------------
 
-1. Thoroughly review the documented behavioural differences.
+1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
 2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
    --version`` output.
 3. Download and extract https://github.com/dw/mitogen/archive/stable.zip
@@ -112,10 +112,11 @@ Testimonials
   can't quite believe it."
 
 
+
+.. _noteworthy_differences:
+
 Noteworthy Differences
 ----------------------
-
-* Ansible 2.3, 2.4 and 2.5 are supported on Python 2.7.
 
 * The ``su`` and ``sudo`` become methods are available. File bugs to register
   interest in more.

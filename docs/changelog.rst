@@ -1,4 +1,6 @@
 
+.. _changelog:
+
 Release Notes
 =============
 
