@@ -80,7 +80,7 @@ Mitogen for Ansible
 
 * The Ansible ``raw`` action executes as a regular Mitogen connection,
   precluding its use for installing Python on a target. This will be addressed
-  soon.
+  in a future 0.2 release.
 
 
 Core Library
