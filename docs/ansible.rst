@@ -48,6 +48,11 @@ it can only ensure the module executes as quickly as possible.
   directories on the target. Security issues relating to temporarily files in
   cross-account scenarios are entirely avoided.
 
+The effect is most potent on playbooks that execute many **short-lived
+actions**, where Ansible's overhead dominates the cost of the operation, for
+example when executing large ``with_items`` loops to run simple commands or
+write files.
+
 
 Installation
 ------------
