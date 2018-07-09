@@ -32,6 +32,7 @@ initial releases.
 * Test suite improvements
 * Replacement CI system to handle every supported OS
 * Minor deviations from vanilla Ansible behaviour
+* Ansible ``raw`` action support
 
 The goal is a *tick/tock* model where even-numbered series are a maturation of
 the previous unstable series, and unstable series are released on PyPI with
@@ -76,6 +77,10 @@ Mitogen for Ansible
   connections. Connection establishment will remain single-threaded for the 0.2
   series, however connection inference bugs will be addressed in a future 0.2
   release.
+
+* The Ansible ``raw`` action executes as a regular Mitogen connection,
+  precluding its use for installing Python on a target. This will be addressed
+  soon.
 
 
 Core Library

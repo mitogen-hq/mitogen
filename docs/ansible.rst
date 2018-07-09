@@ -118,6 +118,10 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
+* The Ansible ``raw`` action executes as a regular Mitogen connection,
+  precluding its use for installing Python on a target. This will be addressed
+  soon.
+
 * The ``su`` and ``sudo`` become methods are available. File bugs to register
   interest in more.
 
