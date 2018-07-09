@@ -69,7 +69,7 @@ def child_main(sender, delay):
     """
     args = ['ps', '-axwwo', 'user,pid,ppid,pgid,%cpu,rss,command']
     while True:
-        sender.send(subprocess.check_output(args))
+        sender.send(subprocess.check_output(args).decode())
         time.sleep(delay)
 
 
@@ -132,7 +132,7 @@ class Painter(object):
 
         all_procs = []
         for host in self.hosts:
-            all_procs.extend(host.procs.itervalues())
+            all_procs.extend(host.procs.values())
 
         all_procs.sort(key=(lambda proc: -proc.pcpu))
 
