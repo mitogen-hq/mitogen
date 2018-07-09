@@ -15,7 +15,7 @@ Release Notes
     </style>
 
 
-v0.2.0 (2018-07-08)
+v0.2.0 (2018-07-09)
 -------------------
 
 Mitogen 0.2.x is the inaugural feature-frozen branch eligible for fixes only,
