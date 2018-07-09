@@ -1,6 +1,7 @@
 
 .. currentmodule:: mitogen.service
 
+.. _service:
 
 Service Framework
 =================

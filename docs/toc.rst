@@ -12,6 +12,6 @@ Table Of Contents
    getting_started
    api
    examples
+   changelog
    internals
    shame
-   changelog
