@@ -215,6 +215,10 @@ container.
       as duplicate connections between hops, due to not perfectly replicating
       the configuration Ansible would normally use for the intermediary.
 
+    * Automatic tunnelling of SSH-dependent actions, such as the
+      ``synchronize`` module, is not yet supported. This will be added in the
+      0.3 series.
+
 To enable connection delegation, set ``mitogen_via=<inventory name>`` on the
 command line, or as host and group variables.
 

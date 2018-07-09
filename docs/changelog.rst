@@ -55,6 +55,10 @@ Mitogen for Ansible
 
 **Known Issues**
 
+* The Ansible ``raw`` action executes as a regular Mitogen connection,
+  precluding its use for installing Python on a target. This will be addressed
+  in a future 0.2 release.
+
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
   Ansible code. Performance-related bug reports for any scenario remain
@@ -78,9 +82,9 @@ Mitogen for Ansible
   series, however connection inference bugs will be addressed in a future 0.2
   release.
 
-* The Ansible ``raw`` action executes as a regular Mitogen connection,
-  precluding its use for installing Python on a target. This will be addressed
-  in a future 0.2 release.
+* Connection Delegation does not support automatic tunnelling of SSH-dependent
+  actions, such as the ``synchronize`` module. This will be added in the 0.3
+  series.
 
 
 Core Library
