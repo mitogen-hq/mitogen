@@ -55,9 +55,25 @@ Mitogen for Ansible
 
 **Known Issues**
 
-* The Ansible ``raw`` action executes as a regular Mitogen connection,
-  precluding its use for installing Python on a target. This will be addressed
-  in a future 0.2 release.
+* The ``raw`` action executes as a regular Mitogen connection, which requires
+  Python on the target, precluding its use for installing Python. This will be
+  addressed in a future 0.2 release. For now, simply mix Mitogen and vanilla
+  Ansible strategies in your playbook:
+
+  .. code-block:: yaml
+
+    - hosts: web-servers
+      strategy: linear
+      tasks:
+      - name: Install Python if necessary.
+        raw: test -e /usr/bin/python || apt install -y python-minimal
+
+    - hosts: web-servers
+      strategy: mitogen_linear
+      roles:
+      - nginx
+      - initech_app
+      - y2k_fix
 
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
