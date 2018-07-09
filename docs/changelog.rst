@@ -116,7 +116,7 @@ Core Library
 
 * The `fakessh` component does not shut down correctly and requires flow
   control added to the design. While minimal fixes are possible, due to the
-  absense of flow control the original design is functionally incomplete.
+  absence of flow control the original design is functionally incomplete.
 
 * The multi-threaded :ref:`service` remains in a state of design flux and
   should be considered obsolete, despite heavy use in Mitogen for Ansible. A
