@@ -8,10 +8,10 @@ Table Of Contents
    index
    ansible
    contributors
+   changelog
    howitworks
    getting_started
    api
    examples
-   changelog
    internals
    shame
