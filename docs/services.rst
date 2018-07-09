@@ -6,6 +6,10 @@
 Service Framework
 =================
 
+.. warning::
+
+    This section is incomplete.
+
 Mitogen includes a simple framework for implementing services exposed to other
 contexts, with some built-in subclasses to capture common designs. This is a
 work in progress, and new functionality will be added as common usage patterns
