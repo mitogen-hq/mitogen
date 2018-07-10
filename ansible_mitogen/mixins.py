@@ -108,7 +108,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Override run() to notify Connection of task-specific data, so it has a
         chance to know e.g. the Python interpreter in use.
         """
-        self._connection.on_action_run(task_vars)
+        self._connection.on_action_run(
+            task_vars=task_vars,
+            loader_basedir=self._loader.get_basedir(),
+        )
         return super(ActionModuleMixin, self).run(tmp, task_vars)
 
     def call(self, func, *args, **kwargs):

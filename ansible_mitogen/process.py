@@ -84,6 +84,12 @@ class MuxProcess(object):
     #: that was spawned.
     worker_pid = None
 
+    #: A copy of :data:`os.environ` at the time the multiplexer process was
+    #: started. It's used by mitogen_local.py to find changes made to the
+    #: top-level environment (e.g. vars plugins -- issue #297) that must be
+    #: applied to locally executed commands and modules.
+    original_env = None
+
     #: In both processes, this is the temporary UNIX socket used for
     #: forked WorkerProcesses to contact the MuxProcess
     unix_listener_path = None
@@ -108,6 +114,7 @@ class MuxProcess(object):
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
 
+        cls.original_env = dict(os.environ)
         cls.child_pid = os.fork()
         ansible_mitogen.logging.setup()
         if cls.child_pid:

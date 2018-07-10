@@ -1,7 +1,7 @@
 
 # issue #294: ensure running mixed vanilla/Mitogen succeeds.
 
-- name: integration/strategy/mixed_vanilla_ansible.yml (linear)
+- name: integration/strategy/_mixed_vanilla_mitogen.yml (linear)
   hosts: test-targets
   any_errors_fatal: true
   strategy: linear
@@ -15,7 +15,7 @@
     - assert:
         that: strategy == 'ansible.plugins.strategy.linear.StrategyModule'
 
-- name: integration/strategy/mixed_vanilla_ansible.yml (mitogen_linear)
+- name: integration/strategy/_mixed_vanilla_mitogen.yml (mitogen_linear)
   hosts: test-targets
   any_errors_fatal: true
   strategy: mitogen_linear
@@ -30,7 +30,7 @@
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
 
 
-- name: integration/strategy/mixed_vanilla_ansible.yml (linear)
+- name: integration/strategy/_mixed_vanilla_mitogen.yml (linear)
   hosts: test-targets
   any_errors_fatal: true
   strategy: linear

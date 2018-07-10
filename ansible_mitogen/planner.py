@@ -175,6 +175,8 @@ class Planner(object):
         """
         new = dict((mitogen.core.UnicodeType(k), kwargs[k])
                    for k in kwargs)
+        new.setdefault('cwd', self._inv.connection.get_default_cwd())
+        new.setdefault('extra_env', self._inv.connection.get_default_env())
         new.setdefault('emulate_tty', True)
         new.setdefault('service_context', self._inv.connection.parent)
         return new
