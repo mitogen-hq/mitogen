@@ -41,3 +41,7 @@ import ansible_mitogen.connection
 
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'local'
+
+    def get_default_cwd(self):
+        # https://github.com/ansible/ansible/issues/14489
+        return self.loader_basedir

@@ -347,6 +347,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to 'hostvars' by on_action_run()
     host_vars = None
 
+    #: Set to '_loader.get_basedir()' by on_action_run().
+    loader_basedir = None
+
     #: Set after connection to the target context's home directory.
     home_dir = None
 
@@ -366,7 +369,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         # https://github.com/dw/mitogen/issues/140
         self.close()
 
-    def on_action_run(self, task_vars):
+    def on_action_run(self, task_vars, loader_basedir):
         """
         Invoked by ActionModuleMixin to indicate a new task is about to start
         executing. We use the opportunity to grab relevant bits from the
@@ -384,6 +387,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.mitogen_ssh_debug_level = task_vars.get('mitogen_ssh_debug_level')
         self.inventory_hostname = task_vars['inventory_hostname']
         self.host_vars = task_vars['hostvars']
+        self.loader_basedir = loader_basedir
         self.close(new_task=True)
 
     @property
@@ -543,6 +547,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         return self.call(ansible_mitogen.target.create_fork_child)
 
+    def get_default_cwd(self):
+        """
+        Overridden by connections/mitogen_local.py to emulate behaviour of CWD
+        inherited from WorkerProcess.
+        """
+        return None
+
     def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
         """
         Implement exec_command() by calling the corresponding
@@ -560,7 +571,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             ansible_mitogen.target.exec_command,
             cmd=mitogen.utils.cast(cmd),
             in_data=mitogen.utils.cast(in_data),
-            chdir=mitogen_chdir,
+            chdir=mitogen_chdir or self.get_default_cwd(),
             emulate_tty=emulate_tty,
         )
 

@@ -126,8 +126,10 @@ class Runner(object):
         implicit bytes/str conversion behaviour of a 2.x controller running
         against a 3.x target.
     :param dict env:
-        Additional environment variables to set during the run.
-
+        Additional environment variables to set during the run. Keys with
+        :data:`None` are unset if present.
+    :param str cwd:
+        If not :data:`None`, change to this directory before executing.
     :param mitogen.core.ExternalContext econtext:
         When `detach` is :data:`True`, a reference to the ExternalContext the
         runner is executing in.
@@ -135,7 +137,7 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, json_args, env=None,
+    def __init__(self, module, service_context, json_args, cwd=None, env=None,
                  econtext=None, detach=False):
         self.module = module
         self.service_context = service_context
@@ -143,6 +145,7 @@ class Runner(object):
         self.detach = detach
         self.args = json.loads(json_args)
         self.env = env
+        self.cwd = cwd
 
     def setup(self):
         """
@@ -150,6 +153,7 @@ class Runner(object):
         from the parent, as :meth:`run` may detach prior to beginning
         execution. The base implementation simply prepares the environment.
         """
+        self._cwd = TemporaryCwd(self.cwd)
         self._env = TemporaryEnvironment(self.env)
 
     def revert(self):
@@ -158,6 +162,7 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
+        self._cwd.revert()
         self._try_cleanup_temp()
 
     def _cleanup_temp(self):
@@ -257,6 +262,16 @@ class ModuleUtilsImporter(object):
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
+
+
+class TemporaryCwd(object):
+    def __init__(self, cwd):
+        self.original = os.getcwd()
+        if cwd:
+            os.chdir(cwd)
+
+    def revert(self):
+        os.chdir(self.original)
 
 
 class TemporaryEnvironment(object):
