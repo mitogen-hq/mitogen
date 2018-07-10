@@ -154,7 +154,12 @@ class Runner(object):
         from the parent, as :meth:`run` may detach prior to beginning
         execution. The base implementation simply prepares the environment.
         """
-        self._cwd = TemporaryCwd(self.cwd)
+        if self.cwd:
+            # For situations like sudo to another non-privileged account, the
+            # CWD could be $HOME of the old account, which could have mode go=,
+            # which means it is impossible to restore the old directory, so
+            # don't even bother.
+            os.chdir(self.cwd)
         env = dict(self.extra_env or {})
         if self.env:
             env.update(self.env)
@@ -166,7 +171,6 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
-        self._cwd.revert()
         self._try_cleanup_temp()
 
     def _cleanup_temp(self):
@@ -266,16 +270,6 @@ class ModuleUtilsImporter(object):
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
-
-
-class TemporaryCwd(object):
-    def __init__(self, cwd):
-        self.original = os.getcwd()
-        if cwd:
-            os.chdir(cwd)
-
-    def revert(self):
-        os.chdir(self.original)
 
 
 class TemporaryEnvironment(object):
