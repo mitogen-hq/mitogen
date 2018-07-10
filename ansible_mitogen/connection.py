@@ -550,7 +550,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def get_default_cwd(self):
         """
         Overridden by connections/mitogen_local.py to emulate behaviour of CWD
-        inherited from WorkerProcess.
+        being fixed to that of ActionBase._loader.get_basedir().
+        """
+        return None
+
+    def get_default_env(self):
+        """
+        Overridden by connections/mitogen_local.py to emulate behaviour of
+        WorkProcess environment inherited from WorkerProcess.
         """
         return None
 

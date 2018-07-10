@@ -137,13 +137,14 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, json_args, cwd=None, env=None,
-                 econtext=None, detach=False):
+    def __init__(self, module, service_context, json_args, extra_env=None,
+                 cwd=None, env=None, econtext=None, detach=False):
         self.module = module
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
         self.args = json.loads(json_args)
+        self.extra_env = extra_env
         self.env = env
         self.cwd = cwd
 
@@ -154,7 +155,10 @@ class Runner(object):
         execution. The base implementation simply prepares the environment.
         """
         self._cwd = TemporaryCwd(self.cwd)
-        self._env = TemporaryEnvironment(self.env)
+        env = dict(self.extra_env or {})
+        if self.env:
+            env.update(self.env)
+        self._env = TemporaryEnvironment(env)
 
     def revert(self):
         """
@@ -275,14 +279,24 @@ class TemporaryCwd(object):
 
 
 class TemporaryEnvironment(object):
+    """
+    Apply environment changes from `env` until :meth:`revert` is called. Values
+    in the dict may be :data:`None` to indicate the relevant key should be
+    deleted.
+    """
     def __init__(self, env=None):
-        self.original = os.environ.copy()
+        self.original = dict(os.environ)
         self.env = env or {}
-        os.environ.update((k, str(v)) for k, v in iteritems(self.env))
+        for key, value in iteritems(self.env):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = str(value)
 
     def revert(self):
-        os.environ.clear()
-        os.environ.update(self.original)
+        if self.env:
+            os.environ.clear()
+            os.environ.update(self.original)
 
 
 class TemporaryArgv(object):

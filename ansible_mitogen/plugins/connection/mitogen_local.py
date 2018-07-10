@@ -37,6 +37,32 @@ except ImportError:
     del base_dir
 
 import ansible_mitogen.connection
+import ansible_mitogen.process
+
+
+if sys.version_info > (2, 7):
+    viewkeys = dict.viewkeys
+else:
+    viewkeys = lambda dct: set(dct)
+
+
+def dict_diff(old, new):
+    """
+    Return a dict representing the differences between the dicts `old` and
+    `new`. Deleted keys appear as a key with the value :data:`None`, added and
+    changed keys appear as a key with the new value.
+    """
+    old_keys = viewkeys(old)
+    new_keys = viewkeys(dict(new))
+    out = {}
+    for key in new_keys - old_keys:
+        out[key] = new[key]
+    for key in old_keys - new_keys:
+        out[key] = None
+    for key in old_keys & new_keys:
+        if old[key] != new[key]:
+            out[key] = new[key]
+    return out
 
 
 class Connection(ansible_mitogen.connection.Connection):
@@ -45,3 +71,13 @@ class Connection(ansible_mitogen.connection.Connection):
     def get_default_cwd(self):
         # https://github.com/ansible/ansible/issues/14489
         return self.loader_basedir
+
+    def get_default_env(self):
+        """
+        Vanilla Ansible local commands execute with an environment inherited
+        from WorkerProcess, we must emulate that.
+        """
+        return dict_diff(
+            old=ansible_mitogen.process.MuxProcess.original_env,
+            new=os.environ,
+        )
