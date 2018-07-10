@@ -40,7 +40,9 @@ import ansible_mitogen.connection
 import ansible_mitogen.process
 
 
-if sys.version_info > (2, 7):
+if sys.version_info > (3,):
+    viewkeys = dict.keys
+elif sys.version_info > (2, 7):
     viewkeys = dict.viewkeys
 else:
     viewkeys = lambda dct: set(dct)
