@@ -126,8 +126,10 @@ class Runner(object):
         implicit bytes/str conversion behaviour of a 2.x controller running
         against a 3.x target.
     :param dict env:
-        Additional environment variables to set during the run.
-
+        Additional environment variables to set during the run. Keys with
+        :data:`None` are unset if present.
+    :param str cwd:
+        If not :data:`None`, change to this directory before executing.
     :param mitogen.core.ExternalContext econtext:
         When `detach` is :data:`True`, a reference to the ExternalContext the
         runner is executing in.
@@ -135,14 +137,16 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, json_args, env=None,
-                 econtext=None, detach=False):
+    def __init__(self, module, service_context, json_args, extra_env=None,
+                 cwd=None, env=None, econtext=None, detach=False):
         self.module = module
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
         self.args = json.loads(json_args)
+        self.extra_env = extra_env
         self.env = env
+        self.cwd = cwd
 
     def setup(self):
         """
@@ -150,7 +154,16 @@ class Runner(object):
         from the parent, as :meth:`run` may detach prior to beginning
         execution. The base implementation simply prepares the environment.
         """
-        self._env = TemporaryEnvironment(self.env)
+        if self.cwd:
+            # For situations like sudo to another non-privileged account, the
+            # CWD could be $HOME of the old account, which could have mode go=,
+            # which means it is impossible to restore the old directory, so
+            # don't even bother.
+            os.chdir(self.cwd)
+        env = dict(self.extra_env or {})
+        if self.env:
+            env.update(self.env)
+        self._env = TemporaryEnvironment(env)
 
     def revert(self):
         """
@@ -260,14 +273,24 @@ class ModuleUtilsImporter(object):
 
 
 class TemporaryEnvironment(object):
+    """
+    Apply environment changes from `env` until :meth:`revert` is called. Values
+    in the dict may be :data:`None` to indicate the relevant key should be
+    deleted.
+    """
     def __init__(self, env=None):
-        self.original = os.environ.copy()
+        self.original = dict(os.environ)
         self.env = env or {}
-        os.environ.update((k, str(v)) for k, v in iteritems(self.env))
+        for key, value in iteritems(self.env):
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = str(value)
 
     def revert(self):
-        os.environ.clear()
-        os.environ.update(self.original)
+        if self.env:
+            os.environ.clear()
+            os.environ.update(self.original)
 
 
 class TemporaryArgv(object):
