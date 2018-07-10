@@ -15,6 +15,18 @@ Release Notes
     </style>
 
 
+v0.2.1 (2018-07-10)
+-------------------
+
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+
+* `#297 <https://github.com/dw/mitogen/issues/297>`_: compatibility: local
+  actions set their working directory to that of their defining playbook, and
+  inherit a process environment as if they were executed as a subprocess of the
+  forked task worker.
+
+
 v0.2.0 (2018-07-09)
 -------------------
 
