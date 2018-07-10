@@ -4,7 +4,14 @@
   hosts: test-targets
   tasks:
     - connection: local
-      command: ansible -vvv -i "{{inventory_file}}" test-targets -m custom_python_detect_environment -e ansible_user=mitogen__slow_user -e ansible_password=slow_user_password
+      command: |
+        ansible -vvv
+        -i "{{inventory_file}}"
+        test-targets
+        -m custom_python_detect_environment
+        -e ansible_user=mitogen__slow_user -e ansible_password=slow_user_password
+      args:
+        chdir: ../..
       register: out
       ignore_errors: true
       when: is_mitogen
