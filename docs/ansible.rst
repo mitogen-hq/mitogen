@@ -90,7 +90,7 @@ concurrent to an equivalent run using the extension.
 .. raw:: html
 
     <video width="720" height="439" controls>
-        <source src="http://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
+        <source src="https://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
     </video>
 
 
