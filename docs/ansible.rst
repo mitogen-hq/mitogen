@@ -45,7 +45,7 @@ it can only ensure the module executes as quickly as possible.
 
 * **Fewer writes to the target filesystem occur**. In typical configurations,
   Ansible repeatedly rewrites and extracts ZIP files to multiple temporary
-  directories on the target. Security issues relating to temporarily files in
+  directories on the target. Security issues relating to temporary files in
   cross-account scenarios are entirely avoided.
 
 The effect is most potent on playbooks that execute many **short-lived
