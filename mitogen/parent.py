@@ -1240,6 +1240,9 @@ class Router(mitogen.core.Router):
         self._context_by_id[context.context_id] = context
         return context
 
+    def doas(self, **kwargs):
+        return self.connect(u'doas', **kwargs)
+
     def docker(self, **kwargs):
         return self.connect(u'docker', **kwargs)
 

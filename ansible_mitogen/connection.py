@@ -173,6 +173,20 @@ def _connect_sudo(spec):
     }
 
 
+def _connect_doas(spec):
+    return {
+        'method': 'doas',
+        'enable_lru': True,
+        'kwargs': {
+            'username': spec['become_user'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['become_pass']),
+            'python_path': spec['python_path'],
+            'doas_path': spec['become_exe'],
+            'connect_timeout': spec['timeout'],
+        }
+    }
+
+
 def _connect_mitogen_su(spec):
     # su as a first-class proxied connection, not a become method.
     return {
@@ -202,6 +216,20 @@ def _connect_mitogen_sudo(spec):
     }
 
 
+def _connect_mitogen_doas(spec):
+    # doas as a first-class proxied connection, not a become method.
+    return {
+        'method': 'doas',
+        'kwargs': {
+            'username': spec['remote_user'],
+            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
+            'python_path': spec['python_path'],
+            'doas_path': spec['become_exe'],
+            'connect_timeout': spec['timeout'],
+        }
+    }
+
+
 CONNECTION_METHOD = {
     'docker': _connect_docker,
     'jail': _connect_jail,
@@ -213,8 +241,10 @@ CONNECTION_METHOD = {
     'ssh': _connect_ssh,
     'su': _connect_su,
     'sudo': _connect_sudo,
+    'doas': _connect_doas,
     'mitogen_su': _connect_mitogen_su,
     'mitogen_sudo': _connect_mitogen_sudo,
+    'mitogen_doas': _connect_mitogen_doas,
 }
 
 
@@ -314,8 +344,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: target user account.
     fork_context = None
 
-    #: Only sudo and su are supported for now.
-    become_methods = ['sudo', 'su']
+    #: Only sudo, su, and doas are supported for now.
+    become_methods = ['sudo', 'su', 'doas']
 
     #: Set to 'ansible_python_interpreter' by on_action_run().
     python_path = None

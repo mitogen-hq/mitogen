@@ -607,6 +607,7 @@ class Importer(object):
         self._present = {'mitogen': [
             'compat',
             'debug',
+            'doas',
             'docker',
             'fakessh',
             'fork',
