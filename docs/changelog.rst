@@ -15,6 +15,13 @@ Release Notes
     </style>
 
 
+v0.2.2 (2018-07-??)
+-------------------
+
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+  is now supported. Contributed by Mike Walker.
+
+
 v0.2.1 (2018-07-10)
 -------------------
 
