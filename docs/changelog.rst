@@ -87,6 +87,10 @@ Mitogen for Ansible
       - initech_app
       - y2k_fix
 
+* When running with ``-vvv``, log messages such as *mitogen: Router(Broker(0x7f5a48921590)): no route
+  for Message(..., 102, ...), my ID is ...* may be visible. These are due to a
+  minor race while initializing logging and can be ignored.
+
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
   Ansible code. Performance-related bug reports for any scenario remain
