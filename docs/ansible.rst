@@ -60,13 +60,13 @@ Installation
 1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
 2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
    --version`` output.
-3. Download and extract https://github.com/dw/mitogen/archive/stable.zip
+3. Download and extract |mitogen_url| from PyPI.
 4. Modify ``ansible.cfg``:
 
-   .. code-block:: dosini
+   .. parsed-literal::
 
         [defaults]
-        strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
+        strategy_plugins = /path/to/mitogen-|mitogen_version|/ansible_mitogen/plugins/strategy
         strategy = mitogen_linear
 
    The ``strategy`` key is optional. If omitted, the
