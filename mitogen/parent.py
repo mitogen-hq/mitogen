@@ -457,10 +457,16 @@ class Argv(object):
     def __init__(self, argv):
         self.argv = argv
 
+    must_escape = frozenset('\\$"`!')
+    must_escape_or_space = must_escape | frozenset(' ')
+
     def escape(self, x):
+        if not self.must_escape_or_space.intersection(x):
+            return x
+
         s = '"'
         for c in x:
-            if c in '\\$"`':
+            if c in self.must_escape:
                 s += '\\'
             s += c
         s += '"'
