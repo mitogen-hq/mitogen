@@ -18,8 +18,23 @@ Release Notes
 v0.2.2 (2018-07-??)
 -------------------
 
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+
+* `#299 <https://github.com/dw/mitogen/pull/299>`_: fix the ``network_cli``
+  connection type when the Mitogen strategy is active.
+
+Core Library
+~~~~~~~~~~~~
+
 * `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
   is now supported. Contributed by Mike Walker.
+
+* `#307 <https://github.com/dw/mitogen/pull/307>`_: SSH login banner output
+  containing the word 'password' is no longer confused for a password prompt.
+
+* Debug logs containing command lines are printed with the minimal quoting and
+  escaping required.
 
 
 v0.2.1 (2018-07-10)
