@@ -21,8 +21,17 @@ v0.2.2 (2018-07-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
-* `#299 <https://github.com/dw/mitogen/pull/299>`_: fix the ``network_cli``
+* `#291 <https://github.com/dw/mitogen/issues/291>`_: compatibility:
+  ``ansible_*_interpreter`` variables are parsed using UNIX hashbang syntax,
+  i.e. with support for a single space-separated argument. This supports a
+  common idiom where ``ansible_python_interpreter`` is set to ``/usr/bin/env
+  python``.
+
+* `#299 <https://github.com/dw/mitogen/issues/299>`_: fix the ``network_cli``
   connection type when the Mitogen strategy is active.
+
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+  is now supported. Contributed by Mike Walker.
 
 * `#309 <https://github.com/dw/mitogen/pull/309>`_: fix a regression to process
   environment cleanup, caused by the change in v0.2.1 to run local tasks with
@@ -32,10 +41,14 @@ Mitogen for Ansible
 Core Library
 ~~~~~~~~~~~~
 
+* `#291 <https://github.com/dw/mitogen/issues/291>`_: the ``python_path``
+  paramater may specify an argument vector prefix rather than a single string
+  program path.
+
 * `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
   is now supported. Contributed by Mike Walker.
 
-* `#307 <https://github.com/dw/mitogen/pull/307>`_: SSH login banner output
+* `#307 <https://github.com/dw/mitogen/issues/307>`_: SSH login banner output
   containing the word 'password' is no longer confused for a password prompt.
 
 * Debug logs containing command lines are printed with the minimal quoting and
