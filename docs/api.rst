@@ -483,9 +483,13 @@ Router Class
             determine its installation prefix. This is required to support
             virtualenv.
 
-        :param str python_path:
-            Path to the Python interpreter to use for bootstrap. Defaults to
-            :data:`sys.executable`. For SSH, defaults to ``python``.
+        :param str|list python_path:
+            String or list path to the Python interpreter to use for bootstrap.
+            Defaults to :data:`sys.executable` for local connections, and
+            ``python`` for remote connections.
+
+            It is possible to pass a list to invoke Python wrapped using
+            another tool, such as ``["/usr/bin/env", "python"]``.
 
         :param bool debug:
             If :data:`True`, arrange for debug logging (:py:meth:`enable_debug`) to
