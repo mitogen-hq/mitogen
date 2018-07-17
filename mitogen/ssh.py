@@ -61,7 +61,18 @@ def filter_debug(stream, it):
 
     This contains the mess of dealing with both line-oriented input, and partial
     lines such as the password prompt.
+
+    Yields `(line, partial)` tuples, where `line` is the line, `partial` is
+    :data:`True` if no terminating newline character was present and no more
+    data exists in the read buffer. Consuming code can use this to unreliably
+    detect the presence of an interactive prompt.
     """
+    # The `partial` test is unreliable, but is only problematic when verbosity
+    # is enabled: it's possible for a combination of SSH banner, password
+    # prompt, verbose output, timing and OS buffering specifics to create a
+    # situation where an otherwise newline-terminated line appears to not be
+    # terminated, due to a partial read(). If something is broken when
+    # ssh_debug_level>0, this is the first place to look.
     state = 'start_of_line'
     buf = b('')
     for chunk in it:
@@ -86,7 +97,7 @@ def filter_debug(stream, it):
                 state = 'start_of_line'
             elif state == 'in_plain':
                 line, nl, buf = buf.partition(b('\n'))
-                yield line + nl
+                yield line + nl, not (nl or buf)
                 if nl:
                     state = 'start_of_line'
 
@@ -237,7 +248,7 @@ class Stream(mitogen.parent.Stream):
             deadline=self.connect_deadline
         )
 
-        for buf in filter_debug(self, it):
+        for buf, partial in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith(self.EC0_MARKER):
                 self._router.broker.start_receive(self.tty_stream)
@@ -255,7 +266,7 @@ class Stream(mitogen.parent.Stream):
                     raise PasswordError(self.password_incorrect_msg)
                 else:
                     raise PasswordError(self.auth_incorrect_msg)
-            elif PASSWORD_PROMPT in buf.lower():
+            elif partial and PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 LOG.debug('%r: sending password', self)
