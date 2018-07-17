@@ -44,9 +44,10 @@ import ansible.utils.shlex
 import mitogen.unix
 import mitogen.utils
 
-import ansible_mitogen.target
+import ansible_mitogen.parsing
 import ansible_mitogen.process
 import ansible_mitogen.services
+import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
@@ -248,6 +249,20 @@ CONNECTION_METHOD = {
 }
 
 
+def parse_python_path(s):
+    """
+    Given the string set for ansible_python_interpeter, parse it as hashbang
+    syntax and return an appropriate argument vector.
+    """
+    if not s:
+        return None
+
+    interpreter, arg = ansible_mitogen.parsing.parse_script_interpreter(s)
+    if arg:
+        return [interpreter, arg]
+    return [interpreter]
+
+
 def config_from_play_context(transport, inventory_name, connection):
     """
     Return a dict representing all important connection configuration, allowing
@@ -265,7 +280,7 @@ def config_from_play_context(transport, inventory_name, connection):
         'become_pass': connection._play_context.become_pass,
         'password': connection._play_context.password,
         'port': connection._play_context.port,
-        'python_path': connection.python_path,
+        'python_path': parse_python_path(connection.python_path),
         'private_key_file': connection._play_context.private_key_file,
         'ssh_executable': connection._play_context.ssh_executable,
         'timeout': connection._play_context.timeout,
@@ -314,7 +329,7 @@ def config_from_hostvars(transport, inventory_name, connection,
         'password': (hostvars.get('ansible_ssh_pass') or
                      hostvars.get('ansible_password')),
         'port': hostvars.get('ansible_port'),
-        'python_path': hostvars.get('ansible_python_interpreter'),
+        'python_path': parse_python_path(hostvars.get('ansible_python_interpreter')),
         'private_key_file': (hostvars.get('ansible_ssh_private_key_file') or
                              hostvars.get('ansible_private_key_file')),
         'mitogen_via': hostvars.get('mitogen_via'),

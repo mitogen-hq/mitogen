@@ -48,40 +48,13 @@ import ansible.module_utils
 import mitogen.core
 
 import ansible_mitogen.loaders
+import ansible_mitogen.parsing
 import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
-
-
-def parse_script_interpreter(source):
-    """
-    Extract the script interpreter and its sole argument from the module
-    source code.
-
-    :returns:
-        Tuple of `(interpreter, arg)`, where `intepreter` is the script
-        interpreter and `arg` is its sole argument if present, otherwise
-        :py:data:`None`.
-    """
-    # Linux requires first 2 bytes with no whitespace, pretty sure it's the
-    # same everywhere. See binfmt_script.c.
-    if not source.startswith(b'#!'):
-        return None, None
-
-    # Find terminating newline. Assume last byte of binprm_buf if absent.
-    nl = source.find(b'\n', 0, 128)
-    if nl == -1:
-        nl = min(128, len(source))
-
-    # Split once on the first run of whitespace. If no whitespace exists,
-    # bits just contains the interpreter filename.
-    bits = source[2:nl].strip().split(None, 1)
-    if len(bits) == 1:
-        return mitogen.core.to_text(bits[0]), None
-    return mitogen.core.to_text(bits[0]), mitogen.core.to_text(bits[1])
 
 
 class Invocation(object):
@@ -215,7 +188,7 @@ class ScriptPlanner(BinaryPlanner):
     detection and rewrite.
     """
     def _get_interpreter(self):
-        interpreter, arg = parse_script_interpreter(
+        interpreter, arg = ansible_mitogen.parsing.parse_hashbang(
             self._inv.module_source
         )
         if interpreter is None:
