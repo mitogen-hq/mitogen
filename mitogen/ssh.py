@@ -161,6 +161,11 @@ class Stream(mitogen.parent.Stream):
         bits = [self.ssh_path]
         if self.ssh_debug_level:
             bits += ['-' + ('v' * min(3, self.ssh_debug_level))]
+        else:
+            # issue #307: suppress any login banner, as it may contain the
+            # password prompt, and there is no robust way to tell the
+            # difference.
+            bits += ['-o', 'LogLevel ERROR']
         if self.username:
             bits += ['-l', self.username]
         if self.port is not None:
