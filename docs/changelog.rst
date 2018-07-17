@@ -15,6 +15,28 @@ Release Notes
     </style>
 
 
+v0.2.2 (2018-07-??)
+-------------------
+
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+
+* `#299 <https://github.com/dw/mitogen/pull/299>`_: fix the ``network_cli``
+  connection type when the Mitogen strategy is active.
+
+Core Library
+~~~~~~~~~~~~
+
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+  is now supported. Contributed by Mike Walker.
+
+* `#307 <https://github.com/dw/mitogen/pull/307>`_: SSH login banner output
+  containing the word 'password' is no longer confused for a password prompt.
+
+* Debug logs containing command lines are printed with the minimal quoting and
+  escaping required.
+
+
 v0.2.1 (2018-07-10)
 -------------------
 
@@ -86,6 +108,10 @@ Mitogen for Ansible
       - nginx
       - initech_app
       - y2k_fix
+
+* When running with ``-vvv``, log messages such as *mitogen: Router(Broker(0x7f5a48921590)): no route
+  for Message(..., 102, ...), my ID is ...* may be visible. These are due to a
+  minor race while initializing logging and can be ignored.
 
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding

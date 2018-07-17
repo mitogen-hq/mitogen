@@ -457,10 +457,16 @@ class Argv(object):
     def __init__(self, argv):
         self.argv = argv
 
+    must_escape = frozenset('\\$"`!')
+    must_escape_or_space = must_escape | frozenset(' ')
+
     def escape(self, x):
+        if not self.must_escape_or_space.intersection(x):
+            return x
+
         s = '"'
         for c in x:
-            if c in '\\$"`':
+            if c in self.must_escape:
                 s += '\\'
             s += c
         s += '"'
@@ -1239,6 +1245,9 @@ class Router(mitogen.core.Router):
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
+
+    def doas(self, **kwargs):
+        return self.connect(u'doas', **kwargs)
 
     def docker(self, **kwargs):
         return self.connect(u'docker', **kwargs)

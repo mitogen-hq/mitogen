@@ -45,7 +45,7 @@ it can only ensure the module executes as quickly as possible.
 
 * **Fewer writes to the target filesystem occur**. In typical configurations,
   Ansible repeatedly rewrites and extracts ZIP files to multiple temporary
-  directories on the target. Security issues relating to temporarily files in
+  directories on the target. Security issues relating to temporary files in
   cross-account scenarios are entirely avoided.
 
 The effect is most potent on playbooks that execute many **short-lived
@@ -60,13 +60,13 @@ Installation
 1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
 2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
    --version`` output.
-3. Download and extract https://github.com/dw/mitogen/archive/stable.zip
+3. Download and extract |mitogen_url| from PyPI.
 4. Modify ``ansible.cfg``:
 
-   .. code-block:: dosini
+   .. parsed-literal::
 
         [defaults]
-        strategy_plugins = /path/to/mitogen-master/ansible_mitogen/plugins/strategy
+        strategy_plugins = /path/to/mitogen-|mitogen_version|/ansible_mitogen/plugins/strategy
         strategy = mitogen_linear
 
    The ``strategy`` key is optional. If omitted, the
@@ -90,7 +90,7 @@ concurrent to an equivalent run using the extension.
 .. raw:: html
 
     <video width="720" height="439" controls>
-        <source src="http://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
+        <source src="https://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
     </video>
 
 
@@ -127,8 +127,8 @@ Noteworthy Differences
   precluding its use for installing Python on a target. This will be addressed
   soon.
 
-* The ``su`` and ``sudo`` become methods are available. File bugs to register
-  interest in more.
+* The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
+  register interest in more.
 
 * The `docker <https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_,
   `jail <https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_,
@@ -137,9 +137,9 @@ Noteworthy Differences
   `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
   and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
   built-in connection types are supported, along with Mitogen-specific
-  :ref:`machinectl <machinectl>`, :ref:`mitogen_su <su>`, :ref:`mitogen_sudo
-  <sudo>`, and :ref:`setns <setns>` types. File bugs to register interest in
-  others.
+  :ref:`machinectl <machinectl>`, :ref:`mitogen_doas< mitogen_doas>`,
+  :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
+  types. File bugs to register interest in others.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -475,6 +475,30 @@ Connection Types
 Matching Ansible, connection variables are treated on a per-task basis, causing
 establishment of additional reuseable interpreters as necessary to match the
 configuration of each task.
+
+
+.. _doas:
+
+Doas
+~~~~
+
+``doas`` can be used as a connection method that supports connection delegation, or
+as a become method.
+
+When used as a become method:
+
+* ``ansible_python_interpreter``
+* ``ansible_become_exe``: path to ``doas`` binary.
+* ``ansible_become_user`` (default: ``root``)
+* ``ansible_become_pass`` (default: assume passwordless)
+* ansible.cfg: ``timeout``
+
+When used as the ``mitogen_doas`` connection method:
+
+* The inventory hostname has no special meaning.
+* ``ansible_user``: username to use.
+* ``ansible_password``: password to use.
+* ``ansible_python_interpreter``
 
 
 .. _method-docker:

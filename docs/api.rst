@@ -523,6 +523,31 @@ Router Class
                 # Use the SSH connection to create a sudo connection.
                 remote_root = router.sudo(username='root', via=remote_machine)
 
+    .. method:: dos (username=None, password=None, su_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
+
+        Construct a context on the local machine over a ``su`` invocation. The
+        ``su`` process is started in a newly allocated pseudo-terminal, and
+        supports typing interactive passwords.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str username:
+            Username to use, defaults to ``root``.
+        :param str password:
+            The account password to use if requested.
+        :param str su_path:
+            Filename or complete path to the ``su`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``su``.
+        :param bytes password_prompt:
+            A string that indicates ``doas`` is requesting a password. Defaults
+            to ``Password:``.
+        :param list incorrect_prompts:
+            List of bytestrings indicating the password is incorrect. Defaults
+            to `(b"doas: authentication failed")`.
+        :raises mitogen.su.PasswordError:
+            A password was requested but none was provided, the supplied
+            password was incorrect, or the target account did not exist.
+
     .. method:: docker (container=None, image=None, docker_path=None, \**kwargs)
 
         Construct a context on the local machine within an existing or
@@ -616,12 +641,9 @@ Router Class
         :param str su_path:
             Filename or complete path to the ``su`` binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``su``.
-        :param str password_prompt:
-            The string to wait to that signals ``su`` is requesting a password.
-            Defaults to ``Password:``.
-        :param str password_prompt:
-            The string that signal a request for the password. Defaults to
-            ``Password:``.
+        :param bytes password_prompt:
+            The string that indicates ``su`` is requesting a password. Defaults
+            to ``Password:``.
         :param str incorrect_prompts:
             Strings that signal the password is incorrect. Defaults to `("su:
             sorry", "su: authentication failure")`.

@@ -125,6 +125,8 @@ class Operations(fuse.Operations):  # fuse.LoggingMixIn,
         self.host = host
         self.root = path
         self.ready = threading.Event()
+        if not hasattr(self, 'encoding'):
+            self.encoding = 'utf-8'
 
     def init(self, path):
         self.broker = mitogen.master.Broker(install_watcher=False)

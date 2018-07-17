@@ -2,15 +2,8 @@ import os
 import sys
 
 sys.path.append('..')
-
-def grep_version():
-    path = os.path.join(os.path.dirname(__file__), '../mitogen/__init__.py')
-    with open(path) as fp:
-        for line in fp:
-            if line.startswith('__version__'):
-                _, _, s = line.partition('=')
-                return '.'.join(map(str, eval(s)))
-
+import mitogen
+VERSION = '%s.%s.%s' % mitogen.__version__
 
 author = u'David Wilson'
 copyright = u'2018, David Wilson'
@@ -31,8 +24,16 @@ language = None
 master_doc = 'toc'
 project = u'Mitogen'
 pygments_style = 'sphinx'
-release = grep_version()
+release = VERSION
 source_suffix = '.rst'
 templates_path = ['_templates']
 todo_include_todos = False
-version = grep_version()
+version = VERSION
+
+rst_epilog = """
+
+.. |mitogen_version| replace:: %(VERSION)s
+
+.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://files.pythonhosted.org/packages/source/m/mitogen/mitogen-%(VERSION)s.tar.gz>`__
+
+""" % locals()
