@@ -137,7 +137,7 @@ Noteworthy Differences
   `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_,
   and `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
   built-in connection types are supported, along with Mitogen-specific
-  :ref:`machinectl <machinectl>`, :ref:`mitogen_doas< mitogen_doas>`,
+  :ref:`machinectl <machinectl>`, :ref:`mitogen_doas <doas>`,
   :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
   types. File bugs to register interest in others.
 
@@ -514,22 +514,6 @@ connection delegation is supported.
 * ``ansible_user``: Name of user within the container to execute as.
 
 
-.. _machinectl:
-
-Machinectl
-~~~~~~~~~~
-
-Like the `machinectl third party plugin
-<https://github.com/BaxterStockman/ansible-connection-machinectl>`_ except
-connection delegation is supported. This is a light wrapper around the
-:ref:`setns <setns>` method.
-
-* ``ansible_host``: Name of Docker container (default: inventory hostname).
-* ``ansible_user``: Name of user within the container to execute as.
-* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
-  as ``/bin/machinectl``.
-
-
 FreeBSD Jail
 ~~~~~~~~~~~~
 
@@ -551,6 +535,23 @@ connection delegation is supported.
 * ``ansible_python_interpreter``
 
 
+Process Model
+^^^^^^^^^^^^^
+
+Ansible usually executes local connection commands as a transient subprocess of
+the forked worker executing a task. With the extension, the local connection
+exists as a persistent subprocess of the connection multiplexer.
+
+This means that global state mutations made to the top-level Ansible process
+that are normally visible to newly forked subprocesses, such as vars plug-ins
+that modify the environment, will not be reflected when executing local
+commands without additional effort.
+
+During execution the extension presently mimics the working directory and
+process environment inheritence of regular Ansible, however it is possible some
+additional differences exist that may break existing playbooks.
+
+
 .. _method-lxc:
 
 LXC
@@ -565,6 +566,22 @@ The ``lxc-attach`` command must be available on the host machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+
+
+.. _machinectl:
+
+Machinectl
+~~~~~~~~~~
+
+Like the `machinectl third party plugin
+<https://github.com/BaxterStockman/ansible-connection-machinectl>`_ except
+connection delegation is supported. This is a light wrapper around the
+:ref:`setns <setns>` method.
+
+* ``ansible_host``: Name of Docker container (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
+  as ``/bin/machinectl``.
 
 
 .. _setns:
