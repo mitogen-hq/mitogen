@@ -815,10 +815,21 @@ class Importer(object):
 
     def get_filename(self, fullname):
         if fullname in self._cache:
+            path = self._cache[fullname][2]
+            if path is None:
+                # If find_loader() returns self but a subsequent master RPC
+                # reveals the module can't be loaded, and so load_module()
+                # throws ImportError, on Python 3.x it is still possible for
+                # the loader to be called to fetch metadata.
+                raise ImportError('master cannot serve %r' % (fullname,))
             return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
+            compressed = self._cache[fullname][3]
+            if compressed is None:
+                raise ImportError('master cannot serve %r' % (fullname,))
+
             source = zlib.decompress(self._cache[fullname][3])
             if PY3:
                 return to_text(source)
