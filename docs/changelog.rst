@@ -24,6 +24,11 @@ Mitogen for Ansible
 * `#299 <https://github.com/dw/mitogen/pull/299>`_: fix the ``network_cli``
   connection type when the Mitogen strategy is active.
 
+* `#309 <https://github.com/dw/mitogen/pull/309>`_: fix a regression to process
+  environment cleanup, caused by the change in v0.2.1 to run local tasks with
+  the correct environment.
+
+
 Core Library
 ~~~~~~~~~~~~
 

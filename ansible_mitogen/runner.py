@@ -288,9 +288,13 @@ class TemporaryEnvironment(object):
                 os.environ[key] = str(value)
 
     def revert(self):
-        if self.env:
-            os.environ.clear()
-            os.environ.update(self.original)
+        """
+        Revert changes made by the module to the process environment. This must
+        always run, as some modules (e.g. git.py) set variables like GIT_SSH
+        that must be cleared out between runs.
+        """
+        os.environ.clear()
+        os.environ.update(self.original)
 
 
 class TemporaryArgv(object):
