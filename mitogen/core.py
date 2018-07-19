@@ -851,7 +851,7 @@ class LogHandler(logging.Handler):
 class Side(object):
     _fork_refs = weakref.WeakValueDictionary()
 
-    def __init__(self, stream, fd, cloexec=True, keep_alive=True):
+    def __init__(self, stream, fd, cloexec=True, keep_alive=True, blocking=False):
         self.stream = stream
         self.fd = fd
         self.closed = False
@@ -859,7 +859,8 @@ class Side(object):
         self._fork_refs[id(self)] = self
         if cloexec:
             set_cloexec(fd)
-        set_nonblock(fd)
+        if not blocking:
+            set_nonblock(fd)
 
     def __repr__(self):
         return '<Side of %r fd %s>' % (self.stream, self.fd)
@@ -1520,7 +1521,7 @@ class IoLogger(BasicStream):
         set_cloexec(self._wsock.fileno())
 
         self.receive_side = Side(self, self._rsock.fileno())
-        self.transmit_side = Side(self, dest_fd, cloexec=False)
+        self.transmit_side = Side(self, dest_fd, cloexec=False, blocking=True)
         self._broker.start_receive(self)
 
     def __repr__(self):
