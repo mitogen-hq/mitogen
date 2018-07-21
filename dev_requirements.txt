@@ -1,5 +1,5 @@
 -r docs/docs-requirements.txt
-ansible==2.5.5
+ansible==2.6.1
 coverage==4.5.1
 Django==1.6.11  # Last version supporting 2.6.
 mock==2.0.0

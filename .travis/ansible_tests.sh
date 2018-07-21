@@ -3,7 +3,7 @@
 
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TMPDIR="/tmp/ansible-tests-$$"
-ANSIBLE_VERSION="${VER:-2.5.5}"
+ANSIBLE_VERSION="${VER:-2.6.1}"
 export ANSIBLE_STRATEGY="${STRATEGY:-mitogen_linear}"
 DISTRO="${DISTRO:-debian}"
 
