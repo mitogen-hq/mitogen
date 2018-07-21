@@ -58,7 +58,7 @@ Installation
 ------------
 
 1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
-2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
+2. Verify Ansible 2.3-2.6.1 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
    --version`` output.
 3. Download and extract |mitogen_url| from PyPI.
 4. Modify ``ansible.cfg``:
@@ -130,12 +130,12 @@ Noteworthy Differences
 * The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
   register interest in more.
 
-* The `docker <https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_,
-  `jail <https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_,
-  `local <https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_,
-  `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_,
-  `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
-  and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
+* The `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
+  `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,
+  `local <https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_,
+  `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_,
+  `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_,
+  and `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
   built-in connection types are supported, along with Mitogen-specific
   :ref:`machinectl <machinectl>`, :ref:`mitogen_doas< mitogen_doas>`,
   :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
@@ -507,7 +507,7 @@ Docker
 ~~~~~~
 
 Like `docker
-<https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_ except
+<https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_ except
 connection delegation is supported.
 
 * ``ansible_host``: Name of Docker container (default: inventory hostname).
@@ -534,7 +534,7 @@ FreeBSD Jail
 ~~~~~~~~~~~~
 
 Like `jail
-<https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_ except
+<https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_ except
 connection delegation is supported.
 
 * ``ansible_host``: Name of jail (default: inventory hostname).
@@ -545,7 +545,7 @@ Local
 ~~~~~
 
 Like `local
-<https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_ except
+<https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_ except
 connection delegation is supported.
 
 * ``ansible_python_interpreter``
@@ -556,8 +556,8 @@ connection delegation is supported.
 LXC
 ~~~
 
-Like `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_
-and `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_
+Like `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_
+and `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_
 except connection delegation is supported, and ``lxc-attach`` is always used
 rather than the LXC Python bindings, as is usual with ``lxc``.
 
@@ -646,7 +646,7 @@ When used as the ``mitogen_sudo`` connection method:
 SSH
 ~~~
 
-Like `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
+Like `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
 except connection delegation is supported.
 
 * ``ansible_ssh_timeout``

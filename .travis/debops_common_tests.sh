@@ -4,7 +4,7 @@
 TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TARGET_COUNT="${TARGET_COUNT:-2}"
-ANSIBLE_VERSION="${VER:-2.5.5}"
+ANSIBLE_VERSION="${VER:-2.6.1}"
 DISTRO=debian  # Naturally DebOps only supports Debian.
 
 export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
