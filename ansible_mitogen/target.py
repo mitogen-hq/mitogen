@@ -407,6 +407,9 @@ def make_temp_directory(base_dir):
     :returns:
         Newly created temporary directory.
     """
+    # issue #301: remote_tmp may contain $vars.
+    base_dir = os.path.expandvars(base_dir)
+
     if not os.path.exists(base_dir):
         os.makedirs(base_dir, mode=int('0700', 8))
     return tempfile.mkdtemp(
