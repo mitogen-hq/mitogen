@@ -297,7 +297,8 @@ class ContextService(mitogen.service.Service):
                                 lambda: self._on_stream_disconnect(stream))
 
         self._send_module_forwards(context)
-        init_child_result = context.call(ansible_mitogen.target.init_child)
+        init_child_result = context.call(ansible_mitogen.target.init_child,
+                                         log_level=LOG.getEffectiveLevel())
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug

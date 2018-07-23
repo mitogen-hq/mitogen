@@ -202,7 +202,7 @@ def reset_temp_dir(econtext):
 
 
 @mitogen.core.takes_econtext
-def init_child(econtext):
+def init_child(econtext, log_level):
     """
     Called by ContextService immediately after connection; arranges for the
     (presently) spotless Python interpreter to be forked, where the newly
@@ -212,6 +212,9 @@ def init_child(econtext):
     This is necessary to prevent modules that are executed in-process from
     polluting the global interpreter state in a way that effects explicitly
     isolated modules.
+
+    :param int log_level:
+        Logging package level active in the master.
 
     :returns:
         Dict like::
@@ -229,6 +232,12 @@ def init_child(econtext):
     mitogen.parent.upgrade_router(econtext)
     _fork_parent = econtext.router.fork()
     reset_temp_dir(econtext)
+
+    # Copying the master's log level causes log messages to be filtered before
+    # they reach LogForwarder, thus reducing an influx of tiny messges waking
+    # the connection multiplexer process in the master.
+    LOG.setLevel(log_level)
+    logging.getLogger('ansible_mitogen').setLevel(log_level)
 
     return {
         'fork_context': _fork_parent,

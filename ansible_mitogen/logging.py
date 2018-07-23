@@ -85,8 +85,16 @@ def setup():
     mitogen.core.IOLOG.propagate = False
 
     if display.verbosity > 2:
-        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
         mitogen.core.LOG.setLevel(logging.DEBUG)
+        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
+    else:
+        # Mitogen copies the active log level into new children, allowing them
+        # to filter tiny messages before they hit the network, and therefore
+        # before they wake the IO loop. Explicitly setting INFO saves ~4%
+        # running against just the local machine.
+        mitogen.core.LOG.setLevel(logging.ERROR)
+        logging.getLogger('ansible_mitogen').setLevel(logging.ERROR)
 
     if display.verbosity > 3:
         mitogen.core.IOLOG.setLevel(logging.DEBUG)
+        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
