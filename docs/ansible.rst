@@ -158,6 +158,13 @@ Noteworthy Differences
   may be established in parallel by default, this can be modified by setting
   the ``MITOGEN_POOL_SIZE`` environment variable.
 
+* The ``ansible_python_interpreter`` variable is parsed using a restrictive
+  :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
+  FOO=bar python``, which occur in practice. Ansible `documents this
+  <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
+  as an absolute path, however the implementation passes it unquoted through
+  the shell, permitting arbitrary code to be injected.
+
 * Performance does not scale linearly with target count. This will improve over
   time.
 

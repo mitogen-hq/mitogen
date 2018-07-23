@@ -28,14 +28,30 @@ Mitogen for Ansible
   python``.
 
 * `#299 <https://github.com/dw/mitogen/issues/299>`_: fix the ``network_cli``
-  connection type when the Mitogen strategy is active.
+  connection type when the Mitogen strategy is active. Mitogen does not help
+  connections to network devices, but it should still be possible to use such
+  connections when Mitogen is active.
+
+* `#301 <https://github.com/dw/mitogen/pull/303>`_: compatibility: the presence
+  of variables such as ``$HOME`` in the ``remote_tmp`` setting are expanded.
 
 * `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
-  is now supported. Contributed by Mike Walker.
+  is now supported. Contributed by `Mike Walker
+  <https://github.com/napkindrawing>`_.
 
-* `#309 <https://github.com/dw/mitogen/pull/309>`_: fix a regression to process
-  environment cleanup, caused by the change in v0.2.1 to run local tasks with
-  the correct environment.
+* `#309 <https://github.com/dw/mitogen/issues/309>`_: fix a regression to
+  process environment cleanup, caused by the change in v0.2.1 to run local
+  tasks with the correct environment.
+
+* `#315 <https://github.com/dw/mitogen/pull/315>`_: the extension is now
+  supported under Ansible 2.6. Contributed by `Dan Quackenbush
+  <https://github.com/danquack>`_.
+
+* `#317 <https://github.com/dw/mitogen/issues/317>`_: respect the verbosity
+  setting when writing to to Ansible's ``log_path`` log file, if it is enabled.
+  Child log filtering was also incorrect, causing the master to needlessly wake
+  many times. This nets a 3.5% runtime improvement running against the local
+  machine.
 
 
 Core Library
@@ -46,7 +62,8 @@ Core Library
   program path.
 
 * `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
-  is now supported. Contributed by Mike Walker.
+  is now supported. Contributed by `Mike Walker
+  <https://github.com/napkindrawing>`_.
 
 * `#307 <https://github.com/dw/mitogen/issues/307>`_: SSH login banner output
   containing the word 'password' is no longer confused for a password prompt.
