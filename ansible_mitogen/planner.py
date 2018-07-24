@@ -187,27 +187,51 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
+    def _rewrite_interpreter(self, path):
+        """
+        Given the original interpreter binary extracted from the script's
+        interpreter line, look up the associated `ansible_*_interpreter`
+        variable, render it and return it.
+
+        :param str path:
+            Absolute UNIX path to original interpreter.
+
+        :returns:
+            Shell fragment prefix used to execute the script via "/bin/sh -c".
+            While `ansible_*_interpreter` documentation suggests shell isn't
+            involved here, the vanilla implementation uses it and that use is
+            exploited in common playbooks.
+        """
+        try:
+            key = u'ansible_%s_interpreter' % os.path.basename(path).strip()
+            template = self._inv.task_vars[key]
+        except KeyError:
+            return path
+
+        return mitogen.utils.cast(
+            self._inv.templar.template(self._inv.task_vars[key])
+        )
+
     def _get_interpreter(self):
-        interpreter, arg = ansible_mitogen.parsing.parse_hashbang(
+        path, arg = ansible_mitogen.parsing.parse_hashbang(
             self._inv.module_source
         )
-        if interpreter is None:
+        if path is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
                 self._inv.module_name,
             ))
 
-        key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
-        try:
-            template = self._inv.task_vars[key].strip()
-            return self._inv.templar.template(template), arg
-        except KeyError:
-            return interpreter, arg
+        fragment = self._rewrite_interpreter(path)
+        if arg:
+            fragment += ' ' + arg
+
+        return fragment, path.startswith('python')
 
     def get_kwargs(self, **kwargs):
-        interpreter, arg = self._get_interpreter()
+        interpreter_fragment, is_python = self._get_interpreter()
         return super(ScriptPlanner, self).get_kwargs(
-            interpreter_arg=arg,
-            interpreter=interpreter,
+            interpreter_fragment=interpreter_fragment,
+            is_python=is_python,
             **kwargs
         )
 

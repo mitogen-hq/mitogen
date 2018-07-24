@@ -22,10 +22,9 @@ Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
 * `#291 <https://github.com/dw/mitogen/issues/291>`_: compatibility:
-  ``ansible_*_interpreter`` variables are parsed using UNIX hashbang syntax,
-  i.e. with support for a single space-separated argument. This supports a
-  common idiom where ``ansible_python_interpreter`` is set to ``/usr/bin/env
-  python``.
+  ``ansible_*_interpreter`` variables are parsed using a restrictive shell-like
+  syntax, supporting a common idiom where ``ansible_python_interpreter`` is set
+  to ``/usr/bin/env python``.
 
 * `#299 <https://github.com/dw/mitogen/issues/299>`_: fix the ``network_cli``
   connection type when the Mitogen strategy is active. Mitogen does not help

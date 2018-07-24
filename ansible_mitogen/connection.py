@@ -251,16 +251,13 @@ CONNECTION_METHOD = {
 
 def parse_python_path(s):
     """
-    Given the string set for ansible_python_interpeter, parse it as hashbang
+    Given the string set for ansible_python_interpeter, parse it using shell
     syntax and return an appropriate argument vector.
     """
     if not s:
         return None
 
-    interpreter, arg = ansible_mitogen.parsing.parse_script_interpreter(s)
-    if arg:
-        return [interpreter, arg]
-    return [interpreter]
+    return shlex.split(s)
 
 
 def config_from_play_context(transport, inventory_name, connection):
