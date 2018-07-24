@@ -358,7 +358,7 @@ class ContextService(mitogen.service.Service):
             Subsequent elements are proxied via the previous.
 
         :returns dict:
-            * context: mitogen.master.Context or None.
+            * context: mitogen.parent.Context or None.
             * init_child_result: Result of :func:`init_child`.
             * msg: StreamError exception text or None.
             * method_name: string failing method name.

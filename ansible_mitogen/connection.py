@@ -344,15 +344,15 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: mitogen.master.Router for this worker.
     router = None
 
-    #: mitogen.master.Context representing the parent Context, which is
+    #: mitogen.parent.Context representing the parent Context, which is
     #: presently always the connection multiplexer process.
     parent = None
 
-    #: mitogen.master.Context connected to the target user account on the
-    #: target machine (i.e. via sudo).
+    #: mitogen.parent.Context connected to the target user account on the
+    #: target machine (i.e. possibly via sudo).
     context = None
 
-    #: mitogen.master.Context connected to the fork parent process in the
+    #: mitogen.parent.Context connected to the fork parent process in the
     #: target user account.
     fork_context = None
 
@@ -492,7 +492,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         Establish a connection to the master process's UNIX listener socket,
         constructing a mitogen.master.Router to communicate with the master,
-        and a mitogen.master.Context to represent it.
+        and a mitogen.parent.Context to represent it.
 
         Depending on the original transport we should emulate, trigger one of
         the _connect_*() service calls defined above to cause the master
