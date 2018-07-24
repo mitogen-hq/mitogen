@@ -566,7 +566,10 @@ class KqueuePoller(mitogen.core.Poller):
             changelist, 32, timeout)
         for event in events:
             fd = event.ident
-            if event.filter == select.KQ_FILTER_READ and fd in self._rfds:
+            if event.flags & select.KQ_EV_ERROR:
+                LOG.debug('ignoring stale event for fd %r: errno=%d: %s',
+                          fd, event.data, errno.errorcode.get(event.data))
+            elif event.filter == select.KQ_FILTER_READ and fd in self._rfds:
                 # Events can still be read for an already-discarded fd.
                 mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
                 yield self._rfds[fd]
