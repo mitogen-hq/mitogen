@@ -267,6 +267,7 @@ class ContextService(mitogen.service.Service):
 
                 {
                     'context': mitogen.core.Context or None,
+                    'via': mitogen.core.Context or None,
                     'init_child_result': {
                         'fork_context': mitogen.core.Context,
                         'home_dir': str or None,
@@ -308,6 +309,7 @@ class ContextService(mitogen.service.Service):
         self._refs_by_context[context] = 0
         return {
             'context': context,
+            'via': via,
             'init_child_result': init_child_result,
             'msg': None,
         }

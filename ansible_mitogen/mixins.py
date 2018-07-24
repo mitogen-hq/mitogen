@@ -200,9 +200,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
         # The copy action plugin violates layering and grabs this attribute
         # directly.
-        self._connection._shell.tmpdir = self.call(
+        self._connection._shell.tmpdir = self._connection.call(
             ansible_mitogen.target.make_temp_directory,
             base_dir=self._get_remote_tmp(),
+            use_login_context=True,
         )
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True

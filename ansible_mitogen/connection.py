@@ -348,9 +348,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: presently always the connection multiplexer process.
     parent = None
 
-    #: mitogen.parent.Context connected to the target user account on the
-    #: target machine (i.e. possibly via sudo).
+    #: mitogen.parent.Context for the target account on the target, possibly
+    #: reached via become.
     context = None
+
+    #: mitogen.parent.Context for the login account on the target. This is
+    #: always the login account, even when become=True.
+    login_context = None
 
     #: mitogen.parent.Context connected to the fork parent process in the
     #: target user account.
@@ -529,6 +533,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
 
         self.context = dct['context']
+        if self._play_context.become:
+            self.login_context = dct['via']
+        else:
+            self.login_context = self.context
+
         self.fork_context = dct['init_child_result']['fork_context']
         self.home_dir = dct['init_child_result']['home_dir']
 
@@ -546,6 +555,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         self.context = None
+        self.fork_context = None
+        self.login_context = None
         if self.broker and not new_task:
             self.broker.shutdown()
             self.broker.join()
@@ -556,11 +567,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         Start a function call to the target.
 
+        :param bool use_login_context:
+            If present and :data:`True`, send the call to the login account
+            context rather than the optional become user context.
         :returns:
             mitogen.core.Receiver that receives the function call result.
         """
         self._connect()
-        return self.context.call_async(func, *args, **kwargs)
+        if kwargs.pop('use_login_context', None):
+            call_context = self.login_context
+        else:
+            call_context = self.context
+        return call_context.call_async(func, *args, **kwargs)
 
     def call(self, func, *args, **kwargs):
         """
