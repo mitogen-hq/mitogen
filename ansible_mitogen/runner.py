@@ -398,7 +398,17 @@ class ProgramRunner(Runner):
         """
         Return the final argument vector used to execute the program.
         """
-        return [self.program_fp.name] + self._get_program_args()
+        return [
+            self.args['_ansible_shell_executable'],
+            '-c',
+            self._get_shell_fragment(),
+        ]
+
+    def _get_shell_fragment(self):
+        return "%s %s" % (
+            shlex_quote(self.program_fp.name),
+            ' '.join(map(shlex_quote, self._get_program_args())),
+        )
 
     def _run(self):
         try:
