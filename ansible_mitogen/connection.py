@@ -593,8 +593,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         try:
             return self.call_async(func, *args, **kwargs).get().unpickle()
         finally:
-            LOG.debug('Call took %d ms: %s%r', 1000 * (time.time() - t0),
-                      func.__name__, args)
+            LOG.debug('Call took %d ms: %r', 1000 * (time.time() - t0),
+                      mitogen.parent.CallSpec(func, args, kwargs))
 
     def create_fork_child(self):
         """
