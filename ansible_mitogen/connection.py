@@ -257,7 +257,7 @@ def parse_python_path(s):
     if not s:
         return None
 
-    return shlex.split(s)
+    return ansible.utils.shlex.shlex_split(s)
 
 
 def config_from_play_context(transport, inventory_name, connection):
