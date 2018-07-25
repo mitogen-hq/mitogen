@@ -48,40 +48,13 @@ import ansible.module_utils
 import mitogen.core
 
 import ansible_mitogen.loaders
+import ansible_mitogen.parsing
 import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
-
-
-def parse_script_interpreter(source):
-    """
-    Extract the script interpreter and its sole argument from the module
-    source code.
-
-    :returns:
-        Tuple of `(interpreter, arg)`, where `intepreter` is the script
-        interpreter and `arg` is its sole argument if present, otherwise
-        :py:data:`None`.
-    """
-    # Linux requires first 2 bytes with no whitespace, pretty sure it's the
-    # same everywhere. See binfmt_script.c.
-    if not source.startswith(b'#!'):
-        return None, None
-
-    # Find terminating newline. Assume last byte of binprm_buf if absent.
-    nl = source.find(b'\n', 0, 128)
-    if nl == -1:
-        nl = min(128, len(source))
-
-    # Split once on the first run of whitespace. If no whitespace exists,
-    # bits just contains the interpreter filename.
-    bits = source[2:nl].strip().split(None, 1)
-    if len(bits) == 1:
-        return mitogen.core.to_text(bits[0]), None
-    return mitogen.core.to_text(bits[0]), mitogen.core.to_text(bits[1])
 
 
 class Invocation(object):
@@ -214,27 +187,51 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
+    def _rewrite_interpreter(self, path):
+        """
+        Given the original interpreter binary extracted from the script's
+        interpreter line, look up the associated `ansible_*_interpreter`
+        variable, render it and return it.
+
+        :param str path:
+            Absolute UNIX path to original interpreter.
+
+        :returns:
+            Shell fragment prefix used to execute the script via "/bin/sh -c".
+            While `ansible_*_interpreter` documentation suggests shell isn't
+            involved here, the vanilla implementation uses it and that use is
+            exploited in common playbooks.
+        """
+        try:
+            key = u'ansible_%s_interpreter' % os.path.basename(path).strip()
+            template = self._inv.task_vars[key]
+        except KeyError:
+            return path
+
+        return mitogen.utils.cast(
+            self._inv.templar.template(self._inv.task_vars[key])
+        )
+
     def _get_interpreter(self):
-        interpreter, arg = parse_script_interpreter(
+        path, arg = ansible_mitogen.parsing.parse_hashbang(
             self._inv.module_source
         )
-        if interpreter is None:
+        if path is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
                 self._inv.module_name,
             ))
 
-        key = u'ansible_%s_interpreter' % os.path.basename(interpreter).strip()
-        try:
-            template = self._inv.task_vars[key].strip()
-            return self._inv.templar.template(template), arg
-        except KeyError:
-            return interpreter, arg
+        fragment = self._rewrite_interpreter(path)
+        if arg:
+            fragment += ' ' + arg
+
+        return fragment, path.startswith('python')
 
     def get_kwargs(self, **kwargs):
-        interpreter, arg = self._get_interpreter()
+        interpreter_fragment, is_python = self._get_interpreter()
         return super(ScriptPlanner, self).get_kwargs(
-            interpreter_arg=arg,
-            interpreter=interpreter,
+            interpreter_fragment=interpreter_fragment,
+            is_python=is_python,
             **kwargs
         )
 

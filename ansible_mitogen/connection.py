@@ -44,9 +44,10 @@ import ansible.utils.shlex
 import mitogen.unix
 import mitogen.utils
 
-import ansible_mitogen.target
+import ansible_mitogen.parsing
 import ansible_mitogen.process
 import ansible_mitogen.services
+import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
@@ -248,6 +249,17 @@ CONNECTION_METHOD = {
 }
 
 
+def parse_python_path(s):
+    """
+    Given the string set for ansible_python_interpeter, parse it using shell
+    syntax and return an appropriate argument vector.
+    """
+    if not s:
+        return None
+
+    return ansible.utils.shlex.shlex_split(s)
+
+
 def config_from_play_context(transport, inventory_name, connection):
     """
     Return a dict representing all important connection configuration, allowing
@@ -265,7 +277,7 @@ def config_from_play_context(transport, inventory_name, connection):
         'become_pass': connection._play_context.become_pass,
         'password': connection._play_context.password,
         'port': connection._play_context.port,
-        'python_path': connection.python_path,
+        'python_path': parse_python_path(connection.python_path),
         'private_key_file': connection._play_context.private_key_file,
         'ssh_executable': connection._play_context.ssh_executable,
         'timeout': connection._play_context.timeout,
@@ -314,7 +326,7 @@ def config_from_hostvars(transport, inventory_name, connection,
         'password': (hostvars.get('ansible_ssh_pass') or
                      hostvars.get('ansible_password')),
         'port': hostvars.get('ansible_port'),
-        'python_path': hostvars.get('ansible_python_interpreter'),
+        'python_path': parse_python_path(hostvars.get('ansible_python_interpreter')),
         'private_key_file': (hostvars.get('ansible_ssh_private_key_file') or
                              hostvars.get('ansible_private_key_file')),
         'mitogen_via': hostvars.get('mitogen_via'),
@@ -332,15 +344,19 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: mitogen.master.Router for this worker.
     router = None
 
-    #: mitogen.master.Context representing the parent Context, which is
+    #: mitogen.parent.Context representing the parent Context, which is
     #: presently always the connection multiplexer process.
     parent = None
 
-    #: mitogen.master.Context connected to the target user account on the
-    #: target machine (i.e. via sudo).
+    #: mitogen.parent.Context for the target account on the target, possibly
+    #: reached via become.
     context = None
 
-    #: mitogen.master.Context connected to the fork parent process in the
+    #: mitogen.parent.Context for the login account on the target. This is
+    #: always the login account, even when become=True.
+    login_context = None
+
+    #: mitogen.parent.Context connected to the fork parent process in the
     #: target user account.
     fork_context = None
 
@@ -480,7 +496,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         Establish a connection to the master process's UNIX listener socket,
         constructing a mitogen.master.Router to communicate with the master,
-        and a mitogen.master.Context to represent it.
+        and a mitogen.parent.Context to represent it.
 
         Depending on the original transport we should emulate, trigger one of
         the _connect_*() service calls defined above to cause the master
@@ -517,6 +533,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
 
         self.context = dct['context']
+        if self._play_context.become:
+            self.login_context = dct['via']
+        else:
+            self.login_context = self.context
+
         self.fork_context = dct['init_child_result']['fork_context']
         self.home_dir = dct['init_child_result']['home_dir']
 
@@ -534,6 +555,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         self.context = None
+        self.fork_context = None
+        self.login_context = None
         if self.broker and not new_task:
             self.broker.shutdown()
             self.broker.join()
@@ -544,11 +567,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         Start a function call to the target.
 
+        :param bool use_login_context:
+            If present and :data:`True`, send the call to the login account
+            context rather than the optional become user context.
         :returns:
             mitogen.core.Receiver that receives the function call result.
         """
         self._connect()
-        return self.context.call_async(func, *args, **kwargs)
+        if kwargs.pop('use_login_context', None):
+            call_context = self.login_context
+        else:
+            call_context = self.context
+        return call_context.call_async(func, *args, **kwargs)
 
     def call(self, func, *args, **kwargs):
         """

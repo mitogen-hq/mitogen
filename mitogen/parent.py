@@ -566,7 +566,10 @@ class KqueuePoller(mitogen.core.Poller):
             changelist, 32, timeout)
         for event in events:
             fd = event.ident
-            if event.filter == select.KQ_FILTER_READ and fd in self._rfds:
+            if event.flags & select.KQ_EV_ERROR:
+                LOG.debug('ignoring stale event for fd %r: errno=%d: %s',
+                          fd, event.data, errno.errorcode.get(event.data))
+            elif event.filter == select.KQ_FILTER_READ and fd in self._rfds:
                 # Events can still be read for an already-discarded fd.
                 mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
                 yield self._rfds[fd]
@@ -871,6 +874,19 @@ class Stream(mitogen.core.Stream):
         fp.close()
         os.write(1,'MITO001\n'.encode())
 
+    def get_python_argv(self):
+        """
+        Return the initial argument vector elements necessary to invoke Python,
+        by returning a 1-element list containing :attr:`python_path` if it is a
+        string, or simply returning it if it is already a list.
+
+        This allows emulation of existing tools where the Python invocation may
+        be set to e.g. `['/usr/bin/env', 'python']`.
+        """
+        if isinstance(self.python_path, list):
+            return self.python_path
+        return [self.python_path]
+
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
@@ -886,8 +902,8 @@ class Stream(mitogen.core.Stream):
         # codecs.decode() requires a bytes object. Since we must be compatible
         # with 2.4 (no bytes literal), an extra .encode() either returns the
         # same str (2.x) or an equivalent bytes (3.x).
-        return [
-            self.python_path, '-c',
+        return self.get_python_argv() + [
+            '-c',
             'import codecs,os,sys;_=codecs.decode;'
             'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
         ]

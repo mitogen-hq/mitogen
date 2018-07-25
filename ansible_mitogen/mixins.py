@@ -188,21 +188,23 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         except AttributeError:
             s = ansible.constants.DEFAULT_REMOTE_TMP  # <=2.4.x
 
-        return self._remote_expand_user(s)
+        return self._remote_expand_user(s, sudoable=False)
 
     def _make_tmp_path(self, remote_user=None):
         """
         Replace the base implementation's use of shell to implement mkdtemp()
-        with an actual call to mkdtemp().
+        with an actual call to mkdtemp(). Like vanilla, the directory is always
+        created in the login account context.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
 
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
         # The copy action plugin violates layering and grabs this attribute
         # directly.
-        self._connection._shell.tmpdir = self.call(
+        self._connection._shell.tmpdir = self._connection.call(
             ansible_mitogen.target.make_temp_directory,
             base_dir=self._get_remote_tmp(),
+            use_login_context=True,
         )
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
@@ -280,20 +282,26 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         Replace the base implementation's attempt to emulate
         os.path.expanduser() with an actual call to os.path.expanduser().
+
+        :param bool sudoable:
+            If :data:`True`, indicate unqualified tilde ("~" with no username)
+            should be evaluated in the context of the login account, not any
+            become_user.
         """
         LOG.debug('_remote_expand_user(%r, sudoable=%r)', path, sudoable)
         if not path.startswith('~'):
             # /home/foo -> /home/foo
             return path
-        if path == '~':
-            # ~ -> /home/dmw
-            return self._connection.homedir
-        if path.startswith('~/'):
-            # ~/.ansible -> /home/dmw/.ansible
-            return os.path.join(self._connection.homedir, path[2:])
-        if path.startswith('~'):
-            # ~root/.ansible -> /root/.ansible
-            return self.call(os.path.expanduser, mitogen.utils.cast(path))
+        if sudoable or not self._play_context.become:
+            if path == '~':
+                # ~ -> /home/dmw
+                return self._connection.homedir
+            if path.startswith('~/'):
+                # ~/.ansible -> /home/dmw/.ansible
+                return os.path.join(self._connection.homedir, path[2:])
+        # ~root/.ansible -> /root/.ansible
+        return self.call(os.path.expanduser, mitogen.utils.cast(path),
+                         use_login_context=not sudoable)
 
     def get_task_timeout_secs(self):
         """

@@ -81,10 +81,10 @@ echo travis_fold:end:job_setup
 
 
 echo travis_fold:start:first_run
-/usr/bin/time debops common
+/usr/bin/time debops common "$@"
 echo travis_fold:end:first_run
 
 
 echo travis_fold:start:second_run
-/usr/bin/time debops common
+/usr/bin/time debops common "$@"
 echo travis_fold:end:second_run

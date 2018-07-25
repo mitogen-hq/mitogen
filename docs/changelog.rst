@@ -21,25 +21,69 @@ v0.2.2 (2018-07-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
-* `#299 <https://github.com/dw/mitogen/pull/299>`_: fix the ``network_cli``
-  connection type when the Mitogen strategy is active.
+* `#291 <https://github.com/dw/mitogen/issues/291>`_: ``ansible_*_interpreter``
+  variables are parsed using a restrictive shell-like syntax, supporting a
+  common idiom where ``ansible_python_interpreter`` is set to ``/usr/bin/env
+  python``.
 
-* `#309 <https://github.com/dw/mitogen/pull/309>`_: fix a regression to process
-  environment cleanup, caused by the change in v0.2.1 to run local tasks with
-  the correct environment.
+* `#299 <https://github.com/dw/mitogen/issues/299>`_: fix the ``network_cli``
+  connection type when the Mitogen strategy is active. Mitogen cannot help
+  network device connections, however it should still be possible to use device
+  connections while Mitogen is active.
+
+* `#301 <https://github.com/dw/mitogen/pull/301>`_: variables like ``$HOME`` in
+  the ``remote_tmp`` setting are evaluated correctly.
+
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+  is supported. Contributed by `Mike Walker
+  <https://github.com/napkindrawing>`_.
+
+* `#309 <https://github.com/dw/mitogen/issues/309>`_: fix a regression to
+  process environment cleanup, caused by the change in v0.2.1 to run local
+  tasks with the correct environment.
+
+* `#315 <https://github.com/dw/mitogen/pull/315>`_: Mitogen for Ansible is
+  supported under Ansible 2.6. Contributed by `Dan Quackenbush
+  <https://github.com/danquack>`_.
+
+* `#317 <https://github.com/dw/mitogen/issues/317>`_: respect the verbosity
+  setting when writing to to Ansible's ``log_path`` log file, if it is enabled.
+  Child log filtering was also incorrect, causing the master to needlessly wake
+  many times. This nets a 3.5% runtime improvement running against the local
+  machine.
 
 
 Core Library
 ~~~~~~~~~~~~
 
-* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
-  is now supported. Contributed by Mike Walker.
+* `#291 <https://github.com/dw/mitogen/issues/291>`_: the ``python_path``
+  paramater may specify an argument vector prefix rather than a single string
+  program path.
 
-* `#307 <https://github.com/dw/mitogen/pull/307>`_: SSH login banner output
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+  is now supported. Contributed by `Mike Walker
+  <https://github.com/napkindrawing>`_.
+
+* `#307 <https://github.com/dw/mitogen/issues/307>`_: SSH login banner output
   containing the word 'password' is no longer confused for a password prompt.
 
 * Debug logs containing command lines are printed with the minimal quoting and
   escaping required.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+the bug reports and pull requests in this release contributed by
+`Frances Albanese <https://github.com/falbanese>`_,
+`Mark Janssen <https://github.com/sigio>`_,
+`Ayaz Ahmed Khan <https://github.com/ayaz>`_,
+`Colin McCarthy <https://github.com/colin-mccarthy>`_,
+`Dan Quackenbush <https://github.com/danquack>`_,
+`Alex Russu <https://github.com/alexrussu>`_,
+`Josh Smift <https://github.com/jbscare>`_, and
+`Mike Walker <https://github.com/napkindrawing>`_.
 
 
 v0.2.1 (2018-07-10)
