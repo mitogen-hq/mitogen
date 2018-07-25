@@ -15,6 +15,16 @@ Release Notes
     </style>
 
 
+.. comment
+
+    v0.2.3 (2018-07-??)
+    -------------------
+
+    * `#315 <https://github.com/dw/mitogen/pull/315>`_: Mitogen for Ansible is
+      supported under Ansible 2.6. Contributed by `Dan Quackenbush
+      <https://github.com/danquack>`_.
+
+
 v0.2.2 (2018-07-??)
 -------------------
 
@@ -41,10 +51,6 @@ Mitogen for Ansible
 * `#309 <https://github.com/dw/mitogen/issues/309>`_: fix a regression to
   process environment cleanup, caused by the change in v0.2.1 to run local
   tasks with the correct environment.
-
-* `#315 <https://github.com/dw/mitogen/pull/315>`_: Mitogen for Ansible is
-  supported under Ansible 2.6. Contributed by `Dan Quackenbush
-  <https://github.com/danquack>`_.
 
 * `#317 <https://github.com/dw/mitogen/issues/317>`_: respect the verbosity
   setting when writing to to Ansible's ``log_path`` log file, if it is enabled.

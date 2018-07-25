@@ -58,7 +58,7 @@ Installation
 ------------
 
 1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
-2. Verify Ansible 2.3-2.6.1 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
+2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
    --version`` output.
 3. Download and extract |mitogen_url| from PyPI.
 4. Modify ``ansible.cfg``:
