@@ -531,7 +531,15 @@ class KqueuePoller(mitogen.core.Poller):
     def _control(self, fd, filters, flags):
         mitogen.core._vv and IOLOG.debug(
             '%r._control(%r, %r, %r)', self, fd, filters, flags)
-        self._changelist.append(select.kevent(fd, filters, flags))
+        # TODO: at shutdown it is currently possible for KQ_EV_ADD/KQ_EV_DEL
+        # pairs to be pending after the associated file descriptor has already
+        # been closed. Fixing this requires maintaining extra state, or perhaps
+        # making fd closure the poller's responsibility. In the meantime,
+        # simply apply changes immediately.
+        # self._changelist.append(select.kevent(fd, filters, flags))
+        changelist = [select.kevent(fd, filters, flags)]
+        events, _ = mitogen.core.io_op(self._kqueue.control, changelist, 0, 0)
+        assert not events
 
     def start_receive(self, fd, data=None):
         mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',

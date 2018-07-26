@@ -57,11 +57,9 @@ write files.
 Installation
 ------------
 
-1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
-2. Verify Ansible 2.3-2.6.1 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
-   --version`` output.
-3. Download and extract |mitogen_url| from PyPI.
-4. Modify ``ansible.cfg``:
+1. Thoroughly review :ref:`noteworthy_differences` and :ref:`changelog`.
+2. Download and extract |mitogen_url|.
+3. Modify ``ansible.cfg``:
 
    .. parsed-literal::
 
@@ -74,11 +72,15 @@ Installation
    per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
    to mimic the ``free`` strategy.
 
-5. If targets have a restrictive ``sudoers`` file, add a rule like:
+4. If targets have a restrictive ``sudoers`` file, add a rule like:
 
-::
+   ::
 
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
+
+5. Subscribe to the `mitogen-announce mailing list
+   <https://www.freelists.org/list/mitogen-announce>`_ in order to stay up to
+   date with new releases and important bug fixes.
 
 
 Demo
@@ -122,6 +124,10 @@ Testimonials
 
 Noteworthy Differences
 ----------------------
+
+* Ansible 2.3-2.5 are supported along with Python 2.6, 2.7 or 3.6. Verify your
+  installation is running one of these versions by checking ``ansible
+  --version`` output.
 
 * The Ansible ``raw`` action executes as a regular Mitogen connection,
   precluding its use for installing Python on a target. This will be addressed
