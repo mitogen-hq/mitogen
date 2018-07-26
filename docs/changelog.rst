@@ -41,6 +41,12 @@ Mitogen for Ansible
   network device connections, however it should still be possible to use device
   connections while Mitogen is active.
 
+* `#300 <https://github.com/dw/mitogen/issues/300>`_: an exception could appear
+  on OS X during shutdown due to scheduling pending Kevent filter changes for
+  file descriptors that have already been closed before the IO loop resumes. As
+  a temporary workaround, Mitogen does not make use of Kevent's bulk change
+  feature.
+
 * `#301 <https://github.com/dw/mitogen/pull/301>`_: variables like ``$HOME`` in
   the ``remote_tmp`` setting are evaluated correctly.
 
