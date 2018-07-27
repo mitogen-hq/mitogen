@@ -86,6 +86,9 @@ Core Library
 * Debug logs containing command lines are printed with the minimal quoting and
   escaping required.
 
+* When :func:`mitogen.core.enable_profiling` is active, :mod:`mitogen.service`
+  threads are run under the profiling hook just like other threads.
+
 
 Thanks!
 ~~~~~~~
