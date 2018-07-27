@@ -58,6 +58,9 @@ Mitogen for Ansible
   times. This nets a 3.5% runtime improvement running against the local
   machine.
 
+* The ``mitogen_ssh_debug_level`` variable is supported, permitting SSH debug
+  output to be included in Mitogen's ``-vvv`` output when both are specified.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -94,6 +97,9 @@ Core Library
 
 * When :func:`mitogen.core.enable_profiling` is active, :mod:`mitogen.service`
   threads are profiled just like other threads.
+
+* The ``ssh_debug_level`` parameter is supported, permitting SSH debug output
+  to be redirected to a Mitogen logger when specified.
 
 * Debug logs containing command lines are printed with the minimal quoting and
   escaping required.
