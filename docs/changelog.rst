@@ -41,16 +41,10 @@ Mitogen for Ansible
   network device connections, however it should still be possible to use device
   connections while Mitogen is active.
 
-* `#300 <https://github.com/dw/mitogen/issues/300>`_: an exception could appear
-  on OS X during shutdown due to scheduling pending Kevent filter changes for
-  file descriptors that have already been closed before the IO loop resumes. As
-  a temporary workaround, Mitogen does not make use of Kevent's bulk change
-  feature.
-
 * `#301 <https://github.com/dw/mitogen/pull/301>`_: variables like ``$HOME`` in
   the ``remote_tmp`` setting are evaluated correctly.
 
-* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the :ref:`doas` become method
   is supported. Contributed by `Mike Walker
   <https://github.com/napkindrawing>`_.
 
@@ -59,9 +53,9 @@ Mitogen for Ansible
   tasks with the correct environment.
 
 * `#317 <https://github.com/dw/mitogen/issues/317>`_: respect the verbosity
-  setting when writing to to Ansible's ``log_path`` log file, if it is enabled.
-  Child log filtering was also incorrect, causing the master to needlessly wake
-  many times. This nets a 3.5% runtime improvement running against the local
+  setting when writing to Ansible's ``log_path``, if it is enabled. Child log
+  filtering was also incorrect, causing the master to needlessly wake many
+  times. This nets a 3.5% runtime improvement running against the local
   machine.
 
 
@@ -69,18 +63,40 @@ Core Library
 ~~~~~~~~~~~~
 
 * `#291 <https://github.com/dw/mitogen/issues/291>`_: the ``python_path``
-  paramater may specify an argument vector prefix rather than a single string
-  program path.
+  parameter may specify an argument vector prefix rather than a string program
+  path.
 
-* `#303 <https://github.com/dw/mitogen/pull/303>`_: the ``doas`` become method
+* `#300 <https://github.com/dw/mitogen/issues/300>`_: the broker could crash on
+  OS X during shutdown due to scheduled `kqueue
+  <https://www.freebsd.org/cgi/man.cgi?query=kevent>`_ filter changes for
+  descriptors that were closed before the IO loop resumes. As a temporary
+  workaround, kqueue's bulk change feature is not used.
+
+* `#303 <https://github.com/dw/mitogen/pull/303>`_: the :ref:`doas` become method
   is now supported. Contributed by `Mike Walker
   <https://github.com/napkindrawing>`_.
 
 * `#307 <https://github.com/dw/mitogen/issues/307>`_: SSH login banner output
   containing the word 'password' is no longer confused for a password prompt.
 
+* `#319 <https://github.com/dw/mitogen/issues/319>`_: SSH connections would
+  fail immediately on Windows Subsystem for Linux, due to use of `TCSAFLUSH`
+  with :func:`termios.tcsetattr`. The flag is omitted if WSL is detected.
+
+* `#320 <https://github.com/dw/mitogen/issues/320>`_: The OS X poller
+  could spuriously wake up due to ignoring an error bit set on events returned
+  by the kernel, manifesting as a failure to read from an unrelated descriptor.
+
 * Debug logs containing command lines are printed with the minimal quoting and
   escaping required.
+
+* Standard IO forwarding accidentally configured the replacement ``stdout`` and
+  ``stderr`` write descriptors as non-blocking, causing subprocesses that
+  generate more output than kernel buffer space existed to throw errors. The
+  write ends are now configured as blocking.
+
+* When :func:`mitogen.core.enable_profiling` is active, :mod:`mitogen.service`
+  threads are profiled just like other threads.
 
 
 Thanks!
@@ -88,14 +104,20 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 the bug reports and pull requests in this release contributed by
-`Frances Albanese <https://github.com/falbanese>`_,
-`Mark Janssen <https://github.com/sigio>`_,
+`Alex Russu <https://github.com/alexrussu>`_,
+`Andy Freeland <https://github.com/rouge8>`_,
 `Ayaz Ahmed Khan <https://github.com/ayaz>`_,
 `Colin McCarthy <https://github.com/colin-mccarthy>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
-`Alex Russu <https://github.com/alexrussu>`_,
-`Josh Smift <https://github.com/jbscare>`_, and
-`Mike Walker <https://github.com/napkindrawing>`_.
+`Duane Zamrok <https://github.com/dewthefifth>`_,
+`Frances Albanese <https://github.com/falbanese>`_,
+`Gonzalo Servat <https://github.com/gservat>`_,
+`Guy Knights <https://github.com/knightsg>`_,
+`Josh Smift <https://github.com/jbscare>`_,
+`Mark Janssen <https://github.com/sigio>`_,
+`Mike Walker <https://github.com/napkindrawing>`_,
+`Tawana Musewe <https://github.com/tbtmuse>`_, and
+`Zach Swanson <https://github.com/zswanson>`_.
 
 
 v0.2.1 (2018-07-10)
