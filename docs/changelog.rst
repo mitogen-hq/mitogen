@@ -87,9 +87,6 @@ Core Library
   could spuriously wake up due to ignoring an error bit set on events returned
   by the kernel, manifesting as a failure to read from an unrelated descriptor.
 
-* Debug logs containing command lines are printed with the minimal quoting and
-  escaping required.
-
 * Standard IO forwarding accidentally configured the replacement ``stdout`` and
   ``stderr`` write descriptors as non-blocking, causing subprocesses that
   generate more output than kernel buffer space existed to throw errors. The
@@ -97,6 +94,9 @@ Core Library
 
 * When :func:`mitogen.core.enable_profiling` is active, :mod:`mitogen.service`
   threads are profiled just like other threads.
+
+* Debug logs containing command lines are printed with the minimal quoting and
+  escaping required.
 
 
 Thanks!
