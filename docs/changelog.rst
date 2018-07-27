@@ -110,7 +110,7 @@ the bug reports and pull requests in this release contributed by
 `Colin McCarthy <https://github.com/colin-mccarthy>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
-`Frances Albanese <https://github.com/falbanese>`_,
+`falbanese <https://github.com/falbanese>`_,
 `Gonzalo Servat <https://github.com/gservat>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Josh Smift <https://github.com/jbscare>`_,

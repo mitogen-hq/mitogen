@@ -79,8 +79,8 @@ Installation
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
 
 5. Subscribe to the `mitogen-announce mailing list
-   <https://www.freelists.org/list/mitogen-announce>`_ in order to stay up to
-   date with new releases and important bug fixes.
+   <https://www.freelists.org/list/mitogen-announce>`_ to stay updated with new
+   releases and important bug fixes.
 
 
 Demo
@@ -702,7 +702,7 @@ controller with ``-vvvv`` or higher.
 
 Although use of standard IO and the logging package on the target is forwarded
 to the controller, it is not possible to receive IO activity logs, as the
-processs of receiving those logs would would itself generate IO activity. To
+process of receiving those logs would would itself generate IO activity. To
 receive a complete trace of every process on every machine, file-based logging
 is necessary. File-based logging can be enabled by setting
 ``MITOGEN_ROUTER_DEBUG=1`` in your environment.
@@ -711,7 +711,8 @@ When file-based logging is enabled, one file per context will be created on the
 local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
 
 If you are experiencing a hang, ``MITOGEN_DUMP_THREAD_STACKS=1`` causes every
-process to dump every thread stack into the logging framework every 5 seconds.
+process on every machine to dump every thread stack into the logging framework
+every 5 seconds.
 
 
 Getting Help
