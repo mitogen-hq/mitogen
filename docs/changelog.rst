@@ -25,7 +25,7 @@ Release Notes
       <https://github.com/danquack>`_.
 
 
-v0.2.2 (2018-07-??)
+v0.2.2 (2018-07-26)
 -------------------
 
 Mitogen for Ansible
@@ -87,9 +87,6 @@ Core Library
   could spuriously wake up due to ignoring an error bit set on events returned
   by the kernel, manifesting as a failure to read from an unrelated descriptor.
 
-* Debug logs containing command lines are printed with the minimal quoting and
-  escaping required.
-
 * Standard IO forwarding accidentally configured the replacement ``stdout`` and
   ``stderr`` write descriptors as non-blocking, causing subprocesses that
   generate more output than kernel buffer space existed to throw errors. The
@@ -97,6 +94,9 @@ Core Library
 
 * When :func:`mitogen.core.enable_profiling` is active, :mod:`mitogen.service`
   threads are profiled just like other threads.
+
+* Debug logs containing command lines are printed with the minimal quoting and
+  escaping required.
 
 
 Thanks!
@@ -110,7 +110,7 @@ the bug reports and pull requests in this release contributed by
 `Colin McCarthy <https://github.com/colin-mccarthy>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
-`Frances Albanese <https://github.com/falbanese>`_,
+`falbanese <https://github.com/falbanese>`_,
 `Gonzalo Servat <https://github.com/gservat>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Josh Smift <https://github.com/jbscare>`_,
@@ -195,6 +195,12 @@ Mitogen for Ansible
 * When running with ``-vvv``, log messages such as *mitogen: Router(Broker(0x7f5a48921590)): no route
   for Message(..., 102, ...), my ID is ...* may be visible. These are due to a
   minor race while initializing logging and can be ignored.
+
+* When running with ``-vvv``, log messages will be printed to the console
+  *after* the Ansible run completes, as connection multiplexer shutdown only
+  begins after Ansible exits. This is due to a lack of suitable shutdown hook
+  in Ansible, and is fairly harmless, albeit cosmetically annoying. A future
+  release may include a solution.
 
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
