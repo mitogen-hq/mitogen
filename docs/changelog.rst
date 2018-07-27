@@ -79,6 +79,10 @@ Core Library
 * `#307 <https://github.com/dw/mitogen/issues/307>`_: SSH login banner output
   containing the word 'password' is no longer confused for a password prompt.
 
+* `#319 <https://github.com/dw/mitogen/issues/319>`_: SSH connections would
+  fail immediately on Windows Subsystem for Linux, due to use of `TCSAFLUSH`
+  with :func:`termios.tcsetattr`. The flag is omitted if WSL is detected.
+
 * Debug logs containing command lines are printed with the minimal quoting and
   escaping required.
 

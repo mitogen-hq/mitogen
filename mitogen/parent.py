@@ -69,6 +69,8 @@ from mitogen.core import LOG
 from mitogen.core import IOLOG
 
 
+IS_WSL = 'Microsoft' in os.uname()[2]
+
 if mitogen.core.PY3:
     xrange = range
 
@@ -125,10 +127,11 @@ def cfmakeraw(tflags):
 def disable_echo(fd):
     old = termios.tcgetattr(fd)
     new = cfmakeraw(old)
-    flags = (
-        termios.TCSAFLUSH |
-        getattr(termios, 'TCSASOFT', 0)
-    )
+    flags = getattr(termios, 'TCSASOFT', 0)
+    if not IS_WSL:
+        # issue #319: Windows Subsystem for Linux as of July 2018 throws EINVAL
+        # if TCSAFLUSH is specified.
+        flags |= termios.TCSAFLUSH
     termios.tcsetattr(fd, flags, new)
 
 
