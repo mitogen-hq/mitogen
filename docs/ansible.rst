@@ -118,6 +118,7 @@ Testimonials
   strategy took Clojars' Ansible runs from **14 minutes to 2 minutes**. I still
   can't quite believe it."
 
+* "Enabling the mitogen plugin in ansible feels like switching from floppy to SSD"
 
 
 .. _noteworthy_differences:
