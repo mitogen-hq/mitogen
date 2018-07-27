@@ -25,7 +25,7 @@ Release Notes
       <https://github.com/danquack>`_.
 
 
-v0.2.2 (2018-07-??)
+v0.2.2 (2018-07-26)
 -------------------
 
 Mitogen for Ansible
