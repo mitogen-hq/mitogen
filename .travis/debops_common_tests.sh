@@ -4,7 +4,7 @@
 TMPDIR="/tmp/debops-$$"
 TRAVIS_BUILD_DIR="${TRAVIS_BUILD_DIR:-`pwd`}"
 TARGET_COUNT="${TARGET_COUNT:-2}"
-ANSIBLE_VERSION="${VER:-2.5.5}"
+ANSIBLE_VERSION="${VER:-2.6.1}"
 DISTRO=debian  # Naturally DebOps only supports Debian.
 
 export PYTHONPATH="${PYTHONPATH}:${TRAVIS_BUILD_DIR}"
@@ -81,10 +81,10 @@ echo travis_fold:end:job_setup
 
 
 echo travis_fold:start:first_run
-/usr/bin/time debops common
+/usr/bin/time debops common "$@"
 echo travis_fold:end:first_run
 
 
 echo travis_fold:start:second_run
-/usr/bin/time debops common
+/usr/bin/time debops common "$@"
 echo travis_fold:end:second_run

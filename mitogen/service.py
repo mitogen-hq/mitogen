@@ -444,9 +444,11 @@ class Pool(object):
             self.add(service)
         self._threads = []
         for x in range(size):
+            name = 'mitogen.service.Pool.%x.worker-%d' % (id(self), x,)
             thread = threading.Thread(
-                name='mitogen.service.Pool.%x.worker-%d' % (id(self), x,),
-                target=self._worker_main,
+                name=name,
+                target=mitogen.core._profile_hook,
+                args=(name, self._worker_main),
             )
             thread.start()
             self._threads.append(thread)

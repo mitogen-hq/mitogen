@@ -45,10 +45,12 @@ RUN yum clean all && \
 
 DOCKERFILE = r"""
 COPY data/001-mitogen.sudo /etc/sudoers.d/001-mitogen
+COPY data/docker/ssh_login_banner.txt /etc/ssh/banner.txt
 RUN \
     chsh -s /bin/bash && \
     mkdir -p /var/run/sshd && \
     echo i-am-mitogen-test-docker-image > /etc/sentinel && \
+    echo "Banner /etc/ssh/banner.txt" >> /etc/ssh/sshd_config && \
     groupadd mitogen__sudo_nopw && \
     useradd -s /bin/bash -m mitogen__has_sudo -G SUDO_GROUP && \
     useradd -s /bin/bash -m mitogen__has_sudo_pubkey -G SUDO_GROUP && \

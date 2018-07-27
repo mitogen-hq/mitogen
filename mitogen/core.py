@@ -607,6 +607,7 @@ class Importer(object):
         self._present = {'mitogen': [
             'compat',
             'debug',
+            'doas',
             'docker',
             'fakessh',
             'fork',
@@ -814,10 +815,21 @@ class Importer(object):
 
     def get_filename(self, fullname):
         if fullname in self._cache:
+            path = self._cache[fullname][2]
+            if path is None:
+                # If find_loader() returns self but a subsequent master RPC
+                # reveals the module can't be loaded, and so load_module()
+                # throws ImportError, on Python 3.x it is still possible for
+                # the loader to be called to fetch metadata.
+                raise ImportError('master cannot serve %r' % (fullname,))
             return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
+            compressed = self._cache[fullname][3]
+            if compressed is None:
+                raise ImportError('master cannot serve %r' % (fullname,))
+
             source = zlib.decompress(self._cache[fullname][3])
             if PY3:
                 return to_text(source)
@@ -850,7 +862,7 @@ class LogHandler(logging.Handler):
 class Side(object):
     _fork_refs = weakref.WeakValueDictionary()
 
-    def __init__(self, stream, fd, cloexec=True, keep_alive=True):
+    def __init__(self, stream, fd, cloexec=True, keep_alive=True, blocking=False):
         self.stream = stream
         self.fd = fd
         self.closed = False
@@ -858,7 +870,8 @@ class Side(object):
         self._fork_refs[id(self)] = self
         if cloexec:
             set_cloexec(fd)
-        set_nonblock(fd)
+        if not blocking:
+            set_nonblock(fd)
 
     def __repr__(self):
         return '<Side of %r fd %s>' % (self.stream, self.fd)
@@ -1519,7 +1532,7 @@ class IoLogger(BasicStream):
         set_cloexec(self._wsock.fileno())
 
         self.receive_side = Side(self, self._rsock.fileno())
-        self.transmit_side = Side(self, dest_fd, cloexec=False)
+        self.transmit_side = Side(self, dest_fd, cloexec=False, blocking=True)
         self._broker.start_receive(self)
 
     def __repr__(self):

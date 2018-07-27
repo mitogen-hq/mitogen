@@ -288,9 +288,13 @@ class TemporaryEnvironment(object):
                 os.environ[key] = str(value)
 
     def revert(self):
-        if self.env:
-            os.environ.clear()
-            os.environ.update(self.original)
+        """
+        Revert changes made by the module to the process environment. This must
+        always run, as some modules (e.g. git.py) set variables like GIT_SSH
+        that must be cleared out between runs.
+        """
+        os.environ.clear()
+        os.environ.update(self.original)
 
 
 class TemporaryArgv(object):
@@ -377,11 +381,10 @@ class ProgramRunner(Runner):
         )
 
     def _get_program_args(self):
-        return [
-            self.args['_ansible_shell_executable'],
-            '-c',
-            self.program_fp.name
-        ]
+        """
+        Return any arguments to pass to the program.
+        """
+        return []
 
     def revert(self):
         """
@@ -391,14 +394,30 @@ class ProgramRunner(Runner):
             self.program_fp.close()
         super(ProgramRunner, self).revert()
 
+    def _get_argv(self):
+        """
+        Return the final argument vector used to execute the program.
+        """
+        return [
+            self.args['_ansible_shell_executable'],
+            '-c',
+            self._get_shell_fragment(),
+        ]
+
+    def _get_shell_fragment(self):
+        return "%s %s" % (
+            shlex_quote(self.program_fp.name),
+            ' '.join(map(shlex_quote, self._get_program_args())),
+        )
+
     def _run(self):
         try:
             rc, stdout, stderr = ansible_mitogen.target.exec_args(
-                args=self._get_program_args(),
+                args=self._get_argv(),
                 emulate_tty=self.emulate_tty,
             )
         except Exception as e:
-            LOG.exception('While running %s', self._get_program_args())
+            LOG.exception('While running %s', self._get_argv())
             return {
                 'rc': 1,
                 'stdout': '',
@@ -438,11 +457,7 @@ class ArgsFileRunner(Runner):
         return json.dumps(self.args)
 
     def _get_program_args(self):
-        return [
-            self.args['_ansible_shell_executable'],
-            '-c',
-            "%s %s" % (self.program_fp.name, self.args_fp.name),
-        ]
+        return [self.args_fp.name]
 
     def revert(self):
         """
@@ -457,10 +472,10 @@ class BinaryRunner(ArgsFileRunner, ProgramRunner):
 
 
 class ScriptRunner(ProgramRunner):
-    def __init__(self, interpreter, interpreter_arg, **kwargs):
+    def __init__(self, interpreter_fragment, is_python, **kwargs):
         super(ScriptRunner, self).__init__(**kwargs)
-        self.interpreter = interpreter
-        self.interpreter_arg = interpreter_arg
+        self.interpreter_fragment = interpreter_fragment
+        self.is_python = is_python
 
     b_ENCODING_STRING = b'# -*- coding: utf-8 -*-'
 
@@ -469,21 +484,34 @@ class ScriptRunner(ProgramRunner):
             super(ScriptRunner, self)._get_program()
         )
 
+    def _get_argv(self):
+        return [
+            self.args['_ansible_shell_executable'],
+            '-c',
+            self._get_shell_fragment(),
+        ]
+
+    def _get_shell_fragment(self):
+        """
+        Scripts are eligible for having their hashbang line rewritten, and to
+        be executed via /bin/sh using the ansible_*_interpreter value used as a
+        shell fragment prefixing to the invocation.
+        """
+        return "%s %s %s" % (
+            self.interpreter_fragment,
+            shlex_quote(self.program_fp.name),
+            ' '.join(map(shlex_quote, self._get_program_args())),
+        )
+
     def _rewrite_source(self, s):
         """
         Mutate the source according to the per-task parameters.
         """
-        # Couldn't find shebang, so let shell run it, because shell assumes
-        # executables like this are just shell scripts.
-        if not self.interpreter:
-            return s
-
-        shebang = b'#!' + utf8(self.interpreter)
-        if self.interpreter_arg:
-            shebang += b' ' + utf8(self.interpreter_arg)
-
-        new = [shebang]
-        if os.path.basename(self.interpreter).startswith('python'):
+        # While Ansible rewrites the #! using ansible_*_interpreter, it is
+        # never actually used to execute the script, instead it is a shell
+        # fragment consumed by shell/__init__.py::build_module_command().
+        new = [b'#!' + utf8(self.interpreter_fragment)]
+        if self.is_python:
             new.append(self.b_ENCODING_STRING)
 
         _, _, rest = s.partition(b'\n')

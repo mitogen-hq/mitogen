@@ -2,8 +2,21 @@
 - name: integration/action/make_tmp_path.yml
   hosts: test-targets
   any_errors_fatal: true
-  gather_facts: true
   tasks:
+    - name: "Find out root's homedir."
+      # Runs first because it blats regular Ansible facts with junk, so
+      # non-become run fixes that up.
+      setup: gather_subset=min
+      become: true
+      register: root_facts
+
+    - name: "Find regular homedir"
+      setup: gather_subset=min
+      register: user_facts
+
+    #
+    # non-become
+    #
 
     - action_passthrough:
         method: _make_tmp_path
@@ -11,7 +24,32 @@
 
     - assert:
         # This string must match ansible.cfg::remote_tmp
-        that: out.result.startswith("{{ansible_user_dir}}/.ansible/mitogen-tests/")
+        that: out.result.startswith("{{user_facts.ansible_facts.ansible_user_dir}}/.ansible/mitogen-tests/")
+
+    - stat:
+        path: "{{out.result}}"
+      register: st
+
+    - assert:
+        that: st.stat.exists and st.stat.isdir and st.stat.mode == "0700"
+
+    - file:
+        path: "{{out.result}}"
+        state: absent
+
+    #
+    # become. make_tmp_path() must evaluate HOME in the context of the SSH
+    # user, not the become user.
+    #
+
+    - action_passthrough:
+        method: _make_tmp_path
+      register: out
+      become: true
+
+    - assert:
+        # This string must match ansible.cfg::remote_tmp
+        that: out.result.startswith("{{user_facts.ansible_facts.ansible_user_dir}}/.ansible/mitogen-tests/")
 
     - stat:
         path: "{{out.result}}"

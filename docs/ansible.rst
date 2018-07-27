@@ -57,11 +57,9 @@ write files.
 Installation
 ------------
 
-1. Thoroughly review the :ref:`noteworthy_differences` and :ref:`changelog`.
-2. Verify Ansible 2.3-2.5 and Python 2.6, 2.7 or 3.6 are listed in ``ansible
-   --version`` output.
-3. Download and extract |mitogen_url| from PyPI.
-4. Modify ``ansible.cfg``:
+1. Thoroughly review :ref:`noteworthy_differences` and :ref:`changelog`.
+2. Download and extract |mitogen_url|.
+3. Modify ``ansible.cfg``:
 
    .. parsed-literal::
 
@@ -74,11 +72,15 @@ Installation
    per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
    to mimic the ``free`` strategy.
 
-5. If targets have a restrictive ``sudoers`` file, add a rule like:
+4. If targets have a restrictive ``sudoers`` file, add a rule like:
 
-::
+   ::
 
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
+
+5. Subscribe to the `mitogen-announce mailing list
+   <https://www.freelists.org/list/mitogen-announce>`_ to stay updated with new
+   releases and important bug fixes.
 
 
 Demo
@@ -123,23 +125,27 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
+* Ansible 2.3-2.5 are supported along with Python 2.6, 2.7 or 3.6. Verify your
+  installation is running one of these versions by checking ``ansible
+  --version`` output.
+
 * The Ansible ``raw`` action executes as a regular Mitogen connection,
   precluding its use for installing Python on a target. This will be addressed
   soon.
 
-* The ``su`` and ``sudo`` become methods are available. File bugs to register
-  interest in more.
+* The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
+  register interest in more.
 
-* The `docker <https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_,
-  `jail <https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_,
-  `local <https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_,
-  `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_,
-  `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_,
-  and `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
+* The `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
+  `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,
+  `local <https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_,
+  `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_,
+  `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_,
+  and `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
   built-in connection types are supported, along with Mitogen-specific
-  :ref:`machinectl <machinectl>`, :ref:`mitogen_su <su>`, :ref:`mitogen_sudo
-  <sudo>`, and :ref:`setns <setns>` types. File bugs to register interest in
-  others.
+  :ref:`machinectl <machinectl>`, :ref:`mitogen_doas <doas>`,
+  :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
+  types. File bugs to register interest in others.
 
 * Local commands execute in a reuseable interpreter created identically to
   interpreters on targets. Presently one interpreter per ``become_user``
@@ -157,6 +163,13 @@ Noteworthy Differences
   in Mitogen this is handled by a fixed-size thread pool. Up to 16 connections
   may be established in parallel by default, this can be modified by setting
   the ``MITOGEN_POOL_SIZE`` environment variable.
+
+* The ``ansible_python_interpreter`` variable is parsed using a restrictive
+  :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
+  FOO=bar python``, which occur in practice. Ansible `documents this
+  <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
+  as an absolute path, however the implementation passes it unquoted through
+  the shell, permitting arbitrary code to be injected.
 
 * Performance does not scale linearly with target count. This will improve over
   time.
@@ -477,17 +490,95 @@ establishment of additional reuseable interpreters as necessary to match the
 configuration of each task.
 
 
+.. _doas:
+
+Doas
+~~~~
+
+``doas`` can be used as a connection method that supports connection delegation, or
+as a become method.
+
+When used as a become method:
+
+* ``ansible_python_interpreter``
+* ``ansible_become_exe``: path to ``doas`` binary.
+* ``ansible_become_user`` (default: ``root``)
+* ``ansible_become_pass`` (default: assume passwordless)
+* ansible.cfg: ``timeout``
+
+When used as the ``mitogen_doas`` connection method:
+
+* The inventory hostname has no special meaning.
+* ``ansible_user``: username to use.
+* ``ansible_password``: password to use.
+* ``ansible_python_interpreter``
+
+
 .. _method-docker:
 
 Docker
 ~~~~~~
 
 Like `docker
-<https://docs.ansible.com/ansible/2.5/plugins/connection/docker.html>`_ except
+<https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_ except
 connection delegation is supported.
 
 * ``ansible_host``: Name of Docker container (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
+
+
+FreeBSD Jail
+~~~~~~~~~~~~
+
+Like `jail
+<https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_ except
+connection delegation is supported.
+
+* ``ansible_host``: Name of jail (default: inventory hostname).
+* ``ansible_user``: Name of user within the jail to execute as.
+
+
+Local
+~~~~~
+
+Like `local
+<https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_ except
+connection delegation is supported.
+
+* ``ansible_python_interpreter``
+
+
+Process Model
+^^^^^^^^^^^^^
+
+Ansible usually executes local connection commands as a transient subprocess of
+the forked worker executing a task. With the extension, the local connection
+exists as a persistent subprocess of the connection multiplexer.
+
+This means that global state mutations made to the top-level Ansible process
+that are normally visible to newly forked subprocesses, such as vars plug-ins
+that modify the environment, will not be reflected when executing local
+commands without additional effort.
+
+During execution the extension presently mimics the working directory and
+process environment inheritence of regular Ansible, however it is possible some
+additional differences exist that may break existing playbooks.
+
+
+.. _method-lxc:
+
+LXC
+~~~
+
+Like `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_
+and `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_
+except connection delegation is supported, and ``lxc-attach`` is always used
+rather than the LXC Python bindings, as is usual with ``lxc``.
+
+The ``lxc-attach`` command must be available on the host machine.
+
+* ``ansible_python_interpreter``
+* ``ansible_host``: Name of LXC container (default: inventory hostname).
 
 
 .. _machinectl:
@@ -504,43 +595,6 @@ connection delegation is supported. This is a light wrapper around the
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
-
-
-FreeBSD Jail
-~~~~~~~~~~~~
-
-Like `jail
-<https://docs.ansible.com/ansible/2.5/plugins/connection/jail.html>`_ except
-connection delegation is supported.
-
-* ``ansible_host``: Name of jail (default: inventory hostname).
-* ``ansible_user``: Name of user within the jail to execute as.
-
-
-Local
-~~~~~
-
-Like `local
-<https://docs.ansible.com/ansible/2.5/plugins/connection/local.html>`_ except
-connection delegation is supported.
-
-* ``ansible_python_interpreter``
-
-
-.. _method-lxc:
-
-LXC
-~~~
-
-Like `lxc <https://docs.ansible.com/ansible/2.5/plugins/connection/lxc.html>`_
-and `lxd <https://docs.ansible.com/ansible/2.5/plugins/connection/lxd.html>`_
-except connection delegation is supported, and ``lxc-attach`` is always used
-rather than the LXC Python bindings, as is usual with ``lxc``.
-
-The ``lxc-attach`` command must be available on the host machine.
-
-* ``ansible_python_interpreter``
-* ``ansible_host``: Name of LXC container (default: inventory hostname).
 
 
 .. _setns:
@@ -622,7 +676,7 @@ When used as the ``mitogen_sudo`` connection method:
 SSH
 ~~~
 
-Like `ssh <https://docs.ansible.com/ansible/2.5/plugins/connection/ssh.html>`_
+Like `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
 except connection delegation is supported.
 
 * ``ansible_ssh_timeout``
@@ -648,7 +702,7 @@ controller with ``-vvvv`` or higher.
 
 Although use of standard IO and the logging package on the target is forwarded
 to the controller, it is not possible to receive IO activity logs, as the
-processs of receiving those logs would would itself generate IO activity. To
+process of receiving those logs would would itself generate IO activity. To
 receive a complete trace of every process on every machine, file-based logging
 is necessary. File-based logging can be enabled by setting
 ``MITOGEN_ROUTER_DEBUG=1`` in your environment.
@@ -657,7 +711,8 @@ When file-based logging is enabled, one file per context will be created on the
 local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
 
 If you are experiencing a hang, ``MITOGEN_DUMP_THREAD_STACKS=1`` causes every
-process to dump every thread stack into the logging framework every 5 seconds.
+process on every machine to dump every thread stack into the logging framework
+every 5 seconds.
 
 
 Getting Help

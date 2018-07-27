@@ -105,5 +105,24 @@ class SshTest(testlib.DockerMixin, unittest2.TestCase):
         )
 
 
+class BannerTest(testlib.DockerMixin, unittest2.TestCase):
+    # Verify the ability to disambiguate random spam appearing in the SSHd's
+    # login banner from a legitimate password prompt.
+    stream_class = mitogen.ssh.Stream
+
+    def test_verbose_enabled(self):
+        context = self.docker_ssh(
+            username='mitogen__has_sudo',
+            password='has_sudo_password',
+            ssh_debug_level=3,
+        )
+        name = 'ssh.%s:%s' % (
+            self.dockerized_ssh.get_host(),
+            self.dockerized_ssh.port,
+        )
+        self.assertEquals(name, context.name)
+
+
+
 if __name__ == '__main__':
     unittest2.main()

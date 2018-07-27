@@ -54,7 +54,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
         return adorned_klass(*args, **kwargs)
 
 
-def wrap_connection_loader__get(name, play_context, new_stdin, **kwargs):
+def wrap_connection_loader__get(name, *args, **kwargs):
     """
     While the strategy is active, rewrite connection_loader.get() calls for
     some transports into requests for a compatible Mitogen transport.
@@ -62,7 +62,7 @@ def wrap_connection_loader__get(name, play_context, new_stdin, **kwargs):
     if name in ('docker', 'jail', 'local', 'lxc',
                 'lxd', 'machinectl', 'setns', 'ssh'):
         name = 'mitogen_' + name
-    return connection_loader__get(name, play_context, new_stdin, **kwargs)
+    return connection_loader__get(name, *args, **kwargs)
 
 
 class StrategyMixin(object):

@@ -34,15 +34,20 @@ import sys
 import mitogen.core
 import mitogen.utils
 
+try:
+    from __main__ import display
+except ImportError:
+    from ansible.utils.display import Display
+    display = Display()
+
 
 class Handler(logging.Handler):
     """
     Use Mitogen's log format, but send the result to a Display method.
     """
-    def __init__(self, display, normal_method):
+    def __init__(self, normal_method):
         logging.Handler.__init__(self)
         self.formatter = mitogen.utils.log_get_formatter()
-        self.display = display
         self.normal_method = normal_method
 
     #: Set of target loggers that produce warnings and errors that spam the
@@ -62,24 +67,11 @@ class Handler(logging.Handler):
 
         s = '[pid %d] %s' % (os.getpid(), self.format(record))
         if record.levelno >= logging.ERROR:
-            self.display.error(s, wrap_text=False)
+            display.error(s, wrap_text=False)
         elif record.levelno >= logging.WARNING:
-            self.display.warning(s, formatted=True)
+            display.warning(s, formatted=True)
         else:
             self.normal_method(s)
-
-
-def find_display():
-    """
-    Find the CLI tool's display variable somewhere up the stack. Why god why,
-    right? Because it's the the simplest way to get access to the verbosity
-    configured on the command line.
-    """
-    f = sys._getframe()
-    while f:
-        if 'display' in f.f_locals:
-            return f.f_locals['display']
-        f = f.f_back
 
 
 def setup():
@@ -87,16 +79,22 @@ def setup():
     Install a handler for Mitogen's logger to redirect it into the Ansible
     display framework, and prevent propagation to the root logger.
     """
-    display = find_display()
-
-    logging.getLogger('ansible_mitogen').handlers = [Handler(display, display.vvv)]
-    mitogen.core.LOG.handlers = [Handler(display, display.vvv)]
-    mitogen.core.IOLOG.handlers = [Handler(display, display.vvvv)]
+    logging.getLogger('ansible_mitogen').handlers = [Handler(display.vvv)]
+    mitogen.core.LOG.handlers = [Handler(display.vvv)]
+    mitogen.core.IOLOG.handlers = [Handler(display.vvvv)]
     mitogen.core.IOLOG.propagate = False
 
     if display.verbosity > 2:
-        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
         mitogen.core.LOG.setLevel(logging.DEBUG)
+        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
+    else:
+        # Mitogen copies the active log level into new children, allowing them
+        # to filter tiny messages before they hit the network, and therefore
+        # before they wake the IO loop. Explicitly setting INFO saves ~4%
+        # running against just the local machine.
+        mitogen.core.LOG.setLevel(logging.ERROR)
+        logging.getLogger('ansible_mitogen').setLevel(logging.ERROR)
 
     if display.verbosity > 3:
         mitogen.core.IOLOG.setLevel(logging.DEBUG)
+        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)

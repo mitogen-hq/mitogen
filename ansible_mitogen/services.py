@@ -267,6 +267,7 @@ class ContextService(mitogen.service.Service):
 
                 {
                     'context': mitogen.core.Context or None,
+                    'via': mitogen.core.Context or None,
                     'init_child_result': {
                         'fork_context': mitogen.core.Context,
                         'home_dir': str or None,
@@ -297,7 +298,8 @@ class ContextService(mitogen.service.Service):
                                 lambda: self._on_stream_disconnect(stream))
 
         self._send_module_forwards(context)
-        init_child_result = context.call(ansible_mitogen.target.init_child)
+        init_child_result = context.call(ansible_mitogen.target.init_child,
+                                         log_level=LOG.getEffectiveLevel())
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug
@@ -307,6 +309,7 @@ class ContextService(mitogen.service.Service):
         self._refs_by_context[context] = 0
         return {
             'context': context,
+            'via': via,
             'init_child_result': init_child_result,
             'msg': None,
         }
@@ -357,7 +360,7 @@ class ContextService(mitogen.service.Service):
             Subsequent elements are proxied via the previous.
 
         :returns dict:
-            * context: mitogen.master.Context or None.
+            * context: mitogen.parent.Context or None.
             * init_child_result: Result of :func:`init_child`.
             * msg: StreamError exception text or None.
             * method_name: string failing method name.

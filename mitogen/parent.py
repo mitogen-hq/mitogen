@@ -69,6 +69,8 @@ from mitogen.core import LOG
 from mitogen.core import IOLOG
 
 
+IS_WSL = 'Microsoft' in os.uname()[2]
+
 if mitogen.core.PY3:
     xrange = range
 
@@ -102,36 +104,34 @@ def is_immediate_child(msg, stream):
 def flags(names):
     """Return the result of ORing a set of (space separated) :py:mod:`termios`
     module constants together."""
-    return sum(getattr(termios, name) for name in names.split())
+    return sum(getattr(termios, name, 0)
+               for name in names.split())
 
 
 def cfmakeraw(tflags):
     """Given a list returned by :py:func:`termios.tcgetattr`, return a list
-    that has been modified in the same manner as the `cfmakeraw()` C library
-    function."""
+    modified in a manner similar to the `cfmakeraw()` C library function, but
+    additionally disabling local echo."""
+    # BSD: https://github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
+    # Linux: https://github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
-    iflag &= ~flags('IGNBRK BRKINT PARMRK ISTRIP INLCR IGNCR ICRNL IXON')
-    oflag &= ~flags('OPOST IXOFF')
-    lflag &= ~flags('ECHO ECHOE ECHONL ICANON ISIG IEXTEN')
+    iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK ISTRIP INLCR ICRNL IXON IGNPAR')
+    iflag &= ~flags('IGNBRK BRKINT PARMRK')
+    oflag &= ~flags('OPOST')
+    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG IEXTEN NOFLSH TOSTOP PENDIN')
     cflag &= ~flags('CSIZE PARENB')
-    cflag |= flags('CS8')
-
-    # TODO: one or more of the above bit twiddles sets or omits a necessary
-    # flag. Forcing these fields to zero, as shown below, gets us what we want
-    # on Linux/OS X, but it is possibly broken on some other OS.
-    iflag = 0
-    oflag = 0
-    lflag = 0
+    cflag |= flags('CS8 CREAD')
     return [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
 
 
 def disable_echo(fd):
     old = termios.tcgetattr(fd)
     new = cfmakeraw(old)
-    flags = (
-        termios.TCSAFLUSH |
-        getattr(termios, 'TCSASOFT', 0)
-    )
+    flags = getattr(termios, 'TCSASOFT', 0)
+    if not IS_WSL:
+        # issue #319: Windows Subsystem for Linux as of July 2018 throws EINVAL
+        # if TCSAFLUSH is specified.
+        flags |= termios.TCSAFLUSH
     termios.tcsetattr(fd, flags, new)
 
 
@@ -457,10 +457,16 @@ class Argv(object):
     def __init__(self, argv):
         self.argv = argv
 
+    must_escape = frozenset('\\$"`!')
+    must_escape_or_space = must_escape | frozenset(' ')
+
     def escape(self, x):
+        if not self.must_escape_or_space.intersection(x):
+            return x
+
         s = '"'
         for c in x:
-            if c in '\\$"`':
+            if c in self.must_escape:
                 s += '\\'
             s += c
         s += '"'
@@ -525,7 +531,15 @@ class KqueuePoller(mitogen.core.Poller):
     def _control(self, fd, filters, flags):
         mitogen.core._vv and IOLOG.debug(
             '%r._control(%r, %r, %r)', self, fd, filters, flags)
-        self._changelist.append(select.kevent(fd, filters, flags))
+        # TODO: at shutdown it is currently possible for KQ_EV_ADD/KQ_EV_DEL
+        # pairs to be pending after the associated file descriptor has already
+        # been closed. Fixing this requires maintaining extra state, or perhaps
+        # making fd closure the poller's responsibility. In the meantime,
+        # simply apply changes immediately.
+        # self._changelist.append(select.kevent(fd, filters, flags))
+        changelist = [select.kevent(fd, filters, flags)]
+        events, _ = mitogen.core.io_op(self._kqueue.control, changelist, 0, 0)
+        assert not events
 
     def start_receive(self, fd, data=None):
         mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
@@ -560,7 +574,10 @@ class KqueuePoller(mitogen.core.Poller):
             changelist, 32, timeout)
         for event in events:
             fd = event.ident
-            if event.filter == select.KQ_FILTER_READ and fd in self._rfds:
+            if event.flags & select.KQ_EV_ERROR:
+                LOG.debug('ignoring stale event for fd %r: errno=%d: %s',
+                          fd, event.data, errno.errorcode.get(event.data))
+            elif event.filter == select.KQ_FILTER_READ and fd in self._rfds:
                 # Events can still be read for an already-discarded fd.
                 mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
                 yield self._rfds[fd]
@@ -865,6 +882,19 @@ class Stream(mitogen.core.Stream):
         fp.close()
         os.write(1,'MITO001\n'.encode())
 
+    def get_python_argv(self):
+        """
+        Return the initial argument vector elements necessary to invoke Python,
+        by returning a 1-element list containing :attr:`python_path` if it is a
+        string, or simply returning it if it is already a list.
+
+        This allows emulation of existing tools where the Python invocation may
+        be set to e.g. `['/usr/bin/env', 'python']`.
+        """
+        if isinstance(self.python_path, list):
+            return self.python_path
+        return [self.python_path]
+
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
@@ -880,8 +910,8 @@ class Stream(mitogen.core.Stream):
         # codecs.decode() requires a bytes object. Since we must be compatible
         # with 2.4 (no bytes literal), an extra .encode() either returns the
         # same str (2.x) or an equivalent bytes (3.x).
-        return [
-            self.python_path, '-c',
+        return self.get_python_argv() + [
+            '-c',
             'import codecs,os,sys;_=codecs.decode;'
             'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
         ]
@@ -1239,6 +1269,9 @@ class Router(mitogen.core.Router):
         context.via = via_context
         self._context_by_id[context.context_id] = context
         return context
+
+    def doas(self, **kwargs):
+        return self.connect(u'doas', **kwargs)
 
     def docker(self, **kwargs):
         return self.connect(u'docker', **kwargs)

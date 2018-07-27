@@ -1,10 +1,10 @@
 -r docs/docs-requirements.txt
-ansible==2.5.5
+ansible==2.6.1
 coverage==4.5.1
 Django==1.6.11  # Last version supporting 2.6.
 mock==2.0.0
 pytz==2012d  # Last 2.6-compat version.
-paramiko==2.3.1  # Last 2.6-compat version.
+paramiko==2.3.2  # Last 2.6-compat version.
 pytest-catchlog==1.2.2
 pytest==3.1.2
 PyYAML==3.11; python_version < '2.7'
