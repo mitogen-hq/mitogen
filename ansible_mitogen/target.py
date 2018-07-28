@@ -39,7 +39,6 @@ import functools
 import grp
 import json
 import logging
-import new
 import operator
 import os
 import pwd
@@ -50,6 +49,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+import types
 
 import mitogen.core
 import mitogen.fork
@@ -61,7 +61,7 @@ import mitogen.service
 # we must setup a fake "__main__" before that module is ever imported. The
 # str() is to cast Unicode to bytes on Python 2.6.
 if not sys.modules.get(str('__main__')):
-    sys.modules[str('__main__')] = new.module(str('__main__'))
+    sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
 
 import ansible.module_utils.json_utils
 import ansible_mitogen.runner

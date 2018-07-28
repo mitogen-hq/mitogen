@@ -24,6 +24,8 @@ Release Notes
       supported under Ansible 2.6. Contributed by `Dan Quackenbush
       <https://github.com/danquack>`_.
 
+    * Compatible with development versions of Ansible post https://github.com/ansible/ansible/pull/41749
+
 
 v0.2.2 (2018-07-26)
 -------------------
