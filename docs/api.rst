@@ -831,8 +831,8 @@ Context Class
         context's main thread.
 
         :param fn:
-            A free function in module scope, or a classmethod or staticmethod
-            of a class directly reachable from module scope:
+            A free function in module scope or a class method of a class
+            directly reachable from module scope:
 
             .. code-block:: python
 
@@ -842,10 +842,6 @@ Context Class
                     """A free function reachable as mymodule.my_func"""
 
                 class MyClass:
-                    @staticmethod
-                    def my_staticmethod():
-                        """Reachable as mymodule.MyClass.my_staticmethod"""
-
                     @classmethod
                     def my_classmethod(cls):
                         """Reachable as mymodule.MyClass.my_classmethod"""
