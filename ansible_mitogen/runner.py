@@ -264,9 +264,9 @@ class ModuleUtilsImporter(object):
         mod.__loader__ = self
         if is_pkg:
             mod.__path__ = []
-            mod.__package__ = fullname
+            mod.__package__ = str(fullname)
         else:
-            mod.__package__ = fullname.rpartition('.')[0]
+            mod.__package__ = str(fullname.rpartition('.')[0])
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
