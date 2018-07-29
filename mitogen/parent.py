@@ -2159,6 +2159,23 @@ class Router(mitogen.core.Router):
         finally:
             self._write_lock.release()
 
+    def disconnect(self, context):
+        """
+        Disconnect a context and forget its stream, assuming the context is
+        directly connected.
+        """
+        stream = self.stream_by_id(context)
+        if stream.remote_id != context.context_id:
+            return
+
+        l = mitogen.core.Latch()
+        mitogen.core.listen(stream, 'disconnect', l.put)
+        def disconnect():
+            LOG.debug('Starting disconnect of %r', stream)
+            stream.on_disconnect(self.broker)
+        self.broker.defer(disconnect)
+        l.get()
+
     def add_route(self, target_id, stream):
         """
         Arrange for messages whose `dst_id` is `target_id` to be forwarded on

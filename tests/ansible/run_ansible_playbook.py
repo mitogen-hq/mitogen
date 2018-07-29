@@ -51,7 +51,11 @@ else:
         os.path.join(GIT_BASEDIR, 'tests/ansible/hosts')
     )
 
-args = ['ansible-playbook']
+if 'ANSIBLE_ARGV' in os.environ:
+    args = eval(os.environ['ANSIBLE_ARGV'])
+else:
+    args = ['ansible-playbook']
+
 args += ['-e', json.dumps(extra)]
 args += sys.argv[1:]
 os.execvp(args[0], args)

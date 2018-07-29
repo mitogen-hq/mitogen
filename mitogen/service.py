@@ -92,6 +92,24 @@ def get_or_create_pool(size=None, router=None):
         _pool_lock.release()
 
 
+def call(service_name, method_name, call_context=None, **kwargs):
+    """
+    Call a service registered with this pool, using the calling thread as a
+    host.
+    """
+    if isinstance(service_name, mitogen.core.BytesType):
+        service_name = service_name.encode('utf-8')
+    elif not isinstance(service_name, mitogen.core.UnicodeType):
+        service_name = service_name.name()  # Service.name()
+
+    if call_context:
+        return call_context.call_service(service_name, method_name, **kwargs)
+    else:
+        pool = get_or_create_pool()
+        invoker = pool.get_invoker(service_name, msg=None)
+        return getattr(invoker.service, method_name)(**kwargs)
+
+
 def validate_arg_spec(spec, args):
     for name in spec:
         try:
@@ -239,12 +257,13 @@ class Invoker(object):
         if not policies:
             raise mitogen.core.CallError('Method has no policies set.')
 
-        if not all(p.is_authorized(self.service, msg) for p in policies):
-            raise mitogen.core.CallError(
-                self.unauthorized_msg,
-                method_name,
-                self.service.name()
-            )
+        if msg is not None:
+            if not all(p.is_authorized(self.service, msg) for p in policies):
+                raise mitogen.core.CallError(
+                    self.unauthorized_msg,
+                    method_name,
+                    self.service.name()
+                )
 
         required = getattr(method, 'mitogen_service__arg_spec', {})
         validate_arg_spec(required, kwargs)
@@ -264,7 +283,7 @@ class Invoker(object):
         except Exception:
             if no_reply:
                 LOG.exception('While calling no-reply method %s.%s',
-                              type(self.service).__name__,
+                              self.service.name(),
                               func_name(method))
             else:
                 raise
@@ -690,7 +709,7 @@ class PushFileService(Service):
         """
         for path in paths:
             self.propagate_to(context, mitogen.core.to_text(path))
-        self.router.responder.forward_modules(context, modules)
+        #self.router.responder.forward_modules(context, modules) TODO
 
     @expose(policy=AllowParents())
     @arg_spec({

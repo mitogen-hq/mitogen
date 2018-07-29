@@ -901,7 +901,11 @@ class Message(object):
             unpickler.find_global = self._find_global
             try:
                 # Must occur off the broker thread.
-                obj = unpickler.load()
+                try:
+                    obj = unpickler.load()
+                except:
+                    LOG.error('raw pickle was: %r', self.data)
+                    raise
                 self._unpickled = obj
             except (TypeError, ValueError):
                 e = sys.exc_info()[1]

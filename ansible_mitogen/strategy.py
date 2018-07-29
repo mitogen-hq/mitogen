@@ -31,6 +31,11 @@ import os
 import signal
 import threading
 
+try:
+    import setproctitle
+except ImportError:
+    setproctitle = None
+
 import mitogen.core
 import ansible_mitogen.affinity
 import ansible_mitogen.loaders
@@ -145,11 +150,17 @@ def wrap_connection_loader__get(name, *args, **kwargs):
     return connection_loader__get(name, *args, **kwargs)
 
 
-def wrap_worker__run(*args, **kwargs):
+def wrap_worker__run(self):
     """
     While the strategy is active, rewrite connection_loader.get() calls for
     some transports into requests for a compatible Mitogen transport.
     """
+    if setproctitle:
+        setproctitle.setproctitle('worker:%s task:%s' % (
+            self._host.name,
+            self._task.action,
+        ))
+
     # Ignore parent's attempts to murder us when we still need to write
     # profiling output.
     if mitogen.core._profile_hook.__name__ != '_profile_hook':
@@ -158,8 +169,58 @@ def wrap_worker__run(*args, **kwargs):
     ansible_mitogen.logging.set_process_name('task')
     ansible_mitogen.affinity.policy.assign_worker()
     return mitogen.core._profile_hook('WorkerProcess',
-        lambda: worker__run(*args, **kwargs)
+        lambda: worker__run(self)
     )
+
+
+class AnsibleWrappers(object):
+    """
+    Manage add/removal of various Ansible runtime hooks.
+    """
+    def _add_plugin_paths(self):
+        """
+        Add the Mitogen plug-in directories to the ModuleLoader path, avoiding
+        the need for manual configuration.
+        """
+        base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
+        ansible_mitogen.loaders.connection_loader.add_directory(
+            os.path.join(base_dir, 'connection')
+        )
+        ansible_mitogen.loaders.action_loader.add_directory(
+            os.path.join(base_dir, 'action')
+        )
+
+    def _install_wrappers(self):
+        """
+        Install our PluginLoader monkey patches and update global variables
+        with references to the real functions.
+        """
+        global action_loader__get
+        action_loader__get = ansible_mitogen.loaders.action_loader.get
+        ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
+
+        global connection_loader__get
+        connection_loader__get = ansible_mitogen.loaders.connection_loader.get
+        ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
+
+        global worker__run
+        worker__run = ansible.executor.process.worker.WorkerProcess.run
+        ansible.executor.process.worker.WorkerProcess.run = wrap_worker__run
+
+    def _remove_wrappers(self):
+        """
+        Uninstall the PluginLoader monkey patches.
+        """
+        ansible_mitogen.loaders.action_loader.get = action_loader__get
+        ansible_mitogen.loaders.connection_loader.get = connection_loader__get
+        ansible.executor.process.worker.WorkerProcess.run = worker__run
+
+    def install(self):
+        self._add_plugin_paths()
+        self._install_wrappers()
+
+    def remove(self):
+        self._remove_wrappers()
 
 
 class StrategyMixin(object):
@@ -223,43 +284,6 @@ class StrategyMixin(object):
         remote process, all the heavy lifting of transferring the action module
         and its dependencies are automatically handled by Mitogen.
     """
-    def _install_wrappers(self):
-        """
-        Install our PluginLoader monkey patches and update global variables
-        with references to the real functions.
-        """
-        global action_loader__get
-        action_loader__get = ansible_mitogen.loaders.action_loader.get
-        ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
-
-        global connection_loader__get
-        connection_loader__get = ansible_mitogen.loaders.connection_loader.get
-        ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
-
-        global worker__run
-        worker__run = ansible.executor.process.worker.WorkerProcess.run
-        ansible.executor.process.worker.WorkerProcess.run = wrap_worker__run
-
-    def _remove_wrappers(self):
-        """
-        Uninstall the PluginLoader monkey patches.
-        """
-        ansible_mitogen.loaders.action_loader.get = action_loader__get
-        ansible_mitogen.loaders.connection_loader.get = connection_loader__get
-        ansible.executor.process.worker.WorkerProcess.run = worker__run
-
-    def _add_plugin_paths(self):
-        """
-        Add the Mitogen plug-in directories to the ModuleLoader path, avoiding
-        the need for manual configuration.
-        """
-        base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
-        ansible_mitogen.loaders.connection_loader.add_directory(
-            os.path.join(base_dir, 'connection')
-        )
-        ansible_mitogen.loaders.action_loader.add_directory(
-            os.path.join(base_dir, 'action')
-        )
 
     def _queue_task(self, host, task, task_vars, play_context):
         """
@@ -290,20 +314,35 @@ class StrategyMixin(object):
             play_context=play_context,
         )
 
+    def _get_worker_model(self):
+        """
+        In classic mode a single :class:`WorkerModel` exists, which manages
+        references and configuration of the associated connection multiplexer
+        process.
+        """
+        return ansible_mitogen.process.get_classic_worker_model()
+
     def run(self, iterator, play_context, result=0):
         """
-        Arrange for a mitogen.master.Router to be available for the duration of
-        the strategy's real run() method.
+        Wrap :meth:`run` to ensure requisite infrastructure and modifications
+        are configured for the duration of the call.
         """
         _assert_supported_release()
-
-        ansible_mitogen.process.MuxProcess.start()
-        run = super(StrategyMixin, self).run
-        self._add_plugin_paths()
-        self._install_wrappers()
+        wrappers = AnsibleWrappers()
+        self._worker_model = self._get_worker_model()
+        ansible_mitogen.process.set_worker_model(self._worker_model)
         try:
-            return mitogen.core._profile_hook('Strategy',
-                lambda: run(iterator, play_context)
-            )
+            self._worker_model.on_strategy_start()
+            try:
+                wrappers.install()
+                try:
+                    run = super(StrategyMixin, self).run
+                    return mitogen.core._profile_hook('Strategy',
+                        lambda: run(iterator, play_context)
+                    )
+                finally:
+                    wrappers.remove()
+            finally:
+                self._worker_model.on_strategy_complete()
         finally:
-            self._remove_wrappers()
+            ansible_mitogen.process.set_worker_model(None)

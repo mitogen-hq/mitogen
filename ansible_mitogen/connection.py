@@ -38,6 +38,7 @@ import sys
 import time
 
 import jinja2.runtime
+from ansible.module_utils import six
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
@@ -459,15 +460,10 @@ class CallChain(mitogen.parent.CallChain):
 
 
 class Connection(ansible.plugins.connection.ConnectionBase):
-    #: mitogen.master.Broker for this worker.
-    broker = None
-
-    #: mitogen.master.Router for this worker.
-    router = None
-
-    #: mitogen.parent.Context representing the parent Context, which is
-    #: presently always the connection multiplexer process.
-    parent = None
+    #: The :class:`ansible_mitogen.process.Binding` representing the connection
+    #: multiplexer this connection's target is assigned to. :data:`None` when
+    #: disconnected.
+    binding = None
 
     #: mitogen.parent.Context for the target account on the target, possibly
     #: reached via become.
@@ -517,13 +513,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: to change the working directory to that of the current playbook,
     #: matching vanilla Ansible behaviour.
     loader_basedir = None
-
-    def __init__(self, play_context, new_stdin, **kwargs):
-        assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
-            'Mitogen connection types may only be instantiated '
-            'while the "mitogen" strategy is active.'
-        )
-        super(Connection, self).__init__(play_context, new_stdin)
 
     def __del__(self):
         """
@@ -584,6 +573,15 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def homedir(self):
         self._connect()
         return self.init_child_result['home_dir']
+
+    def get_binding(self):
+        """
+        Return the :class:`ansible_mitogen.process.Binding` representing the
+        process that hosts the physical connection and services (context
+        establishment, file transfer, ..) for our desired target.
+        """
+        assert self.binding is not None
+        return self.binding
 
     @property
     def connected(self):
@@ -672,18 +670,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         return stack
 
-    def _connect_broker(self):
-        """
-        Establish a reference to the Broker, Router and parent context used for
-        connections.
-        """
-        if not self.broker:
-            self.broker = mitogen.master.Broker()
-            self.router, self.parent = mitogen.unix.connect(
-                path=ansible_mitogen.process.MuxProcess.unix_listener_path,
-                broker=self.broker,
-            )
-
     def _build_stack(self):
         """
         Construct a list of dictionaries representing the connection
@@ -691,14 +677,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         additionally used by the integration tests "mitogen_get_stack" action
         to fetch the would-be connection configuration.
         """
-        return self._stack_from_spec(
-            ansible_mitogen.transport_config.PlayContextSpec(
-                connection=self,
-                play_context=self._play_context,
-                transport=self.transport,
-                inventory_name=self.inventory_hostname,
-            )
+        spec = ansible_mitogen.transport_config.PlayContextSpec(
+            connection=self,
+            play_context=self._play_context,
+            transport=self.transport,
+            inventory_name=self.inventory_hostname,
         )
+        stack = self._stack_from_spec(spec)
+        return spec.inventory_name(), stack
 
     def _connect_stack(self, stack):
         """
@@ -711,7 +697,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         description of the returned dictionary.
         """
         try:
-            dct = self.parent.call_service(
+            dct = mitogen.service.call(
+                call_context=self.binding.get_service_context(),
                 service_name='ansible_mitogen.services.ContextService',
                 method_name='get',
                 stack=mitogen.utils.cast(list(stack)),
@@ -758,8 +745,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if self.connected:
             return
 
-        self._connect_broker()
-        stack = self._build_stack()
+        inventory_name, stack = self._build_stack()
+        worker_model = ansible_mitogen.process.get_worker_model()
+        self.binding = worker_model.get_binding(inventory_name)
         self._connect_stack(stack)
 
     def _mitogen_reset(self, mode):
@@ -776,9 +764,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             return
 
         self.chain.reset()
-        self.parent.call_service(
+        mitogen.service.call(
+            call_context=self.binding.get_service_context(),
             service_name='ansible_mitogen.services.ContextService',
-            method_name=mode,
+            method_name='put',
             context=self.context
         )
 
@@ -787,27 +776,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.init_child_result = None
         self.chain = None
 
-    def _shutdown_broker(self):
-        """
-        Shutdown the broker thread during :meth:`close` or :meth:`reset`.
-        """
-        if self.broker:
-            self.broker.shutdown()
-            self.broker.join()
-            self.broker = None
-            self.router = None
-
-            # #420: Ansible executes "meta" actions in the top-level process,
-            # meaning "reset_connection" will cause :class:`mitogen.core.Latch`
-            # FDs to be cached and erroneously shared by children on subsequent
-            # WorkerProcess forks. To handle that, call on_fork() to ensure any
-            # shared state is discarded.
-            # #490: only attempt to clean up when it's known that some
-            # resources exist to cleanup, otherwise later __del__ double-call
-            # to close() due to GC at random moment may obliterate an unrelated
-            # Connection's resources.
-            mitogen.fork.on_fork()
-
     def close(self):
         """
         Arrange for the mitogen.master.Router running in the worker to
@@ -815,7 +783,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         multiple times.
         """
         self._mitogen_reset(mode='put')
-        self._shutdown_broker()
+        if self.binding:
+            self.binding.close()
+            self.binding = None
 
     def _reset_find_task_vars(self):
         """
@@ -853,7 +823,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self._connect()
         self._mitogen_reset(mode='reset')
-        self._shutdown_broker()
+        self.binding.close()
+        self.binding = None
 
     # Compatibility with Ansible 2.4 wait_for_connection plug-in.
     _reset = reset
@@ -1024,7 +995,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                                      utimes=(st.st_atime, st.st_mtime))
 
         self._connect()
-        self.parent.call_service(
+        mitogen.service.call(
+            call_context=self.binding.get_service_context(),
             service_name='mitogen.service.FileService',
             method_name='register',
             path=mitogen.utils.cast(in_path)
@@ -1036,7 +1008,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         # file alive, but that requires more work.
         self.get_chain().call(
             ansible_mitogen.target.transfer_file,
-            context=self.parent,
+            context=self.binding.get_child_service_context(),
             in_path=in_path,
             out_path=out_path
         )
