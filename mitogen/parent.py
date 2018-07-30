@@ -995,7 +995,7 @@ class Stream(mitogen.core.Stream):
     def on_shutdown(self, broker):
         """Request the slave gracefully shut itself down."""
         LOG.debug('%r closing CALL_FUNCTION channel', self)
-        self._send(
+        self.send(
             mitogen.core.Message(
                 src_id=mitogen.context_id,
                 dst_id=self.remote_id,
@@ -1962,7 +1962,7 @@ class ModuleForwarder(object):
                   self, fullname, context_id, stream.remote_id)
         self._send_module_and_related(stream, fullname)
         if stream.remote_id != context_id:
-            stream._send(
+            stream.send(
                 mitogen.core.Message(
                     data=msg.data,
                     handle=mitogen.core.FORWARD_MODULE,
