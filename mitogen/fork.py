@@ -75,6 +75,17 @@ def reset_logging_framework():
     ]
 
 
+def on_fork():
+    """
+    Should be called by any program integrating Mitogen each time the process
+    is forked, in the context of the new child.
+    """
+    reset_logging_framework()  # Must be first!
+    fixup_prngs()
+    mitogen.core.Latch._on_fork()
+    mitogen.core.Side._on_fork()
+
+
 def handle_child_crash():
     """
     Respond to _child_main() crashing by ensuring the relevant exception is
@@ -134,10 +145,7 @@ class Stream(mitogen.parent.Stream):
             handle_child_crash()
 
     def _child_main(self, childfp):
-        reset_logging_framework()  # Must be first!
-        fixup_prngs()
-        mitogen.core.Latch._on_fork()
-        mitogen.core.Side._on_fork()
+        on_fork()
         if self.on_fork:
             self.on_fork()
         mitogen.core.set_block(childfp.fileno())
