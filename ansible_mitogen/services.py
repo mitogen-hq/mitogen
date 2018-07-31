@@ -388,6 +388,8 @@ class ModuleDepService(mitogen.service.Service):
     Scan a new-style module and produce a cached mapping of module_utils names
     to their resolved filesystem paths.
     """
+    invoker_class = mitogen.service.SerializedInvoker
+
     def __init__(self, *args, **kwargs):
         super(ModuleDepService, self).__init__(*args, **kwargs)
         self._cache = {}
