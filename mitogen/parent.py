@@ -796,7 +796,7 @@ class Stream(mitogen.core.Stream):
     detached = False
     _reaped = False
 
-    def _reap_child(self):
+    def _reap_child(self, signal_no, frame):
         """
         Reap the child process during disconnection.
         """
@@ -810,19 +810,20 @@ class Stream(mitogen.core.Stream):
             # on_disconnect() call.
             return
 
-        try:
-            pid, status = os.waitpid(self.pid, os.WNOHANG)
-        except OSError:
-            e = sys.exc_info()[1]
-            if e.args[0] == errno.ECHILD:
-                LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
-                return
-            raise
+        if signal_no == signal.SIGCHLD:
+            try:
+                pid, status = os.waitpid(self.pid, os.WNOHANG)
+            except OSError:
+                e = sys.exc_info()[1]
+                if e.args[0] == errno.ECHILD:
+                    LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
+                    return
+                raise
 
-        self._reaped = True
-        if pid:
-            LOG.debug('%r: child process exit status was %d', self, status)
-            return
+            self._reaped = True
+            if pid:
+                LOG.debug('%r: child process exit status was %d', self, status)
+                return
 
         # For processes like sudo we cannot actually send sudo a signal,
         # because it is setuid, so this is best-effort only.
@@ -835,7 +836,6 @@ class Stream(mitogen.core.Stream):
                 raise
 
     def on_disconnect(self, broker):
-        self._reap_child()
         super(Stream, self).on_disconnect(broker)
 
     # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
@@ -947,6 +947,7 @@ class Stream(mitogen.core.Stream):
     def start_child(self):
         args = self.get_boot_command()
         try:
+            signal.signal(signal.SIGCHLD, self._reap_child)
             return self.create_child(args, **self.create_child_args)
         except OSError:
             e = sys.exc_info()[1]
