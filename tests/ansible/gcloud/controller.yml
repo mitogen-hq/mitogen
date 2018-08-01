@@ -56,6 +56,10 @@
         editable: true
         name: ~/ansible
 
+    - pip:
+        virtualenv: ~/venv
+        name: debops
+
     - lineinfile:
         line: "source $HOME/venv/bin/activate"
         path: ~/.profile

@@ -46,15 +46,25 @@ import re
 import signal
 import stat
 import subprocess
+import sys
 import tempfile
 import traceback
+import types
 
-import ansible.module_utils.json_utils
-import ansible_mitogen.runner
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
 import mitogen.service
+
+# Ansible since PR #41749 inserts "import __main__" into
+# ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
+# we must setup a fake "__main__" before that module is ever imported. The
+# str() is to cast Unicode to bytes on Python 2.6.
+if not sys.modules.get(str('__main__')):
+    sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
+
+import ansible.module_utils.json_utils
+import ansible_mitogen.runner
 
 
 LOG = logging.getLogger(__name__)

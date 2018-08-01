@@ -33,6 +33,7 @@ import os
 import signal
 import socket
 import sys
+import time
 
 import mitogen
 import mitogen.core
@@ -113,6 +114,9 @@ class MuxProcess(object):
         cls.worker_sock, cls.child_sock = socket.socketpair()
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
+
+        if os.environ.get('MITOGEN_PROFILING', '1'):
+            mitogen.core.enable_profiling()
 
         cls.original_env = dict(os.environ)
         cls.child_pid = os.fork()
@@ -199,4 +203,10 @@ class MuxProcess(object):
         ourself. In future this should gracefully join the pool, but TERM is
         fine for now.
         """
+        if os.environ.get('MITOGEN_PROFILING'):
+            # TODO: avoid killing pool threads before they have written their
+            # .pstats. Really shouldn't be using kill() here at all, but hard
+            # to guarantee services can always be unblocked during shutdown.
+            time.sleep(1)
+
         os.kill(os.getpid(), signal.SIGTERM)
