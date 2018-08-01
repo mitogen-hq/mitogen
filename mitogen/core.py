@@ -350,6 +350,7 @@ def enable_profiling():
         try:
             return func(*args)
         finally:
+            profiler.dump_stats('/tmp/mitogen.%d.%s.pstat' % (os.getpid(), name))
             profiler.create_stats()
             fp = open('/tmp/mitogen.stats.%d.%s.log' % (os.getpid(), name), 'w')
             try:
