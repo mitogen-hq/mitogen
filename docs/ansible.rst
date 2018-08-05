@@ -91,9 +91,7 @@ concurrent to an equivalent run using the extension.
 
 .. raw:: html
 
-    <video width="720" height="439" controls>
-        <source src="https://k3.botanicus.net/tmp/ansible_mitogen.mp4" type="video/mp4">
-    </video>
+    <iframe src="https://player.vimeo.com/video/283272293?title=0&byline=0&portrait=0" width="720" height="439" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>
 
 
 Testimonials
