@@ -40,14 +40,16 @@ pip install ansible=="${ANSIBLE_VERSION}"
 cd ${TRAVIS_BUILD_DIR}/tests/ansible
 
 chmod go= ${TRAVIS_BUILD_DIR}/tests/data/docker/mitogen__has_sudo_pubkey.key
-echo '[test-targets]' > ${TMPDIR}/hosts
+mkdir ${TMPDIR}/hosts
+ln -s ${TRAVIS_BUILD_DIR}/tests/ansible/common-hosts ${TMPDIR}/hosts/common-hosts
+echo '[test-targets]' > ${TMPDIR}/hosts/target
 echo \
     target \
     ansible_host=$DOCKER_HOSTNAME \
     ansible_port=2201 \
     ansible_user=mitogen__has_sudo_nopw \
     ansible_password=has_sudo_nopw_password \
-    >> ${TMPDIR}/hosts
+    >> ${TMPDIR}/hosts/target
 
 # Build the binaries.
 make -C ${TRAVIS_BUILD_DIR}/tests/ansible

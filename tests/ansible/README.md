@@ -25,3 +25,18 @@ environment before the Mitogen connection process forks.
 ```
 ANSIBLE_STRATEGY=mitogen_linear ./run_ansible_playbook.sh all.yml
 ```
+
+
+## ``hosts/`` and ``common-hosts``
+
+To support running the tests against a dev machine that has the requisite user
+accounts, the the default inventory is a directory containing a 'localhost'
+file that defines 'localhost' to be named 'target' in Ansible inventory, and a
+symlink to 'common-hosts', which defines additional targets that all derive
+from 'target'.
+
+This allows ``ansible_tests.sh`` to reuse the common-hosts definitions while
+replacing localhost as the test target by creating a new directory that
+similarly symlinks in common-hosts.
+
+There may be a better solution for this, but it works fine for now.
