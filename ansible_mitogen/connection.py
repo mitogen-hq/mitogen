@@ -126,6 +126,17 @@ def _connect_lxc(spec):
     }
 
 
+def _connect_lxd(spec):
+    return {
+        'method': 'lxd',
+        'kwargs': {
+            'container': spec['remote_addr'],
+            'python_path': spec['python_path'],
+            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+        }
+    }
+
+
 def _connect_machinectl(spec):
     return _connect_setns(dict(spec, mitogen_kind='machinectl'))
 
@@ -236,7 +247,7 @@ CONNECTION_METHOD = {
     'jail': _connect_jail,
     'local': _connect_local,
     'lxc': _connect_lxc,
-    'lxd': _connect_lxc,
+    'lxd': _connect_lxd,
     'machinectl': _connect_machinectl,
     'setns': _connect_setns,
     'ssh': _connect_ssh,
