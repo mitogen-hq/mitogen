@@ -52,7 +52,7 @@ class Stream(mitogen.parent.Stream):
         super(Stream, self).construct(**kwargs)
         self.container = container
         if lxc_attach_path:
-            self.lxc_attach_path = lxc_attach_apth
+            self.lxc_attach_path = lxc_attach_path
 
     def connect(self):
         super(Stream, self).connect()
