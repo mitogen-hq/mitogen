@@ -1,0 +1,15 @@
+
+- name: integration/runner/missing_module.yml
+  hosts: test-targets
+  connection: local
+  tasks:
+    - connection: local
+      command: ansible -i localhost, localhost -m missing_module
+      args:
+        chdir: ../..
+      register: out
+      ignore_errors: true
+
+    - assert:
+        that: |
+          'The module missing_module was not found in configured module paths.' in out.stdout

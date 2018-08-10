@@ -15,3 +15,4 @@
 - import_playbook: environment_isolation.yml
 - import_playbook: etc_environment.yml
 - import_playbook: forking_behaviour.yml
+- import_playbook: missing_module.yml
