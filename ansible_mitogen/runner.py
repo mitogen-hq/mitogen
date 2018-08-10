@@ -44,6 +44,7 @@ import imp
 import json
 import logging
 import os
+import shlex
 import sys
 import tempfile
 import types
@@ -78,6 +79,22 @@ for symbol in 'res_init', '__res_init':
     except AttributeError:
         pass
 
+# For tasks running on Linux machines, with vanilla Ansible, edits to
+# /etc/environment and ~/.pam_environment are reflected if become:true, due to
+# sudo reinvoking pam_env. If multiplexing is disabled, then edits are also
+# reflected with become:false. Rather than emulate existing semantics, simply
+# always ensure edits are reflects for the next task.
+try:
+    etc_env_st = os.stat('/etc/environment')
+except OSError:
+    etc_env_st = None
+
+try:
+    pam_env_st = os.stat(os.path.expanduser('~/.pam_environment'))
+except OSError:
+    pam_env_st = None
+
+
 iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
@@ -102,6 +119,54 @@ def reopen_readonly(fp):
     fd = os.open(fp.name, os.O_RDONLY)
     os.dup2(fd, fp.fileno())
     os.close(fd)
+
+
+def parse_env(fp):
+    """
+    Parse /etc/environ using roughly the same syntax as pam_env.
+    """
+    # https://github.com/linux-pam/linux-pam/blob/v1.3.1/modules/pam_env/pam_env.c#L207
+    for line in fp:
+        # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
+        bits = shlex.split(line, comments=True)
+        if not bits:
+            continue
+
+        if bits[0] == 'export':
+            bits.pop(0)
+
+        key, sep, value = (' '.join(bits)).partition('=')
+        if sep:
+            os.environ[key] = value
+
+
+def reload_env(old_st, path):
+    """
+    Compare the :func:`os.stat` for the pam_env style environmnt file `path`
+    with the previous result `old_st`, which may be :data:`None` if the
+    previous stat attempt failed. Reload its contents if the file has changed
+    or appeared since last attempt.
+
+    :returns:
+        New :func:`os.stat` result. The new call to :func:`reload_env` should
+        pass it as the value of `old_st`.
+    """
+    try:
+        path = os.path.expanduser(path)
+        st = os.stat(path)
+    except OSError:
+        return None
+
+    if old_st == st:
+        return old_st
+    if st is None:
+        LOG.debug('reload_env(%r): file has disappeared', path)
+        return st
+
+    LOG.debug('reload_env(%r): file has changed or appeared, reloading', path)
+    with open(path) as fp:
+        parse_env(fp)
+    return st
 
 
 class Runner(object):
@@ -163,7 +228,21 @@ class Runner(object):
         env = dict(self.extra_env or {})
         if self.env:
             env.update(self.env)
+        self._setup_environ()
         self._env = TemporaryEnvironment(env)
+
+    def _setup_environ(self):
+        """
+        Ensure /etc/environment and ~/.pam_environment are reloaded if their
+        content appears to differ since execution of the previous task. This
+        must happen before TemporaryEnvironment is installed, to ensure changes
+        persist across tasks.
+        """
+        global etc_env_st
+        etc_env_st = reload_env(etc_env_st, '/etc/environment')
+
+        global pam_env_st
+        pam_env_st = reload_env(pam_env_st, '~/.pam_environment')
 
     def revert(self):
         """

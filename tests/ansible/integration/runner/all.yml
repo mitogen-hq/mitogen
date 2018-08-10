@@ -1,7 +1,7 @@
 - import_playbook: builtin_command_module.yml
+- import_playbook: custom_bash_hashbang_argument.yml
 - import_playbook: custom_bash_old_style_module.yml
 - import_playbook: custom_bash_want_json_module.yml
-- import_playbook: custom_bash_hashbang_argument.yml
 - import_playbook: custom_binary_producing_json.yml
 - import_playbook: custom_binary_producing_junk.yml
 - import_playbook: custom_binary_single_null.yml
@@ -13,4 +13,5 @@
 - import_playbook: custom_python_want_json_module.yml
 - import_playbook: custom_script_interpreter.yml
 - import_playbook: environment_isolation.yml
+- import_playbook: etc_environment.yml
 - import_playbook: forking_behaviour.yml
