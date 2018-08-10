@@ -590,8 +590,8 @@ Router Class
 
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 
-        Construct a context on the local machine within an LXC container using
-        the ``lxc-attach`` program.
+        Construct a context on the local machine within an LXC classic
+        container using the ``lxc-attach`` program.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -602,6 +602,19 @@ Router Class
             will be searched if given as a filename. Defaults to
             ``lxc-attach``.
 
+    .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
+
+        Construct a context on the local machine within a LXD container using
+        the ``lxc`` program.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str container:
+            Existing container to connect to. Defaults to ``None``.
+        :param str lxc_path:
+            Filename or complete path to the ``lxc`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``lxc``.
+
     .. method:: setns (container, kind, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
         Construct a context in the style of :meth:`local`, but change the
@@ -609,7 +622,8 @@ Router Class
         executing Python.
 
         The namespaces to use, and the active root file system are taken from
-        the root PID of a running Docker, LXC, or systemd-nspawn container.
+        the root PID of a running Docker, LXC, LXD, or systemd-nspawn
+        container.
 
         A program is required only to find the root PID, after which management
         of the child Python interpreter is handled directly.
@@ -617,14 +631,16 @@ Router Class
         :param str container:
             Container to connect to.
         :param str kind:
-            One of ``docker``, ``lxc`` or ``machinectl``.
+            One of ``docker``, ``lxc``, ``lxd`` or ``machinectl``.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
+        :param str lxc_path:
+            Filename or complete path to the LXD ``lxc`` binary. ``PATH`` will
+            be searched if given as a filename. Defaults to ``lxc``.
         :param str lxc_info_path:
-            Filename or complete path to the ``lxc-info`` binary. ``PATH``
-            will be searched if given as a filename. Defaults to
-            ``lxc-info``.
+            Filename or complete path to the LXC ``lxc-info`` binary. ``PATH``
+            will be searched if given as a filename. Defaults to ``lxc-info``.
         :param str machinectl_path:
             Filename or complete path to the ``machinectl`` binary. ``PATH``
             will be searched if given as a filename. Defaults to

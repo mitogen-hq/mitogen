@@ -614,6 +614,7 @@ class Importer(object):
             'fork',
             'jail',
             'lxc',
+            'lxd',
             'master',
             'minify',
             'parent',

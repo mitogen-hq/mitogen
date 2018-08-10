@@ -569,12 +569,26 @@ additional differences exist that may break existing playbooks.
 LXC
 ~~~
 
-Like `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_
-and `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_
-except connection delegation is supported, and ``lxc-attach`` is always used
-rather than the LXC Python bindings, as is usual with ``lxc``.
+Connect to classic LXC containers, like `lxc
+<https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_ except
+connection delegation is supported, and ``lxc-attach`` is always used rather
+than the LXC Python bindings, as is usual with ``lxc``.
 
 The ``lxc-attach`` command must be available on the host machine.
+
+* ``ansible_python_interpreter``
+* ``ansible_host``: Name of LXC container (default: inventory hostname).
+
+
+.. _method-lxd:
+
+LXD
+~~~
+
+Connect to modern LXD containers, like `lxd
+<https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_ except
+connection delegation is supported. The ``lxc`` command must be available on
+the host machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
@@ -602,21 +616,23 @@ Setns
 ~~~~~
 
 The ``setns`` method connects to Linux containers via `setns(2)
-<https://linux.die.net/man/2/setns>`_. Unlike :ref:`method-docker` and
-:ref:`method-lxc` the namespace transition is handled internally, ensuring
-optimal throughput to the child. This is necessary for :ref:`machinectl` where
-only PTY channels are supported.
+<https://linux.die.net/man/2/setns>`_. Unlike :ref:`method-docker`,
+:ref:`method-lxc`, and :ref:`method-lxd` the namespace transition is handled
+internally, ensuring optimal throughput to the child. This is necessary for
+:ref:`machinectl` where only PTY channels are supported.
 
 A utility program must be installed to discover the PID of the container's root
 process.
 
-* ``mitogen_kind``: one of ``docker``, ``lxc`` or ``machinectl``.
+* ``mitogen_kind``: one of ``docker``, ``lxc``, ``lxd`` or ``machinectl``.
 * ``ansible_host``: Name of container as it is known to the corresponding tool
   (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_docker_path``: path to Docker if not available on the system path.
-* ``mitogen_lxc_info_path``: path to ``lxc-info`` command if not available as
-  ``/usr/bin/lxc-info``.
+* ``mitogen_lxc_path``: path to LXD's ``lxc`` command if not available as
+  ``lxc-info``.
+* ``mitogen_lxc_info_path``: path to LXC classic's ``lxc-info`` command if not
+  available as ``lxc-info``.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
 
