@@ -1,2 +1,2 @@
 [test-targets]
-target ansible_hostname=localhost
+target ansible_host=localhost
