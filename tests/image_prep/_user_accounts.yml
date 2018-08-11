@@ -22,11 +22,19 @@
       - require_tty_pw_required
       - slow_user
       - webapp
+      - sudo1
+      - sudo2
+      - sudo3
+      - sudo4
 
     user_groups:
       has_sudo: ['mitogen__group', '{{sudo_group[distro]}}']
       has_sudo_pubkey: ['mitogen__group', '{{sudo_group[distro]}}']
       has_sudo_nopw: ['mitogen__group', 'mitogen__sudo_nopw']
+      sudo1: ['mitogen__group', 'mitogen__sudo_nopw']
+      sudo2: ['mitogen__group', '{{sudo_group[distro]}}']
+      sudo3: ['mitogen__group', '{{sudo_group[distro]}}']
+      sudo4: ['mitogen__group', '{{sudo_group[distro]}}']
 
     normal_users: "{{
       lookup('sequence', 'start=1 end=5 format=user%d', wantlist=True)

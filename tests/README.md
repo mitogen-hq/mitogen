@@ -77,9 +77,12 @@ also by Ansible's `osx_setup.yml`.
     These accounts do not have passwords set. They exist to test the Ansible
     interpreter recycling logic.
 
+`mitogen__sudo1` .. `mitogen__sudo4`
+    May passwordless sudo to any account.
+
 `mitogen__webapp`
     A plain old account with no sudo access, used as the target for fakessh
-    tddests.
+    tests.
 
 
 # Ansible Integration Test Environment
