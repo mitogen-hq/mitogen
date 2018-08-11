@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import atexit
 import errno
 import logging
 import os
@@ -51,6 +52,23 @@ from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
+
+
+def clean_shutdown(sock):
+    """
+    Shut the write end of `sock`, causing `recv` in the worker process to wake
+    up with a 0-byte read and initiate mux process exit, then wait for a 0-byte
+    read from the read end, which will occur after the the child closes the
+    descriptor on exit.
+
+    This is done using :mod:`atexit` since Ansible lacks any more sensible hook
+    to run code during exit, and unless some synchronization exists with
+    MuxProcess, debug logs may appear on the user's terminal *after* the prompt
+    has been printed.
+    """
+    sock.shutdown(socket.SHUT_WR)
+    while sock.recv(1):
+        pass
 
 
 class MuxProcess(object):
@@ -112,6 +130,7 @@ class MuxProcess(object):
 
         cls.unix_listener_path = mitogen.unix.make_socket_path()
         cls.worker_sock, cls.child_sock = socket.socketpair()
+        atexit.register(lambda: clean_shutdown(cls.worker_sock))
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
 
