@@ -43,6 +43,11 @@ class Stream(mitogen.parent.Stream):
     username = None
     docker_path = 'docker'
 
+    # TODO: better way of capturing errors such as "No such container."
+    create_child_args = {
+        'merge_stdio': True
+    }
+
     def construct(self, container=None, image=None,
                   docker_path=None, username=None,
                   **kwargs):
