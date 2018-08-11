@@ -33,8 +33,14 @@ v0.2.3 (2018-08-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
+* `#291 <https://github.com/dw/mitogen/issues/291>`_: when Mitogen had
+  previously been installed using ``pip`` or ``setuptools``, the globally
+  installed version could conflict with a newer version bundled with an
+  extension that had been installed using the documented steps. Now the bundled
+  library always overrides over any system-installed copy.
+
 * `#324 <https://github.com/dw/mitogen/issues/324>`_: plays with a custom
-  module_utils would fail due to fallout from the Python 3 port and related
+  ``module_utils`` would fail due to fallout from the Python 3 port and related
   tests being disabled.
 
 * `#331 <https://github.com/dw/mitogen/issues/331>`_: fixed known issue: the
@@ -51,17 +57,35 @@ Mitogen for Ansible
   tasks set ``become: true``, or if SSH multiplexing is disabled. Changes to
   ``/etc/environment`` are now monitored and always reflected.
 
-* Runs with many targets executed the module dependency scanner redundantly,
-  due to missing synchronization, creating significant extra work in the
-  connection multiplexer process. For one real-world playbook, the scanner
-  runtime was reduced by 95%, which may be apparent
+* Runs with many targets executed the module dependency scanner redundantly
+  due to missing synchronization, causing significant wasted computation in the
+  connection multiplexer subprocess. For one real-world playbook the scanner
+  runtime was reduced by 95%, which may manifest as shorter runs.
+
+* A missing check caused an exception traceback to appear when using the
+  ``ansible`` command-line tool with a missing or misspelled module name.
+
+* Ansible since >2.6 began importing ``__main__`` from
+  ``ansible.module_utils.basic``, causing an error during execution, due to the
+  controller being configured to refuse network imports outside the
+  ``ansible.*`` namespace. Update the target implementation to construct a stub
+  ``__main__`` module to satisfy the otherwise seemingly vestigial import.
 
 
 Core Library
 ~~~~~~~~~~~~
 
+* `#313 <https://github.com/dw/mitogen/issues/313>`_:
+  :meth:`mitogen.parent.Context.call` was documented as capable of accepting
+  static methods. While possible on Python 2.x the result is very ugly, and in
+  every case it should be trivially possible to replace with a class method.
+  The API docs were updated to remove mention of static methods.
+
 * `#339 <https://github.com/dw/mitogen/issues/339>`_: the LXD connection method
   was erroneously executing LXC Classic commands.
+
+* Add a :func:`mitogen.fork.on_fork` function to allow non-Mitogen managed
+  process forks to clean up Mitogen resources in the forked chlid.
 
 
 Thanks!
@@ -70,8 +94,10 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 the bug reports in this release contributed by
 `Rick Box <https://github.com/boxrick>`_,
+`Dan Quackenbush <https://github.com/danquack>`_,
 `Alex Russu <https://github.com/alexrussu>`_,
 `Timo Beckers <https://github.com/ti-mo>`_,
+`Jesse London <https://github.com/jesteria>`_,
 `Pateek Jain <https://github.com/prateekj201>`_, and
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_.
 
@@ -259,6 +285,11 @@ Mitogen for Ansible
      in Ansible, and is fairly harmless, albeit cosmetically annoying. A future
      release may include a solution.
 
+.. * Configurations will break that rely on the `hashbang argument splitting
+     behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
+     ``ansible_python_interpreter`` setting, contrary to the Ansible
+     documentation. This will be addressed in a future 0.2 release.
+
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
   Ansible code. Performance-related bug reports for any scenario remain
@@ -285,11 +316,6 @@ Mitogen for Ansible
 * Connection Delegation does not support automatic tunnelling of SSH-dependent
   actions, such as the ``synchronize`` module. This will be addressed in the
   0.3 series.
-
-* Configurations will break that rely on the `hashbang argument splitting
-  behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
-  ``ansible_python_interpreter`` setting, contrary to the Ansible
-  documentation. This will be addressed in a future 0.2 release.
 
 
 Core Library
