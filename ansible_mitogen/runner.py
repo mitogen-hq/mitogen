@@ -627,6 +627,14 @@ class NewStyleRunner(ScriptRunner):
         for fullname in self.module_map['builtin']:
             mitogen.core.import_module(fullname)
 
+    def _setup_excepthook(self):
+        """
+        Starting with Ansible 2.6, some modules (file.py) install a
+        sys.excepthook and never clean it up. So we must preserve the original
+        excepthook and restore it after the run completes.
+        """
+        self.original_excepthook = sys.excepthook
+
     def setup(self):
         super(NewStyleRunner, self).setup()
 
@@ -640,12 +648,17 @@ class NewStyleRunner(ScriptRunner):
             module_utils=self.module_map['custom'],
         )
         self._setup_imports()
+        self._setup_excepthook()
         if libc__res_init:
             libc__res_init()
+
+    def _revert_excepthook(self):
+        sys.excepthook = self.original_excepthook
 
     def revert(self):
         self._argv.revert()
         self._stdio.revert()
+        self._revert_excepthook()
         super(NewStyleRunner, self).revert()
 
     def _get_program_filename(self):
@@ -679,6 +692,20 @@ class NewStyleRunner(ScriptRunner):
     else:
         main_module_name = b'__main__'
 
+    def _handle_magic_exception(self, mod, exc):
+        """
+        Beginning with Ansible >2.6, some modules (file.py) install a
+        sys.excepthook which is a closure over AnsibleModule, redirecting the
+        magical exception to AnsibleModule.fail_json().
+
+        For extra special needs bonus points, the class is not defined in
+        module_utils, but is defined in the module itself, meaning there is no
+        type for isinstance() that outlasts the invocation.
+        """
+        klass = getattr(mod, 'AnsibleModuleError', None)
+        if klass and isinstance(exc, klass):
+            mod.module.fail_json(**exc.results)
+
     def _run(self):
         code = self._get_code()
 
@@ -695,10 +722,14 @@ class NewStyleRunner(ScriptRunner):
 
         exc = None
         try:
-            if mitogen.core.PY3:
-                exec(code, vars(mod))
-            else:
-                exec('exec code in vars(mod)')
+            try:
+                if mitogen.core.PY3:
+                    exec(code, vars(mod))
+                else:
+                    exec('exec code in vars(mod)')
+            except Exception as e:
+                self._handle_magic_exception(mod, e)
+                raise
         except SystemExit as e:
             exc = e
 
