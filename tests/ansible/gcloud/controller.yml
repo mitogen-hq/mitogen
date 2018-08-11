@@ -1,5 +1,9 @@
 
 - hosts: controller
+  vars:
+    git_username: '{{ lookup("pipe", "git config --global user.name") }}'
+    git_email: '{{ lookup("pipe", "git config --global user.email") }}'
+
   tasks:
     - lineinfile:
         line: "net.ipv4.ip_forward=1"
@@ -31,6 +35,11 @@
 
     - shell: "rsync -a ~/.ssh {{inventory_hostname}}:"
       connection: local
+
+    - shell: |
+        git config --global user.email "{{git_username}}"
+        git config --global user.name "{{git_email}}"
+      name: set_git_config
 
     - git:
         dest: ~/mitogen
