@@ -23,9 +23,11 @@ def sh(s, *args):
 
 label_by_id = {}
 
-for base_image, label in [('debian:stretch', 'debian'),
-                          ('centos:6', 'centos6'),
-                          ('centos:7', 'centos7')]:
+for base_image, label in [
+        ('debian:stretch', 'debian'),
+        ('centos:6', 'centos6'),
+        ('centos:7', 'centos7')
+    ]:
     args = sh('docker run --rm -it -d -h mitogen-%s %s /bin/bash',
               label, base_image)
     container_id = subprocess.check_output(args).strip()
