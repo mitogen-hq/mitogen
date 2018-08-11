@@ -67,8 +67,7 @@ def clean_shutdown(sock):
     has been printed.
     """
     sock.shutdown(socket.SHUT_WR)
-    while sock.recv(1):
-        pass
+    sock.recv(1)
 
 
 class MuxProcess(object):
@@ -162,7 +161,6 @@ class MuxProcess(object):
 
         # Let the parent know our listening socket is ready.
         mitogen.core.io_op(self.child_sock.send, b('1'))
-        self.child_sock.send(b('1'))
         # Block until the socket is closed, which happens on parent exit.
         mitogen.core.io_op(self.child_sock.recv, 1)
 
