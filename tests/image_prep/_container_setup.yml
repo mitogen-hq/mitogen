@@ -61,8 +61,11 @@
       when: distro == "CentOS"
 
     - file:
-        path: /var/cache/apt
+        path: "{{item}}"
         state: absent
+      with_items:
+      - /var/cache/apt
+      - /var/lib/apt
       when: distro == "Debian"
 
     - user:
