@@ -7,3 +7,8 @@ mitogen__has_sudo_nopw ALL = (mitogen__require_tty_pw_required) ALL
 Defaults>mitogen__pw_required targetpw
 Defaults>mitogen__require_tty requiretty
 Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+
+mitogen__condel1 ALL=(ALL:ALL) NOPASSWD:ALL
+mitogen__condel2 ALL=(ALL:ALL) NOPASSWD:ALL
+mitogen__condel3 ALL=(ALL:ALL) NOPASSWD:ALL
+mitogen__condel4 ALL=(ALL:ALL) NOPASSWD:ALL
