@@ -7,10 +7,6 @@
   any_errors_fatal: true
   gather_facts: true
   tasks:
-    - meta: end_play
-      when: ansible_virtualization_type != "docker"
-
-
     # ~/.pam_environment
 
     - file:
@@ -38,10 +34,14 @@
         path: ~/.pam_environment
         state: absent
 
+
     # /etc/environment
+    - meta: end_play
+      when: ansible_virtualization_type != "docker"
 
     - file:
         path: /etc/environment
+        become: true
         state: absent
 
     - shell: echo $MAGIC_ETC_ENV
@@ -52,6 +52,7 @@
 
     - copy:
         dest: /etc/environment
+        become: true
         content: |
           MAGIC_ETC_ENV=555
 
@@ -63,4 +64,5 @@
 
     - file:
         path: /etc/environment
+        become: true
         state: absent
