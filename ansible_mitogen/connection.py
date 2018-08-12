@@ -373,7 +373,7 @@ def config_from_hostvars(transport, inventory_name, connection,
     config = config_from_play_context(transport, inventory_name, connection)
     hostvars = dict(hostvars)
     return dict(config, **{
-        'remote_addr': hostvars.get('ansible_hostname', inventory_name),
+        'remote_addr': hostvars.get('ansible_host', inventory_name),
         'become': bool(become_user),
         'become_user': become_user,
         'become_pass': None,
