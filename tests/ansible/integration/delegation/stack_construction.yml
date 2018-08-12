@@ -18,6 +18,13 @@
 
 - name: integration/delegation/stack_construction.yml
   hosts: cd-normal
+  tasks:
+    # used later for local_action test.
+    - local_action: custom_python_detect_environment
+      register: local_env
+
+
+- hosts: cd-normal
   any_errors_fatal: true
   tasks:
     - mitogen_get_stack:
@@ -277,6 +284,24 @@
                       'username': 'alias-user',
                   },
                   'method': 'ssh',
+              },
+          ]
+
+
+- hosts: cd-newuser-normal-normal
+  tasks:
+    - local_action: mitogen_get_stack
+      register: out
+    - assert:
+        that: |
+          out.result == [
+              {
+                  'kwargs': {
+                      'python_path': [
+                          hostvars['cd-normal'].local_env.sys_executable
+                      ],
+                  },
+                  'method': 'local',
               },
           ]
 

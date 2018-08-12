@@ -33,6 +33,11 @@ v0.2.3 (2018-08-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
+* `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#340 <https://github.com/dw/mitogen/issues/340>`_: Connection Delegation
+  could establish connections to the wrong target when ``delegate_to:`` is
+  present.
+
 * `#291 <https://github.com/dw/mitogen/issues/291>`_: when Mitogen had
   previously been installed using ``pip`` or ``setuptools``, the globally
   installed version could conflict with a newer version bundled with an
