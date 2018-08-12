@@ -41,8 +41,8 @@
 
     - file:
         path: /etc/environment
-        become: true
         state: absent
+      become: true
 
     - shell: echo $MAGIC_ETC_ENV
       register: echo
@@ -52,9 +52,9 @@
 
     - copy:
         dest: /etc/environment
-        become: true
         content: |
           MAGIC_ETC_ENV=555
+      become: true
 
     - shell: echo $MAGIC_ENV_ENV
       register: echo
@@ -64,5 +64,5 @@
 
     - file:
         path: /etc/environment
-        become: true
         state: absent
+      become: true

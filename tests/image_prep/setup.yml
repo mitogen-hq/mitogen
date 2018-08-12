@@ -6,8 +6,8 @@
       # Hacktacular.. but easiest place for it with current structure.
       sudo_group:
         MacOSX: admin
-        Debian: wheel
-        CentOS: sudo
+        Debian: sudo
+        CentOS: wheel
 
 - import_playbook: _container_setup.yml
 - import_playbook: _user_accounts.yml
