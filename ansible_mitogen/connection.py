@@ -53,7 +53,28 @@ import ansible_mitogen.target
 LOG = logging.getLogger(__name__)
 
 
+def optional_secret(value):
+    """
+    Wrap `value` in :class:`mitogen.core.Secret` if it is not :data:`None`,
+    otherwise return :data:`None`.
+    """
+    if value is not None:
+        return mitogen.core.Secret(value)
+
+
+def parse_python_path(s):
+    """
+    Given the string set for ansible_python_interpeter, parse it using shell
+    syntax and return an appropriate argument vector.
+    """
+    if s:
+        return ansible.utils.shlex.shlex_split(s)
+
+
 def _connect_local(spec):
+    """
+    Return ContextService arguments for a local connection.
+    """
     return {
         'method': 'local',
         'kwargs': {
@@ -62,12 +83,10 @@ def _connect_local(spec):
     }
 
 
-def wrap_or_none(klass, value):
-    if value is not None:
-        return klass(value)
-
-
 def _connect_ssh(spec):
+    """
+    Return ContextService arguments for an SSH connection.
+    """
     if C.HOST_KEY_CHECKING:
         check_host_keys = 'enforce'
     else:
@@ -79,7 +98,7 @@ def _connect_ssh(spec):
             'check_host_keys': check_host_keys,
             'hostname': spec['remote_addr'],
             'username': spec['remote_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
+            'password': optional_secret(spec['password']),
             'port': spec['port'],
             'python_path': spec['python_path'],
             'identity_file': spec['private_key_file'],
@@ -92,6 +111,9 @@ def _connect_ssh(spec):
 
 
 def _connect_docker(spec):
+    """
+    Return ContextService arguments for a Docker connection.
+    """
     return {
         'method': 'docker',
         'kwargs': {
@@ -104,6 +126,9 @@ def _connect_docker(spec):
 
 
 def _connect_jail(spec):
+    """
+    Return ContextService arguments for a FreeBSD jail connection.
+    """
     return {
         'method': 'jail',
         'kwargs': {
@@ -116,6 +141,9 @@ def _connect_jail(spec):
 
 
 def _connect_lxc(spec):
+    """
+    Return ContextService arguments for an LXC Classic container connection.
+    """
     return {
         'method': 'lxc',
         'kwargs': {
@@ -127,6 +155,9 @@ def _connect_lxc(spec):
 
 
 def _connect_lxd(spec):
+    """
+    Return ContextService arguments for an LXD container connection.
+    """
     return {
         'method': 'lxd',
         'kwargs': {
@@ -138,10 +169,16 @@ def _connect_lxd(spec):
 
 
 def _connect_machinectl(spec):
+    """
+    Return ContextService arguments for a machinectl connection.
+    """
     return _connect_setns(dict(spec, mitogen_kind='machinectl'))
 
 
 def _connect_setns(spec):
+    """
+    Return ContextService arguments for a mitogen_setns connection.
+    """
     return {
         'method': 'setns',
         'kwargs': {
@@ -157,12 +194,15 @@ def _connect_setns(spec):
 
 
 def _connect_su(spec):
+    """
+    Return ContextService arguments for su as a become method.
+    """
     return {
         'method': 'su',
         'enable_lru': True,
         'kwargs': {
             'username': spec['become_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['become_pass']),
+            'password': optional_secret(spec['become_pass']),
             'python_path': spec['python_path'],
             'su_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -171,12 +211,15 @@ def _connect_su(spec):
 
 
 def _connect_sudo(spec):
+    """
+    Return ContextService arguments for sudo as a become method.
+    """
     return {
         'method': 'sudo',
         'enable_lru': True,
         'kwargs': {
             'username': spec['become_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['become_pass']),
+            'password': optional_secret(spec['become_pass']),
             'python_path': spec['python_path'],
             'sudo_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -186,12 +229,15 @@ def _connect_sudo(spec):
 
 
 def _connect_doas(spec):
+    """
+    Return ContextService arguments for doas as a become method.
+    """
     return {
         'method': 'doas',
         'enable_lru': True,
         'kwargs': {
             'username': spec['become_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['become_pass']),
+            'password': optional_secret(spec['become_pass']),
             'python_path': spec['python_path'],
             'doas_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -200,12 +246,14 @@ def _connect_doas(spec):
 
 
 def _connect_mitogen_su(spec):
-    # su as a first-class proxied connection, not a become method.
+    """
+    Return ContextService arguments for su as a first class connection.
+    """
     return {
         'method': 'su',
         'kwargs': {
             'username': spec['remote_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
+            'password': optional_secret(spec['password']),
             'python_path': spec['python_path'],
             'su_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -214,12 +262,14 @@ def _connect_mitogen_su(spec):
 
 
 def _connect_mitogen_sudo(spec):
-    # sudo as a first-class proxied connection, not a become method.
+    """
+    Return ContextService arguments for sudo as a first class connection.
+    """
     return {
         'method': 'sudo',
         'kwargs': {
             'username': spec['remote_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
+            'password': optional_secret(spec['password']),
             'python_path': spec['python_path'],
             'sudo_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -229,12 +279,14 @@ def _connect_mitogen_sudo(spec):
 
 
 def _connect_mitogen_doas(spec):
-    # doas as a first-class proxied connection, not a become method.
+    """
+    Return ContextService arguments for doas as a first class connection.
+    """
     return {
         'method': 'doas',
         'kwargs': {
             'username': spec['remote_user'],
-            'password': wrap_or_none(mitogen.core.Secret, spec['password']),
+            'password': optional_secret(spec['password']),
             'python_path': spec['python_path'],
             'doas_path': spec['become_exe'],
             'connect_timeout': spec['timeout'],
@@ -242,6 +294,9 @@ def _connect_mitogen_doas(spec):
     }
 
 
+#: Mapping of connection method names to functions invoked as `func(spec)`
+#: generating ContextService keyword arguments matching a connection
+#: specification.
 CONNECTION_METHOD = {
     'docker': _connect_docker,
     'jail': _connect_jail,
@@ -258,17 +313,6 @@ CONNECTION_METHOD = {
     'mitogen_sudo': _connect_mitogen_sudo,
     'mitogen_doas': _connect_mitogen_doas,
 }
-
-
-def parse_python_path(s):
-    """
-    Given the string set for ansible_python_interpeter, parse it using shell
-    syntax and return an appropriate argument vector.
-    """
-    if not s:
-        return None
-
-    return ansible.utils.shlex.shlex_split(s)
 
 
 def config_from_play_context(transport, inventory_name, connection):
@@ -457,6 +501,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         return self.context is not None
 
     def _config_from_via(self, via_spec):
+        """
+        Produce a dict connection specifiction given a string `via_spec`, of
+        the form `[become_user@]inventory_hostname`.
+        """
         become_user, _, inventory_name = via_spec.rpartition('@')
         via_vars = self.host_vars[inventory_name]
         if isinstance(via_vars, jinja2.runtime.Undefined):
