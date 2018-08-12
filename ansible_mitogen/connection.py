@@ -551,20 +551,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         return stack, seen_names
 
-    def _connect(self):
+    def _connect_broker(self):
         """
-        Establish a connection to the master process's UNIX listener socket,
-        constructing a mitogen.master.Router to communicate with the master,
-        and a mitogen.parent.Context to represent it.
-
-        Depending on the original transport we should emulate, trigger one of
-        the _connect_*() service calls defined above to cause the master
-        process to establish the real connection on our behalf, or return a
-        reference to the existing one.
+        Establish a reference to the Broker, Router and parent context used for
+        connections.
         """
-        if self.connected:
-            return
-
         if not self.broker:
             self.broker = mitogen.master.Broker()
             self.router, self.parent = mitogen.unix.connect(
@@ -572,6 +563,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 broker=self.broker,
             )
 
+    def _build_stack(self):
+        """
+        Construct a list of dictionaries representing the connection
+        configuration between the controller and the target.
+        """
         if hasattr(self._play_context, 'delegate_to'):
             target_config = config_from_hostvars(
                 transport=self._play_context.connection,
@@ -589,7 +585,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 connection=self
             )
         stack, _ = self._stack_from_config(target_config)
+        return stack
 
+    def _connect_stack(self, stack):
+        """
+        Pass `stack` to ContextService, requesting a copy of the context object
+        representing the target. If no connection exists yet, ContextService
+        will establish it before returning it or throwing an error.
+        """
         dct = self.parent.call_service(
             service_name='ansible_mitogen.services.ContextService',
             method_name='get',
@@ -609,6 +612,24 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.fork_context = dct['init_child_result']['fork_context']
         self.home_dir = dct['init_child_result']['home_dir']
+
+    def _connect(self):
+        """
+        Establish a connection to the master process's UNIX listener socket,
+        constructing a mitogen.master.Router to communicate with the master,
+        and a mitogen.parent.Context to represent it.
+
+        Depending on the original transport we should emulate, trigger one of
+        the _connect_*() service calls defined above to cause the master
+        process to establish the real connection on our behalf, or return a
+        reference to the existing one.
+        """
+        if self.connected:
+            return
+
+        self._connect_broker()
+        stack = self._build_stack()
+        self._connect_stack(stack)
 
     def close(self, new_task=False):
         """
