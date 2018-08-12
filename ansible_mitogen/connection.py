@@ -566,7 +566,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def _build_stack(self):
         """
         Construct a list of dictionaries representing the connection
-        configuration between the controller and the target.
+        configuration between the controller and the target. This is
+        additionally used by the integration tests "mitogen_get_stack" action
+        to fetch the would-be connection configuration.
         """
         if hasattr(self._play_context, 'delegate_to'):
             target_config = config_from_hostvars(
