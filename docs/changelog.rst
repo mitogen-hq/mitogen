@@ -61,6 +61,9 @@ Mitogen for Ansible
   in the runtime environment of subsequent tasks. See
   :ref:`ansible_process_env` for a complete description.
 
+* `#343 <https://github.com/dw/mitogen/issues/343>`_: the sudo ``--login``
+  option is supported.
+
 * Runs with many targets executed the module dependency scanner redundantly
   due to missing synchronization, causing significant wasted computation in the
   connection multiplexer subprocess. For one real-world playbook the scanner
@@ -97,13 +100,14 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 the bug reports in this release contributed by
-`Rick Box <https://github.com/boxrick>`_,
-`Dan Quackenbush <https://github.com/danquack>`_,
 `Alex Russu <https://github.com/alexrussu>`_,
-`Timo Beckers <https://github.com/ti-mo>`_,
+`Dan Quackenbush <https://github.com/danquack>`_,
 `Jesse London <https://github.com/jesteria>`_,
-`Pateek Jain <https://github.com/prateekj201>`_, and
-`Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_.
+`Luca Nunzi <https://github.com/0xlc>`_,
+`Pateek Jain <https://github.com/prateekj201>`_,
+`Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
+`Rick Box <https://github.com/boxrick>`_, and
+`Timo Beckers <https://github.com/ti-mo>`_.
 
 
 v0.2.2 (2018-07-26)
