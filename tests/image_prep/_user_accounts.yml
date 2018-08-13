@@ -6,7 +6,7 @@
 
 - hosts: all
   gather_facts: true
-  strategy: mitogen_linear
+  strategy: mitogen_free
   become: true
   vars:
     distro: "{{ansible_distribution}}"

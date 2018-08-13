@@ -13,7 +13,7 @@
         fi
 
 - hosts: all
-  strategy: mitogen_linear
+  strategy: mitogen_free
   # Can't gather facts before here.
   gather_facts: true
   vars:
@@ -60,12 +60,10 @@
     - command: yum clean all
       when: distro == "CentOS"
 
-    - file:
-        path: "{{item}}"
-        state: absent
+    - shell: rm -rf {{item}}/*
       with_items:
       - /var/cache/apt
-      - /var/lib/apt
+      - /var/lib/apt/lists
       when: distro == "Debian"
 
     - user:
