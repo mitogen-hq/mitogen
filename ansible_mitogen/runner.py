@@ -79,24 +79,112 @@ for symbol in 'res_init', '__res_init':
     except AttributeError:
         pass
 
-# For tasks running on Linux machines, with vanilla Ansible, edits to
-# /etc/environment and ~/.pam_environment are reflected if become:true, due to
-# sudo reinvoking pam_env. If multiplexing is disabled, then edits are also
-# reflected with become:false. Rather than emulate existing semantics, simply
-# always ensure edits are reflects for the next task.
-try:
-    etc_env_st = os.stat('/etc/environment')
-except OSError:
-    etc_env_st = None
-
-try:
-    pam_env_st = os.stat(os.path.expanduser('~/.pam_environment'))
-except OSError:
-    pam_env_st = None
-
-
 iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
+
+
+class EnvironmentFileWatcher(object):
+    """
+    Usually Ansible edits to /etc/environment and ~/.pam_environment are
+    reflected in subsequent tasks if become:true or SSH multiplexing is
+    disabled, due to sudo and/or SSH reinvoking pam_env. Rather than emulate
+    existing semantics, do our best to ensure edits are always reflected.
+
+    This can't perfectly replicate the existing behaviour, but it can safely
+    update and remove keys that appear to originate in `path`, and that do not
+    conflict with any existing environment key inherited from elsewhere.
+
+    A more robust future approach may simply be to arrange for the persistent
+    interpreter to restart when a change is detected.
+    """
+    def __init__(self, path):
+        self.path = os.path.expanduser(path)
+        #: Inode data at time of last check.
+        self._st = self._stat()
+        #: List of inherited keys appearing to originated from this file.
+        self._keys = [key for key, value in self._load()
+                      if value == os.environ.get(key)]
+        LOG.debug('%r installed; existing keys: %r', self, self._keys)
+
+    def __repr__(self):
+        return 'EnvironmentFileWatcher(%r)' % (self.path,)
+
+    def _stat(self):
+        try:
+            return os.stat(self.path)
+        except OSError:
+            return None
+
+    def _load(self):
+        try:
+            with open(self.path, 'r') as fp:
+                return list(self._parse(fp))
+        except IOError:
+            return []
+
+    def _parse(self, fp):
+        """
+        linux-pam-1.3.1/modules/pam_env/pam_env.c#L207
+        """
+        for line in fp:
+            # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
+            bits = shlex.split(line, comments=True)
+            if (not bits) or bits[0].startswith('#'):
+                continue
+
+            if bits[0] == 'export':
+                bits.pop(0)
+
+            key, sep, value = (' '.join(bits)).partition('=')
+            if key and sep:
+                yield key, value
+
+    def _on_file_changed(self):
+        LOG.debug('%r: file changed, reloading', self)
+        for key, value in self._load():
+            if key in os.environ:
+                LOG.debug('%r: existing key %r=%r exists, not setting %r',
+                          self, key, os.environ[key], value)
+            else:
+                LOG.debug('%r: setting key %r to %r', self, key, value)
+                self._keys.append(key)
+                os.environ[key] = value
+
+    def _remove_existing(self):
+        """
+        When a change is detected, remove keys that existed in the old file.
+        """
+        for key in self._keys:
+            if key in os.environ:
+                LOG.debug('%r: removing old key %r', self, key)
+                del os.environ[key]
+        self._keys = []
+
+    def check(self):
+        """
+        Compare the :func:`os.stat` for the pam_env style environmnt file
+        `path` with the previous result `old_st`, which may be :data:`None` if
+        the previous stat attempt failed. Reload its contents if the file has
+        changed or appeared since last attempt.
+
+        :returns:
+            New :func:`os.stat` result. The new call to :func:`reload_env` should
+            pass it as the value of `old_st`.
+        """
+        st = self._stat()
+        if self._st == st:
+            return
+
+        self._st = st
+        self._remove_existing()
+
+        if st is None:
+            LOG.debug('%r: file has disappeared', self)
+        else:
+            self._on_file_changed()
+
+_pam_env_watcher = EnvironmentFileWatcher('~/.pam_environment')
+_etc_env_watcher = EnvironmentFileWatcher('/etc/environment')
 
 
 def utf8(s):
@@ -119,54 +207,6 @@ def reopen_readonly(fp):
     fd = os.open(fp.name, os.O_RDONLY)
     os.dup2(fd, fp.fileno())
     os.close(fd)
-
-
-def parse_env(fp):
-    """
-    Parse /etc/environ using roughly the same syntax as pam_env.
-    """
-    # https://github.com/linux-pam/linux-pam/blob/v1.3.1/modules/pam_env/pam_env.c#L207
-    for line in fp:
-        # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
-        bits = shlex.split(line, comments=True)
-        if not bits:
-            continue
-
-        if bits[0] == 'export':
-            bits.pop(0)
-
-        key, sep, value = (' '.join(bits)).partition('=')
-        if sep:
-            os.environ[key] = value
-
-
-def reload_env(old_st, path):
-    """
-    Compare the :func:`os.stat` for the pam_env style environmnt file `path`
-    with the previous result `old_st`, which may be :data:`None` if the
-    previous stat attempt failed. Reload its contents if the file has changed
-    or appeared since last attempt.
-
-    :returns:
-        New :func:`os.stat` result. The new call to :func:`reload_env` should
-        pass it as the value of `old_st`.
-    """
-    try:
-        path = os.path.expanduser(path)
-        st = os.stat(path)
-    except OSError:
-        return None
-
-    if old_st == st:
-        return old_st
-    if st is None:
-        LOG.debug('reload_env(%r): file has disappeared', path)
-        return st
-
-    LOG.debug('reload_env(%r): file has changed or appeared, reloading', path)
-    with open(path) as fp:
-        parse_env(fp)
-    return st
 
 
 class Runner(object):
@@ -219,30 +259,29 @@ class Runner(object):
         from the parent, as :meth:`run` may detach prior to beginning
         execution. The base implementation simply prepares the environment.
         """
-        if self.cwd:
-            # For situations like sudo to another non-privileged account, the
-            # CWD could be $HOME of the old account, which could have mode go=,
-            # which means it is impossible to restore the old directory, so
-            # don't even bother.
-            os.chdir(self.cwd)
-        env = dict(self.extra_env or {})
-        if self.env:
-            env.update(self.env)
+        self._setup_cwd()
         self._setup_environ()
-        self._env = TemporaryEnvironment(env)
+
+    def _setup_cwd(self):
+        """
+        For situations like sudo to a non-privileged account, CWD could be
+        $HOME of the old account, which could have mode go=, which means it is
+        impossible to restore the old directory, so don't even try.
+        """
+        if self.cwd:
+            os.chdir(self.cwd)
 
     def _setup_environ(self):
         """
-        Ensure /etc/environment and ~/.pam_environment are reloaded if their
-        content appears to differ since execution of the previous task. This
-        must happen before TemporaryEnvironment is installed, to ensure changes
-        persist across tasks.
+        Apply changes from /etc/environment files before creating a
+        TemporaryEnvironment to snapshot environment state prior to module run.
         """
-        global etc_env_st
-        etc_env_st = reload_env(etc_env_st, '/etc/environment')
-
-        global pam_env_st
-        pam_env_st = reload_env(pam_env_st, '~/.pam_environment')
+        _pam_env_watcher.check()
+        _etc_env_watcher.check()
+        env = dict(self.extra_env or {})
+        if self.env:
+            env.update(self.env)
+        self._env = TemporaryEnvironment(env)
 
     def revert(self):
         """

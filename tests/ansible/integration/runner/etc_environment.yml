@@ -13,7 +13,7 @@
         path: ~/.pam_environment
         state: absent
 
-    - shell: echo $MAGIC_NEW_ENV
+    - shell: echo $MAGIC_PAM_ENV
       register: echo
 
     - assert:
@@ -22,9 +22,9 @@
     - copy:
         dest: ~/.pam_environment
         content: |
-          MAGIC_NEW_ENV=321
+          MAGIC_PAM_ENV=321
 
-    - shell: echo $MAGIC_NEW_ENV
+    - shell: echo $MAGIC_PAM_ENV
       register: echo
 
     - assert:
@@ -33,6 +33,12 @@
     - file:
         path: ~/.pam_environment
         state: absent
+
+    - shell: echo $MAGIC_PAM_ENV
+      register: echo
+
+    - assert:
+        that: echo.stdout == ""
 
 
     # /etc/environment
@@ -56,7 +62,7 @@
           MAGIC_ETC_ENV=555
       become: true
 
-    - shell: echo $MAGIC_ENV_ENV
+    - shell: echo $MAGIC_ETC_ENV
       register: echo
 
     - assert:
@@ -66,3 +72,9 @@
         path: /etc/environment
         state: absent
       become: true
+
+    - shell: echo $MAGIC_ETC_ENV
+      register: echo
+
+    - assert:
+        that: echo.stdout == ""

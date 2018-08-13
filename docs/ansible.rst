@@ -401,6 +401,61 @@ this precisely, to avoid breaking playbooks that expect text to appear in
 specific variables with a particular linefeed style.
 
 
+.. _ansible_process_env:
+
+Process Environment Emulation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since Ansible discards processes after each module invocation, follow-up tasks
+often (but not always) receive a new environment that will usually include
+changes made by previous tasks. As such modifications are common, for
+compatibility the extension emulates the existing behaviour as closely as
+possible.
+
+Some scenarios exist where emulation is impossible, for example, applying
+``nsswitch.conf`` changes when ``nscd`` is not in use. If future scenarios
+appear that cannot be solved through emulation, the extension will be updated
+to automatically restart affected interpreters instead.
+
+
+DNS Resolution
+^^^^^^^^^^^^^^
+
+Modifications to ``/etc/resolv.conf`` cause the glibc resolver configuration to
+be reloaded via `res_init(3) <https://linux.die.net/man/3/res_init>`_. This
+isn't necessary on some Linux distributions carrying glibc patches to
+automatically check ``/etc/resolv.conf`` periodically, however it is necessary
+on at least Debian and the BSD derivatives.
+
+
+``/etc/environment``
+^^^^^^^^^^^^^^^^^^^^
+
+When ``become: true`` is active or SSH multiplexing is disabled, modifications
+by previous tasks to ``/etc/environment`` and ``$HOME/.pam_environment`` are
+reflected, since the content of those files is reapplied by `PAM
+<https://en.wikipedia.org/wiki/Pluggable_authentication_module>`_ via `pam_env`
+on each authentication of ``sudo`` or ``sshd``.
+
+Both files are monitored for changes, and changes are applied where it appears
+safe to do so:
+
+* New keys are added if they did not otherwise exist in the inherited
+  environment, or previously had the same value as found in the file before it
+  changed.
+
+* Given a key (such as ``http_proxy``) added to the file where no such key
+  exists in the environment, the key will be added.
+
+* Given a key (such as ``PATH``) where an existing environment key exists with
+  a different value, the update or deletion will be ignored, as it is likely
+  the key was overridden elsewhere after `pam_env` ran, such as by
+  ``/etc/profile``.
+
+* Given a key removed from the file that had the same value as the existing
+  environment key, the key will be removed.
+
+
 How Modules Execute
 ~~~~~~~~~~~~~~~~~~~
 

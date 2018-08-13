@@ -56,11 +56,10 @@ Mitogen for Ansible
 * `#332 <https://github.com/dw/mitogen/issues/332>`_: support a new
   :data:`sys.excepthook`-based module exit mechanism added in Ansible 2.6.
 
-* `#338 <https://github.com/dw/mitogen/issues/338>`_: compatibility: due to
-  Ansible's implementation, changes to ``/etc/environment`` made by a task are
-  reflected in the runtime environment of subsequent tasks, but only if those
-  tasks set ``become: true``, or if SSH multiplexing is disabled. Changes to
-  ``/etc/environment`` are now monitored and always reflected.
+* `#338 <https://github.com/dw/mitogen/issues/338>`_: compatibility: changes to
+  ``/etc/environment`` and ``~/.pam_environment`` made by a task are reflected
+  in the runtime environment of subsequent tasks. See
+  :ref:`ansible_process_env` for a complete description.
 
 * Runs with many targets executed the module dependency scanner redundantly
   due to missing synchronization, causing significant wasted computation in the
