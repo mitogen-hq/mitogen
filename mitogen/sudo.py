@@ -49,7 +49,7 @@ SUDO_OPTIONS = [
     #(False, 'str', '--group', '-g')
     (True,  'bool', '--set-home', '-H'),
     #(False, 'str', '--host', '-h')
-    (False, 'bool', '--login', '-i')
+    (False, 'bool', '--login', '-i'),
     #(False, 'bool', '--remove-timestamp', '-K')
     #(False, 'bool', '--reset-timestamp', '-k')
     #(False, 'bool', '--list', '-l')
