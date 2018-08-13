@@ -4,7 +4,11 @@
   connection: local
   tasks:
     - connection: local
-      command: ansible -i localhost, localhost -m missing_module
+      command: |
+        ansible -vvv
+        -i "{{inventory_file}}"
+        test-targets
+        -m missing_module
       args:
         chdir: ../..
       register: out
