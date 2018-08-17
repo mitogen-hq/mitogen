@@ -1,2 +1,2 @@
-
+- import_playbook: delegate_to_template.yml
 - import_playbook: stack_construction.yml

@@ -448,7 +448,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to 'hostvars' by on_action_run()
     host_vars = None
 
-    #: Set to '_loader.get_basedir()' by on_action_run().
+    #: Set to '_loader.get_basedir()' by on_action_run(). Used by mitogen_local
+    #: to change the working directory to that of the current playbook,
+    #: matching vanilla Ansible behaviour.
     loader_basedir = None
 
     #: Set after connection to the target context's home directory.
@@ -470,11 +472,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         # https://github.com/dw/mitogen/issues/140
         self.close()
 
-    def on_action_run(self, task_vars, loader_basedir):
+    def on_action_run(self, task_vars, delegate_to_hostname, loader_basedir):
         """
         Invoked by ActionModuleMixin to indicate a new task is about to start
         executing. We use the opportunity to grab relevant bits from the
         task-specific data.
+
+        :param dict task_vars:
+            Task variable dictionary.
+        :param str delegate_to_hostname:
+            :data:`None`, or the template-expanded inventory hostname this task
+            is being delegated to. A similar variable exists on PlayContext
+            when ``delegate_to:`` is active, however it is unexpanded.
+        :param str loader_basedir:
+            Loader base directory; see :attr:`loader_basedir`.
         """
         self.ansible_ssh_timeout = task_vars.get('ansible_ssh_timeout',
                                                  C.DEFAULT_TIMEOUT)
@@ -488,6 +499,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.mitogen_ssh_debug_level = task_vars.get('mitogen_ssh_debug_level')
         self.inventory_hostname = task_vars['inventory_hostname']
         self.host_vars = task_vars['hostvars']
+        self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
         self.close(new_task=True)
 
@@ -563,6 +575,26 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 broker=self.broker,
             )
 
+    def _config_from_direct_connection(self):
+        """
+        """
+        return config_from_play_context(
+            transport=self.transport,
+            inventory_name=self.inventory_hostname,
+            connection=self
+        )
+
+    def _config_from_delegate_to(self):
+        return config_from_hostvars(
+            transport=self._play_context.connection,
+            inventory_name=self.delegate_to_hostname,
+            connection=self,
+            hostvars=self.host_vars[self._play_context.delegate_to],
+            become_user=(self._play_context.become_user
+                         if self._play_context.become
+                         else None),
+        )
+
     def _build_stack(self):
         """
         Construct a list of dictionaries representing the connection
@@ -570,22 +602,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         additionally used by the integration tests "mitogen_get_stack" action
         to fetch the would-be connection configuration.
         """
-        if hasattr(self._play_context, 'delegate_to'):
-            target_config = config_from_hostvars(
-                transport=self._play_context.connection,
-                inventory_name=self._play_context.delegate_to,
-                connection=self,
-                hostvars=self.host_vars[self._play_context.delegate_to],
-                become_user=(self._play_context.become_user
-                             if self._play_context.become
-                             else None),
-            )
+        if self.delegate_to_hostname is not None:
+            target_config = self._config_from_delegate_to()
         else:
-            target_config = config_from_play_context(
-                transport=self.transport,
-                inventory_name=self.inventory_hostname,
-                connection=self
-            )
+            target_config = self._config_from_direct_connection()
+
         stack, _ = self._stack_from_config(target_config)
         return stack
 

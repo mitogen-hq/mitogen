@@ -110,6 +110,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         self._connection.on_action_run(
             task_vars=task_vars,
+            delegate_to_hostname=self._task.delegate_to,
             loader_basedir=self._loader.get_basedir(),
         )
         return super(ActionModuleMixin, self).run(tmp, task_vars)
