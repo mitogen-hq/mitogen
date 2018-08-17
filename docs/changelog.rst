@@ -64,6 +64,9 @@ Mitogen for Ansible
 * `#343 <https://github.com/dw/mitogen/issues/343>`_: the sudo ``--login``
   option is supported.
 
+* `#344 <https://github.com/dw/mitogen/issues/344>`_: connections no longer
+  fail when the parent machine's logged in username contains slashes.
+
 * Runs with many targets executed the module dependency scanner redundantly
   due to missing synchronization, causing significant wasted computation in the
   connection multiplexer subprocess. For one real-world playbook the scanner
@@ -101,6 +104,7 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 the bug reports in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
+`atoom <https://github.com/atoom>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
 `Jesse London <https://github.com/jesteria>`_,
 `Luca Nunzi <https://github.com/0xlc>`_,

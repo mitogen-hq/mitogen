@@ -93,6 +93,19 @@ def get_core_source():
     return inspect.getsource(mitogen.core)
 
 
+def get_default_remote_name():
+    """
+    Return the default name appearing in argv[0] of remote machines.
+    """
+    s = u'%s@%s:%d'
+    s %= (getpass.getuser(), socket.gethostname(), os.getpid())
+    # In mixed UNIX/Windows environments, the username may contain slashes.
+    return s.translate({
+        ord(u'\\'): ord(u'_'),
+        ord(u'/'): ord(u'_')
+    })
+
+
 def is_immediate_child(msg, stream):
     """
     Handler policy that requires messages to arrive only from immediately
@@ -765,8 +778,7 @@ class Stream(mitogen.core.Stream):
         if connect_timeout:
             self.connect_timeout = connect_timeout
         if remote_name is None:
-            remote_name = '%s@%s:%d'
-            remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
+            remote_name = get_default_remote_name()
         if '/' in remote_name or '\\' in remote_name:
             raise ValueError('remote_name= cannot contain slashes')
         self.remote_name = remote_name
