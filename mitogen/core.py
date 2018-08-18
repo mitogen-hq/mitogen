@@ -116,7 +116,34 @@ AnyTextType = (BytesType, UnicodeType)
 if sys.version_info < (2, 5):
     next = lambda it: it.next()
 
+#: Default size for calls to :meth:`Side.read` or :meth:`Side.write`, and the
+#: size of buffers configured by :func:`mitogen.parent.create_socketpair`. This
+#: value has many performance implications, 128KiB seems to be a sweet spot.
+#:
+#: * When set low, large messages cause many :class:`Broker` IO loop
+#:   iterations, burning CPU and reducing throughput.
+#: * When set high, excessive RAM is reserved by the OS for socket buffers (2x
+#:   per child), and an identically sized temporary userspace buffer is
+#:   allocated on each read that requires zeroing, and over a particular size
+#:   may require two system calls to allocate/deallocate.
+#:
+#: Care must be taken to ensure the underlying kernel object and receiving
+#: program support the desired size. For example,
+#:
+#: * Most UNIXes have TTYs with fixed 2KiB-4KiB buffers, making them unsuitable
+#:   for efficient IO.
+#: * Different UNIXes have varying presets for pipes, which may not be
+#:   configurable. On recent Linux the default pipe buffer size is 64KiB, but
+#:   under memory pressure may be as low as 4KiB for unprivileged processes.
+#: * When communication is via an intermediary process, its internal buffers
+#:   effect the speed OS buffers will drain. For example OpenSSH uses 64KiB
+#:   reads.
+#:
+#: An ideal :class:`Message` has a size that is a multiple of
+#: :data:`CHUNK_SIZE` inclusive of headers, to avoid wasting IO loop iterations
+#: writing small trailer chunks.
 CHUNK_SIZE = 131072
+
 _tls = threading.local()
 
 

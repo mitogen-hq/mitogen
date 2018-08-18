@@ -87,10 +87,10 @@ Message Class
 
 .. class:: Message
 
-    Messages are the fundamental unit of communication, comprising the fields
-    from in the :ref:`stream-protocol` header, an optional reference to the
-    receiving :class:`mitogen.core.Router` for ingress messages, and helper
-    methods for deserialization and generating replies.
+    Messages are the fundamental unit of communication, comprising fields from
+    the :ref:`stream-protocol` header, an optional reference to the receiving
+    :class:`mitogen.core.Router` for ingress messages, and helper methods for
+    deserialization and generating replies.
 
     .. attribute:: router
 

@@ -8,6 +8,13 @@ Internal API Reference
     signals
 
 
+Constants
+=========
+
+.. currentmodule:: mitogen.core
+.. autodata:: CHUNK_SIZE
+
+
 Latch Class
 ===========
 
@@ -91,10 +98,6 @@ Side Class
         Write as much of the bytes from `s` as possible to the file descriptor,
         wrapping the underlying :py:func:`os.write` call with :py:func:`io_op`
         to trap common disconnection connditions.
-
-        :py:meth:`read` always behaves as if it is writing to a regular UNIX
-        file; socket, pipe, and TTY disconnection errors are masked and result
-        in a 0-sized write.
 
         :returns:
             Number of bytes written, or :data:`None` if disconnection was
