@@ -338,6 +338,9 @@ Helper Functions
 .. autofunction:: set_block
 .. autofunction:: io_op
 
+.. currentmodule:: mitogen.parent
+.. autofunction:: close_nonstandard_fds
+.. autofunction:: create_socketpair
 
 .. currentmodule:: mitogen.master
 .. autofunction:: get_child_modules

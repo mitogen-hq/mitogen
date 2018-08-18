@@ -157,6 +157,14 @@ def close_nonstandard_fds():
 
 
 def create_socketpair():
+    """
+    Create a :func:`socket.socketpair` to use for use as a child process's UNIX
+    stdio channels. As socket pairs are bidirectional, they are economical on
+    file descriptor usage as the same descriptor can be used for ``stdin`` and
+    ``stdout``. As they are sockets their buffers are tunable, allowing large
+    buffers to be configured in order to improve throughput for file transfers
+    and reduce :class:`mitogen.core.Broker` IO loop iterations.
+    """
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
                         socket.SO_SNDBUF,
