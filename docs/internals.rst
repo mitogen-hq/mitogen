@@ -8,17 +8,20 @@ Internal API Reference
     signals
 
 
-mitogen.core
-============
-
-
 Latch Class
------------
+===========
 
 .. currentmodule:: mitogen.core
+.. autoclass:: Latch
+   :members:
 
-.. autoclass:: Latch ()
 
+PidfulStreamHandler Class
+=========================
+
+.. currentmodule:: mitogen.core
+.. autoclass:: PidfulStreamHandler
+   :members:
 
 
 Side Class
@@ -354,40 +357,22 @@ context. They will eventually be replaced with asynchronous equivalents.
 
 
 Helper Functions
-----------------
+================
 
 .. currentmodule:: mitogen.core
+.. autofunction:: to_text
+.. autofunction:: has_parent_authority
+.. autofunction:: set_cloexec
+.. autofunction:: set_nonblock
+.. autofunction:: set_block
+.. autofunction:: io_op
 
-.. function:: io_op (func, \*args)
-
-    Wrap a function that may raise :py:class:`OSError`, trapping common error
-    codes relating to disconnection events in various subsystems:
-
-    * When performing IO against a TTY, disconnection of the remote end is
-      signalled by :py:data:`errno.EIO`.
-    * When performing IO against a socket, disconnection of the remote end is
-      signalled by :py:data:`errno.ECONNRESET`.
-    * When performing IO against a pipe, disconnection of the remote end is
-      signalled by :py:data:`errno.EPIPE`.
-
-    :returns:
-        Tuple of `(return_value, disconnected)`, where `return_value` is the
-        return value of `func(\*args)`, and `disconnected` is ``True`` if
-        disconnection was detected, otherwise ``False``.
 
 
 .. currentmodule:: mitogen.parent
 
 .. autofunction:: create_child
-
-
-.. currentmodule:: mitogen.parent
-
 .. autofunction:: tty_create_child
-
-
-.. currentmodule:: mitogen.parent
-
 .. autofunction:: hybrid_tty_create_child
 
 

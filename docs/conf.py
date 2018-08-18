@@ -19,7 +19,7 @@ html_theme_options = {
     'head_font_family': "Georgia, serif",
 }
 htmlhelp_basename = 'mitogendoc'
-intersphinx_mapping = {'python': ('https://docs.python.org/2', None)}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 language = None
 master_doc = 'toc'
 project = u'Mitogen'

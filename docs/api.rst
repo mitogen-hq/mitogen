@@ -1411,29 +1411,9 @@ Exceptions
 
 .. currentmodule:: mitogen.core
 
-.. class:: Error (fmt, \*args)
-
-    Base for all exceptions raised by Mitogen.
-
-.. class:: CallError (e)
-
-    Raised when :py:meth:`Context.call() <mitogen.parent.Context.call>` fails.
-    A copy of the traceback from the external context is appended to the
-    exception message.
-
-.. class:: ChannelError (fmt, \*args)
-
-    Raised when a channel dies or has been closed.
-
-.. class:: LatchError (fmt, \*args)
-
-    Raised when an attempt is made to use a :py:class:`mitogen.core.Latch` that
-    has been marked closed.
-
-.. class:: StreamError (fmt, \*args)
-
-    Raised when a stream cannot be established.
-
-.. class:: TimeoutError (fmt, \*args)
-
-    Raised when a timeout occurs on a stream.
+.. autoclass:: Error
+.. autoclass:: CallError
+.. autoclass:: ChannelError
+.. autoclass:: LatchError
+.. autoclass:: StreamError
+.. autoclass:: TimeoutError
