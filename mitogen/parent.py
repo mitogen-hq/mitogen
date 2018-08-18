@@ -297,6 +297,22 @@ def hybrid_tty_create_child(args):
 
 
 def write_all(fd, s, deadline=None):
+    """Arrange for all of bytestring `s` to be written to the file descriptor
+    `fd`.
+
+    :param int fd:
+        File descriptor to write to.
+    :param bytes s:
+        Bytestring to write to file descriptor.
+    :param float deadline:
+        If not :data:`None`, absolute UNIX timestamp after which timeout should
+        occur.
+
+    :raises mitogen.core.TimeoutError:
+        Bytestring could not be written entirely before deadline was exceeded.
+    :raises mitogen.core.StreamError:
+        File descriptor was disconnected before write could complete.
+    """
     timeout = None
     written = 0
     poller = PREFERRED_POLLER()
@@ -325,6 +341,20 @@ def write_all(fd, s, deadline=None):
 
 
 def iter_read(fds, deadline=None):
+    """Return a generator that arranges for up to 4096-byte chunks to be read
+    at a time from the file descriptor `fd` until the generator is destroyed.
+
+    :param int fd:
+        File descriptor to read from.
+    :param float deadline:
+        If not :data:`None`, an absolute UNIX timestamp after which timeout
+        should occur.
+
+    :raises mitogen.core.TimeoutError:
+        Attempt to read beyond deadline.
+    :raises mitogen.core.StreamError:
+        Attempt to read past end of file.
+    """
     poller = PREFERRED_POLLER()
     for fd in fds:
         poller.start_receive(fd)
@@ -359,6 +389,24 @@ def iter_read(fds, deadline=None):
 
 
 def discard_until(fd, s, deadline):
+    """Read chunks from `fd` until one is encountered that ends with `s`. This
+    is used to skip output produced by ``/etc/profile``, ``/etc/motd`` and
+    mandatory SSH banners while waiting for :attr:`Stream.EC0_MARKER` to
+    appear, indicating the first stage is ready to receive the compressed
+    :mod:`mitogen.core` source.
+
+    :param int fd:
+        File descriptor to read from.
+    :param bytes s:
+        Marker string to discard until encountered.
+    :param float deadline:
+        Absolute UNIX timestamp after which timeout should occur.
+
+    :raises mitogen.core.TimeoutError:
+        Attempt to read beyond deadline.
+    :raises mitogen.core.StreamError:
+        Attempt to read past end of file.
+    """
     for buf in iter_read([fd], deadline):
         if IOLOG.level == logging.DEBUG:
             for line in buf.splitlines():
@@ -980,7 +1028,9 @@ class Stream(mitogen.core.Stream):
             self._reap_child()
             raise
 
-    #: For ssh.py, this must be at least max(len('password'), len('debug1:'))
+    #: Sentinel value emitted by the first stage to indicate it is ready to
+    #: receive the compressed bootstrap. For :mod:`mitogen.ssh` this must have
+    #: length of at least `max(len('password'), len('debug1:'))`
     EC0_MARKER = mitogen.core.b('MITO000\n')
     EC1_MARKER = mitogen.core.b('MITO001\n')
 

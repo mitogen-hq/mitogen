@@ -1013,7 +1013,7 @@ class Stream(BasicStream):
     :py:class:`BasicStream` subclass implementing mitogen's :ref:`stream
     protocol <stream-protocol>`.
     """
-    #: If not ``None``, :py:class:`Router` stamps this into
+    #: If not :data:`None`, :py:class:`Router` stamps this into
     #: :py:attr:`Message.auth_id` of every message received on this stream.
     auth_id = None
 
