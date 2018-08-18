@@ -176,6 +176,7 @@ class Error(Exception):
 class LatchError(Error):
     """Raised when an attempt is made to use a :py:class:`mitogen.core.Latch`
     that has been marked closed."""
+    pass
 
 
 class Blob(BytesType):
@@ -261,10 +262,12 @@ class ChannelError(Error):
 
 class StreamError(Error):
     """Raised when a stream cannot be established."""
+    pass
 
 
 class TimeoutError(Error):
     """Raised when a timeout occurs on a stream."""
+    pass
 
 
 def to_text(o):
