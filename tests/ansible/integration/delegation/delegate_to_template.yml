@@ -20,6 +20,7 @@
                     'check_host_keys': 'ignore',
                     'connect_timeout': 10,
                     'hostname': 'cd-normal-alias',
+                    'identities_only': False,
                     'identity_file': None,
                     'password': None,
                     'port': None,
