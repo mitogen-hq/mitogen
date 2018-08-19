@@ -175,6 +175,30 @@ def create_socketpair():
     return parentfp, childfp
 
 
+def detach_popen(*args, **kwargs):
+    """
+    Use :class:`subprocess.Popen` to construct a child process, then hack the
+    Popen so that it forgets the child it created, allowing it to survive a
+    call to Popen.__del__.
+
+    If the child process is not detached, there is a race between it exitting
+    and __del__ being called. If it exits before __del__ runs, then __del__'s
+    call to :func:`os.waitpid` will capture the one and only exit event
+    delivered to this process, causing later 'legitimate' calls to fail with
+    ECHILD.
+
+    :returns:
+        Process ID of the new child.
+    """
+    # This allows Popen() to be used for e.g. graceful post-fork error
+    # handling, without tying the surrounding code into managing a Popen
+    # object, which isn't possible for at least :mod:`mitogen.fork`. This
+    # should be replaced by a swappable helper class in a future version.
+    proc = subprocess.Popen(*args, **kwargs)
+    proc._child_created = False
+    return proc.pid
+
+
 def create_child(args, merge_stdio=False, preexec_fn=None):
     """
     Create a child process whose stdin/stdout is connected to a socket.
@@ -201,7 +225,7 @@ def create_child(args, merge_stdio=False, preexec_fn=None):
     else:
         extra = {}
 
-    proc = subprocess.Popen(
+    pid = detach_popen(
         args=args,
         stdin=childfp,
         stdout=childfp,
@@ -215,8 +239,8 @@ def create_child(args, merge_stdio=False, preexec_fn=None):
     parentfp.close()
 
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
-              proc.pid, fd, os.getpid(), Argv(args))
-    return proc.pid, fd, None
+              pid, fd, os.getpid(), Argv(args))
+    return pid, fd, None
 
 
 def _acquire_controlling_tty():
@@ -250,7 +274,7 @@ def tty_create_child(args):
     disable_echo(master_fd)
     disable_echo(slave_fd)
 
-    proc = subprocess.Popen(
+    pid = detach_popen(
         args=args,
         stdin=slave_fd,
         stdout=slave_fd,
@@ -261,8 +285,8 @@ def tty_create_child(args):
 
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
-              proc.pid, master_fd, os.getpid(), Argv(args))
-    return proc.pid, master_fd, None
+              pid, master_fd, os.getpid(), Argv(args))
+    return pid, master_fd, None
 
 
 def hybrid_tty_create_child(args):
@@ -284,7 +308,7 @@ def hybrid_tty_create_child(args):
     mitogen.core.set_block(childfp)
     disable_echo(master_fd)
     disable_echo(slave_fd)
-    proc = subprocess.Popen(
+    pid = detach_popen(
         args=args,
         stdin=childfp,
         stdout=childfp,
@@ -300,8 +324,8 @@ def hybrid_tty_create_child(args):
     parentfp.close()
 
     LOG.debug('hybrid_tty_create_child() pid=%d stdio=%d, tty=%d, cmd: %s',
-              proc.pid, stdio_fd, master_fd, Argv(args))
-    return proc.pid, stdio_fd, master_fd
+              pid, stdio_fd, master_fd, Argv(args))
+    return pid, stdio_fd, master_fd
 
 
 def write_all(fd, s, deadline=None):

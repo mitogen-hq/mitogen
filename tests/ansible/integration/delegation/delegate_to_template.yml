@@ -8,6 +8,9 @@
   gather_facts: no
   any_errors_fatal: true
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       delegate_to: "{{ physical_host }}"
       register: out
@@ -20,6 +23,7 @@
                     'check_host_keys': 'ignore',
                     'connect_timeout': 10,
                     'hostname': 'cd-normal-alias',
+                    'identities_only': False,
                     'identity_file': None,
                     'password': None,
                     'port': None,

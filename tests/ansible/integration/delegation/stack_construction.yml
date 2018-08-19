@@ -19,6 +19,9 @@
 - name: integration/delegation/stack_construction.yml
   hosts: cd-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     # used later for local_action test.
     - local_action: custom_python_detect_environment
       register: local_env
@@ -27,6 +30,9 @@
 - hosts: cd-normal
   any_errors_fatal: true
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       register: out
     - assert:
@@ -47,6 +53,9 @@
 
 - hosts: cd-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
@@ -58,6 +67,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -81,6 +91,9 @@
 
 - hosts: cd-alias
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       register: out
     - assert:
@@ -91,6 +104,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -114,6 +128,9 @@
 
 - hosts: cd-normal-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       register: out
     - assert:
@@ -134,6 +151,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'cd-normal-normal',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -157,6 +175,9 @@
 
 - hosts: cd-normal-alias
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       register: out
     - assert:
@@ -167,6 +188,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -190,6 +212,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'cd-normal-alias',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -213,6 +236,9 @@
 
 - hosts: cd-newuser-normal-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       register: out
     - assert:
@@ -233,6 +259,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'cd-newuser-normal-normal',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -256,6 +283,9 @@
 
 - hosts: cd-newuser-normal-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
@@ -267,6 +297,7 @@
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
+                      'identities_only': False,
                       'identity_file': None,
                       'password': None,
                       'port': None,
@@ -290,6 +321,9 @@
 
 - hosts: cd-newuser-normal-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - local_action: mitogen_get_stack
       register: out
     - assert:
@@ -308,6 +342,9 @@
 
 - hosts: cd-newuser-doas-normal
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - mitogen_get_stack:
       register: out
     - assert:
