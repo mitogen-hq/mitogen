@@ -42,6 +42,8 @@ DOCUMENTATION = """
     options:
 """
 
+import ansible.plugins.connection.ssh
+
 try:
     import ansible_mitogen.connection
 except ImportError:
@@ -54,3 +56,10 @@ import ansible_mitogen.connection
 
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'ssh'
+    vanilla_class = ansible.plugins.connection.ssh.Connection
+
+    @staticmethod
+    def _create_control_path(*args, **kwargs):
+        """Forward _create_control_path() to the implementation in ssh.py."""
+        # https://github.com/dw/mitogen/issues/342
+        return Connection.vanilla_class._create_control_path(*args, **kwargs)

@@ -185,6 +185,9 @@ Core Library
   could spuriously wake up due to ignoring an error bit set on events returned
   by the kernel, manifesting as a failure to read from an unrelated descriptor.
 
+* `#342 <https://github.com/dw/mitogen/issues/342>`_: The ``network_cli``
+  connection type would fail due to a missing internal SSH plugin method.
+
 * Standard IO forwarding accidentally configured the replacement ``stdout`` and
   ``stderr`` write descriptors as non-blocking, causing subprocesses that
   generate more output than kernel buffer space existed to throw errors. The
@@ -210,6 +213,7 @@ the bug reports and pull requests in this release contributed by
 `Ayaz Ahmed Khan <https://github.com/ayaz>`_,
 `Colin McCarthy <https://github.com/colin-mccarthy>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
+`dsgnr <https://github.com/dsgnr>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
 `falbanese <https://github.com/falbanese>`_,
 `Gonzalo Servat <https://github.com/gservat>`_,
