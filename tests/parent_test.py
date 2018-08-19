@@ -5,6 +5,7 @@ import sys
 import tempfile
 import time
 
+import mock
 import unittest2
 import testlib
 
@@ -26,6 +27,21 @@ def wait_for_child(pid, timeout=1.0):
         time.sleep(0.05)
 
     assert False, "wait_for_child() timed out"
+
+
+class GetDefaultRemoteNameTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.get_default_remote_name)
+
+    @mock.patch('os.getpid')
+    @mock.patch('getpass.getuser')
+    @mock.patch('socket.gethostname')
+    def test_slashes(self, mock_gethostname, mock_getuser, mock_getpid):
+        # Ensure slashes appearing in the remote name are replaced with
+        # underscores.
+        mock_gethostname.return_value = 'box'
+        mock_getuser.return_value = 'ECORP\\Administrator'
+        mock_getpid.return_value = 123
+        self.assertEquals("ECORP_Administrator@box:123", self.func())
 
 
 class ReapChildTest(testlib.RouterMixin, testlib.TestCase):

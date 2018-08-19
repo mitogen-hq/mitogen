@@ -44,6 +44,7 @@ import imp
 import json
 import logging
 import os
+import shlex
 import sys
 import tempfile
 import types
@@ -65,6 +66,9 @@ except ImportError:
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+ansible.module_utils.basic.get_module_path = lambda: (
+    ansible_mitogen.target.temp_dir
+)
 
 # For tasks that modify /etc/resolv.conf, non-Debian derivative glibcs cache
 # resolv.conf at startup and never implicitly reload it. Cope with that via an
@@ -80,6 +84,110 @@ for symbol in 'res_init', '__res_init':
 
 iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
+
+
+class EnvironmentFileWatcher(object):
+    """
+    Usually Ansible edits to /etc/environment and ~/.pam_environment are
+    reflected in subsequent tasks if become:true or SSH multiplexing is
+    disabled, due to sudo and/or SSH reinvoking pam_env. Rather than emulate
+    existing semantics, do our best to ensure edits are always reflected.
+
+    This can't perfectly replicate the existing behaviour, but it can safely
+    update and remove keys that appear to originate in `path`, and that do not
+    conflict with any existing environment key inherited from elsewhere.
+
+    A more robust future approach may simply be to arrange for the persistent
+    interpreter to restart when a change is detected.
+    """
+    def __init__(self, path):
+        self.path = os.path.expanduser(path)
+        #: Inode data at time of last check.
+        self._st = self._stat()
+        #: List of inherited keys appearing to originated from this file.
+        self._keys = [key for key, value in self._load()
+                      if value == os.environ.get(key)]
+        LOG.debug('%r installed; existing keys: %r', self, self._keys)
+
+    def __repr__(self):
+        return 'EnvironmentFileWatcher(%r)' % (self.path,)
+
+    def _stat(self):
+        try:
+            return os.stat(self.path)
+        except OSError:
+            return None
+
+    def _load(self):
+        try:
+            with open(self.path, 'r') as fp:
+                return list(self._parse(fp))
+        except IOError:
+            return []
+
+    def _parse(self, fp):
+        """
+        linux-pam-1.3.1/modules/pam_env/pam_env.c#L207
+        """
+        for line in fp:
+            # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
+            bits = shlex.split(line, comments=True)
+            if (not bits) or bits[0].startswith('#'):
+                continue
+
+            if bits[0] == 'export':
+                bits.pop(0)
+
+            key, sep, value = (' '.join(bits)).partition('=')
+            if key and sep:
+                yield key, value
+
+    def _on_file_changed(self):
+        LOG.debug('%r: file changed, reloading', self)
+        for key, value in self._load():
+            if key in os.environ:
+                LOG.debug('%r: existing key %r=%r exists, not setting %r',
+                          self, key, os.environ[key], value)
+            else:
+                LOG.debug('%r: setting key %r to %r', self, key, value)
+                self._keys.append(key)
+                os.environ[key] = value
+
+    def _remove_existing(self):
+        """
+        When a change is detected, remove keys that existed in the old file.
+        """
+        for key in self._keys:
+            if key in os.environ:
+                LOG.debug('%r: removing old key %r', self, key)
+                del os.environ[key]
+        self._keys = []
+
+    def check(self):
+        """
+        Compare the :func:`os.stat` for the pam_env style environmnt file
+        `path` with the previous result `old_st`, which may be :data:`None` if
+        the previous stat attempt failed. Reload its contents if the file has
+        changed or appeared since last attempt.
+
+        :returns:
+            New :func:`os.stat` result. The new call to :func:`reload_env` should
+            pass it as the value of `old_st`.
+        """
+        st = self._stat()
+        if self._st == st:
+            return
+
+        self._st = st
+        self._remove_existing()
+
+        if st is None:
+            LOG.debug('%r: file has disappeared', self)
+        else:
+            self._on_file_changed()
+
+_pam_env_watcher = EnvironmentFileWatcher('~/.pam_environment')
+_etc_env_watcher = EnvironmentFileWatcher('/etc/environment')
 
 
 def utf8(s):
@@ -154,12 +262,25 @@ class Runner(object):
         from the parent, as :meth:`run` may detach prior to beginning
         execution. The base implementation simply prepares the environment.
         """
+        self._setup_cwd()
+        self._setup_environ()
+
+    def _setup_cwd(self):
+        """
+        For situations like sudo to a non-privileged account, CWD could be
+        $HOME of the old account, which could have mode go=, which means it is
+        impossible to restore the old directory, so don't even try.
+        """
         if self.cwd:
-            # For situations like sudo to another non-privileged account, the
-            # CWD could be $HOME of the old account, which could have mode go=,
-            # which means it is impossible to restore the old directory, so
-            # don't even bother.
             os.chdir(self.cwd)
+
+    def _setup_environ(self):
+        """
+        Apply changes from /etc/environment files before creating a
+        TemporaryEnvironment to snapshot environment state prior to module run.
+        """
+        _pam_env_watcher.check()
+        _etc_env_watcher.check()
         env = dict(self.extra_env or {})
         if self.env:
             env.update(self.env)
@@ -548,6 +669,14 @@ class NewStyleRunner(ScriptRunner):
         for fullname in self.module_map['builtin']:
             mitogen.core.import_module(fullname)
 
+    def _setup_excepthook(self):
+        """
+        Starting with Ansible 2.6, some modules (file.py) install a
+        sys.excepthook and never clean it up. So we must preserve the original
+        excepthook and restore it after the run completes.
+        """
+        self.original_excepthook = sys.excepthook
+
     def setup(self):
         super(NewStyleRunner, self).setup()
 
@@ -561,12 +690,17 @@ class NewStyleRunner(ScriptRunner):
             module_utils=self.module_map['custom'],
         )
         self._setup_imports()
+        self._setup_excepthook()
         if libc__res_init:
             libc__res_init()
+
+    def _revert_excepthook(self):
+        sys.excepthook = self.original_excepthook
 
     def revert(self):
         self._argv.revert()
         self._stdio.revert()
+        self._revert_excepthook()
         super(NewStyleRunner, self).revert()
 
     def _get_program_filename(self):
@@ -600,6 +734,20 @@ class NewStyleRunner(ScriptRunner):
     else:
         main_module_name = b'__main__'
 
+    def _handle_magic_exception(self, mod, exc):
+        """
+        Beginning with Ansible >2.6, some modules (file.py) install a
+        sys.excepthook which is a closure over AnsibleModule, redirecting the
+        magical exception to AnsibleModule.fail_json().
+
+        For extra special needs bonus points, the class is not defined in
+        module_utils, but is defined in the module itself, meaning there is no
+        type for isinstance() that outlasts the invocation.
+        """
+        klass = getattr(mod, 'AnsibleModuleError', None)
+        if klass and isinstance(exc, klass):
+            mod.module.fail_json(**exc.results)
+
     def _run(self):
         code = self._get_code()
 
@@ -616,10 +764,14 @@ class NewStyleRunner(ScriptRunner):
 
         exc = None
         try:
-            if mitogen.core.PY3:
-                exec(code, vars(mod))
-            else:
-                exec('exec code in vars(mod)')
+            try:
+                if mitogen.core.PY3:
+                    exec(code, vars(mod))
+                else:
+                    exec('exec code in vars(mod)')
+            except Exception as e:
+                self._handle_magic_exception(mod, e)
+                raise
         except SystemExit as e:
             exc = e
 

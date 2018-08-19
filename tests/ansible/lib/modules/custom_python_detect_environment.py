@@ -3,6 +3,7 @@
 # interpreter I run within.
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.basic import get_module_path
 from ansible.module_utils import six
 
 import os
@@ -29,6 +30,8 @@ def main():
         mitogen_loaded='mitogen.core' in sys.modules,
         hostname=socket.gethostname(),
         username=pwd.getpwuid(os.getuid()).pw_name,
+        module_tmpdir=getattr(module, 'tmpdir', None),
+        module_path=get_module_path(),
     )
 
 if __name__ == '__main__':

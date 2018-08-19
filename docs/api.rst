@@ -87,10 +87,10 @@ Message Class
 
 .. class:: Message
 
-    Messages are the fundamental unit of communication, comprising the fields
-    from in the :ref:`stream-protocol` header, an optional reference to the
-    receiving :class:`mitogen.core.Router` for ingress messages, and helper
-    methods for deserialization and generating replies.
+    Messages are the fundamental unit of communication, comprising fields from
+    the :ref:`stream-protocol` header, an optional reference to the receiving
+    :class:`mitogen.core.Router` for ingress messages, and helper methods for
+    deserialization and generating replies.
 
     .. attribute:: router
 
@@ -238,16 +238,16 @@ Router Class
     .. method:: add_handler (fn, handle=None, persist=True, respondent=None, policy=None)
 
         Invoke `fn(msg)` for each Message sent to `handle` from this context.
-        Unregister after one invocation if `persist` is ``False``. If `handle`
-        is ``None``, a new handle is allocated and returned.
+        Unregister after one invocation if `persist` is :data:`False`. If
+        `handle` is :data:`None`, a new handle is allocated and returned.
 
         :param int handle:
-            If not ``None``, an explicit handle to register, usually one of the
-            ``mitogen.core.*`` constants. If unspecified, a new unused handle
-            will be allocated.
+            If not :data:`None`, an explicit handle to register, usually one of
+            the ``mitogen.core.*`` constants. If unspecified, a new unused
+            handle will be allocated.
 
         :param bool persist:
-            If ``False``, the handler will be unregistered after a single
+            If :data:`False`, the handler will be unregistered after a single
             message has been received.
 
         :param mitogen.core.Context respondent:
@@ -281,7 +281,8 @@ Router Class
             sender indicating refusal occurred.
 
         :return:
-            `handle`, or if `handle` was ``None``, the newly allocated handle.
+            `handle`, or if `handle` was :data:`None`, the newly allocated
+            handle.
 
     .. method:: del_handler (handle)
 
@@ -300,10 +301,10 @@ Router Class
         called from the I/O multiplexer thread.
 
         :param mitogen.core.Stream stream:
-            If not ``None``, a reference to the stream the message arrived on.
-            Used for performing source route verification, to ensure sensitive
-            messages such as ``CALL_FUNCTION`` arrive only from trusted
-            contexts.
+            If not :data:`None`, a reference to the stream the message arrived
+            on. Used for performing source route verification, to ensure
+            sensitive messages such as ``CALL_FUNCTION`` arrive only from
+            trusted contexts.
 
     .. method:: route(msg)
 
@@ -515,8 +516,8 @@ Router Class
             otherwise.
 
         :param mitogen.core.Context via:
-            If not ``None``, arrange for construction to occur via RPCs made to
-            the context `via`, and for :py:data:`ADD_ROUTE
+            If not :data:`None`, arrange for construction to occur via RPCs
+            made to the context `via`, and for :py:data:`ADD_ROUTE
             <mitogen.core.ADD_ROUTE>` messages to be generated as appropriate.
 
             .. code-block:: python
@@ -567,7 +568,7 @@ Router Class
             :data:`None`, which Docker interprets as ``root``.
         :param str image:
             Image tag to use to construct a temporary container. Defaults to
-            ``None``.
+            :data:`None`.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
@@ -590,17 +591,30 @@ Router Class
 
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 
-        Construct a context on the local machine within an LXC container using
-        the ``lxc-attach`` program.
+        Construct a context on the local machine within an LXC classic
+        container using the ``lxc-attach`` program.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
         :param str container:
-            Existing container to connect to. Defaults to ``None``.
+            Existing container to connect to. Defaults to :data:`None`.
         :param str lxc_attach_path:
             Filename or complete path to the ``lxc-attach`` binary. ``PATH``
             will be searched if given as a filename. Defaults to
             ``lxc-attach``.
+
+    .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
+
+        Construct a context on the local machine within a LXD container using
+        the ``lxc`` program.
+
+        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+
+        :param str container:
+            Existing container to connect to. Defaults to :data:`None`.
+        :param str lxc_path:
+            Filename or complete path to the ``lxc`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``lxc``.
 
     .. method:: setns (container, kind, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
@@ -609,7 +623,8 @@ Router Class
         executing Python.
 
         The namespaces to use, and the active root file system are taken from
-        the root PID of a running Docker, LXC, or systemd-nspawn container.
+        the root PID of a running Docker, LXC, LXD, or systemd-nspawn
+        container.
 
         A program is required only to find the root PID, after which management
         of the child Python interpreter is handled directly.
@@ -617,14 +632,16 @@ Router Class
         :param str container:
             Container to connect to.
         :param str kind:
-            One of ``docker``, ``lxc`` or ``machinectl``.
+            One of ``docker``, ``lxc``, ``lxd`` or ``machinectl``.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
+        :param str lxc_path:
+            Filename or complete path to the LXD ``lxc`` binary. ``PATH`` will
+            be searched if given as a filename. Defaults to ``lxc``.
         :param str lxc_info_path:
-            Filename or complete path to the ``lxc-info`` binary. ``PATH``
-            will be searched if given as a filename. Defaults to
-            ``lxc-info``.
+            Filename or complete path to the LXC ``lxc-info`` binary. ``PATH``
+            will be searched if given as a filename. Defaults to ``lxc-info``.
         :param str machinectl_path:
             Filename or complete path to the ``machinectl`` binary. ``PATH``
             will be searched if given as a filename. Defaults to
@@ -774,7 +791,7 @@ Context Class
         handle which is placed in the message's `reply_to`.
 
         :param bool persist:
-            If ``False``, the handler will be unregistered after a single
+            If :data:`False`, the handler will be unregistered after a single
             message has been received.
 
         :param mitogen.core.Message msg:
@@ -793,7 +810,7 @@ Context Class
             The message.
 
         :param float deadline:
-            If not ``None``, seconds before timing out waiting for a reply.
+            If not :data:`None`, seconds before timing out waiting for a reply.
 
         :raises mitogen.core.TimeoutError:
             No message was received and `deadline` passed.
@@ -915,8 +932,8 @@ Receiver Class
         Router to register the handler on.
 
     :param int handle:
-        If not ``None``, an explicit handle to register, otherwise an unused
-        handle is chosen.
+        If not :data:`None`, an explicit handle to register, otherwise an
+        unused handle is chosen.
 
     :param bool persist:
         If :data:`True`, do not unregister the receiver's handler after the
@@ -924,13 +941,13 @@ Receiver Class
 
     :param mitogen.core.Context respondent:
         Reference to the context this receiver is receiving from. If not
-        ``None``, arranges for the receiver to receive a dead message if
+        :data:`None`, arranges for the receiver to receive a dead message if
         messages can no longer be routed to the context, due to disconnection
         or exit.
 
     .. attribute:: notify = None
 
-        If not ``None``, a reference to a function invoked as
+        If not :data:`None`, a reference to a function invoked as
         `notify(receiver)` when a new message is delivered to this receiver.
         Used by :py:class:`mitogen.select.Select` to implement waiting on
         multiple receivers.
@@ -984,7 +1001,7 @@ Receiver Class
         Sleep waiting for a message to arrive on this receiver.
 
         :param float timeout:
-            If not ``None``, specifies a timeout in seconds.
+            If not :data:`None`, specifies a timeout in seconds.
 
         :raises mitogen.core.ChannelError:
             The remote end indicated the channel should be closed, or
@@ -1167,10 +1184,10 @@ Select Class
         message may be posted at any moment between :py:meth:`empty` and
         :py:meth:`get`.
 
-        :py:meth:`empty` may return ``False`` even when :py:meth:`get` would
-        block if another thread has drained a receiver added to this select.
-        This can be avoided by only consuming each receiver from a single
-        thread.
+        :py:meth:`empty` may return :data:`False` even when :py:meth:`get`
+        would block if another thread has drained a receiver added to this
+        select. This can be avoided by only consuming each receiver from a
+        single thread.
 
     .. py:method:: __iter__ (self)
 
@@ -1354,8 +1371,8 @@ A random assortment of utility functions useful on masters and children.
     variables. See :ref:`logging-env-vars`.
 
     :param str path:
-        If not ``None``, a filesystem path to write logs to. Otherwise, logs
-        are written to :py:data:`sys.stderr`.
+        If not :data:`None`, a filesystem path to write logs to. Otherwise,
+        logs are written to :py:data:`sys.stderr`.
 
     :param bool io:
         If :data:`True`, include extremely verbose IO logs in the output.
@@ -1395,29 +1412,9 @@ Exceptions
 
 .. currentmodule:: mitogen.core
 
-.. class:: Error (fmt, \*args)
-
-    Base for all exceptions raised by Mitogen.
-
-.. class:: CallError (e)
-
-    Raised when :py:meth:`Context.call() <mitogen.parent.Context.call>` fails.
-    A copy of the traceback from the external context is appended to the
-    exception message.
-
-.. class:: ChannelError (fmt, \*args)
-
-    Raised when a channel dies or has been closed.
-
-.. class:: LatchError (fmt, \*args)
-
-    Raised when an attempt is made to use a :py:class:`mitogen.core.Latch` that
-    has been marked closed.
-
-.. class:: StreamError (fmt, \*args)
-
-    Raised when a stream cannot be established.
-
-.. class:: TimeoutError (fmt, \*args)
-
-    Raised when a timeout occurs on a stream.
+.. autoclass:: Error
+.. autoclass:: CallError
+.. autoclass:: ChannelError
+.. autoclass:: LatchError
+.. autoclass:: StreamError
+.. autoclass:: TimeoutError

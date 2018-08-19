@@ -73,13 +73,16 @@ also by Ansible's `osx_setup.yml`.
     used to target this account, the parent session requires a TTY and the
     account password must be entered.
 
-`mitogen__user1` .. `mitogen__user21`
+`mitogen__user1` .. `mitogen__user5`
     These accounts do not have passwords set. They exist to test the Ansible
     interpreter recycling logic.
 
+`mitogen__sudo1` .. `mitogen__sudo4`
+    May passwordless sudo to any account.
+
 `mitogen__webapp`
     A plain old account with no sudo access, used as the target for fakessh
-    tddests.
+    tests.
 
 
 # Ansible Integration Test Environment

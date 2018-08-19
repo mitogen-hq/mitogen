@@ -4,6 +4,7 @@ contexts.
 """
 
 import inspect
+import sys
 import zlib
 
 import mitogen.fakessh
@@ -24,6 +25,10 @@ print('Preamble size: %s (%.2fKiB)' % (
     len(stream.get_preamble()),
     len(stream.get_preamble()) / 1024.0,
 ))
+if '--dump' in sys.argv:
+    print(zlib.decompress(stream.get_preamble()))
+    exit()
+
 
 print(
     '               '

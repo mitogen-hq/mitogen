@@ -84,6 +84,17 @@ def _stdlib_paths():
 
 
 def get_child_modules(path):
+    """Return the suffixes of submodules directly neated beneath of the package
+    directory at `path`.
+
+    :param str path:
+        Path to the module's source code on disk, or some PEP-302-recognized
+        equivalent. Usually this is the module's ``__file__`` attribute, but
+        is specified explicitly to avoid loading the module.
+
+    :return:
+        List of submodule name suffixes.
+    """
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return [to_text(name) for _, name, _ in it]
 
@@ -276,7 +287,7 @@ def is_stdlib_path(path):
 
 
 def is_stdlib_name(modname):
-    """Return ``True`` if `modname` appears to come from the standard
+    """Return :data:`True` if `modname` appears to come from the standard
     library."""
     if imp.is_builtin(modname) != 0:
         return True
@@ -412,8 +423,8 @@ class ModuleFinder(object):
         source code.
 
         :returns:
-            Tuple of `(module path, source text, is package?)`, or ``None`` if
-            the source cannot be found.
+            Tuple of `(module path, source text, is package?)`, or :data:`None`
+            if the source cannot be found.
         """
         tup = self._found_cache.get(fullname)
         if tup:

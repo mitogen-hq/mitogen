@@ -55,6 +55,7 @@ import ansible_mitogen.target
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
+NO_MODULE_MSG = 'The module %s was not found in configured module paths.'
 
 
 class Invocation(object):
@@ -393,6 +394,9 @@ _planners = [
 
 def get_module_data(name):
     path = ansible_mitogen.loaders.module_loader.find_plugin(name, '')
+    if path is None:
+        raise ansible.errors.AnsibleError(NO_MODULE_MSG % (name,))
+
     with open(path, 'rb') as fp:
         source = fp.read()
     return mitogen.core.to_text(path), source

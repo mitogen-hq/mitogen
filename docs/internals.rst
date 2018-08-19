@@ -8,17 +8,27 @@ Internal API Reference
     signals
 
 
-mitogen.core
-============
+Constants
+=========
+
+.. currentmodule:: mitogen.core
+.. autodata:: CHUNK_SIZE
 
 
 Latch Class
------------
+===========
 
 .. currentmodule:: mitogen.core
+.. autoclass:: Latch
+   :members:
 
-.. autoclass:: Latch ()
 
+PidfulStreamHandler Class
+=========================
+
+.. currentmodule:: mitogen.core
+.. autoclass:: PidfulStreamHandler
+   :members:
 
 
 Side Class
@@ -50,24 +60,24 @@ Side Class
 
     .. attribute:: fd
 
-        Integer file descriptor to perform IO on, or ``None`` if
+        Integer file descriptor to perform IO on, or :data:`None` if
         :py:meth:`close` has been called.
 
     .. attribute:: keep_alive
 
-        If ``True``, causes presence of this side in :py:class:`Broker`'s
+        If :data:`True`, causes presence of this side in :py:class:`Broker`'s
         active reader set to defer shutdown until the side is disconnected.
 
     .. method:: fileno
 
-        Return :py:attr:`fd` if it is not ``None``, otherwise raise
+        Return :py:attr:`fd` if it is not :data:`None`, otherwise raise
         :py:class:`StreamError`. This method is implemented so that
         :py:class:`Side` can be used directly by :py:func:`select.select`.
 
     .. method:: close
 
-        Call :py:func:`os.close` on :py:attr:`fd` if it is not ``None``, then
-        set it to ``None``.
+        Call :py:func:`os.close` on :py:attr:`fd` if it is not :data:`None`,
+        then set it to :data:`None`.
 
     .. method:: read (n=CHUNK_SIZE)
 
@@ -89,12 +99,9 @@ Side Class
         wrapping the underlying :py:func:`os.write` call with :py:func:`io_op`
         to trap common disconnection connditions.
 
-        :py:meth:`read` always behaves as if it is writing to a regular UNIX
-        file; socket, pipe, and TTY disconnection errors are masked and result
-        in a 0-sized write.
-
         :returns:
-            Number of bytes written, or ``None`` if disconnection was detected.
+            Number of bytes written, or :data:`None` if disconnection was
+            detected.
 
 
 Stream Classes
@@ -302,123 +309,47 @@ mitogen.master
 
 
 Blocking I/O Functions
-----------------------
+======================
 
 These functions exist to support the blocking phase of setting up a new
 context. They will eventually be replaced with asynchronous equivalents.
 
 
-.. currentmodule:: mitogen.master
-
-.. function:: iter_read(fd, deadline=None)
-
-    Return a generator that arranges for up to 4096-byte chunks to be read at a
-    time from the file descriptor `fd` until the generator is destroyed.
-
-    :param fd:
-        File descriptor to read from.
-
-    :param deadline:
-        If not ``None``, an absolute UNIX timestamp after which timeout should
-        occur.
-
-    :raises mitogen.core.TimeoutError:
-        Attempt to read beyond deadline.
-
-    :raises mitogen.core.StreamError:
-        Attempt to read past end of file.
+.. currentmodule:: mitogen.parent
+.. autofunction:: discard_until
+.. autofunction:: iter_read
+.. autofunction:: write_all
 
 
-.. currentmodule:: mitogen.master
-
-.. function:: write_all (fd, s, deadline=None)
-
-    Arrange for all of bytestring `s` to be written to the file descriptor
-    `fd`.
-
-    :param int fd:
-        File descriptor to write to.
-
-    :param bytes s:
-        Bytestring to write to file descriptor.
-
-    :param float deadline:
-        If not ``None``, an absolute UNIX timestamp after which timeout should
-        occur.
-
-    :raises mitogen.core.TimeoutError:
-        Bytestring could not be written entirely before deadline was exceeded.
-
-    :raises mitogen.core.StreamError:
-        File descriptor was disconnected before write could complete.
-
-
-Helper Functions
-----------------
-
-.. currentmodule:: mitogen.core
-
-.. function:: io_op (func, \*args)
-
-    Wrap a function that may raise :py:class:`OSError`, trapping common error
-    codes relating to disconnection events in various subsystems:
-
-    * When performing IO against a TTY, disconnection of the remote end is
-      signalled by :py:data:`errno.EIO`.
-    * When performing IO against a socket, disconnection of the remote end is
-      signalled by :py:data:`errno.ECONNRESET`.
-    * When performing IO against a pipe, disconnection of the remote end is
-      signalled by :py:data:`errno.EPIPE`.
-
-    :returns:
-        Tuple of `(return_value, disconnected)`, where `return_value` is the
-        return value of `func(\*args)`, and `disconnected` is ``True`` if
-        disconnection was detected, otherwise ``False``.
-
+Subprocess Creation Functions
+=============================
 
 .. currentmodule:: mitogen.parent
-
 .. autofunction:: create_child
-
-
-.. currentmodule:: mitogen.parent
-
+.. autofunction:: hybrid_tty_create_child
 .. autofunction:: tty_create_child
 
 
+Helper Functions
+================
+
+.. currentmodule:: mitogen.core
+.. autofunction:: to_text
+.. autofunction:: has_parent_authority
+.. autofunction:: set_cloexec
+.. autofunction:: set_nonblock
+.. autofunction:: set_block
+.. autofunction:: io_op
+
 .. currentmodule:: mitogen.parent
-
-.. autofunction:: hybrid_tty_create_child
-
+.. autofunction:: close_nonstandard_fds
+.. autofunction:: create_socketpair
 
 .. currentmodule:: mitogen.master
-
-.. function:: get_child_modules (path)
-
-    Return the suffixes of submodules directly neated beneath of the package
-    directory at `path`.
-
-    :param str path:
-        Path to the module's source code on disk, or some PEP-302-recognized
-        equivalent. Usually this is the module's ``__file__`` attribute, but
-        is specified explicitly to avoid loading the module.
-
-    :return:
-        List of submodule name suffixes.
-
+.. autofunction:: get_child_modules
 
 .. currentmodule:: mitogen.minify
-
-.. autofunction:: minimize_source (source)
-
-    Remove comments and docstrings from Python `source`, preserving line
-    numbers and syntax of empty blocks.
-
-    :param str source:
-        The source to minimize.
-
-    :returns str:
-        The minimized source.
+.. autofunction:: minimize_source
 
 
 Signals

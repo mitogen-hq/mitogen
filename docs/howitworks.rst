@@ -332,7 +332,7 @@ Masters listen on the following handles:
     Receives the name of a module to load `fullname`, locates the source code
     for `fullname`, and routes one or more :py:data:`LOAD_MODULE` messages back
     towards the sender of the :py:data:`GET_MODULE` request. If lookup fails,
-    ``None`` is sent instead.
+    :data:`None` is sent instead.
 
     See :ref:`import-preloading` for a deeper discussion of
     :py:data:`GET_MODULE`/:py:data:`LOAD_MODULE`.
@@ -355,12 +355,13 @@ Children listen on the following handles:
 
     Receives `(pkg_present, path, compressed, related)` tuples, composed of:
 
-    * **pkg_present**: Either ``None`` for a plain ``.py`` module, or a list of
-      canonical names of submodules existing witin this package. For example, a
-      :py:data:`LOAD_MODULE` for the :py:mod:`mitogen` package would return a
-      list like: `["mitogen.core", "mitogen.fakessh", "mitogen.master", ..]`.
-      This list is used by children to avoid generating useless round-trips due
-      to Python 2.x's :keyword:`import` statement behavior.
+    * **pkg_present**: Either :data:`None` for a plain ``.py`` module, or a
+      list of canonical names of submodules existing witin this package. For
+      example, a :py:data:`LOAD_MODULE` for the :py:mod:`mitogen` package would
+      return a list like: `["mitogen.core", "mitogen.fakessh",
+      "mitogen.master", ..]`. This list is used by children to avoid generating
+      useless round-trips due to Python 2.x's :keyword:`import` statement
+      behavior.
     * **path**: Original filesystem where the module was found on the master.
     * **compressed**: :py:mod:`zlib`-compressed module source code.
     * **related**: list of canonical module names on which this module appears

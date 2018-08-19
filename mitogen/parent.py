@@ -93,6 +93,19 @@ def get_core_source():
     return inspect.getsource(mitogen.core)
 
 
+def get_default_remote_name():
+    """
+    Return the default name appearing in argv[0] of remote machines.
+    """
+    s = u'%s@%s:%d'
+    s %= (getpass.getuser(), socket.gethostname(), os.getpid())
+    # In mixed UNIX/Windows environments, the username may contain slashes.
+    return s.translate({
+        ord(u'\\'): ord(u'_'),
+        ord(u'/'): ord(u'_')
+    })
+
+
 def is_immediate_child(msg, stream):
     """
     Handler policy that requires messages to arrive only from immediately
@@ -144,6 +157,14 @@ def close_nonstandard_fds():
 
 
 def create_socketpair():
+    """
+    Create a :func:`socket.socketpair` to use for use as a child process's UNIX
+    stdio channels. As socket pairs are bidirectional, they are economical on
+    file descriptor usage as the same descriptor can be used for ``stdin`` and
+    ``stdout``. As they are sockets their buffers are tunable, allowing large
+    buffers to be configured in order to improve throughput for file transfers
+    and reduce :class:`mitogen.core.Broker` IO loop iterations.
+    """
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
                         socket.SO_SNDBUF,
@@ -284,6 +305,22 @@ def hybrid_tty_create_child(args):
 
 
 def write_all(fd, s, deadline=None):
+    """Arrange for all of bytestring `s` to be written to the file descriptor
+    `fd`.
+
+    :param int fd:
+        File descriptor to write to.
+    :param bytes s:
+        Bytestring to write to file descriptor.
+    :param float deadline:
+        If not :data:`None`, absolute UNIX timestamp after which timeout should
+        occur.
+
+    :raises mitogen.core.TimeoutError:
+        Bytestring could not be written entirely before deadline was exceeded.
+    :raises mitogen.core.StreamError:
+        File descriptor was disconnected before write could complete.
+    """
     timeout = None
     written = 0
     poller = PREFERRED_POLLER()
@@ -312,6 +349,20 @@ def write_all(fd, s, deadline=None):
 
 
 def iter_read(fds, deadline=None):
+    """Return a generator that arranges for up to 4096-byte chunks to be read
+    at a time from the file descriptor `fd` until the generator is destroyed.
+
+    :param int fd:
+        File descriptor to read from.
+    :param float deadline:
+        If not :data:`None`, an absolute UNIX timestamp after which timeout
+        should occur.
+
+    :raises mitogen.core.TimeoutError:
+        Attempt to read beyond deadline.
+    :raises mitogen.core.StreamError:
+        Attempt to read past end of file.
+    """
     poller = PREFERRED_POLLER()
     for fd in fds:
         poller.start_receive(fd)
@@ -346,6 +397,24 @@ def iter_read(fds, deadline=None):
 
 
 def discard_until(fd, s, deadline):
+    """Read chunks from `fd` until one is encountered that ends with `s`. This
+    is used to skip output produced by ``/etc/profile``, ``/etc/motd`` and
+    mandatory SSH banners while waiting for :attr:`Stream.EC0_MARKER` to
+    appear, indicating the first stage is ready to receive the compressed
+    :mod:`mitogen.core` source.
+
+    :param int fd:
+        File descriptor to read from.
+    :param bytes s:
+        Marker string to discard until encountered.
+    :param float deadline:
+        Absolute UNIX timestamp after which timeout should occur.
+
+    :raises mitogen.core.TimeoutError:
+        Attempt to read beyond deadline.
+    :raises mitogen.core.StreamError:
+        Attempt to read past end of file.
+    """
     for buf in iter_read([fd], deadline):
         if IOLOG.level == logging.DEBUG:
             for line in buf.splitlines():
@@ -765,8 +834,7 @@ class Stream(mitogen.core.Stream):
         if connect_timeout:
             self.connect_timeout = connect_timeout
         if remote_name is None:
-            remote_name = '%s@%s:%d'
-            remote_name %= (getpass.getuser(), socket.gethostname(), os.getpid())
+            remote_name = get_default_remote_name()
         if '/' in remote_name or '\\' in remote_name:
             raise ValueError('remote_name= cannot contain slashes')
         self.remote_name = remote_name
@@ -968,7 +1036,9 @@ class Stream(mitogen.core.Stream):
             self._reap_child()
             raise
 
-    #: For ssh.py, this must be at least max(len('password'), len('debug1:'))
+    #: Sentinel value emitted by the first stage to indicate it is ready to
+    #: receive the compressed bootstrap. For :mod:`mitogen.ssh` this must have
+    #: length of at least `max(len('password'), len('debug1:'))`
     EC0_MARKER = mitogen.core.b('MITO000\n')
     EC1_MARKER = mitogen.core.b('MITO001\n')
 
@@ -1287,6 +1357,9 @@ class Router(mitogen.core.Router):
 
     def lxc(self, **kwargs):
         return self.connect(u'lxc', **kwargs)
+
+    def lxd(self, **kwargs):
+        return self.connect(u'lxd', **kwargs)
 
     def setns(self, **kwargs):
         return self.connect(u'setns', **kwargs)

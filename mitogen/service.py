@@ -372,8 +372,9 @@ class DeduplicatingInvoker(Invoker):
 
 
 class Service(object):
-    #: Sentinel object to suppress reply generation, since returning ``None``
-    #: will trigger a response message containing the pickled ``None``.
+    #: Sentinel object to suppress reply generation, since returning
+    #: :data:`None` will trigger a response message containing the pickled
+    #: :data:`None`.
     NO_REPLY = object()
 
     invoker_class = Invoker

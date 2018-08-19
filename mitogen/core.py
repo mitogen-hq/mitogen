@@ -116,7 +116,34 @@ AnyTextType = (BytesType, UnicodeType)
 if sys.version_info < (2, 5):
     next = lambda it: it.next()
 
+#: Default size for calls to :meth:`Side.read` or :meth:`Side.write`, and the
+#: size of buffers configured by :func:`mitogen.parent.create_socketpair`. This
+#: value has many performance implications, 128KiB seems to be a sweet spot.
+#:
+#: * When set low, large messages cause many :class:`Broker` IO loop
+#:   iterations, burning CPU and reducing throughput.
+#: * When set high, excessive RAM is reserved by the OS for socket buffers (2x
+#:   per child), and an identically sized temporary userspace buffer is
+#:   allocated on each read that requires zeroing, and over a particular size
+#:   may require two system calls to allocate/deallocate.
+#:
+#: Care must be taken to ensure the underlying kernel object and receiving
+#: program support the desired size. For example,
+#:
+#: * Most UNIXes have TTYs with fixed 2KiB-4KiB buffers, making them unsuitable
+#:   for efficient IO.
+#: * Different UNIXes have varying presets for pipes, which may not be
+#:   configurable. On recent Linux the default pipe buffer size is 64KiB, but
+#:   under memory pressure may be as low as 4KiB for unprivileged processes.
+#: * When communication is via an intermediary process, its internal buffers
+#:   effect the speed OS buffers will drain. For example OpenSSH uses 64KiB
+#:   reads.
+#:
+#: An ideal :class:`Message` has a size that is a multiple of
+#: :data:`CHUNK_SIZE` inclusive of headers, to avoid wasting IO loop iterations
+#: writing small trailer chunks.
 CHUNK_SIZE = 131072
+
 _tls = threading.local()
 
 
@@ -131,6 +158,13 @@ else:
 
 
 class Error(Exception):
+    """Base for all exceptions raised by Mitogen.
+
+    :param str fmt:
+        Exception text, or format string if `args` is non-empty.
+    :param tuple args:
+        Format string arguments.
+    """
     def __init__(self, fmt=None, *args):
         if args:
             fmt %= args
@@ -140,10 +174,14 @@ class Error(Exception):
 
 
 class LatchError(Error):
+    """Raised when an attempt is made to use a :py:class:`mitogen.core.Latch`
+    that has been marked closed."""
     pass
 
 
 class Blob(BytesType):
+    """A serializable bytes subclass whose content is summarized in repr()
+    output, making it suitable for logging binary data."""
     def __repr__(self):
         return '[blob: %d bytes]' % len(self)
 
@@ -152,6 +190,8 @@ class Blob(BytesType):
 
 
 class Secret(UnicodeType):
+    """A serializable unicode subclass whose content is masked in repr()
+    output, making it suitable for logging passwords."""
     def __repr__(self):
         return '[secret]'
 
@@ -165,6 +205,10 @@ class Secret(UnicodeType):
 
 
 class Kwargs(dict):
+    """A serializable dict subclass that indicates the contained keys should be
+    be coerced to Unicode on Python 3 as required. Python 2 produces keyword
+    argument dicts whose keys are bytestrings, requiring a helper to ensure
+    compatibility with Python 3."""
     if PY3:
         def __init__(self, dct):
             for k, v in dct.items():
@@ -181,6 +225,10 @@ class Kwargs(dict):
 
 
 class CallError(Error):
+    """Serializable :class:`Error` subclass raised when
+    :py:meth:`Context.call() <mitogen.parent.Context.call>` fails. A copy of
+    the traceback from the external context is appended to the exception
+    message."""
     def __init__(self, fmt=None, *args):
         if not isinstance(fmt, BaseException):
             Error.__init__(self, fmt, *args)
@@ -207,37 +255,54 @@ def _unpickle_call_error(s):
 
 
 class ChannelError(Error):
+    """Raised when a channel dies or has been closed."""
     remote_msg = 'Channel closed by remote end.'
     local_msg = 'Channel closed by local end.'
 
 
 class StreamError(Error):
+    """Raised when a stream cannot be established."""
     pass
 
 
 class TimeoutError(Error):
+    """Raised when a timeout occurs on a stream."""
     pass
 
 
 def to_text(o):
-    if isinstance(o, UnicodeType):
-        return UnicodeType(o)
+    """Coerce `o` to Unicode by decoding it from UTF-8 if it is an instance of
+    :class:`bytes`, otherwise pass it to the :class:`str` constructor. The
+    returned object is always a plain :class:`str`, any subclass is removed."""
     if isinstance(o, BytesType):
         return o.decode('utf-8')
     return UnicodeType(o)
 
 
 def has_parent_authority(msg, _stream=None):
+    """Policy function for use with :class:`Receiver` and
+    :meth:`Router.add_handler` that requires incoming messages to originate
+    from a parent context, or on a :class:`Stream` whose :attr:`auth_id
+    <Stream.auth_id>` has been set to that of a parent context or the current
+    context."""
     return (msg.auth_id == mitogen.context_id or
             msg.auth_id in mitogen.parent_ids)
 
 
 def listen(obj, name, func):
+    """
+    Arrange for `func(*args, **kwargs)` to be invoked when the named signal is
+    fired by `obj`.
+    """
     signals = vars(obj).setdefault('_signals', {})
     signals.setdefault(name, []).append(func)
 
 
 def fire(obj, name, *args, **kwargs):
+    """
+    Arrange for `func(*args, **kwargs)` to be invoked for every function
+    registered for the named signal on `obj`.
+    """
     signals = vars(obj).get('_signals', {})
     return [func(*args, **kwargs) for func in signals.get(name, ())]
 
@@ -253,7 +318,8 @@ def takes_router(func):
 
 
 def is_blacklisted_import(importer, fullname):
-    """Return ``True`` if `fullname` is part of a blacklisted package, or if
+    """
+    Return :data:`True` if `fullname` is part of a blacklisted package, or if
     any packages have been whitelisted and `fullname` is not part of one.
 
     NB:
@@ -266,22 +332,51 @@ def is_blacklisted_import(importer, fullname):
 
 
 def set_cloexec(fd):
+    """Set the file descriptor `fd` to automatically close on
+    :func:`os.execve`. This has no effect on file descriptors inherited across
+    :func:`os.fork`, they must be explicitly closed through some other means,
+    such as :func:`mitogen.fork.on_fork`."""
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     assert fd > 2
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
 def set_nonblock(fd):
+    """Set the file descriptor `fd` to non-blocking mode. For most underlying
+    file types, this causes :func:`os.read` or :func:`os.write` to raise
+    :class:`OSError` with :data:`errno.EAGAIN` rather than block the thread
+    when the underlying kernel buffer is exhausted."""
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
 def set_block(fd):
+    """Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread
+    when the underlying kernel buffer is exhausted."""
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
 
 
 def io_op(func, *args):
+    """Wrap `func(*args)` that may raise :class:`select.error`,
+    :class:`IOError`, or :class:`OSError`, trapping UNIX error codes relating
+    to disconnection and retry events in various subsystems:
+
+    * When a signal is delivered to the process on Python 2, system call retry
+      is signalled through :data:`errno.EINTR`. The invocation is automatically
+      restarted.
+    * When performing IO against a TTY, disconnection of the remote end is
+      signalled by :data:`errno.EIO`.
+    * When performing IO against a socket, disconnection of the remote end is
+      signalled by :data:`errno.ECONNRESET`.
+    * When performing IO against a pipe, disconnection of the remote end is
+      signalled by :data:`errno.EPIPE`.
+
+    :returns:
+        Tuple of `(return_value, disconnected)`, where `return_value` is the
+        return value of `func(\*args)`, and `disconnected` is :data:`True` if
+        disconnection was detected, otherwise :data:`False`.
+    """
     while True:
         try:
             return func(*args), False
@@ -296,7 +391,19 @@ def io_op(func, *args):
 
 
 class PidfulStreamHandler(logging.StreamHandler):
+    """A :class:`logging.StreamHandler` subclass used when
+    :meth:`Router.enable_debug() <mitogen.master.Router.enable_debug>` has been
+    called, or the `debug` parameter was specified during context construction.
+    Verifies the process ID has not changed on each call to :meth:`emit`,
+    reopening the associated log file when a change is detected.
+
+    This ensures logging to the per-process output files happens correctly even
+    when uncooperative third party components call :func:`os.fork`.
+    """
+    #: PID that last opened the log file.
     open_pid = None
+
+    #: Output path template.
     template = '/tmp/mitogen.%s.%s.log'
 
     def _reopen(self):
@@ -614,6 +721,7 @@ class Importer(object):
             'fork',
             'jail',
             'lxc',
+            'lxd',
             'master',
             'minify',
             'parent',
@@ -935,7 +1043,7 @@ class Stream(BasicStream):
     :py:class:`BasicStream` subclass implementing mitogen's :ref:`stream
     protocol <stream-protocol>`.
     """
-    #: If not ``None``, :py:class:`Router` stamps this into
+    #: If not :data:`None`, :py:class:`Router` stamps this into
     #: :py:attr:`Message.auth_id` of every message received on this stream.
     auth_id = None
 
@@ -958,6 +1066,16 @@ class Stream(BasicStream):
     def construct(self):
         pass
 
+    def _internal_receive(self, broker, buf):
+        if self._input_buf and self._input_buf_len < 128:
+            self._input_buf[0] += buf
+        else:
+            self._input_buf.append(buf)
+
+        self._input_buf_len += len(buf)
+        while self._receive_one(broker):
+            pass
+
     def on_receive(self, broker):
         """Handle the next complete message on the stream. Raise
         :py:class:`StreamError` on failure."""
@@ -967,14 +1085,7 @@ class Stream(BasicStream):
         if not buf:
             return self.on_disconnect(broker)
 
-        if self._input_buf and self._input_buf_len < 128:
-            self._input_buf[0] += buf
-        else:
-            self._input_buf.append(buf)
-
-        self._input_buf_len += len(buf)
-        while self._receive_one(broker):
-            pass
+        self._internal_receive(broker, buf)
 
     HEADER_FMT = '>LLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
