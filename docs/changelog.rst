@@ -74,6 +74,10 @@ Mitogen for Ansible
 * `#344 <https://github.com/dw/mitogen/issues/344>`_: connections no longer
   fail when the parent machine's logged in username contains slashes.
 
+* `#345 <https://github.com/dw/mitogen/issues/345>`_: the ``IdentitiesOnly
+  yes`` option is no longer supplied to OpenSSH by default, more closely
+  mimicking Ansible's default behaviour.
+
 * Runs with many targets executed the module dependency scanner redundantly
   due to missing synchronization, causing significant wasted computation in the
   connection multiplexer subprocess. For one real-world playbook the scanner
@@ -100,6 +104,9 @@ Core Library
 
 * `#339 <https://github.com/dw/mitogen/issues/339>`_: the LXD connection method
   was erroneously executing LXC Classic commands.
+
+* `#345 <https://github.com/dw/mitogen/issues/345>`_: the SSH connection method
+  allows optionally disabling ``IdentitiesOnly yes``.
 
 * Add a :func:`mitogen.fork.on_fork` function to allow non-Mitogen managed
   process forks to clean up Mitogen resources in the forked chlid.

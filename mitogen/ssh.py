@@ -142,7 +142,7 @@ class Stream(mitogen.parent.Stream):
                   check_host_keys='enforce', password=None, identity_file=None,
                   compression=True, ssh_args=None, keepalive_enabled=True,
                   keepalive_count=3, keepalive_interval=15,
-                  ssh_debug_level=None, **kwargs):
+                  identities_only=True, ssh_debug_level=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         if check_host_keys not in ('accept', 'enforce', 'ignore'):
             raise ValueError(self.check_host_keys_msg)
@@ -153,6 +153,7 @@ class Stream(mitogen.parent.Stream):
         self.check_host_keys = check_host_keys
         self.password = password
         self.identity_file = identity_file
+        self.identities_only = identities_only
         self.compression = compression
         self.keepalive_enabled = keepalive_enabled
         self.keepalive_count = keepalive_count
@@ -181,7 +182,7 @@ class Stream(mitogen.parent.Stream):
             bits += ['-l', self.username]
         if self.port is not None:
             bits += ['-p', str(self.port)]
-        if self.identity_file or self.password:
+        if self.identities_only and (self.identity_file or self.password):
             bits += ['-o', 'IdentitiesOnly yes']
         if self.identity_file:
             bits += ['-i', self.identity_file]

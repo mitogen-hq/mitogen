@@ -706,7 +706,7 @@ Router Class
             :py:class:`mitogen.core.StreamError` to be raised, and that
             attributes of the stream match the actual behaviour of ``sudo``.
 
-    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys='enforce', password=None, identity_file=None, compression=True, \**kwargs)
+    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys='enforce', password=None, identity_file=None, identities_only=True, compression=True, \**kwargs)
 
         Construct a remote context over a ``ssh`` invocation. The ``ssh``
         process is started in a newly allocated pseudo-terminal, and supports
@@ -744,6 +744,13 @@ Router Class
             the SSH client to perform authenticaion; agent authentication is
             automatically disabled, as is reading the default private key from
             ``~/.ssh/id_rsa``, or ``~/.ssh/id_dsa``.
+        :param bool identities_only:
+            If :data:`True` and a password or explicit identity file is
+            specified, instruct the SSH client to disable any authentication
+            identities inherited from the surrounding environment, such as
+            those loaded in any running ``ssh-agent``, or default key files
+            present in ``~/.ssh``. This ensures authentication attempts only
+            occur using the supplied password or SSH key.
         :param bool compression:
             If :py:data:`True`, enable ``ssh`` compression support. Compression
             has a minimal effect on the size of modules transmitted, as they

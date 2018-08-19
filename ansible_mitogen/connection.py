@@ -102,6 +102,7 @@ def _connect_ssh(spec):
             'port': spec['port'],
             'python_path': spec['python_path'],
             'identity_file': spec['private_key_file'],
+            'identities_only': False,
             'ssh_path': spec['ssh_executable'],
             'connect_timeout': spec['ansible_ssh_timeout'],
             'ssh_args': spec['ssh_args'],
