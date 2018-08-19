@@ -261,7 +261,7 @@ within a stable series.
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
-* Support for Ansible 2.3 - 2.5.x and any mixture of Python 2.6, 2.7 or 3.6 on
+* Support for Ansible 2.3 - 2.6.x and any mixture of Python 2.6, 2.7 or 3.6 on
   controller and target nodes.
 
 * Drop-in support for many Ansible connection types.
