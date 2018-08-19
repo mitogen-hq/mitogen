@@ -72,4 +72,4 @@ matrix:
 
     # Sanity check against vanilla Ansible. One job suffices.
     - python: "2.7"
-      env: MODE=ansible VER=2.6.2 DISTRO=debian STRATEGY=linear
+      env: MODE=ansible VER=2.6.2 DISTROS=debian STRATEGY=linear
