@@ -58,6 +58,11 @@ import ansible_mitogen.target
 
 LOG = logging.getLogger(__name__)
 
+# Force load of plugin to ensure ConfigManager has definitions loaded. Done
+# during module import to ensure a single-threaded environment; PluginLoader
+# is not thread-safe.
+ansible_mitogen.loaders.shell_loader.get('sh')
+
 
 if sys.version_info[0] == 3:
     def reraise(tp, value, tb):
@@ -74,8 +79,6 @@ else:
 
 
 def _get_candidate_temp_dirs():
-    # Force load of plugin to ensure ConfigManager has definitions loaded.
-    ansible_mitogen.loaders.shell_loader.get('sh')
     options = ansible.constants.config.get_plugin_options('shell', 'sh')
 
     # Pre 2.5 this came from ansible.constants.
