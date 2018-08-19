@@ -44,7 +44,8 @@ Mitogen for Ansible
   extension that had been installed using the documented steps. Now the bundled
   library always overrides over any system-installed copy.
 
-* `#321 <https://github.com/dw/mitogen/issues/321>`_: temporary file handling
+* `#321 <https://github.com/dw/mitogen/issues/321>`_,
+  `#336 <https://github.com/dw/mitogen/issues/336>`_: temporary file handling
   has been simplified and additional network roundtrips have been removed,
   undoing earlier damage caused by compatibility fixes, and improving 2.6
   compatibility. One directory is created at startup for each persistent
@@ -112,8 +113,10 @@ the bug reports in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
 `atoom <https://github.com/atoom>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
+`dsgnr <https://github.com/dsgnr>`_,
 `Jesse London <https://github.com/jesteria>`_,
 `Luca Nunzi <https://github.com/0xlc>`_,
+`nikitakazantsev12 <https://github.com/nikitakazantsev12>`_,
 `Pateek Jain <https://github.com/prateekj201>`_,
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
 `Rick Box <https://github.com/boxrick>`_, and
@@ -213,7 +216,6 @@ the bug reports and pull requests in this release contributed by
 `Ayaz Ahmed Khan <https://github.com/ayaz>`_,
 `Colin McCarthy <https://github.com/colin-mccarthy>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
-`dsgnr <https://github.com/dsgnr>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
 `falbanese <https://github.com/falbanese>`_,
 `Gonzalo Servat <https://github.com/gservat>`_,
