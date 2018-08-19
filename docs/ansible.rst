@@ -271,8 +271,8 @@ command line, or as host and group variables.
 File Transfer
 ~~~~~~~~~~~~~
 
-Normally `sftp <https://linux.die.net/man/1/sftp>`_ or
-`scp <https://linux.die.net/man/1/scp>`_ are used to copy files by the
+Normally `sftp(1) <https://linux.die.net/man/1/sftp>`_ or
+`scp(1) <https://linux.die.net/man/1/scp>`_ are used to copy files by the
 `assemble <http://docs.ansible.com/ansible/latest/modules/assemble_module.html>`_,
 `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_,
 `patch <http://docs.ansible.com/ansible/latest/modules/patch_module.html>`_,
@@ -302,7 +302,7 @@ to rename over any existing file. This ensures the file remains consistent at
 all times, in the event of a crash, or when overlapping `ansible-playbook` runs
 deploy differing file contents.
 
-The `sftp <https://linux.die.net/man/1/sftp>`_ and `scp
+The `sftp(1) <https://linux.die.net/man/1/sftp>`_ and `scp(1)
 <https://linux.die.net/man/1/sftp>`_ tools may cause undetected data corruption
 in the form of truncated files, or files containing intermingled data segments
 from overlapping runs. As part of normal operation, both tools expose a window
@@ -401,6 +401,67 @@ this precisely, to avoid breaking playbooks that expect text to appear in
 specific variables with a particular linefeed style.
 
 
+.. _ansible_tempfiles:
+
+Temporary Files
+~~~~~~~~~~~~~~~
+
+Ansible creates a variety of temporary files and directories depending on its
+operating mode.
+
+In the best case when pipelining is enabled and no temporary uploads are
+required, for each task Ansible will create one directory below a
+system-supplied temporary directory returned by :func:`tempfile.mkdtemp`, owned
+by the target user account a new-style module intends to execute in.
+
+In other cases depending on the task type, whether become is active, whether
+the target become user is privileged, whether the associated action plugin
+needs to upload files, and whether the associated module needs to store files,
+Ansible may:
+
+* Create a directory owned by the SSH user either under ``remote_tmp``, or a
+  system-default directory,
+* Upload action dependencies such as non-new style modules or rendered
+  templates to that directory via `sftp(1) <https://linux.die.net/man/1/sftp>`_
+  or `scp(1) <https://linux.die.net/man/1/scp>`_.
+* Attempt to modify the directory's access control list to grant access to the
+  target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
+  requiring that tool to be installed and a supported filesystem to be in use,
+  or for the ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
+* Create a directory owned by the target user either under ``remote_tmp``, or
+  a system-default directory, if a new-style module needs a temporary directory
+  and one was not previously created for a supporting file earlier in the
+  invocation.
+
+In summary, for each task Ansible may create one or more of:
+
+* ``~ssh_user/<remote_tmp>/...`` owned by the login user,
+* ``$TMPDIR/ansible-tmp-...`` owned by the login user,
+* ``$TMPDIR/ansible-tmp-...`` owned by the login user with ACLs permitting
+  write access by the become user,
+* ``~become_user/<remote_tmp>/...`` owned by the become user,
+* ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
+* ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
+
+The extension must create a temporary directory to maintain compatibility with
+Ansible, since many modules introspect :data:`sys.argv` in order to find a
+directory where they may write temporary files, however for simplicity only
+one such directory exists for the lifetime of each interpreter, stored in a
+system-supplied temporary directory, and always privately owned by the target
+user account.
+
+The ``remote_tmp`` path is unused, since Ansible does not make exclusive use of
+it, existing semantics are untenable, environments exist with read-only home
+directories where the default ``remote_tmp`` path (``~/.ansible/tmp``) cannot
+be used, and new-style modules always depended on the existence of a
+system-supplied directory anyway, so no requirement is introduced by simply
+ignoring ``remote_tmp``.
+
+As the directory is created once at startup, and its content is managed by code
+running remotely, no additional network roundtrips are required to create and
+destroy it for each task requiring temporary file storage.
+
+
 .. _ansible_process_env:
 
 Process Environment Emulation
@@ -425,7 +486,7 @@ Modifications to ``/etc/resolv.conf`` cause the glibc resolver configuration to
 be reloaded via `res_init(3) <https://linux.die.net/man/3/res_init>`_. This
 isn't necessary on some Linux distributions carrying glibc patches to
 automatically check ``/etc/resolv.conf`` periodically, however it is necessary
-on at least Debian and the BSD derivatives.
+on at least Debian and BSD derivatives.
 
 
 ``/etc/environment``
@@ -433,7 +494,7 @@ on at least Debian and the BSD derivatives.
 
 When ``become: true`` is active or SSH multiplexing is disabled, modifications
 by previous tasks to ``/etc/environment`` and ``$HOME/.pam_environment`` are
-reflected, since the content of those files is reapplied by `PAM
+normally reflected, since the content of those files is reapplied by `PAM
 <https://en.wikipedia.org/wiki/Pluggable_authentication_module>`_ via `pam_env`
 on each authentication of ``sudo`` or ``sshd``.
 

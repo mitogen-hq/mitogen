@@ -456,6 +456,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set after connection to the target context's home directory.
     home_dir = None
 
+    #: Set after connection to the target context's home directory.
+    _temp_dir = None
+
     def __init__(self, play_context, new_stdin, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'Mitogen connection types may only be instantiated '
@@ -635,6 +638,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.fork_context = dct['init_child_result']['fork_context']
         self.home_dir = dct['init_child_result']['home_dir']
+        self._temp_dir = dct['init_child_result']['temp_dir']
+
+    def get_temp_dir(self):
+        self._connect()
+        return self._temp_dir
 
     def _connect(self):
         """

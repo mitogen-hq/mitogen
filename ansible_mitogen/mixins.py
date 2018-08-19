@@ -180,48 +180,26 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         assert False, "_is_pipelining_enabled() should never be called."
 
-    def _get_remote_tmp(self):
-        """
-        Mitogen-only: return the 'remote_tmp' setting.
-        """
-        try:
-            s = self._connection._shell.get_option('remote_tmp')
-        except AttributeError:
-            s = ansible.constants.DEFAULT_REMOTE_TMP  # <=2.4.x
-
-        return self._remote_expand_user(s, sudoable=False)
-
     def _make_tmp_path(self, remote_user=None):
         """
-        Replace the base implementation's use of shell to implement mkdtemp()
-        with an actual call to mkdtemp(). Like vanilla, the directory is always
-        created in the login account context.
+        Return the temporary directory created by the persistent interpreter at
+        startup.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
-
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
-        # The copy action plugin violates layering and grabs this attribute
-        # directly.
-        self._connection._shell.tmpdir = self._connection.call(
-            ansible_mitogen.target.make_temp_directory,
-            base_dir=self._get_remote_tmp(),
-            use_login_context=True,
-        )
+        self._connection._shell.tmpdir = self._connection.get_temp_dir()
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
         return self._connection._shell.tmpdir
 
     def _remove_tmp_path(self, tmp_path):
         """
-        Replace the base implementation's invocation of rm -rf with a call to
-        shutil.rmtree().
+        Stub out the base implementation's invocation of rm -rf, replacing it
+        with nothing, as the persistent interpreter automatically cleans up
+        after itself without introducing roundtrips.
         """
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
-        if tmp_path is None:
-            tmp_path = self._connection._shell.tmpdir
-        if self._should_remove_tmp_path(tmp_path):
-            self.call(shutil.rmtree, tmp_path)
-            self._connection._shell.tmpdir = None
+        self._connection._shell.tmpdir = None
 
     def _transfer_data(self, remote_path, data):
         """
@@ -332,7 +310,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         env = {}
         self._compute_environment_string(env)
 
+        # Always set _ansible_tmpdir regardless of whether _make_remote_tmp()
+        # has ever been called. This short-circuits all the .tmpdir logic in
+        # module_common and ensures no second temporary directory or atexit
+        # handler is installed.
         self._connection._connect()
+        module_args['_ansible_tmpdir'] = self._connection.get_temp_dir()
+
         return ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
                 action=self,

@@ -44,6 +44,13 @@ Mitogen for Ansible
   extension that had been installed using the documented steps. Now the bundled
   library always overrides over any system-installed copy.
 
+* `#321 <https://github.com/dw/mitogen/issues/321>`_: temporary file handling
+  has been simplified and additional network roundtrips have been removed,
+  undoing earlier damage caused by compatibility bug fixes. A single directory
+  is created once at startup for each persistent interpreter, and the
+  ``remote_tmp`` setting is always ignored. See :ref:`ansible_tempfiles` for a
+  complete description.
+
 * `#324 <https://github.com/dw/mitogen/issues/324>`_: plays with a custom
   ``module_utils`` would fail due to fallout from the Python 3 port and related
   tests being disabled.

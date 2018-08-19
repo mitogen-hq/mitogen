@@ -1,63 +1,115 @@
+#
+# Ensure _make_tmp_path returns the same result across invocations for a single
+# user account, and that the path returned cleans itself up on connection
+# termination.
+#
+# Related bugs prior to the new-style handling:
+#   https://github.com/dw/mitogen/issues/239
+#   https://github.com/dw/mitogen/issues/301
 
 - name: integration/action/make_tmp_path.yml
   hosts: test-targets
   any_errors_fatal: true
   tasks:
-    - name: "Find out root's homedir."
-      # Runs first because it blats regular Ansible facts with junk, so
-      # non-become run fixes that up.
-      setup: gather_subset=min
-      become: true
-      register: root_facts
-
-    - name: "Find regular homedir"
-      setup: gather_subset=min
-      register: user_facts
-
     #
-    # non-become
+    # non-root
     #
 
-    - action_passthrough:
+    - name: "Find regular temp path"
+      action_passthrough:
         method: _make_tmp_path
+      register: tmp_path
+
+    - name: "Write some junk in regular temp path"
+      shell: hostname > {{tmp_path.result}}/hostname
+
+    - name: "Verify junk did not persist across tasks"
+      stat: path={{tmp_path.result}}/hostname
+      register: junk_stat
+
+    - name: "Verify junk did not persist across tasks"
+      assert:
+        that:
+        - not junk_stat.stat.exists
+
+    - name: "Verify temp path hasn't changed since start"
+      action_passthrough:
+        method: _make_tmp_path
+      register: tmp_path2
+
+    - name: "Verify temp path hasn't changed since start"
+      assert:
+        that:
+        - tmp_path2.result == tmp_path.result
+
+    - name: "Verify temp path changes across connection reset"
+      mitogen_shutdown_all:
+
+    - name: "Verify temp path changes across connection reset"
+      action_passthrough:
+        method: _make_tmp_path
+      register: tmp_path2
+
+    - name: "Verify temp path changes across connection reset"
+      assert:
+        that:
+        - tmp_path2.result != tmp_path.result
+
+    - name: "Verify old path disappears across connection reset"
+      stat: path={{tmp_path.result}}
+      register: junk_stat
+
+    - name: "Verify old path disappears across connection reset"
+      assert:
+        that:
+        - not junk_stat.stat.exists
+
+    #
+    # root
+    #
+
+    - name: "Find root temp path"
+      become: true
+      action_passthrough:
+        method: _make_tmp_path
+      register: tmp_path_root
+
+    - name: "Verify root temp path differs from regular path"
+      assert:
+        that:
+        - tmp_path2.result != tmp_path_root.result
+
+    #
+    # readonly homedir
+    #
+
+    - name: "Try writing to temp directory for the readonly_homedir user"
+      become: true
+      become_user: mitogen__readonly_homedir
+      action_passthrough:
+        method: _make_tmp_path
+      register: tmp_path
+
+    - name: "Try writing to temp directory for the readonly_homedir user"
+      become: true
+      become_user: mitogen__readonly_homedir
+      shell: hostname > {{tmp_path.result}}/hostname
+
+    #
+    # modules get the same temp dir
+    #
+
+    - name: "Verify modules get the same tmpdir as the action plugin"
+      action_passthrough:
+        method: _make_tmp_path
+      register: tmp_path
+
+    - name: "Verify modules get the same tmpdir as the action plugin"
+      custom_python_detect_environment:
       register: out
 
-    - assert:
-        # This string must match ansible.cfg::remote_tmp
-        that: out.result.startswith("{{user_facts.ansible_facts.ansible_user_dir}}/.ansible/mitogen-tests/")
-
-    - stat:
-        path: "{{out.result}}"
-      register: st
-
-    - assert:
-        that: st.stat.exists and st.stat.isdir and st.stat.mode == "0700"
-
-    - file:
-        path: "{{out.result}}"
-        state: absent
-
-    #
-    # become. make_tmp_path() must evaluate HOME in the context of the SSH
-    # user, not the become user.
-    #
-
-    - action_passthrough:
-        method: _make_tmp_path
-      register: out
-      become: true
-
-    - assert:
-        # This string must match ansible.cfg::remote_tmp
-        that: out.result.startswith("{{user_facts.ansible_facts.ansible_user_dir}}/.ansible/mitogen-tests/")
-
-    - stat:
-        path: "{{out.result}}"
-      register: st
-
-    - assert:
-        that: st.stat.exists and st.stat.isdir and st.stat.mode == "0700"
-
-    - file:
-        path: "{{out.result}}"
-        state: absent
+    # v2.6 related: https://github.com/ansible/ansible/pull/39833
+    - name: "Verify modules get the same tmpdir as the action plugin"
+      assert:
+        that:
+        - out.module_tmpdir == tmp_path.result

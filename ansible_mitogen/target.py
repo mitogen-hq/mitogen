@@ -69,6 +69,19 @@ import ansible_mitogen.runner
 
 LOG = logging.getLogger(__name__)
 
+MAKE_TEMP_FAILED_MSG = (
+    "Unable to create a temporary directory for the persistent interpreter.\n"
+    "This likely means no system-supplied TMP directory can be written to.\n"
+    "\n"
+    "The following paths were tried:\n"
+    "    %(namelist)s\n"
+    "\n"
+    "The original exception was:\n"
+    "\n"
+    "%(exception)s"
+)
+
+
 #: Set by init_child() to the single temporary directory that will exist for
 #: the duration of the process.
 temp_dir = None
@@ -204,7 +217,14 @@ def reset_temp_dir(econtext):
     """
     global temp_dir
     # https://github.com/dw/mitogen/issues/239
-    temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_')
+
+    try:
+        temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_')
+    except IOError:
+        raise IOError(MAKE_TEMP_FAILED_MSG % {
+            'namelist': '\n    '.join(tempfile._candidate_tempdir_list()),
+            'exception': traceback.format_exc()
+        })
 
     # This must be reinstalled in forked children too, since the Broker
     # instance from the parent process does not carry over to the new child.
@@ -252,6 +272,7 @@ def init_child(econtext, log_level):
     return {
         'fork_context': _fork_parent,
         'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
+        'temp_dir': temp_dir,
     }
 
 
@@ -414,27 +435,6 @@ def run_module_async(kwargs, job_id, timeout_secs, econtext):
     """
     arunner = AsyncRunner(job_id, timeout_secs, econtext, kwargs)
     arunner.run()
-
-
-def make_temp_directory(base_dir):
-    """
-    Handle creation of `base_dir` if it is absent, in addition to a unique
-    temporary directory within `base_dir`. This is the temporary directory that
-    becomes 'remote_tmp', not the one used by Ansiballz. It always uses the
-    system temporary directory.
-
-    :returns:
-        Newly created temporary directory.
-    """
-    # issue #301: remote_tmp may contain $vars.
-    base_dir = os.path.expandvars(base_dir)
-
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir, mode=int('0700', 8))
-    return tempfile.mkdtemp(
-        dir=base_dir,
-        prefix='ansible-mitogen-tmp-',
-    )
 
 
 def get_user_shell():

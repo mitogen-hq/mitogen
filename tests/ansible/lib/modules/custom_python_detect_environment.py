@@ -29,6 +29,7 @@ def main():
         mitogen_loaded='mitogen.core' in sys.modules,
         hostname=socket.gethostname(),
         username=pwd.getpwuid(os.getuid()).pw_name,
+        module_tmpdir=getattr(module, 'tmpdir', None),
     )
 
 if __name__ == '__main__':
