@@ -47,9 +47,8 @@ Mitogen for Ansible
 * `#321 <https://github.com/dw/mitogen/issues/321>`_: temporary file handling
   has been simplified and additional network roundtrips have been removed,
   undoing earlier damage caused by compatibility bug fixes. A single directory
-  is created once at startup for each persistent interpreter, and the
-  ``remote_tmp`` setting is always ignored. See :ref:`ansible_tempfiles` for a
-  complete description.
+  is created once at startup for each persistent interpreter. See
+  :ref:`ansible_tempfiles` for a complete description.
 
 * `#324 <https://github.com/dw/mitogen/issues/324>`_: plays with a custom
   ``module_utils`` would fail due to fallout from the Python 3 port and related

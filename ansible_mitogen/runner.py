@@ -66,6 +66,9 @@ except ImportError:
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+ansible.module_utils.basic.get_module_path = lambda: (
+    ansible_mitogen.target.temp_dir
+)
 
 # For tasks that modify /etc/resolv.conf, non-Debian derivative glibcs cache
 # resolv.conf at startup and never implicitly reload it. Cope with that via an

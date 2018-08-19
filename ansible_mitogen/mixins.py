@@ -315,7 +315,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # module_common and ensures no second temporary directory or atexit
         # handler is installed.
         self._connection._connect()
-        if not module_args.get('_ansible_tmpdir', object()):
+
+        if ansible.__version__ > '2.5':
             module_args['_ansible_tmpdir'] = self._connection.get_temp_dir()
 
         return ansible_mitogen.planner.invoke(

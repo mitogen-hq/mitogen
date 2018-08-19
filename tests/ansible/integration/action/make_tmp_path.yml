@@ -11,6 +11,9 @@
   hosts: test-targets
   any_errors_fatal: true
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     #
     # non-root
     #
@@ -109,7 +112,16 @@
       register: out
 
     # v2.6 related: https://github.com/ansible/ansible/pull/39833
-    - name: "Verify modules get the same tmpdir as the action plugin"
+    - name: "Verify modules get the same tmpdir as the action plugin (<2.5)"
+      when: ansible_version.full < '2.5'
       assert:
         that:
+        - out.module_path == tmp_path.result
+        - out.module_tmpdir == None
+
+    - name: "Verify modules get the same tmpdir as the action plugin (>2.5)"
+      when: ansible_version.full > '2.5'
+      assert:
+        that:
+        - out.module_path == tmp_path.result
         - out.module_tmpdir == tmp_path.result
