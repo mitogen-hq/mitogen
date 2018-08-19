@@ -412,7 +412,7 @@ operating mode.
 In the best case when pipelining is enabled and no temporary uploads are
 required, for each task Ansible will create one directory below a
 system-supplied temporary directory returned by :func:`tempfile.mkdtemp`, owned
-by the target user account a new-style module intends to execute in.
+by the target account a new-style module will execute in.
 
 In other cases depending on the task type, whether become is active, whether
 the target become user is privileged, whether the associated action plugin
@@ -449,8 +449,8 @@ however only one directory exists for the lifetime of each interpreter, its
 location is consistent for each target account, and it is always privately
 owned by that account.
 
-The paths below are tried until one is found that is writeable and appears live
-on a filesystem with ``noexec`` disabled:
+The paths below are tried until one is found that is writeable and lives on a
+filesystem with ``noexec`` disabled:
 
 1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
    ``ansible.cfg``
