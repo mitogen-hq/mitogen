@@ -15,18 +15,6 @@ Release Notes
     </style>
 
 
-.. comment
-
-    v0.2.3 (2018-07-??)
-    -------------------
-
-    * `#315 <https://github.com/dw/mitogen/pull/315>`_: Mitogen for Ansible is
-      supported under Ansible 2.6. Contributed by `Dan Quackenbush
-      <https://github.com/danquack>`_.
-
-    * Compatible with development versions of Ansible post https://github.com/ansible/ansible/pull/41749
-
-
 v0.2.3 (2018-08-??)
 -------------------
 
@@ -43,6 +31,9 @@ Mitogen for Ansible
   installed version could conflict with a newer version bundled with an
   extension that had been installed using the documented steps. Now the bundled
   library always overrides over any system-installed copy.
+
+* `#315 <https://github.com/dw/mitogen/pull/315>`_: Mitogen for Ansible is
+  supported under Ansible 2.6.
 
 * `#321 <https://github.com/dw/mitogen/issues/321>`_,
   `#336 <https://github.com/dw/mitogen/issues/336>`_: temporary file handling
