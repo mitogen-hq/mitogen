@@ -443,23 +443,30 @@ In summary, for each task Ansible may create one or more of:
 * ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
 * ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
 
-The extension must create a temporary directory to maintain compatibility with
-Ansible, since many modules introspect :data:`sys.argv` in order to find a
-directory where they may write temporary files, however for simplicity only
-one such directory exists for the lifetime of each interpreter, stored in a
-system-supplied temporary directory, and always privately owned by the target
-user account.
+A directory must be created in order to maintain compatibility with Ansible,
+as many modules introspect :data:`sys.argv` in order to find a directory where
+they may write files, however for only one such directory exists for the
+lifetime of each interpreter, its location is consistent for each target
+account, and it is always privately owned by that account.
 
-The ``remote_tmp`` path is unused, since Ansible does not make exclusive use of
-it, existing semantics are untenable, environments exist with read-only home
-directories where the default ``remote_tmp`` path (``~/.ansible/tmp``) cannot
-be used, and new-style modules always depended on the existence of a
-system-supplied directory anyway, so no requirement is introduced by simply
-ignoring ``remote_tmp``.
+The following candidate paths are tried until one is found that is writeable
+and appears live on a filesystem that does not have ``noexec`` enabled:
+
+1. The ``$variable`` and tilde-expanded ``remote_tmp`` setting from
+   ``ansible.cfg``.
+2. The ``$variable`` and tilde-expanded ``system_tmpdirs`` setting from
+   ``ansible.cfg``.
+3. The ``TMPDIR`` environment variable.
+4. The ``TEMP`` environment variable.
+5. The ``TMP`` environment variable.
+6. ``/tmp``
+7. ``/var/tmp``
+8. ``/usr/tmp``
+9. The current working directory.
 
 As the directory is created once at startup, and its content is managed by code
 running remotely, no additional network roundtrips are required to create and
-destroy it for each task requiring temporary file storage.
+destroy it for each task requiring temporary storage.
 
 
 .. _ansible_process_env:

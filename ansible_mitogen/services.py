@@ -46,8 +46,12 @@ import os.path
 import sys
 import threading
 
+import ansible.constants
+
 import mitogen
 import mitogen.service
+import mitogen.utils
+import ansible_mitogen.loaders
 import ansible_mitogen.module_finder
 import ansible_mitogen.target
 
@@ -67,6 +71,19 @@ else:
         "def reraise(tp, value, tb=None):\n"
         "    raise tp, value, tb\n"
      )
+
+
+def _get_candidate_temp_dirs():
+    # Force load of plugin to ensure ConfigManager has definitions loaded.
+    ansible_mitogen.loaders.shell_loader.get('sh')
+    options = ansible.constants.config.get_plugin_options('shell', 'sh')
+
+    # Pre 2.5 this came from ansible.constants.
+    remote_tmp = (options.get('remote_tmp') or
+                  ansible.constants.DEFAULT_REMOTE_TMP)
+    dirs = list(options.get('system_tmpdirs', ('/var/tmp', '/tmp')))
+    dirs.insert(0, remote_tmp)
+    return mitogen.utils.cast(dirs)
 
 
 class Error(Exception):
@@ -252,6 +269,18 @@ class ContextService(mitogen.service.Service):
         for fullname in self.ALWAYS_PRELOAD:
             self.router.responder.forward_module(context, fullname)
 
+    _candidate_temp_dirs = None
+
+    def _get_candidate_temp_dirs(self):
+        """
+        Return a list of locations to try to create the single temporary
+        directory used by the run. This simply caches the (expensive) plugin
+        load of :func:`_get_candidate_temp_dirs`.
+        """
+        if self._candidate_temp_dirs is None:
+            self._candidate_temp_dirs = _get_candidate_temp_dirs()
+        return self._candidate_temp_dirs
+
     def _connect(self, key, spec, via=None):
         """
         Actual connect implementation. Arranges for the Mitogen connection to
@@ -298,8 +327,11 @@ class ContextService(mitogen.service.Service):
                                 lambda: self._on_stream_disconnect(stream))
 
         self._send_module_forwards(context)
-        init_child_result = context.call(ansible_mitogen.target.init_child,
-                                         log_level=LOG.getEffectiveLevel())
+        init_child_result = context.call(
+            ansible_mitogen.target.init_child,
+            log_level=LOG.getEffectiveLevel(),
+            candidate_temp_dirs=self._get_candidate_temp_dirs(),
+        )
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug
