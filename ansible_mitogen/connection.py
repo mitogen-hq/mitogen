@@ -419,6 +419,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Only sudo, su, and doas are supported for now.
     become_methods = ['sudo', 'su', 'doas']
 
+    #
+    # Note: any of the attributes below may be :data:`None` if the connection
+    # plugin was constructed directly by a non-cooperative action, such as in
+    # the case of the synchronize module.
+    #
+
     #: Set to 'ansible_python_interpreter' by on_action_run().
     python_path = None
 
@@ -448,6 +454,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     #: Set to 'hostvars' by on_action_run()
     host_vars = None
+
+    #: Set by on_action_run()
+    delegate_to_hostname = None
 
     #: Set to '_loader.get_basedir()' by on_action_run(). Used by mitogen_local
     #: to change the working directory to that of the current playbook,
