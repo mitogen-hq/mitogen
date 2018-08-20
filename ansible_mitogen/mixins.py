@@ -216,6 +216,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._connection.put_data(remote_path, data)
         return remote_path
 
+    #: Actions listed here cause :func:`_fixup_perms2` to avoid a needless
+    #: roundtrip, as they modify file modes separately afterwards. This is due
+    #: to the method prototype having a default of `execute=True`.
+    FIXUP_PERMS_RED_HERRING = set(['copy'])
+
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
         """
         Mitogen always executes ActionBase helper methods in the context of the
@@ -224,7 +229,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_fixup_perms2(%r, remote_user=%r, execute=%r)',
                   remote_paths, remote_user, execute)
-        if execute:
+        if execute and self._load_name not in self.FIXUP_PERMS_RED_HERRING:
             return self._remote_chmod(remote_paths, mode='u+x')
         return self.COMMAND_RESULT.copy()
 

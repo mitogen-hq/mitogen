@@ -312,10 +312,10 @@ where readers may observe inconsistent file contents.
 Performance
 ^^^^^^^^^^^
 
-One roundtrip initiates a transfer larger than 32KiB, while smaller transfers
-are embedded in the initiating RPC. For tools operating via SSH multiplexing, 4
-roundtrips are required to configure the IO channel, in addition to the time to
-start the local and remote processes.
+One roundtrip initiates a transfer larger than 124 KiB, while smaller transfers
+are embedded in a 0-roundtrip remote call. For tools operating via SSH
+multiplexing, 4 roundtrips are required to configure the IO channel, in
+addition to the time to start the local and remote processes.
 
 An invocation of ``scp`` with an empty ``.profile`` over a 30 ms link takes
 ~140 ms, wasting 110 ms per invocation, rising to ~2,000 ms over a 400 ms

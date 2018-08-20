@@ -692,15 +692,29 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param bool use_login_context:
             If present and :data:`True`, send the call to the login account
             context rather than the optional become user context.
+
+        :param bool no_reply:
+            If present and :data:`True`, send the call with no ``reply_to``
+            header, causing the context to execute it entirely asynchronously,
+            and to log any exception thrown. This allows avoiding a roundtrip
+            in places where the outcome of a call is highly likely to succeed,
+            and subsequent actions will fail regardless with a meaningful
+            exception if the no_reply call failed.
+
         :returns:
-            mitogen.core.Receiver that receives the function call result.
+            :class:`mitogen.core.Receiver` that receives the function call result.
         """
         self._connect()
+
         if kwargs.pop('use_login_context', None):
             call_context = self.login_context
         else:
             call_context = self.context
-        return call_context.call_async(func, *args, **kwargs)
+
+        if kwargs.pop('no_reply', None):
+            return call_context.call_no_reply(func, *args, **kwargs)
+        else:
+            return call_context.call_async(func, *args, **kwargs)
 
     def call(self, func, *args, **kwargs):
         """
@@ -713,7 +727,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         t0 = time.time()
         try:
-            return self.call_async(func, *args, **kwargs).get().unpickle()
+            recv = self.call_async(func, *args, **kwargs)
+            if recv is None:  # no_reply=True
+                return None
+            return recv.get().unpickle()
         finally:
             LOG.debug('Call took %d ms: %r', 1000 * (time.time() - t0),
                       mitogen.parent.CallSpec(func, args, kwargs))
@@ -786,19 +803,33 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     def put_data(self, out_path, data, mode=None, utimes=None):
         """
-        Implement put_file() by caling the corresponding
-        ansible_mitogen.target function in the target.
+        Implement put_file() by caling the corresponding ansible_mitogen.target
+        function in the target, transferring small files inline.
 
         :param str out_path:
             Remote filesystem path to write.
         :param byte data:
             File contents to put.
         """
+        # no_reply=True here avoids a roundrip that 99% of the time will report
+        # a successful response. If the file transfer fails, the target context
+        # will dump an exception into the logging framework, which will appear
+        # on console, and the missing file will cause the subsequent task step
+        # to fail regardless. This is safe since CALL_FUNCTION is presently
+        # single-threaded for each target, so subsequent steps cannot execute
+        # until the transfer RPC has completed.
         self.call(ansible_mitogen.target.write_path,
                   mitogen.utils.cast(out_path),
                   mitogen.core.Blob(data),
                   mode=mode,
-                  utimes=utimes)
+                  utimes=utimes,
+                  no_reply=True)
+
+    #: Maximum size of a small file before switching to streaming file
+    #: transfer. This should really be the same as
+    #: mitogen.services.FileService.IO_SIZE, however the message format has
+    #: slightly more overhead, so just randomly subtract 4KiB.
+    SMALL_FILE_LIMIT = mitogen.core.CHUNK_SIZE - 4096
 
     def put_file(self, in_path, out_path):
         """
@@ -817,14 +848,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         # If the file is sufficiently small, just ship it in the argument list
         # rather than introducing an extra RTT for the child to request it from
         # FileService.
-        if st.st_size <= 32768:
+        if st.st_size <= self.SMALL_FILE_LIMIT:
             fp = open(in_path, 'rb')
             try:
-                s = fp.read(32769)
+                s = fp.read(self.SMALL_FILE_LIMIT + 1)
             finally:
                 fp.close()
 
-            # Ensure file was not growing during call.
+            # Ensure did not grow during read.
             if len(s) == st.st_size:
                 return self.put_data(out_path, s, mode=st.st_mode,
                                      utimes=(st.st_atime, st.st_mtime))
