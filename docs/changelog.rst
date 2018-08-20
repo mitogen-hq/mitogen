@@ -21,16 +21,8 @@ v0.2.3 (2018-08-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
-* `#251 <https://github.com/dw/mitogen/issues/251>`_,
-  `#340 <https://github.com/dw/mitogen/issues/340>`_: Connection Delegation
-  could establish connections to the wrong target when ``delegate_to:`` is
-  present.
-
-* `#291 <https://github.com/dw/mitogen/issues/291>`_: when Mitogen had
-  previously been installed using ``pip`` or ``setuptools``, the globally
-  installed version could conflict with a newer version bundled with an
-  extension that had been installed using the documented steps. Now the bundled
-  library always overrides over any system-installed copy.
+Enhancements
+^^^^^^^^^^^^
 
 * `#315 <https://github.com/dw/mitogen/pull/315>`_: Ansible 2.6 is now
   supported.
@@ -49,6 +41,37 @@ Mitogen for Ansible
   `unarchive <http://docs.ansible.com/ansible/latest/modules/unarchive_module.html>`_,
   `uri <http://docs.ansible.com/ansible/latest/modules/uri_module.html>`_). See
   :ref:`ansible_tempfiles` for a complete description.
+
+* `084c0ac0 <https://github.com/dw/mitogen/commit/084c0ac0>`_: avoid a
+  roundtrip in
+  `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_ and
+  `template <http://docs.ansible.com/ansible/latest/modules/template_module.html>`_
+  due to an unfortunate default.
+
+* `7458dfae <https://github.com/dw/mitogen/commit/7458dfae>`_: avoid a
+  roundtrip when transferring files smaller than 124KiB. Copy and template
+  actions are now 2-RTT, reducing runtime for a 20-iteration template loop over
+  a 250 ms link from 30 seconds to 10 seconds compared to v0.2.2, down from 120
+  seconds compared to vanilla.
+
+* `d62e6e2a <https://github.com/dw/mitogen/commit/d62e6e2a>`_: many-target
+  runs executed the dependency scanner redundantly due to missing
+  synchronization, wasting significant runtime in the connection multiplexer.
+  In one case work was reduced by 95%, which may manifest as faster runs.
+
+Fixes
+^^^^^
+
+* `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#340 <https://github.com/dw/mitogen/issues/340>`_: Connection Delegation
+  could establish connections to the wrong target when ``delegate_to:`` is
+  present.
+
+* `#291 <https://github.com/dw/mitogen/issues/291>`_: when Mitogen had
+  previously been installed using ``pip`` or ``setuptools``, the globally
+  installed version could conflict with a newer version bundled with an
+  extension that had been installed using the documented steps. Now the bundled
+  library always overrides over any system-installed copy.
 
 * `#324 <https://github.com/dw/mitogen/issues/324>`_: plays with a
   `custom module_utils <https://docs.ansible.com/ansible/latest/reference_appendices/config.html#default-module-utils-path>`_
@@ -77,23 +100,6 @@ Mitogen for Ansible
 * `#345 <https://github.com/dw/mitogen/issues/345>`_: the ``IdentitiesOnly
   yes`` option is no longer supplied to OpenSSH by default, better matching
   Ansible's behaviour.
-
-* `084c0ac0 <https://github.com/dw/mitogen/commit/084c0ac0>`_: avoid a
-  roundtrip in
-  `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_ and
-  `template <http://docs.ansible.com/ansible/latest/modules/template_module.html>`_
-  due to an unfortunate default.
-
-* `7458dfae <https://github.com/dw/mitogen/commit/7458dfae>`_: avoid a
-  roundtrip when transferring files smaller than 124KiB. Copy and template
-  actions are now 2-RTT, reducing runtime for a 20-iteration template loop over
-  a 250 ms link from 30 seconds to 10 seconds compared to v0.2.2, down from 120
-  seconds compared to vanilla.
-
-* `d62e6e2a <https://github.com/dw/mitogen/commit/d62e6e2a>`_: many-target
-  runs executed the dependency scanner redundantly due to missing
-  synchronization, wasting significant runtime in the connection multiplexer.
-  In one case work was reduced by 95%, which may manifest as faster runs.
 
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
