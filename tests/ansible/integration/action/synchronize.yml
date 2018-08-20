@@ -1,0 +1,28 @@
+# Verify basic operation of the synchronize module.
+
+- name: integration/action/synchronize.yml
+  hosts: test-targets
+  any_errors_fatal: true
+  tasks:
+    - file:
+        path: /tmp/sync-test
+        state: directory
+      connection: local
+
+    - copy:
+        dest: /tmp/sync-test/item
+        content: "item!"
+      connection: local
+
+    - synchronize:
+        dest: /tmp/sync-test
+        src: /tmp/sync-test
+
+    - slurp:
+        src: /tmp/sync-test/item
+      register: out
+
+    - set_fact: outout="{{out.content|b64decode}}"
+
+    - assert:
+        that: outout == "item!"
