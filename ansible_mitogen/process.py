@@ -133,7 +133,7 @@ class MuxProcess(object):
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
 
-        if os.environ.get('MITOGEN_PROFILING', '1'):
+        if os.environ.get('MITOGEN_PROFILING'):
             mitogen.core.enable_profiling()
 
         cls.original_env = dict(os.environ)
