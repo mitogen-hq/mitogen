@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+import os
 import io
 
 from ansible.module_utils import six
@@ -7,6 +8,11 @@ try:
     from ansible.plugins import callback_loader
 except ImportError:
     from ansible.plugins.loader import callback_loader
+
+try:
+    pprint = __import__(os.environ['NICE_STDOUT_PPRINT'])
+except KeyError:
+    pprint = None
 
 
 def printi(tio, obj, key=None, indent=0):
@@ -50,7 +56,10 @@ class CallbackModule(DefaultModule):
     def _dump_results(self, result, *args, **kwargs):
         try:
             tio = io.StringIO()
-            printi(tio, result)
+            if pprint:
+                pprint.pprint(result, stream=tio)
+            else:
+                printi(tio, result)
             return tio.getvalue() #.encode('ascii', 'replace')
         except:
             import traceback
