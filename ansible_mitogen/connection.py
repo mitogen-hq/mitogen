@@ -602,7 +602,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             transport=self._play_context.connection,
             inventory_name=self.delegate_to_hostname,
             connection=self,
-            hostvars=self.host_vars[self._play_context.delegate_to],
+            hostvars=self.host_vars[self.delegate_to_hostname],
             become_user=(self._play_context.become_user
                          if self._play_context.become
                          else None),

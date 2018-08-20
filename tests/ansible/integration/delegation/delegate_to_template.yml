@@ -22,6 +22,30 @@
                 'kwargs': {
                     'check_host_keys': 'ignore',
                     'connect_timeout': 10,
+                    'hostname': 'alias-host',
+                    'identities_only': False,
+                    'identity_file': None,
+                    'password': None,
+                    'port': None,
+                    'python_path': None,
+                    'ssh_args': [
+                        '-o',
+                        'ForwardAgent=yes',
+                        '-o',
+                        'ControlMaster=auto',
+                        '-o',
+                        'ControlPersist=60s',
+                    ],
+                    'ssh_debug_level': None,
+                    'ssh_path': 'ssh',
+                    'username': 'alias-user',
+                },
+                'method': 'ssh',
+            },
+            {
+                'kwargs': {
+                    'check_host_keys': 'ignore',
+                    'connect_timeout': 10,
                     'hostname': 'cd-normal-alias',
                     'identities_only': False,
                     'identity_file': None,
@@ -41,5 +65,5 @@
                     'username': None,
                 },
                 'method': 'ssh',
-            },
+            }
           ]
