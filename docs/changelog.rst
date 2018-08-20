@@ -32,8 +32,8 @@ Mitogen for Ansible
   extension that had been installed using the documented steps. Now the bundled
   library always overrides over any system-installed copy.
 
-* `#315 <https://github.com/dw/mitogen/pull/315>`_: Mitogen for Ansible is
-  supported under Ansible 2.6.
+* `#315 <https://github.com/dw/mitogen/pull/315>`_: Ansible 2.6 is now
+  supported.
 
 * `#321 <https://github.com/dw/mitogen/issues/321>`_,
   `#336 <https://github.com/dw/mitogen/issues/336>`_: temporary file handling
@@ -50,9 +50,10 @@ Mitogen for Ansible
   `uri <http://docs.ansible.com/ansible/latest/modules/uri_module.html>`_). See
   :ref:`ansible_tempfiles` for a complete description.
 
-* `#324 <https://github.com/dw/mitogen/issues/324>`_: plays with a custom
-  ``module_utils`` would fail due to fallout from the Python 3 port and related
-  tests being disabled.
+* `#324 <https://github.com/dw/mitogen/issues/324>`_: plays with a
+  `custom module_utils <https://docs.ansible.com/ansible/latest/reference_appendices/config.html#default-module-utils-path>`_
+  would fail due to fallout from the Python 3 port and related tests being
+  disabled.
 
 * `#331 <https://github.com/dw/mitogen/issues/331>`_: fixed known issue: the
   connection multiplexer subprocess always exits before the main Ansible
@@ -60,7 +61,7 @@ Mitogen for Ansible
   when ``-vvv`` is enabled.
 
 * `#332 <https://github.com/dw/mitogen/issues/332>`_: support a new
-  :data:`sys.excepthook`-based module exit mechanism added in Ansible 2.6.
+  :func:`sys.excepthook`-based module exit mechanism added in Ansible 2.6.
 
 * `#338 <https://github.com/dw/mitogen/issues/338>`_: compatibility: changes to
   ``/etc/environment`` and ``~/.pam_environment`` made by a task are reflected
@@ -71,22 +72,28 @@ Mitogen for Ansible
   option is supported.
 
 * `#344 <https://github.com/dw/mitogen/issues/344>`_: connections no longer
-  fail when the parent machine's logged in username contains slashes.
+  fail when the controller's login username contains slashes.
 
 * `#345 <https://github.com/dw/mitogen/issues/345>`_: the ``IdentitiesOnly
-  yes`` option is no longer supplied to OpenSSH by default, more closely
-  mimicking Ansible's default behaviour.
+  yes`` option is no longer supplied to OpenSSH by default, better matching
+  Ansible's behaviour.
 
 * `084c0ac0 <https://github.com/dw/mitogen/commit/084c0ac0>`_: avoid a
-  needless roundtrip for each invocation of the
+  roundtrip in
   `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_ and
   `template <http://docs.ansible.com/ansible/latest/modules/template_module.html>`_
-  actions, due to an unfortunate default parameter.
+  due to an unfortunate default.
 
-* Runs with many targets executed the module dependency scanner redundantly
-  due to missing synchronization, causing significant wasted computation in the
-  connection multiplexer subprocess. For one real-world playbook the scanner
-  runtime was reduced by 95%, which may manifest as shorter runs.
+* `7458dfae <https://github.com/dw/mitogen/commit/7458dfae>`_: avoid a
+  roundtrip when transferring files smaller than 124KiB. Copy and template
+  actions are now 2-RTT, reducing runtime for a 20-iteration template loop over
+  a 250 ms link from 30 seconds to 10 seconds compared to v0.2.2, down from 120
+  seconds compared to vanilla.
+
+* `d62e6e2a <https://github.com/dw/mitogen/commit/d62e6e2a>`_: many-target
+  runs executed the dependency scanner redundantly due to missing
+  synchronization, wasting significant runtime in the connection multiplexer.
+  In one case work was reduced by 95%, which may manifest as faster runs.
 
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
