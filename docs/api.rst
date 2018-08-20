@@ -528,11 +528,11 @@ Router Class
                 # Use the SSH connection to create a sudo connection.
                 remote_root = router.sudo(username='root', via=remote_machine)
 
-    .. method:: dos (username=None, password=None, su_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
+    .. method:: doas (username=None, password=None, doas_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
 
-        Construct a context on the local machine over a ``su`` invocation. The
-        ``su`` process is started in a newly allocated pseudo-terminal, and
-        supports typing interactive passwords.
+        Construct a context on the local machine over a ``doas`` invocation.
+        The ``doas`` process is started in a newly allocated pseudo-terminal,
+        and supports typing interactive passwords.
 
         Accepts all parameters accepted by :py:meth:`local`, in addition to:
 
@@ -540,16 +540,16 @@ Router Class
             Username to use, defaults to ``root``.
         :param str password:
             The account password to use if requested.
-        :param str su_path:
-            Filename or complete path to the ``su`` binary. ``PATH`` will be
-            searched if given as a filename. Defaults to ``su``.
+        :param str doas_path:
+            Filename or complete path to the ``doas`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``doas``.
         :param bytes password_prompt:
             A string that indicates ``doas`` is requesting a password. Defaults
             to ``Password:``.
         :param list incorrect_prompts:
             List of bytestrings indicating the password is incorrect. Defaults
             to `(b"doas: authentication failed")`.
-        :raises mitogen.su.PasswordError:
+        :raises mitogen.doas.PasswordError:
             A password was requested but none was provided, the supplied
             password was incorrect, or the target account did not exist.
 
