@@ -103,21 +103,21 @@ Fixes
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
 
-* Ansible since >=2.7 began importing ``__main__`` from
-  ``ansible.module_utils.basic``, causing an error during execution, due to the
-  controller being configured to refuse network imports outside the
+* Ansible since >=2.7 began importing :mod:`__main__` from
+  :mod:`ansible.module_utils.basic`, causing an error during execution, due to
+  the controller being configured to refuse network imports outside the
   ``ansible.*`` namespace. Update the target implementation to construct a stub
-  ``__main__`` module to satisfy the otherwise seemingly vestigial import.
+  :mod:`__main__` module to satisfy the otherwise seemingly vestigial import.
 
 
 Core Library
 ~~~~~~~~~~~~
 
 * `#313 <https://github.com/dw/mitogen/issues/313>`_:
-  :meth:`mitogen.parent.Context.call` was documented as capable of accepting
-  static methods. While possible on Python 2.x the result is very ugly, and in
-  every case it should be trivially possible to replace with a class method.
-  The API docs were updated to remove mention of static methods.
+  :meth:`mitogen.parent.Context.call` was accidentally documented as capable of
+  accepting static methods. While possible on Python 2.x the result is ugly,
+  and in every case it should be trivial to replace with a classmethod. The
+  documentation was fixed.
 
 * `#339 <https://github.com/dw/mitogen/issues/339>`_: the LXD connection method
   was erroneously executing LXC Classic commands.
@@ -125,8 +125,13 @@ Core Library
 * `#345 <https://github.com/dw/mitogen/issues/345>`_: the SSH connection method
   allows optionally disabling ``IdentitiesOnly yes``.
 
-* Add a :func:`mitogen.fork.on_fork` function to allow non-Mitogen managed
-  process forks to clean up Mitogen resources in the forked chlid.
+* `af2ded66 <https://github.com/dw/mitogen/commit/af2ded66>`_: add
+  :func:`mitogen.fork.on_fork` to allow non-Mitogen managed process forks to
+  clean up Mitogen resources in the child.
+
+* `d6784242 <https://github.com/dw/mitogen/commit/d6784242>`_: the setns method
+  always resets ``HOME``, ``SHELL``, ``LOGNAME`` and ``USER`` environment
+  variables to an account in the target container, defaulting to ``root``.
 
 
 Thanks!
