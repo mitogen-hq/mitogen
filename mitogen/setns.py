@@ -118,7 +118,7 @@ class Stream(mitogen.parent.Stream):
     child_is_immediate_subprocess = False
 
     container = None
-    username = None
+    username = 'root'
     kind = None
     python_path = 'python'
     docker_path = 'docker'
@@ -184,27 +184,26 @@ class Stream(mitogen.parent.Stream):
             except AttributeError:
                 pass
 
-        if self.username:
-            try:
-                os.setgroups([grent.gr_gid
-                              for grent in grp.getgrall()
-                              if self.username in grent.gr_mem])
-                pwent = pwd.getpwnam(self.username)
-                os.setreuid(pwent.pw_uid, pwent.pw_uid)
-                # shadow-4.4/libmisc/setupenv.c. Not done: MAIL, PATH
-                os.environ.update({
-                    'HOME': pwent.pw_dir,
-                    'SHELL': pwent.pw_shell or '/bin/sh',
-                    'LOGNAME': self.username,
-                    'USER': self.username,
-                })
-                if ((os.path.exists(pwent.pw_dir) and
-                     os.access(pwent.pw_dir, os.X_OK))):
-                    os.chdir(pwent.pw_dir)
-            except Exception:
-                e = sys.exc_info()[1]
-                raise Error(self.username_msg, self.username, self.container,
-                            type(e).__name__, e)
+        try:
+            os.setgroups([grent.gr_gid
+                          for grent in grp.getgrall()
+                          if self.username in grent.gr_mem])
+            pwent = pwd.getpwnam(self.username)
+            os.setreuid(pwent.pw_uid, pwent.pw_uid)
+            # shadow-4.4/libmisc/setupenv.c. Not done: MAIL, PATH
+            os.environ.update({
+                'HOME': pwent.pw_dir,
+                'SHELL': pwent.pw_shell or '/bin/sh',
+                'LOGNAME': self.username,
+                'USER': self.username,
+            })
+            if ((os.path.exists(pwent.pw_dir) and
+                 os.access(pwent.pw_dir, os.X_OK))):
+                os.chdir(pwent.pw_dir)
+        except Exception:
+            e = sys.exc_info()[1]
+            raise Error(self.username_msg, self.username, self.container,
+                        type(e).__name__, e)
 
     username_msg = 'while transitioning to user %r in container %r: %s: %s'
 

@@ -616,7 +616,7 @@ Router Class
             Filename or complete path to the ``lxc`` binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``lxc``.
 
-    .. method:: setns (container, kind, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
+    .. method:: setns (container, kind, username=None, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
         Construct a context in the style of :meth:`local`, but change the
         active Linux process namespaces via calls to `setns(1)` before
@@ -633,6 +633,9 @@ Router Class
             Container to connect to.
         :param str kind:
             One of ``docker``, ``lxc``, ``lxd`` or ``machinectl``.
+        :param str username:
+            Username within the container to :func:`setuid` to. Defaults to
+            ``root``.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
