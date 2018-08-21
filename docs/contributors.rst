@@ -10,6 +10,7 @@ sponsorship and outstanding future-thinking of its early adopters.
     <!--
 
 .. image:: images/sponsors/cgi.svg
+.. image:: images/sponsors/grx.svg
 .. image:: images/sponsors/securelink.svg
 .. image:: images/sponsors/seantis.svg
 .. raw:: html
@@ -49,7 +50,19 @@ sponsorship and outstanding future-thinking of its early adopters.
     <table border="0" width="100%">
     <tr>
         <td width="160" style="padding: 12px; text-align: center;">
-            <a href="https://www.seantis.ch"
+            <a href="https://www.goodrx.com/"
+                ><img src="_images/grx.svg" width="160"></a>
+        </td>
+        <td style="padding: 12px;" valign=middle>
+            GoodRx is America’s #1 prescription price transparency platform.
+            Join GoodRx and help consumers save up to 80% on their
+            medications. Apply today at <a
+            href="https://www.goodrx.com/jobs">www.goodrx.com/jobs</a>
+        </td>
+    </tr>
+    <tr>
+        <td width="160" style="padding: 12px; text-align: center;">
+            <a href="https://www.seantis.ch/"
                 ><img src="_images/seantis.svg" width="160"></a>
         </td>
         <td style="padding: 12px;" valign=middle>
