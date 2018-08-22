@@ -49,7 +49,7 @@
     #
 
     - file:
-        path: /tmp/weird-mode
+        path: /tmp/weird-mode.out
         state: absent
 
     - name: Create local test file.
@@ -61,10 +61,10 @@
 
     - copy:
         src: "/tmp/weird-mode"
-        dest: "/tmp/weird-mode"
+        dest: "/tmp/weird-mode.out"
 
     - stat:
-        path: "/tmp/weird-mode"
+        path: "/tmp/weird-mode.out"
       register: out
     - assert:
         that:
