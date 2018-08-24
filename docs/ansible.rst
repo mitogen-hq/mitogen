@@ -832,25 +832,43 @@ except connection delegation is supported.
 Debugging
 ---------
 
-Diagnostics and use of the :py:mod:`logging` package output on the target
-machine are usually discarded. With Mitogen, all of this is captured and
-returned to the controller, where it can be viewed as desired with ``-vvv``.
-Basic high level logs are produced with ``-vvv``, with logging of all IO on the
-controller with ``-vvvv`` or higher.
+Diagnostics and :py:mod:`logging` package output on targets are usually
+discarded. With Mitogen, these are captured and forwarded to the controller
+where they can be viewed with ``-vvv``. Basic high level logs are produced with
+``-vvv``, with logging of all IO on the controller with ``-vvvv`` or higher.
 
-Although use of standard IO and the logging package on the target is forwarded
-to the controller, it is not possible to receive IO activity logs, as the
-process of receiving those logs would would itself generate IO activity. To
-receive a complete trace of every process on every machine, file-based logging
-is necessary. File-based logging can be enabled by setting
-``MITOGEN_ROUTER_DEBUG=1`` in your environment.
+While uncaptured standard IO and the logging package on targets is forwarded,
+it is not possible to receive IO activity logs, as the forwarding process would
+would itself generate additional IO.
 
-When file-based logging is enabled, one file per context will be created on the
-local machine and every target machine, as ``/tmp/mitogen.<pid>.log``.
+To receive a complete trace of every process on every machine, file-based
+logging is necessary. File-based logging can be enabled by setting
+``MITOGEN_ROUTER_DEBUG=1`` in your environment. When file-based logging is
+enabled, one file per context will be created on the local machine and every
+target machine, as ``/tmp/mitogen.<pid>.log``.
 
-If you are experiencing a hang, ``MITOGEN_DUMP_THREAD_STACKS=1`` causes every
-process on every machine to dump every thread stack into the logging framework
-every 5 seconds.
+Diagnosing Hangs
+~~~~~~~~~~~~~~~~
+
+If you encounter a hang, the ``MITOGEN_DUMP_THREAD_STACKS=<secs>`` environment
+variable arranges for each process on each machine to dump each thread stack
+into the logging framework every `secs` seconds, which is visible when running
+with ``-vvv``.
+
+However, certain controller hangs may render ``MITOGEN_DUMP_THREAD_STACKS``
+ineffective, or occur too infrequently for interactive reproduction. In these
+cases `faulthandler <https://faulthandler.readthedocs.io/>`_ may be used:
+
+1. For Python 2, ``pip install faulthandler``. This is unnecessary on Python 3.
+2. Once the hang occurs, observe the process tree using ``pstree`` or ``ps
+   --forest``.
+3. The most likely process to be hung is the connection multiplexer, which can
+   easily be identified as the parent of all SSH client processes.
+4. Send ``kill -SEGV <pid>`` to the multiplexer PID, causing it to print all
+   thread stacks.
+5. `File a bug <https://github.com/dw/mitogen/issues/new/>`_ including a copy
+   of the stacks, along with a description of the last task executing prior to
+   the hang.
 
 
 Getting Help
