@@ -36,13 +36,29 @@ def func_accepts_returns_sender(sender):
     return sender
 
 
+class TargetClass:
+
+    offset = 100
+
+    @classmethod
+    def add_numbers_with_offset(cls, x, y):
+        return cls.offset + x + y
+
+
 class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
+
     def setUp(self):
         super(CallFunctionTest, self).setUp()
         self.local = self.router.fork()
 
     def test_succeeds(self):
         self.assertEqual(3, self.local.call(function_that_adds_numbers, 1, 2))
+
+    def test_succeeds_class_method(self):
+        self.assertEqual(
+            self.local.call(TargetClass.add_numbers_with_offset, 1, 2),
+            103,
+        )
 
     def test_crashes(self):
         exc = self.assertRaises(mitogen.core.CallError,
