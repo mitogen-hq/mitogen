@@ -47,7 +47,6 @@ import termios
 import textwrap
 import threading
 import time
-import types
 import zlib
 
 # Absolute imports for <2.5.
@@ -490,9 +489,8 @@ def upgrade_router(econtext):
 
 
 def make_call_msg(fn, *args, **kwargs):
-    if isinstance(fn, types.MethodType) and \
-       isinstance(fn.im_self, (type, types.ClassType)):
-        klass = mitogen.core.to_text(fn.im_self.__name__)
+    if inspect.ismethod(fn) and inspect.isclass(fn.__self__):
+        klass = mitogen.core.to_text(fn.__self__.__name__)
     else:
         klass = None
 
