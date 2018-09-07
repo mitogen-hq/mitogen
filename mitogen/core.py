@@ -1113,9 +1113,8 @@ class Stream(BasicStream):
         )
 
         if msg_len > self._router.max_message_size:
-            LOG.error('Maximum message size exceeded (got %d, max %d) %r',
-                      msg_len, self._router.max_message_size,
-                      self._input_buf[0])
+            LOG.error('Maximum message size exceeded (got %d, max %d)',
+                      msg_len, self._router.max_message_size)
             self.on_disconnect(broker)
             return False
 
