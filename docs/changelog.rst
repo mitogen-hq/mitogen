@@ -113,6 +113,10 @@ Fixes
 Core Library
 ~~~~~~~~~~~~
 
+* `#305 <https://github.com/dw/mitogen/issues/305>`_: fix a long-standing minor
+  race relating to the logging framework, where *no route for Message(...)(*
+  would appear fruequently during startup.
+
 * `#313 <https://github.com/dw/mitogen/issues/313>`_:
   :meth:`mitogen.parent.Context.call` was accidentally documented as capable of
   accepting static methods. While possible on Python 2.x the result is ugly,
@@ -339,10 +343,6 @@ Mitogen for Ansible
       - nginx
       - initech_app
       - y2k_fix
-
-* When running with ``-vvv``, log messages such as *mitogen: Router(Broker(0x7f5a48921590)): no route
-  for Message(..., 102, ...), my ID is ...* may be visible. These are due to a
-  minor race while initializing logging and can be ignored.
 
 .. * When running with ``-vvv``, log messages will be printed to the console
      *after* the Ansible run completes, as connection multiplexer shutdown only
