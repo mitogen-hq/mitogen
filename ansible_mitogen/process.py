@@ -87,6 +87,27 @@ def getenv_int(key, default=0):
         return default
 
 
+def setup_gil():
+    """
+    Set extremely long GIL release interval to let threads naturally progress
+    through CPU-heavy sequences without forcing the wake of another thread that
+    may contend trying to run the same CPU-heavy code. For the new-style work,
+    this drops runtime ~33% and involuntary context switches by >80%,
+    essentially making threads cooperatively scheduled.
+    """
+    try:
+        # Python 2.
+        sys.setcheckinterval(100000)
+    except AttributeError:
+        pass
+
+    try:
+        # Python 3.
+        sys.setswitchinterval(10)
+    except AttributeError:
+        pass
+
+
 class MuxProcess(object):
     """
     Implement a subprocess forked from the Ansible top-level, as a safe place
@@ -147,6 +168,7 @@ class MuxProcess(object):
         if faulthandler is not None:
             faulthandler.enable()
 
+        setup_gil()
         cls.unix_listener_path = mitogen.unix.make_socket_path()
         cls.worker_sock, cls.child_sock = socket.socketpair()
         atexit.register(lambda: clean_shutdown(cls.worker_sock))
