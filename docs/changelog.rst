@@ -140,6 +140,10 @@ Core Library
   always resets ``HOME``, ``SHELL``, ``LOGNAME`` and ``USER`` environment
   variables to an account in the target container, defaulting to ``root``.
 
+* `830966bf <https://github.com/dw/mitogen/commit/830966bf>`_: the UNIX
+  listener no longer crashes if the peer process disappears in the middle of
+  connection setup.
+
 
 Thanks!
 ~~~~~~~
