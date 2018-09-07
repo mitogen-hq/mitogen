@@ -78,22 +78,39 @@ class Listener(mitogen.core.BasicStream):
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
 
-    def on_receive(self, broker):
-        sock, _ = self._sock.accept()
+    def _accept_client(self, sock):
         sock.setblocking(True)
-        pid, = struct.unpack('>L', sock.recv(4))
+        try:
+            pid, = struct.unpack('>L', sock.recv(4))
+        except socket.error:
+            LOG.error('%r: failed to read remote identity: %s',
+                      self, sys.exc_info()[1])
+            return
 
         context_id = self._router.id_allocator.allocate()
         context = mitogen.parent.Context(self._router, context_id)
         stream = mitogen.core.Stream(self._router, context_id)
-        stream.accept(sock.fileno(), sock.fileno())
         stream.name = u'unix_client.%d' % (pid,)
         stream.auth_id = mitogen.context_id
         stream.is_privileged = True
+
+        try:
+            sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
+                                  os.getpid()))
+        except socket.error:
+            LOG.error('%r: failed to assign identity to PID %d: %s',
+                      self, pid, sys.exc_info()[1])
+            return
+
+        stream.accept(sock.fileno(), sock.fileno())
         self._router.register(context, stream)
-        sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
-                              os.getpid()))
-        sock.close()
+
+    def on_receive(self, broker):
+        sock, _ = self._sock.accept()
+        try:
+            self._accept_client(sock)
+        finally:
+            sock.close()
 
 
 def connect(path, broker=None):
