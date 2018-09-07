@@ -950,6 +950,16 @@ class LogHandler(logging.Handler):
         logging.Handler.__init__(self)
         self.context = context
         self.local = threading.local()
+        self._buffer = []
+
+    def uncork(self):
+        self._send = self.context.send
+        for msg in self._buffer:
+            self._send(msg)
+        self._buffer = None
+
+    def _send(self, msg):
+        self._buffer.append(msg)
 
     def emit(self, rec):
         if rec.name == 'mitogen.io' or \
@@ -963,7 +973,7 @@ class LogHandler(logging.Handler):
             if isinstance(encoded, UnicodeType):
                 # Logging package emits both :(
                 encoded = encoded.encode('utf-8')
-            self.context.send(Message(data=encoded, handle=FORWARD_LOG))
+            self._send(Message(data=encoded, handle=FORWARD_LOG))
         finally:
             self.local.in_emit = False
 
@@ -2053,9 +2063,10 @@ class ExternalContext(object):
             pass  # No first stage exists (e.g. fakessh)
 
     def _setup_logging(self):
+        self.log_handler = LogHandler(self.master)
         root = logging.getLogger()
         root.setLevel(self.config['log_level'])
-        root.handlers = [LogHandler(self.master)]
+        root.handlers = [self.log_handler]
         if self.config['debug']:
             enable_debug_logging()
 
@@ -2186,6 +2197,7 @@ class ExternalContext(object):
                     self._setup_stdio()
 
                 self.router.register(self.parent, self.stream)
+                self.log_handler.uncork()
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Connected to %s; my ID is %r, PID is %r',
