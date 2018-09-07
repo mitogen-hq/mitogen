@@ -78,6 +78,13 @@ try:
 except:
     SC_OPEN_MAX = 1024
 
+OPENPTY_MSG = (
+    "Failed to create a PTY: %s. It is likely the maximum number of PTYs has "
+    "been reached. Consider increasing the 'kern.tty.ptmx_max' sysctl on OS "
+    "X, the 'kernel.pty.max' sysctl on Linux, or modifying your configuration "
+    "to avoid PTY use."
+)
+
 
 def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
@@ -254,6 +261,22 @@ def _acquire_controlling_tty():
         fcntl.ioctl(2, termios.TIOCSCTTY)
 
 
+def openpty():
+    """
+    Call :func:`os.openpty`, raising a descriptive error if the call fails.
+
+    :raises mitogen.core.StreamError:
+        Creating a PTY failed.
+    :returns:
+        See :func`os.openpty`.
+    """
+    try:
+        return os.openpty()
+    except OSError:
+        e = sys.exc_info()[1]
+        raise mitogen.core.StreamError(OPENPTY_MSG, e)
+
+
 def tty_create_child(args):
     """
     Return a file descriptor connected to the master end of a pseudo-terminal,
@@ -268,7 +291,7 @@ def tty_create_child(args):
     :returns:
         `(pid, tty_fd, None)`
     """
-    master_fd, slave_fd = os.openpty()
+    master_fd, slave_fd = openpty()
     mitogen.core.set_block(slave_fd)
     disable_echo(master_fd)
     disable_echo(slave_fd)
@@ -300,7 +323,7 @@ def hybrid_tty_create_child(args):
     :returns:
         `(pid, socketpair_fd, tty_fd)`
     """
-    master_fd, slave_fd = os.openpty()
+    master_fd, slave_fd = openpty()
     parentfp, childfp = create_socketpair()
 
     mitogen.core.set_block(slave_fd)
