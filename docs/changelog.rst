@@ -119,6 +119,13 @@ Core Library
   and in every case it should be trivial to replace with a classmethod. The
   documentation was fixed.
 
+* `#337 <https://github.com/dw/mitogen/issues/337>`_: to avoid a scaling
+  limitation, SSH no longer allocates a PTY for every OpenSSH client. PTYs are
+  only allocated if a password is supplied, or when `host_key_checking=accept`.
+  This is since Linux has a default of 4096 PTYs (``kernel.pty.max``), while OS
+  X has a default of 127 and an absolute maximum of 999
+  (``kern.tty.ptmx_max``).
+
 * `#339 <https://github.com/dw/mitogen/issues/339>`_: the LXD connection method
   was erroneously executing LXC Classic commands.
 
