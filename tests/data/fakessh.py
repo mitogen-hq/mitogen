@@ -45,6 +45,13 @@ if os.getenv('FAKESSH_MODE') == 'strict':
     sys.exit(255)
 
 
+#
+# Set an env var if stderr was a TTY to make ssh_test tests easier to write.
+#
+if os.isatty(2):
+    os.environ['STDERR_WAS_TTY'] = '1'
+
+
 parser = optparse.OptionParser()
 parser.add_option('--user', '-l', action='store')
 parser.add_option('-o', dest='options', action='append')

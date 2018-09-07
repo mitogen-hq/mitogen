@@ -120,7 +120,7 @@ class Stream(mitogen.parent.Stream):
     #: Number of -v invocations to pass on command line.
     ssh_debug_level = 0
 
-    #: If batch_mode=False, points to the corresponding TtyLogStream, allowing
+    #: If batch_mode=False, points to the corresponding DiagLogStream, allowing
     #: it to be disconnected at the same time this stream is being torn down.
     tty_stream = None
 
@@ -136,27 +136,15 @@ class Stream(mitogen.parent.Stream):
     ssh_args = None
 
     check_host_keys_msg = 'check_host_keys= must be set to accept, enforce or ignore'
-    batch_mode_check_host_keys_msg = (
-        'check_host_keys cannot be set to "accept" when batch mode is '
-        'enabled, since batch mode disables PTY allocation.'
-    )
-    batch_mode_password_msg = (
-        'A password cannot be set when batch mode is enabled, '
-        'since batch mode disables PTY allocation.'
-    )
 
     def construct(self, hostname, username=None, ssh_path=None, port=None,
                   check_host_keys='enforce', password=None, identity_file=None,
                   compression=True, ssh_args=None, keepalive_enabled=True,
-                  keepalive_count=3, keepalive_interval=15, batch_mode=False,
+                  keepalive_count=3, keepalive_interval=15,
                   identities_only=True, ssh_debug_level=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         if check_host_keys not in ('accept', 'enforce', 'ignore'):
             raise ValueError(self.check_host_keys_msg)
-        if check_host_keys == 'accept' and batch_mode:
-            raise ValueError(self.batch_mode_check_host_keys_msg)
-        if password is not None and batch_mode:
-            raise ValueError(self.batch_mode_password_msg)
 
         self.hostname = hostname
         self.username = username
@@ -169,20 +157,36 @@ class Stream(mitogen.parent.Stream):
         self.keepalive_enabled = keepalive_enabled
         self.keepalive_count = keepalive_count
         self.keepalive_interval = keepalive_interval
-        self.batch_mode = batch_mode
-        if self.batch_mode:
-            self.create_child = mitogen.parent.create_child
-            self.create_child_args = {
-                'merge_stdio': True,
-            }
-        else:
-            self.create_child = mitogen.parent.hybrid_tty_create_child
         if ssh_path:
             self.ssh_path = ssh_path
         if ssh_args:
             self.ssh_args = ssh_args
         if ssh_debug_level:
             self.ssh_debug_level = ssh_debug_level
+
+        self._init_create_child()
+
+    def _requires_pty(self):
+        """
+        Return :data:`True` if the configuration requires a PTY to be
+        allocated. This is only true if we must interactively accept host keys,
+        or type a password.
+        """
+        return (self.check_host_keys == 'accept' or
+                self.password is not None)
+
+    def _init_create_child(self):
+        """
+        Initialize the base class :attr:`create_child` and
+        :attr:`create_child_args` according to whether we need a PTY or not.
+        """
+        if self._requires_pty():
+            self.create_child = mitogen.parent.hybrid_tty_create_child
+        else:
+            self.create_child = mitogen.parent.create_child
+            self.create_child_args = {
+                'stderr_pipe': True,
+            }
 
     def on_disconnect(self, broker):
         if self.tty_stream is not None:
@@ -213,15 +217,12 @@ class Stream(mitogen.parent.Stream):
                 '-o', 'ServerAliveInterval %s' % (self.keepalive_interval,),
                 '-o', 'ServerAliveCountMax %s' % (self.keepalive_count,),
             ]
-        if self.batch_mode:
+        if not self._requires_pty():
             bits += ['-o', 'BatchMode yes']
         if self.check_host_keys == 'enforce':
             bits += ['-o', 'StrictHostKeyChecking yes']
         if self.check_host_keys == 'accept':
-            if self.batch_mode:
-                bits += ['-o', 'StrictHostKeyChecking no']
-            else:
-                bits += ['-o', 'StrictHostKeyChecking ask']
+            bits += ['-o', 'StrictHostKeyChecking ask']
         elif self.check_host_keys == 'ignore':
             bits += [
                 '-o', 'StrictHostKeyChecking no',
@@ -273,7 +274,7 @@ class Stream(mitogen.parent.Stream):
     def _connect_bootstrap(self, extra_fd):
         fds = [self.receive_side.fd]
         if extra_fd is not None:
-            self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
+            self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
             fds.append(extra_fd)
 
         it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
@@ -294,6 +295,9 @@ class Stream(mitogen.parent.Stream):
                 # it at the start of the line.
                 if self.password is not None and password_sent:
                     raise PasswordError(self.password_incorrect_msg)
+                elif 'password' in buf and self.password is None:
+                    # Permission denied (password,pubkey)
+                    raise PasswordError(self.password_required_msg)
                 else:
                     raise PasswordError(self.auth_incorrect_msg)
             elif partial and PASSWORD_PROMPT in buf.lower():

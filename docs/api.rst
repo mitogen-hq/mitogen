@@ -713,11 +713,12 @@ Router Class
 
         Construct a remote context over an OpenSSH ``ssh`` invocation.
 
-        By default, the ``ssh`` process is started in a newly allocated
-        pseudo-terminal to support typing interactive passwords, however when
-        making many connections, this may be disabled by specifying
-        `batch_mode=True`, as most operating systems have a conservative upper
-        limit on the number of pseudo-terminals that may exist.
+        The ``ssh`` process is started in a newly allocated pseudo-terminal to
+        support typing interactive passwords and responding to prompts, if a
+        password is specified, or `check_host_keys=accept`. In other scenarios,
+        ``BatchMode`` is enabled and no PTY is allocated. For many-target
+        configurations, both options should be avoided as most systems have a
+        conservative limit on the number of pseudo-terminals that may exist.
 
         Accepts all parameters accepted by :meth:`local`, in addition to:
 
@@ -764,11 +765,6 @@ Router Class
             are already compressed, however it has a large effect on every
             remaining message in the otherwise uncompressed stream protocol,
             such as function call arguments and return values.
-        :param bool batch_mode:
-            If :data:`True`, disable pseudo-terminal allocation. When
-            :data:`True`, the `password=` parameter may not be used, since no
-            PTY exists to enter the password, and the `check_host_keys=`
-            parameter may not be set to `accept`.
         :param int ssh_debug_level:
             Optional integer `0..3` indicating the SSH client debug level.
         :raises mitogen.ssh.PasswordError:

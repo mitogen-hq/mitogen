@@ -107,7 +107,7 @@ class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
 
-    #: Once connected, points to the corresponding TtyLogStream, allowing it to
+    #: Once connected, points to the corresponding DiagLogStream, allowing it to
     #: be disconnected at the same time this stream is being torn down.
     tty_stream = None
 
@@ -165,7 +165,7 @@ class Stream(mitogen.parent.Stream):
     password_required_msg = 'sudo password is required'
 
     def _connect_bootstrap(self, extra_fd):
-        self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
+        self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
 
         password_sent = False
         it = mitogen.parent.iter_read(

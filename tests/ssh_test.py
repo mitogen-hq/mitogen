@@ -124,20 +124,9 @@ class BannerTest(testlib.DockerMixin, unittest2.TestCase):
         self.assertEquals(name, context.name)
 
 
-class BatchModeTest(testlib.DockerMixin, testlib.TestCase):
+class RequirePtyTest(testlib.DockerMixin, testlib.TestCase):
     stream_class = mitogen.ssh.Stream
-    #
-    # Test that:
-    # 
-    # - batch_mode=false, host_key_checking=accept
-    # - batch_mode=false, host_key_checking=enforce
-    # - batch_mode=false, host_key_checking=ignore
-    #
-    # - batch_mode=true, host_key_checking=accept
-    # - batch_mode=true, host_key_checking=enforce
-    # - batch_mode=true, host_key_checking=ignore
-    # - batch_mode=true, password is not None
-    # 
+
     def fake_ssh(self, FAKESSH_MODE=None, **kwargs):
         os.environ['FAKESSH_MODE'] = str(FAKESSH_MODE)
         try:
@@ -150,59 +139,25 @@ class BatchModeTest(testlib.DockerMixin, testlib.TestCase):
         finally:
             del os.environ['FAKESSH_MODE']
 
-    def test_false_accept(self):
-        # Should succeed.
-        self.fake_ssh(FAKESSH_MODE='ask', check_host_keys='accept')
+    def test_check_host_keys_accept(self):
+        # required=true, host_key_checking=accept
+        context = self.fake_ssh(FAKESSH_MODE='ask', check_host_keys='accept')
+        self.assertEquals('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
 
-    def test_false_enforce(self):
-        # Should succeed.
-        self.fake_ssh(check_host_keys='enforce')
+    def test_check_host_keys_enforce(self):
+        # required=false, host_key_checking=enforce
+        context = self.fake_ssh(check_host_keys='enforce')
+        self.assertEquals(None, context.call(os.getenv, 'STDERR_WAS_TTY'))
 
-    def test_false_ignore(self):
-        # Should succeed.
-        self.fake_ssh(check_host_keys='ignore')
+    def test_check_host_keys_ignore(self):
+        # required=false, host_key_checking=ignore
+        context = self.fake_ssh(check_host_keys='ignore')
+        self.assertEquals(None, context.call(os.getenv, 'STDERR_WAS_TTY'))
 
-    def test_false_password(self):
-        # Should succeed.
-        self.docker_ssh(username='mitogen__has_sudo_nopw',
-                        password='has_sudo_nopw_password')
-
-    def test_true_accept(self):
-        e = self.assertRaises(ValueError,
-            lambda: self.fake_ssh(check_host_keys='accept', batch_mode=True)
-        )
-        self.assertEquals(e.args[0],
-            self.stream_class.batch_mode_check_host_keys_msg)
-
-    def test_true_enforce(self):
-        e = self.assertRaises(mitogen.ssh.HostKeyError,
-            lambda: self.docker_ssh(
-                batch_mode=True,
-                check_host_keys='enforce',
-                ssh_args=['-o', 'UserKnownHostsFile /dev/null'],
-            )
-        )
-        self.assertEquals(e.args[0], self.stream_class.hostkey_failed_msg)
-
-    def test_true_ignore(self):
-        e = self.assertRaises(mitogen.ssh.HostKeyError,
-            lambda: self.fake_ssh(
-                FAKESSH_MODE='strict',
-                batch_mode=True,
-                check_host_keys='ignore',
-            )
-        )
-        self.assertEquals(e.args[0], self.stream_class.hostkey_failed_msg)
-
-    def test_true_password(self):
-        e = self.assertRaises(ValueError,
-            lambda: self.fake_ssh(
-                password='nope',
-                batch_mode=True,
-            )
-        )
-        self.assertEquals(e.args[0], self.stream_class.batch_mode_password_msg)
-
+    def test_password_present(self):
+        # required=true, password is not None
+        context = self.fake_ssh(check_host_keys='ignore', password='willick')
+        self.assertEquals('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
 
 
 if __name__ == '__main__':
