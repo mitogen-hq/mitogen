@@ -50,6 +50,7 @@ import mitogen.service
 import mitogen.unix
 import mitogen.utils
 
+import ansible.constants as C
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
@@ -204,6 +205,7 @@ class MuxProcess(object):
         self.listener = mitogen.unix.Listener(
             router=self.router,
             path=self.unix_listener_path,
+            backlog=C.DEFAULT_FORKS,
         )
         self._enable_router_debug()
         self._enable_stack_dumps()

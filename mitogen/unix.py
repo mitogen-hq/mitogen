@@ -63,7 +63,7 @@ def make_socket_path():
 class Listener(mitogen.core.BasicStream):
     keep_alive = True
 
-    def __init__(self, router, path=None, backlog=30):
+    def __init__(self, router, path=None, backlog=100):
         self._router = router
         self.path = path or make_socket_path()
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
