@@ -58,6 +58,14 @@ Enhancements
   synchronization, wasting significant runtime in the connection multiplexer.
   In one case work was reduced by 95%, which may manifest as faster runs.
 
+* `5189408e <https://github.com/dw/mitogen/commit/5189408e>`_: threads are
+  cooperatively scheduled, minimizing `GIL
+  <https://en.wikipedia.org/wiki/Global_interpreter_lock>`_ contention, and
+  reducing context switching by an order of magnitude. This manifests as an
+  overall improvement, but is easily noticeable on short many-target
+  runs, where startup overhead dominates runtime.
+
+
 Fixes
 ^^^^^
 
