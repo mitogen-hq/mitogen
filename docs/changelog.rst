@@ -156,6 +156,12 @@ Core Library
   listener no longer crashes if the peer process disappears in the middle of
   connection setup.
 
+* `5adae88d <https://github.com/dw/mitogen/commit/5adae88d>`_ a new
+   `mitogen_chain` keyword argument is accepted by
+   :meth:`mitogen.master.Context.call_async`, allowing overlapping chains of
+   function calls to be pipelined to a context, while cancelling the chain on
+   the first exception.
+
 
 Thanks!
 ~~~~~~~
