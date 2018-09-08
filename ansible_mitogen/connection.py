@@ -725,6 +725,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         else:
             return call_context.call_async(func, *args, **kwargs)
 
+    call_aborted_msg = (
+        'Mitogen was disconnected from the remote environment while a call '
+        'was in-progress. If you feel this is in error, please file a bug. '
+        'Original error was: %s'
+    )
+
+    def _call_rethrow(self, recv):
+        try:
+            return recv.get().unpickle()
+        except mitogen.core.ChannelError as e:
+            raise ansible.errors.AnsibleConnectionFailure(
+                self.call_aborted_msg % (e,)
+            )
+
     def call(self, func, *args, **kwargs):
         """
         Start and wait for completion of a function call in the target.
@@ -739,7 +753,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             recv = self.call_async(func, *args, **kwargs)
             if recv is None:  # no_reply=True
                 return None
-            return recv.get().unpickle()
+            return self._call_rethrow(recv)
         finally:
             LOG.debug('Call took %d ms: %r', 1000 * (time.time() - t0),
                       mitogen.parent.CallSpec(func, args, kwargs))
