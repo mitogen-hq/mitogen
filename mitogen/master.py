@@ -371,7 +371,7 @@ class ModuleFinder(object):
             #        requests.packages.urllib3.contrib.pyopenssl"
             e = sys.exc_info()[1]
             LOG.debug('%r: loading %r using %r failed: %s',
-                      self, fullname, loader)
+                      self, fullname, loader, e)
             return
 
         if path is None or source is None:
