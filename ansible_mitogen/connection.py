@@ -693,6 +693,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         if kwargs.pop('use_login_context', None):
             call_context = self.login_context
+        elif kwargs.pop('use_fork_context', None):
+            call_context = self.fork_context
         else:
             call_context = self.context
 
@@ -743,7 +745,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :returns:
             mitogen.core.Context of the new child.
         """
-        return self.call(ansible_mitogen.target.create_fork_child)
+        return self.call(ansible_mitogen.target.create_fork_child,
+                         use_fork_context=True)
 
     def get_default_cwd(self):
         """

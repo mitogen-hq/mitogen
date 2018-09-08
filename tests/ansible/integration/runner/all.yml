@@ -14,5 +14,7 @@
 - import_playbook: custom_script_interpreter.yml
 - import_playbook: environment_isolation.yml
 - import_playbook: etc_environment.yml
-- import_playbook: forking_behaviour.yml
+- import_playbook: forking_active.yml
+- import_playbook: forking_inactive.yml
+- import_playbook: forking_correct_parent.yml
 - import_playbook: missing_module.yml
