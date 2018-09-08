@@ -5,6 +5,10 @@
 
   # Verify mitogen_task_isolation=fork triggers forking.
 
+  - name: get regular process ID.
+    custom_python_detect_environment:
+    register: sync_proc1
+
   - name: get force-forked process ID.
     custom_python_detect_environment:
     register: fork_proc1

@@ -417,13 +417,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: reached via become.
     context = None
 
-    #: mitogen.parent.Context for the login account on the target. This is
-    #: always the login account, even when become=True.
+    #: Context for the login account on the target. This is always the login
+    #: account, even when become=True.
     login_context = None
 
-    #: mitogen.parent.Context connected to the fork parent process in the
-    #: target user account.
-    fork_context = None
+    #: Dict containing init_child() return vaue as recorded at startup by
+    #: ContextService. Contains:
+    #:
+    #:  fork_context:   Context connected to the fork parent : process in the
+    #:                  target account.
+    #:  home_dir:       Target context's home directory.
+    #:  temp_dir:       A writeable temporary directory path.
+    init_child_result = None
 
     #: Only sudo, su, and doas are supported for now.
     become_methods = ['sudo', 'su', 'doas']
@@ -447,12 +452,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: to change the working directory to that of the current playbook,
     #: matching vanilla Ansible behaviour.
     loader_basedir = None
-
-    #: Set after connection to the target context's home directory.
-    home_dir = None
-
-    #: Set after connection to the target context's home directory.
-    _temp_dir = None
 
     def __init__(self, play_context, new_stdin, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
@@ -495,7 +494,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     @property
     def homedir(self):
         self._connect()
-        return self.home_dir
+        return self.init_child_result['home_dir']
 
     @property
     def connected(self):
@@ -622,13 +621,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         else:
             self.login_context = self.context
 
-        self.fork_context = dct['init_child_result']['fork_context']
-        self.home_dir = dct['init_child_result']['home_dir']
-        self._temp_dir = dct['init_child_result']['temp_dir']
+        self.init_child_result = dct['init_child_result']
 
     def get_temp_dir(self):
         self._connect()
-        return self._temp_dir
+        return self.init_child_result['temp_dir']
 
     def _connect(self):
         """
@@ -662,8 +659,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         self.context = None
-        self.fork_context = None
-        self.login_context = None
+        self.init_child_result = None
         if self.broker and not new_task:
             self.broker.shutdown()
             self.broker.join()
@@ -694,7 +690,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if kwargs.pop('use_login_context', None):
             call_context = self.login_context
         elif kwargs.pop('use_fork_context', None):
-            call_context = self.fork_context
+            call_context = self.init_child_result['fork_context']
         else:
             call_context = self.context
 
