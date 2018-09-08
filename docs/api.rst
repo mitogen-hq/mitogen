@@ -934,9 +934,9 @@ Context Class
                 if recv.get().unpickle() == 'baz':
                     pass
 
-            Note that for long-lived programs, there is presently no mechanism
-            for clearing the chain history on a target. This will be addressed
-            in future.
+            It is necessary to explicitly clean up the chain history on a
+            target, otherwise unbounded memory usage is possible. See
+            :meth:`forget_chain`.
 
         :returns:
             :class:`mitogen.core.Receiver` configured to receive the result
@@ -977,6 +977,11 @@ Context Class
         :raises mitogen.core.CallError:
             An exception was raised in the remote context during execution.
 
+    .. method:: forget_chain (chain_id)
+
+        Instruct the target to forget any exception related to `chain_id`, a
+        key previously used as the `mitogen_chain` parameter to
+        :meth:`call_async`.
 
 
 Receiver Class

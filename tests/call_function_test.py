@@ -143,6 +143,14 @@ class ChainTest(testlib.RouterMixin, testlib.TestCase):
             lambda: self.local.call(func_returns_arg, 'yes', mitogen_chain='c1'))
         self.local.call_no_reply(function_that_fails, 'c2', mitogen_chain='c2')
 
+    def test_forget(self):
+        self.local.call_no_reply(function_that_fails, 'x1', mitogen_chain='c1')
+        e1 = self.assertRaises(mitogen.core.CallError,
+            lambda: self.local.call(function_that_fails, 'x2', mitogen_chain='c1'))
+        self.local.forget_chain('c1')
+        self.assertEquals('x3',
+            self.local.call(func_returns_arg, 'x3', mitogen_chain='c1'))
+
 
 if __name__ == '__main__':
     unittest2.main()

@@ -1959,6 +1959,11 @@ class Dispatcher(object):
                              policy=has_parent_authority)
         listen(econtext.broker, 'shutdown', self.recv.close)
 
+    @classmethod
+    @takes_econtext
+    def forget_chain(cls, chain_id, econtext):
+        econtext.dispatcher._error_by_chain_id.pop(chain_id, None)
+
     def _parse_request(self, msg):
         data = msg.unpickle(throw=False)
         _v and LOG.debug('_dispatch_one(%r)', data)

@@ -1160,6 +1160,9 @@ class Context(mitogen.core.Context):
                   self, fn, args, kwargs)
         self.send(make_call_msg(fn, *args, **kwargs))
 
+    def forget_chain(self, chain_id):
+        self.call_no_reply(mitogen.core.Dispatcher.forget_chain, chain_id)
+
     def shutdown(self, wait=False):
         LOG.debug('%r.shutdown() sending SHUTDOWN', self)
         latch = mitogen.core.Latch()
