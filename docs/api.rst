@@ -892,6 +892,52 @@ Context Class
         :param dict kwargs:
             Function keyword arguments, if any. See :ref:`serialization-rules`
             for permitted types.
+        :param str mitogen_chain:
+            Optional cancellation key for threading unrelated asynchronous
+            requests to one context. If any prior call in the chain raised an
+            exception, subsequent calls with the same key immediately produce
+            the same exception.
+
+            This permits a sequence of :meth:`no-reply <call_no_reply>` or
+            pipelined asynchronous calls to be made without wasting network
+            round-trips to discover if prior calls succeeded, while allowing
+            such chains to overlap concurrently from multiple unrelated source
+            contexts. The chain is cancelled on first exception, enabling
+            patterns like::
+
+                # Must be distinct for each overlapping sequence, and cannot be
+                # reused.
+                chain = 'make-dirs-and-do-stuff-%s-%s-%s-%s' % (
+                    socket.gethostname(),
+                    os.getpid(),
+                    threading.currentThread().id,
+                    time.time(),
+                )
+                context.call_no_reply(os.mkdir, '/tmp/foo',
+                                      mitogen_chain=chain)
+
+                # If os.mkdir() fails, this never runs:
+                context.call_no_reply(os.mkdir, '/tmp/foo/bar',
+                                      mitogen_chain=chain)
+
+                # If either os.mkdir() fails, this never runs, and returns the
+                # exception.
+                recv = context.call_async(subprocess.check_output, '/tmp/foo',
+                                          mitogen_chain=chain)
+
+                # If os.mkdir() or check_call() failed, this never runs, and
+                # the exception that occurred is raised.
+                context.call(do_something, mitogen_chain=chain)
+
+                # The receiver also got a copy of the exception, so if this
+                # code was executed, the exception would also be raised.
+                if recv.get().unpickle() == 'baz':
+                    pass
+
+            Note that for long-lived programs, there is presently no mechanism
+            for clearing the chain history on a target. This will be addressed
+            in future.
+
         :returns:
             :class:`mitogen.core.Receiver` configured to receive the result
             of the invocation:
@@ -923,8 +969,10 @@ Context Class
 
     .. method:: call_no_reply (fn, \*args, \*\*kwargs)
 
-        Send a function call, but expect no return value. If the call fails,
-        the full exception will be logged to the target context's logging framework.
+        Like :meth:`call_async`, but do not wait for a return value, and inform
+        the target context no such reply is expected. If the call fails, the
+        full exception will be logged to the target context's logging
+        framework, unless the `mitogen_chain` argument was present.
 
         :raises mitogen.core.CallError:
             An exception was raised in the remote context during execution.

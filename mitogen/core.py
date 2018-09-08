@@ -1952,15 +1952,14 @@ class Broker(object):
 class Dispatcher(object):
     def __init__(self, econtext):
         self.econtext = econtext
+        #: Chain ID -> CallError if prior call failed.
+        self._error_by_chain_id = {}
         self.recv = Receiver(router=econtext.router,
                              handle=CALL_FUNCTION,
                              policy=has_parent_authority)
-        listen(econtext.broker, 'shutdown', self._on_broker_shutdown)
+        listen(econtext.broker, 'shutdown', self.recv.close)
 
-    def _on_broker_shutdown(self):
-        self.recv.close()
-
-    def _dispatch_one(self, msg):
+    def _parse_request(self, msg):
         data = msg.unpickle(throw=False)
         _v and LOG.debug('_dispatch_one(%r)', data)
 
@@ -1973,22 +1972,35 @@ class Dispatcher(object):
             kwargs.setdefault('econtext', self.econtext)
         if getattr(fn, 'mitogen_takes_router', None):
             kwargs.setdefault('router', self.econtext.router)
-        return fn(*args, **kwargs)
+
+        return fn, args, kwargs
+
+    def _dispatch_one(self, msg):
+        try:
+            fn, args, kwargs = self._parse_request(msg)
+        except Exception:
+            return None, CallError(sys.exc_info()[1])
+
+        chain_id = kwargs.pop('mitogen_chain', None)
+        if chain_id in self._error_by_chain_id:
+            return chain_id, self._error_by_chain_id[chain_id]
+
+        try:
+            return chain_id, fn(*args, **kwargs)
+        except Exception:
+            e = CallError(sys.exc_info()[1])
+            if chain_id is not None:
+                self._error_by_chain_id[chain_id] = e
+            return chain_id, e
 
     def _dispatch_calls(self):
         for msg in self.recv:
-            try:
-                ret = self._dispatch_one(msg)
-                _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
-                if msg.reply_to:
-                    msg.reply(ret)
-            except Exception:
-                e = sys.exc_info()[1]
-                if msg.reply_to:
-                    _v and LOG.debug('_dispatch_calls: %s', e)
-                    msg.reply(CallError(e))
-                else:
-                    LOG.exception('_dispatch_calls: %r', msg)
+            chain_id, ret = self._dispatch_one(msg)
+            _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
+            if msg.reply_to:
+                msg.reply(ret)
+            elif isinstance(ret, CallError) and chain_id is None:
+                LOG.error('No-reply function call failed: %s', ret)
 
     def run(self):
         if self.econtext.config.get('on_start'):
