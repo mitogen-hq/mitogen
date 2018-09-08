@@ -333,14 +333,15 @@ def config_from_play_context(transport, inventory_name, connection):
         'password': connection._play_context.password,
         'port': connection._play_context.port,
         'python_path': parse_python_path(
-            connection.task_vars.get('ansible_python_interpreter',
-                                     '/usr/bin/python')
+            connection.get_task_var('ansible_python_interpreter',
+                                    default='/usr/bin/python')
         ),
         'private_key_file': connection._play_context.private_key_file,
         'ssh_executable': connection._play_context.ssh_executable,
         'timeout': connection._play_context.timeout,
         'ansible_ssh_timeout':
-            connection.task_vars.get('ansible_ssh_timeout', C.DEFAULT_TIMEOUT),
+            connection.get_task_var('ansible_ssh_timeout',
+                                    default=C.DEFAULT_TIMEOUT),
         'ssh_args': [
             mitogen.core.to_text(term)
             for s in (
@@ -360,17 +361,17 @@ def config_from_play_context(transport, inventory_name, connection):
             for term in ansible.utils.shlex.shlex_split(s or '')
         ],
         'mitogen_via':
-            connection.task_vars.get('mitogen_via'),
+            connection.get_task_var('mitogen_via'),
         'mitogen_kind':
-            connection.task_vars.get('mitogen_kind'),
+            connection.get_task_var('mitogen_kind'),
         'mitogen_docker_path':
-            connection.task_vars.get('mitogen_docker_path'),
+            connection.get_task_var('mitogen_docker_path'),
         'mitogen_lxc_info_path':
-            connection.task_vars.get('mitogen_lxc_info_path'),
+            connection.get_task_var('mitogen_lxc_info_path'),
         'mitogen_machinectl_path':
-            connection.task_vars.get('mitogen_machinectl_path'),
+            connection.get_task_var('mitogen_machinectl_path'),
         'mitogen_ssh_debug_level':
-            connection.task_vars.get('mitogen_ssh_debug_level'),
+            connection.get_task_var('mitogen_ssh_debug_level'),
     }
 
 
@@ -439,8 +440,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     # the case of the synchronize module.
     #
 
+    #: Set to the host name as it appears in inventory by on_action_run().
+    inventory_hostname = None
+
     #: Set to task_vars by on_action_run().
-    task_vars = None
+    _task_vars = None
 
     #: Set to 'hostvars' by on_action_run()
     host_vars = None
@@ -485,11 +489,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Loader base directory; see :attr:`loader_basedir`.
         """
         self.inventory_hostname = task_vars['inventory_hostname']
-        self.task_vars = task_vars
+        self._task_vars = task_vars
         self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
         self.close(new_task=True)
+
+    def get_task_var(self, key, default=None):
+        if self._task_vars and key in self._task_vars:
+            return self._task_vars[key]
+        return default
 
     @property
     def homedir(self):
