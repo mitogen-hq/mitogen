@@ -157,10 +157,10 @@ Core Library
   connection setup.
 
 * `5adae88d <https://github.com/dw/mitogen/commit/5adae88d>`_ a new
-   `mitogen_chain` keyword argument is accepted by
-   :meth:`mitogen.master.Context.call_async`, allowing overlapping chains of
-   function calls to be pipelined to a context, while cancelling the chain on
-   the first exception.
+  `mitogen_chain` keyword argument is accepted by
+  :meth:`mitogen.parent.Context.call_async`, allowing overlapping chains of
+  function calls to be pipelined to a context, while cancelling the chain on
+  the first exception.
 
 
 Thanks!
@@ -170,14 +170,18 @@ Mitogen would not be possible without the support of users. A huge thanks for
 the bug reports in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
 `atoom <https://github.com/atoom>`_,
+`Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
 `dsgnr <https://github.com/dsgnr>`_,
 `Jesse London <https://github.com/jesteria>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
+`Josh Smift <https://github.com/jbscare>`_,
 `Luca Nunzi <https://github.com/0xlc>`_,
 `nikitakazantsev12 <https://github.com/nikitakazantsev12>`_,
-`Prateek Jain <https://github.com/prateekj201>`_,
+`Peter V. Saveliev <https://github.com/svinota>`_,
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
+`Pierre-Louis Bonicoli <https://github.com/jesteria>`_,
+`Prateek Jain <https://github.com/prateekj201>`_,
 `Rick Box <https://github.com/boxrick>`_, and
 `Timo Beckers <https://github.com/ti-mo>`_.
 
