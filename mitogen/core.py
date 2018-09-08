@@ -2214,6 +2214,7 @@ class ExternalContext(object):
                 if self.config.get('setup_stdio', True):
                     self._setup_stdio()
 
+                self.dispatcher = Dispatcher(self)
                 self.router.register(self.parent, self.stream)
                 self.log_handler.uncork()
 
@@ -2222,7 +2223,6 @@ class ExternalContext(object):
                                  self.parent, mitogen.context_id, os.getpid())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
-                self.dispatcher = Dispatcher(self)
                 self.dispatcher.run()
                 _v and LOG.debug('ExternalContext.main() normal exit')
             except KeyboardInterrupt:
