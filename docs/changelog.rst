@@ -108,6 +108,11 @@ Fixes
   yes`` option is no longer supplied to OpenSSH by default, better matching
   Ansible's behaviour.
 
+* `#355 <https://github.com/dw/mitogen/issues/355>`_: tasks configured to run
+  in an isolated forked subprocess were being forked from the wrong parent
+  context. This meant built-in modules overridden via a custom ``module_utils``
+  search path may not have had any effect.
+
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
 
