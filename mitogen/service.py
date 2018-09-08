@@ -636,8 +636,7 @@ class PushFileService(Service):
         """
         for path in paths:
             self.propagate_to(context, path)
-        for fullname in modules:
-            self.router.responder.forward_module(context, fullname)
+        self.router.responder.forward_modules(context, modules)
 
     @expose(policy=AllowParents())
     @arg_spec({

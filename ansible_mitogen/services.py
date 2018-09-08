@@ -269,8 +269,7 @@ class ContextService(mitogen.service.Service):
     )
 
     def _send_module_forwards(self, context):
-        for fullname in self.ALWAYS_PRELOAD:
-            self.router.responder.forward_module(context, fullname)
+        self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
 
     _candidate_temp_dirs = None
 
