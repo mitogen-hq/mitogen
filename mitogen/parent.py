@@ -231,9 +231,10 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
     # O_NONBLOCK from Python's future stdin fd.
     mitogen.core.set_block(childfp.fileno())
 
+    stderr_r = None
+    extra = {}
     if merge_stdio:
         extra = {'stderr': childfp}
-        stderr_r = None
     elif stderr_pipe:
         stderr_r, stderr_w = os.pipe()
         mitogen.core.set_cloexec(stderr_r)
