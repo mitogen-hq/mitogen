@@ -523,22 +523,6 @@ def upgrade_router(econtext):
         )
 
 
-def make_call_msg(fn, *args, **kwargs):
-    if inspect.ismethod(fn) and inspect.isclass(fn.__self__):
-        klass = mitogen.core.to_text(fn.__self__.__name__)
-    else:
-        klass = None
-
-    tup = (
-        mitogen.core.to_text(fn.__module__),
-        klass,
-        mitogen.core.to_text(fn.__name__),
-        args,
-        mitogen.core.Kwargs(kwargs)
-    )
-    return mitogen.core.Message.pickled(tup, handle=mitogen.core.CALL_FUNCTION)
-
-
 def stream_by_method_name(name):
     """
     Given the name of a Mitogen connection method, import its implementation
@@ -1137,8 +1121,215 @@ class ChildIdAllocator(object):
         return self.allocate()
 
 
+class CallChain(object):
+    """
+    Construct :data:`mitogen.core.CALL_FUNCTION` messages and deliver them to a
+    target context, optionally threading related calls such that an exception
+    in an earlier call cancels subsequent calls.
+
+    :param mitogen.core.Context context:
+        Target context.
+    :param bool pipelined:
+        Enable pipelined mode.
+
+    By default, :meth:`call`, :meth:`call_no_reply` and :meth:`call_async`
+    issue calls and produce responses, with no memory of prior exceptions. If a
+    call made with :meth:`call_no_reply` fails, the traceback is logged to the
+    target context's logging framework.
+
+    **Pipelined Mode**
+
+    When `pipelined=True`, if an exception occurs in a call,
+    all subsequent calls made by the same :class:`CallChain` instance will fail
+    with the same exception, including those already in-flight on the network,
+    and no further calls will execute until :meth:`reset` is invoked.
+
+    No traceback is logged for calls made with :meth:`call_no_reply`, instead
+    the exception is saved and reported as the result of subsequent
+    :meth:`call` or :meth:`call_async` calls.
+
+    A sequence of pipelined asynchronous calls can be made without wasting
+    network round-trips to discover if prior calls succeeded, while allowing
+    such chains to overlap concurrently at a target context from multiple
+    unrelated source contexts. This enables many calls to safely progress in
+    one network round-trip, like::
+
+        chain = mitogen.parent.CallChain(context, pipelined=True)
+        chain.call_no_reply(os.mkdir, '/tmp/foo')
+
+        # If previous mkdir() failed, this never runs:
+        chain.call_no_reply(os.mkdir, '/tmp/foo/bar')
+
+        # If either mkdir() failed, this never runs, and returns the exception.
+        recv = chain.call_async(subprocess.check_output, '/tmp/foo')
+
+        # If mkdir() or check_call() failed, this never runs, and returns the
+        # exception.
+        chain.call(do_something)
+
+        # The receiver also got a copy of the exception, so if this
+        # code was executed, the exception would also be raised.
+        if recv.get().unpickle() == 'baz':
+            pass
+
+    When pipelining is enabled, :meth:`reset` must be called to ensure the last
+    exception is discarded, otherwise unbounded memory usage is possible in
+    long-running programs. :class:`CallChain` supports the context manager
+    protocol to ensure :meth:`reset` is always invoked::
+
+        with mitogen.parent.CallChain(context, pipelined=True) as chain:
+            chain.call_no_reply(...)
+            chain.call_no_reply(...)
+            chain.call_no_reply(...)
+            chain.call(...)
+
+        # chain.reset() automatically invoked.
+    """
+    def __init__(self, context, pipelined=False):
+        self.context = context
+        if pipelined:
+            self.chain_id = self.make_chain_id()
+        else:
+            self.chain_id = None
+
+    @classmethod
+    def make_chain_id(cls):
+        return '%s-%s-%s-%s' % (
+            socket.gethostname(),
+            os.getpid(),
+            threading.currentThread().ident,
+            int(1e6 * time.time()),
+        )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _1, _2, _3):
+        self.reset()
+
+    def reset(self):
+        """
+        Instruct the target to forget any related exception.
+        """
+        if not self.chain_id:
+            return
+
+        saved, self.chain_id = self.chain_id, None
+        try:
+            self.call_no_reply(mitogen.core.Dispatcher.forget_chain, saved)
+        finally:
+            self.chain_id = saved
+
+    def make_msg(self, fn, *args, **kwargs):
+        if inspect.ismethod(fn) and inspect.isclass(fn.__self__):
+            klass = mitogen.core.to_text(fn.__self__.__name__)
+        else:
+            klass = None
+
+        tup = (
+            self.chain_id,
+            mitogen.core.to_text(fn.__module__),
+            klass,
+            mitogen.core.to_text(fn.__name__),
+            args,
+            mitogen.core.Kwargs(kwargs)
+        )
+        return mitogen.core.Message.pickled(tup,
+            handle=mitogen.core.CALL_FUNCTION)
+
+    def call_no_reply(self, fn, *args, **kwargs):
+        """
+        Like :meth:`call_async`, but do not wait for a return value, and inform
+        the target context no such reply is expected. If the call fails and
+        pipelining is disabled, the full exception will be logged to the target
+        context's logging framework.
+
+        :raises mitogen.core.CallError:
+            An exception was raised in the remote context during execution.
+        """
+        LOG.debug('%r.call_no_reply(%r, *%r, **%r)',
+                  self, fn, args, kwargs)
+        self.context.send(self.make_msg(fn, *args, **kwargs))
+
+    def call_async(self, fn, *args, **kwargs):
+        """
+        Arrange for the context's ``CALL_FUNCTION`` handle to receive a message
+        that causes `fn(\*args, \**kwargs)` to be invoked on the context's main
+        thread.
+
+        :param fn:
+            A free function in module scope or a class method of a class
+            directly reachable from module scope:
+
+            .. code-block:: python
+
+                # mymodule.py
+
+                def my_func():
+                    '''A free function reachable as mymodule.my_func'''
+
+                class MyClass:
+                    @classmethod
+                    def my_classmethod(cls):
+                        '''Reachable as mymodule.MyClass.my_classmethod'''
+
+                    def my_instancemethod(self):
+                        '''Unreachable: requires a class instance!'''
+
+                    class MyEmbeddedClass:
+                        @classmethod
+                        def my_classmethod(cls):
+                            '''Not directly reachable from module scope!'''
+
+        :param tuple args:
+            Function arguments, if any. See :ref:`serialization-rules` for
+            permitted types.
+        :param dict kwargs:
+            Function keyword arguments, if any. See :ref:`serialization-rules`
+            for permitted types.
+        :returns:
+            :class:`mitogen.core.Receiver` configured to receive the result of
+            the invocation:
+
+            .. code-block:: python
+
+                recv = context.call_async(os.check_output, 'ls /tmp/')
+                try:
+                    # Prints output once it is received.
+                    msg = recv.get()
+                    print(msg.unpickle())
+                except mitogen.core.CallError, e:
+                    print('Call failed:', str(e))
+
+            Asynchronous calls may be dispatched in parallel to multiple
+            contexts and consumed as they complete using
+            :class:`mitogen.select.Select`.
+        """
+        LOG.debug('%r.call_async(): %r', self, CallSpec(fn, args, kwargs))
+        return self.context.send_async(self.make_msg(fn, *args, **kwargs))
+
+    def call(self, fn, *args, **kwargs):
+        """
+        Equivalent to :meth:`call_async(fn, \*args, \**kwargs).get().unpickle()
+        <call_async>`.
+
+        :returns:
+            The function's return value.
+
+        :raises mitogen.core.CallError:
+            An exception was raised in the remote context during execution.
+        """
+        receiver = self.call_async(fn, *args, **kwargs)
+        return receiver.get().unpickle(throw_dead=False)
+
+
 class Context(mitogen.core.Context):
+    call_chain_class = CallChain
     via = None
+
+    def __init__(self, *args, **kwargs):
+        super(Context, self).__init__(*args, **kwargs)
+        self.default_call_chain = self.call_chain_class(self)
 
     def __eq__(self, other):
         return (isinstance(other, mitogen.core.Context) and
@@ -1149,20 +1340,13 @@ class Context(mitogen.core.Context):
         return hash((self.router, self.context_id))
 
     def call_async(self, fn, *args, **kwargs):
-        LOG.debug('%r.call_async(): %r', self, CallSpec(fn, args, kwargs))
-        return self.send_async(make_call_msg(fn, *args, **kwargs))
+        return self.default_call_chain.call_async(fn, *args, **kwargs)
 
     def call(self, fn, *args, **kwargs):
-        receiver = self.call_async(fn, *args, **kwargs)
-        return receiver.get().unpickle(throw_dead=False)
+        return self.default_call_chain.call(fn, *args, **kwargs)
 
     def call_no_reply(self, fn, *args, **kwargs):
-        LOG.debug('%r.call_no_reply(%r, *%r, **%r)',
-                  self, fn, args, kwargs)
-        self.send(make_call_msg(fn, *args, **kwargs))
-
-    def forget_chain(self, chain_id):
-        self.call_no_reply(mitogen.core.Dispatcher.forget_chain, chain_id)
+        self.default_call_chain.call_no_reply(fn, *args, **kwargs)
 
     def shutdown(self, wait=False):
         LOG.debug('%r.shutdown() sending SHUTDOWN', self)

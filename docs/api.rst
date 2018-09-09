@@ -833,11 +833,20 @@ Context Class
 
 .. currentmodule:: mitogen.parent
 
+.. autoclass:: CallChain
+    :members:
+
 .. class:: Context
 
     Extend :class:`mitogen.core.Router` with functionality useful to
     masters, and child contexts who later become parents. Currently when this
     class is required, the target context's router is upgraded at runtime.
+
+    .. attribute:: default_call_chain
+
+        A :class:`CallChain` instance constructed by default, with pipelining
+        disabled. :meth:`call`, :meth:`call_async` and :meth:`call_no_reply`
+        use this instance.
 
     .. method:: shutdown (wait=False)
 
@@ -858,130 +867,15 @@ Context Class
 
     .. method:: call_async (fn, \*args, \*\*kwargs)
 
-        Arrange for the context's ``CALL_FUNCTION`` handle to receive a
-        message that causes `fn(\*args, \**kwargs)` to be invoked on the
-        context's main thread.
-
-        :param fn:
-            A free function in module scope or a class method of a class
-            directly reachable from module scope:
-
-            .. code-block:: python
-
-                # mymodule.py
-
-                def my_func():
-                    """A free function reachable as mymodule.my_func"""
-
-                class MyClass:
-                    @classmethod
-                    def my_classmethod(cls):
-                        """Reachable as mymodule.MyClass.my_classmethod"""
-
-                    def my_instancemethod(self):
-                        """Unreachable: requires a class instance!"""
-
-                    class MyEmbeddedClass:
-                        @classmethod
-                        def my_classmethod(cls):
-                            """Not directly reachable from module scope!"""
-
-        :param tuple args:
-            Function arguments, if any. See :ref:`serialization-rules` for
-            permitted types.
-        :param dict kwargs:
-            Function keyword arguments, if any. See :ref:`serialization-rules`
-            for permitted types.
-        :param str mitogen_chain:
-            Optional cancellation key for threading unrelated asynchronous
-            requests to one context. If any prior call in the chain raised an
-            exception, subsequent calls with the same key immediately produce
-            the same exception.
-
-            This permits a sequence of :meth:`no-reply <call_no_reply>` or
-            pipelined asynchronous calls to be made without wasting network
-            round-trips to discover if prior calls succeeded, while allowing
-            such chains to overlap concurrently from multiple unrelated source
-            contexts. The chain is cancelled on first exception, enabling
-            patterns like::
-
-                # Must be distinct for each overlapping sequence, and cannot be
-                # reused.
-                chain = 'make-dirs-and-do-stuff-%s-%s-%s-%s' % (
-                    socket.gethostname(),
-                    os.getpid(),
-                    threading.currentThread().id,
-                    time.time(),
-                )
-                context.call_no_reply(os.mkdir, '/tmp/foo',
-                                      mitogen_chain=chain)
-
-                # If os.mkdir() fails, this never runs:
-                context.call_no_reply(os.mkdir, '/tmp/foo/bar',
-                                      mitogen_chain=chain)
-
-                # If either os.mkdir() fails, this never runs, and returns the
-                # exception.
-                recv = context.call_async(subprocess.check_output, '/tmp/foo',
-                                          mitogen_chain=chain)
-
-                # If os.mkdir() or check_call() failed, this never runs, and
-                # the exception that occurred is raised.
-                context.call(do_something, mitogen_chain=chain)
-
-                # The receiver also got a copy of the exception, so if this
-                # code was executed, the exception would also be raised.
-                if recv.get().unpickle() == 'baz':
-                    pass
-
-            It is necessary to explicitly clean up the chain history on a
-            target, otherwise unbounded memory usage is possible. See
-            :meth:`forget_chain`.
-
-        :returns:
-            :class:`mitogen.core.Receiver` configured to receive the result
-            of the invocation:
-
-            .. code-block:: python
-
-                recv = context.call_async(os.check_output, 'ls /tmp/')
-                try:
-                    # Prints output once it is received.
-                    msg = recv.get()
-                    print(msg.unpickle())
-                except mitogen.core.CallError, e:
-                    print('Call failed:', str(e))
-
-            Asynchronous calls may be dispatched in parallel to multiple
-            contexts and consumed as they complete using
-            :class:`mitogen.select.Select`.
+        See :meth:`CallChain.call_async`.
 
     .. method:: call (fn, \*args, \*\*kwargs)
 
-        Equivalent to :meth:`call_async(fn, \*args, \**kwargs).get().unpickle()
-        <call_async>`.
-
-        :returns:
-            The function's return value.
-
-        :raises mitogen.core.CallError:
-            An exception was raised in the remote context during execution.
+        See :meth:`CallChain.call`.
 
     .. method:: call_no_reply (fn, \*args, \*\*kwargs)
 
-        Like :meth:`call_async`, but do not wait for a return value, and inform
-        the target context no such reply is expected. If the call fails, the
-        full exception will be logged to the target context's logging
-        framework, unless the `mitogen_chain` argument was present.
-
-        :raises mitogen.core.CallError:
-            An exception was raised in the remote context during execution.
-
-    .. method:: forget_chain (chain_id)
-
-        Instruct the target to forget any exception related to `chain_id`, a
-        key previously used as the `mitogen_chain` parameter to
-        :meth:`call_async`.
+        See :meth:`CallChain.call_no_reply`.
 
 
 Receiver Class

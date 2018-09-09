@@ -1968,7 +1968,7 @@ class Dispatcher(object):
         data = msg.unpickle(throw=False)
         _v and LOG.debug('_dispatch_one(%r)', data)
 
-        modname, klass, func, args, kwargs = data
+        chain_id, modname, klass, func, args, kwargs = data
         obj = import_module(modname)
         if klass:
             obj = getattr(obj, klass)
@@ -1978,15 +1978,14 @@ class Dispatcher(object):
         if getattr(fn, 'mitogen_takes_router', None):
             kwargs.setdefault('router', self.econtext.router)
 
-        return fn, args, kwargs
+        return chain_id, fn, args, kwargs
 
     def _dispatch_one(self, msg):
         try:
-            fn, args, kwargs = self._parse_request(msg)
+            chain_id, fn, args, kwargs = self._parse_request(msg)
         except Exception:
             return None, CallError(sys.exc_info()[1])
 
-        chain_id = kwargs.pop('mitogen_chain', None)
         if chain_id in self._error_by_chain_id:
             return chain_id, self._error_by_chain_id[chain_id]
 
