@@ -1123,36 +1123,36 @@ class ChildIdAllocator(object):
 
 class CallChain(object):
     """
-    Construct :data:`mitogen.core.CALL_FUNCTION` messages and deliver them to a
-    target context, optionally threading related calls such that an exception
-    in an earlier call cancels subsequent calls.
+    Deliver :data:`mitogen.core.CALL_FUNCTION` messages to a target context,
+    optionally threading related calls so an exception in an earlier call
+    cancels subsequent calls.
 
     :param mitogen.core.Context context:
         Target context.
     :param bool pipelined:
-        Enable pipelined mode.
+        Enable pipelining.
 
-    By default, :meth:`call`, :meth:`call_no_reply` and :meth:`call_async`
-    issue calls and produce responses, with no memory of prior exceptions. If a
-    call made with :meth:`call_no_reply` fails, the traceback is logged to the
-    target context's logging framework.
+    :meth:`call`, :meth:`call_no_reply` and :meth:`call_async`
+    normally issue calls and produce responses with no memory of prior
+    exceptions. If a call made with :meth:`call_no_reply` fails, the exception
+    is logged to the target context's logging framework.
 
-    **Pipelined Mode**
+    **Pipelining**
 
-    When `pipelined=True`, if an exception occurs in a call,
-    all subsequent calls made by the same :class:`CallChain` instance will fail
-    with the same exception, including those already in-flight on the network,
-    and no further calls will execute until :meth:`reset` is invoked.
+    When pipelining is enabled, if an exception occurs during a call,
+    subsequent calls made by the same :class:`CallChain` fail with the same
+    exception, including those already in-flight on the network, and no further
+    calls execute until :meth:`reset` is invoked.
 
-    No traceback is logged for calls made with :meth:`call_no_reply`, instead
-    the exception is saved and reported as the result of subsequent
-    :meth:`call` or :meth:`call_async` calls.
+    No exception is logged for calls made with :meth:`call_no_reply`, instead
+    it is saved and reported as the result of subsequent :meth:`call` or
+    :meth:`call_async` calls.
 
-    A sequence of pipelined asynchronous calls can be made without wasting
-    network round-trips to discover if prior calls succeeded, while allowing
-    such chains to overlap concurrently at a target context from multiple
-    unrelated source contexts. This enables many calls to safely progress in
-    one network round-trip, like::
+    Sequences of asynchronous calls can be made without wasting network
+    round-trips to discover if prior calls succeed, and chains originating from
+    multiple unrelated source contexts may overlap concurrently at a target
+    context without interference. In this example, 4 calls complete in one
+    round-trip::
 
         chain = mitogen.parent.CallChain(context, pipelined=True)
         chain.call_no_reply(os.mkdir, '/tmp/foo')
@@ -1160,22 +1160,21 @@ class CallChain(object):
         # If previous mkdir() failed, this never runs:
         chain.call_no_reply(os.mkdir, '/tmp/foo/bar')
 
-        # If either mkdir() failed, this never runs, and returns the exception.
+        # If either mkdir() failed, this never runs, and the exception is
+        # asynchronously delivered to the receiver.
         recv = chain.call_async(subprocess.check_output, '/tmp/foo')
 
-        # If mkdir() or check_call() failed, this never runs, and returns the
-        # exception.
+        # If anything so far failed, this never runs, and raises the exception.
         chain.call(do_something)
 
-        # The receiver also got a copy of the exception, so if this
-        # code was executed, the exception would also be raised.
+        # If this code was executed, the exception would also be raised.
         if recv.get().unpickle() == 'baz':
             pass
 
-    When pipelining is enabled, :meth:`reset` must be called to ensure the last
+    When pipelining is enabled, :meth:`reset` must be invoked to ensure any
     exception is discarded, otherwise unbounded memory usage is possible in
-    long-running programs. :class:`CallChain` supports the context manager
-    protocol to ensure :meth:`reset` is always invoked::
+    long-running programs. The context manager protocol is supported to ensure
+    :meth:`reset` is always invoked::
 
         with mitogen.parent.CallChain(context, pipelined=True) as chain:
             chain.call_no_reply(...)
@@ -1243,20 +1242,16 @@ class CallChain(object):
     def call_no_reply(self, fn, *args, **kwargs):
         """
         Like :meth:`call_async`, but do not wait for a return value, and inform
-        the target context no such reply is expected. If the call fails and
-        pipelining is disabled, the full exception will be logged to the target
+        the target context no reply is expected. If the call fails and
+        pipelining is disabled, the exception will be logged to the target
         context's logging framework.
-
-        :raises mitogen.core.CallError:
-            An exception was raised in the remote context during execution.
         """
         LOG.debug('%r.call_no_reply(): %r', self, CallSpec(fn, args, kwargs))
         self.context.send(self.make_msg(fn, *args, **kwargs))
 
     def call_async(self, fn, *args, **kwargs):
         """
-        Arrange for the context's ``CALL_FUNCTION`` handle to receive a message
-        that causes `fn(\*args, \**kwargs)` to be invoked on the context's main
+        Arrange for `fn(\*args, \**kwargs)` to be invoked on the context's main
         thread.
 
         :param fn:
@@ -1312,12 +1307,13 @@ class CallChain(object):
 
     def call(self, fn, *args, **kwargs):
         """
-        Equivalent to :meth:`call_async(fn, \*args, \**kwargs).get().unpickle()
-        <call_async>`.
+        Like :meth:`call_async`, but block until the return value is available.
+        Equivalent to::
+
+            call_async(fn, *args, **kwargs).get().unpickle()
 
         :returns:
             The function's return value.
-
         :raises mitogen.core.CallError:
             An exception was raised in the remote context during execution.
         """
