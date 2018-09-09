@@ -53,6 +53,10 @@ Enhancements
   a 250 ms link from 30 seconds to 10 seconds compared to v0.2.2, down from 120
   seconds compared to vanilla.
 
+* `49736b3a <https://github.com/dw/mitogen/commit/49736b3a>`_: avoid a
+  roundtrip when transferring files larger than 124KiB, in between waiting for
+  the transfer to complete and start of the follow-up action..
+
 * `d62e6e2a <https://github.com/dw/mitogen/commit/d62e6e2a>`_: many-target
   runs executed the dependency scanner redundantly due to missing
   synchronization, wasting significant runtime in the connection multiplexer.
