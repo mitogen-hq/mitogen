@@ -162,7 +162,7 @@ Core Library
   connection setup.
 
 * A new :class:`mitogen.parent.CallChain` class abstracts safe pipelining of
-  overlapping chains of unrelated function calls to a target context,
+  overlapping chains of related function calls to a target context,
   cancelling the chain if an exception occurs.
 
 
