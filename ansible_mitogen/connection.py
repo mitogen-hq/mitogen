@@ -463,10 +463,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #:                  target, automatically destroyed at shutdown.
     init_child_result = None
 
-    #: After :meth:`get_temp_dir` is called, a private temporary directory,
-    #: destroyed during :meth:`close`, or automatically during shutdown if
-    #: :meth:`close` failed or was never called.
-    _temp_dir = None
+    #: A private temporary directory destroyed during :meth:`close`, or
+    #: automatically during shutdown if :meth:`close` failed or was never
+    #: called.
+    temp_dir = None
 
     #: A :class:`mitogen.parent.CallChain` to use for calls made to the target
     #: account, to ensure subsequent calls fail if pipelined directory creation
@@ -674,17 +674,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.init_child_result = dct['init_child_result']
 
-    def get_temp_dir(self):
+    def _init_temp_dir(self):
         """
         """
-        if self._temp_dir is None:
-            self._temp_dir = os.path.join(
-                self.init_child_result['temp_dir'],
-                'worker-%d-%x' % (os.getpid(), id(self))
-            )
-            self.get_chain().call_no_reply(os.mkdir, self._temp_dir)
-
-        return self._temp_dir
+        self.temp_dir = os.path.join(
+            self.init_child_result['temp_dir'],
+            'worker-%d-%x' % (os.getpid(), id(self))
+        )
+        self.get_chain().call_no_reply(os.mkdir, self.temp_dir)
 
     def _connect(self):
         """
@@ -703,6 +700,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect_broker()
         stack = self._build_stack()
         self._connect_stack(stack)
+        self._init_temp_dir()
 
     def close(self, new_task=False):
         """
@@ -712,18 +710,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         if self.context:
             self.chain.reset()
-            if self._temp_dir:
-                # Don't pipeline here to ensure exception is dumped into
-                # logging framework on failure.
-                self.context.call_no_reply(ansible_mitogen.target.prune_tree,
-                                           self._temp_dir)
-                self._temp_dir = None
+            # No pipelining to ensure exception is logged on failure.
+            self.context.call_no_reply(ansible_mitogen.target.prune_tree,
+                                       self.temp_dir)
             self.parent.call_service(
                 service_name='ansible_mitogen.services.ContextService',
                 method_name='put',
                 context=self.context
             )
 
+        self.temp_dir = None
         self.context = None
         self.login_context = None
         self.init_child_result = None

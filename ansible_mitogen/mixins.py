@@ -176,12 +176,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _make_tmp_path(self, remote_user=None):
         """
-        Return the temporary directory created by the persistent interpreter at
-        startup.
+        Return the directory created by the Connection instance during
+        connection.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
+        self._connection._connect()
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
-        self._connection._shell.tmpdir = self._connection.get_temp_dir()
+        self._connection._shell.tmpdir = self._connection.temp_dir
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
         return self._connection._shell.tmpdir
@@ -318,7 +319,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._connection._connect()
 
         if ansible.__version__ > '2.5':
-            module_args['_ansible_tmpdir'] = self._connection.get_temp_dir()
+            module_args['_ansible_tmpdir'] = self._connection.temp_dir
 
         return ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(

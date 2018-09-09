@@ -66,9 +66,6 @@ except ImportError:
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
-ansible.module_utils.basic.get_module_path = lambda: (
-    ansible_mitogen.target.temp_dir
-)
 
 # For tasks that modify /etc/resolv.conf, non-Debian derivative glibcs cache
 # resolv.conf at startup and never implicitly reload it. Cope with that via an
@@ -245,13 +242,15 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, json_args, extra_env=None,
-                 cwd=None, env=None, econtext=None, detach=False):
+    def __init__(self, module, service_context, json_args, temp_dir,
+                 extra_env=None, cwd=None, env=None, econtext=None,
+                 detach=False):
         self.module = module
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
         self.args = json.loads(json_args)
+        self.temp_dir = temp_dir
         self.extra_env = extra_env
         self.env = env
         self.cwd = cwd
@@ -292,33 +291,6 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
-        self._try_cleanup_temp()
-
-    def _cleanup_temp(self):
-        """
-        Empty temp_dir in time for the next module invocation.
-        """
-        for name in os.listdir(ansible_mitogen.target.temp_dir):
-            if name in ('.', '..'):
-                continue
-
-            path = os.path.join(ansible_mitogen.target.temp_dir, name)
-            LOG.debug('Deleting %r', path)
-            ansible_mitogen.target.prune_tree(path)
-
-    def _try_cleanup_temp(self):
-        """
-        During broker shutdown triggered by async task timeout or loss of
-        connection to the parent, it is possible for prune_tree() in
-        target.py::_on_broker_shutdown() to run before _cleanup_temp(), so skip
-        cleanup if the directory or a file disappears from beneath us.
-        """
-        try:
-            self._cleanup_temp()
-        except (IOError, OSError) as e:
-            if e.args[0] == errno.ENOENT:
-                return
-            raise
 
     def _run(self):
         """
@@ -431,7 +403,8 @@ class NewStyleStdio(object):
     """
     Patch ansible.module_utils.basic argument globals.
     """
-    def __init__(self, args):
+    def __init__(self, args, temp_dir):
+        self.temp_dir = temp_dir
         self.original_stdout = sys.stdout
         self.original_stderr = sys.stderr
         self.original_stdin = sys.stdin
@@ -441,7 +414,15 @@ class NewStyleStdio(object):
         ansible.module_utils.basic._ANSIBLE_ARGS = utf8(encoded)
         sys.stdin = StringIO(mitogen.core.to_text(encoded))
 
+        self.original_get_path = getattr(ansible.module_utils.basic,
+                                        'get_module_path', None)
+        ansible.module_utils.basic.get_module_path = self._get_path
+
+    def _get_path(self):
+        return self.temp_dir
+
     def revert(self):
+        ansible.module_utils.basic.get_module_path = self.original_get_path
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
         sys.stdin = self.original_stdin
@@ -485,7 +466,7 @@ class ProgramRunner(Runner):
         fetched via :meth:`_get_program`.
         """
         filename = self._get_program_filename()
-        path = os.path.join(ansible_mitogen.target.temp_dir, filename)
+        path = os.path.join(self.temp_dir, filename)
         self.program_fp = open(path, 'wb')
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
@@ -565,7 +546,7 @@ class ArgsFileRunner(Runner):
         self.args_fp = tempfile.NamedTemporaryFile(
             prefix='ansible_mitogen',
             suffix='-args',
-            dir=ansible_mitogen.target.temp_dir,
+            dir=self.temp_dir,
         )
         self.args_fp.write(utf8(self._get_args_contents()))
         self.args_fp.flush()
@@ -680,7 +661,7 @@ class NewStyleRunner(ScriptRunner):
     def setup(self):
         super(NewStyleRunner, self).setup()
 
-        self._stdio = NewStyleStdio(self.args)
+        self._stdio = NewStyleStdio(self.args, self.temp_dir)
         # It is possible that not supplying the script filename will break some
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
@@ -758,7 +739,7 @@ class NewStyleRunner(ScriptRunner):
         # don't want to pointlessly write the module to disk when it never
         # actually needs to exist. So just pass the filename as it would exist.
         mod.__file__ = os.path.join(
-            ansible_mitogen.target.temp_dir,
+            self.temp_dir,
             'ansible_module_' + os.path.basename(self.path),
         )
 

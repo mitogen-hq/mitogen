@@ -464,9 +464,10 @@ filesystem with ``noexec`` disabled:
 8. ``/usr/tmp``
 9. Current working directory
 
-As the directory is created once at startup, and its content is managed by code
-running remotely, no additional network roundtrips are required to manage it
-for each task requiring temporary storage.
+The directory is created once at startup, and subdirectories are automatically
+created and destroyed for every new task. Management of subdirectories happens
+on the controller, but management of the parent directory happens entirely on
+the target.
 
 
 .. _ansible_process_env:

@@ -1193,7 +1193,7 @@ class CallChain(object):
 
     @classmethod
     def make_chain_id(cls):
-        return '%s-%s-%s-%s' % (
+        return '%s-%s-%x-%x' % (
             socket.gethostname(),
             os.getpid(),
             threading.currentThread().ident,
