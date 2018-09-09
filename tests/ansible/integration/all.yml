@@ -6,6 +6,7 @@
 - import_playbook: action/all.yml
 - import_playbook: async/all.yml
 - import_playbook: become/all.yml
+- import_playbook: connection/all.yml
 - import_playbook: connection_loader/all.yml
 - import_playbook: context_service/all.yml
 - import_playbook: delegation/all.yml
