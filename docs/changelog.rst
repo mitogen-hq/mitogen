@@ -54,9 +54,13 @@ Enhancements
   seconds compared to vanilla.
 
 * `49736b3a <https://github.com/dw/mitogen/commit/49736b3a>`_: avoid a
-  roundtrip when transferring files larger than 124KiB, avoiding a delay
+  roundtrip when transferring files larger than 124KiB, removing a delay
   between waiting for the transfer to complete and start of the follow-up
   action.
+
+* `#337 <https://github.com/dw/mitogen/issues/337>`_: To avoid a scaling
+  limitation, Mitogen no longer requires a PTY for every SSH client unless an
+  SSH password has been specified.
 
 * `d62e6e2a <https://github.com/dw/mitogen/commit/d62e6e2a>`_: many-target
   runs executed the dependency scanner redundantly due to missing
