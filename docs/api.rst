@@ -1094,11 +1094,11 @@ Select Class
 
         .. code-block:: python
 
-            sum(context.call_async(get_disk_usage).get().unpickle()
-                for context in contexts)
+            recvs = [c.call_async(get_disk_usage) for c in contexts]
+            sum(recv.get().unpickle() for recv in recvs)
 
-        Result processing happens concurrently to new results arriving, so
-        :meth:`all` should always be faster.
+        Result processing happens in the order results arrive, rather than the
+        order requests were issued, so :meth:`all` should always be faster.
 
     .. py:method:: get (timeout=None, block=True)
 

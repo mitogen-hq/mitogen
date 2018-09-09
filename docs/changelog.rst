@@ -61,9 +61,9 @@ Enhancements
 * `5189408e <https://github.com/dw/mitogen/commit/5189408e>`_: threads are
   cooperatively scheduled, minimizing `GIL
   <https://en.wikipedia.org/wiki/Global_interpreter_lock>`_ contention, and
-  reducing context switching by an order of magnitude. This manifests as an
-  overall improvement, but is easily noticeable on short many-target
-  runs, where startup overhead dominates runtime.
+  reducing context switching by around 90%. This manifests as an overall
+  improvement, but is easily noticeable on short many-target runs, where
+  startup overhead dominates runtime.
 
 
 Fixes
@@ -109,9 +109,9 @@ Fixes
   Ansible's behaviour.
 
 * `#355 <https://github.com/dw/mitogen/issues/355>`_: tasks configured to run
-  in an isolated forked subprocess were being forked from the wrong parent
-  context. This meant built-in modules overridden via a custom ``module_utils``
-  search path may not have had any effect.
+  in an isolated forked subprocess were forked from the wrong parent context.
+  This meant built-in modules overridden via a custom ``module_utils`` search
+  path may not have had any effect.
 
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
@@ -126,15 +126,19 @@ Fixes
 Core Library
 ~~~~~~~~~~~~
 
+* A new :class:`mitogen.parent.CallChain` class abstracts safe pipelining of
+  related function calls to a target context, cancelling the chain if an
+  exception occurs.
+
 * `#305 <https://github.com/dw/mitogen/issues/305>`_: fix a long-standing minor
-  race relating to the logging framework, where *no route for Message(...)(*
-  would appear fruequently during startup.
+  race relating to the logging framework, where *no route for Message..*
+  would frequently appear during startup.
 
 * `#313 <https://github.com/dw/mitogen/issues/313>`_:
-  :meth:`mitogen.parent.Context.call` was accidentally documented as capable of
-  accepting static methods. While possible on Python 2.x the result is ugly,
-  and in every case it should be trivial to replace with a classmethod. The
-  documentation was fixed.
+  :meth:`mitogen.parent.Context.call` was documented as capable of accepting
+  static methods. While possible on Python 2.x the result is ugly, and in every
+  case it should be trivial to replace with a classmethod. The documentation
+  was fixed.
 
 * `#337 <https://github.com/dw/mitogen/issues/337>`_: to avoid a scaling
   limitation, SSH no longer allocates a PTY for every OpenSSH client. PTYs are
@@ -160,10 +164,6 @@ Core Library
 * `830966bf <https://github.com/dw/mitogen/commit/830966bf>`_: the UNIX
   listener no longer crashes if the peer process disappears in the middle of
   connection setup.
-
-* A new :class:`mitogen.parent.CallChain` class abstracts safe pipelining of
-  overlapping chains of related function calls to a target context,
-  cancelling the chain if an exception occurs.
 
 
 Thanks!
