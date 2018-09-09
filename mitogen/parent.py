@@ -596,8 +596,12 @@ class CallSpec(object):
         self.kwargs = kwargs
 
     def _get_name(self):
-        return u'%s.%s' % (self.func.__module__,
-                           self.func.__name__)
+        bits = [self.func.__module__]
+        if inspect.ismethod(self.func):
+            bits.append(getattr(self.func.__self__, '__name__', None) or
+                        getattr(type(self.func.__self__), '__name__', None))
+        bits.append(self.func.__name__)
+        return u'.'.join(bits)
 
     def _get_args(self):
         return u', '.join(repr(a) for a in self.args)
