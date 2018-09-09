@@ -14,7 +14,7 @@ import googleapiclient.discovery
 def main():
     project = 'mitogen-load-testing'
     zone = 'europe-west1-d'
-    group_name = 'target'
+    group_name = 'micro-debian9'
 
     client = googleapiclient.discovery.build('compute', 'v1')
     resp = client.instances().list(project=project, zone=zone).execute()

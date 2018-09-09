@@ -371,7 +371,7 @@ class ModuleFinder(object):
             #        requests.packages.urllib3.contrib.pyopenssl"
             e = sys.exc_info()[1]
             LOG.debug('%r: loading %r using %r failed: %s',
-                      self, fullname, loader)
+                      self, fullname, loader, e)
             return
 
         if path is None or source is None:
@@ -681,8 +681,7 @@ class ModuleResponder(object):
                 )
             )
 
-    def _forward_module(self, context, fullname):
-        IOLOG.debug('%r._forward_module(%r, %r)', self, context, fullname)
+    def _forward_one_module(self, context, fullname):
         path = []
         while fullname:
             path.append(fullname)
@@ -693,8 +692,13 @@ class ModuleResponder(object):
             self._send_module_and_related(stream, fullname)
             self._send_forward_module(stream, context, fullname)
 
-    def forward_module(self, context, fullname):
-        self._router.broker.defer(self._forward_module, context, fullname)
+    def _forward_modules(self, context, fullnames):
+        IOLOG.debug('%r._forward_modules(%r, %r)', self, context, fullnames)
+        for fullname in fullnames:
+            self._forward_one_module(context, fullname)
+
+    def forward_modules(self, context, fullnames):
+        self._router.broker.defer(self._forward_modules, context, fullnames)
 
 
 class Broker(mitogen.core.Broker):

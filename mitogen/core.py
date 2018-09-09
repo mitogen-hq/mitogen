@@ -950,6 +950,16 @@ class LogHandler(logging.Handler):
         logging.Handler.__init__(self)
         self.context = context
         self.local = threading.local()
+        self._buffer = []
+
+    def uncork(self):
+        self._send = self.context.send
+        for msg in self._buffer:
+            self._send(msg)
+        self._buffer = None
+
+    def _send(self, msg):
+        self._buffer.append(msg)
 
     def emit(self, rec):
         if rec.name == 'mitogen.io' or \
@@ -963,7 +973,7 @@ class LogHandler(logging.Handler):
             if isinstance(encoded, UnicodeType):
                 # Logging package emits both :(
                 encoded = encoded.encode('utf-8')
-            self.context.send(Message(data=encoded, handle=FORWARD_LOG))
+            self._send(Message(data=encoded, handle=FORWARD_LOG))
         finally:
             self.local.in_emit = False
 
@@ -1939,14 +1949,75 @@ class Broker(object):
         return 'Broker(%#x)' % (id(self),)
 
 
+class Dispatcher(object):
+    def __init__(self, econtext):
+        self.econtext = econtext
+        #: Chain ID -> CallError if prior call failed.
+        self._error_by_chain_id = {}
+        self.recv = Receiver(router=econtext.router,
+                             handle=CALL_FUNCTION,
+                             policy=has_parent_authority)
+        listen(econtext.broker, 'shutdown', self.recv.close)
+
+    @classmethod
+    @takes_econtext
+    def forget_chain(cls, chain_id, econtext):
+        econtext.dispatcher._error_by_chain_id.pop(chain_id, None)
+
+    def _parse_request(self, msg):
+        data = msg.unpickle(throw=False)
+        _v and LOG.debug('_dispatch_one(%r)', data)
+
+        chain_id, modname, klass, func, args, kwargs = data
+        obj = import_module(modname)
+        if klass:
+            obj = getattr(obj, klass)
+        fn = getattr(obj, func)
+        if getattr(fn, 'mitogen_takes_econtext', None):
+            kwargs.setdefault('econtext', self.econtext)
+        if getattr(fn, 'mitogen_takes_router', None):
+            kwargs.setdefault('router', self.econtext.router)
+
+        return chain_id, fn, args, kwargs
+
+    def _dispatch_one(self, msg):
+        try:
+            chain_id, fn, args, kwargs = self._parse_request(msg)
+        except Exception:
+            return None, CallError(sys.exc_info()[1])
+
+        if chain_id in self._error_by_chain_id:
+            return chain_id, self._error_by_chain_id[chain_id]
+
+        try:
+            return chain_id, fn(*args, **kwargs)
+        except Exception:
+            e = CallError(sys.exc_info()[1])
+            if chain_id is not None:
+                self._error_by_chain_id[chain_id] = e
+            return chain_id, e
+
+    def _dispatch_calls(self):
+        for msg in self.recv:
+            chain_id, ret = self._dispatch_one(msg)
+            _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
+            if msg.reply_to:
+                msg.reply(ret)
+            elif isinstance(ret, CallError) and chain_id is None:
+                LOG.error('No-reply function call failed: %s', ret)
+
+    def run(self):
+        if self.econtext.config.get('on_start'):
+            self.econtext.config['on_start'](self)
+
+        _profile_hook('main', self._dispatch_calls)
+
+
 class ExternalContext(object):
     detached = False
 
     def __init__(self, config):
         self.config = config
-
-    def _on_broker_shutdown(self):
-        self.recv.close()
 
     def _on_broker_exit(self):
         if not self.config['profiling']:
@@ -2031,16 +2102,12 @@ class ExternalContext(object):
 
         in_fd = self.config.get('in_fd', 100)
         out_fd = self.config.get('out_fd', 1)
-        self.recv = Receiver(router=self.router,
-                             handle=CALL_FUNCTION,
-                             policy=has_parent_authority)
         self.stream = Stream(self.router, parent_id)
         self.stream.name = 'parent'
         self.stream.accept(in_fd, out_fd)
         self.stream.receive_side.keep_alive = False
 
         listen(self.stream, 'disconnect', self._on_parent_disconnect)
-        listen(self.broker, 'shutdown', self._on_broker_shutdown)
         listen(self.broker, 'exit', self._on_broker_exit)
 
         os.close(in_fd)
@@ -2052,9 +2119,10 @@ class ExternalContext(object):
             pass  # No first stage exists (e.g. fakessh)
 
     def _setup_logging(self):
+        self.log_handler = LogHandler(self.master)
         root = logging.getLogger()
         root.setLevel(self.config['log_level'])
-        root.handlers = [LogHandler(self.master)]
+        root.handlers = [self.log_handler]
         if self.config['debug']:
             enable_debug_logging()
 
@@ -2137,40 +2205,6 @@ class ExternalContext(object):
         # Reopen with line buffering.
         sys.stdout = os.fdopen(1, 'w', 1)
 
-    def _dispatch_one(self, msg):
-        data = msg.unpickle(throw=False)
-        _v and LOG.debug('_dispatch_calls(%r)', data)
-
-        modname, klass, func, args, kwargs = data
-        obj = import_module(modname)
-        if klass:
-            obj = getattr(obj, klass)
-        fn = getattr(obj, func)
-        if getattr(fn, 'mitogen_takes_econtext', None):
-            kwargs.setdefault('econtext', self)
-        if getattr(fn, 'mitogen_takes_router', None):
-            kwargs.setdefault('router', self.router)
-        return fn(*args, **kwargs)
-
-    def _dispatch_calls(self):
-        if self.config.get('on_start'):
-            self.config['on_start'](self)
-
-        for msg in self.recv:
-            try:
-                ret = self._dispatch_one(msg)
-                _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
-                if msg.reply_to:
-                    msg.reply(ret)
-            except Exception:
-                e = sys.exc_info()[1]
-                if msg.reply_to:
-                    _v and LOG.debug('_dispatch_calls: %s', e)
-                    msg.reply(CallError(e))
-                else:
-                    LOG.exception('_dispatch_calls: %r', msg)
-        self.dispatch_stopped = True
-
     def main(self):
         self._setup_master()
         try:
@@ -2184,14 +2218,16 @@ class ExternalContext(object):
                 if self.config.get('setup_stdio', True):
                     self._setup_stdio()
 
+                self.dispatcher = Dispatcher(self)
                 self.router.register(self.parent, self.stream)
+                self.log_handler.uncork()
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Connected to %s; my ID is %r, PID is %r',
                                  self.parent, mitogen.context_id, os.getpid())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
-                _profile_hook('main', self._dispatch_calls)
+                self.dispatcher.run()
                 _v and LOG.debug('ExternalContext.main() normal exit')
             except KeyboardInterrupt:
                 LOG.debug('KeyboardInterrupt received, exiting gracefully.')

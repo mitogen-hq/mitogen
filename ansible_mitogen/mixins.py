@@ -115,15 +115,6 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         )
         return super(ActionModuleMixin, self).run(tmp, task_vars)
 
-    def call(self, func, *args, **kwargs):
-        """
-        Arrange for a Python function to be called in the target context, which
-        should be some function from the standard library or
-        ansible_mitogen.target module. This junction point exists mainly as a
-        nice place to insert print statements during debugging.
-        """
-        return self._connection.call(func, *args, **kwargs)
-
     COMMAND_RESULT = {
         'rc': 0,
         'stdout': '',
@@ -164,7 +155,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         target user account.
         """
         LOG.debug('_remote_file_exists(%r)', path)
-        return self.call(os.path.exists, mitogen.utils.cast(path))
+        return self._connection.get_chain().call(
+            os.path.exists,
+            mitogen.utils.cast(path)
+        )
 
     def _configure_module(self, module_name, module_args, task_vars=None):
         """
@@ -182,12 +176,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _make_tmp_path(self, remote_user=None):
         """
-        Return the temporary directory created by the persistent interpreter at
-        startup.
+        Return the directory created by the Connection instance during
+        connection.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
+        self._connection._connect()
         # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
-        self._connection._shell.tmpdir = self._connection.get_temp_dir()
+        self._connection._shell.tmpdir = self._connection.temp_dir
         LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
         self._cleanup_remote_tmp = True
         return self._connection._shell.tmpdir
@@ -241,7 +236,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_remote_chmod(%r, mode=%r, sudoable=%r)',
                   paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.select.Select.all(
-            self._connection.call_async(
+            self._connection.get_chain().call_async(
                 ansible_mitogen.target.set_file_mode, path, mode
             )
             for path in paths
@@ -254,9 +249,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_remote_chown(%r, user=%r, sudoable=%r)',
                   paths, user, sudoable)
-        ent = self.call(pwd.getpwnam, user)
+        ent = self._connection.get_chain().call(pwd.getpwnam, user)
         return self.fake_shell(lambda: mitogen.select.Select.all(
-            self._connection.call_async(
+            self._connection.get_chain().call_async(
                 os.chown, path, ent.pw_uid, ent.pw_gid
             )
             for path in paths
@@ -284,8 +279,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 # ~/.ansible -> /home/dmw/.ansible
                 return os.path.join(self._connection.homedir, path[2:])
         # ~root/.ansible -> /root/.ansible
-        return self.call(os.path.expanduser, mitogen.utils.cast(path),
-                         use_login_context=not sudoable)
+        return self._connection.get_chain(login=(not sudoable)).call(
+            os.path.expanduser,
+            mitogen.utils.cast(path),
+        )
 
     def get_task_timeout_secs(self):
         """
@@ -322,7 +319,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._connection._connect()
 
         if ansible.__version__ > '2.5':
-            module_args['_ansible_tmpdir'] = self._connection.get_temp_dir()
+            module_args['_ansible_tmpdir'] = self._connection.temp_dir
 
         return ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(

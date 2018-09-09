@@ -121,6 +121,25 @@ class ContextTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertRaises(OSError, lambda: os.kill(pid, 0))
 
 
+class OpenPtyTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.openpty)
+
+    def test_pty_returned(self):
+        master_fd, slave_fd = self.func()
+        self.assertTrue(isinstance(master_fd, int))
+        self.assertTrue(isinstance(slave_fd, int))
+        os.close(master_fd)
+        os.close(slave_fd)
+
+    @mock.patch('os.openpty')
+    def test_max_reached(self, openpty):
+        openpty.side_effect = OSError(errno.ENXIO)
+        e = self.assertRaises(mitogen.core.StreamError,
+                              lambda: self.func())
+        msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
+        self.assertEquals(e.args[0], msg)
+
+
 class TtyCreateChildTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.tty_create_child)
 

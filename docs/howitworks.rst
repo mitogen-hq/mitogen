@@ -373,11 +373,9 @@ Children listen on the following handles:
 .. currentmodule:: mitogen.core
 .. data:: CALL_FUNCTION
 
-    Receives `(mod_name, class_name, func_name, args, kwargs)`
-    5-tuples from
-    :py:meth:`call_async() <mitogen.parent.Context.call_async>`,
-    imports ``mod_name``, then attempts to execute
-    `class_name.func_name(\*args, \**kwargs)`.
+    Receives `(chain_id, mod_name, class_name, func_name, args, kwargs)`
+    6-tuples from :class:`mitogen.parent.CallChain`, imports ``mod_name``, then
+    attempts to execute `class_name.func_name(\*args, \**kwargs)`.
 
     When this channel is closed (by way of receiving a dead message), the
     child's main thread begins graceful shutdown of its own :py:class:`Broker`

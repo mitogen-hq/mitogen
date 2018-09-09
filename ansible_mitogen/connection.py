@@ -31,7 +31,6 @@ from __future__ import unicode_literals
 
 import logging
 import os
-import shlex
 import stat
 import time
 
@@ -333,11 +332,16 @@ def config_from_play_context(transport, inventory_name, connection):
         'become_pass': connection._play_context.become_pass,
         'password': connection._play_context.password,
         'port': connection._play_context.port,
-        'python_path': parse_python_path(connection.python_path),
+        'python_path': parse_python_path(
+            connection.get_task_var('ansible_python_interpreter',
+                                    default='/usr/bin/python')
+        ),
         'private_key_file': connection._play_context.private_key_file,
         'ssh_executable': connection._play_context.ssh_executable,
         'timeout': connection._play_context.timeout,
-        'ansible_ssh_timeout': connection.ansible_ssh_timeout,
+        'ansible_ssh_timeout':
+            connection.get_task_var('ansible_ssh_timeout',
+                                    default=C.DEFAULT_TIMEOUT),
         'ssh_args': [
             mitogen.core.to_text(term)
             for s in (
@@ -356,12 +360,18 @@ def config_from_play_context(transport, inventory_name, connection):
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
         ],
-        'mitogen_via': connection.mitogen_via,
-        'mitogen_kind': connection.mitogen_kind,
-        'mitogen_docker_path': connection.mitogen_docker_path,
-        'mitogen_lxc_info_path': connection.mitogen_lxc_info_path,
-        'mitogen_machinectl_path': connection.mitogen_machinectl_path,
-        'mitogen_ssh_debug_level': connection.mitogen_ssh_debug_level,
+        'mitogen_via':
+            connection.get_task_var('mitogen_via'),
+        'mitogen_kind':
+            connection.get_task_var('mitogen_kind'),
+        'mitogen_docker_path':
+            connection.get_task_var('mitogen_docker_path'),
+        'mitogen_lxc_info_path':
+            connection.get_task_var('mitogen_lxc_info_path'),
+        'mitogen_machinectl_path':
+            connection.get_task_var('mitogen_machinectl_path'),
+        'mitogen_ssh_debug_level':
+            connection.get_task_var('mitogen_ssh_debug_level'),
     }
 
 
@@ -393,6 +403,34 @@ def config_from_hostvars(transport, inventory_name, connection,
     })
 
 
+class CallChain(mitogen.parent.CallChain):
+    call_aborted_msg = (
+        'Mitogen was disconnected from the remote environment while a call '
+        'was in-progress. If you feel this is in error, please file a bug. '
+        'Original error was: %s'
+    )
+
+    def _rethrow(self, recv):
+        try:
+            return recv.get().unpickle()
+        except mitogen.core.ChannelError as e:
+            raise ansible.errors.AnsibleConnectionFailure(
+                self.call_aborted_msg % (e,)
+            )
+
+    def call(self, func, *args, **kwargs):
+        """
+        Like :meth:`mitogen.parent.CallChain.call`, but log timings.
+        """
+        t0 = time.time()
+        try:
+            recv = self.call_async(func, *args, **kwargs)
+            return self._rethrow(recv)
+        finally:
+            LOG.debug('Call took %d ms: %r', 1000 * (time.time() - t0),
+                      mitogen.parent.CallSpec(func, args, kwargs))
+
+
 class Connection(ansible.plugins.connection.ConnectionBase):
     #: mitogen.master.Broker for this worker.
     broker = None
@@ -408,16 +446,34 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: reached via become.
     context = None
 
-    #: mitogen.parent.Context for the login account on the target. This is
-    #: always the login account, even when become=True.
+    #: Context for the login account on the target. This is always the login
+    #: account, even when become=True.
     login_context = None
-
-    #: mitogen.parent.Context connected to the fork parent process in the
-    #: target user account.
-    fork_context = None
 
     #: Only sudo, su, and doas are supported for now.
     become_methods = ['sudo', 'su', 'doas']
+
+    #: Dict containing init_child() return vaue as recorded at startup by
+    #: ContextService. Contains:
+    #:
+    #:  fork_context:   Context connected to the fork parent : process in the
+    #:                  target account.
+    #:  home_dir:       Target context's home directory.
+    #:  temp_dir:       A writeable temporary directory managed by the
+    #:                  target, automatically destroyed at shutdown.
+    init_child_result = None
+
+    #: A private temporary directory destroyed during :meth:`close`, or
+    #: automatically during shutdown if :meth:`close` failed or was never
+    #: called.
+    temp_dir = None
+
+    #: A :class:`mitogen.parent.CallChain` to use for calls made to the target
+    #: account, to ensure subsequent calls fail if pipelined directory creation
+    #: or file transfer fails. This eliminates roundtrips when a call is likely
+    #: to succeed, and ensures subsequent actions will fail with the original
+    #: exception if the pipelined call failed.
+    chain = None
 
     #
     # Note: any of the attributes below may be :data:`None` if the connection
@@ -425,32 +481,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     # the case of the synchronize module.
     #
 
-    #: Set to 'ansible_python_interpreter' by on_action_run().
-    python_path = None
-
-    #: Set to 'ansible_ssh_timeout' by on_action_run().
-    ansible_ssh_timeout = None
-
-    #: Set to 'mitogen_via' by on_action_run().
-    mitogen_via = None
-
-    #: Set to 'mitogen_kind' by on_action_run().
-    mitogen_kind = None
-
-    #: Set to 'mitogen_docker_path' by on_action_run().
-    mitogen_docker_path = None
-
-    #: Set to 'mitogen_lxc_info_path' by on_action_run().
-    mitogen_lxc_info_path = None
-
-    #: Set to 'mitogen_lxc_info_path' by on_action_run().
-    mitogen_machinectl_path = None
-
-    #: Set to 'mitogen_ssh_debug_level' by on_action_run().
-    mitogen_ssh_debug_level = None
-
-    #: Set to 'inventory_hostname' by on_action_run().
+    #: Set to the host name as it appears in inventory by on_action_run().
     inventory_hostname = None
+
+    #: Set to task_vars by on_action_run().
+    _task_vars = None
 
     #: Set to 'hostvars' by on_action_run()
     host_vars = None
@@ -462,12 +497,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: to change the working directory to that of the current playbook,
     #: matching vanilla Ansible behaviour.
     loader_basedir = None
-
-    #: Set after connection to the target context's home directory.
-    home_dir = None
-
-    #: Set after connection to the target context's home directory.
-    _temp_dir = None
 
     def __init__(self, play_context, new_stdin, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
@@ -500,26 +529,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str loader_basedir:
             Loader base directory; see :attr:`loader_basedir`.
         """
-        self.ansible_ssh_timeout = task_vars.get('ansible_ssh_timeout',
-                                                 C.DEFAULT_TIMEOUT)
-        self.python_path = task_vars.get('ansible_python_interpreter',
-                                         '/usr/bin/python')
-        self.mitogen_via = task_vars.get('mitogen_via')
-        self.mitogen_kind = task_vars.get('mitogen_kind')
-        self.mitogen_docker_path = task_vars.get('mitogen_docker_path')
-        self.mitogen_lxc_info_path = task_vars.get('mitogen_lxc_info_path')
-        self.mitogen_machinectl_path = task_vars.get('mitogen_machinectl_path')
-        self.mitogen_ssh_debug_level = task_vars.get('mitogen_ssh_debug_level')
         self.inventory_hostname = task_vars['inventory_hostname']
+        self._task_vars = task_vars
         self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
         self.close(new_task=True)
 
+    def get_task_var(self, key, default=None):
+        if self._task_vars and key in self._task_vars:
+            return self._task_vars[key]
+        return default
+
     @property
     def homedir(self):
         self._connect()
-        return self.home_dir
+        return self.init_child_result['home_dir']
 
     @property
     def connected(self):
@@ -535,7 +560,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if isinstance(via_vars, jinja2.runtime.Undefined):
             raise ansible.errors.AnsibleConnectionFailure(
                 self.unknown_via_msg % (
-                    self.mitogen_via,
+                    via_spec,
                     inventory_name,
                 )
             )
@@ -602,7 +627,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             transport=self._play_context.connection,
             inventory_name=self.delegate_to_hostname,
             connection=self,
-            hostvars=self.host_vars[self._play_context.delegate_to],
+            hostvars=self.host_vars[self.delegate_to_hostname],
             become_user=(self._play_context.become_user
                          if self._play_context.become
                          else None),
@@ -641,18 +666,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
 
         self.context = dct['context']
+        self.chain = CallChain(self.context, pipelined=True)
         if self._play_context.become:
             self.login_context = dct['via']
         else:
             self.login_context = self.context
 
-        self.fork_context = dct['init_child_result']['fork_context']
-        self.home_dir = dct['init_child_result']['home_dir']
-        self._temp_dir = dct['init_child_result']['temp_dir']
+        self.init_child_result = dct['init_child_result']
 
-    def get_temp_dir(self):
-        self._connect()
-        return self._temp_dir
+    def _init_temp_dir(self):
+        """
+        """
+        self.temp_dir = os.path.join(
+            self.init_child_result['temp_dir'],
+            'worker-%d-%x' % (os.getpid(), id(self))
+        )
+        self.get_chain().call_no_reply(os.mkdir, self.temp_dir)
 
     def _connect(self):
         """
@@ -671,6 +700,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect_broker()
         stack = self._build_stack()
         self._connect_stack(stack)
+        self._init_temp_dir()
 
     def close(self, new_task=False):
         """
@@ -679,70 +709,45 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         multiple times.
         """
         if self.context:
+            self.chain.reset()
+            # No pipelining to ensure exception is logged on failure.
+            self.context.call_no_reply(ansible_mitogen.target.prune_tree,
+                                       self.temp_dir)
             self.parent.call_service(
                 service_name='ansible_mitogen.services.ContextService',
                 method_name='put',
                 context=self.context
             )
 
+        self.temp_dir = None
         self.context = None
-        self.fork_context = None
         self.login_context = None
+        self.init_child_result = None
+        self.chain = None
         if self.broker and not new_task:
             self.broker.shutdown()
             self.broker.join()
             self.broker = None
             self.router = None
 
-    def call_async(self, func, *args, **kwargs):
+    def get_chain(self, use_login=False, use_fork=False):
         """
-        Start a function call to the target.
+        Return the :class:`mitogen.parent.CallChain` to use for executing
+        function calls.
 
-        :param bool use_login_context:
-            If present and :data:`True`, send the call to the login account
-            context rather than the optional become user context.
-
-        :param bool no_reply:
-            If present and :data:`True`, send the call with no ``reply_to``
-            header, causing the context to execute it entirely asynchronously,
-            and to log any exception thrown. This allows avoiding a roundtrip
-            in places where the outcome of a call is highly likely to succeed,
-            and subsequent actions will fail regardless with a meaningful
-            exception if the no_reply call failed.
-
-        :returns:
-            :class:`mitogen.core.Receiver` that receives the function call result.
+        :param bool use_login:
+            If :data:`True`, always return the chain for the login account
+            rather than any active become user.
+        :param bool use_fork:
+            If :data:`True`, return the chain for the fork parent.
+        :returns mitogen.parent.CallChain:
         """
         self._connect()
-
-        if kwargs.pop('use_login_context', None):
-            call_context = self.login_context
-        else:
-            call_context = self.context
-
-        if kwargs.pop('no_reply', None):
-            return call_context.call_no_reply(func, *args, **kwargs)
-        else:
-            return call_context.call_async(func, *args, **kwargs)
-
-    def call(self, func, *args, **kwargs):
-        """
-        Start and wait for completion of a function call in the target.
-
-        :raises mitogen.core.CallError:
-            The function call failed.
-        :returns:
-            Function return value.
-        """
-        t0 = time.time()
-        try:
-            recv = self.call_async(func, *args, **kwargs)
-            if recv is None:  # no_reply=True
-                return None
-            return recv.get().unpickle()
-        finally:
-            LOG.debug('Call took %d ms: %r', 1000 * (time.time() - t0),
-                      mitogen.parent.CallSpec(func, args, kwargs))
+        if use_login:
+            return self.login_context.default_call_chain
+        if use_fork:
+            return self.init_child_result['fork_context'].default_call_chain
+        return self.chain
 
     def create_fork_child(self):
         """
@@ -753,7 +758,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :returns:
             mitogen.core.Context of the new child.
         """
-        return self.call(ansible_mitogen.target.create_fork_child)
+        return self.get_chain(use_fork=True).call(
+            ansible_mitogen.target.create_fork_child
+        )
 
     def get_default_cwd(self):
         """
@@ -806,35 +813,33 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Local filesystem path to write.
         """
-        output = self.call(ansible_mitogen.target.read_path,
-                           mitogen.utils.cast(in_path))
+        output = self.get_chain().call(
+            ansible_mitogen.target.read_path,
+            mitogen.utils.cast(in_path),
+        )
         ansible_mitogen.target.write_path(out_path, output)
 
     def put_data(self, out_path, data, mode=None, utimes=None):
         """
         Implement put_file() by caling the corresponding ansible_mitogen.target
-        function in the target, transferring small files inline.
+        function in the target, transferring small files inline. This is
+        pipelined and will return immediately; failed transfers are reported as
+        exceptions in subsequent functon calls.
 
         :param str out_path:
             Remote filesystem path to write.
         :param byte data:
             File contents to put.
         """
-        # no_reply=True here avoids a roundrip that 99% of the time will report
-        # a successful response. If the file transfer fails, the target context
-        # will dump an exception into the logging framework, which will appear
-        # on console, and the missing file will cause the subsequent task step
-        # to fail regardless. This is safe since CALL_FUNCTION is presently
-        # single-threaded for each target, so subsequent steps cannot execute
-        # until the transfer RPC has completed.
-        self.call(ansible_mitogen.target.write_path,
-                  mitogen.utils.cast(out_path),
-                  mitogen.core.Blob(data),
-                  mode=mode,
-                  utimes=utimes,
-                  no_reply=True)
+        self.get_chain().call_no_reply(
+            ansible_mitogen.target.write_path,
+            mitogen.utils.cast(out_path),
+            mitogen.core.Blob(data),
+            mode=mode,
+            utimes=utimes,
+        )
 
-    #: Maximum size of a small file before switching to streaming file
+    #: Maximum size of a small file before switching to streaming
     #: transfer. This should really be the same as
     #: mitogen.services.FileService.IO_SIZE, however the message format has
     #: slightly more overhead, so just randomly subtract 4KiB.

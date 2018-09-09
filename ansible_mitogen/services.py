@@ -269,8 +269,7 @@ class ContextService(mitogen.service.Service):
     )
 
     def _send_module_forwards(self, context):
-        for fullname in self.ALWAYS_PRELOAD:
-            self.router.responder.forward_module(context, fullname)
+        self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
 
     _candidate_temp_dirs = None
 
@@ -380,6 +379,12 @@ class ContextService(mitogen.service.Service):
 
         return latch
 
+    disconnect_msg = (
+        'Channel was disconnected while connection attempt was in progress; '
+        'this may be caused by an abnormal Ansible exit, or due to an '
+        'unreliable target.'
+    )
+
     @mitogen.service.expose(mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
         'stack': list
@@ -407,6 +412,13 @@ class ContextService(mitogen.service.Service):
                 if isinstance(result, tuple):  # exc_info()
                     reraise(*result)
                 via = result['context']
+            except mitogen.core.ChannelError:
+                return {
+                    'context': None,
+                    'init_child_result': None,
+                    'method_name': spec['method'],
+                    'msg': self.disconnect_msg,
+                }
             except mitogen.core.StreamError as e:
                 return {
                     'context': None,

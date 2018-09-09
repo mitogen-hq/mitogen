@@ -4,6 +4,7 @@ import time
 import unittest2
 
 import mitogen.core
+import mitogen.parent
 import mitogen.master
 
 import testlib
@@ -18,15 +19,15 @@ def function_that_adds_numbers(x, y):
     return x + y
 
 
-def function_that_fails():
-    raise plain_old_module.MyError('exception text')
+def function_that_fails(s=''):
+    raise plain_old_module.MyError('exception text'+s)
 
 
 def func_with_bad_return_value():
     return CrazyType()
 
 
-def func_accepts_returns_context(context):
+def func_returns_arg(context):
     return context
 
 
@@ -101,7 +102,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(exc.args[0], mitogen.core.ChannelError.local_msg)
 
     def test_accepts_returns_context(self):
-        context = self.local.call(func_accepts_returns_context, self.local)
+        context = self.local.call(func_returns_arg, self.local)
         self.assertIsNot(context, self.local)
         self.assertEqual(context.context_id, self.local.context_id)
         self.assertEqual(context.name, self.local.name)
@@ -116,6 +117,41 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(123, recv.get().unpickle())
         self.assertRaises(mitogen.core.ChannelError,
                           lambda: recv.get().unpickle())
+
+
+class ChainTest(testlib.RouterMixin, testlib.TestCase):
+    # Verify mitogen_chain functionality.
+    klass = mitogen.parent.CallChain
+
+    def setUp(self):
+        super(ChainTest, self).setUp()
+        self.local = self.router.fork()
+
+    def test_subsequent_calls_produce_same_error(self):
+        chain = self.klass(self.local, pipelined=True)
+        self.assertEquals('xx', chain.call(func_returns_arg, 'xx'))
+        chain.call_no_reply(function_that_fails, 'x1')
+        e1 = self.assertRaises(mitogen.core.CallError,
+            lambda: chain.call(function_that_fails, 'x2'))
+        e2 = self.assertRaises(mitogen.core.CallError,
+            lambda: chain.call(func_returns_arg, 'x3'))
+        self.assertEquals(str(e1), str(e2))
+
+    def test_unrelated_overlapping_failed_chains(self):
+        c1 = self.klass(self.local, pipelined=True)
+        c2 = self.klass(self.local, pipelined=True)
+        c1.call_no_reply(function_that_fails, 'c1')
+        self.assertEquals('yes', c2.call(func_returns_arg, 'yes'))
+        self.assertRaises(mitogen.core.CallError,
+            lambda: c1.call(func_returns_arg, 'yes'))
+
+    def test_reset(self):
+        c1 = self.klass(self.local, pipelined=True)
+        c1.call_no_reply(function_that_fails, 'x1')
+        e1 = self.assertRaises(mitogen.core.CallError,
+            lambda: c1.call(function_that_fails, 'x2'))
+        c1.reset()
+        self.assertEquals('x3', c1.call(func_returns_arg, 'x3'))
 
 
 if __name__ == '__main__':

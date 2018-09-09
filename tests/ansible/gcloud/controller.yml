@@ -6,6 +6,24 @@
 
   tasks:
     - lineinfile:
+        line: "{{item}}"
+        path: /etc/sysctl.conf
+      register: sysctl_conf
+      become: true
+      with_items:
+        - "net.ipv4.ip_forward=1"
+        - "kernel.perf_event_paranoid=-1"
+
+    - copy:
+        src: ~/.ssh/id_gitlab
+        dest: ~/.ssh/id_gitlab
+        mode: 0600
+
+    - template:
+        dest: ~/.ssh/config
+        src: ssh_config.j2
+
+    - lineinfile:
         line: "net.ipv4.ip_forward=1"
         path: /etc/sysctl.conf
       register: sysctl_conf
