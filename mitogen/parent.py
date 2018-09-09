@@ -1201,6 +1201,9 @@ class CallChain(object):
             int(1e6 * time.time()),
         )
 
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.context)
+
     def __enter__(self):
         return self
 
@@ -1247,8 +1250,7 @@ class CallChain(object):
         :raises mitogen.core.CallError:
             An exception was raised in the remote context during execution.
         """
-        LOG.debug('%r.call_no_reply(%r, *%r, **%r)',
-                  self, fn, args, kwargs)
+        LOG.debug('%r.call_no_reply(): %r', self, CallSpec(fn, args, kwargs))
         self.context.send(self.make_msg(fn, *args, **kwargs))
 
     def call_async(self, fn, *args, **kwargs):

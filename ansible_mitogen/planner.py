@@ -478,7 +478,7 @@ def invoke(invocation):
         response = _invoke_forked_task(invocation, planner)
     else:
         _propagate_deps(invocation, planner, invocation.connection.context)
-        response = invocation.connection.call(
+        response = invocation.connection.get_chain().call(
             ansible_mitogen.target.run_module,
             kwargs=planner.get_kwargs(),
         )
