@@ -789,7 +789,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             (return code, stdout bytes, stderr bytes)
         """
         emulate_tty = (not in_data and sudoable)
-        rc, stdout, stderr = self.call(
+        rc, stdout, stderr = self.get_chain().call(
             ansible_mitogen.target.exec_command,
             cmd=mitogen.utils.cast(cmd),
             in_data=mitogen.utils.cast(in_data),
