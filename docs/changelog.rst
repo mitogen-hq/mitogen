@@ -74,6 +74,14 @@ Enhancements
   improvement, but is easily noticeable on short many-target runs, where
   startup overhead dominates runtime.
 
+* The `faulthandler <https://faulthandler.readthedocs.io/>`_ module is
+  automatically activated if it is installed, simplifying debugging of hangs.
+  See :ref:`diagnosing-hangs` for more information.
+
+* The ``MITOGEN_DUMP_THREAD_STACKS`` environment variable's value now indicates
+  the number of seconds between stack dumps. See :ref:`diagnosing-hangs` for
+  more information.
+
 
 Fixes
 ^^^^^
