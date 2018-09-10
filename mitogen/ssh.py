@@ -258,7 +258,7 @@ class Stream(mitogen.parent.Stream):
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
             LOG.debug('%r: accepting host key', self)
-            self.tty_stream.transmit_side.write('y\n')
+            self.tty_stream.transmit_side.write(b('y\n'))
             return
 
         # _host_key_prompt() should never be reached with ignore or enforce
@@ -304,7 +304,9 @@ class Stream(mitogen.parent.Stream):
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 LOG.debug('%r: sending password', self)
-                self.tty_stream.transmit_side.write((self.password + '\n').encode())
+                self.tty_stream.transmit_side.write(
+                    (self.password + '\n').encode()
+                )
                 password_sent = True
 
         raise mitogen.core.StreamError('bootstrap failed')
