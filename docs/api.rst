@@ -792,8 +792,8 @@ Context Class
 
     .. method:: send (msg)
 
-        Arrange for `msg` to be delivered to this context. Updates the
-        message's `dst_id` prior to routing it via the associated router.
+        Arrange for `msg` to be delivered to this context.
+        :attr:`dst_id <Message.dst_id>` is set to the target context ID.
 
         :param mitogen.core.Message msg:
             The message.
@@ -801,9 +801,9 @@ Context Class
     .. method:: send_async (msg, persist=False)
 
         Arrange for `msg` to be delivered to this context, with replies
-        delivered to a newly constructed Receiver. Updates the message's
-        `dst_id` prior to routing it via the associated router and registers a
-        handle which is placed in the message's `reply_to`.
+        directed to a newly constructed receiver. :attr:`dst_id
+        <Message.dst_id>` is set to the target context ID, and :attr:`reply_to
+        <Message.reply_to>` is set to the newly constructed receiver's handle.
 
         :param bool persist:
             If :data:`False`, the handler will be unregistered after a single
@@ -818,15 +818,15 @@ Context Class
 
     .. method:: send_await (msg, deadline=None)
 
-        As with :meth:`send_async`, but expect a single reply
-        (`persist=False`) delivered within `deadline` seconds.
+        Like :meth:`send_async`, but expect a single reply (`persist=False`)
+        delivered within `deadline` seconds.
 
         :param mitogen.core.Message msg:
             The message.
-
         :param float deadline:
             If not :data:`None`, seconds before timing out waiting for a reply.
-
+        :returns:
+            The deserialized reply.
         :raises mitogen.core.TimeoutError:
             No message was received and `deadline` passed.
 
@@ -838,9 +838,9 @@ Context Class
 
 .. class:: Context
 
-    Extend :class:`mitogen.core.Router` with functionality useful to
-    masters, and child contexts who later become parents. Currently when this
-    class is required, the target context's router is upgraded at runtime.
+    Extend :class:`mitogen.core.Context` with functionality useful to masters,
+    and child contexts who later become parents. Currently when this class is
+    required, the target context's router is upgraded at runtime.
 
     .. attribute:: default_call_chain
 
@@ -1196,7 +1196,7 @@ Broker Class
     Responsible for handling I/O multiplexing in a private thread.
 
     **Note:** This is the somewhat limited core version of the Broker class
-    used by child contexts. The master subclass is documented below this one.
+    used by child contexts. The master subclass is documented below.
 
     .. attribute:: shutdown_timeout = 3.0
 

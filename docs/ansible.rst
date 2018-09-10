@@ -313,9 +313,10 @@ Performance
 ^^^^^^^^^^^
 
 One roundtrip initiates a transfer larger than 124 KiB, while smaller transfers
-are embedded in a 0-roundtrip remote call. For tools operating via SSH
-multiplexing, 4 roundtrips are required to configure the IO channel, in
-addition to the time to start the local and remote processes.
+are embedded in a 0-roundtrip pipelined call. For tools operating via SSH
+multiplexing, 4 roundtrips are required to configure the IO channel, followed
+by 6 roundtrips to transfer the file in the case of ``sftp``, in addition to
+the time to start the local and remote processes.
 
 An invocation of ``scp`` with an empty ``.profile`` over a 30 ms link takes
 ~140 ms, wasting 110 ms per invocation, rising to ~2,000 ms over a 400 ms
@@ -847,6 +848,8 @@ logging is necessary. File-based logging can be enabled by setting
 ``MITOGEN_ROUTER_DEBUG=1`` in your environment. When file-based logging is
 enabled, one file per context will be created on the local machine and every
 target machine, as ``/tmp/mitogen.<pid>.log``.
+
+.. _diagnosing-hangs:
 
 Diagnosing Hangs
 ~~~~~~~~~~~~~~~~

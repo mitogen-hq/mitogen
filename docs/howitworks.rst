@@ -377,6 +377,13 @@ Children listen on the following handles:
     6-tuples from :class:`mitogen.parent.CallChain`, imports ``mod_name``, then
     attempts to execute `class_name.func_name(\*args, \**kwargs)`.
 
+    * `chain_id`: if not :data:`None`, an identifier unique to the originating
+      :class:`mitogen.parent.CallChain`. When set, if an exception occurs
+      during a call, future calls with the same ID automatically fail with the
+      same exception without ever executing, and failed calls with no
+      `reply_to` set are not dumped to the logging framework as they otherwise
+      would. This is used to implement pipelining.
+
     When this channel is closed (by way of receiving a dead message), the
     child's main thread begins graceful shutdown of its own :py:class:`Broker`
     and :py:class:`Router`.

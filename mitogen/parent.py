@@ -1149,14 +1149,15 @@ class CallChain(object):
     calls execute until :meth:`reset` is invoked.
 
     No exception is logged for calls made with :meth:`call_no_reply`, instead
-    it is saved and reported as the result of subsequent :meth:`call` or
-    :meth:`call_async` calls.
+    the exception is saved and reported as the result of subsequent
+    :meth:`call` or :meth:`call_async` calls.
 
     Sequences of asynchronous calls can be made without wasting network
     round-trips to discover if prior calls succeed, and chains originating from
     multiple unrelated source contexts may overlap concurrently at a target
-    context without interference. In this example, 4 calls complete in one
-    round-trip::
+    context without interference.
+
+    In this example, 4 calls complete in one round-trip::
 
         chain = mitogen.parent.CallChain(context, pipelined=True)
         chain.call_no_reply(os.mkdir, '/tmp/foo')
