@@ -17,22 +17,22 @@ HOST_KEY_STRICT_MSG = """Host key verification failed.\n"""
 
 
 def tty(msg):
-    fp = open('/dev/tty', 'w', 0)
-    fp.write(msg)
+    fp = open('/dev/tty', 'wb', 0)
+    fp.write(msg.encode())
     fp.close()
 
 
 def stderr(msg):
-    fp = open('/dev/stderr', 'w', 0)
-    fp.write(msg)
+    fp = open('/dev/stderr', 'wb', 0)
+    fp.write(msg.encode())
     fp.close()
 
 
 def confirm(msg):
     tty(msg)
-    fp = open('/dev/tty', 'r', 0)
+    fp = open('/dev/tty', 'rb', 0)
     try:
-        return fp.readline()
+        return fp.readline().decode()
     finally:
         fp.close()
 
