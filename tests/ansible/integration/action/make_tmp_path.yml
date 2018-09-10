@@ -175,7 +175,7 @@
       when: ansible_version.full < '2.5'
       assert:
         that:
-        - out.module_path.startswith(tmp_path.result)
+        - out.module_path.startswith(parent_temp_path2)
         - out.module_tmpdir == None
 
     - name: "Verify modules get the same tmpdir as the action plugin (>2.5)"
