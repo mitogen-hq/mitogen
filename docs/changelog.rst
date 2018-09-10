@@ -71,11 +71,11 @@ Enhancements
 
 * The `faulthandler <https://faulthandler.readthedocs.io/>`_ module is
   automatically activated if it is installed, simplifying debugging of hangs.
-  See :ref:`diagnosing-hangs` for more information.
+  See :ref:`diagnosing-hangs` for details.
 
 * The ``MITOGEN_DUMP_THREAD_STACKS`` environment variable's value now indicates
   the number of seconds between stack dumps. See :ref:`diagnosing-hangs` for
-  more information.
+  details.
 
 
 Fixes
