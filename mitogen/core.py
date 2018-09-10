@@ -2008,7 +2008,7 @@ class Dispatcher(object):
 
     def run(self):
         if self.econtext.config.get('on_start'):
-            self.econtext.config['on_start'](self)
+            self.econtext.config['on_start'](self.econtext)
 
         _profile_hook('main', self._dispatch_calls)
 
