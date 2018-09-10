@@ -23,27 +23,88 @@
         method: _make_tmp_path
       register: tmp_path
 
-    - name: "Write some junk in regular temp path"
-      shell: hostname > {{tmp_path.result}}/hostname
-
-    - name: "Verify junk did not persist across tasks"
-      stat: path={{tmp_path.result}}/hostname
-      register: junk_stat
-
-    - name: "Verify junk did not persist across tasks"
-      assert:
-        that:
-        - not junk_stat.stat.exists
-
-    - name: "Verify temp path hasn't changed since start"
+    - name: "Find regular temp path (new task)"
       action_passthrough:
         method: _make_tmp_path
       register: tmp_path2
 
-    - name: "Verify temp path hasn't changed since start"
+    - name: "Find parent temp path"
+      set_fact:
+        parent_temp_path: "{{tmp_path.result|dirname}}"
+
+    - name: "Find parent temp path (new task)"
+      set_fact:
+        parent_temp_path2: "{{tmp_path2.result|dirname}}"
+
+    - name: "Verify common base path for both tasks"
       assert:
         that:
-        - tmp_path2.result == tmp_path.result
+        - parent_temp_path == parent_temp_path2
+
+    - name: "Verify different subdir for both tasks"
+      assert:
+        that:
+        - tmp_path.result != tmp_path2.result
+
+    #
+    # Verify subdirectory removal.
+    #
+
+    - name: Stat temp path
+      stat:
+        path: "{{tmp_path.result}}"
+      register: stat1
+
+    - name: Stat temp path (new task)
+      stat:
+        path: "{{tmp_path2.result}}"
+      register: stat2
+
+    - name: "Verify neither subdir exists any more"
+      assert:
+        that:
+        - not stat1.stat.exists
+        - not stat2.stat.exists
+
+    #
+    # Verify parent directory persistence.
+    #
+
+    - name: Stat parent temp path (new task)
+      stat:
+        path: "{{parent_temp_path}}"
+      register: stat
+
+    - name: "Verify parent temp path is persistent"
+      assert:
+        that:
+        - stat.stat.exists
+
+    #
+    # Write some junk into the temp path.
+    #
+
+    - name: "Write junk to temp path and verify it disappears"
+      custom_python_run_script:
+        script: |
+          from ansible.module_utils.basic import get_module_path
+          path = get_module_path() + '/foo.txt'
+          result['path'] = path
+          open(path, 'w').write("bar")
+      register: out
+
+    - name: "Verify junk disappeared."
+      stat:
+        path: "{{out.path}}"
+      register: out
+
+    - assert:
+        that:
+        - not out.stat.exists
+
+    #
+    #
+    #
 
     - name: "Verify temp path changes across connection reset"
       mitogen_shutdown_all:
@@ -54,12 +115,16 @@
       register: tmp_path2
 
     - name: "Verify temp path changes across connection reset"
+      set_fact:
+        parent_temp_path2: "{{tmp_path2.result|dirname}}"
+
+    - name: "Verify temp path changes across connection reset"
       assert:
         that:
-        - tmp_path2.result != tmp_path.result
+        - parent_temp_path != parent_temp_path2
 
     - name: "Verify old path disappears across connection reset"
-      stat: path={{tmp_path.result}}
+      stat: path={{parent_temp_path}}
       register: junk_stat
 
     - name: "Verify old path disappears across connection reset"
@@ -89,23 +154,17 @@
     - name: "Try writing to temp directory for the readonly_homedir user"
       become: true
       become_user: mitogen__readonly_homedir
-      action_passthrough:
-        method: _make_tmp_path
+      custom_python_run_script:
+        script: |
+          from ansible.module_utils.basic import get_module_path
+          path = get_module_path() + '/foo.txt'
+          result['path'] = path
+          open(path, 'w').write("bar")
       register: tmp_path
 
-    - name: "Try writing to temp directory for the readonly_homedir user"
-      become: true
-      become_user: mitogen__readonly_homedir
-      shell: hostname > {{tmp_path.result}}/hostname
-
     #
-    # modules get the same temp dir
+    # modules get the same base dir
     #
-
-    - name: "Verify modules get the same tmpdir as the action plugin"
-      action_passthrough:
-        method: _make_tmp_path
-      register: tmp_path
 
     - name: "Verify modules get the same tmpdir as the action plugin"
       custom_python_detect_environment:
@@ -116,12 +175,12 @@
       when: ansible_version.full < '2.5'
       assert:
         that:
-        - out.module_path == tmp_path.result
+        - out.module_path.startswith( == tmp_path.result
         - out.module_tmpdir == None
 
     - name: "Verify modules get the same tmpdir as the action plugin (>2.5)"
       when: ansible_version.full > '2.5'
       assert:
         that:
-        - out.module_path == tmp_path.result
-        - out.module_tmpdir == tmp_path.result
+        - out.module_path.startswith(parent_temp_path2)
+        - out.module_tmpdir.startswith(parent_temp_path2)

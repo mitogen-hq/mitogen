@@ -194,7 +194,8 @@ the bug reports in this release contributed by
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
 `Pierre-Louis Bonicoli <https://github.com/jesteria>`_,
 `Prateek Jain <https://github.com/prateekj201>`_,
-`Rick Box <https://github.com/boxrick>`_, and
+`Rick Box <https://github.com/boxrick>`_,
+`Tawana Musewe <https://github.com/tbtmuse>`_, and
 `Timo Beckers <https://github.com/ti-mo>`_.
 
 
