@@ -78,9 +78,27 @@ Installation
 
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
 
-5. Subscribe to the `mitogen-announce mailing list
-   <https://www.freelists.org/list/mitogen-announce>`_ to stay updated with new
-   releases and important bug fixes.
+5.
+
+   .. raw:: html
+
+    <form action="https://www.freelists.org/cgi-bin/subscription.cgi" method="post">
+        Releases occur frequently and often include important fixes. Subscribe
+        to the <a
+        href="https://www.freelists.org/list/mitogen-announce">mitogen-announce
+        mailing list</a> be notified of new releases.
+
+        <p>
+        <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;">
+        <input type=hidden name="list" value="mitogen-announce">
+        <!-- <input type=hidden name="url_or_message" value="https://mitogen.readthedocs.io/en/stable/ansible.html#installation">-->
+        <input type="hidden" name="action" value="subscribe">
+        <button type="submit" style="font-size: 105%;">
+            Subscribe
+        </button>
+        </p>
+    </form>
+
 
 
 Demo
