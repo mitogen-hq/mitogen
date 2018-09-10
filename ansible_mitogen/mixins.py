@@ -279,7 +279,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 # ~/.ansible -> /home/dmw/.ansible
                 return os.path.join(self._connection.homedir, path[2:])
         # ~root/.ansible -> /root/.ansible
-        return self._connection.get_chain(login=(not sudoable)).call(
+        return self._connection.get_chain(use_login=(not sudoable)).call(
             os.path.expanduser,
             mitogen.utils.cast(path),
         )
