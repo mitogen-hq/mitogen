@@ -873,7 +873,14 @@ class FileService(Service):
             raise Error(self.context_mismatch_msg)
 
         LOG.debug('Serving %r', path)
-        fp = open(path, 'rb', self.IO_SIZE)
+        try:
+            fp = open(path, 'rb', self.IO_SIZE)
+        except IOError:
+            msg.reply(mitogen.core.CallError(
+                sys.exc_info()[1]
+            ))
+            return
+
         # Response must arrive first so requestee can begin receive loop,
         # otherwise first ack won't arrive until all pending chunks were
         # delivered. In that case max BDP would always be 128KiB, aka. max
