@@ -295,7 +295,7 @@ class Stream(mitogen.parent.Stream):
                 # it at the start of the line.
                 if self.password is not None and password_sent:
                     raise PasswordError(self.password_incorrect_msg)
-                elif 'password' in buf and self.password is None:
+                elif PASSWORD_PROMPT in buf and self.password is None:
                     # Permission denied (password,pubkey)
                     raise PasswordError(self.password_required_msg)
                 else:
