@@ -59,8 +59,8 @@ Enhancements
   action.
 
 * `#337 <https://github.com/dw/mitogen/issues/337>`_: To avoid a scaling
-  limitation, Mitogen no longer requires a PTY for every SSH client unless an
-  SSH password has been specified.
+  limitation, a PTY is no longer allocated for an SSH connection unless the
+  configuration specifies a password.
 
 * `d62e6e2a <https://github.com/dw/mitogen/commit/d62e6e2a>`_: many-target
   runs executed the dependency scanner redundantly due to missing
@@ -150,8 +150,8 @@ Core Library
   was fixed.
 
 * `#337 <https://github.com/dw/mitogen/issues/337>`_: to avoid a scaling
-  limitation, SSH now longer allocates a PTY for every OpenSSH client if it can
-  be avoided. PTYs are only allocated if a password is supplied, or when
+  limitation, a PTY is no longer allocated for each OpenSSH client if it can be
+  avoided. PTYs are only allocated if a password is supplied, or when
   `host_key_checking=accept`. This is since Linux has a default of 4096 PTYs
   (``kernel.pty.max``), while OS X has a default of 127 and an absolute maximum
   of 999 (``kern.tty.ptmx_max``).
