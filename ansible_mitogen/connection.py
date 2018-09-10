@@ -880,13 +880,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             path=mitogen.utils.cast(in_path)
         )
 
-        # A roundtrip is always necessary for the target to request the file
-        # from FileService, however, by pipelining the transfer function, the
-        # subsequent step (probably a module invocation) can get its
-        # dependencies and function call in-flight before the transfer is
-        # complete. This saves at least 1 RTT between the transfer completing
-        # and the start of the follow-up task.
-        self.get_chain().call_no_reply(
+        # For now this must remain synchronous, as the action plug-in may have
+        # passed us a temporary file to transfer. A future FileService could
+        # maintain an LRU list of open file descriptors to keep the temporary
+        # file alive, but that requires more work.
+        self.get_chain().call(
             ansible_mitogen.target.transfer_file,
             context=self.parent,
             in_path=in_path,

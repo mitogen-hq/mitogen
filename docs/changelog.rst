@@ -53,11 +53,6 @@ Enhancements
   a 250 ms link from 30 seconds to 10 seconds compared to v0.2.2, down from 120
   seconds compared to vanilla.
 
-* `49736b3a <https://github.com/dw/mitogen/commit/49736b3a>`_: avoid a
-  roundtrip when transferring files larger than 124KiB, removing a delay
-  between waiting for the transfer to complete and start of the follow-up
-  action.
-
 * `#337 <https://github.com/dw/mitogen/issues/337>`_: To avoid a scaling
   limitation, a PTY is no longer allocated for an SSH connection unless the
   configuration specifies a password.
