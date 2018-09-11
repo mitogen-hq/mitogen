@@ -125,6 +125,11 @@ Fixes
   This meant built-in modules overridden via a custom ``module_utils`` search
   path may not have had any effect.
 
+* `#362 <https://github.com/dw/mitogen/issues/362>`_: to work around a slow
+  algorithm in the :mod:`subprocess` module, the maximum number of open files
+  in processes running on the target is capped to 512, reducing the work
+  required to start a subprocess by >2000x in default CentOS configurations.
+
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
 
