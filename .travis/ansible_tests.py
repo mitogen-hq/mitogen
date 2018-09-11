@@ -55,7 +55,7 @@ with ci_lib.Fold('job_setup'):
             ))
 
     # Build the binaries.
-    run("make -C %s", TESTS_DIR)
+    # run("make -C %s", TESTS_DIR)
     if not ci_lib.exists_in_path('sshpass'):
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
