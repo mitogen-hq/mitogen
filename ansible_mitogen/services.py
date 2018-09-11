@@ -139,11 +139,15 @@ class ContextService(mitogen.service.Service):
         count reaches zero.
         """
         LOG.debug('%r.put(%r)', self, context)
-        if self._refs_by_context.get(context, 0) == 0:
-            LOG.warning('%r.put(%r): refcount was 0. shutdown_all called?',
-                        self, context)
-            return
-        self._refs_by_context[context] -= 1
+        self._lock.acquire()
+        try:
+            if self._refs_by_context.get(context, 0) == 0:
+                LOG.warning('%r.put(%r): refcount was 0. shutdown_all called?',
+                            self, context)
+                return
+            self._refs_by_context[context] -= 1
+        finally:
+            self._lock.release()
 
     def key_from_kwargs(self, **kwargs):
         """
