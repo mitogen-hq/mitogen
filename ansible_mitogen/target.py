@@ -91,13 +91,15 @@ _fork_parent = None
 good_temp_dir = None
 
 
-# subprocess.Popen(close_fds=True) aka. AnsibleModule.run_command() loops the
-# entire SC_OPEN_MAX space. CentOS>5 ships with 1,048,576 FDs by default,
-# resulting in huge (>500ms) runtime waste running many commands. Therefore if
-# we are a child context, cap the insane FD count to something reasonable.
-if subprocess.MAXFD > 512 and not mitogen.is_master:
-    subprocess.MAXFD = 512
+# issue #362: subprocess.Popen(close_fds=True) aka. AnsibleModule.run_command()
+# loops the entire SC_OPEN_MAX space. CentOS>5 ships with 1,048,576 FDs by
+# default, resulting in huge (>500ms) runtime waste running many commands.
+# Therefore if we are a child, cap the range to something reasonable.
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+if (rlimit[0] > 512 or rlimit[1] > 512) and not mitogen.is_master:
     resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
+    subprocess.MAXFD = 512  # Python <3.x
+del rlimit
 
 
 def get_small_file(context, path):
