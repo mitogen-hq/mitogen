@@ -24,9 +24,10 @@ with ci_lib.Fold('docker_setup'):
             --rm
             --detach
             --publish 0.0.0.0:%s:22/tcp
+            --hostname=target-%s
             --name=target-%s
             mitogen/%s-test
-        """, BASE_PORT + i, distro, distro,)
+        """, BASE_PORT + i, distro, distro, distro)
 
 
 with ci_lib.Fold('job_setup'):
