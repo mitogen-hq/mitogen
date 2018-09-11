@@ -60,8 +60,6 @@
         path: "{{tmp_path2.result}}"
       register: stat2
 
-    - debug: msg={{stat1}}
-
     - name: "Verify neither subdir exists any more"
       assert:
         that:

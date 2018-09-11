@@ -19,7 +19,6 @@
       - set_fact: out={{out_linux}}
       when: ansible_system == "Linux"
 
-    - debug: msg={{out}}
     - assert:
         that: |
           out.changed and

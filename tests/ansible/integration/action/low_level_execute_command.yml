@@ -23,7 +23,6 @@
       register: raw
 
     # Can't test stdout because TTY inserts \r in Ansible version.
-    - debug: msg={{raw}}
     - name: Verify raw module output.
       assert:
         that:

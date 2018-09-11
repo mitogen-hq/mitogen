@@ -41,9 +41,9 @@
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 
-  - debug: msg={{async_out}}
-    vars:
-      async_out: "{{result.content|b64decode|from_json}}"
+  #- debug: msg={{async_out}}
+    #vars:
+      #async_out: "{{result.content|b64decode|from_json}}"
 
   - assert:
       that:

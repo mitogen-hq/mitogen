@@ -9,7 +9,5 @@
         SOME_ENV: 123
       register: result
 
-    - debug: msg={{result}}
-
     - assert:
         that: "result.stdout == '123'"

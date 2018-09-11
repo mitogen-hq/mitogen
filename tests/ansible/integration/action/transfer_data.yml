@@ -37,8 +37,6 @@
         src: /tmp/transfer-data
       register: out
 
-    - debug: msg={{out}}
-
     - assert:
         that:
           out.content|b64decode == 'I am text.'

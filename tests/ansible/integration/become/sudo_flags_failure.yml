@@ -11,12 +11,11 @@
       vars:
         ansible_become_flags: --derps
 
-    - debug: msg={{out}}
     - name: Verify raw module output.
       assert:
         that:
           - out.failed
           - |
             ('sudo: no such option: --derps' in out.msg) or
-            ("sudo: unrecognized option `--derps'" in out.module_stderr) or 
+            ("sudo: unrecognized option `--derps'" in out.module_stderr) or
             ("sudo: unrecognized option '--derps'" in out.module_stderr)
