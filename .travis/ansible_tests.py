@@ -38,7 +38,7 @@ with ci_lib.Fold('job_setup'):
     run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
 
     run("mkdir %s", HOSTS_DIR)
-    run("ln -s %s/common-hosts %s", TESTS_DIR, HOSTS_DIR)
+    run("ln -s %s/hosts/common-hosts %s", TESTS_DIR, HOSTS_DIR)
 
     with open(os.path.join(HOSTS_DIR, 'target'), 'w') as fp:
         fp.write('[test-targets]\n')
