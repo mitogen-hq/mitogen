@@ -331,9 +331,7 @@
           out.result == [
               {
                   'kwargs': {
-                      'python_path': [
-                          hostvars['cd-normal'].local_env.sys_executable
-                      ],
+                      'python_path': None
                   },
                   'method': 'local',
               },
