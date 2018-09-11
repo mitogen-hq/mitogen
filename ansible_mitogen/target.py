@@ -43,6 +43,7 @@ import operator
 import os
 import pwd
 import re
+import resource
 import signal
 import stat
 import subprocess
@@ -88,6 +89,15 @@ _fork_parent = None
 #: Set by :func:`init_child` to the name of a writeable and executable
 #: temporary directory accessible by the active user account.
 good_temp_dir = None
+
+
+# subprocess.Popen(close_fds=True) aka. AnsibleModule.run_command() loops the
+# entire SC_OPEN_MAX space. CentOS>5 ships with 1,048,576 FDs by default,
+# resulting in huge (>500ms) runtime waste running many commands. Therefore if
+# we are a child context, cap the insane FD count to something reasonable.
+if subprocess.MAXFD > 512 and not mitogen.is_master:
+    subprocess.MAXFD = 512
+    resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
 
 
 def get_small_file(context, path):
