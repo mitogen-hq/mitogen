@@ -5,10 +5,21 @@
   any_errors_fatal: true
   tasks:
 
-  - custom_binary_producing_junk:
-    async: 100
-    poll: 0
-    register: job
+  - block:
+    - custom_binary_producing_junk_Darwin:
+      async: 100
+      poll: 0
+      register: job_darwin
+    - set_fact: job={{job_darwin}}
+    when: ansible_system == "Darwin"
+
+  - block:
+    - custom_binary_producing_junk_Linux:
+      async: 100
+      poll: 0
+      register: job_linux
+    - set_fact: job={{job_linux}}
+    when: ansible_system == "Linux"
 
   - shell: sleep 1
 
