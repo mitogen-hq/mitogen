@@ -85,13 +85,9 @@ MAKE_TEMP_FAILED_MSG = (
 #: the target Python interpreter before it executes any code or imports.
 _fork_parent = None
 
-#: Set by init_child() to a list of candidate $variable-expanded and
-#: tilde-expanded directory paths that may be usable as a temporary directory.
-_candidate_temp_dirs = None
-
-#: Set by reset_temp_dir() to the single temporary directory that will exist
-#: for the duration of the process.
-temp_dir = None
+#: Set by :func:`init_child` to the name of a writeable and executable
+#: temporary directory accessible by the active user account.
+good_temp_dir = None
 
 
 def get_small_file(context, path):
@@ -206,15 +202,19 @@ def _on_broker_shutdown():
     prune_tree(temp_dir)
 
 
-def find_good_temp_dir():
+def find_good_temp_dir(candidate_temp_dirs):
     """
-    Given a list of candidate temp directories extracted from ``ansible.cfg``
-    and stored in _candidate_temp_dirs, combine it with the Python-builtin list
-    of candidate directories used by :mod:`tempfile`, then iteratively try each
-    in turn until one is found that is both writeable and executable.
+    Given a list of candidate temp directories extracted from ``ansible.cfg``,
+    combine it with the Python-builtin list of candidate directories used by
+    :mod:`tempfile`, then iteratively try each until one is found that is both
+    writeable and executable.
+
+    :param list candidate_temp_dirs:
+        List of candidate $variable-expanded and tilde-expanded directory paths
+        that may be usable as a temporary directory.
     """
     paths = [os.path.expandvars(os.path.expanduser(p))
-             for p in _candidate_temp_dirs]
+             for p in candidate_temp_dirs]
     paths.extend(tempfile._candidate_tempdir_list())
 
     for path in paths:
@@ -254,29 +254,6 @@ def find_good_temp_dir():
 
 
 @mitogen.core.takes_econtext
-def reset_temp_dir(econtext):
-    """
-    Create one temporary directory to be reused by all runner.py invocations
-    for the lifetime of the process. The temporary directory is changed for
-    each forked job, and emptied as necessary by runner.py::_cleanup_temp()
-    after each module invocation.
-
-    The result is that a context need only create and delete one directory
-    during startup and shutdown, and no further filesystem writes need occur
-    assuming no modules execute that create temporary files.
-    """
-    global temp_dir
-    # https://github.com/dw/mitogen/issues/239
-
-    basedir = find_good_temp_dir()
-    temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_', dir=basedir)
-
-    # This must be reinstalled in forked children too, since the Broker
-    # instance from the parent process does not carry over to the new child.
-    mitogen.core.listen(econtext.broker, 'shutdown', _on_broker_shutdown)
-
-
-@mitogen.core.takes_econtext
 def init_child(econtext, log_level, candidate_temp_dirs):
     """
     Called by ContextService immediately after connection; arranges for the
@@ -306,24 +283,23 @@ def init_child(econtext, log_level, candidate_temp_dirs):
         the controller will use to start forked jobs, and `home_dir` is the
         home directory for the active user account.
     """
-    global _candidate_temp_dirs
-    _candidate_temp_dirs = candidate_temp_dirs
-
-    global _fork_parent
-    mitogen.parent.upgrade_router(econtext)
-    _fork_parent = econtext.router.fork()
-    reset_temp_dir(econtext)
-
     # Copying the master's log level causes log messages to be filtered before
     # they reach LogForwarder, thus reducing an influx of tiny messges waking
     # the connection multiplexer process in the master.
     LOG.setLevel(log_level)
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
+    global _fork_parent
+    mitogen.parent.upgrade_router(econtext)
+    _fork_parent = econtext.router.fork()
+
+    global good_temp_dir
+    good_temp_dir = find_good_temp_dir(candidate_temp_dirs)
+
     return {
         'fork_context': _fork_parent,
         'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
-        'temp_dir': temp_dir,
+        'good_temp_dir': good_temp_dir,
     }
 
 
@@ -336,7 +312,6 @@ def create_fork_child(econtext):
     """
     mitogen.parent.upgrade_router(econtext)
     context = econtext.router.fork()
-    context.call(reset_temp_dir)
     LOG.debug('create_fork_child() -> %r', context)
     return context
 

@@ -425,6 +425,9 @@ specific variables with a particular linefeed style.
 Temporary Files
 ~~~~~~~~~~~~~~~
 
+Temporary file handling in Ansible is incredibly tricky business, and the exact
+behaviour varies across major releases.
+
 Ansible creates a variety of temporary files and directories depending on its
 operating mode.
 
@@ -462,11 +465,20 @@ In summary, for each task Ansible may create one or more of:
 * ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
 * ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
 
-A directory must exist to maintain compatibility with Ansible, as many modules
-introspect :data:`sys.argv` to find a directory where they may write files,
-however only one directory exists for the lifetime of each interpreter, its
-location is consistent for each target account, and it is always privately
-owned by that account.
+
+Mitogen for Ansible
+^^^^^^^^^^^^^^^^^^^
+
+Temporary h
+Temporary directory handling is fiddly and varies across major Ansible
+releases.
+
+
+Temporary directories must exist to maintain compatibility with Ansible, as
+many modules introspect :data:`sys.argv` to find a directory where they may
+write files, however only one directory exists for the lifetime of each
+interpreter, its location is consistent for each target account, and it is
+always privately owned by that account.
 
 The paths below are tried until one is found that is writeable and lives on a
 filesystem with ``noexec`` disabled:

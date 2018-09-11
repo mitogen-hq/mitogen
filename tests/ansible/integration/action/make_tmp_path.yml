@@ -28,18 +28,18 @@
         method: _make_tmp_path
       register: tmp_path2
 
-    - name: "Find parent temp path"
+    - name: "Find good temp path"
       set_fact:
-        parent_temp_path: "{{tmp_path.result|dirname}}"
+        good_temp_path: "{{tmp_path.result|dirname}}"
 
-    - name: "Find parent temp path (new task)"
+    - name: "Find good temp path (new task)"
       set_fact:
-        parent_temp_path2: "{{tmp_path2.result|dirname}}"
+        good_temp_path2: "{{tmp_path2.result|dirname}}"
 
     - name: "Verify common base path for both tasks"
       assert:
         that:
-        - parent_temp_path == parent_temp_path2
+        - good_temp_path == good_temp_path2
 
     - name: "Verify different subdir for both tasks"
       assert:
@@ -60,6 +60,8 @@
         path: "{{tmp_path2.result}}"
       register: stat2
 
+    - debug: msg={{stat1}}
+
     - name: "Verify neither subdir exists any more"
       assert:
         that:
@@ -67,15 +69,15 @@
         - not stat2.stat.exists
 
     #
-    # Verify parent directory persistence.
+    # Verify good directory persistence.
     #
 
-    - name: Stat parent temp path (new task)
+    - name: Stat good temp path (new task)
       stat:
-        path: "{{parent_temp_path}}"
+        path: "{{good_temp_path}}"
       register: stat
 
-    - name: "Verify parent temp path is persistent"
+    - name: "Verify good temp path is persistent"
       assert:
         that:
         - stat.stat.exists
@@ -101,36 +103,6 @@
     - assert:
         that:
         - not out.stat.exists
-
-    #
-    #
-    #
-
-    - name: "Verify temp path changes across connection reset"
-      mitogen_shutdown_all:
-
-    - name: "Verify temp path changes across connection reset"
-      action_passthrough:
-        method: _make_tmp_path
-      register: tmp_path2
-
-    - name: "Verify temp path changes across connection reset"
-      set_fact:
-        parent_temp_path2: "{{tmp_path2.result|dirname}}"
-
-    - name: "Verify temp path changes across connection reset"
-      assert:
-        that:
-        - parent_temp_path != parent_temp_path2
-
-    - name: "Verify old path disappears across connection reset"
-      stat: path={{parent_temp_path}}
-      register: junk_stat
-
-    - name: "Verify old path disappears across connection reset"
-      assert:
-        that:
-        - not junk_stat.stat.exists
 
     #
     # root
@@ -175,12 +147,12 @@
       when: ansible_version.full < '2.5'
       assert:
         that:
-        - out.module_path.startswith(parent_temp_path2)
+        - out.module_path.startswith(good_temp_path2)
         - out.module_tmpdir == None
 
     - name: "Verify modules get the same tmpdir as the action plugin (>2.5)"
       when: ansible_version.full > '2.5'
       assert:
         that:
-        - out.module_path.startswith(parent_temp_path2)
-        - out.module_tmpdir.startswith(parent_temp_path2)
+        - out.module_path.startswith(good_temp_path2)
+        - out.module_tmpdir.startswith(good_temp_path2)
