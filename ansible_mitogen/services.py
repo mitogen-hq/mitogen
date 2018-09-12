@@ -187,29 +187,24 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
         return count
 
-    def _shutdown(self, context, lru=None, new_context=None):
+    def _shutdown_unlocked(self, context, lru=None, new_context=None):
         """
         Arrange for `context` to be shut down, and optionally add `new_context`
         to the LRU list while holding the lock.
         """
-        LOG.info('%r._shutdown(): shutting down %r', self, context)
+        LOG.info('%r._shutdown_unlocked(): shutting down %r', self, context)
         context.shutdown()
 
         key = self._key_by_context[context]
+        del self._response_by_key[key]
+        del self._refs_by_context[context]
+        del self._key_by_context[context]
+        if lru and context in lru:
+            lru.remove(context)
+        if new_context:
+            lru.append(new_context)
 
-        self._lock.acquire()
-        try:
-            del self._response_by_key[key]
-            del self._refs_by_context[context]
-            del self._key_by_context[context]
-            if lru and context in lru:
-                lru.remove(context)
-            if new_context:
-                lru.append(new_context)
-        finally:
-            self._lock.release()
-
-    def _update_lru(self, new_context, spec, via):
+    def _update_lru_unlocked(self, new_context, spec, via):
         """
         Update the LRU ("MRU"?) list associated with the connection described
         by `kwargs`, destroying the most recently created context if the list
@@ -228,16 +223,27 @@ class ContextService(mitogen.service.Service):
                         'but they are all marked as in-use.', via)
             return
 
-        self._shutdown(context, lru=lru, new_context=new_context)
+        self._shutdown_unlocked(context, lru=lru, new_context=new_context)
+
+    def _update_lru(self, new_context, spec, via):
+        self._lock.acquire()
+        try:
+            self._update_lru_unlocked(new_context, spec, via)
+        finally:
+            self._lock.release()
 
     @mitogen.service.expose(mitogen.service.AllowParents())
     def shutdown_all(self):
         """
         For testing use, arrange for all connections to be shut down.
         """
-        for context in list(self._key_by_context):
-            self._shutdown(context)
-        self._lru_by_via = {}
+        self._lock.acquire()
+        try:
+            for context in list(self._key_by_context):
+                self._shutdown_unlocked(context)
+            self._lru_by_via = {}
+        finally:
+            self._lock.release()
 
     def _on_stream_disconnect(self, stream):
         """
