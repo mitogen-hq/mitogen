@@ -63,7 +63,7 @@ class Stream(mitogen.parent.Stream):
         bits = [
             self.lxc_path,
             'exec',
-            '--force-noninteractive',
+            '--mode=noninteractive',
             self.container,
             '--',
         ]

@@ -18,7 +18,7 @@ class FakeLxcTest(testlib.RouterMixin, unittest2.TestCase):
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
         self.assertEquals(argv[0], lxc_path)
         self.assertEquals(argv[1], 'exec')
-        self.assertEquals(argv[2], '--force-noninteractive')
+        self.assertEquals(argv[2], '--mode=noninteractive')
         self.assertEquals(argv[3], 'container_name')
 
 
