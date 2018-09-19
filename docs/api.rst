@@ -589,6 +589,26 @@ Router Class
             Filename or complete path to the ``jexec`` binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``/usr/sbin/jexec``.
 
+    .. method:: kubectl (pid=None, container=None, kubectl_path=None, username=None, \**kwargs)
+
+        Construct a context in a container via the Kubernetes ``kubectl``
+        program.
+
+        Accepts all parameters accepted by :meth:`local`, in addition to:
+
+        :param str pod:
+            Kubernetes pod to connect to.
+        :param str container:
+            Optional container within pod to connect to. If the pod has only
+            one container, this parameter is not required. Defaults to
+            :data:`None`.
+        :param str kubectl_path:
+            Filename or complete path to the ``kubectl`` binary. ``PATH`` will
+            be searched if given as a filename. Defaults to ``kubectl``.
+        :param str username:
+            Optional username to authenticate to the Kubernetes API server
+            with. within the container to :func:`setuid` to.
+
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 
         Construct a context on the local machine within an LXC classic

@@ -155,6 +155,7 @@ Noteworthy Differences
 
 * The `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
   `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,
+  `kubectl <https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_,
   `local <https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_,
   `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_,
   `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_,
@@ -681,6 +682,8 @@ connection delegation is supported.
 * ``ansible_user``: Name of user within the container to execute as.
 
 
+.. _method-jail:
+
 FreeBSD Jail
 ~~~~~~~~~~~~
 
@@ -690,6 +693,19 @@ connection delegation is supported.
 
 * ``ansible_host``: Name of jail (default: inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
+
+
+.. _method-kubectl:
+
+Kubernetes Pod
+~~~~~~~~~~~~~~
+
+Like `kubectl
+<https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_ except
+connection delegation is supported.
+
+* ``ansible_host``: Name of pod (default: inventory hostname).
+* ``ansible_user``: Name of user to authenticate to API as.
 
 
 Local

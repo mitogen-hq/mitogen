@@ -48,13 +48,10 @@ class Stream(mitogen.parent.Stream):
         'merge_stdio': True
     }
 
-    def construct(self, pod = None, container=None,
-                  kubectl_path=None, username=None,
+    def construct(self, pod, container=None, kubectl_path=None, username=None,
                   **kwargs):
-        assert pod
         super(Stream, self).construct(**kwargs)
-        if pod:
-            self.pod = pod
+        self.pod = pod
         if container:
             self.container = container
         if kubectl_path:

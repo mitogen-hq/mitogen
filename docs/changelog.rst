@@ -41,6 +41,9 @@ Enhancements
   `uri <http://docs.ansible.com/ansible/latest/modules/uri_module.html>`_). See
   :ref:`ansible_tempfiles` for a complete description.
 
+* `#376 <https://github.com/dw/mitogen/pull/376>`_: the ``kubectl`` connection
+  type is now supported. Contributed by Yannig Perré.
+
 * `084c0ac0 <https://github.com/dw/mitogen/commit/084c0ac0>`_: avoid a
   roundtrip in
   `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_ and
@@ -170,6 +173,10 @@ Core Library
 * `#345 <https://github.com/dw/mitogen/issues/345>`_: the SSH connection method
   allows optionally disabling ``IdentitiesOnly yes``.
 
+* `#371 <https://github.com/dw/mitogen/pull/371>`_: the LXC connection method
+  uses a more compatible method to establish an non-interactive session.
+  Contributed by Brian Candler.
+
 * `af2ded66 <https://github.com/dw/mitogen/commit/af2ded66>`_: add
   :func:`mitogen.fork.on_fork` to allow non-Mitogen managed process forks to
   clean up Mitogen resources in the child.
@@ -191,6 +198,7 @@ the bug reports in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
 `atoom <https://github.com/atoom>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
+`Brian Candler <https://github.com/candlerb>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
 `dsgnr <https://github.com/dsgnr>`_,
 `Jesse London <https://github.com/jesteria>`_,
@@ -203,8 +211,9 @@ the bug reports in this release contributed by
 `Pierre-Louis Bonicoli <https://github.com/jesteria>`_,
 `Prateek Jain <https://github.com/prateekj201>`_,
 `Rick Box <https://github.com/boxrick>`_,
-`Tawana Musewe <https://github.com/tbtmuse>`_, and
-`Timo Beckers <https://github.com/ti-mo>`_.
+`Tawana Musewe <https://github.com/tbtmuse>`_,
+`Timo Beckers <https://github.com/ti-mo>`_, and
+`Yannig Perré <https://github.com/yannig>`_.
 
 
 v0.2.2 (2018-07-26)
