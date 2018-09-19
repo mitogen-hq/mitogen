@@ -1596,6 +1596,9 @@ class Router(mitogen.core.Router):
     def docker(self, **kwargs):
         return self.connect(u'docker', **kwargs)
 
+    def kubectl(self, **kwargs):
+        return self.connect(u'kubectl', **kwargs)
+
     def fork(self, **kwargs):
         return self.connect(u'fork', **kwargs)
 

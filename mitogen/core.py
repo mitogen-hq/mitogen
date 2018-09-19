@@ -717,6 +717,7 @@ class Importer(object):
             'debug',
             'doas',
             'docker',
+            'kubectl',
             'fakessh',
             'fork',
             'jail',

@@ -1,0 +1,91 @@
+---
+
+- name: "Create pod"
+  tags: always
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Create a test pod
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-pod-{{item}}
+            namespace: default
+          spec:
+            containers:
+            - name: python2
+              image: python:2
+              args: [ "sleep", "100000" ]
+      loop: "{{ range(10)|list }}"
+
+    - name: "Wait pod to be running"
+      debug: { msg: "pod is running" }
+      # status and availableReplicas might not be there. Using default value (d(default_value))
+      until: "pod_def.status.containerStatuses[0].ready"
+      # Waiting 100 s
+      retries: 50
+      delay: 2
+      vars:
+        pod_def: "{{lookup('k8s', kind='Pod', namespace='default', resource_name='test-pod-' ~ item)}}"
+      loop: "{{ range(10)|list }}"
+
+    - name: "Add pod to pods group"
+      add_host:
+        name: "test-pod-{{item}}"
+        groups: [ "pods" ]
+        ansible_connection: "kubectl"
+      changed_when: no
+      tags: "always"
+      loop: "{{ range(10)|list }}"
+
+- name: "Test kubectl connection (default strategy)"
+  tags: default
+  hosts: pods
+  strategy: "linear"
+  gather_facts: no
+  tasks:
+    - name: "Simple shell with linear"
+      shell: ls /tmp
+      loop: [ 1, 2, 3, 4, 5 ]
+
+    - name: "Simple file with linear"
+      file:
+        path: "/etc"
+        state: directory
+      loop: [ 1, 2, 3, 4, 5 ]
+
+- name: "Test kubectl connection (mitogen strategy)"
+  tags: mitogen
+  hosts: pods
+  strategy: "mitogen_linear"
+  gather_facts: no
+  tasks:
+    - name: "Simple shell with mitogen"
+      shell: ls /tmp
+      loop: [ 1, 2, 3, 4, 5 ]
+
+    - name: "Simple file with mitogen"
+      file:
+        path: "/etc"
+        state: directory
+      loop: [ 1, 2, 3, 4, 5 ]
+      register: _
+
+- name: "Destroy pod"
+  tags: cleanup
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Destroy pod
+      k8s:
+        state: absent
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-pod-{{item}}
+            namespace: default
+      loop: "{{ range(10)|list }}"
