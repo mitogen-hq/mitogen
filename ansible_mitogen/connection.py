@@ -132,11 +132,10 @@ def _connect_kubectl(spec):
     return {
         'method': 'kubectl',
         'kwargs': {
-            'username': spec['remote_user'],
             'pod': spec['remote_addr'],
-            #'container': spec['container'],
             'python_path': spec['python_path'],
             'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'additional_parameters': spec['additional_parameters'],
         }
     }
 
@@ -392,6 +391,8 @@ def config_from_play_context(transport, inventory_name, connection):
             connection.get_task_var('mitogen_machinectl_path'),
         'mitogen_ssh_debug_level':
             connection.get_task_var('mitogen_ssh_debug_level'),
+        'additional_parameters':
+            connection.get_additional_parameters(),
     }
 
 
@@ -570,6 +571,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     @property
     def connected(self):
         return self.context is not None
+
+    def get_additional_parameters(self):
+        return []
 
     def _config_from_via(self, via_spec):
         """

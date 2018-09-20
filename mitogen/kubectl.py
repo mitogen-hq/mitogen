@@ -32,6 +32,9 @@ import logging
 import mitogen.core
 import mitogen.parent
 
+import ansible.plugins.connection.kubectl
+
+from ansible.module_utils.six import iteritems
 
 LOG = logging.getLogger(__name__)
 
@@ -42,37 +45,26 @@ class Stream(mitogen.parent.Stream):
     container = None
     username = None
     kubectl_path = 'kubectl'
+    kubectl_options = []
 
     # TODO: better way of capturing errors such as "No such container."
     create_child_args = {
         'merge_stdio': True
     }
 
-    def construct(self, pod = None, container=None,
-                  kubectl_path=None, username=None,
-                  **kwargs):
-        assert pod
+    def construct(self, pod = None, kubectl_path=None,
+                  additional_parameters=None, **kwargs):
+        assert(pod)
         super(Stream, self).construct(**kwargs)
-        if pod:
-            self.pod = pod
-        if container:
-            self.container = container
-        if kubectl_path:
-            self.kubectl_path = kubectl_path
-        if username:
-            self.username = username
+
+        self.kubectl_options = additional_parameters
+        self.pod = pod
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = u'kubectl.' + (self.pod) + str(self.container)
+        self.name = u'kubectl.' + (self.pod) + str(self.container) + str(self.kubectl_options)
 
     def get_boot_command(self):
-        args = ['exec', '-it', self.pod]
-        if self.username:
-            args += ['--username=' + self.username]
+        bits = [self.kubectl_path] + self.kubectl_options + ['exec', '-it', self.pod]
 
-        if self.container:
-            args += ['--container=' + self.container]
-        bits = [self.kubectl_path]
-
-        return bits + args + [ "--" ] + super(Stream, self).get_boot_command()
+        return bits + [ "--" ] + super(Stream, self).get_boot_command()
