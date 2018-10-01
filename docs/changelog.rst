@@ -173,6 +173,12 @@ Core Library
 * `#345 <https://github.com/dw/mitogen/issues/345>`_: the SSH connection method
   allows optionally disabling ``IdentitiesOnly yes``.
 
+* `#366 <https://github.com/dw/mitogen/issues/366>`_,
+  `#380 <https://github.com/dw/mitogen/issues/380>`_: attempts by children to
+  import :mod:`__main__` where the main program module lacks an execution guard
+  are refused, and an error is logged. This prevents a common and highly
+  confusing error when prototyping new scripts.
+
 * `#371 <https://github.com/dw/mitogen/pull/371>`_: the LXC connection method
   uses a more compatible method to establish an non-interactive session.
   Contributed by Brian Candler.
@@ -202,6 +208,7 @@ the bug reports in this release contributed by
 `Dan Quackenbush <https://github.com/danquack>`_,
 `dsgnr <https://github.com/dsgnr>`_,
 `Jesse London <https://github.com/jesteria>`_,
+`John McGrath <https://github.com/jmcgrath207>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Luca Nunzi <https://github.com/0xlc>`_,
@@ -210,6 +217,7 @@ the bug reports in this release contributed by
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
 `Pierre-Louis Bonicoli <https://github.com/jesteria>`_,
 `Prateek Jain <https://github.com/prateekj201>`_,
+`RedheatWei <https://github.com/RedheatWei>`_,
 `Rick Box <https://github.com/boxrick>`_,
 `Tawana Musewe <https://github.com/tbtmuse>`_,
 `Timo Beckers <https://github.com/ti-mo>`_, and
