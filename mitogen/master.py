@@ -553,6 +553,14 @@ class ModuleResponder(object):
         return 'ModuleResponder(%r)' % (self._router,)
 
     MAIN_RE = re.compile(b(r'^if\s+__name__\s*==\s*.__main__.\s*:'), re.M)
+    main_guard_msg = (
+        "A child context attempted to import __main__, however the main "
+        "module present in the master process lacks an execution guard. "
+        "Update %r to prevent unintended execution, using a guard like:\n"
+        "\n"
+        "    if __name__ == '__main__':\n"
+        "        # your code here.\n"
+    )
 
     def whitelist_prefix(self, fullname):
         if self.whitelist == ['']:
@@ -562,14 +570,19 @@ class ModuleResponder(object):
     def blacklist_prefix(self, fullname):
         self.blacklist.append(fullname)
 
-    def neutralize_main(self, src):
+    def neutralize_main(self, path, src):
         """Given the source for the __main__ module, try to find where it
         begins conditional execution based on a "if __name__ == '__main__'"
         guard, and remove any code after that point."""
         match = self.MAIN_RE.search(src)
         if match:
             return src[:match.start()]
-        return src
+
+        if b('mitogen.main(') in src:
+            return src
+
+        LOG.error(self.main_guard_msg, path)
+        raise ImportError('refused')
 
     def _make_negative_response(self, fullname):
         return (fullname, None, None, None, ())
@@ -596,7 +609,7 @@ class ModuleResponder(object):
             pkg_present = None
 
         if fullname == '__main__':
-            source = self.neutralize_main(source)
+            source = self.neutralize_main(path, source)
         compressed = mitogen.core.Blob(zlib.compress(source, 9))
         related = [
             to_text(name)
