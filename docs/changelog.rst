@@ -134,6 +134,10 @@ Fixes
   in processes running on the target is capped to 512, reducing the work
   required to start a subprocess by >2000x in default CentOS configurations.
 
+* `b9112a9c <https://github.com/dw/mitogen/commit/b9112a9c>`_,
+  `2c287801 <https://github.com/dw/mitogen/commit/2c287801>`_: OpenSSH 7.5
+  permission denied prompts are now recognized. Contributed by Alex Willmer.
+
 * A missing check caused an exception traceback to appear when using the
   ``ansible`` command-line tool with a missing or misspelled module name.
 
@@ -208,6 +212,7 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 the bug reports in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
+`Alex Willmer <https://github.com/moreati>`_,
 `atoom <https://github.com/atoom>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
