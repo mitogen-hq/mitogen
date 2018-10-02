@@ -210,7 +210,7 @@ Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
-the bug reports in this release contributed by
+bug reports, features and fixes in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
 `Alex Willmer <https://github.com/moreati>`_,
 `atoom <https://github.com/atoom>`_,
