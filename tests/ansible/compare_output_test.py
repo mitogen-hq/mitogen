@@ -6,7 +6,6 @@ import re
 import subprocess
 import tempfile
 
-
 LOG = logging.getLogger(__name__)
 
 suffixes = [
@@ -42,21 +41,22 @@ def run(s):
         return fp.read()
 
 
-logging.basicConfig(level=logging.DEBUG)
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
 
-for suffix in suffixes:
-    ansible = run('ansible localhost %s' % (suffix,))
-    mitogen = run('ANSIBLE_STRATEGY=mitogen ansible localhost %s' % (suffix,))
+    for suffix in suffixes:
+        ansible = run('ansible localhost %s' % (suffix,))
+        mitogen = run('ANSIBLE_STRATEGY=mitogen ansible localhost %s' % (suffix,))
 
-    diff = list(difflib.unified_diff(
-        a=fixup(ansible).splitlines(),
-        b=fixup(mitogen).splitlines(),
-        fromfile='ansible-output.txt',
-        tofile='mitogen-output.txt',
-    ))
-    if diff:
-        print('++ differ! suffix: %r' % (suffix,))
-        for line in diff:
-            print(line)
-        print
-        print
+        diff = list(difflib.unified_diff(
+            a=fixup(ansible).splitlines(),
+            b=fixup(mitogen).splitlines(),
+            fromfile='ansible-output.txt',
+            tofile='mitogen-output.txt',
+        ))
+        if diff:
+            print('++ differ! suffix: %r' % (suffix,))
+            for line in diff:
+                print(line)
+            print
+            print
