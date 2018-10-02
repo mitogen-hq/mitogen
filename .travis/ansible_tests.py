@@ -24,9 +24,10 @@ with ci_lib.Fold('docker_setup'):
             --rm
             --detach
             --publish 0.0.0.0:%s:22/tcp
+            --hostname=target-%s
             --name=target-%s
             mitogen/%s-test
-        """, BASE_PORT + i, distro, distro,)
+        """, BASE_PORT + i, distro, distro, distro)
 
 
 with ci_lib.Fold('job_setup'):
@@ -37,7 +38,7 @@ with ci_lib.Fold('job_setup'):
     run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
 
     run("mkdir %s", HOSTS_DIR)
-    run("ln -s %s/common-hosts %s", TESTS_DIR, HOSTS_DIR)
+    run("ln -s %s/hosts/common-hosts %s", TESTS_DIR, HOSTS_DIR)
 
     with open(os.path.join(HOSTS_DIR, 'target'), 'w') as fp:
         fp.write('[test-targets]\n')
@@ -54,7 +55,7 @@ with ci_lib.Fold('job_setup'):
             ))
 
     # Build the binaries.
-    run("make -C %s", TESTS_DIR)
+    # run("make -C %s", TESTS_DIR)
     if not ci_lib.exists_in_path('sshpass'):
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")

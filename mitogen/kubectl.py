@@ -35,44 +35,31 @@ import mitogen.parent
 
 LOG = logging.getLogger(__name__)
 
+
 class Stream(mitogen.parent.Stream):
     child_is_immediate_subprocess = True
 
     pod = None
-    container = None
-    username = None
     kubectl_path = 'kubectl'
+    kubectl_args = None
 
     # TODO: better way of capturing errors such as "No such container."
     create_child_args = {
         'merge_stdio': True
     }
 
-    def construct(self, pod = None, container=None,
-                  kubectl_path=None, username=None,
-                  **kwargs):
-        assert pod
+    def construct(self, pod, kubectl_path=None, kubectl_args=None, **kwargs):
         super(Stream, self).construct(**kwargs)
-        if pod:
-            self.pod = pod
-        if container:
-            self.container = container
+        assert pod
+        self.pod = pod
         if kubectl_path:
             self.kubectl_path = kubectl_path
-        if username:
-            self.username = username
+        self.kubectl_args = kubectl_args or []
 
     def connect(self):
         super(Stream, self).connect()
-        self.name = u'kubectl.' + (self.pod) + str(self.container)
+        self.name = u'kubectl.%s%s' % (self.pod, self.kubectl_args)
 
     def get_boot_command(self):
-        args = ['exec', '-it', self.pod]
-        if self.username:
-            args += ['--username=' + self.username]
-
-        if self.container:
-            args += ['--container=' + self.container]
-        bits = [self.kubectl_path]
-
-        return bits + args + [ "--" ] + super(Stream, self).get_boot_command()
+        bits = [self.kubectl_path] + self.kubectl_args + ['exec', '-it', self.pod]
+        return bits + ["--"] + super(Stream, self).get_boot_command()

@@ -158,22 +158,48 @@ def sync_with_broker(broker, timeout=10.0):
     sem.get(timeout=10.0)
 
 
+class CaptureStreamHandler(logging.StreamHandler):
+    def __init__(self, *args, **kwargs):
+        super(CaptureStreamHandler, self).__init__(*args, **kwargs)
+        self.msgs = []
+
+    def emit(self, msg):
+        self.msgs.append(msg)
+        return super(CaptureStreamHandler, self).emit(msg)
+
+
 class LogCapturer(object):
     def __init__(self, name=None):
         self.sio = StringIO()
         self.logger = logging.getLogger(name)
-        self.handler = logging.StreamHandler(self.sio)
+        self.handler = CaptureStreamHandler(self.sio)
         self.old_propagate = self.logger.propagate
         self.old_handlers = self.logger.handlers
+        self.old_level = self.logger.level
 
     def start(self):
         self.logger.handlers = [self.handler]
         self.logger.propagate = False
+        self.logger.level = logging.DEBUG
+
+    def raw(self):
+        return self.sio.getvalue()
+
+    def msgs(self):
+        return self.handler.msgs
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, _1, _2, _3):
+        self.stop()
 
     def stop(self):
+        self.logger.level = self.old_level
         self.logger.handlers = self.old_handlers
         self.logger.propagate = self.old_propagate
-        return self.sio.getvalue()
+        return self.raw()
 
 
 class TestCase(unittest2.TestCase):

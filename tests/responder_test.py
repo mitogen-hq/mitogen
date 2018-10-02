@@ -1,5 +1,6 @@
 
 import mock
+import textwrap
 import subprocess
 import sys
 
@@ -10,6 +11,60 @@ import testlib
 
 import plain_old_module
 import simple_pkg.a
+
+
+class NeutralizeMainTest(testlib.RouterMixin, unittest2.TestCase):
+    klass = mitogen.master.ModuleResponder
+
+    def call(self, *args, **kwargs):
+        return self.klass(self.router).neutralize_main(*args, **kwargs)
+
+    def test_missing_exec_guard(self):
+        path = testlib.data_path('main_with_no_exec_guard.py')
+        args = [sys.executable, path]
+        proc = subprocess.Popen(args, stderr=subprocess.PIPE)
+        _, stderr = proc.communicate()
+        self.assertEquals(1, proc.returncode)
+        expect = self.klass.main_guard_msg % (path,)
+        self.assertTrue(expect in stderr.decode())
+
+    HAS_MITOGEN_MAIN = mitogen.core.b(
+        textwrap.dedent("""
+            herp derp
+
+            def myprog():
+                pass
+
+            @mitogen.main(maybe_some_option=True)
+            def main(router):
+                pass
+        """)
+    )
+
+    def test_mitogen_main(self):
+        untouched = self.call("derp.py", self.HAS_MITOGEN_MAIN)
+        self.assertEquals(untouched, self.HAS_MITOGEN_MAIN)
+
+    HAS_EXEC_GUARD = mitogen.core.b(
+        textwrap.dedent("""
+            herp derp
+
+            def myprog():
+                pass
+
+            def main():
+                pass
+
+            if __name__ == '__main__':
+                main()
+        """)
+    )
+
+    def test_exec_guard(self):
+        touched = self.call("derp.py", self.HAS_EXEC_GUARD)
+        bits = touched.decode().split()
+        self.assertEquals(bits[-3:], ['def', 'main():', 'pass'])
+
 
 
 class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):

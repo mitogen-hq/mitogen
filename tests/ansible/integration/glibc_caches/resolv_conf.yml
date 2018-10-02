@@ -9,7 +9,6 @@
     ansible_become_pass: has_sudo_pubkey_password
   tasks:
 
-    - debug: msg={{hostvars}}
     - mitogen_test_gethostbyname:
         name: www.google.com
       register: out

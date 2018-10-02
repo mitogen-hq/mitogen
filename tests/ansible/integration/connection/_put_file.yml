@@ -13,11 +13,10 @@
   register: original
   connection: local
 
-- stat: path=/tmp/{{file_name}}
+- stat: path=/tmp/{{file_name}}.out
   register: copied
 
 - assert:
     that:
     - original.stat.checksum == copied.stat.checksum
-    #- original.stat.atime == copied.stat.atime
-    - original.stat.mtime == copied.stat.mtime
+    - original.stat.mtime|int == copied.stat.mtime|int

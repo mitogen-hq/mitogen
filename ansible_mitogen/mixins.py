@@ -180,12 +180,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         connection.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
-        self._connection._connect()
-        # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
-        self._connection._shell.tmpdir = self._connection.temp_dir
-        LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
-        self._cleanup_remote_tmp = True
-        return self._connection._shell.tmpdir
+        return self._connection._make_tmp_path()
 
     def _remove_tmp_path(self, tmp_path):
         """
@@ -193,6 +188,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         with nothing, as the persistent interpreter automatically cleans up
         after itself without introducing roundtrips.
         """
+        # The actual removal is pipelined by Connection.close().
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
         self._connection._shell.tmpdir = None
 
@@ -293,6 +289,25 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         except AttributeError:
             return getattr(self._task, 'async')
 
+    def _temp_file_gibberish(self, module_args, wrap_async):
+        # Ansible>2.5 module_utils reuses the action's temporary directory if
+        # one exists. Older versions error if this key is present.
+        if ansible.__version__ > '2.5':
+            if wrap_async:
+                # Sharing is not possible with async tasks, as in that case,
+                # the directory must outlive the action plug-in.
+                module_args['_ansible_tmpdir'] = None
+            else:
+                module_args['_ansible_tmpdir'] = self._connection._shell.tmpdir
+
+        # If _ansible_tmpdir is unset, Ansible>2.6 module_utils will use
+        # _ansible_remote_tmp as the location to create the module's temporary
+        # directory. Older versions error if this key is present.
+        if ansible.__version__ > '2.6':
+            module_args['_ansible_remote_tmp'] = (
+                self._connection.get_good_temp_dir()
+            )
+
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
                         delete_remote_tmp=True, wrap_async=False):
@@ -311,16 +326,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._update_module_args(module_name, module_args, task_vars)
         env = {}
         self._compute_environment_string(env)
+        self._temp_file_gibberish(module_args, wrap_async)
 
-        # Always set _ansible_tmpdir regardless of whether _make_remote_tmp()
-        # has ever been called. This short-circuits all the .tmpdir logic in
-        # module_common and ensures no second temporary directory or atexit
-        # handler is installed.
         self._connection._connect()
-
-        if ansible.__version__ > '2.5':
-            module_args['_ansible_tmpdir'] = self._connection.temp_dir
-
         return ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
                 action=self,

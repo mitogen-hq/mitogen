@@ -149,7 +149,8 @@ class Planner(object):
         """
         new = dict((mitogen.core.UnicodeType(k), kwargs[k])
                    for k in kwargs)
-        new.setdefault('temp_dir', self._inv.connection.temp_dir)
+        new.setdefault('good_temp_dir',
+            self._inv.connection.get_good_temp_dir())
         new.setdefault('cwd', self._inv.connection.get_default_cwd())
         new.setdefault('extra_env', self._inv.connection.get_default_env())
         new.setdefault('emulate_tty', True)

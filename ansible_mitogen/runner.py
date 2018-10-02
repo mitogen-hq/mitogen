@@ -230,6 +230,11 @@ class Runner(object):
         This is passed as a string rather than a dict in order to mimic the
         implicit bytes/str conversion behaviour of a 2.x controller running
         against a 3.x target.
+    :param str good_temp_dir:
+        The writeable temporary directory for this user account reported by
+        :func:`ansible_mitogen.target.init_child` passed via the controller.
+        This is specified explicitly to remain compatible with Ansible<2.5, and
+        for forked tasks where init_child never runs.
     :param dict env:
         Additional environment variables to set during the run. Keys with
         :data:`None` are unset if present.
@@ -242,7 +247,7 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, json_args, temp_dir,
+    def __init__(self, module, service_context, json_args, good_temp_dir,
                  extra_env=None, cwd=None, env=None, econtext=None,
                  detach=False):
         self.module = module
@@ -250,10 +255,32 @@ class Runner(object):
         self.econtext = econtext
         self.detach = detach
         self.args = json.loads(json_args)
-        self.temp_dir = temp_dir
+        self.good_temp_dir = good_temp_dir
         self.extra_env = extra_env
         self.env = env
         self.cwd = cwd
+        #: If not :data:`None`, :meth:`get_temp_dir` had to create a temporary
+        #: directory for this run, because we're in an asynchronous task, or
+        #: because the originating action did not create a directory.
+        self._temp_dir = None
+
+    def get_temp_dir(self):
+        path = self.args.get('_ansible_tmpdir')
+        if path is not None:
+            return path
+
+        if self._temp_dir is None:
+            self._temp_dir = tempfile.mkdtemp(
+                prefix='ansible_mitogen_runner_',
+                dir=self.good_temp_dir,
+            )
+
+        return self._temp_dir
+
+    def revert_temp_dir(self):
+        if self._temp_dir is not None:
+            ansible_mitogen.target.prune_tree(self._temp_dir)
+            self._temp_dir = None
 
     def setup(self):
         """
@@ -291,6 +318,7 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
+        self.revert_temp_dir()
 
     def _run(self):
         """
@@ -466,7 +494,7 @@ class ProgramRunner(Runner):
         fetched via :meth:`_get_program`.
         """
         filename = self._get_program_filename()
-        path = os.path.join(self.temp_dir, filename)
+        path = os.path.join(self.get_temp_dir(), filename)
         self.program_fp = open(path, 'wb')
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
@@ -546,7 +574,7 @@ class ArgsFileRunner(Runner):
         self.args_fp = tempfile.NamedTemporaryFile(
             prefix='ansible_mitogen',
             suffix='-args',
-            dir=self.temp_dir,
+            dir=self.get_temp_dir(),
         )
         self.args_fp.write(utf8(self._get_args_contents()))
         self.args_fp.flush()
@@ -661,7 +689,7 @@ class NewStyleRunner(ScriptRunner):
     def setup(self):
         super(NewStyleRunner, self).setup()
 
-        self._stdio = NewStyleStdio(self.args, self.temp_dir)
+        self._stdio = NewStyleStdio(self.args, self.get_temp_dir())
         # It is possible that not supplying the script filename will break some
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
@@ -739,7 +767,7 @@ class NewStyleRunner(ScriptRunner):
         # don't want to pointlessly write the module to disk when it never
         # actually needs to exist. So just pass the filename as it would exist.
         mod.__file__ = os.path.join(
-            self.temp_dir,
+            self.get_temp_dir(),
             'ansible_module_' + os.path.basename(self.path),
         )
 

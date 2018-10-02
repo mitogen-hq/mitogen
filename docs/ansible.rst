@@ -78,9 +78,27 @@ Installation
 
        deploy = (ALL) NOPASSWD:/usr/bin/python -c*
 
-5. Subscribe to the `mitogen-announce mailing list
-   <https://www.freelists.org/list/mitogen-announce>`_ to stay updated with new
-   releases and important bug fixes.
+5.
+
+   .. raw:: html
+
+    <form action="https://www.freelists.org/cgi-bin/subscription.cgi" method="post">
+        Releases occur frequently and often include important fixes. Subscribe
+        to the <a
+        href="https://www.freelists.org/list/mitogen-announce">mitogen-announce
+        mailing list</a> be notified of new releases.
+
+        <p>
+        <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;">
+        <input type=hidden name="list" value="mitogen-announce">
+        <!-- <input type=hidden name="url_or_message" value="https://mitogen.readthedocs.io/en/stable/ansible.html#installation">-->
+        <input type="hidden" name="action" value="subscribe">
+        <button type="submit" style="font-size: 105%;">
+            Subscribe
+        </button>
+        </p>
+    </form>
+
 
 
 Demo
@@ -137,6 +155,7 @@ Noteworthy Differences
 
 * The `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
   `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,
+  `kubectl <https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_,
   `local <https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_,
   `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_,
   `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_,
@@ -407,6 +426,9 @@ specific variables with a particular linefeed style.
 Temporary Files
 ~~~~~~~~~~~~~~~
 
+Temporary file handling in Ansible is incredibly tricky business, and the exact
+behaviour varies across major releases.
+
 Ansible creates a variety of temporary files and directories depending on its
 operating mode.
 
@@ -444,11 +466,20 @@ In summary, for each task Ansible may create one or more of:
 * ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
 * ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
 
-A directory must exist to maintain compatibility with Ansible, as many modules
-introspect :data:`sys.argv` to find a directory where they may write files,
-however only one directory exists for the lifetime of each interpreter, its
-location is consistent for each target account, and it is always privately
-owned by that account.
+
+Mitogen for Ansible
+^^^^^^^^^^^^^^^^^^^
+
+Temporary h
+Temporary directory handling is fiddly and varies across major Ansible
+releases.
+
+
+Temporary directories must exist to maintain compatibility with Ansible, as
+many modules introspect :data:`sys.argv` to find a directory where they may
+write files, however only one directory exists for the lifetime of each
+interpreter, its location is consistent for each target account, and it is
+always privately owned by that account.
 
 The paths below are tried until one is found that is writeable and lives on a
 filesystem with ``noexec`` disabled:
@@ -651,6 +682,8 @@ connection delegation is supported.
 * ``ansible_user``: Name of user within the container to execute as.
 
 
+.. _method-jail:
+
 FreeBSD Jail
 ~~~~~~~~~~~~
 
@@ -660,6 +693,19 @@ connection delegation is supported.
 
 * ``ansible_host``: Name of jail (default: inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
+
+
+.. _method-kubectl:
+
+Kubernetes Pod
+~~~~~~~~~~~~~~
+
+Like `kubectl
+<https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_ except
+connection delegation is supported.
+
+* ``ansible_host``: Name of pod (default: inventory hostname).
+* ``ansible_user``: Name of user to authenticate to API as.
 
 
 Local

@@ -10,6 +10,8 @@ import shlex
 import shutil
 import tempfile
 
+import os
+os.system('curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type')
 
 #
 # check_output() monkeypatch cutpasted from testlib.py

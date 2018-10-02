@@ -31,6 +31,7 @@ from __future__ import unicode_literals
 
 import logging
 import os
+import random
 import stat
 import time
 
@@ -132,11 +133,10 @@ def _connect_kubectl(spec):
     return {
         'method': 'kubectl',
         'kwargs': {
-            'username': spec['remote_user'],
             'pod': spec['remote_addr'],
-            #'container': spec['container'],
             'python_path': spec['python_path'],
             'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'kubectl_args': spec['extra_args'],
         }
     }
 
@@ -392,6 +392,8 @@ def config_from_play_context(transport, inventory_name, connection):
             connection.get_task_var('mitogen_machinectl_path'),
         'mitogen_ssh_debug_level':
             connection.get_task_var('mitogen_ssh_debug_level'),
+        'extra_args':
+            connection.get_extra_args(),
     }
 
 
@@ -474,26 +476,19 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Only sudo, su, and doas are supported for now.
     become_methods = ['sudo', 'su', 'doas']
 
-    #: Dict containing init_child() return vaue as recorded at startup by
+    #: Dict containing init_child() return value as recorded at startup by
     #: ContextService. Contains:
     #:
     #:  fork_context:   Context connected to the fork parent : process in the
     #:                  target account.
     #:  home_dir:       Target context's home directory.
-    #:  temp_dir:       A writeable temporary directory managed by the
-    #:                  target, automatically destroyed at shutdown.
+    #:  good_temp_dir:  A writeable directory where new temporary directories
+    #:                  can be created.
     init_child_result = None
 
-    #: A private temporary directory destroyed during :meth:`close`, or
-    #: automatically during shutdown if :meth:`close` failed or was never
-    #: called.
-    temp_dir = None
-
-    #: A :class:`mitogen.parent.CallChain` to use for calls made to the target
-    #: account, to ensure subsequent calls fail if pipelined directory creation
-    #: or file transfer fails. This eliminates roundtrips when a call is likely
-    #: to succeed, and ensures subsequent actions will fail with the original
-    #: exception if the pipelined call failed.
+    #: A :class:`mitogen.parent.CallChain` for calls made to the target
+    #: account, to ensure subsequent calls fail with the original exception if
+    #: pipelined directory creation or file transfer fails.
     chain = None
 
     #
@@ -695,14 +690,24 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.init_child_result = dct['init_child_result']
 
-    def _init_temp_dir(self):
-        """
-        """
-        self.temp_dir = os.path.join(
-            self.init_child_result['temp_dir'],
-            'worker-%d-%x' % (os.getpid(), id(self))
+    def get_good_temp_dir(self):
+        self._connect()
+        return self.init_child_result['good_temp_dir']
+
+    def _generate_tmp_path(self):
+        return os.path.join(
+            self.get_good_temp_dir(),
+            'ansible_mitogen_action_%016x' % (
+                random.getrandbits(8*8),
+            )
         )
-        self.get_chain().call_no_reply(os.mkdir, self.temp_dir)
+
+    def _make_tmp_path(self):
+        assert getattr(self._shell, 'tmpdir', None) is None
+        self._shell.tmpdir = self._generate_tmp_path()
+        LOG.debug('Temporary directory: %r', self._shell.tmpdir)
+        self.get_chain().call_no_reply(os.mkdir, self._shell.tmpdir)
+        return self._shell.tmpdir
 
     def _connect(self):
         """
@@ -721,7 +726,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect_broker()
         stack = self._build_stack()
         self._connect_stack(stack)
-        self._init_temp_dir()
 
     def close(self, new_task=False):
         """
@@ -729,18 +733,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
+        if getattr(self._shell, 'tmpdir', None) is not None:
+            # Avoid CallChain to ensure exception is logged on failure.
+            self.context.call_no_reply(
+                ansible_mitogen.target.prune_tree,
+                self._shell.tmpdir,
+            )
+            self._shell.tmpdir = None
+
         if self.context:
             self.chain.reset()
-            # No pipelining to ensure exception is logged on failure.
-            self.context.call_no_reply(ansible_mitogen.target.prune_tree,
-                                       self.temp_dir)
             self.parent.call_service(
                 service_name='ansible_mitogen.services.ContextService',
                 method_name='put',
                 context=self.context
             )
 
-        self.temp_dir = None
         self.context = None
         self.login_context = None
         self.init_child_result = None
@@ -782,6 +790,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         return self.get_chain(use_fork=True).call(
             ansible_mitogen.target.create_fork_child
         )
+
+    def get_extra_args(self):
+        """
+        Overridden by connections/mitogen_kubectl.py to a list of additional
+        arguments for the command.
+        """
+        # TODO: maybe use this for SSH too.
+        return []
 
     def get_default_cwd(self):
         """
