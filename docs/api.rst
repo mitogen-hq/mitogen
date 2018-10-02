@@ -458,7 +458,7 @@ Router Class
             rich data structures that cannot normally be passed via a
             serialization.
 
-        :param Context via:
+        :param mitogen.core.Context via:
             Same as the `via` parameter for :meth:`local`.
 
         :param bool debug:
@@ -1095,7 +1095,8 @@ Select Class
         each, returning the result of calling `msg.unpickle()` on each in turn.
         Results are returned in the order they arrived.
 
-        This is sugar for handling batch :class:`Context.call_async`
+        This is sugar for handling batch
+        :meth:`Context.call_async <mitogen.parent.Context.call_async>`
         invocations:
 
         .. code-block:: python
@@ -1262,7 +1263,8 @@ Broker Class
     .. method:: keep_alive
 
         Return :data:`True` if any reader's :attr:`Side.keep_alive`
-        attribute is :data:`True`, or any :class:`Context` is still
+        attribute is :data:`True`, or any
+        :class:`Context <mitogen.core.Context>` is still
         registered that is not the master. Used to delay shutdown while some
         important work is in progress (e.g. log draining).
 

@@ -15,3 +15,8 @@ Table Of Contents
    examples
    internals
    shame
+
+.. toctree::
+   :hidden:
+
+   services

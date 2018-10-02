@@ -290,8 +290,7 @@ command line, or as host and group variables.
 File Transfer
 ~~~~~~~~~~~~~
 
-Normally `sftp(1) <https://linux.die.net/man/1/sftp>`_ or
-`scp(1) <https://linux.die.net/man/1/scp>`_ are used to copy files by the
+Normally `sftp(1)`_ or `scp(1)`_ are used to copy files by the
 `assemble <http://docs.ansible.com/ansible/latest/modules/assemble_module.html>`_,
 `copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_,
 `patch <http://docs.ansible.com/ansible/latest/modules/patch_module.html>`_,
@@ -301,6 +300,9 @@ Normally `sftp(1) <https://linux.die.net/man/1/sftp>`_ or
 actions, or when uploading modules with pipelining disabled. With Mitogen
 copies are implemented natively using the same interpreters, connection tree,
 and routed message bus that carries RPCs.
+
+.. _scp(1): https://linux.die.net/man/1/scp
+.. _sftp(1): https://linux.die.net/man/1/sftp
 
 This permits direct streaming between endpoints regardless of execution
 environment, without necessitating temporary copies in intermediary accounts or
@@ -321,8 +323,7 @@ to rename over any existing file. This ensures the file remains consistent at
 all times, in the event of a crash, or when overlapping `ansible-playbook` runs
 deploy differing file contents.
 
-The `sftp(1) <https://linux.die.net/man/1/sftp>`_ and `scp(1)
-<https://linux.die.net/man/1/sftp>`_ tools may cause undetected data corruption
+The `sftp(1)`_ and `scp(1)`_ tools may cause undetected data corruption
 in the form of truncated files, or files containing intermingled data segments
 from overlapping runs. As part of normal operation, both tools expose a window
 where readers may observe inconsistent file contents.
@@ -445,8 +446,7 @@ Ansible may:
 * Create a directory owned by the SSH user either under ``remote_tmp``, or a
   system-default directory,
 * Upload action dependencies such as non-new style modules or rendered
-  templates to that directory via `sftp(1) <https://linux.die.net/man/1/sftp>`_
-  or `scp(1) <https://linux.die.net/man/1/scp>`_.
+  templates to that directory via `sftp(1)`_ or `scp(1)`_.
 * Attempt to modify the directory's access control list to grant access to the
   target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
   requiring that tool to be installed and a supported filesystem to be in use,
