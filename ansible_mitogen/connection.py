@@ -133,11 +133,10 @@ def _connect_kubectl(spec):
     return {
         'method': 'kubectl',
         'kwargs': {
-            'username': spec['remote_user'],
             'pod': spec['remote_addr'],
-            #'container': spec['container'],
             'python_path': spec['python_path'],
             'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'kubectl_args': spec['extra_args'],
         }
     }
 
@@ -393,6 +392,8 @@ def config_from_play_context(transport, inventory_name, connection):
             connection.get_task_var('mitogen_machinectl_path'),
         'mitogen_ssh_debug_level':
             connection.get_task_var('mitogen_ssh_debug_level'),
+        'extra_args':
+            connection.get_extra_args(),
     }
 
 
@@ -789,6 +790,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         return self.get_chain(use_fork=True).call(
             ansible_mitogen.target.create_fork_child
         )
+
+    def get_extra_args(self):
+        """
+        Overridden by connections/mitogen_kubectl.py to a list of additional
+        arguments for the command.
+        """
+        # TODO: maybe use this for SSH too.
+        return []
 
     def get_default_cwd(self):
         """

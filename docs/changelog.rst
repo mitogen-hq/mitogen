@@ -41,7 +41,8 @@ Enhancements
   `uri <http://docs.ansible.com/ansible/latest/modules/uri_module.html>`_). See
   :ref:`ansible_tempfiles` for a complete description.
 
-* `#376 <https://github.com/dw/mitogen/pull/376>`_: the ``kubectl`` connection
+* `#376 <https://github.com/dw/mitogen/pull/376>`_,
+  `#377 <https://github.com/dw/mitogen/pull/377>`_: the ``kubectl`` connection
   type is now supported. Contributed by Yannig Perré.
 
 * `084c0ac0 <https://github.com/dw/mitogen/commit/084c0ac0>`_: avoid a

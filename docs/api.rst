@@ -589,7 +589,7 @@ Router Class
             Filename or complete path to the ``jexec`` binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``/usr/sbin/jexec``.
 
-    .. method:: kubectl (pid=None, container=None, kubectl_path=None, username=None, \**kwargs)
+    .. method:: kubectl (pod, kubectl_path=None, kubectl_args=None, \**kwargs)
 
         Construct a context in a container via the Kubernetes ``kubectl``
         program.
@@ -598,16 +598,11 @@ Router Class
 
         :param str pod:
             Kubernetes pod to connect to.
-        :param str container:
-            Optional container within pod to connect to. If the pod has only
-            one container, this parameter is not required. Defaults to
-            :data:`None`.
         :param str kubectl_path:
             Filename or complete path to the ``kubectl`` binary. ``PATH`` will
             be searched if given as a filename. Defaults to ``kubectl``.
-        :param str username:
-            Optional username to authenticate to the Kubernetes API server
-            with. within the container to :func:`setuid` to.
+        :param list kubectl_args:
+            Additional arguments to pass to the ``kubectl`` command.
 
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 
@@ -729,7 +724,7 @@ Router Class
             :class:`mitogen.core.StreamError` to be raised, and that
             attributes of the stream match the actual behaviour of ``sudo``.
 
-    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys='enforce', password=None, identity_file=None, identities_only=True, compression=True, \**kwargs)
+    .. method:: ssh (hostname, username=None, ssh_path=None, ssh_args=None, port=None, check_host_keys='enforce', password=None, identity_file=None, identities_only=True, compression=True, \**kwargs)
 
         Construct a remote context over an OpenSSH ``ssh`` invocation.
 
@@ -747,6 +742,8 @@ Router Class
             the username to use.
         :param str ssh_path:
             Absolute or relative path to ``ssh``. Defaults to ``ssh``.
+        :param list ssh_args:
+            Additional arguments to pass to the SSH command.
         :param int port:
             Port number to connect to; default is unspecified, which causes SSH
             to pick the port number.

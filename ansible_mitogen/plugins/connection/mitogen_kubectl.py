@@ -31,6 +31,9 @@ from __future__ import absolute_import
 import os.path
 import sys
 
+import ansible.plugins.connection.kubectl
+from ansible.module_utils.six import iteritems
+
 try:
     import ansible_mitogen
 except ImportError:
@@ -43,3 +46,11 @@ import ansible_mitogen.connection
 
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'kubectl'
+
+    def get_extra_args(self):
+        parameters = []
+        for key, option in iteritems(ansible.plugins.connection.kubectl.CONNECTION_OPTIONS):
+            if self.get_task_var('ansible_' + key) is not None:
+                parameters += [ option, self.get_task_var('ansible_' + key) ]
+
+        return parameters
