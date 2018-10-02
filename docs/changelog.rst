@@ -174,6 +174,11 @@ Core Library
 * `#345 <https://github.com/dw/mitogen/issues/345>`_: the SSH connection method
   allows optionally disabling ``IdentitiesOnly yes``.
 
+* `#356 <https://github.com/dw/mitogen/issues/356>`_: if the master Python
+  process does not have :data:`sys.executable` set, the default Python
+  interpreter used for new children on the local machine defaults to
+  ``"/usr/bin/python"``.
+
 * `#366 <https://github.com/dw/mitogen/issues/366>`_,
   `#380 <https://github.com/dw/mitogen/issues/380>`_: attempts by children to
   import :mod:`__main__` where the main program module lacks an execution guard

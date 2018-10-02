@@ -85,9 +85,33 @@ OPENPTY_MSG = (
     "to avoid PTY use."
 )
 
+SYS_EXECUTABLE_MSG = (
+    "The Python sys.executable variable is unset, indicating Python was "
+    "unable to determine its original program name. Unless explicitly "
+    "configured otherwise, child contexts will be started using "
+    "'/usr/bin/python'"
+)
+_sys_executable_warning_logged = False
+
 
 def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
+
+
+def get_sys_executable():
+    """
+    Return :data:`sys.executable` if it is set, otherwise return
+    ``"/usr/bin/python"`` and log a warning.
+    """
+    if sys.executable:
+        return sys.executable
+
+    global _sys_executable_warning_logged
+    if not _sys_executable_warning_logged:
+        LOG.warn(SYS_EXECUTABLE_MSG)
+        _sys_executable_warning_logged = True
+
+    return '/usr/bin/python'
 
 
 def get_core_source():
@@ -841,7 +865,7 @@ class Stream(mitogen.core.Stream):
     Base for streams capable of starting new slaves.
     """
     #: The path to the remote Python interpreter.
-    python_path = sys.executable
+    python_path = get_sys_executable()
 
     #: Maximum time to wait for a connection attempt.
     connect_timeout = 30.0
