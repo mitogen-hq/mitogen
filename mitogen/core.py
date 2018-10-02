@@ -374,7 +374,7 @@ def io_op(func, *args):
 
     :returns:
         Tuple of `(return_value, disconnected)`, where `return_value` is the
-        return value of `func(\*args)`, and `disconnected` is :data:`True` if
+        return value of `func(*args)`, and `disconnected` is :data:`True` if
         disconnection was detected, otherwise :data:`False`.
     """
     while True:

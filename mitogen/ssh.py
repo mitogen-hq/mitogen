@@ -291,8 +291,8 @@ class Stream(mitogen.parent.Stream):
                 raise HostKeyError(self.hostkey_failed_msg)
             elif buf.lower().startswith((
                     PERMDENIED_PROMPT,
-                    b("%s@%s: %s" % (self.username, self.hostname,
-                                     PERMDENIED_PROMPT)),
+                    b("%s@%s: " % (self.username, self.hostname))
+                        + PERMDENIED_PROMPT,
                 )):
                 # issue #271: work around conflict with user shell reporting
                 # 'permission denied' e.g. during chdir($HOME) by only matching

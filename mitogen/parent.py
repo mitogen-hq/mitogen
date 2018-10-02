@@ -1280,7 +1280,7 @@ class CallChain(object):
 
     def call_async(self, fn, *args, **kwargs):
         """
-        Arrange for `fn(\*args, \**kwargs)` to be invoked on the context's main
+        Arrange for `fn(*args, **kwargs)` to be invoked on the context's main
         thread.
 
         :param fn:
