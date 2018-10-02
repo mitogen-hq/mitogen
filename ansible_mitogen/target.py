@@ -214,6 +214,50 @@ def _on_broker_shutdown():
     prune_tree(temp_dir)
 
 
+def is_good_temp_dir(path):
+    """
+    Return :data:`True` if `path` can be used as a temporary directory, logging
+    any failures that may cause it to be unsuitable. If the directory doesn't
+    exist, we attempt to create it using :func:`os.makedirs`.
+    """
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path, mode=int('0700', 8))
+        except OSError as e:
+            LOG.debug('temp dir %r unusable: did not exist and attempting '
+                      'to create it failed: %s', path, e)
+            return False
+
+    try:
+        tmp = tempfile.NamedTemporaryFile(
+            prefix='ansible_mitogen_is_good_temp_dir',
+            dir=path,
+        )
+    except (OSError, IOError) as e:
+        LOG.debug('temp dir %r unusable: %s', path, e)
+        return False
+
+    try:
+        try:
+            os.chmod(tmp.name, int('0700', 8))
+        except OSError as e:
+            LOG.debug('temp dir %r unusable: %s: chmod failed: %s',
+                      path, e)
+            return False
+
+        try:
+            # access(.., X_OK) is sufficient to detect noexec.
+            if not os.access(tmp.name, os.X_OK):
+                raise OSError('filesystem appears to be mounted noexec')
+        except OSError as e:
+            LOG.debug('temp dir %r unusable: %s: %s', path, e)
+            return False
+    finally:
+        tmp.close()
+
+    return True
+
+
 def find_good_temp_dir(candidate_temp_dirs):
     """
     Given a list of candidate temp directories extracted from ``ansible.cfg``,
@@ -230,35 +274,9 @@ def find_good_temp_dir(candidate_temp_dirs):
     paths.extend(tempfile._candidate_tempdir_list())
 
     for path in paths:
-        try:
-            tmp = tempfile.NamedTemporaryFile(
-                prefix='ansible_mitogen_find_good_temp_dir',
-                dir=path,
-            )
-        except (OSError, IOError) as e:
-            LOG.debug('temp dir %r unusable: %s', path, e)
-            continue
-
-        try:
-            try:
-                os.chmod(tmp.name, int('0700', 8))
-            except OSError as e:
-                LOG.debug('temp dir %r unusable: %s: chmod failed: %s',
-                          path, e)
-                continue
-
-            try:
-                # access(.., X_OK) is sufficient to detect noexec.
-                if not os.access(tmp.name, os.X_OK):
-                    raise OSError('filesystem appears to be mounted noexec')
-            except OSError as e:
-                LOG.debug('temp dir %r unusable: %s: %s', path, e)
-                continue
-
+        if is_good_temp_dir(path):
             LOG.debug('Selected temp directory: %r (from %r)', path, paths)
             return path
-        finally:
-            tmp.close()
 
     raise IOError(MAKE_TEMP_FAILED_MSG % {
         'paths': '\n    '.join(paths),
