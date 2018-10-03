@@ -1,5 +1,6 @@
 import errno
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -42,6 +43,41 @@ class GetDefaultRemoteNameTest(testlib.TestCase):
         mock_getuser.return_value = 'ECORP\\Administrator'
         mock_getpid.return_value = 123
         self.assertEquals("ECORP_Administrator@box:123", self.func())
+
+
+class WstatusToStrTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.wstatus_to_str)
+
+    def test_return_zero(self):
+        pid = os.fork()
+        if not pid:
+            os._exit(0)
+        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
+        self.assertEquals(self.func(status),
+                          'exited with return code 0')
+
+    def test_return_one(self):
+        pid = os.fork()
+        if not pid:
+            os._exit(1)
+        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
+        self.assertEquals(
+            self.func(status),
+            'exited with return code 1'
+        )
+
+    def test_sigkill(self):
+        pid = os.fork()
+        if not pid:
+            time.sleep(600)
+        os.kill(pid, signal.SIGKILL)
+        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
+        self.assertEquals(
+            self.func(status),
+            'exited due to signal %s (SIGKILL)' % (signal.SIGKILL,)
+        )
+
+    # can't test SIGSTOP without POSIX sessions rabbithole
 
 
 class ReapChildTest(testlib.RouterMixin, testlib.TestCase):

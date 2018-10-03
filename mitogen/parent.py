@@ -93,6 +93,12 @@ SYS_EXECUTABLE_MSG = (
 )
 _sys_executable_warning_logged = False
 
+SIGNAL_BY_NUM = dict(
+    (getattr(signal, name), name)
+    for name in sorted(vars(signal), reverse=True)
+    if name.startswith('SIG') and not name.startswith('SIG_')
+)
+
 
 def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
@@ -584,6 +590,21 @@ def _proxy_connect(name, method_name, kwargs, econtext):
     }
 
 
+def wstatus_to_str(status):
+    """
+    Parse and format a :func:`os.waitpid` exit status.
+    """
+    if os.WIFEXITED(status):
+        return 'exited with return code %d' % (os.WEXITSTATUS(status),)
+    if os.WIFSIGNALED(status):
+        n = os.WTERMSIG(status)
+        return 'exited due to signal %d (%s)' % (n, SIGNAL_BY_NUM.get(n))
+    if os.WIFSTOPPED(status):
+        n = os.WSTOPSIG(status)
+        return 'stopped due to signal %d (%s)' % (n, SIGNAL_BY_NUM.get(n))
+    return 'unknown wait status (%d)' % (status,)
+
+
 class Argv(object):
     """
     Wrapper to defer argv formatting when debug logging is disabled.
@@ -961,7 +982,7 @@ class Stream(mitogen.core.Stream):
 
         self._reaped = True
         if pid:
-            LOG.debug('%r: child process exit status was %d', self, status)
+            LOG.debug('%r: PID %d %s', self, pid, wstatus_to_str(status))
             return
 
         # For processes like sudo we cannot actually send sudo a signal,
