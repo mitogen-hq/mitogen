@@ -89,6 +89,18 @@ LOAD_MODULE = 107
 FORWARD_MODULE = 108
 DETACHING = 109
 CALL_SERVICE = 110
+
+#: Special value used to signal disconnection or the inability to route a
+#: message, when it appears in the `reply_to` field. Usually causes
+#: :class:`mitogen.core.ChannelError` to be raised when it is received.
+#:
+#: It indicates the sender did not know how to process the message, or wishes
+#: no further messages to be delivered to it. It is used when:
+#:
+#:  * a remote receiver is disconnected or explicitly closed.
+#:  * a related message could not be delivered due to no route existing for it.
+#:  * a router is being torn down, as a sentinel value to notify
+#:    :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 IS_DEAD = 999
 
 try:

@@ -298,8 +298,9 @@ parent and child. Integers use big endian in their encoded form.
     * - `reply_to`
       - 4
       - Integer target handle to direct any reply to this message. Used to
-        receive a one-time reply, such as the return value of a function call.
-        :data:`IS_DEAD` has a special meaning when it appears in this field.
+        receive a one-time reply, such as the return value of a function call,
+        or to signal a special condition for the message. :ref:`See below
+        <reply_to_values>` for special values for this field.
 
     * - `length`
       - 4
@@ -472,23 +473,14 @@ Non-master parents also listen on the following handles:
     ensuring they are cached and deduplicated at each hop in the chain leading
     to the target context.
 
+.. _reply_to_values:
+
 Special values for the `reply_to` field:
 
 .. _IS_DEAD:
 .. currentmodule:: mitogen.core
-.. data:: IS_DEAD
+.. autodata:: IS_DEAD
 
-    Special value used to signal disconnection or the inability to route a
-    message, when it appears in the `reply_to` field. Usually causes
-    :class:`mitogen.core.ChannelError` to be raised when it is received.
-
-    It indicates the sender did not know how to process the message, or wishes
-    no further messages to be delivered to it. It is used when:
-
-    * a remote receiver is disconnected or explicitly closed.
-    * a related message could not be delivered due to no route existing for it.
-    * a router is being torn down, as a sentinel value to notify
-      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 
 
 Additional handles are created to receive the result of every function call
