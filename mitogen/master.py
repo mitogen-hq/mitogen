@@ -253,6 +253,25 @@ class ThreadWatcher(object):
 
 
 class LogForwarder(object):
+    """
+    Install a :data:`mitogen.core.FORWARD_LOG` handler that delivers forwarded
+    log events into the local logging framework. This is used by the master's
+    :class:`Router`.
+
+    The forwarded :class:`logging.LogRecord` objects are delivered to loggers
+    under ``mitogen.ctx.*`` corresponding to their
+    :attr:`mitogen.core.Context.name`, with the message prefixed with the
+    logger name used in the child. The records include some extra attributes:
+
+    * ``mitogen_message``: Unicode original message without the logger name
+      prepended.
+    * ``mitogen_context``: :class:`mitogen.parent.Context` reference to the
+      source context.
+    * ``mitogen_name``: Original logger name.
+
+    :param mitogen.master.Router router:
+        Router to install the handler on.
+    """
     def __init__(self, router):
         self._router = router
         self._cache = {}
@@ -269,7 +288,8 @@ class LogForwarder(object):
         if logger is None:
             context = self._router.context_by_id(msg.src_id)
             if context is None:
-                LOG.error('FORWARD_LOG received from src_id %d', msg.src_id)
+                LOG.error('%s: dropping log from unknown context ID %d',
+                          self, msg.src_id)
                 return
 
             name = '%s.%s' % (RLOG.name, context.name)
