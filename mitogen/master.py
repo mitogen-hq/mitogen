@@ -83,6 +83,34 @@ def _stdlib_paths():
                for p in prefixes)
 
 
+def is_stdlib_name(modname):
+    """Return :data:`True` if `modname` appears to come from the standard
+    library.
+    """
+    if imp.is_builtin(modname) != 0:
+        return True
+
+    module = sys.modules.get(modname)
+    if module is None:
+        return False
+
+    # six installs crap with no __file__
+    modpath = os.path.abspath(getattr(module, '__file__', ''))
+    return is_stdlib_path(modpath)
+
+
+_STDLIB_PATHS = _stdlib_paths()
+
+
+def is_stdlib_path(path):
+    return any(
+        os.path.commonprefix((libpath, path)) == libpath
+        and 'site-packages' not in path
+        and 'dist-packages' not in path
+        for libpath in _STDLIB_PATHS
+    )
+
+
 def get_child_modules(path):
     """Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
@@ -304,33 +332,6 @@ class LogForwarder(object):
 
     def __repr__(self):
         return 'LogForwarder(%r)' % (self._router,)
-
-
-_STDLIB_PATHS = _stdlib_paths()
-
-
-def is_stdlib_path(path):
-    return any(
-        os.path.commonprefix((libpath, path)) == libpath
-        and 'site-packages' not in path
-        and 'dist-packages' not in path
-        for libpath in _STDLIB_PATHS
-    )
-
-
-def is_stdlib_name(modname):
-    """Return :data:`True` if `modname` appears to come from the standard
-    library."""
-    if imp.is_builtin(modname) != 0:
-        return True
-
-    module = sys.modules.get(modname)
-    if module is None:
-        return False
-
-    # six installs crap with no __file__
-    modpath = os.path.abspath(getattr(module, '__file__', ''))
-    return is_stdlib_path(modpath)
 
 
 class ModuleFinder(object):
