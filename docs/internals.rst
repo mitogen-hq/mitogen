@@ -334,12 +334,13 @@ Helper Functions
 ================
 
 .. currentmodule:: mitogen.core
-.. autofunction:: to_text
 .. autofunction:: has_parent_authority
+.. autofunction:: io_op
+.. autofunction:: qualname
+.. autofunction:: set_block
 .. autofunction:: set_cloexec
 .. autofunction:: set_nonblock
-.. autofunction:: set_block
-.. autofunction:: io_op
+.. autofunction:: to_text
 
 .. currentmodule:: mitogen.parent
 .. autofunction:: close_nonstandard_fds

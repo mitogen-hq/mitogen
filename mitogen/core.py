@@ -236,6 +236,13 @@ class Kwargs(dict):
         return (Kwargs, (dict(self),))
 
 
+def qualname(type_):
+    """
+    Given a type, return its fully qualified name as a string.
+    """
+    return '%s.%s' % (type_.__module__, type_.__name__)
+
+
 class CallError(Error):
     """Serializable :class:`Error` subclass raised when
     :py:meth:`Context.call() <mitogen.parent.Context.call>` fails. A copy of
@@ -246,13 +253,23 @@ class CallError(Error):
             Error.__init__(self, fmt, *args)
         else:
             e = fmt
-            fmt = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
+            fmt = '%s: %s' % (qualname(type(e)), e)
             args = ()
             tb = sys.exc_info()[2]
             if tb:
                 fmt += '\n'
                 fmt += ''.join(traceback.format_tb(tb))
             Error.__init__(self, fmt)
+
+    @property
+    def type_name(self):
+        """
+        Return the fully qualified name of the original exception type, or
+        :data:`None` if the :class:`CallError` was raised explcitly.
+        """
+        type_name, sep, _ = self.args[0].partition(':')
+        if sep:
+            return type_name
 
     def __reduce__(self):
         return (_unpickle_call_error, (self.args[0],))
@@ -1205,8 +1222,7 @@ class Stream(BasicStream):
         self.transmit_side = Side(self, os.dup(wfd))
 
     def __repr__(self):
-        cls = type(self)
-        return '%s.%s(%r)' % (cls.__module__, cls.__name__, self.name)
+        return '%s(%r)' % (qualname(type(self)), self.name)
 
 
 class Context(object):
