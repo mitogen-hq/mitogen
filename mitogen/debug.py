@@ -234,5 +234,4 @@ class ContextDebugger(object):
             method, args, kwargs = msg.unpickle()
             msg.reply(getattr(cls, method)(*args, **kwargs))
         except Exception:
-            e = sys.exc_info()[1]
-            msg.reply(mitogen.core.CallError(e))
+            msg.reply(mitogen.core.CallError.from_exception())

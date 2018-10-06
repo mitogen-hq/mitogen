@@ -365,8 +365,10 @@ class DeduplicatingInvoker(Invoker):
             e = sys.exc_info()[1]
             self._produce_response(key, e)
         except Exception:
-            e = sys.exc_info()[1]
-            self._produce_response(key, mitogen.core.CallError(e))
+            self._produce_response(
+                key,
+                mitogen.core.CallError.from_exception()
+            )
 
         return Service.NO_REPLY
 
@@ -524,8 +526,7 @@ class Pool(object):
         except Exception:
             LOG.exception('%r: while invoking %r of %r',
                           self, method_name, service_name)
-            e = sys.exc_info()[1]
-            msg.reply(mitogen.core.CallError(e))
+            msg.reply(mitogen.core.CallError.from_exception())
 
     def _worker_run(self):
         while not self.closed:
@@ -876,9 +877,7 @@ class FileService(Service):
         try:
             fp = open(path, 'rb', self.IO_SIZE)
         except IOError:
-            msg.reply(mitogen.core.CallError(
-                sys.exc_info()[1]
-            ))
+            msg.reply(mitogen.core.CallError.from_exception())
             return
 
         # Response must arrive first so requestee can begin receive loop,

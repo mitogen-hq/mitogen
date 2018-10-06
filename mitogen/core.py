@@ -248,39 +248,43 @@ class CallError(Error):
     :py:meth:`Context.call() <mitogen.parent.Context.call>` fails. A copy of
     the traceback from the external context is appended to the exception
     message."""
-    def __init__(self, fmt=None, *args):
-        if not isinstance(fmt, BaseException):
-            Error.__init__(self, fmt, *args)
-        else:
-            e = fmt
-            fmt = '%s: %s' % (qualname(type(e)), e)
-            args = ()
-            tb = sys.exc_info()[2]
-            if tb:
-                fmt += '\n'
-                fmt += ''.join(traceback.format_tb(tb))
-            Error.__init__(self, fmt)
+    #: Fully qualified name of the original exception type, or :data:`None` if
+    #: the :class:`CallError` was constructed with a string argument.
+    type_name = None
 
-    @property
-    def type_name(self):
-        """
-        Return the fully qualified name of the original exception type, or
-        :data:`None` if the :class:`CallError` was raised explcitly.
-        """
-        type_name, sep, _ = self.args[0].partition(':')
-        if sep:
-            return type_name
+    @classmethod
+    def with_type_name(cls, type_name):
+        return type('CallError_' + type_name, (cls,), {
+            'type_name': type_name,
+        })
+
+    @classmethod
+    def from_exception(cls, e=None):
+        e_type, e_val, tb = sys.exc_info()
+        if e is None:
+            e = e_val
+        assert e is not None
+        type_name = qualname(type(e))
+        s = '%s: %s' % (type_name, e)
+        if tb:
+            s += '\n'
+            s += ''.join(traceback.format_tb(tb))
+        return cls.with_type_name(type_name)(s)
 
     def __reduce__(self):
-        return (_unpickle_call_error, (self.args[0],))
+        return (_unpickle_call_error, (self.type_name, self.args[0],))
 
 
-def _unpickle_call_error(s):
+def _unpickle_call_error(type_name, s):
+    if not (type_name is None or
+            (type(type_name) is UnicodeType and
+             len(type_name) < 100)):
+        raise TypeError('cannot unpickle CallError: bad type_name')
     if not (type(s) is UnicodeType and len(s) < 10000):
-        raise TypeError('cannot unpickle CallError: bad input')
-    inst = CallError.__new__(CallError)
-    Exception.__init__(inst, s)
-    return inst
+        raise TypeError('cannot unpickle CallError: bad message')
+    if type_name:
+        return CallError.with_type_name(type_name)(s)
+    return CallError(s)
 
 
 class ChannelError(Error):
@@ -580,8 +584,7 @@ class Message(object):
         try:
             self.data = pickle.dumps(obj, protocol=2)
         except pickle.PicklingError:
-            e = sys.exc_info()[1]
-            self.data = pickle.dumps(CallError(e), protocol=2)
+            self.data = pickle.dumps(CallError.from_exception(), protocol=2)
         return self
 
     def reply(self, msg, router=None, **kwargs):
@@ -2013,7 +2016,7 @@ class Dispatcher(object):
         try:
             chain_id, fn, args, kwargs = self._parse_request(msg)
         except Exception:
-            return None, CallError(sys.exc_info()[1])
+            return None, CallError.from_exception()
 
         if chain_id in self._error_by_chain_id:
             return chain_id, self._error_by_chain_id[chain_id]
@@ -2021,7 +2024,7 @@ class Dispatcher(object):
         try:
             return chain_id, fn(*args, **kwargs)
         except Exception:
-            e = CallError(sys.exc_info()[1])
+            e = CallError.from_exception()
             if chain_id is not None:
                 self._error_by_chain_id[chain_id] = e
             return chain_id, e

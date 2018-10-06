@@ -34,14 +34,12 @@ mitogen.core
 .. decorator:: takes_econtext
 
     Decorator that marks a function or class method to automatically receive a
-    kwarg named `econtext`, referencing the
-    :class:`mitogen.core.ExternalContext` active in the context in which the
-    function is being invoked in. The decorator is only meaningful when the
-    function is invoked via :data:`CALL_FUNCTION
-    <mitogen.core.CALL_FUNCTION>`.
+    kwarg named `econtext`, referencing the :class:`ExternalContext` active in
+    the context in which the function is being invoked. The decorator is only
+    meaningful when the function is invoked via :data:`CALL_FUNCTION`.
 
-    When the function is invoked directly, `econtext` must still be passed to
-    it explicitly.
+    No special handling occurs when the function is invoked directly.
+
 
 .. currentmodule:: mitogen.core
 .. decorator:: takes_router
