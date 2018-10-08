@@ -252,11 +252,11 @@ class CallError(Error):
     #: the :class:`CallError` was constructed with a string argument.
     type_name = None
 
-    @classmethod
-    def with_type_name(cls, type_name):
-        return type('CallError_' + type_name, (cls,), {
-            'type_name': type_name,
-        })
+    @staticmethod
+    def for_type_name(type_name):
+        # Overridden by mitogen.error on import to dynamically produce
+        # CallError subclasses reflecting the original exception hierarchy.
+        return CallError
 
     @classmethod
     def from_exception(cls, e=None):
@@ -269,7 +269,7 @@ class CallError(Error):
         if tb:
             s += '\n'
             s += ''.join(traceback.format_tb(tb))
-        return cls.with_type_name(type_name)(s)
+        return cls.for_type_name(type_name)(s)
 
     def __reduce__(self):
         return (_unpickle_call_error, (self.type_name, self.args[0],))
@@ -283,7 +283,7 @@ def _unpickle_call_error(type_name, s):
     if not (type(s) is UnicodeType and len(s) < 10000):
         raise TypeError('cannot unpickle CallError: bad message')
     if type_name:
-        return CallError.with_type_name(type_name)(s)
+        return CallError.for_type_name(type_name)(s)
     return CallError(s)
 
 
