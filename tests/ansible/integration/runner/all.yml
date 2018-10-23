@@ -1,3 +1,4 @@
+- import_playbook: atexit.yml
 - import_playbook: builtin_command_module.yml
 - import_playbook: custom_bash_hashbang_argument.yml
 - import_playbook: custom_bash_old_style_module.yml
@@ -15,6 +16,6 @@
 - import_playbook: environment_isolation.yml
 - import_playbook: etc_environment.yml
 - import_playbook: forking_active.yml
-- import_playbook: forking_inactive.yml
 - import_playbook: forking_correct_parent.yml
+- import_playbook: forking_inactive.yml
 - import_playbook: missing_module.yml

@@ -38,6 +38,7 @@ how to build arguments for it, preseed related data, etc.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import atexit
 import ctypes
 import errno
 import imp
@@ -757,9 +758,25 @@ class NewStyleRunner(ScriptRunner):
         if klass and isinstance(exc, klass):
             mod.module.fail_json(**exc.results)
 
-    def _run(self):
-        code = self._get_code()
+    def _run_code(self, code, mod):
+        try:
+            if mitogen.core.PY3:
+                exec(code, vars(mod))
+            else:
+                exec('exec code in vars(mod)')
+        except Exception as e:
+            self._handle_magic_exception(mod, e)
+            raise
 
+    def _run_atexit_funcs(self):
+        """
+        Newer Ansibles use atexit.register() to trigger tmpdir cleanup, when
+        AnsibleModule.tmpdir is responsible for creating its own temporary
+        directory.
+        """
+        atexit._run_exitfuncs()
+
+    def _run(self):
         mod = types.ModuleType(self.main_module_name)
         mod.__package__ = None
         # Some Ansible modules use __file__ to find the Ansiballz temporary
@@ -771,16 +788,13 @@ class NewStyleRunner(ScriptRunner):
             'ansible_module_' + os.path.basename(self.path),
         )
 
+        code = self._get_code()
         exc = None
         try:
             try:
-                if mitogen.core.PY3:
-                    exec(code, vars(mod))
-                else:
-                    exec('exec code in vars(mod)')
-            except Exception as e:
-                self._handle_magic_exception(mod, e)
-                raise
+                self._run_code(code, mod)
+            finally:
+                self._run_atexit_funcs()
         except SystemExit as e:
             exc = e
 
