@@ -15,6 +15,35 @@ Release Notes
     </style>
 
 
+v0.2.4 (2018-??-??)
+------------------
+
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+
+Enhancements
+^^^^^^^^^^^^
+
+Fixes
+^^^^^
+
+Core Library
+~~~~~~~~~~~~
+
+* `#76 <https://github.com/dw/mitogen/issues/76>`_: routing maintains the set
+  of destination context ID ever received on each stream, and when
+  disconnection occurs, propagates ``DEL_ROUTE`` messages downwards towards
+  every stream that ever communicated with a disappearing peer, rather than
+  simply toward parents.
+
+  Conversations between nodes in any level of the connection tree should
+  correctly receive ``DEL_ROUTE`` messages when a participant disconnects,
+  allowing receivers to be woken with :class:`mitogen.core.ChannelError` to
+  signal the connection has broken, even when one participant is not a parent
+  of the other.
+
+
+
 v0.2.3 (2018-10-23)
 -------------------
 
