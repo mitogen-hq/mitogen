@@ -33,7 +33,7 @@ be expected. On the slave, it is built dynamically during startup.
 
 
 #: Library version as a tuple.
-__version__ = (0, 2, 2)
+__version__ = (0, 2, 3)
 
 
 #: This is :data:`False` in slave contexts. Previously it was used to prevent
