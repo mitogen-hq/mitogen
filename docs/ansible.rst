@@ -427,11 +427,9 @@ specific variables with a particular linefeed style.
 Temporary Files
 ~~~~~~~~~~~~~~~
 
-Temporary file handling in Ansible is incredibly tricky business, and the exact
-behaviour varies across major releases.
-
-Ansible creates a variety of temporary files and directories depending on its
-operating mode.
+Temporary file handling in Ansible is tricky, and the precise behaviour varies
+across major versions. A variety of temporary files and directories are
+created, depending on the operating mode:
 
 In the best case when pipelining is enabled and no temporary uploads are
 required, for each task Ansible will create one directory below a
@@ -470,19 +468,19 @@ In summary, for each task Ansible may create one or more of:
 Mitogen for Ansible
 ^^^^^^^^^^^^^^^^^^^
 
-Temporary h
-Temporary directory handling is fiddly and varies across major Ansible
-releases.
-
+As Mitogen can execute new-style modules from RAM, and transfer files to target
+user accounts without first writing an intermediary file in any separate login
+account, handling is relatively simplified.
 
 Temporary directories must exist to maintain compatibility with Ansible, as
 many modules introspect :data:`sys.argv` to find a directory where they may
 write files, however only one directory exists for the lifetime of each
-interpreter, its location is consistent for each target account, and it is
-always privately owned by that account.
+interpreter, its location is consistent for each account, and it is always
+privately owned by that account.
 
-The paths below are tried until one is found that is writeable and lives on a
-filesystem with ``noexec`` disabled:
+During startup, the persistent remote interpreter tries the paths below until
+one is found that is writeable and lives on a filesystem with ``noexec``
+disabled:
 
 1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
    ``ansible.cfg``
@@ -496,10 +494,35 @@ filesystem with ``noexec`` disabled:
 8. ``/usr/tmp``
 9. Current working directory
 
-The directory is created once at startup, and subdirectories are automatically
-created and destroyed for every new task. Management of subdirectories happens
-on the controller, but management of the parent directory happens entirely on
-the target.
+The directory is created at startup and recursively destroyed during interpeter
+shutdown. Subdirectories are automatically created and destroyed by the
+controller for each task that requires them.
+
+
+Round-trip Avoidance
+^^^^^^^^^^^^^^^^^^^^
+
+Mitogen avoids many round-trips due to temporary file handling that are present
+in regular Ansible:
+
+* During task startup, it is not necessary to wait until the target has
+  succeeded in creating a temporary directory. Instead, any failed attempt to
+  create the directory will cause any subsequent RPC belonging to the same task
+  to fail with the error that occurred.
+
+* As temporary directories are privately owned by the target user account,
+  operations relating to modifying the directory to support cross-account
+  access are avoided.
+
+* An explicit work-around is included to avoid the `copy` and `template`
+  actions needlessly triggering a round-trip to set their temporary file as
+  executable.
+
+* During task shutdown, it is not necessary to wait to learn if the target has
+  succeeded in deleting a temporary directory, since any error that may occur
+  can is logged asynchronously via the logging framework, and the persistent
+  remote interpreter arranges for all subdirectories to be destroyed during
+  interpreter shutdown.
 
 
 .. _ansible_process_env:
