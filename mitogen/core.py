@@ -1719,9 +1719,26 @@ class Router(object):
         self._last_handle = itertools.count(1000)
         #: handle -> (persistent?, func(msg))
         self._handle_map = {}
+        self.add_handler(self._on_del_route, DEL_ROUTE)
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
+
+    def _on_del_route(self, msg):
+        """
+        Stub DEL_ROUTE handler; fires 'disconnect' events on the corresponding
+        member of :attr:`_context_by_id`. This handler is replaced by
+        :class:`mitogen.parent.RouteMonitor` in an upgraded context.
+        """
+        LOG.error('%r._on_del_route() %r', self, msg)
+        if not msg.is_dead:
+            target_id_s, _, name = msg.data.partition(b(':'))
+            target_id = int(target_id_s, 10)
+            if target_id not in self._context_by_id:
+                LOG.debug('DEL_ROUTE for unknown ID %r: %r', target_id, msg)
+                return
+
+            fire(self._context_by_id[target_id], 'disconnect')
 
     def on_stream_disconnect(self, stream):
         for context in self._context_by_id.values():
