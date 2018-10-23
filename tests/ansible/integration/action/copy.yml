@@ -64,3 +64,20 @@
         - stat.results[2].stat.checksum == "b26dd6444595e2bdb342aa0a91721b57478b5029"
         - stat.results[3].stat.checksum == "d675f47e467eae19e49032a2cc39118e12a6ee72"
 
+    - file:
+        state: absent
+        path: "{{item}}"
+      with_items:
+      - /tmp/copy-tiny-file
+      - /tmp/copy-tiny-file.out
+      - /tmp/copy-no-mode
+      - /tmp/copy-no-mode.out
+      - /tmp/copy-with-mode
+      - /tmp/copy-with-mode.out
+      - /tmp/copy-large-file
+      - /tmp/copy-large-file.out
+      - /tmp/copy-tiny-inline-file.out
+      - /tmp/copy-large-inline-file
+      - /tmp/copy-large-inline-file.out
+
+    # end of cleaning out files (again)

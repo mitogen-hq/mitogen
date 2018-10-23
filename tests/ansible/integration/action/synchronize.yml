@@ -32,6 +32,7 @@
     - file:
         path: /tmp/sync-test.out
         state: absent
+      become: true
 
     - synchronize:
         private_key: /tmp/synchronize-action-key
@@ -46,3 +47,12 @@
 
     - assert:
         that: outout == "item!"
+
+    - file:
+        path: "{{item}}"
+        state: absent
+      become: true
+      with_items:
+      - /tmp/synchronize-action-key
+      - /tmp/sync-test
+      - /tmp/sync-test.out

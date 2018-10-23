@@ -102,3 +102,16 @@
     - assert:
         that:
         - out.stat.mode == "1461"
+
+    - file:
+        state: absent
+        path: "{{item}}"
+      with_items:
+      - /tmp/weird-mode
+      - /tmp/weird-mode.out
+      - /tmp/copy-no-mode
+      - /tmp/copy-no-mode.out
+      - /tmp/copy-with-mode
+      - /tmp/copy-with-mode.out
+
+    # end of cleaning out files
