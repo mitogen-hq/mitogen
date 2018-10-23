@@ -15,7 +15,7 @@ Release Notes
     </style>
 
 
-v0.2.3 (2018-08-??)
+v0.2.3 (2018-10-23)
 -------------------
 
 Mitogen for Ansible
@@ -24,7 +24,9 @@ Mitogen for Ansible
 Enhancements
 ^^^^^^^^^^^^
 
-* `#315 <https://github.com/dw/mitogen/pull/315>`_: Ansible 2.6 is supported.
+* `#315 <https://github.com/dw/mitogen/pull/315>`_,
+  `#392 <https://github.com/dw/mitogen/issues/392>`_: Ansible 2.6 and 2.7 are
+  supported.
 
 * `#321 <https://github.com/dw/mitogen/issues/321>`_,
   `#336 <https://github.com/dw/mitogen/issues/336>`_: temporary file handling
@@ -386,7 +388,7 @@ within a stable series.
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
-* Support for Ansible 2.3 - 2.6.x and any mixture of Python 2.6, 2.7 or 3.6 on
+* Support for Ansible 2.3 - 2.7.x and any mixture of Python 2.6, 2.7 or 3.6 on
   controller and target nodes.
 
 * Drop-in support for many Ansible connection types.
@@ -428,6 +430,8 @@ Mitogen for Ansible
      behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
      ``ansible_python_interpreter`` setting, contrary to the Ansible
      documentation. This will be addressed in a future 0.2 release.
+
+* The Ansible 2.7 ``reboot`` module is not yet supported.
 
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
