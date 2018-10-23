@@ -424,82 +424,84 @@ specific variables with a particular linefeed style.
 
 .. _ansible_tempfiles:
 
-Temporary Files
-~~~~~~~~~~~~~~~
+...
 
-Temporary file handling in Ansible is incredibly tricky business, and the exact
-behaviour varies across major releases.
+    Temporary Files
+    ~~~~~~~~~~~~~~~
 
-Ansible creates a variety of temporary files and directories depending on its
-operating mode.
+    Temporary file handling in Ansible is incredibly tricky business, and the exact
+    behaviour varies across major releases.
 
-In the best case when pipelining is enabled and no temporary uploads are
-required, for each task Ansible will create one directory below a
-system-supplied temporary directory returned by :func:`tempfile.mkdtemp`, owned
-by the target account a new-style module will execute in.
+    Ansible creates a variety of temporary files and directories depending on its
+    operating mode.
 
-In other cases depending on the task type, whether become is active, whether
-the target become user is privileged, whether the associated action plugin
-needs to upload files, and whether the associated module needs to store files,
-Ansible may:
+    In the best case when pipelining is enabled and no temporary uploads are
+    required, for each task Ansible will create one directory below a
+    system-supplied temporary directory returned by :func:`tempfile.mkdtemp`, owned
+    by the target account a new-style module will execute in.
 
-* Create a directory owned by the SSH user either under ``remote_tmp``, or a
-  system-default directory,
-* Upload action dependencies such as non-new style modules or rendered
-  templates to that directory via `sftp(1)`_ or `scp(1)`_.
-* Attempt to modify the directory's access control list to grant access to the
-  target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
-  requiring that tool to be installed and a supported filesystem to be in use,
-  or for the ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
-* Create a directory owned by the target user either under ``remote_tmp``, or
-  a system-default directory, if a new-style module needs a temporary directory
-  and one was not previously created for a supporting file earlier in the
-  invocation.
+    In other cases depending on the task type, whether become is active, whether
+    the target become user is privileged, whether the associated action plugin
+    needs to upload files, and whether the associated module needs to store files,
+    Ansible may:
 
-In summary, for each task Ansible may create one or more of:
+    * Create a directory owned by the SSH user either under ``remote_tmp``, or a
+      system-default directory,
+    * Upload action dependencies such as non-new style modules or rendered
+      templates to that directory via `sftp(1)`_ or `scp(1)`_.
+    * Attempt to modify the directory's access control list to grant access to the
+      target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
+      requiring that tool to be installed and a supported filesystem to be in use,
+      or for the ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
+    * Create a directory owned by the target user either under ``remote_tmp``, or
+      a system-default directory, if a new-style module needs a temporary directory
+      and one was not previously created for a supporting file earlier in the
+      invocation.
 
-* ``~ssh_user/<remote_tmp>/...`` owned by the login user,
-* ``$TMPDIR/ansible-tmp-...`` owned by the login user,
-* ``$TMPDIR/ansible-tmp-...`` owned by the login user with ACLs permitting
-  write access by the become user,
-* ``~become_user/<remote_tmp>/...`` owned by the become user,
-* ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
-* ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
+    In summary, for each task Ansible may create one or more of:
 
-
-Mitogen for Ansible
-^^^^^^^^^^^^^^^^^^^
-
-Temporary h
-Temporary directory handling is fiddly and varies across major Ansible
-releases.
+    * ``~ssh_user/<remote_tmp>/...`` owned by the login user,
+    * ``$TMPDIR/ansible-tmp-...`` owned by the login user,
+    * ``$TMPDIR/ansible-tmp-...`` owned by the login user with ACLs permitting
+      write access by the become user,
+    * ``~become_user/<remote_tmp>/...`` owned by the become user,
+    * ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
+    * ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
 
 
-Temporary directories must exist to maintain compatibility with Ansible, as
-many modules introspect :data:`sys.argv` to find a directory where they may
-write files, however only one directory exists for the lifetime of each
-interpreter, its location is consistent for each target account, and it is
-always privately owned by that account.
+    Mitogen for Ansible
+    ^^^^^^^^^^^^^^^^^^^
 
-The paths below are tried until one is found that is writeable and lives on a
-filesystem with ``noexec`` disabled:
+    Temporary h
+    Temporary directory handling is fiddly and varies across major Ansible
+    releases.
 
-1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
-   ``ansible.cfg``
-2. ``$variable`` and tilde-expanded ``system_tmpdirs`` setting from
-   ``ansible.cfg``
-3. ``TMPDIR`` environment variable
-4. ``TEMP`` environment variable
-5. ``TMP`` environment variable
-6. ``/tmp``
-7. ``/var/tmp``
-8. ``/usr/tmp``
-9. Current working directory
 
-The directory is created once at startup, and subdirectories are automatically
-created and destroyed for every new task. Management of subdirectories happens
-on the controller, but management of the parent directory happens entirely on
-the target.
+    Temporary directories must exist to maintain compatibility with Ansible, as
+    many modules introspect :data:`sys.argv` to find a directory where they may
+    write files, however only one directory exists for the lifetime of each
+    interpreter, its location is consistent for each target account, and it is
+    always privately owned by that account.
+
+    The paths below are tried until one is found that is writeable and lives on a
+    filesystem with ``noexec`` disabled:
+
+    1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
+       ``ansible.cfg``
+    2. ``$variable`` and tilde-expanded ``system_tmpdirs`` setting from
+       ``ansible.cfg``
+    3. ``TMPDIR`` environment variable
+    4. ``TEMP`` environment variable
+    5. ``TMP`` environment variable
+    6. ``/tmp``
+    7. ``/var/tmp``
+    8. ``/usr/tmp``
+    9. Current working directory
+
+    The directory is created once at startup, and subdirectories are automatically
+    created and destroyed for every new task. Management of subdirectories happens
+    on the controller, but management of the parent directory happens entirely on
+    the target.
 
 
 .. _ansible_process_env:
