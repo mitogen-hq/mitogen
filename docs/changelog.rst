@@ -134,6 +134,11 @@ Fixes
   in processes running on the target is capped to 512, reducing the work
   required to start a subprocess by >2000x in default CentOS configurations.
 
+* `#397 <https://github.com/dw/mitogen/issues/397>`_: recent Mitogen master
+  versions could fail to clean up temporary directories in a number of
+  circumstances, and newer Ansibles moved to using :mod:`atexit` to effect
+  temporary directory cleanup in some circumstances.
+
 * `b9112a9c <https://github.com/dw/mitogen/commit/b9112a9c>`_,
   `2c287801 <https://github.com/dw/mitogen/commit/2c287801>`_: OpenSSH 7.5
   permission denied prompts are now recognized. Contributed by Alex Willmer.
@@ -223,13 +228,14 @@ bug reports, features and fixes in this release contributed by
 `Jonathan Rosser <https://github.com/jrosser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Luca Nunzi <https://github.com/0xlc>`_,
-`nikitakazantsev12 <https://github.com/nikitakazantsev12>`_,
+`Orion Poplawski <https://github.com/opoplawski>`_,
 `Peter V. Saveliev <https://github.com/svinota>`_,
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
 `Pierre-Louis Bonicoli <https://github.com/jesteria>`_,
 `Prateek Jain <https://github.com/prateekj201>`_,
 `RedheatWei <https://github.com/RedheatWei>`_,
 `Rick Box <https://github.com/boxrick>`_,
+`nikitakazantsev12 <https://github.com/nikitakazantsev12>`_,
 `Tawana Musewe <https://github.com/tbtmuse>`_,
 `Timo Beckers <https://github.com/ti-mo>`_, and
 `Yannig Perré <https://github.com/yannig>`_.
@@ -329,12 +335,13 @@ the bug reports and pull requests in this release contributed by
 `Colin McCarthy <https://github.com/colin-mccarthy>`_,
 `Dan Quackenbush <https://github.com/danquack>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
-`falbanese <https://github.com/falbanese>`_,
 `Gonzalo Servat <https://github.com/gservat>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Mark Janssen <https://github.com/sigio>`_,
 `Mike Walker <https://github.com/napkindrawing>`_,
+`Orion Poplawski <https://github.com/opoplawski>`_,
+`falbanese <https://github.com/falbanese>`_,
 `Tawana Musewe <https://github.com/tbtmuse>`_, and
 `Zach Swanson <https://github.com/zswanson>`_.
 
