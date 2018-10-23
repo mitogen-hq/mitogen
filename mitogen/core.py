@@ -1279,7 +1279,7 @@ def _unpickle_context(router, context_id, name):
                 (isinstance(name, UnicodeType) and len(name) < 100))
             ):
         raise TypeError('cannot unpickle Context: bad input')
-    return router.context_class(router, context_id, name)
+    return router.context_by_id(context_id, name=name)
 
 
 class Poller(object):
@@ -1731,6 +1731,15 @@ class Router(object):
         while self._handle_map:
             _, (_, func, _) = self._handle_map.popitem()
             func(Message.dead())
+
+    def context_by_id(self, context_id, via_id=None, create=True, name=None):
+        context = self._context_by_id.get(context_id)
+        if create and not context:
+            context = self.context_class(self, context_id, name=name)
+            if via_id is not None:
+                context.via = self.context_by_id(via_id)
+            self._context_by_id[context_id] = context
+        return context
 
     def register(self, context, stream):
         _v and LOG.debug('register(%r, %r)', context, stream)

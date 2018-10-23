@@ -1581,15 +1581,6 @@ class Router(mitogen.core.Router):
     def allocate_id(self):
         return self.id_allocator.allocate()
 
-    def context_by_id(self, context_id, via_id=None, create=True):
-        context = self._context_by_id.get(context_id)
-        if create and not context:
-            context = self.context_class(self, context_id)
-            if via_id is not None:
-                context.via = self.context_by_id(via_id)
-            self._context_by_id[context_id] = context
-        return context
-
     connection_timeout_msg = u"Connection timed out."
 
     def _connect(self, klass, name=None, **kwargs):
