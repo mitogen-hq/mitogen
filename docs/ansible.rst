@@ -424,84 +424,105 @@ specific variables with a particular linefeed style.
 
 .. _ansible_tempfiles:
 
-...
+Temporary Files
+~~~~~~~~~~~~~~~
 
-    Temporary Files
-    ~~~~~~~~~~~~~~~
+Temporary file handling in Ansible is tricky, and the precise behaviour varies
+across major versions. A variety of temporary files and directories are
+created, depending on the operating mode:
 
-    Temporary file handling in Ansible is incredibly tricky business, and the exact
-    behaviour varies across major releases.
+In the best case when pipelining is enabled and no temporary uploads are
+required, for each task Ansible will create one directory below a
+system-supplied temporary directory returned by :func:`tempfile.mkdtemp`, owned
+by the target account a new-style module will execute in.
 
-    Ansible creates a variety of temporary files and directories depending on its
-    operating mode.
+In other cases depending on the task type, whether become is active, whether
+the target become user is privileged, whether the associated action plugin
+needs to upload files, and whether the associated module needs to store files,
+Ansible may:
 
-    In the best case when pipelining is enabled and no temporary uploads are
-    required, for each task Ansible will create one directory below a
-    system-supplied temporary directory returned by :func:`tempfile.mkdtemp`, owned
-    by the target account a new-style module will execute in.
+* Create a directory owned by the SSH user either under ``remote_tmp``, or a
+  system-default directory,
+* Upload action dependencies such as non-new style modules or rendered
+  templates to that directory via `sftp(1)`_ or `scp(1)`_.
+* Attempt to modify the directory's access control list to grant access to the
+  target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
+  requiring that tool to be installed and a supported filesystem to be in use,
+  or for the ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
+* Create a directory owned by the target user either under ``remote_tmp``, or
+  a system-default directory, if a new-style module needs a temporary directory
+  and one was not previously created for a supporting file earlier in the
+  invocation.
 
-    In other cases depending on the task type, whether become is active, whether
-    the target become user is privileged, whether the associated action plugin
-    needs to upload files, and whether the associated module needs to store files,
-    Ansible may:
+In summary, for each task Ansible may create one or more of:
 
-    * Create a directory owned by the SSH user either under ``remote_tmp``, or a
-      system-default directory,
-    * Upload action dependencies such as non-new style modules or rendered
-      templates to that directory via `sftp(1)`_ or `scp(1)`_.
-    * Attempt to modify the directory's access control list to grant access to the
-      target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
-      requiring that tool to be installed and a supported filesystem to be in use,
-      or for the ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
-    * Create a directory owned by the target user either under ``remote_tmp``, or
-      a system-default directory, if a new-style module needs a temporary directory
-      and one was not previously created for a supporting file earlier in the
-      invocation.
-
-    In summary, for each task Ansible may create one or more of:
-
-    * ``~ssh_user/<remote_tmp>/...`` owned by the login user,
-    * ``$TMPDIR/ansible-tmp-...`` owned by the login user,
-    * ``$TMPDIR/ansible-tmp-...`` owned by the login user with ACLs permitting
-      write access by the become user,
-    * ``~become_user/<remote_tmp>/...`` owned by the become user,
-    * ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
-    * ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
+* ``~ssh_user/<remote_tmp>/...`` owned by the login user,
+* ``$TMPDIR/ansible-tmp-...`` owned by the login user,
+* ``$TMPDIR/ansible-tmp-...`` owned by the login user with ACLs permitting
+  write access by the become user,
+* ``~become_user/<remote_tmp>/...`` owned by the become user,
+* ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
+* ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
 
 
-    Mitogen for Ansible
-    ^^^^^^^^^^^^^^^^^^^
+Mitogen for Ansible
+^^^^^^^^^^^^^^^^^^^
 
-    Temporary h
-    Temporary directory handling is fiddly and varies across major Ansible
-    releases.
+As Mitogen can execute new-style modules from RAM, and transfer files to target
+user accounts without first writing an intermediary file in any separate login
+account, handling is relatively simplified.
+
+Temporary directories must exist to maintain compatibility with Ansible, as
+many modules introspect :data:`sys.argv` to find a directory where they may
+write files, however only one directory exists for the lifetime of each
+interpreter, its location is consistent for each account, and it is always
+privately owned by that account.
+
+During startup, the persistent remote interpreter tries the paths below until
+one is found that is writeable and lives on a filesystem with ``noexec``
+disabled:
+
+1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
+   ``ansible.cfg``
+2. ``$variable`` and tilde-expanded ``system_tmpdirs`` setting from
+   ``ansible.cfg``
+3. ``TMPDIR`` environment variable
+4. ``TEMP`` environment variable
+5. ``TMP`` environment variable
+6. ``/tmp``
+7. ``/var/tmp``
+8. ``/usr/tmp``
+9. Current working directory
+
+The directory is created at startup and recursively destroyed during interpeter
+shutdown. Subdirectories are automatically created and destroyed by the
+controller for each task that requires them.
 
 
-    Temporary directories must exist to maintain compatibility with Ansible, as
-    many modules introspect :data:`sys.argv` to find a directory where they may
-    write files, however only one directory exists for the lifetime of each
-    interpreter, its location is consistent for each target account, and it is
-    always privately owned by that account.
+Round-trip Avoidance
+^^^^^^^^^^^^^^^^^^^^
 
-    The paths below are tried until one is found that is writeable and lives on a
-    filesystem with ``noexec`` disabled:
+Mitogen avoids many round-trips due to temporary file handling that are present
+in regular Ansible:
 
-    1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
-       ``ansible.cfg``
-    2. ``$variable`` and tilde-expanded ``system_tmpdirs`` setting from
-       ``ansible.cfg``
-    3. ``TMPDIR`` environment variable
-    4. ``TEMP`` environment variable
-    5. ``TMP`` environment variable
-    6. ``/tmp``
-    7. ``/var/tmp``
-    8. ``/usr/tmp``
-    9. Current working directory
+* During task startup, it is not necessary to wait until the target has
+  succeeded in creating a temporary directory. Instead, any failed attempt to
+  create the directory will cause any subsequent RPC belonging to the same task
+  to fail with the error that occurred.
 
-    The directory is created once at startup, and subdirectories are automatically
-    created and destroyed for every new task. Management of subdirectories happens
-    on the controller, but management of the parent directory happens entirely on
-    the target.
+* As temporary directories are privately owned by the target user account,
+  operations relating to modifying the directory to support cross-account
+  access are avoided.
+
+* An explicit work-around is included to avoid the `copy` and `template`
+  actions needlessly triggering a round-trip to set their temporary file as
+  executable.
+
+* During task shutdown, it is not necessary to wait to learn if the target has
+  succeeded in deleting a temporary directory, since any error that may occur
+  can is logged asynchronously via the logging framework, and the persistent
+  remote interpreter arranges for all subdirectories to be destroyed during
+  interpreter shutdown.
 
 
 .. _ansible_process_env:
