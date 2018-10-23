@@ -190,7 +190,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         # The actual removal is pipelined by Connection.close().
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
-        self._connection._shell.tmpdir = None
+        # Upstream _remove_tmp_path resets shell.tmpdir here, however
+        # connection.py uses that as the sole location of the temporary
+        # directory, if one exists.
+        # self._connection._shell.tmpdir = None
 
     def _transfer_data(self, remote_path, data):
         """
