@@ -26,6 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import absolute_import
 import os.path
 import sys
 
@@ -44,12 +45,12 @@ import sys
 # debuggers and isinstance() work predictably.
 #
 
-try:
-    import ansible_mitogen
-except ImportError:
-    base_dir = os.path.dirname(__file__)
-    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
-    del base_dir
+BASE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), '../../..')
+)
+
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 import ansible_mitogen.loaders
 import ansible_mitogen.strategy

@@ -94,6 +94,16 @@ def get_lxc_pid(path, name):
     raise Error("could not find PID from lxc-info output.\n%s", output)
 
 
+def get_lxd_pid(path, name):
+    output = _run_command([path, 'info', name])
+    for line in output.splitlines():
+        bits = line.split()
+        if bits and bits[0] == 'Pid:':
+            return int(bits[1])
+
+    raise Error("could not find PID from lxc output.\n%s", output)
+
+
 def get_machinectl_pid(path, name):
     output = _run_command([path, 'status', name])
     for line in output.splitlines():
@@ -108,20 +118,24 @@ class Stream(mitogen.parent.Stream):
     child_is_immediate_subprocess = False
 
     container = None
-    username = None
+    username = 'root'
     kind = None
+    python_path = 'python'
     docker_path = 'docker'
+    lxc_path = 'lxc'
     lxc_info_path = 'lxc-info'
     machinectl_path = 'machinectl'
 
     GET_LEADER_BY_KIND = {
         'docker': ('docker_path', get_docker_pid),
         'lxc': ('lxc_info_path', get_lxc_pid),
+        'lxd': ('lxc_path', get_lxd_pid),
         'machinectl': ('machinectl_path', get_machinectl_pid),
     }
 
     def construct(self, container, kind, username=None, docker_path=None,
-                  lxc_info_path=None, machinectl_path=None, **kwargs):
+                  lxc_path=None, lxc_info_path=None, machinectl_path=None,
+                  **kwargs):
         super(Stream, self).construct(**kwargs)
         if kind not in self.GET_LEADER_BY_KIND:
             raise Error('unsupported container kind: %r', kind)
@@ -132,6 +146,8 @@ class Stream(mitogen.parent.Stream):
             self.username = username
         if docker_path:
             self.docker_path = docker_path
+        if lxc_path:
+            self.lxc_path = lxc_path
         if lxc_info_path:
             self.lxc_info_path = lxc_info_path
         if machinectl_path:
@@ -168,27 +184,26 @@ class Stream(mitogen.parent.Stream):
             except AttributeError:
                 pass
 
-        if self.username:
-            try:
-                os.setgroups([grent.gr_gid
-                              for grent in grp.getgrall()
-                              if self.username in grent.gr_mem])
-                pwent = pwd.getpwnam(self.username)
-                os.setreuid(pwent.pw_uid, pwent.pw_uid)
-                # shadow-4.4/libmisc/setupenv.c. Not done: MAIL, PATH
-                os.environ.update({
-                    'HOME': pwent.pw_dir,
-                    'SHELL': pwent.pw_shell or '/bin/sh',
-                    'LOGNAME': self.username,
-                    'USER': self.username,
-                })
-                if ((os.path.exists(pwent.pw_dir) and
-                     os.access(pwent.pw_dir, os.X_OK))):
-                    os.chdir(pwent.pw_dir)
-            except Exception:
-                e = sys.exc_info()[1]
-                raise Error(self.username_msg, self.username, self.container,
-                            type(e).__name__, e)
+        try:
+            os.setgroups([grent.gr_gid
+                          for grent in grp.getgrall()
+                          if self.username in grent.gr_mem])
+            pwent = pwd.getpwnam(self.username)
+            os.setreuid(pwent.pw_uid, pwent.pw_uid)
+            # shadow-4.4/libmisc/setupenv.c. Not done: MAIL, PATH
+            os.environ.update({
+                'HOME': pwent.pw_dir,
+                'SHELL': pwent.pw_shell or '/bin/sh',
+                'LOGNAME': self.username,
+                'USER': self.username,
+            })
+            if ((os.path.exists(pwent.pw_dir) and
+                 os.access(pwent.pw_dir, os.X_OK))):
+                os.chdir(pwent.pw_dir)
+        except Exception:
+            e = sys.exc_info()[1]
+            raise Error(self.username_msg, self.username, self.container,
+                        type(e).__name__, e)
 
     username_msg = 'while transitioning to user %r in container %r: %s: %s'
 

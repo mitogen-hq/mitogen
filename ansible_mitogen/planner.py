@@ -55,6 +55,7 @@ import ansible_mitogen.target
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
+NO_MODULE_MSG = 'The module %s was not found in configured module paths.'
 
 
 class Invocation(object):
@@ -148,6 +149,8 @@ class Planner(object):
         """
         new = dict((mitogen.core.UnicodeType(k), kwargs[k])
                    for k in kwargs)
+        new.setdefault('good_temp_dir',
+            self._inv.connection.get_good_temp_dir())
         new.setdefault('cwd', self._inv.connection.get_default_cwd())
         new.setdefault('extra_env', self._inv.connection.get_default_env())
         new.setdefault('emulate_tty', True)
@@ -393,6 +396,9 @@ _planners = [
 
 def get_module_data(name):
     path = ansible_mitogen.loaders.module_loader.find_plugin(name, '')
+    if path is None:
+        raise ansible.errors.AnsibleError(NO_MODULE_MSG % (name,))
+
     with open(path, 'rb') as fp:
         source = fp.read()
     return mitogen.core.to_text(path), source
@@ -474,7 +480,7 @@ def invoke(invocation):
         response = _invoke_forked_task(invocation, planner)
     else:
         _propagate_deps(invocation, planner, invocation.connection.context)
-        response = invocation.connection.call(
+        response = invocation.connection.get_chain().call(
             ansible_mitogen.target.run_module,
             kwargs=planner.get_kwargs(),
         )

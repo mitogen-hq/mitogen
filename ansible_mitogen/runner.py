@@ -38,12 +38,14 @@ how to build arguments for it, preseed related data, etc.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import atexit
 import ctypes
 import errno
 import imp
 import json
 import logging
 import os
+import shlex
 import sys
 import tempfile
 import types
@@ -80,6 +82,110 @@ for symbol in 'res_init', '__res_init':
 
 iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
+
+
+class EnvironmentFileWatcher(object):
+    """
+    Usually Ansible edits to /etc/environment and ~/.pam_environment are
+    reflected in subsequent tasks if become:true or SSH multiplexing is
+    disabled, due to sudo and/or SSH reinvoking pam_env. Rather than emulate
+    existing semantics, do our best to ensure edits are always reflected.
+
+    This can't perfectly replicate the existing behaviour, but it can safely
+    update and remove keys that appear to originate in `path`, and that do not
+    conflict with any existing environment key inherited from elsewhere.
+
+    A more robust future approach may simply be to arrange for the persistent
+    interpreter to restart when a change is detected.
+    """
+    def __init__(self, path):
+        self.path = os.path.expanduser(path)
+        #: Inode data at time of last check.
+        self._st = self._stat()
+        #: List of inherited keys appearing to originated from this file.
+        self._keys = [key for key, value in self._load()
+                      if value == os.environ.get(key)]
+        LOG.debug('%r installed; existing keys: %r', self, self._keys)
+
+    def __repr__(self):
+        return 'EnvironmentFileWatcher(%r)' % (self.path,)
+
+    def _stat(self):
+        try:
+            return os.stat(self.path)
+        except OSError:
+            return None
+
+    def _load(self):
+        try:
+            with open(self.path, 'r') as fp:
+                return list(self._parse(fp))
+        except IOError:
+            return []
+
+    def _parse(self, fp):
+        """
+        linux-pam-1.3.1/modules/pam_env/pam_env.c#L207
+        """
+        for line in fp:
+            # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
+            bits = shlex.split(line, comments=True)
+            if (not bits) or bits[0].startswith('#'):
+                continue
+
+            if bits[0] == 'export':
+                bits.pop(0)
+
+            key, sep, value = (' '.join(bits)).partition('=')
+            if key and sep:
+                yield key, value
+
+    def _on_file_changed(self):
+        LOG.debug('%r: file changed, reloading', self)
+        for key, value in self._load():
+            if key in os.environ:
+                LOG.debug('%r: existing key %r=%r exists, not setting %r',
+                          self, key, os.environ[key], value)
+            else:
+                LOG.debug('%r: setting key %r to %r', self, key, value)
+                self._keys.append(key)
+                os.environ[key] = value
+
+    def _remove_existing(self):
+        """
+        When a change is detected, remove keys that existed in the old file.
+        """
+        for key in self._keys:
+            if key in os.environ:
+                LOG.debug('%r: removing old key %r', self, key)
+                del os.environ[key]
+        self._keys = []
+
+    def check(self):
+        """
+        Compare the :func:`os.stat` for the pam_env style environmnt file
+        `path` with the previous result `old_st`, which may be :data:`None` if
+        the previous stat attempt failed. Reload its contents if the file has
+        changed or appeared since last attempt.
+
+        :returns:
+            New :func:`os.stat` result. The new call to :func:`reload_env` should
+            pass it as the value of `old_st`.
+        """
+        st = self._stat()
+        if self._st == st:
+            return
+
+        self._st = st
+        self._remove_existing()
+
+        if st is None:
+            LOG.debug('%r: file has disappeared', self)
+        else:
+            self._on_file_changed()
+
+_pam_env_watcher = EnvironmentFileWatcher('~/.pam_environment')
+_etc_env_watcher = EnvironmentFileWatcher('/etc/environment')
 
 
 def utf8(s):
@@ -125,6 +231,11 @@ class Runner(object):
         This is passed as a string rather than a dict in order to mimic the
         implicit bytes/str conversion behaviour of a 2.x controller running
         against a 3.x target.
+    :param str good_temp_dir:
+        The writeable temporary directory for this user account reported by
+        :func:`ansible_mitogen.target.init_child` passed via the controller.
+        This is specified explicitly to remain compatible with Ansible<2.5, and
+        for forked tasks where init_child never runs.
     :param dict env:
         Additional environment variables to set during the run. Keys with
         :data:`None` are unset if present.
@@ -137,16 +248,40 @@ class Runner(object):
         When :data:`True`, indicate the runner should detach the context from
         its parent after setup has completed successfully.
     """
-    def __init__(self, module, service_context, json_args, extra_env=None,
-                 cwd=None, env=None, econtext=None, detach=False):
+    def __init__(self, module, service_context, json_args, good_temp_dir,
+                 extra_env=None, cwd=None, env=None, econtext=None,
+                 detach=False):
         self.module = module
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
         self.args = json.loads(json_args)
+        self.good_temp_dir = good_temp_dir
         self.extra_env = extra_env
         self.env = env
         self.cwd = cwd
+        #: If not :data:`None`, :meth:`get_temp_dir` had to create a temporary
+        #: directory for this run, because we're in an asynchronous task, or
+        #: because the originating action did not create a directory.
+        self._temp_dir = None
+
+    def get_temp_dir(self):
+        path = self.args.get('_ansible_tmpdir')
+        if path is not None:
+            return path
+
+        if self._temp_dir is None:
+            self._temp_dir = tempfile.mkdtemp(
+                prefix='ansible_mitogen_runner_',
+                dir=self.good_temp_dir,
+            )
+
+        return self._temp_dir
+
+    def revert_temp_dir(self):
+        if self._temp_dir is not None:
+            ansible_mitogen.target.prune_tree(self._temp_dir)
+            self._temp_dir = None
 
     def setup(self):
         """
@@ -154,12 +289,25 @@ class Runner(object):
         from the parent, as :meth:`run` may detach prior to beginning
         execution. The base implementation simply prepares the environment.
         """
+        self._setup_cwd()
+        self._setup_environ()
+
+    def _setup_cwd(self):
+        """
+        For situations like sudo to a non-privileged account, CWD could be
+        $HOME of the old account, which could have mode go=, which means it is
+        impossible to restore the old directory, so don't even try.
+        """
         if self.cwd:
-            # For situations like sudo to another non-privileged account, the
-            # CWD could be $HOME of the old account, which could have mode go=,
-            # which means it is impossible to restore the old directory, so
-            # don't even bother.
             os.chdir(self.cwd)
+
+    def _setup_environ(self):
+        """
+        Apply changes from /etc/environment files before creating a
+        TemporaryEnvironment to snapshot environment state prior to module run.
+        """
+        _pam_env_watcher.check()
+        _etc_env_watcher.check()
         env = dict(self.extra_env or {})
         if self.env:
             env.update(self.env)
@@ -171,33 +319,7 @@ class Runner(object):
         implementation simply restores the original environment.
         """
         self._env.revert()
-        self._try_cleanup_temp()
-
-    def _cleanup_temp(self):
-        """
-        Empty temp_dir in time for the next module invocation.
-        """
-        for name in os.listdir(ansible_mitogen.target.temp_dir):
-            if name in ('.', '..'):
-                continue
-
-            path = os.path.join(ansible_mitogen.target.temp_dir, name)
-            LOG.debug('Deleting %r', path)
-            ansible_mitogen.target.prune_tree(path)
-
-    def _try_cleanup_temp(self):
-        """
-        During broker shutdown triggered by async task timeout or loss of
-        connection to the parent, it is possible for prune_tree() in
-        target.py::_on_broker_shutdown() to run before _cleanup_temp(), so skip
-        cleanup if the directory or a file disappears from beneath us.
-        """
-        try:
-            self._cleanup_temp()
-        except (IOError, OSError) as e:
-            if e.args[0] == errno.ENOENT:
-                return
-            raise
+        self.revert_temp_dir()
 
     def _run(self):
         """
@@ -264,9 +386,9 @@ class ModuleUtilsImporter(object):
         mod.__loader__ = self
         if is_pkg:
             mod.__path__ = []
-            mod.__package__ = fullname
+            mod.__package__ = str(fullname)
         else:
-            mod.__package__ = fullname.rpartition('.')[0]
+            mod.__package__ = str(fullname.rpartition('.')[0])
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
@@ -310,7 +432,8 @@ class NewStyleStdio(object):
     """
     Patch ansible.module_utils.basic argument globals.
     """
-    def __init__(self, args):
+    def __init__(self, args, temp_dir):
+        self.temp_dir = temp_dir
         self.original_stdout = sys.stdout
         self.original_stderr = sys.stderr
         self.original_stdin = sys.stdin
@@ -320,7 +443,15 @@ class NewStyleStdio(object):
         ansible.module_utils.basic._ANSIBLE_ARGS = utf8(encoded)
         sys.stdin = StringIO(mitogen.core.to_text(encoded))
 
+        self.original_get_path = getattr(ansible.module_utils.basic,
+                                        'get_module_path', None)
+        ansible.module_utils.basic.get_module_path = self._get_path
+
+    def _get_path(self):
+        return self.temp_dir
+
     def revert(self):
+        ansible.module_utils.basic.get_module_path = self.original_get_path
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
         sys.stdin = self.original_stdin
@@ -364,7 +495,7 @@ class ProgramRunner(Runner):
         fetched via :meth:`_get_program`.
         """
         filename = self._get_program_filename()
-        path = os.path.join(ansible_mitogen.target.temp_dir, filename)
+        path = os.path.join(self.get_temp_dir(), filename)
         self.program_fp = open(path, 'wb')
         self.program_fp.write(self._get_program())
         self.program_fp.flush()
@@ -444,7 +575,7 @@ class ArgsFileRunner(Runner):
         self.args_fp = tempfile.NamedTemporaryFile(
             prefix='ansible_mitogen',
             suffix='-args',
-            dir=ansible_mitogen.target.temp_dir,
+            dir=self.get_temp_dir(),
         )
         self.args_fp.write(utf8(self._get_args_contents()))
         self.args_fp.flush()
@@ -548,10 +679,18 @@ class NewStyleRunner(ScriptRunner):
         for fullname in self.module_map['builtin']:
             mitogen.core.import_module(fullname)
 
+    def _setup_excepthook(self):
+        """
+        Starting with Ansible 2.6, some modules (file.py) install a
+        sys.excepthook and never clean it up. So we must preserve the original
+        excepthook and restore it after the run completes.
+        """
+        self.original_excepthook = sys.excepthook
+
     def setup(self):
         super(NewStyleRunner, self).setup()
 
-        self._stdio = NewStyleStdio(self.args)
+        self._stdio = NewStyleStdio(self.args, self.get_temp_dir())
         # It is possible that not supplying the script filename will break some
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
@@ -561,12 +700,17 @@ class NewStyleRunner(ScriptRunner):
             module_utils=self.module_map['custom'],
         )
         self._setup_imports()
+        self._setup_excepthook()
         if libc__res_init:
             libc__res_init()
+
+    def _revert_excepthook(self):
+        sys.excepthook = self.original_excepthook
 
     def revert(self):
         self._argv.revert()
         self._stdio.revert()
+        self._revert_excepthook()
         super(NewStyleRunner, self).revert()
 
     def _get_program_filename(self):
@@ -600,9 +744,39 @@ class NewStyleRunner(ScriptRunner):
     else:
         main_module_name = b'__main__'
 
-    def _run(self):
-        code = self._get_code()
+    def _handle_magic_exception(self, mod, exc):
+        """
+        Beginning with Ansible >2.6, some modules (file.py) install a
+        sys.excepthook which is a closure over AnsibleModule, redirecting the
+        magical exception to AnsibleModule.fail_json().
 
+        For extra special needs bonus points, the class is not defined in
+        module_utils, but is defined in the module itself, meaning there is no
+        type for isinstance() that outlasts the invocation.
+        """
+        klass = getattr(mod, 'AnsibleModuleError', None)
+        if klass and isinstance(exc, klass):
+            mod.module.fail_json(**exc.results)
+
+    def _run_code(self, code, mod):
+        try:
+            if mitogen.core.PY3:
+                exec(code, vars(mod))
+            else:
+                exec('exec code in vars(mod)')
+        except Exception as e:
+            self._handle_magic_exception(mod, e)
+            raise
+
+    def _run_atexit_funcs(self):
+        """
+        Newer Ansibles use atexit.register() to trigger tmpdir cleanup, when
+        AnsibleModule.tmpdir is responsible for creating its own temporary
+        directory.
+        """
+        atexit._run_exitfuncs()
+
+    def _run(self):
         mod = types.ModuleType(self.main_module_name)
         mod.__package__ = None
         # Some Ansible modules use __file__ to find the Ansiballz temporary
@@ -610,16 +784,17 @@ class NewStyleRunner(ScriptRunner):
         # don't want to pointlessly write the module to disk when it never
         # actually needs to exist. So just pass the filename as it would exist.
         mod.__file__ = os.path.join(
-            ansible_mitogen.target.temp_dir,
+            self.get_temp_dir(),
             'ansible_module_' + os.path.basename(self.path),
         )
 
+        code = self._get_code()
         exc = None
         try:
-            if mitogen.core.PY3:
-                exec(code, vars(mod))
-            else:
-                exec('exec code in vars(mod)')
+            try:
+                self._run_code(code, mod)
+            finally:
+                self._run_atexit_funcs()
         except SystemExit as e:
             exc = e
 

@@ -27,12 +27,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import atexit
 import errno
 import logging
 import os
 import signal
 import socket
 import sys
+import time
+
+try:
+    import faulthandler
+except ImportError:
+    faulthandler = None
 
 import mitogen
 import mitogen.core
@@ -43,6 +50,7 @@ import mitogen.service
 import mitogen.unix
 import mitogen.utils
 
+import ansible.constants as C
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
@@ -50,6 +58,54 @@ from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
+
+
+def clean_shutdown(sock):
+    """
+    Shut the write end of `sock`, causing `recv` in the worker process to wake
+    up with a 0-byte read and initiate mux process exit, then wait for a 0-byte
+    read from the read end, which will occur after the the child closes the
+    descriptor on exit.
+
+    This is done using :mod:`atexit` since Ansible lacks any more sensible hook
+    to run code during exit, and unless some synchronization exists with
+    MuxProcess, debug logs may appear on the user's terminal *after* the prompt
+    has been printed.
+    """
+    sock.shutdown(socket.SHUT_WR)
+    sock.recv(1)
+
+
+def getenv_int(key, default=0):
+    """
+    Get an integer-valued environment variable `key`, if it exists and parses
+    as an integer, otherwise return `default`.
+    """
+    try:
+        return int(os.environ.get(key, str(default)))
+    except ValueError:
+        return default
+
+
+def setup_gil():
+    """
+    Set extremely long GIL release interval to let threads naturally progress
+    through CPU-heavy sequences without forcing the wake of another thread that
+    may contend trying to run the same CPU-heavy code. For the new-style work,
+    this drops runtime ~33% and involuntary context switches by >80%,
+    essentially making threads cooperatively scheduled.
+    """
+    try:
+        # Python 2.
+        sys.setcheckinterval(100000)
+    except AttributeError:
+        pass
+
+    try:
+        # Python 3.
+        sys.setswitchinterval(10)
+    except AttributeError:
+        pass
 
 
 class MuxProcess(object):
@@ -109,10 +165,18 @@ class MuxProcess(object):
         if cls.worker_sock is not None:
             return
 
+        if faulthandler is not None:
+            faulthandler.enable()
+
+        setup_gil()
         cls.unix_listener_path = mitogen.unix.make_socket_path()
         cls.worker_sock, cls.child_sock = socket.socketpair()
+        atexit.register(lambda: clean_shutdown(cls.worker_sock))
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
+
+        if os.environ.get('MITOGEN_PROFILING'):
+            mitogen.core.enable_profiling()
 
         cls.original_env = dict(os.environ)
         cls.child_pid = os.fork()
@@ -139,9 +203,17 @@ class MuxProcess(object):
 
         # Let the parent know our listening socket is ready.
         mitogen.core.io_op(self.child_sock.send, b('1'))
-        self.child_sock.send(b('1'))
         # Block until the socket is closed, which happens on parent exit.
         mitogen.core.io_op(self.child_sock.recv, 1)
+
+    def _enable_router_debug(self):
+        if 'MITOGEN_ROUTER_DEBUG' in os.environ:
+            self.router.enable_debug()
+
+    def _enable_stack_dumps(self):
+        secs = getenv_int('MITOGEN_DUMP_THREAD_STACKS', default=0)
+        if secs:
+            mitogen.debug.dump_to_logger(secs=secs)
 
     def _setup_master(self):
         """
@@ -155,11 +227,10 @@ class MuxProcess(object):
         self.listener = mitogen.unix.Listener(
             router=self.router,
             path=self.unix_listener_path,
+            backlog=C.DEFAULT_FORKS,
         )
-        if 'MITOGEN_ROUTER_DEBUG' in os.environ:
-            self.router.enable_debug()
-        if 'MITOGEN_DUMP_THREAD_STACKS' in os.environ:
-            mitogen.debug.dump_to_logger()
+        self._enable_router_debug()
+        self._enable_stack_dumps()
 
     def _setup_services(self):
         """
@@ -174,7 +245,7 @@ class MuxProcess(object):
                 ansible_mitogen.services.ContextService(self.router),
                 ansible_mitogen.services.ModuleDepService(self.router),
             ],
-            size=int(os.environ.get('MITOGEN_POOL_SIZE', '16')),
+            size=getenv_int('MITOGEN_POOL_SIZE', default=16),
         )
         LOG.debug('Service pool configured: size=%d', self.pool.size)
 
@@ -199,4 +270,10 @@ class MuxProcess(object):
         ourself. In future this should gracefully join the pool, but TERM is
         fine for now.
         """
+        if os.environ.get('MITOGEN_PROFILING'):
+            # TODO: avoid killing pool threads before they have written their
+            # .pstats. Really shouldn't be using kill() here at all, but hard
+            # to guarantee services can always be unblocked during shutdown.
+            time.sleep(1)
+
         os.kill(os.getpid(), signal.SIGTERM)

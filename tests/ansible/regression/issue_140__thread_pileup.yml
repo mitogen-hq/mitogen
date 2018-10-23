@@ -16,7 +16,7 @@
       creates: /tmp/filetree.in
 
   - name: Delete remote file tree
-    shell: rm -rf /tmp/filetree.out
+    file: path=/tmp/filetree.out state=absent
 
   - file:
       state: directory
@@ -26,6 +26,5 @@
     copy:
       src: "{{item.src}}"
       dest: "/tmp/filetree.out/{{item.path}}"
-    with_filetree:
-      - /tmp/filetree.in
+    with_filetree: /tmp/filetree.in
     when: item.state == 'file'

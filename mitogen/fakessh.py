@@ -436,7 +436,7 @@ def run(dest, router, args, deadline=None, econtext=None):
         ssh_path = os.path.join(tmp_path, 'ssh')
         fp = open(ssh_path, 'w')
         try:
-            fp.write('#!%s\n' % (sys.executable,))
+            fp.write('#!%s\n' % (mitogen.parent.get_sys_executable(),))
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext(%r).main()\n' % (
@@ -449,7 +449,7 @@ def run(dest, router, args, deadline=None, econtext=None):
         env = os.environ.copy()
         env.update({
             'PATH': '%s:%s' % (tmp_path, env.get('PATH', '')),
-            'ARGV0': sys.executable,
+            'ARGV0': mitogen.parent.get_sys_executable(),
             'SSH_PATH': ssh_path,
         })
 

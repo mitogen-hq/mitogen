@@ -12,6 +12,6 @@ def do_nothing():
 def main(router):
     f = router.fork()
     t0 = time.time()
-    for x in xrange(1000):
+    for x in xrange(10000):
         f.call(do_nothing)
     print '++', int(1e6 * ((time.time() - t0) / (1.0+x))), 'usec'

@@ -110,18 +110,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         self._connection.on_action_run(
             task_vars=task_vars,
+            delegate_to_hostname=self._task.delegate_to,
             loader_basedir=self._loader.get_basedir(),
         )
         return super(ActionModuleMixin, self).run(tmp, task_vars)
-
-    def call(self, func, *args, **kwargs):
-        """
-        Arrange for a Python function to be called in the target context, which
-        should be some function from the standard library or
-        ansible_mitogen.target module. This junction point exists mainly as a
-        nice place to insert print statements during debugging.
-        """
-        return self._connection.call(func, *args, **kwargs)
 
     COMMAND_RESULT = {
         'rc': 0,
@@ -163,7 +155,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         target user account.
         """
         LOG.debug('_remote_file_exists(%r)', path)
-        return self.call(os.path.exists, mitogen.utils.cast(path))
+        return self._connection.get_chain().call(
+            os.path.exists,
+            mitogen.utils.cast(path)
+        )
 
     def _configure_module(self, module_name, module_args, task_vars=None):
         """
@@ -179,48 +174,26 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         assert False, "_is_pipelining_enabled() should never be called."
 
-    def _get_remote_tmp(self):
-        """
-        Mitogen-only: return the 'remote_tmp' setting.
-        """
-        try:
-            s = self._connection._shell.get_option('remote_tmp')
-        except AttributeError:
-            s = ansible.constants.DEFAULT_REMOTE_TMP  # <=2.4.x
-
-        return self._remote_expand_user(s, sudoable=False)
-
     def _make_tmp_path(self, remote_user=None):
         """
-        Replace the base implementation's use of shell to implement mkdtemp()
-        with an actual call to mkdtemp(). Like vanilla, the directory is always
-        created in the login account context.
+        Return the directory created by the Connection instance during
+        connection.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
-
-        # _make_tmp_path() is basically a global stashed away as Shell.tmpdir.
-        # The copy action plugin violates layering and grabs this attribute
-        # directly.
-        self._connection._shell.tmpdir = self._connection.call(
-            ansible_mitogen.target.make_temp_directory,
-            base_dir=self._get_remote_tmp(),
-            use_login_context=True,
-        )
-        LOG.debug('Temporary directory: %r', self._connection._shell.tmpdir)
-        self._cleanup_remote_tmp = True
-        return self._connection._shell.tmpdir
+        return self._connection._make_tmp_path()
 
     def _remove_tmp_path(self, tmp_path):
         """
-        Replace the base implementation's invocation of rm -rf with a call to
-        shutil.rmtree().
+        Stub out the base implementation's invocation of rm -rf, replacing it
+        with nothing, as the persistent interpreter automatically cleans up
+        after itself without introducing roundtrips.
         """
+        # The actual removal is pipelined by Connection.close().
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
-        if tmp_path is None:
-            tmp_path = self._connection._shell.tmpdir
-        if self._should_remove_tmp_path(tmp_path):
-            self.call(shutil.rmtree, tmp_path)
-            self._connection._shell.tmpdir = None
+        # Upstream _remove_tmp_path resets shell.tmpdir here, however
+        # connection.py uses that as the sole location of the temporary
+        # directory, if one exists.
+        # self._connection._shell.tmpdir = None
 
     def _transfer_data(self, remote_path, data):
         """
@@ -237,6 +210,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._connection.put_data(remote_path, data)
         return remote_path
 
+    #: Actions listed here cause :func:`_fixup_perms2` to avoid a needless
+    #: roundtrip, as they modify file modes separately afterwards. This is due
+    #: to the method prototype having a default of `execute=True`.
+    FIXUP_PERMS_RED_HERRING = set(['copy'])
+
     def _fixup_perms2(self, remote_paths, remote_user=None, execute=True):
         """
         Mitogen always executes ActionBase helper methods in the context of the
@@ -245,7 +223,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_fixup_perms2(%r, remote_user=%r, execute=%r)',
                   remote_paths, remote_user, execute)
-        if execute:
+        if execute and self._load_name not in self.FIXUP_PERMS_RED_HERRING:
             return self._remote_chmod(remote_paths, mode='u+x')
         return self.COMMAND_RESULT.copy()
 
@@ -257,7 +235,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_remote_chmod(%r, mode=%r, sudoable=%r)',
                   paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.select.Select.all(
-            self._connection.call_async(
+            self._connection.get_chain().call_async(
                 ansible_mitogen.target.set_file_mode, path, mode
             )
             for path in paths
@@ -270,9 +248,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_remote_chown(%r, user=%r, sudoable=%r)',
                   paths, user, sudoable)
-        ent = self.call(pwd.getpwnam, user)
+        ent = self._connection.get_chain().call(pwd.getpwnam, user)
         return self.fake_shell(lambda: mitogen.select.Select.all(
-            self._connection.call_async(
+            self._connection.get_chain().call_async(
                 os.chown, path, ent.pw_uid, ent.pw_gid
             )
             for path in paths
@@ -300,8 +278,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 # ~/.ansible -> /home/dmw/.ansible
                 return os.path.join(self._connection.homedir, path[2:])
         # ~root/.ansible -> /root/.ansible
-        return self.call(os.path.expanduser, mitogen.utils.cast(path),
-                         use_login_context=not sudoable)
+        return self._connection.get_chain(use_login=(not sudoable)).call(
+            os.path.expanduser,
+            mitogen.utils.cast(path),
+        )
 
     def get_task_timeout_secs(self):
         """
@@ -311,6 +291,25 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             return self._task.async_val
         except AttributeError:
             return getattr(self._task, 'async')
+
+    def _temp_file_gibberish(self, module_args, wrap_async):
+        # Ansible>2.5 module_utils reuses the action's temporary directory if
+        # one exists. Older versions error if this key is present.
+        if ansible.__version__ > '2.5':
+            if wrap_async:
+                # Sharing is not possible with async tasks, as in that case,
+                # the directory must outlive the action plug-in.
+                module_args['_ansible_tmpdir'] = None
+            else:
+                module_args['_ansible_tmpdir'] = self._connection._shell.tmpdir
+
+        # If _ansible_tmpdir is unset, Ansible>2.6 module_utils will use
+        # _ansible_remote_tmp as the location to create the module's temporary
+        # directory. Older versions error if this key is present.
+        if ansible.__version__ > '2.6':
+            module_args['_ansible_remote_tmp'] = (
+                self._connection.get_good_temp_dir()
+            )
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
@@ -330,6 +329,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._update_module_args(module_name, module_args, task_vars)
         env = {}
         self._compute_environment_string(env)
+        self._temp_file_gibberish(module_args, wrap_async)
 
         self._connection._connect()
         return ansible_mitogen.planner.invoke(

@@ -1,10 +1,12 @@
 import errno
 import os
+import signal
 import subprocess
 import sys
 import tempfile
 import time
 
+import mock
 import unittest2
 import testlib
 
@@ -26,6 +28,56 @@ def wait_for_child(pid, timeout=1.0):
         time.sleep(0.05)
 
     assert False, "wait_for_child() timed out"
+
+
+class GetDefaultRemoteNameTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.get_default_remote_name)
+
+    @mock.patch('os.getpid')
+    @mock.patch('getpass.getuser')
+    @mock.patch('socket.gethostname')
+    def test_slashes(self, mock_gethostname, mock_getuser, mock_getpid):
+        # Ensure slashes appearing in the remote name are replaced with
+        # underscores.
+        mock_gethostname.return_value = 'box'
+        mock_getuser.return_value = 'ECORP\\Administrator'
+        mock_getpid.return_value = 123
+        self.assertEquals("ECORP_Administrator@box:123", self.func())
+
+
+class WstatusToStrTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.wstatus_to_str)
+
+    def test_return_zero(self):
+        pid = os.fork()
+        if not pid:
+            os._exit(0)
+        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
+        self.assertEquals(self.func(status),
+                          'exited with return code 0')
+
+    def test_return_one(self):
+        pid = os.fork()
+        if not pid:
+            os._exit(1)
+        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
+        self.assertEquals(
+            self.func(status),
+            'exited with return code 1'
+        )
+
+    def test_sigkill(self):
+        pid = os.fork()
+        if not pid:
+            time.sleep(600)
+        os.kill(pid, signal.SIGKILL)
+        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
+        self.assertEquals(
+            self.func(status),
+            'exited due to signal %s (SIGKILL)' % (signal.SIGKILL,)
+        )
+
+    # can't test SIGSTOP without POSIX sessions rabbithole
 
 
 class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
@@ -103,6 +155,25 @@ class ContextTest(testlib.RouterMixin, unittest2.TestCase):
         local.shutdown(wait=True)
         wait_for_child(pid)
         self.assertRaises(OSError, lambda: os.kill(pid, 0))
+
+
+class OpenPtyTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.openpty)
+
+    def test_pty_returned(self):
+        master_fd, slave_fd = self.func()
+        self.assertTrue(isinstance(master_fd, int))
+        self.assertTrue(isinstance(slave_fd, int))
+        os.close(master_fd)
+        os.close(slave_fd)
+
+    @mock.patch('os.openpty')
+    def test_max_reached(self, openpty):
+        openpty.side_effect = OSError(errno.ENXIO)
+        e = self.assertRaises(mitogen.core.StreamError,
+                              lambda: self.func())
+        msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
+        self.assertEquals(e.args[0], msg)
 
 
 class TtyCreateChildTest(unittest2.TestCase):

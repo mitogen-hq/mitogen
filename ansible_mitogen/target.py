@@ -43,29 +43,63 @@ import operator
 import os
 import pwd
 import re
+import resource
 import signal
 import stat
 import subprocess
+import sys
 import tempfile
 import traceback
+import types
 
-import ansible.module_utils.json_utils
-import ansible_mitogen.runner
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
 import mitogen.service
 
+# Ansible since PR #41749 inserts "import __main__" into
+# ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
+# we must setup a fake "__main__" before that module is ever imported. The
+# str() is to cast Unicode to bytes on Python 2.6.
+if not sys.modules.get(str('__main__')):
+    sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
+
+import ansible.module_utils.json_utils
+import ansible_mitogen.runner
+
 
 LOG = logging.getLogger(__name__)
 
-#: Set by init_child() to the single temporary directory that will exist for
-#: the duration of the process.
-temp_dir = None
+MAKE_TEMP_FAILED_MSG = (
+    "Unable to find a useable temporary directory. This likely means no\n"
+    "system-supplied TMP directory can be written to, or all directories\n"
+    "were mounted on 'noexec' filesystems.\n"
+    "\n"
+    "The following paths were tried:\n"
+    "    %(namelist)s\n"
+    "\n"
+    "Please check '-vvv' output for a log of individual path errors."
+)
+
 
 #: Initialized to an econtext.parent.Context pointing at a pristine fork of
 #: the target Python interpreter before it executes any code or imports.
 _fork_parent = None
+
+#: Set by :func:`init_child` to the name of a writeable and executable
+#: temporary directory accessible by the active user account.
+good_temp_dir = None
+
+
+# issue #362: subprocess.Popen(close_fds=True) aka. AnsibleModule.run_command()
+# loops the entire SC_OPEN_MAX space. CentOS>5 ships with 1,048,576 FDs by
+# default, resulting in huge (>500ms) runtime waste running many commands.
+# Therefore if we are a child, cap the range to something reasonable.
+rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+if (rlimit[0] > 512 or rlimit[1] > 512) and not mitogen.is_master:
+    resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
+    subprocess.MAXFD = 512  # Python <3.x
+del rlimit
 
 
 def get_small_file(context, path):
@@ -180,29 +214,77 @@ def _on_broker_shutdown():
     prune_tree(temp_dir)
 
 
-@mitogen.core.takes_econtext
-def reset_temp_dir(econtext):
+def is_good_temp_dir(path):
     """
-    Create one temporary directory to be reused by all runner.py invocations
-    for the lifetime of the process. The temporary directory is changed for
-    each forked job, and emptied as necessary by runner.py::_cleanup_temp()
-    after each module invocation.
-
-    The result is that a context need only create and delete one directory
-    during startup and shutdown, and no further filesystem writes need occur
-    assuming no modules execute that create temporary files.
+    Return :data:`True` if `path` can be used as a temporary directory, logging
+    any failures that may cause it to be unsuitable. If the directory doesn't
+    exist, we attempt to create it using :func:`os.makedirs`.
     """
-    global temp_dir
-    # https://github.com/dw/mitogen/issues/239
-    temp_dir = tempfile.mkdtemp(prefix='ansible_mitogen_')
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path, mode=int('0700', 8))
+        except OSError as e:
+            LOG.debug('temp dir %r unusable: did not exist and attempting '
+                      'to create it failed: %s', path, e)
+            return False
 
-    # This must be reinstalled in forked children too, since the Broker
-    # instance from the parent process does not carry over to the new child.
-    mitogen.core.listen(econtext.broker, 'shutdown', _on_broker_shutdown)
+    try:
+        tmp = tempfile.NamedTemporaryFile(
+            prefix='ansible_mitogen_is_good_temp_dir',
+            dir=path,
+        )
+    except (OSError, IOError) as e:
+        LOG.debug('temp dir %r unusable: %s', path, e)
+        return False
+
+    try:
+        try:
+            os.chmod(tmp.name, int('0700', 8))
+        except OSError as e:
+            LOG.debug('temp dir %r unusable: %s: chmod failed: %s',
+                      path, e)
+            return False
+
+        try:
+            # access(.., X_OK) is sufficient to detect noexec.
+            if not os.access(tmp.name, os.X_OK):
+                raise OSError('filesystem appears to be mounted noexec')
+        except OSError as e:
+            LOG.debug('temp dir %r unusable: %s: %s', path, e)
+            return False
+    finally:
+        tmp.close()
+
+    return True
+
+
+def find_good_temp_dir(candidate_temp_dirs):
+    """
+    Given a list of candidate temp directories extracted from ``ansible.cfg``,
+    combine it with the Python-builtin list of candidate directories used by
+    :mod:`tempfile`, then iteratively try each until one is found that is both
+    writeable and executable.
+
+    :param list candidate_temp_dirs:
+        List of candidate $variable-expanded and tilde-expanded directory paths
+        that may be usable as a temporary directory.
+    """
+    paths = [os.path.expandvars(os.path.expanduser(p))
+             for p in candidate_temp_dirs]
+    paths.extend(tempfile._candidate_tempdir_list())
+
+    for path in paths:
+        if is_good_temp_dir(path):
+            LOG.debug('Selected temp directory: %r (from %r)', path, paths)
+            return path
+
+    raise IOError(MAKE_TEMP_FAILED_MSG % {
+        'paths': '\n    '.join(paths),
+    })
 
 
 @mitogen.core.takes_econtext
-def init_child(econtext, log_level):
+def init_child(econtext, log_level, candidate_temp_dirs):
     """
     Called by ContextService immediately after connection; arranges for the
     (presently) spotless Python interpreter to be forked, where the newly
@@ -215,6 +297,9 @@ def init_child(econtext, log_level):
 
     :param int log_level:
         Logging package level active in the master.
+    :param list[str] candidate_temp_dirs:
+        List of $variable-expanded and tilde-expanded directory names to add to
+        candidate list of temporary directories.
 
     :returns:
         Dict like::
@@ -228,20 +313,23 @@ def init_child(econtext, log_level):
         the controller will use to start forked jobs, and `home_dir` is the
         home directory for the active user account.
     """
-    global _fork_parent
-    mitogen.parent.upgrade_router(econtext)
-    _fork_parent = econtext.router.fork()
-    reset_temp_dir(econtext)
-
     # Copying the master's log level causes log messages to be filtered before
     # they reach LogForwarder, thus reducing an influx of tiny messges waking
     # the connection multiplexer process in the master.
     LOG.setLevel(log_level)
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
+    global _fork_parent
+    mitogen.parent.upgrade_router(econtext)
+    _fork_parent = econtext.router.fork()
+
+    global good_temp_dir
+    good_temp_dir = find_good_temp_dir(candidate_temp_dirs)
+
     return {
         'fork_context': _fork_parent,
         'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
+        'good_temp_dir': good_temp_dir,
     }
 
 
@@ -254,7 +342,6 @@ def create_fork_child(econtext):
     """
     mitogen.parent.upgrade_router(econtext)
     context = econtext.router.fork()
-    context.call(reset_temp_dir)
     LOG.debug('create_fork_child() -> %r', context)
     return context
 
@@ -404,27 +491,6 @@ def run_module_async(kwargs, job_id, timeout_secs, econtext):
     """
     arunner = AsyncRunner(job_id, timeout_secs, econtext, kwargs)
     arunner.run()
-
-
-def make_temp_directory(base_dir):
-    """
-    Handle creation of `base_dir` if it is absent, in addition to a unique
-    temporary directory within `base_dir`. This is the temporary directory that
-    becomes 'remote_tmp', not the one used by Ansiballz. It always uses the
-    system temporary directory.
-
-    :returns:
-        Newly created temporary directory.
-    """
-    # issue #301: remote_tmp may contain $vars.
-    base_dir = os.path.expandvars(base_dir)
-
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir, mode=int('0700', 8))
-    return tempfile.mkdtemp(
-        dir=base_dir,
-        prefix='ansible-mitogen-tmp-',
-    )
 
 
 def get_user_shell():

@@ -35,9 +35,9 @@ mitogen.core
 
     Decorator that marks a function or class method to automatically receive a
     kwarg named `econtext`, referencing the
-    :py:class:`mitogen.core.ExternalContext` active in the context in which the
+    :class:`mitogen.core.ExternalContext` active in the context in which the
     function is being invoked in. The decorator is only meaningful when the
-    function is invoked via :py:data:`CALL_FUNCTION
+    function is invoked via :data:`CALL_FUNCTION
     <mitogen.core.CALL_FUNCTION>`.
 
     When the function is invoked directly, `econtext` must still be passed to
@@ -47,10 +47,10 @@ mitogen.core
 .. decorator:: takes_router
 
     Decorator that marks a function or class method to automatically receive a
-    kwarg named `router`, referencing the :py:class:`mitogen.core.Router`
+    kwarg named `router`, referencing the :class:`mitogen.core.Router`
     active in the context in which the function is being invoked in. The
     decorator is only meaningful when the function is invoked via
-    :py:data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>`.
+    :data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>`.
 
     When the function is invoked directly, `router` must still be passed to it
     explicitly.
@@ -87,25 +87,25 @@ Message Class
 
 .. class:: Message
 
-    Messages are the fundamental unit of communication, comprising the fields
-    from in the :ref:`stream-protocol` header, an optional reference to the
-    receiving :class:`mitogen.core.Router` for ingress messages, and helper
-    methods for deserialization and generating replies.
+    Messages are the fundamental unit of communication, comprising fields from
+    the :ref:`stream-protocol` header, an optional reference to the receiving
+    :class:`mitogen.core.Router` for ingress messages, and helper methods for
+    deserialization and generating replies.
 
     .. attribute:: router
 
-        The :py:class:`mitogen.core.Router` responsible for routing the
-        message. This is :py:data:`None` for locally originated messages.
+        The :class:`mitogen.core.Router` responsible for routing the
+        message. This is :data:`None` for locally originated messages.
 
     .. attribute:: receiver
 
-        The :py:class:`mitogen.core.Receiver` over which the message was last
-        received. Part of the :py:class:`mitogen.select.Select` interface.
-        Defaults to :py:data:`None`.
+        The :class:`mitogen.core.Receiver` over which the message was last
+        received. Part of the :class:`mitogen.select.Select` interface.
+        Defaults to :data:`None`.
 
     .. attribute:: dst_id
 
-        Integer target context ID. :py:class:`mitogen.core.Router` delivers
+        Integer target context ID. :class:`mitogen.core.Router` delivers
         messages locally when their :attr:`dst_id` matches
         :data:`mitogen.context_id`, otherwise they are routed up or downstream.
 
@@ -117,12 +117,12 @@ Message Class
     .. attribute:: auth_id
 
         The context ID under whose authority the message is acting. See
-        :py:ref:`source-verification`.
+        :ref:`source-verification`.
 
     .. attribute:: handle
 
         Integer target handle in the destination context. This is one of the
-        :py:ref:`standard-handles`, or a dynamically generated handle used to
+        :ref:`standard-handles`, or a dynamically generated handle used to
         receive a one-time reply, such as the return value of a function call.
 
     .. attribute:: reply_to
@@ -143,12 +143,12 @@ Message Class
 
     .. py:method:: __init__ (\**kwargs)
 
-        Construct a message from from the supplied `kwargs`. :py:attr:`src_id`
-        and :py:attr:`auth_id` are always set to :py:data:`mitogen.context_id`.
+        Construct a message from from the supplied `kwargs`. :attr:`src_id`
+        and :attr:`auth_id` are always set to :data:`mitogen.context_id`.
 
     .. py:classmethod:: pickled (obj, \**kwargs)
 
-        Construct a pickled message, setting :py:attr:`data` to the
+        Construct a pickled message, setting :attr:`data` to the
         serialization of `obj`, and setting remaining fields using `kwargs`.
 
         :returns:
@@ -156,10 +156,10 @@ Message Class
 
     .. method:: unpickle (throw=True)
 
-        Unpickle :py:attr:`data`, optionally raising any exceptions present.
+        Unpickle :attr:`data`, optionally raising any exceptions present.
 
         :param bool throw:
-            If :py:data:`True`, raise exceptions, otherwise it is the caller's
+            If :data:`True`, raise exceptions, otherwise it is the caller's
             responsibility.
 
         :raises mitogen.core.CallError:
@@ -169,8 +169,8 @@ Message Class
 
     .. method:: reply (obj, router=None, \**kwargs)
 
-        Compose a reply to this message and send it using :py:attr:`router`, or
-        `router` is :py:attr:`router` is :data:`None`.
+        Compose a reply to this message and send it using :attr:`router`, or
+        `router` is :attr:`router` is :data:`None`.
 
         :param obj:
             Either a :class:`Message`, or an object to be serialized in order
@@ -190,8 +190,8 @@ Router Class
 .. class:: Router
 
     Route messages between parent and child contexts, and invoke handlers
-    defined on our parent context. :py:meth:`Router.route() <route>` straddles
-    the :py:class:`Broker <mitogen.core.Broker>` and user threads, it is safe
+    defined on our parent context. :meth:`Router.route() <route>` straddles
+    the :class:`Broker <mitogen.core.Broker>` and user threads, it is safe
     to call anywhere.
 
     **Note:** This is the somewhat limited core version of the Router class
@@ -217,7 +217,7 @@ Router Class
 
     .. method:: stream_by_id (dst_id)
 
-        Return the :py:class:`mitogen.core.Stream` that should be used to
+        Return the :class:`mitogen.core.Stream` that should be used to
         communicate with `dst_id`. If a specific route for `dst_id` is not
         known, a reference to the parent context's stream is returned.
 
@@ -238,16 +238,16 @@ Router Class
     .. method:: add_handler (fn, handle=None, persist=True, respondent=None, policy=None)
 
         Invoke `fn(msg)` for each Message sent to `handle` from this context.
-        Unregister after one invocation if `persist` is ``False``. If `handle`
-        is ``None``, a new handle is allocated and returned.
+        Unregister after one invocation if `persist` is :data:`False`. If
+        `handle` is :data:`None`, a new handle is allocated and returned.
 
         :param int handle:
-            If not ``None``, an explicit handle to register, usually one of the
-            ``mitogen.core.*`` constants. If unspecified, a new unused handle
-            will be allocated.
+            If not :data:`None`, an explicit handle to register, usually one of
+            the ``mitogen.core.*`` constants. If unspecified, a new unused
+            handle will be allocated.
 
         :param bool persist:
-            If ``False``, the handler will be unregistered after a single
+            If :data:`False`, the handler will be unregistered after a single
             message has been received.
 
         :param mitogen.core.Context respondent:
@@ -260,28 +260,29 @@ Router Class
 
         :param function policy:
             Function invoked as `policy(msg, stream)` where `msg` is a
-            :py:class:`mitogen.core.Message` about to be delivered, and
-            `stream` is the :py:class:`mitogen.core.Stream` on which it was
-            received. The function must return :py:data:`True`, otherwise an
+            :class:`mitogen.core.Message` about to be delivered, and
+            `stream` is the :class:`mitogen.core.Stream` on which it was
+            received. The function must return :data:`True`, otherwise an
             error is logged and delivery is refused.
 
             Two built-in policy functions exist:
 
-            * :py:func:`mitogen.core.has_parent_authority`: requires the
+            * :func:`mitogen.core.has_parent_authority`: requires the
               message arrived from a parent context, or a context acting with a
               parent context's authority (``auth_id``).
 
-            * :py:func:`mitogen.parent.is_immediate_child`: requires the
+            * :func:`mitogen.parent.is_immediate_child`: requires the
               message arrived from an immediately connected child, for use in
               messaging patterns where either something becomes buggy or
               insecure by permitting indirect upstream communication.
 
             In case of refusal, and the message's ``reply_to`` field is
-            nonzero, a :py:class:`mitogen.core.CallError` is delivered to the
+            nonzero, a :class:`mitogen.core.CallError` is delivered to the
             sender indicating refusal occurred.
 
         :return:
-            `handle`, or if `handle` was ``None``, the newly allocated handle.
+            `handle`, or if `handle` was :data:`None`, the newly allocated
+            handle.
 
     .. method:: del_handler (handle)
 
@@ -296,22 +297,22 @@ Router Class
         destination is the local context, then arrange for it to be dispatched
         using the local handlers.
 
-        This is a lower overhead version of :py:meth:`route` that may only be
+        This is a lower overhead version of :meth:`route` that may only be
         called from the I/O multiplexer thread.
 
         :param mitogen.core.Stream stream:
-            If not ``None``, a reference to the stream the message arrived on.
-            Used for performing source route verification, to ensure sensitive
-            messages such as ``CALL_FUNCTION`` arrive only from trusted
-            contexts.
+            If not :data:`None`, a reference to the stream the message arrived
+            on. Used for performing source route verification, to ensure
+            sensitive messages such as ``CALL_FUNCTION`` arrive only from
+            trusted contexts.
 
     .. method:: route(msg)
 
-        Arrange for the :py:class:`Message` `msg` to be delivered to its
+        Arrange for the :class:`Message` `msg` to be delivered to its
         destination using any relevant downstream context, or if none is found,
         by forwarding the message upstream towards the master context. If `msg`
         is destined for the local context, it is dispatched using the handles
-        registered with :py:meth:`add_handler`.
+        registered with :meth:`add_handler`.
 
         This may be called from any thread.
 
@@ -320,7 +321,7 @@ Router Class
 
 .. class:: Router (broker=None)
 
-    Extend :py:class:`mitogen.core.Router` with functionality useful to
+    Extend :class:`mitogen.core.Router` with functionality useful to
     masters, and child contexts who later become masters. Currently when this
     class is required, the target context's router is upgraded at runtime.
 
@@ -333,16 +334,16 @@ Router Class
         customers or projects.
 
     :param mitogen.master.Broker broker:
-        :py:class:`Broker` instance to use. If not specified, a private
-        :py:class:`Broker` is created.
+        :class:`Broker` instance to use. If not specified, a private
+        :class:`Broker` is created.
 
     .. attribute:: profiling
 
         When :data:`True`, cause the broker thread and any subsequent broker
         and main threads existing in any child to write
         ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
-        :py:mod:`cProfile` dump on graceful exit. Must be set prior to
-        construction of any :py:class:`Broker`, e.g. via:
+        :mod:`cProfile` dump on graceful exit. Must be set prior to
+        construction of any :class:`Broker`, e.g. via:
 
         .. code::
 
@@ -377,7 +378,7 @@ Router Class
         and router, and responds to function calls identically to children
         created using other methods.
 
-        For long-lived processes, :py:meth:`local` is always better as it
+        For long-lived processes, :meth:`local` is always better as it
         guarantees a pristine interpreter state that inherited little from the
         parent. Forking should only be used in performance-sensitive scenarios
         where short-lived children must be spawned to isolate potentially buggy
@@ -419,10 +420,10 @@ Router Class
           immediate copy-on-write to large portions of the process heap.
 
         * Locks held in the parent causing random deadlocks in the child, such
-          as when another thread emits a log entry via the :py:mod:`logging`
-          package concurrent to another thread calling :py:meth:`fork`.
+          as when another thread emits a log entry via the :mod:`logging`
+          package concurrent to another thread calling :meth:`fork`.
 
-        * Objects existing in Thread-Local Storage of every non-:py:meth:`fork`
+        * Objects existing in Thread-Local Storage of every non-:meth:`fork`
           thread becoming permanently inaccessible, and never having their
           object destructors called, including TLS usage by native extension
           code, triggering many new variants of all the issues above.
@@ -433,16 +434,16 @@ Router Class
           case, children continually reuse the same state due to repeatedly
           forking from a static parent.
 
-        :py:meth:`fork` cleans up Mitogen-internal objects, in addition to
-        locks held by the :py:mod:`logging` package, reseeds
-        :py:func:`random.random`, and the OpenSSL PRNG via
-        :py:func:`ssl.RAND_add`, but only if the :py:mod:`ssl` module is
+        :meth:`fork` cleans up Mitogen-internal objects, in addition to
+        locks held by the :mod:`logging` package, reseeds
+        :func:`random.random`, and the OpenSSL PRNG via
+        :func:`ssl.RAND_add`, but only if the :mod:`ssl` module is
         already loaded. You must arrange for your program's state, including
         any third party packages in use, to be cleaned up by specifying an
         `on_fork` function.
 
         The associated stream implementation is
-        :py:class:`mitogen.fork.Stream`.
+        :class:`mitogen.fork.Stream`.
 
         :param function on_fork:
             Function invoked as `on_fork()` from within the child process. This
@@ -457,20 +458,20 @@ Router Class
             rich data structures that cannot normally be passed via a
             serialization.
 
-        :param Context via:
-            Same as the `via` parameter for :py:meth:`local`.
+        :param mitogen.core.Context via:
+            Same as the `via` parameter for :meth:`local`.
 
         :param bool debug:
-            Same as the `debug` parameter for :py:meth:`local`.
+            Same as the `debug` parameter for :meth:`local`.
 
         :param bool profiling:
-            Same as the `profiling` parameter for :py:meth:`local`.
+            Same as the `profiling` parameter for :meth:`local`.
 
     .. method:: local (remote_name=None, python_path=None, debug=False, connect_timeout=None, profiling=False, via=None)
 
         Construct a context on the local machine as a subprocess of the current
         process. The associated stream implementation is
-        :py:class:`mitogen.master.Stream`.
+        :class:`mitogen.master.Stream`.
 
         :param str remote_name:
             The ``argv[0]`` suffix for the new process. If `remote_name` is
@@ -492,9 +493,9 @@ Router Class
             another tool, such as ``["/usr/bin/env", "python"]``.
 
         :param bool debug:
-            If :data:`True`, arrange for debug logging (:py:meth:`enable_debug`) to
+            If :data:`True`, arrange for debug logging (:meth:`enable_debug`) to
             be enabled in the new context. Automatically :data:`True` when
-            :py:meth:`enable_debug` has been called, but may be used
+            :meth:`enable_debug` has been called, but may be used
             selectively otherwise.
 
         :param bool unidirectional:
@@ -509,14 +510,14 @@ Router Class
             healthy. Defaults to 30 seconds.
 
         :param bool profiling:
-            If :data:`True`, arrange for profiling (:py:data:`profiling`) to be
+            If :data:`True`, arrange for profiling (:data:`profiling`) to be
             enabled in the new context. Automatically :data:`True` when
-            :py:data:`profiling` is :data:`True`, but may be used selectively
+            :data:`profiling` is :data:`True`, but may be used selectively
             otherwise.
 
         :param mitogen.core.Context via:
-            If not ``None``, arrange for construction to occur via RPCs made to
-            the context `via`, and for :py:data:`ADD_ROUTE
+            If not :data:`None`, arrange for construction to occur via RPCs
+            made to the context `via`, and for :data:`ADD_ROUTE
             <mitogen.core.ADD_ROUTE>` messages to be generated as appropriate.
 
             .. code-block:: python
@@ -527,28 +528,28 @@ Router Class
                 # Use the SSH connection to create a sudo connection.
                 remote_root = router.sudo(username='root', via=remote_machine)
 
-    .. method:: dos (username=None, password=None, su_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
+    .. method:: doas (username=None, password=None, doas_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
 
-        Construct a context on the local machine over a ``su`` invocation. The
-        ``su`` process is started in a newly allocated pseudo-terminal, and
-        supports typing interactive passwords.
+        Construct a context on the local machine over a ``doas`` invocation.
+        The ``doas`` process is started in a newly allocated pseudo-terminal,
+        and supports typing interactive passwords.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str username:
             Username to use, defaults to ``root``.
         :param str password:
             The account password to use if requested.
-        :param str su_path:
-            Filename or complete path to the ``su`` binary. ``PATH`` will be
-            searched if given as a filename. Defaults to ``su``.
+        :param str doas_path:
+            Filename or complete path to the ``doas`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``doas``.
         :param bytes password_prompt:
             A string that indicates ``doas`` is requesting a password. Defaults
             to ``Password:``.
         :param list incorrect_prompts:
             List of bytestrings indicating the password is incorrect. Defaults
             to `(b"doas: authentication failed")`.
-        :raises mitogen.su.PasswordError:
+        :raises mitogen.doas.PasswordError:
             A password was requested but none was provided, the supplied
             password was incorrect, or the target account did not exist.
 
@@ -558,7 +559,7 @@ Router Class
         temporary new Docker container using the ``docker`` program. One of
         `container` or `image` must be specified.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str container:
             Existing container to connect to. Defaults to :data:`None`.
@@ -567,7 +568,7 @@ Router Class
             :data:`None`, which Docker interprets as ``root``.
         :param str image:
             Image tag to use to construct a temporary container. Defaults to
-            ``None``.
+            :data:`None`.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
@@ -577,7 +578,7 @@ Router Class
         Construct a context on the local machine within a FreeBSD jail using
         the ``jexec`` program.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str container:
             Existing container to connect to. Defaults to :data:`None`.
@@ -588,28 +589,57 @@ Router Class
             Filename or complete path to the ``jexec`` binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``/usr/sbin/jexec``.
 
+    .. method:: kubectl (pod, kubectl_path=None, kubectl_args=None, \**kwargs)
+
+        Construct a context in a container via the Kubernetes ``kubectl``
+        program.
+
+        Accepts all parameters accepted by :meth:`local`, in addition to:
+
+        :param str pod:
+            Kubernetes pod to connect to.
+        :param str kubectl_path:
+            Filename or complete path to the ``kubectl`` binary. ``PATH`` will
+            be searched if given as a filename. Defaults to ``kubectl``.
+        :param list kubectl_args:
+            Additional arguments to pass to the ``kubectl`` command.
+
     .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
 
-        Construct a context on the local machine within an LXC container using
-        the ``lxc-attach`` program.
+        Construct a context on the local machine within an LXC classic
+        container using the ``lxc-attach`` program.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str container:
-            Existing container to connect to. Defaults to ``None``.
+            Existing container to connect to. Defaults to :data:`None`.
         :param str lxc_attach_path:
             Filename or complete path to the ``lxc-attach`` binary. ``PATH``
             will be searched if given as a filename. Defaults to
             ``lxc-attach``.
 
-    .. method:: setns (container, kind, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
+    .. method:: lxc (container, lxc_attach_path=None, \**kwargs)
+
+        Construct a context on the local machine within a LXD container using
+        the ``lxc`` program.
+
+        Accepts all parameters accepted by :meth:`local`, in addition to:
+
+        :param str container:
+            Existing container to connect to. Defaults to :data:`None`.
+        :param str lxc_path:
+            Filename or complete path to the ``lxc`` binary. ``PATH`` will be
+            searched if given as a filename. Defaults to ``lxc``.
+
+    .. method:: setns (container, kind, username=None, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
         Construct a context in the style of :meth:`local`, but change the
         active Linux process namespaces via calls to `setns(1)` before
         executing Python.
 
         The namespaces to use, and the active root file system are taken from
-        the root PID of a running Docker, LXC, or systemd-nspawn container.
+        the root PID of a running Docker, LXC, LXD, or systemd-nspawn
+        container.
 
         A program is required only to find the root PID, after which management
         of the child Python interpreter is handled directly.
@@ -617,14 +647,19 @@ Router Class
         :param str container:
             Container to connect to.
         :param str kind:
-            One of ``docker``, ``lxc`` or ``machinectl``.
+            One of ``docker``, ``lxc``, ``lxd`` or ``machinectl``.
+        :param str username:
+            Username within the container to :func:`setuid` to. Defaults to
+            ``root``.
         :param str docker_path:
             Filename or complete path to the Docker binary. ``PATH`` will be
             searched if given as a filename. Defaults to ``docker``.
+        :param str lxc_path:
+            Filename or complete path to the LXD ``lxc`` binary. ``PATH`` will
+            be searched if given as a filename. Defaults to ``lxc``.
         :param str lxc_info_path:
-            Filename or complete path to the ``lxc-info`` binary. ``PATH``
-            will be searched if given as a filename. Defaults to
-            ``lxc-info``.
+            Filename or complete path to the LXC ``lxc-info`` binary. ``PATH``
+            will be searched if given as a filename. Defaults to ``lxc-info``.
         :param str machinectl_path:
             Filename or complete path to the ``machinectl`` binary. ``PATH``
             will be searched if given as a filename. Defaults to
@@ -636,7 +671,7 @@ Router Class
         ``su`` process is started in a newly allocated pseudo-terminal, and
         supports typing interactive passwords.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str username:
             Username to pass to ``su``, defaults to ``root``.
@@ -663,7 +698,7 @@ Router Class
         The ``sudo`` process is started in a newly allocated pseudo-terminal,
         and supports typing interactive passwords.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str username:
             Username to pass to sudo as the ``-u`` parameter, defaults to
@@ -674,34 +709,41 @@ Router Class
         :param str password:
             The password to use if/when sudo requests it. Depending on the sudo
             configuration, this is either the current account password or the
-            target account password. :py:class:`mitogen.sudo.PasswordError`
+            target account password. :class:`mitogen.sudo.PasswordError`
             will be raised if sudo requests a password but none is provided.
         :param bool set_home:
-            If :py:data:`True`, request ``sudo`` set the ``HOME`` environment
+            If :data:`True`, request ``sudo`` set the ``HOME`` environment
             variable to match the target UNIX account.
         :param bool preserve_env:
-            If :py:data:`True`, request ``sudo`` to preserve the environment of
+            If :data:`True`, request ``sudo`` to preserve the environment of
             the parent process.
         :param list sudo_args:
-            Arguments in the style of :py:data:`sys.argv` that would normally
+            Arguments in the style of :data:`sys.argv` that would normally
             be passed to ``sudo``. The arguments are parsed in-process to set
             equivalent parameters. Re-parsing ensures unsupported options cause
-            :py:class:`mitogen.core.StreamError` to be raised, and that
+            :class:`mitogen.core.StreamError` to be raised, and that
             attributes of the stream match the actual behaviour of ``sudo``.
 
-    .. method:: ssh (hostname, username=None, ssh_path=None, port=None, check_host_keys='enforce', password=None, identity_file=None, compression=True, \**kwargs)
+    .. method:: ssh (hostname, username=None, ssh_path=None, ssh_args=None, port=None, check_host_keys='enforce', password=None, identity_file=None, identities_only=True, compression=True, \**kwargs)
 
-        Construct a remote context over a ``ssh`` invocation. The ``ssh``
-        process is started in a newly allocated pseudo-terminal, and supports
-        typing interactive passwords.
+        Construct a remote context over an OpenSSH ``ssh`` invocation.
 
-        Accepts all parameters accepted by :py:meth:`local`, in addition to:
+        The ``ssh`` process is started in a newly allocated pseudo-terminal to
+        support typing interactive passwords and responding to prompts, if a
+        password is specified, or `check_host_keys=accept`. In other scenarios,
+        ``BatchMode`` is enabled and no PTY is allocated. For many-target
+        configurations, both options should be avoided as most systems have a
+        conservative limit on the number of pseudo-terminals that may exist.
+
+        Accepts all parameters accepted by :meth:`local`, in addition to:
 
         :param str username:
             The SSH username; default is unspecified, which causes SSH to pick
             the username to use.
         :param str ssh_path:
             Absolute or relative path to ``ssh``. Defaults to ``ssh``.
+        :param list ssh_args:
+            Additional arguments to pass to the SSH command.
         :param int port:
             Port number to connect to; default is unspecified, which causes SSH
             to pick the port number.
@@ -717,7 +759,7 @@ Router Class
               unknown hosts cause a connection failure.
         :param str password:
             Password to type if/when ``ssh`` requests it. If not specified and
-            a password is requested, :py:class:`mitogen.ssh.PasswordError` is
+            a password is requested, :class:`mitogen.ssh.PasswordError` is
             raised.
         :param str identity_file:
             Path to an SSH private key file to use for authentication. Default
@@ -727,13 +769,20 @@ Router Class
             the SSH client to perform authenticaion; agent authentication is
             automatically disabled, as is reading the default private key from
             ``~/.ssh/id_rsa``, or ``~/.ssh/id_dsa``.
+        :param bool identities_only:
+            If :data:`True` and a password or explicit identity file is
+            specified, instruct the SSH client to disable any authentication
+            identities inherited from the surrounding environment, such as
+            those loaded in any running ``ssh-agent``, or default key files
+            present in ``~/.ssh``. This ensures authentication attempts only
+            occur using the supplied password or SSH key.
         :param bool compression:
-            If :py:data:`True`, enable ``ssh`` compression support. Compression
+            If :data:`True`, enable ``ssh`` compression support. Compression
             has a minimal effect on the size of modules transmitted, as they
             are already compressed, however it has a large effect on every
             remaining message in the otherwise uncompressed stream protocol,
             such as function call arguments and return values.
-        :parama int ssh_debug_level:
+        :param int ssh_debug_level:
             Optional integer `0..3` indicating the SSH client debug level.
         :raises mitogen.ssh.PasswordError:
             A password was requested but none was specified, or the specified
@@ -760,8 +809,8 @@ Context Class
 
     .. method:: send (msg)
 
-        Arrange for `msg` to be delivered to this context. Updates the
-        message's `dst_id` prior to routing it via the associated router.
+        Arrange for `msg` to be delivered to this context.
+        :attr:`dst_id <Message.dst_id>` is set to the target context ID.
 
         :param mitogen.core.Message msg:
             The message.
@@ -769,43 +818,52 @@ Context Class
     .. method:: send_async (msg, persist=False)
 
         Arrange for `msg` to be delivered to this context, with replies
-        delivered to a newly constructed Receiver. Updates the message's
-        `dst_id` prior to routing it via the associated router and registers a
-        handle which is placed in the message's `reply_to`.
+        directed to a newly constructed receiver. :attr:`dst_id
+        <Message.dst_id>` is set to the target context ID, and :attr:`reply_to
+        <Message.reply_to>` is set to the newly constructed receiver's handle.
 
         :param bool persist:
-            If ``False``, the handler will be unregistered after a single
+            If :data:`False`, the handler will be unregistered after a single
             message has been received.
 
         :param mitogen.core.Message msg:
             The message.
 
         :returns:
-            :py:class:`mitogen.core.Receiver` configured to receive any replies
+            :class:`mitogen.core.Receiver` configured to receive any replies
             sent to the message's `reply_to` handle.
 
     .. method:: send_await (msg, deadline=None)
 
-        As with :py:meth:`send_async`, but expect a single reply
-        (`persist=False`) delivered within `deadline` seconds.
+        Like :meth:`send_async`, but expect a single reply (`persist=False`)
+        delivered within `deadline` seconds.
 
         :param mitogen.core.Message msg:
             The message.
-
         :param float deadline:
-            If not ``None``, seconds before timing out waiting for a reply.
-
+            If not :data:`None`, seconds before timing out waiting for a reply.
+        :returns:
+            The deserialized reply.
         :raises mitogen.core.TimeoutError:
             No message was received and `deadline` passed.
 
 
 .. currentmodule:: mitogen.parent
 
+.. autoclass:: CallChain
+    :members:
+
 .. class:: Context
 
-    Extend :py:class:`mitogen.core.Router` with functionality useful to
-    masters, and child contexts who later become parents. Currently when this
-    class is required, the target context's router is upgraded at runtime.
+    Extend :class:`mitogen.core.Context` with functionality useful to masters,
+    and child contexts who later become parents. Currently when this class is
+    required, the target context's router is upgraded at runtime.
+
+    .. attribute:: default_call_chain
+
+        A :class:`CallChain` instance constructed by default, with pipelining
+        disabled. :meth:`call`, :meth:`call_async` and :meth:`call_no_reply`
+        use this instance.
 
     .. method:: shutdown (wait=False)
 
@@ -816,7 +874,7 @@ Context Class
         terminate a hung context using this method. This will be fixed shortly.
 
         :param bool wait:
-            If :py:data:`True`, block the calling thread until the context has
+            If :data:`True`, block the calling thread until the context has
             completely terminated.
         :returns:
             If `wait` is :data:`False`, returns a :class:`mitogen.core.Latch`
@@ -826,81 +884,15 @@ Context Class
 
     .. method:: call_async (fn, \*args, \*\*kwargs)
 
-        Arrange for the context's ``CALL_FUNCTION`` handle to receive a
-        message that causes `fn(\*args, \**kwargs)` to be invoked on the
-        context's main thread.
-
-        :param fn:
-            A free function in module scope, or a classmethod or staticmethod
-            of a class directly reachable from module scope:
-
-            .. code-block:: python
-
-                # mymodule.py
-
-                def my_func():
-                    """A free function reachable as mymodule.my_func"""
-
-                class MyClass:
-                    @staticmethod
-                    def my_staticmethod():
-                        """Reachable as mymodule.MyClass.my_staticmethod"""
-
-                    @classmethod
-                    def my_classmethod(cls):
-                        """Reachable as mymodule.MyClass.my_classmethod"""
-
-                    def my_instancemethod(self):
-                        """Unreachable: requires a class instance!"""
-
-                    class MyEmbeddedClass:
-                        @classmethod
-                        def my_classmethod(cls):
-                            """Not directly reachable from module scope!"""
-
-        :param tuple args:
-            Function arguments, if any. See :ref:`serialization-rules` for
-            permitted types.
-        :param dict kwargs:
-            Function keyword arguments, if any. See :ref:`serialization-rules`
-            for permitted types.
-        :returns:
-            :py:class:`mitogen.core.Receiver` configured to receive the result
-            of the invocation:
-
-            .. code-block:: python
-
-                recv = context.call_async(os.check_output, 'ls /tmp/')
-                try:
-                    # Prints output once it is received.
-                    msg = recv.get()
-                    print(msg.unpickle())
-                except mitogen.core.CallError, e:
-                    print('Call failed:', str(e))
-
-            Asynchronous calls may be dispatched in parallel to multiple
-            contexts and consumed as they complete using
-            :py:class:`mitogen.select.Select`.
+        See :meth:`CallChain.call_async`.
 
     .. method:: call (fn, \*args, \*\*kwargs)
 
-        Equivalent to :py:meth:`call_async(fn, \*args, \**kwargs).get().unpickle()
-        <call_async>`.
-
-        :returns:
-            The function's return value.
-
-        :raises mitogen.core.CallError:
-            An exception was raised in the remote context during execution.
+        See :meth:`CallChain.call`.
 
     .. method:: call_no_reply (fn, \*args, \*\*kwargs)
 
-        Send a function call, but expect no return value. If the call fails,
-        the full exception will be logged to the target context's logging framework.
-
-        :raises mitogen.core.CallError:
-            An exception was raised in the remote context during execution.
-
+        See :meth:`CallChain.call_no_reply`.
 
 
 Receiver Class
@@ -912,15 +904,15 @@ Receiver Class
 
     Receivers are used to wait for pickled responses from another context to be
     sent to a handle registered in this context. A receiver may be single-use
-    (as in the case of :py:meth:`mitogen.parent.Context.call_async`) or
+    (as in the case of :meth:`mitogen.parent.Context.call_async`) or
     multiple use.
 
     :param mitogen.core.Router router:
         Router to register the handler on.
 
     :param int handle:
-        If not ``None``, an explicit handle to register, otherwise an unused
-        handle is chosen.
+        If not :data:`None`, an explicit handle to register, otherwise an
+        unused handle is chosen.
 
     :param bool persist:
         If :data:`True`, do not unregister the receiver's handler after the
@@ -928,20 +920,20 @@ Receiver Class
 
     :param mitogen.core.Context respondent:
         Reference to the context this receiver is receiving from. If not
-        ``None``, arranges for the receiver to receive a dead message if
+        :data:`None`, arranges for the receiver to receive a dead message if
         messages can no longer be routed to the context, due to disconnection
         or exit.
 
     .. attribute:: notify = None
 
-        If not ``None``, a reference to a function invoked as
+        If not :data:`None`, a reference to a function invoked as
         `notify(receiver)` when a new message is delivered to this receiver.
-        Used by :py:class:`mitogen.select.Select` to implement waiting on
+        Used by :class:`mitogen.select.Select` to implement waiting on
         multiple receivers.
 
     .. py:method:: to_sender ()
 
-        Return a :py:class:`mitogen.core.Sender` configured to deliver messages
+        Return a :class:`mitogen.core.Sender` configured to deliver messages
         to this receiver. Since a Sender can be serialized, this makes it
         convenient to pass `(context_id, handle)` pairs around::
 
@@ -958,15 +950,15 @@ Receiver Class
 
     .. py:method:: empty ()
 
-        Return :data:`True` if calling :py:meth:`get` would block.
+        Return :data:`True` if calling :meth:`get` would block.
 
-        As with :py:class:`Queue.Queue`, :data:`True` may be returned even
-        though a subsequent call to :py:meth:`get` will succeed, since a
-        message may be posted at any moment between :py:meth:`empty` and
-        :py:meth:`get`.
+        As with :class:`Queue.Queue`, :data:`True` may be returned even
+        though a subsequent call to :meth:`get` will succeed, since a
+        message may be posted at any moment between :meth:`empty` and
+        :meth:`get`.
 
-        :py:meth:`empty` is only useful to avoid a race while installing
-        :py:attr:`notify`:
+        :meth:`empty` is only useful to avoid a race while installing
+        :attr:`notify`:
 
         .. code-block:: python
 
@@ -980,15 +972,15 @@ Receiver Class
 
     .. py:method:: close ()
 
-        Cause :py:class:`mitogen.core.ChannelError` to be raised in any thread
-        waiting in :py:meth:`get` on this receiver.
+        Cause :class:`mitogen.core.ChannelError` to be raised in any thread
+        waiting in :meth:`get` on this receiver.
 
     .. py:method:: get (timeout=None)
 
         Sleep waiting for a message to arrive on this receiver.
 
         :param float timeout:
-            If not ``None``, specifies a timeout in seconds.
+            If not :data:`None`, specifies a timeout in seconds.
 
         :raises mitogen.core.ChannelError:
             The remote end indicated the channel should be closed, or
@@ -999,17 +991,17 @@ Receiver Class
 
         :returns:
             `(msg, data)` tuple, where `msg` is the
-            :py:class:`mitogen.core.Message` that was received, and `data` is
+            :class:`mitogen.core.Message` that was received, and `data` is
             its unpickled data part.
 
     .. py:method:: get_data (timeout=None)
 
-        Like :py:meth:`get`, except only return the data part.
+        Like :meth:`get`, except only return the data part.
 
     .. py:method:: __iter__ ()
 
         Block and yield `(msg, data)` pairs delivered to this receiver until
-        :py:class:`mitogen.core.ChannelError` is raised.
+        :class:`mitogen.core.ChannelError` is raised.
 
 
 Sender Class
@@ -1020,10 +1012,10 @@ Sender Class
 .. class:: Sender (context, dst_handle)
 
     Senders are used to send pickled messages to a handle in another context,
-    it is the inverse of :py:class:`mitogen.core.Sender`.
+    it is the inverse of :class:`mitogen.core.Sender`.
 
     Senders may be serialized, making them convenient to wire up data flows.
-    See :py:meth:`mitogen.core.Receiver.to_sender` for more information.
+    See :meth:`mitogen.core.Receiver.to_sender` for more information.
 
     :param mitogen.core.Context context:
         Context to send messages to.
@@ -1032,7 +1024,7 @@ Sender Class
 
     .. py:method:: close ()
 
-        Send a dead message to the remote end, causing :py:meth:`ChannelError`
+        Send a dead message to the remote end, causing :meth:`ChannelError`
         to be raised in any waiting thread.
 
     .. py:method:: send (data)
@@ -1051,11 +1043,11 @@ Select Class
 
     Support scatter/gather asynchronous calls and waiting on multiple
     receivers, channels, and sub-Selects. Accepts a sequence of
-    :py:class:`mitogen.core.Receiver` or :py:class:`mitogen.select.Select`
+    :class:`mitogen.core.Receiver` or :class:`mitogen.select.Select`
     instances and returns the first value posted to any receiver or select.
 
     If `oneshot` is :data:`True`, then remove each receiver as it yields a
-    result; since :py:meth:`__iter__` terminates once the final receiver is
+    result; since :meth:`__iter__` terminates once the final receiver is
     removed, this makes it convenient to respond to calls made in parallel:
 
     .. code-block:: python
@@ -1070,7 +1062,7 @@ Select Class
         # Iteration ends when last Receiver yields a result.
         print('Received total %s from %s receivers' % (total, len(recvs)))
 
-    :py:class:`Select` may drive a long-running scheduler:
+    :class:`Select` may drive a long-running scheduler:
 
     .. code-block:: python
 
@@ -1081,7 +1073,7 @@ Select Class
                 for context, workfunc in get_new_work():
                     select.add(context.call_async(workfunc))
 
-    :py:class:`Select` may be nested:
+    :class:`Select` may be nested:
 
     .. code-block:: python
 
@@ -1099,11 +1091,12 @@ Select Class
 
     .. py:classmethod:: all (it)
 
-        Take an iterable of receivers and retrieve a :py:class:`Message` from
+        Take an iterable of receivers and retrieve a :class:`Message` from
         each, returning the result of calling `msg.unpickle()` on each in turn.
         Results are returned in the order they arrived.
 
-        This is sugar for handling batch :py:class:`Context.call_async`
+        This is sugar for handling batch
+        :meth:`Context.call_async <mitogen.parent.Context.call_async>`
         invocations:
 
         .. code-block:: python
@@ -1119,32 +1112,32 @@ Select Class
 
         .. code-block:: python
 
-            sum(context.call_async(get_disk_usage).get().unpickle()
-                for context in contexts)
+            recvs = [c.call_async(get_disk_usage) for c in contexts]
+            sum(recv.get().unpickle() for recv in recvs)
 
-        Result processing happens concurrently to new results arriving, so
-        :py:meth:`all` should always be faster.
+        Result processing happens in the order results arrive, rather than the
+        order requests were issued, so :meth:`all` should always be faster.
 
     .. py:method:: get (timeout=None, block=True)
 
         Fetch the next available value from any receiver, or raise
-        :py:class:`mitogen.core.TimeoutError` if no value is available within
+        :class:`mitogen.core.TimeoutError` if no value is available within
         `timeout` seconds.
 
-        On success, the message's :py:attr:`receiver
+        On success, the message's :attr:`receiver
         <mitogen.core.Message.receiver>` attribute is set to the receiver.
 
         :param float timeout:
             Timeout in seconds.
         :param bool block:
-            If :py:data:`False`, immediately raise
-            :py:class:`mitogen.core.TimeoutError` if the select is empty.
+            If :data:`False`, immediately raise
+            :class:`mitogen.core.TimeoutError` if the select is empty.
         :return:
-            :py:class:`mitogen.core.Message`
+            :class:`mitogen.core.Message`
         :raises mitogen.core.TimeoutError:
             Timeout was reached.
         :raises mitogen.core.LatchError:
-            :py:meth:`close` has been called, and the underlying latch is no
+            :meth:`close` has been called, and the underlying latch is no
             longer valid.
 
     .. py:method:: __bool__ ()
@@ -1155,8 +1148,8 @@ Select Class
 
         Remove the select's notifier function from each registered receiver,
         mark the associated latch as closed, and cause any thread currently
-        sleeping in :py:meth:`get` to be woken with
-        :py:class:`mitogen.core.LatchError`.
+        sleeping in :meth:`get` to be woken with
+        :class:`mitogen.core.LatchError`.
 
         This is necessary to prevent memory leaks in long-running receivers. It
         is called automatically when the Python :keyword:`with` statement is
@@ -1164,35 +1157,35 @@ Select Class
 
     .. py:method:: empty ()
 
-        Return :data:`True` if calling :py:meth:`get` would block.
+        Return :data:`True` if calling :meth:`get` would block.
 
-        As with :py:class:`Queue.Queue`, :data:`True` may be returned even
-        though a subsequent call to :py:meth:`get` will succeed, since a
-        message may be posted at any moment between :py:meth:`empty` and
-        :py:meth:`get`.
+        As with :class:`Queue.Queue`, :data:`True` may be returned even
+        though a subsequent call to :meth:`get` will succeed, since a
+        message may be posted at any moment between :meth:`empty` and
+        :meth:`get`.
 
-        :py:meth:`empty` may return ``False`` even when :py:meth:`get` would
-        block if another thread has drained a receiver added to this select.
-        This can be avoided by only consuming each receiver from a single
-        thread.
+        :meth:`empty` may return :data:`False` even when :meth:`get`
+        would block if another thread has drained a receiver added to this
+        select. This can be avoided by only consuming each receiver from a
+        single thread.
 
     .. py:method:: __iter__ (self)
 
-        Yield the result of :py:meth:`get` until no receivers remain in the
+        Yield the result of :meth:`get` until no receivers remain in the
         select, either because `oneshot` is :data:`True`, or each receiver was
-        explicitly removed via :py:meth:`remove`.
+        explicitly removed via :meth:`remove`.
 
     .. py:method:: add (recv)
 
-        Add the :py:class:`mitogen.core.Receiver` or
-        :py:class:`mitogen.core.Channel` `recv` to the select.
+        Add the :class:`mitogen.core.Receiver` or
+        :class:`mitogen.core.Channel` `recv` to the select.
 
     .. py:method:: remove (recv)
 
-        Remove the :py:class:`mitogen.core.Receiver` or
-        :py:class:`mitogen.core.Channel` `recv` from the select. Note that if
-        the receiver has notified prior to :py:meth:`remove`, then it will
-        still be returned by a subsequent :py:meth:`get`. This may change in a
+        Remove the :class:`mitogen.core.Receiver` or
+        :class:`mitogen.core.Channel` `recv` from the select. Note that if
+        the receiver has notified prior to :meth:`remove`, then it will
+        still be returned by a subsequent :meth:`get`. This may change in a
         future version.
 
 
@@ -1203,7 +1196,7 @@ Channel Class
 
 .. class:: Channel (router, context, dst_handle, handle=None)
 
-    A channel inherits from :py:class:`mitogen.core.Sender` and
+    A channel inherits from :class:`mitogen.core.Sender` and
     `mitogen.core.Receiver` to provide bidirectional functionality.
 
     Since all handles aren't known until after both ends are constructed, for
@@ -1221,12 +1214,12 @@ Broker Class
     Responsible for handling I/O multiplexing in a private thread.
 
     **Note:** This is the somewhat limited core version of the Broker class
-    used by child contexts. The master subclass is documented below this one.
+    used by child contexts. The master subclass is documented below.
 
     .. attribute:: shutdown_timeout = 3.0
 
-        Seconds grace to allow :py:class:`streams <Stream>` to shutdown
-        gracefully before force-disconnecting them during :py:meth:`shutdown`.
+        Seconds grace to allow :class:`streams <Stream>` to shutdown
+        gracefully before force-disconnecting them during :meth:`shutdown`.
 
     .. method:: defer (func, \*args, \*kwargs)
 
@@ -1236,26 +1229,26 @@ Broker Class
 
     .. method:: start_receive (stream)
 
-        Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
+        Mark the :attr:`receive_side <Stream.receive_side>` on `stream` as
         ready for reading. Safe to call from any thread. When the associated
         file descriptor becomes ready for reading,
-        :py:meth:`BasicStream.on_receive` will be called.
+        :meth:`BasicStream.on_receive` will be called.
 
     .. method:: stop_receive (stream)
 
-        Mark the :py:attr:`receive_side <Stream.receive_side>` on `stream` as
+        Mark the :attr:`receive_side <Stream.receive_side>` on `stream` as
         not ready for reading. Safe to call from any thread.
 
     .. method:: _start_transmit (stream)
 
-        Mark the :py:attr:`transmit_side <Stream.transmit_side>` on `stream` as
+        Mark the :attr:`transmit_side <Stream.transmit_side>` on `stream` as
         ready for writing. Must only be called from the Broker thread. When the
         associated file descriptor becomes ready for writing,
-        :py:meth:`BasicStream.on_transmit` will be called.
+        :meth:`BasicStream.on_transmit` will be called.
 
     .. method:: stop_receive (stream)
 
-        Mark the :py:attr:`transmit_side <Stream.receive_side>` on `stream` as
+        Mark the :attr:`transmit_side <Stream.receive_side>` on `stream` as
         not ready for writing. Safe to call from any thread.
 
     .. method:: shutdown
@@ -1265,12 +1258,13 @@ Broker Class
     .. method:: join
 
         Wait for the broker to stop, expected to be called after
-        :py:meth:`shutdown`.
+        :meth:`shutdown`.
 
     .. method:: keep_alive
 
-        Return :data:`True` if any reader's :py:attr:`Side.keep_alive`
-        attribute is :data:`True`, or any :py:class:`Context` is still
+        Return :data:`True` if any reader's :attr:`Side.keep_alive`
+        attribute is :data:`True`, or any
+        :class:`Context <mitogen.core.Context>` is still
         registered that is not the master. Used to delay shutdown while some
         important work is in progress (e.g. log draining).
 
@@ -1278,11 +1272,11 @@ Broker Class
 
     .. method:: _broker_main
 
-        Handle events until :py:meth:`shutdown`. On shutdown, invoke
-        :py:meth:`Stream.on_shutdown` for every active stream, then allow up to
-        :py:attr:`shutdown_timeout` seconds for the streams to unregister
+        Handle events until :meth:`shutdown`. On shutdown, invoke
+        :meth:`Stream.on_shutdown` for every active stream, then allow up to
+        :attr:`shutdown_timeout` seconds for the streams to unregister
         themselves before forcefully calling
-        :py:meth:`Stream.on_disconnect`.
+        :meth:`Stream.on_disconnect`.
 
 
 .. currentmodule:: mitogen.master
@@ -1298,7 +1292,7 @@ Broker Class
 
     :param bool install_watcher:
         If :data:`True`, an additional thread is started to monitor the
-        lifetime of the main thread, triggering :py:meth:`shutdown`
+        lifetime of the main thread, triggering :meth:`shutdown`
         automatically in case the user forgets to call it, or their code
         crashed.
 
@@ -1309,8 +1303,8 @@ Broker Class
 
     .. attribute:: shutdown_timeout = 5.0
 
-        Seconds grace to allow :py:class:`streams <Stream>` to shutdown
-        gracefully before force-disconnecting them during :py:meth:`shutdown`.
+        Seconds grace to allow :class:`streams <Stream>` to shutdown
+        gracefully before force-disconnecting them during :meth:`shutdown`.
 
 
 Utility Functions
@@ -1326,7 +1320,7 @@ A random assortment of utility functions useful on masters and children.
     Many tools love to subclass built-in types in order to implement useful
     functionality, such as annotating the safety of a Unicode string, or adding
     additional methods to a dict. However, cPickle loves to preserve those
-    subtypes during serialization, resulting in CallError during :py:meth:`call
+    subtypes during serialization, resulting in CallError during :meth:`call
     <mitogen.parent.Context.call>` in the target when it tries to deserialize
     the data.
 
@@ -1346,27 +1340,27 @@ A random assortment of utility functions useful on masters and children.
 
     Remove all entries mentioning ``site-packages`` or ``Extras`` from the
     system path. Used primarily for testing on OS X within a virtualenv, where
-    OS X bundles some ancient version of the :py:mod:`six` module.
+    OS X bundles some ancient version of the :mod:`six` module.
 
 .. currentmodule:: mitogen.utils
 .. function:: log_to_file (path=None, io=False, level='INFO')
 
-    Install a new :py:class:`logging.Handler` writing applications logs to the
+    Install a new :class:`logging.Handler` writing applications logs to the
     filesystem. Useful when debugging slave IO problems.
 
     Parameters to this function may be overridden at runtime using environment
     variables. See :ref:`logging-env-vars`.
 
     :param str path:
-        If not ``None``, a filesystem path to write logs to. Otherwise, logs
-        are written to :py:data:`sys.stderr`.
+        If not :data:`None`, a filesystem path to write logs to. Otherwise,
+        logs are written to :data:`sys.stderr`.
 
     :param bool io:
         If :data:`True`, include extremely verbose IO logs in the output.
         Useful for debugging hangs, less useful for debugging application code.
 
     :param str level:
-        Name of the :py:mod:`logging` package constant that is the minimum
+        Name of the :mod:`logging` package constant that is the minimum
         level to log at. Useful levels are ``DEBUG``, ``INFO``, ``WARNING``,
         and ``ERROR``.
 
@@ -1374,7 +1368,7 @@ A random assortment of utility functions useful on masters and children.
 .. function:: run_with_router(func, \*args, \**kwargs)
 
     Arrange for `func(router, \*args, \**kwargs)` to run with a temporary
-    :py:class:`mitogen.master.Router`, ensuring the Router and Broker are
+    :class:`mitogen.master.Router`, ensuring the Router and Broker are
     correctly shut down during normal or exceptional return.
 
     :returns:
@@ -1383,7 +1377,7 @@ A random assortment of utility functions useful on masters and children.
 .. currentmodule:: mitogen.utils
 .. decorator:: with_router
 
-    Decorator version of :py:func:`run_with_router`. Example:
+    Decorator version of :func:`run_with_router`. Example:
 
     .. code-block:: python
 
@@ -1399,29 +1393,9 @@ Exceptions
 
 .. currentmodule:: mitogen.core
 
-.. class:: Error (fmt, \*args)
-
-    Base for all exceptions raised by Mitogen.
-
-.. class:: CallError (e)
-
-    Raised when :py:meth:`Context.call() <mitogen.parent.Context.call>` fails.
-    A copy of the traceback from the external context is appended to the
-    exception message.
-
-.. class:: ChannelError (fmt, \*args)
-
-    Raised when a channel dies or has been closed.
-
-.. class:: LatchError (fmt, \*args)
-
-    Raised when an attempt is made to use a :py:class:`mitogen.core.Latch` that
-    has been marked closed.
-
-.. class:: StreamError (fmt, \*args)
-
-    Raised when a stream cannot be established.
-
-.. class:: TimeoutError (fmt, \*args)
-
-    Raised when a timeout occurs on a stream.
+.. autoclass:: Error
+.. autoclass:: CallError
+.. autoclass:: ChannelError
+.. autoclass:: LatchError
+.. autoclass:: StreamError
+.. autoclass:: TimeoutError

@@ -3,9 +3,6 @@ Arrange for all ContextService connections to be torn down unconditionally,
 required for reliable LRU tests.
 """
 
-import traceback
-import sys
-
 import ansible_mitogen.connection
 import ansible_mitogen.services
 import mitogen.service

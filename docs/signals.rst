@@ -19,16 +19,10 @@ functions registered to receive it will be called back.
 Functions
 ---------
 
-.. function:: mitogen.core.listen (obj, name, func)
+.. currentmodule:: mitogen.core
 
-    Arrange for `func(\*args, \*\*kwargs)` to be invoked when the named signal
-    is fired by `obj`.
-
-.. function:: mitogen.core.fire (obj, name, \*args, \*\*kwargs)
-
-    Arrange for `func(\*args, \*\*kwargs)` to be invoked for every function
-    registered for the named signal on `obj`.
-
+.. autofunction:: listen
+.. autofunction:: fire
 
 
 List

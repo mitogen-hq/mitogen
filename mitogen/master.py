@@ -83,7 +83,46 @@ def _stdlib_paths():
                for p in prefixes)
 
 
+def is_stdlib_name(modname):
+    """Return :data:`True` if `modname` appears to come from the standard
+    library.
+    """
+    if imp.is_builtin(modname) != 0:
+        return True
+
+    module = sys.modules.get(modname)
+    if module is None:
+        return False
+
+    # six installs crap with no __file__
+    modpath = os.path.abspath(getattr(module, '__file__', ''))
+    return is_stdlib_path(modpath)
+
+
+_STDLIB_PATHS = _stdlib_paths()
+
+
+def is_stdlib_path(path):
+    return any(
+        os.path.commonprefix((libpath, path)) == libpath
+        and 'site-packages' not in path
+        and 'dist-packages' not in path
+        for libpath in _STDLIB_PATHS
+    )
+
+
 def get_child_modules(path):
+    """Return the suffixes of submodules directly neated beneath of the package
+    directory at `path`.
+
+    :param str path:
+        Path to the module's source code on disk, or some PEP-302-recognized
+        equivalent. Usually this is the module's ``__file__`` attribute, but
+        is specified explicitly to avoid loading the module.
+
+    :return:
+        List of submodule name suffixes.
+    """
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return [to_text(name) for _, name, _ in it]
 
@@ -168,24 +207,35 @@ def scan_code_imports(co):
 
 class ThreadWatcher(object):
     """
-    Manage threads that waits for nother threads to shutdown, before invoking
-    `on_join()`. In CPython it seems possible to use this method to ensure a
-    non-main thread is signalled when the main thread has exitted, using yet
-    another thread as a proxy.
+    Manage threads that wait for another thread to shut down, before invoking
+    `on_join()` for each associated ThreadWatcher.
+
+    In CPython it seems possible to use this method to ensure a non-main thread
+    is signalled when the main thread has exited, using a third thread as a
+    proxy.
     """
-    _lock = threading.Lock()
-    _pid = None
-    _instances_by_target = {}
-    _thread_by_target = {}
+    #: Protects remaining _cls_* members.
+    _cls_lock = threading.Lock()
+
+    #: PID of the process that last modified the class data. If the PID
+    #: changes, it means the thread watch dict refers to threads that no longer
+    #: exist in the current process (since it forked), and so must be reset.
+    _cls_pid = None
+
+    #: Map watched Thread -> list of ThreadWatcher instances.
+    _cls_instances_by_target = {}
+
+    #: Map watched Thread -> watcher Thread for each watched thread.
+    _cls_thread_by_target = {}
 
     @classmethod
     def _reset(cls):
         """If we have forked since the watch dictionaries were initialized, all
         that has is garbage, so clear it."""
-        if os.getpid() != cls._pid:
-            cls._pid = os.getpid()
-            cls._instances_by_target.clear()
-            cls._thread_by_target.clear()
+        if os.getpid() != cls._cls_pid:
+            cls._cls_pid = os.getpid()
+            cls._cls_instances_by_target.clear()
+            cls._cls_thread_by_target.clear()
 
     def __init__(self, target, on_join):
         self.target = target
@@ -194,33 +244,34 @@ class ThreadWatcher(object):
     @classmethod
     def _watch(cls, target):
         target.join()
-        for watcher in cls._instances_by_target[target]:
+        for watcher in cls._cls_instances_by_target[target]:
             watcher.on_join()
 
     def install(self):
-        self._lock.acquire()
+        self._cls_lock.acquire()
         try:
             self._reset()
-            self._instances_by_target.setdefault(self.target, []).append(self)
-            if self.target not in self._thread_by_target:
-                self._thread_by_target[self.target] = threading.Thread(
+            lst = self._cls_instances_by_target.setdefault(self.target, [])
+            lst.append(self)
+            if self.target not in self._cls_thread_by_target:
+                self._cls_thread_by_target[self.target] = threading.Thread(
                     name='mitogen.master.join_thread_async',
                     target=self._watch,
                     args=(self.target,)
                 )
-                self._thread_by_target[self.target].start()
+                self._cls_thread_by_target[self.target].start()
         finally:
-            self._lock.release()
+            self._cls_lock.release()
 
     def remove(self):
-        self._lock.acquire()
+        self._cls_lock.acquire()
         try:
             self._reset()
-            lst = self._instances_by_target.get(self.target, [])
+            lst = self._cls_instances_by_target.get(self.target, [])
             if self in lst:
                 lst.remove(self)
         finally:
-            self._lock.release()
+            self._cls_lock.release()
 
     @classmethod
     def watch(cls, target, on_join):
@@ -230,6 +281,25 @@ class ThreadWatcher(object):
 
 
 class LogForwarder(object):
+    """
+    Install a :data:`mitogen.core.FORWARD_LOG` handler that delivers forwarded
+    log events into the local logging framework. This is used by the master's
+    :class:`Router`.
+
+    The forwarded :class:`logging.LogRecord` objects are delivered to loggers
+    under ``mitogen.ctx.*`` corresponding to their
+    :attr:`mitogen.core.Context.name`, with the message prefixed with the
+    logger name used in the child. The records include some extra attributes:
+
+    * ``mitogen_message``: Unicode original message without the logger name
+      prepended.
+    * ``mitogen_context``: :class:`mitogen.parent.Context` reference to the
+      source context.
+    * ``mitogen_name``: Original logger name.
+
+    :param mitogen.master.Router router:
+        Router to install the handler on.
+    """
     def __init__(self, router):
         self._router = router
         self._cache = {}
@@ -246,7 +316,8 @@ class LogForwarder(object):
         if logger is None:
             context = self._router.context_by_id(msg.src_id)
             if context is None:
-                LOG.error('FORWARD_LOG received from src_id %d', msg.src_id)
+                LOG.error('%s: dropping log from unknown context ID %d',
+                          self, msg.src_id)
                 return
 
             name = '%s.%s' % (RLOG.name, context.name)
@@ -261,33 +332,6 @@ class LogForwarder(object):
 
     def __repr__(self):
         return 'LogForwarder(%r)' % (self._router,)
-
-
-_STDLIB_PATHS = _stdlib_paths()
-
-
-def is_stdlib_path(path):
-    return any(
-        os.path.commonprefix((libpath, path)) == libpath
-        and 'site-packages' not in path
-        and 'dist-packages' not in path
-        for libpath in _STDLIB_PATHS
-    )
-
-
-def is_stdlib_name(modname):
-    """Return ``True`` if `modname` appears to come from the standard
-    library."""
-    if imp.is_builtin(modname) != 0:
-        return True
-
-    module = sys.modules.get(modname)
-    if module is None:
-        return False
-
-    # six installs crap with no __file__
-    modpath = os.path.abspath(getattr(module, '__file__', ''))
-    return is_stdlib_path(modpath)
 
 
 class ModuleFinder(object):
@@ -360,7 +404,7 @@ class ModuleFinder(object):
             #        requests.packages.urllib3.contrib.pyopenssl"
             e = sys.exc_info()[1]
             LOG.debug('%r: loading %r using %r failed: %s',
-                      self, fullname, loader)
+                      self, fullname, loader, e)
             return
 
         if path is None or source is None:
@@ -412,8 +456,8 @@ class ModuleFinder(object):
         source code.
 
         :returns:
-            Tuple of `(module path, source text, is package?)`, or ``None`` if
-            the source cannot be found.
+            Tuple of `(module path, source text, is package?)`, or :data:`None`
+            if the source cannot be found.
         """
         tup = self._found_cache.get(fullname)
         if tup:
@@ -542,6 +586,14 @@ class ModuleResponder(object):
         return 'ModuleResponder(%r)' % (self._router,)
 
     MAIN_RE = re.compile(b(r'^if\s+__name__\s*==\s*.__main__.\s*:'), re.M)
+    main_guard_msg = (
+        "A child context attempted to import __main__, however the main "
+        "module present in the master process lacks an execution guard. "
+        "Update %r to prevent unintended execution, using a guard like:\n"
+        "\n"
+        "    if __name__ == '__main__':\n"
+        "        # your code here.\n"
+    )
 
     def whitelist_prefix(self, fullname):
         if self.whitelist == ['']:
@@ -551,14 +603,19 @@ class ModuleResponder(object):
     def blacklist_prefix(self, fullname):
         self.blacklist.append(fullname)
 
-    def neutralize_main(self, src):
+    def neutralize_main(self, path, src):
         """Given the source for the __main__ module, try to find where it
         begins conditional execution based on a "if __name__ == '__main__'"
         guard, and remove any code after that point."""
         match = self.MAIN_RE.search(src)
         if match:
             return src[:match.start()]
-        return src
+
+        if b('mitogen.main(') in src:
+            return src
+
+        LOG.error(self.main_guard_msg, path)
+        raise ImportError('refused')
 
     def _make_negative_response(self, fullname):
         return (fullname, None, None, None, ())
@@ -585,7 +642,7 @@ class ModuleResponder(object):
             pkg_present = None
 
         if fullname == '__main__':
-            source = self.neutralize_main(source)
+            source = self.neutralize_main(path, source)
         compressed = mitogen.core.Blob(zlib.compress(source, 9))
         related = [
             to_text(name)
@@ -670,8 +727,7 @@ class ModuleResponder(object):
                 )
             )
 
-    def _forward_module(self, context, fullname):
-        IOLOG.debug('%r._forward_module(%r, %r)', self, context, fullname)
+    def _forward_one_module(self, context, fullname):
         path = []
         while fullname:
             path.append(fullname)
@@ -682,8 +738,13 @@ class ModuleResponder(object):
             self._send_module_and_related(stream, fullname)
             self._send_forward_module(stream, context, fullname)
 
-    def forward_module(self, context, fullname):
-        self._router.broker.defer(self._forward_module, context, fullname)
+    def _forward_modules(self, context, fullnames):
+        IOLOG.debug('%r._forward_modules(%r, %r)', self, context, fullnames)
+        for fullname in fullnames:
+            self._forward_one_module(context, fullname)
+
+    def forward_modules(self, context, fullnames):
+        self._router.broker.defer(self._forward_modules, context, fullnames)
 
 
 class Broker(mitogen.core.Broker):

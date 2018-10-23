@@ -208,7 +208,7 @@ started the context, however as shown, this can be overridden.
 Calling A Function
 ------------------
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
 
 Now that some contexts exist, it is time to execute code in them. Any regular
 function, static method, or class method reachable directly from module scope

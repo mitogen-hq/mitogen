@@ -7,3 +7,4 @@
 - import_playbook: issue_152__virtualenv_python_fails.yml
 - import_playbook: issue_154__module_state_leaks.yml
 - import_playbook: issue_177__copy_module_failing.yml
+- import_playbook: issue_332_ansiblemoduleerror_first_occurrence.yml

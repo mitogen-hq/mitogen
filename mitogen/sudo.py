@@ -49,7 +49,7 @@ SUDO_OPTIONS = [
     #(False, 'str', '--group', '-g')
     (True,  'bool', '--set-home', '-H'),
     #(False, 'str', '--host', '-h')
-    #(False, 'bool', '--login', '-i')
+    (False, 'bool', '--login', '-i'),
     #(False, 'bool', '--remove-timestamp', '-K')
     #(False, 'bool', '--reset-timestamp', '-k')
     #(False, 'bool', '--list', '-l')
@@ -107,7 +107,7 @@ class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
 
-    #: Once connected, points to the corresponding TtyLogStream, allowing it to
+    #: Once connected, points to the corresponding DiagLogStream, allowing it to
     #: be disconnected at the same time this stream is being torn down.
     tty_stream = None
 
@@ -116,10 +116,11 @@ class Stream(mitogen.parent.Stream):
     password = None
     preserve_env = False
     set_home = False
+    login = False
 
     def construct(self, username=None, sudo_path=None, password=None,
                   preserve_env=None, set_home=None, sudo_args=None,
-                  **kwargs):
+                  login=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         opts = parse_sudo_flags(sudo_args or [])
 
@@ -133,6 +134,8 @@ class Stream(mitogen.parent.Stream):
             self.preserve_env = preserve_env or opts.preserve_env
         if (set_home or opts.set_home) is not None:
             self.set_home = set_home or opts.set_home
+        if (login or opts.login) is not None:
+            self.login = True
 
     def connect(self):
         super(Stream, self).connect()
@@ -144,13 +147,16 @@ class Stream(mitogen.parent.Stream):
 
     def get_boot_command(self):
         # Note: sudo did not introduce long-format option processing until July
-        # 2013, so even though we parse long-format options, we always supply
-        # short-form to the sudo command.
+        # 2013, so even though we parse long-format options, supply short-form
+        # to the sudo command.
         bits = [self.sudo_path, '-u', self.username]
         if self.preserve_env:
             bits += ['-E']
         if self.set_home:
             bits += ['-H']
+        if self.login:
+            bits += ['-i']
+
         bits = bits + super(Stream, self).get_boot_command()
         LOG.debug('sudo command line: %r', bits)
         return bits
@@ -159,7 +165,7 @@ class Stream(mitogen.parent.Stream):
     password_required_msg = 'sudo password is required'
 
     def _connect_bootstrap(self, extra_fd):
-        self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
+        self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
 
         password_sent = False
         it = mitogen.parent.iter_read(

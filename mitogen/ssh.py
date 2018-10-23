@@ -111,7 +111,6 @@ class HostKeyError(mitogen.core.StreamError):
 
 
 class Stream(mitogen.parent.Stream):
-    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
 
     #: Default to whatever is available as 'python' on the remote machine,
@@ -121,8 +120,8 @@ class Stream(mitogen.parent.Stream):
     #: Number of -v invocations to pass on command line.
     ssh_debug_level = 0
 
-    #: Once connected, points to the corresponding TtyLogStream, allowing it to
-    #: be disconnected at the same time this stream is being torn down.
+    #: If batch_mode=False, points to the corresponding DiagLogStream, allowing
+    #: it to be disconnected at the same time this stream is being torn down.
     tty_stream = None
 
     #: The path to the SSH binary.
@@ -142,7 +141,7 @@ class Stream(mitogen.parent.Stream):
                   check_host_keys='enforce', password=None, identity_file=None,
                   compression=True, ssh_args=None, keepalive_enabled=True,
                   keepalive_count=3, keepalive_interval=15,
-                  ssh_debug_level=None, **kwargs):
+                  identities_only=True, ssh_debug_level=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         if check_host_keys not in ('accept', 'enforce', 'ignore'):
             raise ValueError(self.check_host_keys_msg)
@@ -153,6 +152,7 @@ class Stream(mitogen.parent.Stream):
         self.check_host_keys = check_host_keys
         self.password = password
         self.identity_file = identity_file
+        self.identities_only = identities_only
         self.compression = compression
         self.keepalive_enabled = keepalive_enabled
         self.keepalive_count = keepalive_count
@@ -164,8 +164,33 @@ class Stream(mitogen.parent.Stream):
         if ssh_debug_level:
             self.ssh_debug_level = ssh_debug_level
 
+        self._init_create_child()
+
+    def _requires_pty(self):
+        """
+        Return :data:`True` if the configuration requires a PTY to be
+        allocated. This is only true if we must interactively accept host keys,
+        or type a password.
+        """
+        return (self.check_host_keys == 'accept' or
+                self.password is not None)
+
+    def _init_create_child(self):
+        """
+        Initialize the base class :attr:`create_child` and
+        :attr:`create_child_args` according to whether we need a PTY or not.
+        """
+        if self._requires_pty():
+            self.create_child = mitogen.parent.hybrid_tty_create_child
+        else:
+            self.create_child = mitogen.parent.create_child
+            self.create_child_args = {
+                'stderr_pipe': True,
+            }
+
     def on_disconnect(self, broker):
-        self.tty_stream.on_disconnect(broker)
+        if self.tty_stream is not None:
+            self.tty_stream.on_disconnect(broker)
         super(Stream, self).on_disconnect(broker)
 
     def get_boot_command(self):
@@ -181,7 +206,7 @@ class Stream(mitogen.parent.Stream):
             bits += ['-l', self.username]
         if self.port is not None:
             bits += ['-p', str(self.port)]
-        if self.identity_file or self.password:
+        if self.identities_only and (self.identity_file or self.password):
             bits += ['-o', 'IdentitiesOnly yes']
         if self.identity_file:
             bits += ['-i', self.identity_file]
@@ -192,6 +217,8 @@ class Stream(mitogen.parent.Stream):
                 '-o', 'ServerAliveInterval %s' % (self.keepalive_interval,),
                 '-o', 'ServerAliveCountMax %s' % (self.keepalive_count,),
             ]
+        if not self._requires_pty():
+            bits += ['-o', 'BatchMode yes']
         if self.check_host_keys == 'enforce':
             bits += ['-o', 'StrictHostKeyChecking yes']
         if self.check_host_keys == 'accept':
@@ -231,7 +258,7 @@ class Stream(mitogen.parent.Stream):
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
             LOG.debug('%r: accepting host key', self)
-            self.tty_stream.transmit_side.write('y\n')
+            self.tty_stream.transmit_side.write(b('y\n'))
             return
 
         # _host_key_prompt() should never be reached with ignore or enforce
@@ -239,38 +266,51 @@ class Stream(mitogen.parent.Stream):
         # with ours.
         raise HostKeyError(self.hostkey_config_msg)
 
+    def _ec0_received(self):
+        if self.tty_stream is not None:
+            self._router.broker.start_receive(self.tty_stream)
+        return super(Stream, self)._ec0_received()
+
     def _connect_bootstrap(self, extra_fd):
-        self.tty_stream = mitogen.parent.TtyLogStream(extra_fd, self)
+        fds = [self.receive_side.fd]
+        if extra_fd is not None:
+            self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
+            fds.append(extra_fd)
+
+        it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
 
         password_sent = False
-        it = mitogen.parent.iter_read(
-            fds=[self.receive_side.fd, extra_fd],
-            deadline=self.connect_deadline
-        )
-
         for buf, partial in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith(self.EC0_MARKER):
-                self._router.broker.start_receive(self.tty_stream)
                 self._ec0_received()
                 return
             elif HOSTKEY_REQ_PROMPT in buf.lower():
                 self._host_key_prompt()
             elif HOSTKEY_FAIL in buf.lower():
                 raise HostKeyError(self.hostkey_failed_msg)
-            elif buf.lower().startswith(PERMDENIED_PROMPT):
+            elif buf.lower().startswith((
+                    PERMDENIED_PROMPT,
+                    b("%s@%s: " % (self.username, self.hostname))
+                        + PERMDENIED_PROMPT,
+                )):
                 # issue #271: work around conflict with user shell reporting
                 # 'permission denied' e.g. during chdir($HOME) by only matching
                 # it at the start of the line.
                 if self.password is not None and password_sent:
                     raise PasswordError(self.password_incorrect_msg)
+                elif PASSWORD_PROMPT in buf and self.password is None:
+                    # Permission denied (password,pubkey)
+                    raise PasswordError(self.password_required_msg)
                 else:
                     raise PasswordError(self.auth_incorrect_msg)
             elif partial and PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 LOG.debug('%r: sending password', self)
-                self.tty_stream.transmit_side.write((self.password + '\n').encode())
+                self.tty_stream.transmit_side.write(
+                    (self.password + '\n').encode()
+                )
                 password_sent = True
 
         raise mitogen.core.StreamError('bootstrap failed')

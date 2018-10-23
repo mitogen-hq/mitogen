@@ -48,10 +48,16 @@ except ImportError:
 
 @lru_cache()
 def minimize_source(source):
-    """Remove most comments and docstrings from Python source code.
+    """Remove comments and docstrings from Python `source`, preserving line
+    numbers and syntax of empty blocks.
+
+    :param str source:
+        The source to minimize.
+
+    :returns str:
+        The minimized source.
     """
-    if not isinstance(source, mitogen.core.UnicodeType):
-        source = source.decode('utf-8')
+    source = mitogen.core.to_text(source)
     tokens = tokenize.generate_tokens(StringIO(source).readline)
     tokens = strip_comments(tokens)
     tokens = strip_docstrings(tokens)

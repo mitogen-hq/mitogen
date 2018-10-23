@@ -9,7 +9,6 @@
   - custom_python_external_module:
     register: out
 
-  - debug: msg={{out}}
   - assert:
       that:
       - out.external1_path == "ansible/integration/module_utils/module_utils/external1.py"

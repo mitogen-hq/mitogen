@@ -1,0 +1,5 @@
+---
+
+- import_playbook: exec_command.yml
+- import_playbook: put_small_file.yml
+- import_playbook: put_large_file.yml

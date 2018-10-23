@@ -1,7 +1,3 @@
-
-[test-targets]
-localhost
-
 [connection-delegation-test]
 cd-bastion
 cd-rack11 mitogen_via=ssh-user@cd-bastion

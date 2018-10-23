@@ -49,7 +49,7 @@ class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.tty_create_child)
     child_is_immediate_subprocess = False
 
-    #: Once connected, points to the corresponding TtyLogStream, allowing it to
+    #: Once connected, points to the corresponding DiagLogStream, allowing it to
     #: be disconnected at the same time this stream is being torn down.
 
     username = 'root'

@@ -46,13 +46,22 @@ import os.path
 import sys
 import threading
 
+import ansible.constants
+
 import mitogen
 import mitogen.service
+import mitogen.utils
+import ansible_mitogen.loaders
 import ansible_mitogen.module_finder
 import ansible_mitogen.target
 
 
 LOG = logging.getLogger(__name__)
+
+# Force load of plugin to ensure ConfigManager has definitions loaded. Done
+# during module import to ensure a single-threaded environment; PluginLoader
+# is not thread-safe.
+ansible_mitogen.loaders.shell_loader.get('sh')
 
 
 if sys.version_info[0] == 3:
@@ -67,6 +76,17 @@ else:
         "def reraise(tp, value, tb=None):\n"
         "    raise tp, value, tb\n"
      )
+
+
+def _get_candidate_temp_dirs():
+    options = ansible.constants.config.get_plugin_options('shell', 'sh')
+
+    # Pre 2.5 this came from ansible.constants.
+    remote_tmp = (options.get('remote_tmp') or
+                  ansible.constants.DEFAULT_REMOTE_TMP)
+    dirs = list(options.get('system_tmpdirs', ('/var/tmp', '/tmp')))
+    dirs.insert(0, remote_tmp)
+    return mitogen.utils.cast(dirs)
 
 
 class Error(Exception):
@@ -119,11 +139,15 @@ class ContextService(mitogen.service.Service):
         count reaches zero.
         """
         LOG.debug('%r.put(%r)', self, context)
-        if self._refs_by_context.get(context, 0) == 0:
-            LOG.warning('%r.put(%r): refcount was 0. shutdown_all called?',
-                        self, context)
-            return
-        self._refs_by_context[context] -= 1
+        self._lock.acquire()
+        try:
+            if self._refs_by_context.get(context, 0) == 0:
+                LOG.warning('%r.put(%r): refcount was 0. shutdown_all called?',
+                            self, context)
+                return
+            self._refs_by_context[context] -= 1
+        finally:
+            self._lock.release()
 
     def key_from_kwargs(self, **kwargs):
         """
@@ -163,29 +187,24 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
         return count
 
-    def _shutdown(self, context, lru=None, new_context=None):
+    def _shutdown_unlocked(self, context, lru=None, new_context=None):
         """
         Arrange for `context` to be shut down, and optionally add `new_context`
         to the LRU list while holding the lock.
         """
-        LOG.info('%r._shutdown(): shutting down %r', self, context)
+        LOG.info('%r._shutdown_unlocked(): shutting down %r', self, context)
         context.shutdown()
 
         key = self._key_by_context[context]
+        del self._response_by_key[key]
+        del self._refs_by_context[context]
+        del self._key_by_context[context]
+        if lru and context in lru:
+            lru.remove(context)
+        if new_context:
+            lru.append(new_context)
 
-        self._lock.acquire()
-        try:
-            del self._response_by_key[key]
-            del self._refs_by_context[context]
-            del self._key_by_context[context]
-            if lru and context in lru:
-                lru.remove(context)
-            if new_context:
-                lru.append(new_context)
-        finally:
-            self._lock.release()
-
-    def _update_lru(self, new_context, spec, via):
+    def _update_lru_unlocked(self, new_context, spec, via):
         """
         Update the LRU ("MRU"?) list associated with the connection described
         by `kwargs`, destroying the most recently created context if the list
@@ -204,16 +223,27 @@ class ContextService(mitogen.service.Service):
                         'but they are all marked as in-use.', via)
             return
 
-        self._shutdown(context, lru=lru, new_context=new_context)
+        self._shutdown_unlocked(context, lru=lru, new_context=new_context)
+
+    def _update_lru(self, new_context, spec, via):
+        self._lock.acquire()
+        try:
+            self._update_lru_unlocked(new_context, spec, via)
+        finally:
+            self._lock.release()
 
     @mitogen.service.expose(mitogen.service.AllowParents())
     def shutdown_all(self):
         """
         For testing use, arrange for all connections to be shut down.
         """
-        for context in list(self._key_by_context):
-            self._shutdown(context)
-        self._lru_by_via = {}
+        self._lock.acquire()
+        try:
+            for context in list(self._key_by_context):
+                self._shutdown_unlocked(context)
+            self._lru_by_via = {}
+        finally:
+            self._lock.release()
 
     def _on_stream_disconnect(self, stream):
         """
@@ -249,8 +279,19 @@ class ContextService(mitogen.service.Service):
     )
 
     def _send_module_forwards(self, context):
-        for fullname in self.ALWAYS_PRELOAD:
-            self.router.responder.forward_module(context, fullname)
+        self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
+
+    _candidate_temp_dirs = None
+
+    def _get_candidate_temp_dirs(self):
+        """
+        Return a list of locations to try to create the single temporary
+        directory used by the run. This simply caches the (expensive) plugin
+        load of :func:`_get_candidate_temp_dirs`.
+        """
+        if self._candidate_temp_dirs is None:
+            self._candidate_temp_dirs = _get_candidate_temp_dirs()
+        return self._candidate_temp_dirs
 
     def _connect(self, key, spec, via=None):
         """
@@ -298,8 +339,11 @@ class ContextService(mitogen.service.Service):
                                 lambda: self._on_stream_disconnect(stream))
 
         self._send_module_forwards(context)
-        init_child_result = context.call(ansible_mitogen.target.init_child,
-                                         log_level=LOG.getEffectiveLevel())
+        init_child_result = context.call(
+            ansible_mitogen.target.init_child,
+            log_level=LOG.getEffectiveLevel(),
+            candidate_temp_dirs=self._get_candidate_temp_dirs(),
+        )
 
         if os.environ.get('MITOGEN_DUMP_THREAD_STACKS'):
             from mitogen import debug
@@ -345,6 +389,12 @@ class ContextService(mitogen.service.Service):
 
         return latch
 
+    disconnect_msg = (
+        'Channel was disconnected while connection attempt was in progress; '
+        'this may be caused by an abnormal Ansible exit, or due to an '
+        'unreliable target.'
+    )
+
     @mitogen.service.expose(mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
         'stack': list
@@ -372,6 +422,13 @@ class ContextService(mitogen.service.Service):
                 if isinstance(result, tuple):  # exc_info()
                     reraise(*result)
                 via = result['context']
+            except mitogen.core.ChannelError:
+                return {
+                    'context': None,
+                    'init_child_result': None,
+                    'method_name': spec['method'],
+                    'msg': self.disconnect_msg,
+                }
             except mitogen.core.StreamError as e:
                 return {
                     'context': None,
@@ -388,6 +445,8 @@ class ModuleDepService(mitogen.service.Service):
     Scan a new-style module and produce a cached mapping of module_utils names
     to their resolved filesystem paths.
     """
+    invoker_class = mitogen.service.SerializedInvoker
+
     def __init__(self, *args, **kwargs):
         super(ModuleDepService, self).__init__(*args, **kwargs)
         self._cache = {}

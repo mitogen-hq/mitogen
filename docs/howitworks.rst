@@ -298,8 +298,9 @@ parent and child. Integers use big endian in their encoded form.
     * - `reply_to`
       - 4
       - Integer target handle to direct any reply to this message. Used to
-        receive a one-time reply, such as the return value of a function call.
-        :data:`IS_DEAD` has a special meaning when it appears in this field.
+        receive a one-time reply, such as the return value of a function call,
+        or to signal a special condition for the message. :ref:`See below
+        <reply_to_values>` for special values for this field.
 
     * - `length`
       - 4
@@ -332,7 +333,7 @@ Masters listen on the following handles:
     Receives the name of a module to load `fullname`, locates the source code
     for `fullname`, and routes one or more :py:data:`LOAD_MODULE` messages back
     towards the sender of the :py:data:`GET_MODULE` request. If lookup fails,
-    ``None`` is sent instead.
+    :data:`None` is sent instead.
 
     See :ref:`import-preloading` for a deeper discussion of
     :py:data:`GET_MODULE`/:py:data:`LOAD_MODULE`.
@@ -355,12 +356,13 @@ Children listen on the following handles:
 
     Receives `(pkg_present, path, compressed, related)` tuples, composed of:
 
-    * **pkg_present**: Either ``None`` for a plain ``.py`` module, or a list of
-      canonical names of submodules existing witin this package. For example, a
-      :py:data:`LOAD_MODULE` for the :py:mod:`mitogen` package would return a
-      list like: `["mitogen.core", "mitogen.fakessh", "mitogen.master", ..]`.
-      This list is used by children to avoid generating useless round-trips due
-      to Python 2.x's :keyword:`import` statement behavior.
+    * **pkg_present**: Either :data:`None` for a plain ``.py`` module, or a
+      list of canonical names of submodules existing witin this package. For
+      example, a :py:data:`LOAD_MODULE` for the :py:mod:`mitogen` package would
+      return a list like: `["mitogen.core", "mitogen.fakessh",
+      "mitogen.master", ..]`. This list is used by children to avoid generating
+      useless round-trips due to Python 2.x's :keyword:`import` statement
+      behavior.
     * **path**: Original filesystem where the module was found on the master.
     * **compressed**: :py:mod:`zlib`-compressed module source code.
     * **related**: list of canonical module names on which this module appears
@@ -372,11 +374,16 @@ Children listen on the following handles:
 .. currentmodule:: mitogen.core
 .. data:: CALL_FUNCTION
 
-    Receives `(mod_name, class_name, func_name, args, kwargs)`
-    5-tuples from
-    :py:meth:`call_async() <mitogen.parent.Context.call_async>`,
-    imports ``mod_name``, then attempts to execute
-    `class_name.func_name(\*args, \**kwargs)`.
+    Receives `(chain_id, mod_name, class_name, func_name, args, kwargs)`
+    6-tuples from :class:`mitogen.parent.CallChain`, imports ``mod_name``, then
+    attempts to execute `class_name.func_name(\*args, \**kwargs)`.
+
+    * `chain_id`: if not :data:`None`, an identifier unique to the originating
+      :class:`mitogen.parent.CallChain`. When set, if an exception occurs
+      during a call, future calls with the same ID automatically fail with the
+      same exception without ever executing, and failed calls with no
+      `reply_to` set are not dumped to the logging framework as they otherwise
+      would. This is used to implement pipelining.
 
     When this channel is closed (by way of receiving a dead message), the
     child's main thread begins graceful shutdown of its own :py:class:`Broker`
@@ -466,23 +473,14 @@ Non-master parents also listen on the following handles:
     ensuring they are cached and deduplicated at each hop in the chain leading
     to the target context.
 
+.. _reply_to_values:
+
 Special values for the `reply_to` field:
 
 .. _IS_DEAD:
 .. currentmodule:: mitogen.core
-.. data:: IS_DEAD
+.. autodata:: IS_DEAD
 
-    Special value used to signal disconnection or the inability to route a
-    message, when it appears in the `reply_to` field. Usually causes
-    :class:`mitogen.core.ChannelError` to be raised when it is received.
-
-    It indicates the sender did not know how to process the message, or wishes
-    no further messages to be delivered to it. It is used when:
-
-    * a remote receiver is disconnected or explicitly closed.
-    * a related message could not be delivered due to no route existing for it.
-    * a router is being torn down, as a sentinel value to notify
-      :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 
 
 Additional handles are created to receive the result of every function call

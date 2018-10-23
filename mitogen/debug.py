@@ -183,15 +183,16 @@ def install_handler():
     signal.signal(signal.SIGUSR2, _handler)
 
 
-def _logging_main():
+def _logging_main(secs):
     while True:
-        time.sleep(5)
+        time.sleep(secs)
         LOG.info('PERIODIC THREAD DUMP\n\n%s', get_snapshot())
 
 
-def dump_to_logger():
+def dump_to_logger(secs=5):
     th = threading.Thread(
         target=_logging_main,
+        kwargs={'secs': secs},
         name='mitogen.debug.dump_to_logger',
     )
     th.setDaemon(True)
