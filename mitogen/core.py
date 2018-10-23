@@ -1085,6 +1085,9 @@ class Stream(BasicStream):
         self._output_buf = collections.deque()
         self._input_buf_len = 0
         self._output_buf_len = 0
+        #: Routing records the dst_id of every message arriving from this
+        #: stream. Any arriving DEL_ROUTE is rebroadcast for any such ID.
+        self.egress_ids = set()
 
     def construct(self):
         pass
@@ -1837,6 +1840,9 @@ class Router(object):
 
             if in_stream.auth_id is not None:
                 msg.auth_id = in_stream.auth_id
+
+            # Maintain a set of IDs the source ever communicated with.
+            in_stream.egress_ids.add(msg.dst_id)
 
         if msg.dst_id == mitogen.context_id:
             return self._invoke(msg, in_stream)

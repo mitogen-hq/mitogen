@@ -314,5 +314,16 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue('policy refused message: ' in logs.stop())
 
 
+class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
+    def test_egress_ids_populated(self):
+        # Ensure Stream.egress_ids is populated on message reception.
+        c1 = self.router.fork()
+        stream = self.router.stream_by_id(c1.context_id)
+        self.assertEquals(set(), stream.egress_ids)
+
+        c1.call(time.sleep, 0)
+        self.assertEquals(set([mitogen.context_id]), stream.egress_ids)
+
+
 if __name__ == '__main__':
     unittest2.main()
