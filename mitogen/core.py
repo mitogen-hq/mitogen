@@ -1870,8 +1870,9 @@ class Router(object):
 
         dead = False
         if out_stream is None:
-            LOG.error('%r: no route for %r, my ID is %r',
-                      self, msg, mitogen.context_id)
+            if msg.reply_to not in (0, IS_DEAD):
+                LOG.error('%r: no route for %r, my ID is %r',
+                          self, msg, mitogen.context_id)
             dead = True
 
         if in_stream and self.unidirectional and not dead and \

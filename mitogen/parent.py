@@ -1598,11 +1598,12 @@ class Router(mitogen.core.Router):
 
     def del_route(self, target_id):
         LOG.debug('%r.del_route(%r)', self, target_id)
-        try:
-            del self._stream_by_id[target_id]
-        except KeyError:
-            LOG.error('%r: cant delete route to %r: no such stream',
-                      self, target_id)
+        # DEL_ROUTE may be sent by a parent if it knows this context sent
+        # messages to a peer that has now disconnected, to let us raise
+        # 'disconnect' event on the appropriate Context instance. In that case,
+        # we won't a matching _stream_by_id entry for the disappearing route,
+        # so don't raise an error for a missing key here.
+        self._stream_by_id.pop(target_id, None)
 
     def get_module_blacklist(self):
         if mitogen.context_id == 0:
