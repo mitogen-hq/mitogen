@@ -256,8 +256,9 @@ class ContextService(mitogen.service.Service):
         # in _latches_by_key below.
         self._lock.acquire()
         try:
+            routes = self.router.route_monitor.get_routes(stream)
             for context, key in list(self._key_by_context.items()):
-                if context.context_id in stream.routes:
+                if context.context_id in routes:
                     LOG.info('Dropping %r due to disconnect of %r',
                              context, stream)
                     self._response_by_key.pop(key, None)
