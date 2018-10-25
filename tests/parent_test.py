@@ -336,7 +336,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
             lambda: recv.get())
         self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
 
-    def test_sibling_disconnected(self):
+    def test_near_sibling_disconnected(self):
         # Hard mode: child notices sibling connected to same parent has
         # disconnected.
         c1 = self.router.fork()
@@ -348,6 +348,27 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
 
         recv = c1.call_async(call_func_in_sibling, c2)
         c2.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.CallError,
+            lambda: recv.get().unpickle())
+        self.assertTrue(e.args[0].startswith(
+            'mitogen.core.ChannelError: Channel closed by local end.'
+        ))
+
+    def test_far_sibling_disconnected(self):
+        # God mode: child of child notices child of child of parent has
+        # disconnected.
+        c1 = self.router.fork()
+        c11 = self.router.fork(via=c1)
+
+        c2 = self.router.fork()
+        c22 = self.router.fork(via=c2)
+
+        # Let c1 call functions in c2.
+        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        c11.call(mitogen.parent.upgrade_router)
+
+        recv = c11.call_async(call_func_in_sibling, c22)
+        c22.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.CallError,
             lambda: recv.get().unpickle())
         self.assertTrue(e.args[0].startswith(
