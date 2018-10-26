@@ -1940,6 +1940,25 @@ class Broker(object):
         it = (side.keep_alive for (_, (side, _)) in self.poller.readers)
         return sum(it, 0)
 
+    def defer_sync(self, func):
+        """
+        Block the calling thread while `func` runs on a broker thread.
+
+        :returns:
+            Return value of `func()`.
+        """
+        latch = Latch()
+        def wrapper():
+            try:
+                latch.put(func())
+            except Exception:
+                latch.put(sys.exc_info()[1])
+        self.defer(wrapper)
+        res = latch.get()
+        if isinstance(res, Exception):
+            raise res
+        return res
+
     def _call(self, stream, func):
         try:
             func(self)
@@ -2100,11 +2119,6 @@ class ExternalContext(object):
             _v and LOG.debug('%r: parent stream is gone, dying.', self)
             self.broker.shutdown()
 
-    def _sync(self, func):
-        latch = Latch()
-        self.broker.defer(lambda: latch.put(func()))
-        return latch.get()
-
     def detach(self):
         self.detached = True
         stream = self.router.stream_by_id(mitogen.parent_id)
@@ -2113,7 +2127,7 @@ class ExternalContext(object):
             self.parent.send_await(Message(handle=DETACHING))
             LOG.info('Detaching from %r; parent is %s', stream, self.parent)
             for x in range(20):
-                pending = self._sync(lambda: stream.pending_bytes())
+                pending = self.broker.defer_sync(lambda: stream.pending_bytes())
                 if not pending:
                     break
                 time.sleep(0.05)

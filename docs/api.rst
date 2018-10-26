@@ -1227,6 +1227,14 @@ Broker Class
         thread, or immediately if the current thread is the broker thread. Safe
         to call from any thread.
 
+    .. method:: defer_sync (func)
+
+        Arrange for `func()` to execute on the broker thread, blocking the
+        current thread until a result or exception is available.
+
+        :returns:
+            Call result.
+
     .. method:: start_receive (stream)
 
         Mark the :attr:`receive_side <Stream.receive_side>` on `stream` as
