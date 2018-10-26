@@ -5,6 +5,7 @@ Django==1.6.11  # Last version supporting 2.6.
 mock==2.0.0
 pytz==2018.5
 paramiko==2.3.2  # Last 2.6-compat version.
+cffi==1.11.2  # Random pin to try and fix pyparser==2.18 not having effect
 pycparser==2.18  # Last version supporting 2.6.
 pytest-catchlog==1.2.2
 pytest==3.1.2

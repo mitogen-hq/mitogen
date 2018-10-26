@@ -27,7 +27,7 @@ mkdir "$TMPDIR"
 
 
 echo travis_fold:start:job_setup
-pip install -qqqU debops==0.7.2 ansible==${ANSIBLE_VERSION}
+pip install -qqqU debops==0.7.2 ansible==${ANSIBLE_VERSION} |cat
 debops-init "$TMPDIR/project"
 cd "$TMPDIR/project"
 
