@@ -34,6 +34,7 @@ with ci_lib.Fold('job_setup'):
     os.chdir(TESTS_DIR)
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
 
+    run("pip install -qr requirements.txt")  # tests/ansible/requirements
     # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
     run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
 
