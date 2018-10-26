@@ -160,12 +160,12 @@ def sync_with_broker(broker, timeout=10.0):
 
 class CaptureStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwargs):
-        super(CaptureStreamHandler, self).__init__(*args, **kwargs)
+        logging.StreamHandler.__init__(self, *args, **kwargs)
         self.msgs = []
 
     def emit(self, msg):
         self.msgs.append(msg)
-        return super(CaptureStreamHandler, self).emit(msg)
+        logging.StreamHandler.emit(self, msg)
 
 
 class LogCapturer(object):
