@@ -133,7 +133,7 @@ class RequirePtyTest(testlib.DockerMixin, testlib.TestCase):
             return self.router.ssh(
                 hostname='hostname',
                 username='mitogen__has_sudo',
-                ssh_path=testlib.data_path('fakessh.py'),
+                ssh_path=testlib.data_path('stubs/ssh.py'),
                 **kwargs
             )
         finally:
