@@ -79,7 +79,7 @@ class WstatusToStrTest(testlib.TestCase):
         (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
         self.assertEquals(
             self.func(status),
-            'exited due to signal %s (SIGKILL)' % (signal.SIGKILL,)
+            'exited due to signal %s (SIGKILL)' % (int(signal.SIGKILL),)
         )
 
     # can't test SIGSTOP without POSIX sessions rabbithole
