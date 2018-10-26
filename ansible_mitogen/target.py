@@ -250,7 +250,7 @@ def is_good_temp_dir(path):
             if not os.access(tmp.name, os.X_OK):
                 raise OSError('filesystem appears to be mounted noexec')
         except OSError as e:
-            LOG.debug('temp dir %r unusable: %s: %s', path, e)
+            LOG.debug('temp dir %r unusable: %s', path, e)
             return False
     finally:
         tmp.close()
