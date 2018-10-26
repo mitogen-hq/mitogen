@@ -103,7 +103,8 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_accepts_returns_context(self):
         context = self.local.call(func_returns_arg, self.local)
-        self.assertIsNot(context, self.local)
+        # Unpickling now deduplicates Context instances.
+        self.assertIs(context, self.local)
         self.assertEqual(context.context_id, self.local.context_id)
         self.assertEqual(context.name, self.local.name)
 
@@ -124,7 +125,7 @@ class CallChainTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.parent.CallChain
 
     def setUp(self):
-        super(ChainTest, self).setUp()
+        super(CallChainTest, self).setUp()
         self.local = self.router.fork()
 
     def test_subsequent_calls_produce_same_error(self):
