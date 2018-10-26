@@ -42,6 +42,8 @@ Core Library
   signal the connection has broken, even when one participant is not a parent
   of the other.
 
+* `9ec360c2 <https://github.com/dw/mitogen/commit/9ec360c2>`_: a new
+  :meth:`mitogen.core.Broker.defer_sync` utility function is provided.
 
 
 v0.2.3 (2018-10-23)
