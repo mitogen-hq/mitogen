@@ -7,6 +7,7 @@ import time
 import unittest2
 
 import mitogen
+import mitogen.fork
 import mitogen.master
 import mitogen.service
 import mitogen.unix
@@ -110,6 +111,7 @@ class ClientTest(unittest2.TestCase):
         if os.fork():
             self._test_simple_client(path)
         else:
+            mitogen.fork.on_fork()
             self._test_simple_server(path)
 
 
