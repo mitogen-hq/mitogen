@@ -241,8 +241,7 @@ def is_good_temp_dir(path):
         try:
             os.chmod(tmp.name, int('0700', 8))
         except OSError as e:
-            LOG.debug('temp dir %r unusable: %s: chmod failed: %s',
-                      path, e)
+            LOG.debug('temp dir %r unusable: chmod failed: %s', path, e)
             return False
 
         try:
