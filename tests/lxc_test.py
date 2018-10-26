@@ -11,9 +11,9 @@ def has_subseq(seq, subseq):
     return any(seq[x:x+len(subseq)] == subseq for x in range(0, len(seq)))
 
 
-class FakeLxcAttachTest(testlib.RouterMixin, unittest2.TestCase):
+class ConstructorTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
-        lxc_attach_path = testlib.data_path('fake_lxc_attach.py')
+        lxc_attach_path = testlib.data_path('stubs/lxc-attach.py')
         context = self.router.lxc(
             container='container_name',
             lxc_attach_path=lxc_attach_path,

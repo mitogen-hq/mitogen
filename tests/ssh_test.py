@@ -11,12 +11,12 @@ import testlib
 import plain_old_module
 
 
-class FakeSshTest(testlib.RouterMixin, unittest2.TestCase):
+class ConstructorTest(testlib.RouterMixin, unittest2.TestCase):
     def test_okay(self):
         context = self.router.ssh(
             hostname='hostname',
             username='mitogen__has_sudo',
-            ssh_path=testlib.data_path('fakessh.py'),
+            ssh_path=testlib.data_path('stubs/ssh.py'),
         )
         #context.call(mitogen.utils.log_to_file, '/tmp/log')
         #context.call(mitogen.utils.disable_site_packages)

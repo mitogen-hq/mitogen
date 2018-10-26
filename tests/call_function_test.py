@@ -119,7 +119,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
                           lambda: recv.get().unpickle())
 
 
-class ChainTest(testlib.RouterMixin, testlib.TestCase):
+class CallChainTest(testlib.RouterMixin, testlib.TestCase):
     # Verify mitogen_chain functionality.
     klass = mitogen.parent.CallChain
 
