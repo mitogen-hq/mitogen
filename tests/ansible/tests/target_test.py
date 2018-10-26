@@ -28,10 +28,10 @@ class ApplyModeSpecTest(unittest2.TestCase):
 
     def test_simple(self):
         spec = 'u+rwx,go=x'
-        self.assertEquals(0711, self.func(spec, 0))
+        self.assertEquals(int('0711', 8), self.func(spec, 0))
 
         spec = 'g-rw'
-        self.assertEquals(0717, self.func(spec, 0777))
+        self.assertEquals(int('0717', 8), self.func(spec, int('0777', 8)))
 
 
 class IsGoodTempDirTest(unittest2.TestCase):
