@@ -335,6 +335,11 @@ class LogForwarder(object):
 
 
 class ModuleFinder(object):
+    """
+    Given the name of a loaded module, make a best-effort attempt at finding
+    related modules likely needed by a child context requesting the original
+    module.
+    """
     def __init__(self):
         #: Import machinery is expensive, keep :py:meth`:get_module_source`
         #: results around.
@@ -477,7 +482,8 @@ class ModuleFinder(object):
     def resolve_relpath(self, fullname, level):
         """Given an ImportFrom AST node, guess the prefix that should be tacked
         on to an alias name to produce a canonical name. `fullname` is the name
-        of the module in which the ImportFrom appears."""
+        of the module in which the ImportFrom appears.
+        """
         mod = sys.modules.get(fullname, None)
         if hasattr(mod, '__path__'):
             fullname += '.__init__'
@@ -499,7 +505,7 @@ class ModuleFinder(object):
 
     def find_related_imports(self, fullname):
         """
-        Return a list of non-stdlb modules that are directly imported by
+        Return a list of non-stdlib modules that are directly imported by
         `fullname`, plus their parents.
 
         The list is determined by retrieving the source code of
@@ -550,8 +556,8 @@ class ModuleFinder(object):
         Return a list of non-stdlib modules that are imported directly or
         indirectly by `fullname`, plus their parents.
 
-        This method is like :py:meth:`on_disconect`, but it also recursively
-        searches any modules which are imported by `fullname`.
+        This method is like :py:meth:`find_related_imports`, but also
+        recursively searches any modules which are imported by `fullname`.
 
         :param fullname: Fully qualified name of an _already imported_ module
             for which source code can be retrieved
