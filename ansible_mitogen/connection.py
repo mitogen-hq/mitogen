@@ -427,16 +427,30 @@ def config_from_hostvars(transport, inventory_name, connection,
 
 
 class CallChain(mitogen.parent.CallChain):
+    """
+    Extend :class:`mitogen.parent.CallChain` to additionally cause the
+    associated :class:`Connection` to be reset if a ChannelError occurs.
+
+    This only catches failures that occur while a call is pnding, it is a
+    stop-gap until a more general method is available to notice connection in
+    every situation.
+    """
     call_aborted_msg = (
         'Mitogen was disconnected from the remote environment while a call '
         'was in-progress. If you feel this is in error, please file a bug. '
         'Original error was: %s'
     )
 
+    def __init__(self, connection, context, pipelined=False):
+        super(CallChain, self).__init__(context, pipelined)
+        #: The connection to reset on CallError.
+        self._connection = connection
+
     def _rethrow(self, recv):
         try:
             return recv.get().unpickle()
         except mitogen.core.ChannelError as e:
+            self._connection.reset()
             raise ansible.errors.AnsibleConnectionFailure(
                 self.call_aborted_msg % (e,)
             )
@@ -682,7 +696,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(dct['msg'])
 
         self.context = dct['context']
-        self.chain = CallChain(self.context, pipelined=True)
+        self.chain = CallChain(self, self.context, pipelined=True)
         if self._play_context.become:
             self.login_context = dct['via']
         else:
