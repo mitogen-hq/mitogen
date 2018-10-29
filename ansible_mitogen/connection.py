@@ -550,7 +550,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
-        self.close(new_task=True)
+        self._reset(mode='put')
 
     def get_task_var(self, key, default=None):
         if self._task_vars and key in self._task_vars:
@@ -709,6 +709,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.get_chain().call_no_reply(os.mkdir, self._shell.tmpdir)
         return self._shell.tmpdir
 
+    def _reset_tmp_path(self):
+        """
+        Called by _reset(); ask the remote context to delete any temporary
+        directory created for the action. CallChain is not used here to ensure
+        exception is logged by the context on failure, since the CallChain
+        itself is about to be destructed.
+        """
+        if getattr(self._shell, 'tmpdir', None) is not None:
+            self.context.call_no_reply(
+                ansible_mitogen.target.prune_tree,
+                self._shell.tmpdir,
+            )
+            self._shell.tmpdir = None
+
     def _connect(self):
         """
         Establish a connection to the master process's UNIX listener socket,
@@ -727,37 +741,52 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         stack = self._build_stack()
         self._connect_stack(stack)
 
-    def close(self, new_task=False):
+    def _reset(self, mode):
         """
-        Arrange for the mitogen.master.Router running in the worker to
-        gracefully shut down, and wait for shutdown to complete. Safe to call
-        multiple times.
-        """
-        if getattr(self._shell, 'tmpdir', None) is not None:
-            # Avoid CallChain to ensure exception is logged on failure.
-            self.context.call_no_reply(
-                ansible_mitogen.target.prune_tree,
-                self._shell.tmpdir,
-            )
-            self._shell.tmpdir = None
+        Forget everything we know about the connected context.
 
-        if self.context:
-            self.chain.reset()
-            self.parent.call_service(
-                service_name='ansible_mitogen.services.ContextService',
-                method_name='put',
-                context=self.context
-            )
+        :param str mode:
+            Name of ContextService method to use to discard the context, either
+            'put' or 'reset'.
+        """
+        if not self.context:
+            return
+
+        self._reset_tmp_path()
+        self.chain.reset()
+        self.parent.call_service(
+            service_name='ansible_mitogen.services.ContextService',
+            method_name=mode,
+            context=self.context
+        )
 
         self.context = None
         self.login_context = None
         self.init_child_result = None
         self.chain = None
-        if self.broker and not new_task:
+
+    def close(self):
+        """
+        Arrange for the mitogen.master.Router running in the worker to
+        gracefully shut down, and wait for shutdown to complete. Safe to call
+        multiple times.
+        """
+        self._reset(mode='put')
+        if self.broker:
             self.broker.shutdown()
             self.broker.join()
             self.broker = None
             self.router = None
+
+    def reset(self):
+        """
+        Explicitly terminate the connection to the remote host. This discards
+        any local state we hold for the connection, returns the Connection to
+        the 'disconnected' state, and informs ContextService the connection is
+        bad somehow, and should be shut down and discarded.
+        """
+        self._connect()
+        self._reset(mode='reset')
 
     def get_chain(self, use_login=False, use_fork=False):
         """
