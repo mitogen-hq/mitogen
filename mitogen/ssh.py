@@ -265,7 +265,7 @@ class Stream(mitogen.parent.Stream):
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
             LOG.debug('%r: accepting host key', self)
-            self.tty_stream.transmit_side.write(b('y\n'))
+            self.tty_stream.transmit_side.write(b('yes\n'))
             return
 
         # _host_key_prompt() should never be reached with ignore or enforce

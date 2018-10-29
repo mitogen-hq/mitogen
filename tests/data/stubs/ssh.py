@@ -19,7 +19,6 @@ PERMDENIED_CLASSIC_MSG = 'Permission denied (publickey,password)\n'
 PERMDENIED_75_MSG = 'chicken@nandos.com: permission denied (publickey,password)\n'
 
 
-
 def tty(msg):
     fp = open('/dev/tty', 'wb', 0)
     fp.write(msg.encode())
@@ -41,10 +40,10 @@ def confirm(msg):
         fp.close()
 
 
-mode = os.getenv('FAKESSH_MODE')
+mode = os.getenv('STUBSSH_MODE')
 
 if mode == 'ask':
-    assert 'y\n' == confirm(HOST_KEY_ASK_MSG)
+    assert 'yes\n' == confirm(HOST_KEY_ASK_MSG)
 
 elif mode == 'strict':
     stderr(HOST_KEY_STRICT_MSG)

@@ -51,6 +51,11 @@ Core Library
   signal the connection has broken, even when one participant is not a parent
   of the other.
 
+* `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
+   "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
+   was configured. This would lead to connection timeouts due to the hung
+   response.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
