@@ -24,6 +24,15 @@ Mitogen for Ansible
 Enhancements
 ^^^^^^^^^^^^
 
+* `#369 <https://github.com/dw/mitogen/issues/369>`_: :meth:`Connection.reset`
+  is implemented, allowing `meta: reset_connection
+  <https://docs.ansible.com/ansible/latest/modules/meta_module.html>`_ to shut
+  down the remote interpreter as expected, and improving support for the
+  `reboot
+  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
+  module.
+
+
 Fixes
 ^^^^^
 
