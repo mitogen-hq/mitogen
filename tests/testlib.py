@@ -15,6 +15,11 @@ import mitogen.master
 import mitogen.utils
 
 try:
+    import faulthandler
+except ImportError:
+    pass
+
+try:
     import urlparse
 except ImportError:
     import urllib.parse as urlparse
@@ -31,6 +36,9 @@ sys.path.append(DATA_DIR)
 
 if mitogen.is_master:
     mitogen.utils.log_to_file()
+
+if faulthandler is not None:
+    faulthandler.enable()
 
 
 def data_path(suffix):
