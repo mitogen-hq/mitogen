@@ -89,6 +89,24 @@ def _get_candidate_temp_dirs():
     return mitogen.utils.cast(dirs)
 
 
+def key_from_dict(**kwargs):
+    """
+    Return a unique string representation of a dict as quickly as possible.
+    Used to generated deduplication keys from a request.
+    """
+    out = []
+    stack = [kwargs]
+    while stack:
+        obj = stack.pop()
+        if isinstance(obj, dict):
+            stack.extend(sorted(obj.items()))
+        elif isinstance(obj, (list, tuple)):
+            stack.extend(obj)
+        else:
+            out.append(str(obj))
+    return ''.join(out)
+
+
 class Error(Exception):
     pass
 
@@ -113,7 +131,7 @@ class ContextService(mitogen.service.Service):
         super(ContextService, self).__init__(*args, **kwargs)
         self._lock = threading.Lock()
         #: Records the :meth:`get` result dict for successful calls, returned
-        #: for identical subsequent calls. Keyed by :meth:`key_from_kwargs`.
+        #: for identical subsequent calls. Keyed by :meth:`key_from_dict`.
         self._response_by_key = {}
         #: List of :class:`mitogen.core.Latch` awaiting the result for a
         #: particular key.
@@ -126,7 +144,7 @@ class ContextService(mitogen.service.Service):
         #: :attr:`max_interpreters` is reached, the most recently used context
         #: is destroyed to make room for any additional context.
         self._lru_by_via = {}
-        #: :meth:`key_from_kwargs` result by Context.
+        #: :func:`key_from_dict` result by Context.
         self._key_by_context = {}
 
     @mitogen.service.expose(mitogen.service.AllowParents())
@@ -149,29 +167,13 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
-    def key_from_kwargs(self, **kwargs):
-        """
-        Generate a deduplication key from the request.
-        """
-        out = []
-        stack = [kwargs]
-        while stack:
-            obj = stack.pop()
-            if isinstance(obj, dict):
-                stack.extend(sorted(obj.items()))
-            elif isinstance(obj, (list, tuple)):
-                stack.extend(obj)
-            else:
-                out.append(str(obj))
-        return ''.join(out)
-
     def _produce_response(self, key, response):
         """
         Reply to every waiting request matching a configuration key with a
         response dictionary, deleting the list of waiters when done.
 
         :param str key:
-            Result of :meth:`key_from_kwargs`
+            Result of :meth:`key_from_dict`
         :param dict response:
             Response dictionary
         :returns:
@@ -361,7 +363,7 @@ class ContextService(mitogen.service.Service):
 
     def _wait_or_start(self, spec, via=None):
         latch = mitogen.core.Latch()
-        key = self.key_from_kwargs(via=via, **spec)
+        key = key_from_dict(via=via, **spec)
         self._lock.acquire()
         try:
             response = self._response_by_key.get(key)
