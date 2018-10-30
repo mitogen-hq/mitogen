@@ -32,6 +32,17 @@ def subprocess__check_output(*popenargs, **kwargs):
 if not hasattr(subprocess, 'check_output'):
     subprocess.check_output = subprocess__check_output
 
+
+# -----------------
+
+# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
+
+sys.stdout = os.popen('stdbuf -oL cat', 'w', 1)
+os.dup2(sys.stdout.fileno(), 1)
+
+sys.stderr = sys.stdout
+os.dup2(sys.stderr.fileno(), 2)
+
 # -----------------
 
 def _argv(s, *args):

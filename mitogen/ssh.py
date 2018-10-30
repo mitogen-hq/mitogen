@@ -31,6 +31,7 @@ Functionality to allow establishing new slave contexts over an SSH connection.
 """
 
 import logging
+import re
 import time
 
 try:
@@ -46,9 +47,15 @@ LOG = logging.getLogger('mitogen')
 
 # sshpass uses 'assword' because it doesn't lowercase the input.
 PASSWORD_PROMPT = b('password')
-PERMDENIED_PROMPT = b('permission denied')
 HOSTKEY_REQ_PROMPT = b('are you sure you want to continue connecting (yes/no)?')
 HOSTKEY_FAIL = b('host key verification failed.')
+
+# [user@host: ] permission denied
+PERMDENIED_RE = re.compile(
+    ('(?:[^@]+@[^:]+: )?'  # Absent in OpenSSH <7.5
+     'Permission denied').encode(),
+    re.I
+)
 
 
 DEBUG_PREFIXES = (b('debug1:'), b('debug2:'), b('debug3:'))
@@ -258,7 +265,7 @@ class Stream(mitogen.parent.Stream):
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
             LOG.debug('%r: accepting host key', self)
-            self.tty_stream.transmit_side.write(b('y\n'))
+            self.tty_stream.transmit_side.write(b('yes\n'))
             return
 
         # _host_key_prompt() should never be reached with ignore or enforce
@@ -289,11 +296,7 @@ class Stream(mitogen.parent.Stream):
                 self._host_key_prompt()
             elif HOSTKEY_FAIL in buf.lower():
                 raise HostKeyError(self.hostkey_failed_msg)
-            elif buf.lower().startswith((
-                    PERMDENIED_PROMPT,
-                    b("%s@%s: " % (self.username, self.hostname))
-                        + PERMDENIED_PROMPT,
-                )):
+            elif PERMDENIED_RE.match(buf):
                 # issue #271: work around conflict with user shell reporting
                 # 'permission denied' e.g. during chdir($HOME) by only matching
                 # it at the start of the line.

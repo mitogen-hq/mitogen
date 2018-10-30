@@ -15,6 +15,11 @@ import mitogen.master
 import mitogen.utils
 
 try:
+    import faulthandler
+except ImportError:
+    pass
+
+try:
     import urlparse
 except ImportError:
     import urllib.parse as urlparse
@@ -31,6 +36,9 @@ sys.path.append(DATA_DIR)
 
 if mitogen.is_master:
     mitogen.utils.log_to_file()
+
+if faulthandler is not None:
+    faulthandler.enable()
 
 
 def data_path(suffix):
@@ -160,12 +168,12 @@ def sync_with_broker(broker, timeout=10.0):
 
 class CaptureStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwargs):
-        super(CaptureStreamHandler, self).__init__(*args, **kwargs)
+        logging.StreamHandler.__init__(self, *args, **kwargs)
         self.msgs = []
 
     def emit(self, msg):
         self.msgs.append(msg)
-        return super(CaptureStreamHandler, self).emit(msg)
+        logging.StreamHandler.emit(self, msg)
 
 
 class LogCapturer(object):

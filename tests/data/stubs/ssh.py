@@ -15,6 +15,9 @@ Are you sure you want to continue connecting (yes/no)?
 
 HOST_KEY_STRICT_MSG = """Host key verification failed.\n"""
 
+PERMDENIED_CLASSIC_MSG = 'Permission denied (publickey,password)\n'
+PERMDENIED_75_MSG = 'chicken@nandos.com: permission denied (publickey,password)\n'
+
 
 def tty(msg):
     fp = open('/dev/tty', 'wb', 0)
@@ -37,11 +40,21 @@ def confirm(msg):
         fp.close()
 
 
-if os.getenv('FAKESSH_MODE') == 'ask':
-    assert 'y\n' == confirm(HOST_KEY_ASK_MSG)
+mode = os.getenv('STUBSSH_MODE')
 
-if os.getenv('FAKESSH_MODE') == 'strict':
+if mode == 'ask':
+    assert 'yes\n' == confirm(HOST_KEY_ASK_MSG)
+
+elif mode == 'strict':
     stderr(HOST_KEY_STRICT_MSG)
+    sys.exit(255)
+
+elif mode == 'permdenied_classic':
+    stderr(PERMDENIED_CLASSIC_MSG)
+    sys.exit(255)
+
+elif mode == 'permdenied_75':
+    stderr(PERMDENIED_75_MSG)
     sys.exit(255)
 
 

@@ -241,8 +241,7 @@ def is_good_temp_dir(path):
         try:
             os.chmod(tmp.name, int('0700', 8))
         except OSError as e:
-            LOG.debug('temp dir %r unusable: %s: chmod failed: %s',
-                      path, e)
+            LOG.debug('temp dir %r unusable: chmod failed: %s', path, e)
             return False
 
         try:
@@ -250,7 +249,7 @@ def is_good_temp_dir(path):
             if not os.access(tmp.name, os.X_OK):
                 raise OSError('filesystem appears to be mounted noexec')
         except OSError as e:
-            LOG.debug('temp dir %r unusable: %s: %s', path, e)
+            LOG.debug('temp dir %r unusable: %s', path, e)
             return False
     finally:
         tmp.close()

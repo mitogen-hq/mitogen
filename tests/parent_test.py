@@ -30,6 +30,11 @@ def wait_for_child(pid, timeout=1.0):
     assert False, "wait_for_child() timed out"
 
 
+@mitogen.core.takes_econtext
+def call_func_in_sibling(ctx, econtext):
+    ctx.call(time.sleep, 99999)
+
+
 class GetDefaultRemoteNameTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.get_default_remote_name)
 
@@ -74,7 +79,7 @@ class WstatusToStrTest(testlib.TestCase):
         (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
         self.assertEquals(
             self.func(status),
-            'exited due to signal %s (SIGKILL)' % (signal.SIGKILL,)
+            'exited due to signal %s (SIGKILL)' % (int(signal.SIGKILL),)
         )
 
     # can't test SIGSTOP without POSIX sessions rabbithole
@@ -296,6 +301,79 @@ class WriteAllTest(unittest2.TestCase):
             ))
         finally:
             proc.terminate()
+
+
+class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
+    def test_child_disconnected(self):
+        # Easy mode: process notices its own directly connected child is
+        # disconnected.
+        c1 = self.router.fork()
+        recv = c1.call_async(time.sleep, 9999)
+        c1.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+
+    def test_indirect_child_disconnected(self):
+        # Achievement unlocked: process notices an indirectly connected child
+        # is disconnected.
+        c1 = self.router.fork()
+        c2 = self.router.fork(via=c1)
+        recv = c2.call_async(time.sleep, 9999)
+        c2.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+
+    def test_indirect_child_intermediary_disconnected(self):
+        # Battlefield promotion: process notices indirect child disconnected
+        # due to an intermediary child disconnecting.
+        c1 = self.router.fork()
+        c2 = self.router.fork(via=c1)
+        recv = c2.call_async(time.sleep, 9999)
+        c1.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+
+    def test_near_sibling_disconnected(self):
+        # Hard mode: child notices sibling connected to same parent has
+        # disconnected.
+        c1 = self.router.fork()
+        c2 = self.router.fork()
+
+        # Let c1 call functions in c2.
+        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        c1.call(mitogen.parent.upgrade_router)
+
+        recv = c1.call_async(call_func_in_sibling, c2)
+        c2.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.CallError,
+            lambda: recv.get().unpickle())
+        self.assertTrue(e.args[0].startswith(
+            'mitogen.core.ChannelError: Channel closed by local end.'
+        ))
+
+    def test_far_sibling_disconnected(self):
+        # God mode: child of child notices child of child of parent has
+        # disconnected.
+        c1 = self.router.fork()
+        c11 = self.router.fork(via=c1)
+
+        c2 = self.router.fork()
+        c22 = self.router.fork(via=c2)
+
+        # Let c1 call functions in c2.
+        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        c11.call(mitogen.parent.upgrade_router)
+
+        recv = c11.call_async(call_func_in_sibling, c22)
+        c22.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.CallError,
+            lambda: recv.get().unpickle())
+        self.assertTrue(e.args[0].startswith(
+            'mitogen.core.ChannelError: Channel closed by local end.'
+        ))
 
 
 if __name__ == '__main__':

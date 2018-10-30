@@ -15,6 +15,59 @@ Release Notes
     </style>
 
 
+v0.2.4 (2018-??-??)
+------------------
+
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+
+Enhancements
+^^^^^^^^^^^^
+
+* `#369 <https://github.com/dw/mitogen/issues/369>`_: :meth:`Connection.reset`
+  is implemented, allowing `meta: reset_connection
+  <https://docs.ansible.com/ansible/latest/modules/meta_module.html>`_ to shut
+  down the remote interpreter as expected, and improving support for the
+  `reboot
+  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
+  module.
+
+
+Fixes
+^^^^^
+
+Core Library
+~~~~~~~~~~~~
+
+* `#76 <https://github.com/dw/mitogen/issues/76>`_: routing maintains the set
+  of destination context ID ever received on each stream, and when
+  disconnection occurs, propagates ``DEL_ROUTE`` messages downwards towards
+  every stream that ever communicated with a disappearing peer, rather than
+  simply toward parents.
+
+  Conversations between nodes in any level of the connection tree should
+  correctly receive ``DEL_ROUTE`` messages when a participant disconnects,
+  allowing receivers to be woken with :class:`mitogen.core.ChannelError` to
+  signal the connection has broken, even when one participant is not a parent
+  of the other.
+
+* `#405 <https://github.com/dw/mitogen/issues/405>`_: if a message is rejected
+  due to being too large, and it has a ``reply_to`` set, a dead message is
+  returned to the sender. This ensures function calls exceeding the configured
+  maximum size crash rather than hang.
+
+* `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
+   "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
+   was configured. This would lead to connection timeouts due to the hung
+   response.
+
+* `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
+  7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
+
+* `9ec360c2 <https://github.com/dw/mitogen/commit/9ec360c2>`_: a new
+  :meth:`mitogen.core.Broker.defer_sync` utility function is provided.
+
+
 v0.2.3 (2018-10-23)
 -------------------
 

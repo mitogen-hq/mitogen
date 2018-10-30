@@ -1085,6 +1085,9 @@ class Stream(BasicStream):
         self._output_buf = collections.deque()
         self._input_buf_len = 0
         self._output_buf_len = 0
+        #: Routing records the dst_id of every message arriving from this
+        #: stream. Any arriving DEL_ROUTE is rebroadcast for any such ID.
+        self.egress_ids = set()
 
     def construct(self):
         pass
@@ -1279,7 +1282,7 @@ def _unpickle_context(router, context_id, name):
                 (isinstance(name, UnicodeType) and len(name) < 100))
             ):
         raise TypeError('cannot unpickle Context: bad input')
-    return router.context_class(router, context_id, name)
+    return router.context_by_id(context_id, name=name)
 
 
 class Poller(object):
@@ -1716,9 +1719,26 @@ class Router(object):
         self._last_handle = itertools.count(1000)
         #: handle -> (persistent?, func(msg))
         self._handle_map = {}
+        self.add_handler(self._on_del_route, DEL_ROUTE)
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
+
+    def _on_del_route(self, msg):
+        """
+        Stub DEL_ROUTE handler; fires 'disconnect' events on the corresponding
+        member of :attr:`_context_by_id`. This handler is replaced by
+        :class:`mitogen.parent.RouteMonitor` in an upgraded context.
+        """
+        LOG.error('%r._on_del_route() %r', self, msg)
+        if not msg.is_dead:
+            target_id_s, _, name = msg.data.partition(b(':'))
+            target_id = int(target_id_s, 10)
+            if target_id not in self._context_by_id:
+                LOG.debug('DEL_ROUTE for unknown ID %r: %r', target_id, msg)
+                return
+
+            fire(self._context_by_id[target_id], 'disconnect')
 
     def on_stream_disconnect(self, stream):
         for context in self._context_by_id.values():
@@ -1731,6 +1751,15 @@ class Router(object):
         while self._handle_map:
             _, (_, func, _) = self._handle_map.popitem()
             func(Message.dead())
+
+    def context_by_id(self, context_id, via_id=None, create=True, name=None):
+        context = self._context_by_id.get(context_id)
+        if create and not context:
+            context = self.context_class(self, context_id, name=name)
+            if via_id is not None:
+                context.via = self.context_by_id(via_id)
+            self._context_by_id[context_id] = context
+        return context
 
     def register(self, context, stream):
         _v and LOG.debug('register(%r, %r)', context, stream)
@@ -1803,11 +1832,17 @@ class Router(object):
         except Exception:
             LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
 
+    def _maybe_send_dead(self, msg):
+        if msg.reply_to and not msg.is_dead:
+            msg.reply(Message.dead(), router=self)
+
     def _async_route(self, msg, in_stream=None):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
+
         if len(msg.data) > self.max_message_size:
             LOG.error('message too large (max %d bytes): %r',
                       self.max_message_size, msg)
+            self._maybe_send_dead(msg)
             return
 
         # Perform source verification.
@@ -1829,6 +1864,9 @@ class Router(object):
             if in_stream.auth_id is not None:
                 msg.auth_id = in_stream.auth_id
 
+            # Maintain a set of IDs the source ever communicated with.
+            in_stream.egress_ids.add(msg.dst_id)
+
         if msg.dst_id == mitogen.context_id:
             return self._invoke(msg, in_stream)
 
@@ -1836,21 +1874,18 @@ class Router(object):
         if out_stream is None:
             out_stream = self._stream_by_id.get(mitogen.parent_id)
 
-        dead = False
         if out_stream is None:
-            LOG.error('%r: no route for %r, my ID is %r',
-                      self, msg, mitogen.context_id)
-            dead = True
+            if msg.reply_to not in (0, IS_DEAD):
+                LOG.error('%r: no route for %r, my ID is %r',
+                          self, msg, mitogen.context_id)
+            self._maybe_send_dead(msg)
+            return
 
-        if in_stream and self.unidirectional and not dead and \
-           not (in_stream.is_privileged or out_stream.is_privileged):
+        if in_stream and self.unidirectional and not \
+                (in_stream.is_privileged or out_stream.is_privileged):
             LOG.error('routing mode prevents forward of %r from %r -> %r',
                       msg, in_stream, out_stream)
-            dead = True
-
-        if dead:
-            if msg.reply_to and not msg.is_dead:
-                msg.reply(Message.dead(), router=self)
+            self._maybe_send_dead(msg)
             return
 
         out_stream._send(msg)
@@ -1906,6 +1941,25 @@ class Broker(object):
     def keep_alive(self):
         it = (side.keep_alive for (_, (side, _)) in self.poller.readers)
         return sum(it, 0)
+
+    def defer_sync(self, func):
+        """
+        Block the calling thread while `func` runs on a broker thread.
+
+        :returns:
+            Return value of `func()`.
+        """
+        latch = Latch()
+        def wrapper():
+            try:
+                latch.put(func())
+            except Exception:
+                latch.put(sys.exc_info()[1])
+        self.defer(wrapper)
+        res = latch.get()
+        if isinstance(res, Exception):
+            raise res
+        return res
 
     def _call(self, stream, func):
         try:
@@ -2067,11 +2121,6 @@ class ExternalContext(object):
             _v and LOG.debug('%r: parent stream is gone, dying.', self)
             self.broker.shutdown()
 
-    def _sync(self, func):
-        latch = Latch()
-        self.broker.defer(lambda: latch.put(func()))
-        return latch.get()
-
     def detach(self):
         self.detached = True
         stream = self.router.stream_by_id(mitogen.parent_id)
@@ -2080,7 +2129,7 @@ class ExternalContext(object):
             self.parent.send_await(Message(handle=DETACHING))
             LOG.info('Detaching from %r; parent is %s', stream, self.parent)
             for x in range(20):
-                pending = self._sync(lambda: stream.pending_bytes())
+                pending = self.broker.defer_sync(lambda: stream.pending_bytes())
                 if not pending:
                     break
                 time.sleep(0.05)

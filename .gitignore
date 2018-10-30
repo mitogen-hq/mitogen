@@ -1,6 +1,7 @@
 .coverage
 .tox
 .venv
+venvs/**
 **/.DS_Store
 *.pyc
 *.pyd

@@ -14,7 +14,8 @@ cache:
   - /home/travis/virtualenv
 
 install:
-- pip install -r dev_requirements.txt
+# |cat to disable progress bar.
+- pip install -r dev_requirements.txt |cat
 
 script:
 - |

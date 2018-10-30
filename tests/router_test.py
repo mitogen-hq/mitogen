@@ -1,6 +1,7 @@
 import logging
 import subprocess
 import time
+import zlib
 
 import unittest2
 
@@ -189,20 +190,35 @@ class AddHandlerTest(unittest2.TestCase):
         self.assertTrue(queue.get(timeout=5).is_dead)
 
 
-class MessageSizeTest(testlib.BrokerMixin, unittest2.TestCase):
+class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
     klass = mitogen.master.Router
 
     def test_local_exceeded(self):
         router = self.klass(broker=self.broker, max_message_size=4096)
-        recv = mitogen.core.Receiver(router)
 
         logs = testlib.LogCapturer()
         logs.start()
 
-        sem = mitogen.core.Latch()
+        # Send message and block for one IO loop, so _async_route can run.
         router.route(mitogen.core.Message.pickled(' '*8192))
-        router.broker.defer(sem.put, ' ')  # wlil always run after _async_route
-        sem.get()
+        router.broker.defer_sync(lambda: None)
+
+        expect = 'message too large (max 4096 bytes)'
+        self.assertTrue(expect in logs.stop())
+
+    def test_local_dead_message(self):
+        # Local router should generate dead message when reply_to is set.
+        router = self.klass(broker=self.broker, max_message_size=4096)
+
+        logs = testlib.LogCapturer()
+        logs.start()
+
+        # Try function call. Receiver should be woken by a dead message sent by
+        # router due to message size exceeded.
+        child = router.fork()
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: child.call(zlib.crc32, ' '*8192))
+        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
 
         expect = 'message too large (max 4096 bytes)'
         self.assertTrue(expect in logs.stop())
@@ -312,6 +328,17 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         msg = 'mitogen.core.CallError: Refused by policy.'
         self.assertTrue(msg in str(e))
         self.assertTrue('policy refused message: ' in logs.stop())
+
+
+class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
+    def test_egress_ids_populated(self):
+        # Ensure Stream.egress_ids is populated on message reception.
+        c1 = self.router.fork()
+        stream = self.router.stream_by_id(c1.context_id)
+        self.assertEquals(set(), stream.egress_ids)
+
+        c1.call(time.sleep, 0)
+        self.assertEquals(set([mitogen.context_id]), stream.egress_ids)
 
 
 if __name__ == '__main__':

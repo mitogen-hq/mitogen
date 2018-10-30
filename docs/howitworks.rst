@@ -575,6 +575,28 @@ When ``sudo:node22a:webapp`` wants to send a message to
 .. image:: images/route.png
 
 
+Disconnect Propagation
+######################
+
+To ensure timely shutdown when a failure occurs, where some context is awaiting
+a response from another context that has become disconnected,
+:class:`mitogen.core.Router` additionally records the destination context ID of
+every message received on a particular stream.
+
+When ``DEL_ROUTE`` is generated locally or received on some other stream,
+:class:`mitogen.parent.RouteMonitor` uses this to find every stream that ever
+communicated with the route that is about to go away, and forwards the message
+to each found.
+
+The recipient ``DEL_ROUTE`` handler in turn uses the message to find any
+:class:`mitogen.core.Context` in the local process corresponding to the
+disappearing route, and if found, fires a ``disconnected`` event on it.
+
+Any interested party, such as :class:`mitogen.core.Receiver`, may subscribe to
+the event and use it to abort any threads that were asleep waiting for a reply
+that will never arrive.
+
+
 .. _source-verification:
 
 Source Verification

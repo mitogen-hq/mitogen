@@ -69,6 +69,7 @@ from mitogen.core import IOLOG
 
 
 IS_WSL = 'Microsoft' in os.uname()[2]
+itervalues = getattr(dict, 'itervalues', dict.values)
 
 if mitogen.core.PY3:
     xrange = range
@@ -543,6 +544,7 @@ def _upgrade_broker(broker):
               len(old.readers), len(old.writers))
 
 
+@mitogen.core.takes_econtext
 def upgrade_router(econtext):
     if not isinstance(econtext.router, Router):  # TODO
         econtext.broker.defer(_upgrade_broker, econtext.broker)
@@ -911,9 +913,6 @@ class Stream(mitogen.core.Stream):
     def __init__(self, *args, **kwargs):
         super(Stream, self).__init__(*args, **kwargs)
         self.sent_modules = set(['mitogen', 'mitogen.core'])
-        #: List of contexts reachable via this stream; used to cleanup routes
-        #: during disconnection.
-        self.routes = set([self.remote_id])
 
     def construct(self, max_message_size, remote_name=None, python_path=None,
                   debug=False, connect_timeout=None, profiling=False,
@@ -1428,21 +1427,40 @@ class RouteMonitor(object):
             persist=True,
             policy=is_immediate_child,
         )
+        #: Mapping of Stream instance to integer context IDs reachable via the
+        #: stream; used to cleanup routes during disconnection.
+        self._routes_by_stream = {}
 
-    def propagate(self, handle, target_id, name=None):
-        # self.parent is None in the master.
-        if not self.parent:
-            return
-
+    def _send_one(self, stream, handle, target_id, name):
         data = str(target_id)
         if name:
             data = '%s:%s' % (target_id, mitogen.core.b(name))
-        self.parent.send(
+        stream.send(
             mitogen.core.Message(
                 handle=handle,
                 data=data.encode('utf-8'),
+                dst_id=stream.remote_id,
             )
         )
+
+    def _propagate(self, handle, target_id, name=None):
+        if not self.parent:
+            # self.parent is None in the master.
+            return
+
+        stream = self.router.stream_by_id(self.parent.context_id)
+        self._send_one(stream, handle, target_id, name)
+
+    def _child_propagate(self, handle, target_id):
+        """
+        For DEL_ROUTE, we additionally want to broadcast the message to any
+        stream that has ever communicated with the disconnecting ID, so
+        core.py's :meth:`mitogen.core.Router._on_del_route` can turn the
+        message into a disconnect event.
+        """
+        for stream in itervalues(self.router._stream_by_id):
+            if target_id in stream.egress_ids:
+                self._send_one(stream, mitogen.core.DEL_ROUTE, target_id, None)
 
     def notice_stream(self, stream):
         """
@@ -1450,23 +1468,34 @@ class RouteMonitor(object):
         stream, we're also responsible for broadcasting DEL_ROUTE upstream
         if/when that child disconnects.
         """
-        self.propagate(mitogen.core.ADD_ROUTE, stream.remote_id,
-                       stream.name)
+        self._routes_by_stream[stream] = set([stream.remote_id])
+        self._propagate(mitogen.core.ADD_ROUTE, stream.remote_id,
+                        stream.name)
         mitogen.core.listen(
             obj=stream,
             name='disconnect',
             func=lambda: self._on_stream_disconnect(stream),
         )
 
+    def get_routes(self, stream):
+        """
+        Return the set of context IDs reachable on a stream.
+
+        :param mitogen.core.Stream stream:
+        :returns: set([int])
+        """
+        return self._routes_by_stream.get(stream) or set()
+
     def _on_stream_disconnect(self, stream):
         """
         Respond to disconnection of a local stream by
         """
-        LOG.debug('%r is gone; propagating DEL_ROUTE for %r',
-                  stream, stream.routes)
-        for target_id in stream.routes:
+        routes = self._routes_by_stream.pop(stream)
+        LOG.debug('%r is gone; propagating DEL_ROUTE for %r', stream, routes)
+        for target_id in routes:
             self.router.del_route(target_id)
-            self.propagate(mitogen.core.DEL_ROUTE, target_id)
+            self._propagate(mitogen.core.DEL_ROUTE, target_id)
+            self._child_propagate(mitogen.core.DEL_ROUTE, target_id)
 
             context = self.router.context_by_id(target_id, create=False)
             if context:
@@ -1489,9 +1518,9 @@ class RouteMonitor(object):
             return
 
         LOG.debug('Adding route to %d via %r', target_id, stream)
-        stream.routes.add(target_id)
+        self._routes_by_stream[stream].add(target_id)
         self.router.add_route(target_id, stream)
-        self.propagate(mitogen.core.ADD_ROUTE, target_id, target_name)
+        self._propagate(mitogen.core.ADD_ROUTE, target_id, target_name)
 
     def _on_del_route(self, msg):
         if msg.is_dead:
@@ -1505,13 +1534,20 @@ class RouteMonitor(object):
                       target_id, stream, registered_stream)
             return
 
-        LOG.debug('Deleting route to %d via %r', target_id, stream)
-        stream.routes.discard(target_id)
-        self.router.del_route(target_id)
-        self.propagate(mitogen.core.DEL_ROUTE, target_id)
         context = self.router.context_by_id(target_id, create=False)
         if context:
+            LOG.debug('%r: Firing local disconnect for %r', self, context)
             mitogen.core.fire(context, 'disconnect')
+
+        LOG.debug('Deleting route to %d via %r', target_id, stream)
+        routes = self._routes_by_stream.get(stream)
+        if routes:
+            routes.discard(target_id)
+
+        self.router.del_route(target_id)
+        if stream.remote_id != mitogen.parent_id:
+            self._propagate(mitogen.core.DEL_ROUTE, target_id)
+        self._child_propagate(mitogen.core.DEL_ROUTE, target_id)
 
 
 class Router(mitogen.core.Router):
@@ -1562,11 +1598,12 @@ class Router(mitogen.core.Router):
 
     def del_route(self, target_id):
         LOG.debug('%r.del_route(%r)', self, target_id)
-        try:
-            del self._stream_by_id[target_id]
-        except KeyError:
-            LOG.error('%r: cant delete route to %r: no such stream',
-                      self, target_id)
+        # DEL_ROUTE may be sent by a parent if it knows this context sent
+        # messages to a peer that has now disconnected, to let us raise
+        # 'disconnect' event on the appropriate Context instance. In that case,
+        # we won't a matching _stream_by_id entry for the disappearing route,
+        # so don't raise an error for a missing key here.
+        self._stream_by_id.pop(target_id, None)
 
     def get_module_blacklist(self):
         if mitogen.context_id == 0:
@@ -1580,15 +1617,6 @@ class Router(mitogen.core.Router):
 
     def allocate_id(self):
         return self.id_allocator.allocate()
-
-    def context_by_id(self, context_id, via_id=None, create=True):
-        context = self._context_by_id.get(context_id)
-        if create and not context:
-            context = self.context_class(self, context_id)
-            if via_id is not None:
-                context.via = self.context_by_id(via_id)
-            self._context_by_id[context_id] = context
-        return context
 
     connection_timeout_msg = u"Connection timed out."
 

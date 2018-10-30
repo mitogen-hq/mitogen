@@ -52,7 +52,7 @@ def is_path_dead(path):
         s.connect(path)
     except socket.error:
         e = sys.exc_info()[1]
-        return e[0] in (errno.ECONNREFUSED, errno.ENOENT)
+        return e.args[0] in (errno.ECONNREFUSED, errno.ENOENT)
     return False
 
 
@@ -82,7 +82,7 @@ class Listener(mitogen.core.BasicStream):
         sock.setblocking(True)
         try:
             pid, = struct.unpack('>L', sock.recv(4))
-        except socket.error:
+        except (struct.error, socket.error):
             LOG.error('%r: failed to read remote identity: %s',
                       self, sys.exc_info()[1])
             return
