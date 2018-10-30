@@ -49,6 +49,12 @@ class Stream(mitogen.parent.Stream):
     lxc_path = 'lxc'
     python_path = 'python'
 
+    eof_error_hint = (
+        'Note: many versions of LXC do not report program execution failure '
+        'meaningfully. Please check the host logs (/var/log) for more '
+        'information.'
+    )
+
     def construct(self, container, lxc_path=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         self.container = container

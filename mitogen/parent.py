@@ -407,6 +407,8 @@ def write_all(fd, s, deadline=None):
 
     :raises mitogen.core.TimeoutError:
         Bytestring could not be written entirely before deadline was exceeded.
+    :raises mitogen.parent.EofError:
+        Stream indicated EOF, suggesting the child process has exitted.
     :raises mitogen.core.StreamError:
         File descriptor was disconnected before write could complete.
     """
@@ -430,7 +432,7 @@ def write_all(fd, s, deadline=None):
             for fd in poller.poll(timeout):
                 n, disconnected = mitogen.core.io_op(os.write, fd, window)
                 if disconnected:
-                    raise mitogen.core.StreamError('EOF on stream during write')
+                    raise EofError('EOF on stream during write')
 
                 written += n
     finally:
@@ -449,6 +451,8 @@ def iter_read(fds, deadline=None):
 
     :raises mitogen.core.TimeoutError:
         Attempt to read beyond deadline.
+    :raises mitogen.parent.EofError:
+        All streams indicated EOF, suggesting the child process has exitted.
     :raises mitogen.core.StreamError:
         Attempt to read past end of file.
     """
@@ -478,10 +482,9 @@ def iter_read(fds, deadline=None):
         poller.close()
 
     if not poller.readers:
-        raise mitogen.core.StreamError(
-            u'EOF on stream; last 300 bytes received: %r' %
-            (b('').join(bits)[-300:].decode('latin1'),)
-        )
+        raise EofError(u'EOF on stream; last 300 bytes received: %r' %
+                       (b('').join(bits)[-300:].decode('latin1'),))
+
     raise mitogen.core.TimeoutError('read timed out')
 
 
@@ -501,6 +504,8 @@ def discard_until(fd, s, deadline):
 
     :raises mitogen.core.TimeoutError:
         Attempt to read beyond deadline.
+    :raises mitogen.parent.EofError:
+        All streams indicated EOF, suggesting the child process has exitted.
     :raises mitogen.core.StreamError:
         Attempt to read past end of file.
     """
@@ -605,6 +610,14 @@ def wstatus_to_str(status):
         n = os.WSTOPSIG(status)
         return 'stopped due to signal %d (%s)' % (n, SIGNAL_BY_NUM.get(n))
     return 'unknown wait status (%d)' % (status,)
+
+
+class EofError(mitogen.core.StreamError):
+    """
+    Raised by :func:`iter_read` and :func:`write_all` when EOF is detected by
+    the child process.
+    """
+    # inherits from StreamError to maintain compatibility.
 
 
 class Argv(object):
@@ -1105,6 +1118,16 @@ class Stream(mitogen.core.Stream):
             msg = 'Child start failed: %s. Command was: %s' % (e, Argv(args))
             raise mitogen.core.StreamError(msg)
 
+    eof_error_hint = None
+
+    def _adorn_eof_error(self, e):
+        """
+        Used by subclasses to provide additional information in the case of a
+        failed connection.
+        """
+        if self.eof_error_hint:
+            e.args = ('%s\n\n%s' % (e.args[0], self.eof_error_hint),)
+
     def connect(self):
         LOG.debug('%r.connect()', self)
         self.pid, fd, extra_fd = self.start_child()
@@ -1116,6 +1139,10 @@ class Stream(mitogen.core.Stream):
 
         try:
             self._connect_bootstrap(extra_fd)
+        except EofError:
+            e = sys.exc_info()[1]
+            self._adorn_eof_error(e)
+            raise
         except Exception:
             self._reap_child()
             raise
