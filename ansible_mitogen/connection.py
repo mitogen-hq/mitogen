@@ -92,6 +92,12 @@ def _connect_ssh(spec):
     else:
         check_host_keys = 'ignore'
 
+    # #334: tilde-expand private_key_file to avoid implementation difference
+    # between Python and OpenSSH.
+    private_key_file = spec['private_key_file']
+    if private_key_file is not None:
+        private_key_file = os.path.expanduser(private_key_file)
+
     return {
         'method': 'ssh',
         'kwargs': {
@@ -101,7 +107,7 @@ def _connect_ssh(spec):
             'password': optional_secret(spec['password']),
             'port': spec['port'],
             'python_path': spec['python_path'],
-            'identity_file': spec['private_key_file'],
+            'identity_file': private_key_file,
             'identities_only': False,
             'ssh_path': spec['ssh_executable'],
             'connect_timeout': spec['ansible_ssh_timeout'],
