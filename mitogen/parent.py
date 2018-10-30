@@ -407,6 +407,8 @@ def write_all(fd, s, deadline=None):
 
     :raises mitogen.core.TimeoutError:
         Bytestring could not be written entirely before deadline was exceeded.
+    :raises mitogen.parent.EofError:
+        Stream indicated EOF, suggesting the child process has exitted.
     :raises mitogen.core.StreamError:
         File descriptor was disconnected before write could complete.
     """
@@ -430,7 +432,7 @@ def write_all(fd, s, deadline=None):
             for fd in poller.poll(timeout):
                 n, disconnected = mitogen.core.io_op(os.write, fd, window)
                 if disconnected:
-                    raise mitogen.core.StreamError('EOF on stream during write')
+                    raise EofError('EOF on stream during write')
 
                 written += n
     finally:
@@ -449,6 +451,8 @@ def iter_read(fds, deadline=None):
 
     :raises mitogen.core.TimeoutError:
         Attempt to read beyond deadline.
+    :raises mitogen.parent.EofError:
+        All streams indicated EOF, suggesting the child process has exitted.
     :raises mitogen.core.StreamError:
         Attempt to read past end of file.
     """
@@ -478,10 +482,9 @@ def iter_read(fds, deadline=None):
         poller.close()
 
     if not poller.readers:
-        raise mitogen.core.StreamError(
-            u'EOF on stream; last 300 bytes received: %r' %
-            (b('').join(bits)[-300:].decode('latin1'),)
-        )
+        raise EofError(u'EOF on stream; last 300 bytes received: %r' %
+                       (b('').join(bits)[-300:].decode('latin1'),))
+
     raise mitogen.core.TimeoutError('read timed out')
 
 
@@ -501,6 +504,8 @@ def discard_until(fd, s, deadline):
 
     :raises mitogen.core.TimeoutError:
         Attempt to read beyond deadline.
+    :raises mitogen.parent.EofError:
+        All streams indicated EOF, suggesting the child process has exitted.
     :raises mitogen.core.StreamError:
         Attempt to read past end of file.
     """
@@ -607,6 +612,14 @@ def wstatus_to_str(status):
     return 'unknown wait status (%d)' % (status,)
 
 
+class EofError(mitogen.core.StreamError):
+    """
+    Raised by :func:`iter_read` and :func:`write_all` when EOF is detected by
+    the child process.
+    """
+    # inherits from StreamError to maintain compatibility.
+
+
 class Argv(object):
     """
     Wrapper to defer argv formatting when debug logging is disabled.
@@ -681,14 +694,6 @@ class KqueuePoller(mitogen.core.Poller):
     def close(self):
         self._kqueue.close()
 
-    @property
-    def readers(self):
-        return list(self._rfds.items())
-
-    @property
-    def writers(self):
-        return list(self._wfds.items())
-
     def _control(self, fd, filters, flags):
         mitogen.core._vv and IOLOG.debug(
             '%r._control(%r, %r, %r)', self, fd, filters, flags)
@@ -707,7 +712,7 @@ class KqueuePoller(mitogen.core.Poller):
             self, fd, data)
         if fd not in self._rfds:
             self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
-        self._rfds[fd] = data or fd
+        self._rfds[fd] = (data or fd, self._generation)
 
     def stop_receive(self, fd):
         mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd)
@@ -720,7 +725,7 @@ class KqueuePoller(mitogen.core.Poller):
             self, fd, data)
         if fd not in self._wfds:
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
-        self._wfds[fd] = data or fd
+        self._wfds[fd] = (data or fd, self._generation)
 
     def stop_transmit(self, fd):
         mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
@@ -728,7 +733,7 @@ class KqueuePoller(mitogen.core.Poller):
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
             del self._wfds[fd]
 
-    def poll(self, timeout=None):
+    def _poll(self, timeout):
         changelist = self._changelist
         self._changelist = []
         events, _ = mitogen.core.io_op(self._kqueue.control,
@@ -738,13 +743,17 @@ class KqueuePoller(mitogen.core.Poller):
             if event.flags & select.KQ_EV_ERROR:
                 LOG.debug('ignoring stale event for fd %r: errno=%d: %s',
                           fd, event.data, errno.errorcode.get(event.data))
-            elif event.filter == select.KQ_FILTER_READ and fd in self._rfds:
+            elif event.filter == select.KQ_FILTER_READ:
+                data, gen = self._rfds.get(fd, (None, None))
                 # Events can still be read for an already-discarded fd.
-                mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
-                yield self._rfds[fd]
+                if gen and gen < self._generation:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                    yield data
             elif event.filter == select.KQ_FILTER_WRITE and fd in self._wfds:
-                mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
-                yield self._wfds[fd]
+                data, gen = self._wfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                    yield data
 
 
 class EpollPoller(mitogen.core.Poller):
@@ -758,14 +767,6 @@ class EpollPoller(mitogen.core.Poller):
 
     def close(self):
         self._epoll.close()
-
-    @property
-    def readers(self):
-        return list(self._rfds.items())
-
-    @property
-    def writers(self):
-        return list(self._wfds.items())
 
     def _control(self, fd):
         mitogen.core._vv and IOLOG.debug('%r._control(%r)', self, fd)
@@ -784,7 +785,7 @@ class EpollPoller(mitogen.core.Poller):
     def start_receive(self, fd, data=None):
         mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
             self, fd, data)
-        self._rfds[fd] = data or fd
+        self._rfds[fd] = (data or fd, self._generation)
         self._control(fd)
 
     def stop_receive(self, fd):
@@ -795,7 +796,7 @@ class EpollPoller(mitogen.core.Poller):
     def start_transmit(self, fd, data=None):
         mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
             self, fd, data)
-        self._wfds[fd] = data or fd
+        self._wfds[fd] = (data or fd, self._generation)
         self._control(fd)
 
     def stop_transmit(self, fd):
@@ -806,20 +807,24 @@ class EpollPoller(mitogen.core.Poller):
     _inmask = (getattr(select, 'EPOLLIN', 0) |
                getattr(select, 'EPOLLHUP', 0))
 
-    def poll(self, timeout=None):
+    def _poll(self, timeout):
         the_timeout = -1
         if timeout is not None:
             the_timeout = timeout
 
         events, _ = mitogen.core.io_op(self._epoll.poll, the_timeout, 32)
         for fd, event in events:
-            if event & self._inmask and fd in self._rfds:
-                # Events can still be read for an already-discarded fd.
-                mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
-                yield self._rfds[fd]
-            if event & select.EPOLLOUT and fd in self._wfds:
-                mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
-                yield self._wfds[fd]
+            if event & self._inmask:
+                data, gen = self._rfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    # Events can still be read for an already-discarded fd.
+                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                    yield data
+            if event & select.EPOLLOUT:
+                data, gen = self._wfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                    yield data
 
 
 POLLER_BY_SYSNAME = {
@@ -1113,6 +1118,16 @@ class Stream(mitogen.core.Stream):
             msg = 'Child start failed: %s. Command was: %s' % (e, Argv(args))
             raise mitogen.core.StreamError(msg)
 
+    eof_error_hint = None
+
+    def _adorn_eof_error(self, e):
+        """
+        Used by subclasses to provide additional information in the case of a
+        failed connection.
+        """
+        if self.eof_error_hint:
+            e.args = ('%s\n\n%s' % (e.args[0], self.eof_error_hint),)
+
     def connect(self):
         LOG.debug('%r.connect()', self)
         self.pid, fd, extra_fd = self.start_child()
@@ -1124,6 +1139,10 @@ class Stream(mitogen.core.Stream):
 
         try:
             self._connect_bootstrap(extra_fd)
+        except EofError:
+            e = sys.exc_info()[1]
+            self._adorn_eof_error(e)
+            raise
         except Exception:
             self._reap_child()
             raise

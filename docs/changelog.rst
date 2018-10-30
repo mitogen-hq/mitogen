@@ -37,14 +37,18 @@ Fixes
 ^^^^^
 
 * `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
-   tilde-expands private key paths using Ansible's logic. Previously Mitogen
-   passed the path unmodified to SSH, which would expand it using
-   :func:`os.getpwent`.
+  tilde-expands private key paths using Ansible's logic. Previously Mitogen
+  passed the path unmodified to SSH, which would expand it using
+  :func:`os.getpwent`.
 
-   This differs from :func:`os.path.expanduser`, which prefers the ``HOME``
-   environment variable if it is set, causing behaviour to diverge when Ansible
-   was invoked using sudo without appropriate flags to cause the ``HOME``
-   environment variable to be reset to match the target account.
+  This differs from :func:`os.path.expanduser`, which prefers the ``HOME``
+  environment variable if it is set, causing behaviour to diverge when Ansible
+  was invoked using sudo without appropriate flags to cause the ``HOME``
+  environment variable to be reset to match the target account.
+
+* `#373 <https://github.com/dw/mitogen/issues/373>`_: the LXC and LXD methods
+  now print a useful hint when Python fails to start, as no useful error is
+  normally logged to the console by these tools.
 
 
 Core Library
@@ -56,11 +60,10 @@ Core Library
   every stream that ever communicated with a disappearing peer, rather than
   simply toward parents.
 
-  Conversations between nodes in any level of the connection tree should
-  correctly receive ``DEL_ROUTE`` messages when a participant disconnects,
-  allowing receivers to be woken with :class:`mitogen.core.ChannelError` to
-  signal the connection has broken, even when one participant is not a parent
-  of the other.
+  Conversations between nodes in any level of the tree receive ``DEL_ROUTE``
+  messages when a participant disconnects, allowing receivers to be woken with
+  :class:`mitogen.core.ChannelError` to signal the connection has broken, even
+  when one participant is not a parent of the other.
 
 * `#405 <https://github.com/dw/mitogen/issues/405>`_: if a message is rejected
   due to being too large, and it has a ``reply_to`` set, a dead message is
@@ -68,9 +71,9 @@ Core Library
   maximum size crash rather than hang.
 
 * `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
-   "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
-   was configured. This would lead to connection timeouts due to the hung
-   response.
+  "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
+  was configured. This would lead to connection timeouts due to the hung
+  response.
 
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
@@ -84,6 +87,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
+`Brian Candler <https://github.com/candlerb>`_, and
 `Guy Knights <https://github.com/knightsg>`_.
 
 
