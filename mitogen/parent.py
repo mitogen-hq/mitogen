@@ -755,14 +755,6 @@ class EpollPoller(mitogen.core.Poller):
     def close(self):
         self._epoll.close()
 
-    @property
-    def readers(self):
-        return list(self._rfds.items())
-
-    @property
-    def writers(self):
-        return list(self._wfds.items())
-
     def _control(self, fd):
         mitogen.core._vv and IOLOG.debug('%r._control(%r)', self, fd)
         mask = (((fd in self._rfds) and select.EPOLLIN) |
@@ -780,7 +772,7 @@ class EpollPoller(mitogen.core.Poller):
     def start_receive(self, fd, data=None):
         mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
             self, fd, data)
-        self._rfds[fd] = data or fd
+        self._rfds[fd] = (data or fd, self._generation)
         self._control(fd)
 
     def stop_receive(self, fd):
@@ -791,7 +783,7 @@ class EpollPoller(mitogen.core.Poller):
     def start_transmit(self, fd, data=None):
         mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
             self, fd, data)
-        self._wfds[fd] = data or fd
+        self._wfds[fd] = (data or fd, self._generation)
         self._control(fd)
 
     def stop_transmit(self, fd):
@@ -802,20 +794,24 @@ class EpollPoller(mitogen.core.Poller):
     _inmask = (getattr(select, 'EPOLLIN', 0) |
                getattr(select, 'EPOLLHUP', 0))
 
-    def poll(self, timeout=None):
+    def _poll(self, timeout):
         the_timeout = -1
         if timeout is not None:
             the_timeout = timeout
 
         events, _ = mitogen.core.io_op(self._epoll.poll, the_timeout, 32)
         for fd, event in events:
-            if event & self._inmask and fd in self._rfds:
-                # Events can still be read for an already-discarded fd.
-                mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
-                yield self._rfds[fd]
-            if event & select.EPOLLOUT and fd in self._wfds:
-                mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
-                yield self._wfds[fd]
+            if event & self._inmask:
+                data, gen = self._rfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    # Events can still be read for an already-discarded fd.
+                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                    yield data
+            if event & select.EPOLLOUT:
+                data, gen = self._wfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                    yield data
 
 
 POLLER_BY_SYSNAME = {
