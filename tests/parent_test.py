@@ -267,7 +267,7 @@ class WriteAllTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.write_all)
 
     def make_proc(self):
-        args = [testlib.data_path('write_all_consumer.sh')]
+        args = [testlib.data_path('write_all_consumer.py')]
         proc = subprocess.Popen(args, stdin=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdin.fileno())
         return proc
