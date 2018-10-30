@@ -215,7 +215,7 @@ class IterReadTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
-        args = [testlib.data_path('iter_read_generator.sh')]
+        args = [testlib.data_path('iter_read_generator.py')]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdout.fileno())
         return proc
