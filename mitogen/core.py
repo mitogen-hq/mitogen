@@ -1286,17 +1286,20 @@ def _unpickle_context(router, context_id, name):
 
 
 class Poller(object):
+    #: Increments on every poll(). Used to version _rfds and _wfds.
+    _generation = 1
+
     def __init__(self):
         self._rfds = {}
         self._wfds = {}
 
     @property
     def readers(self):
-        return list(self._rfds.items())
+        return list((fd, data) for fd, (data, gen) in self._rfds.items())
 
     @property
     def writers(self):
-        return list(self._wfds.items())
+        return list((fd, data) for fd, (data, gen) in self._wfds.items())
 
     def __repr__(self):
         return '%s(%#x)' % (type(self).__name__, id(self))
@@ -1305,19 +1308,18 @@ class Poller(object):
         pass
 
     def start_receive(self, fd, data=None):
-        self._rfds[fd] = data or fd
+        self._rfds[fd] = (data or fd, self._generation)
 
     def stop_receive(self, fd):
         self._rfds.pop(fd, None)
 
     def start_transmit(self, fd, data=None):
-        self._wfds[fd] = data or fd
+        self._wfds[fd] = (data or fd, self._generation)
 
     def stop_transmit(self, fd):
         self._wfds.pop(fd, None)
 
-    def poll(self, timeout=None):
-        _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
+    def _poll(self, timeout):
         (rfds, wfds, _), _ = io_op(select.select,
             self._rfds,
             self._wfds,
@@ -1326,11 +1328,20 @@ class Poller(object):
 
         for fd in rfds:
             _vv and IOLOG.debug('%r: POLLIN for %r', self, fd)
-            yield self._rfds[fd]
+            data, gen = self._rfds.get(fd, (None, None))
+            if gen and gen < self._generation:
+                yield data
 
         for fd in wfds:
             _vv and IOLOG.debug('%r: POLLOUT for %r', self, fd)
-            yield self._wfds[fd]
+            data, gen = self._wfds.get(fd, (None, None))
+            if gen and gen < self._generation:
+                yield data
+
+    def poll(self, timeout=None):
+        _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
+        self._generation += 1
+        return self._poll(timeout)
 
 
 class Latch(object):

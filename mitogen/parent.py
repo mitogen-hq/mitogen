@@ -681,14 +681,6 @@ class KqueuePoller(mitogen.core.Poller):
     def close(self):
         self._kqueue.close()
 
-    @property
-    def readers(self):
-        return list(self._rfds.items())
-
-    @property
-    def writers(self):
-        return list(self._wfds.items())
-
     def _control(self, fd, filters, flags):
         mitogen.core._vv and IOLOG.debug(
             '%r._control(%r, %r, %r)', self, fd, filters, flags)
@@ -707,7 +699,7 @@ class KqueuePoller(mitogen.core.Poller):
             self, fd, data)
         if fd not in self._rfds:
             self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
-        self._rfds[fd] = data or fd
+        self._rfds[fd] = (data or fd, self._generation)
 
     def stop_receive(self, fd):
         mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd)
@@ -720,7 +712,7 @@ class KqueuePoller(mitogen.core.Poller):
             self, fd, data)
         if fd not in self._wfds:
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
-        self._wfds[fd] = data or fd
+        self._wfds[fd] = (data or fd, self._generation)
 
     def stop_transmit(self, fd):
         mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
@@ -728,7 +720,7 @@ class KqueuePoller(mitogen.core.Poller):
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
             del self._wfds[fd]
 
-    def poll(self, timeout=None):
+    def _poll(self, timeout):
         changelist = self._changelist
         self._changelist = []
         events, _ = mitogen.core.io_op(self._kqueue.control,
@@ -738,13 +730,17 @@ class KqueuePoller(mitogen.core.Poller):
             if event.flags & select.KQ_EV_ERROR:
                 LOG.debug('ignoring stale event for fd %r: errno=%d: %s',
                           fd, event.data, errno.errorcode.get(event.data))
-            elif event.filter == select.KQ_FILTER_READ and fd in self._rfds:
+            elif event.filter == select.KQ_FILTER_READ:
+                data, gen = self._rfds.get(fd, (None, None))
                 # Events can still be read for an already-discarded fd.
-                mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
-                yield self._rfds[fd]
+                if gen and gen < self._generation:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                    yield data
             elif event.filter == select.KQ_FILTER_WRITE and fd in self._wfds:
-                mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
-                yield self._wfds[fd]
+                data, gen = self._wfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                    yield data
 
 
 class EpollPoller(mitogen.core.Poller):
