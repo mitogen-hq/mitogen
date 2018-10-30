@@ -51,6 +51,11 @@ Core Library
   signal the connection has broken, even when one participant is not a parent
   of the other.
 
+* `#405 <https://github.com/dw/mitogen/issues/405>`_: if a message is rejected
+  due to being too large, and it has a ``reply_to`` set, a dead message is
+  returned to the sender. This ensures function calls exceeding the configured
+  maximum size crash rather than hang.
+
 * `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
    "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
    was configured. This would lead to connection timeouts due to the hung
