@@ -1832,11 +1832,17 @@ class Router(object):
         except Exception:
             LOG.exception('%r._invoke(%r): %r crashed', self, msg, fn)
 
+    def _maybe_send_dead(self, msg):
+        if msg.reply_to and not msg.is_dead:
+            msg.reply(Message.dead(), router=self)
+
     def _async_route(self, msg, in_stream=None):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
+
         if len(msg.data) > self.max_message_size:
             LOG.error('message too large (max %d bytes): %r',
                       self.max_message_size, msg)
+            self._maybe_send_dead(msg)
             return
 
         # Perform source verification.
@@ -1868,22 +1874,18 @@ class Router(object):
         if out_stream is None:
             out_stream = self._stream_by_id.get(mitogen.parent_id)
 
-        dead = False
         if out_stream is None:
             if msg.reply_to not in (0, IS_DEAD):
                 LOG.error('%r: no route for %r, my ID is %r',
                           self, msg, mitogen.context_id)
-            dead = True
+            self._maybe_send_dead(msg)
+            return
 
-        if in_stream and self.unidirectional and not dead and \
-           not (in_stream.is_privileged or out_stream.is_privileged):
+        if in_stream and self.unidirectional and not \
+                (in_stream.is_privileged or out_stream.is_privileged):
             LOG.error('routing mode prevents forward of %r from %r -> %r',
                       msg, in_stream, out_stream)
-            dead = True
-
-        if dead:
-            if msg.reply_to and not msg.is_dead:
-                msg.reply(Message.dead(), router=self)
+            self._maybe_send_dead(msg)
             return
 
         out_stream._send(msg)
