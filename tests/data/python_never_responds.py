@@ -1,3 +1,7 @@
-#!/bin/bash
+#!/usr/bin/python
 # I am a Python interpreter that sits idle until the connection times out.
-exec -a mitogen-tests-python-never-responds.sh sleep 86400
+
+import time
+
+while True:
+    time.sleep(86400)

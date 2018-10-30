@@ -93,7 +93,7 @@ class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
             remote_id=1234,
             old_router=self.router,
             max_message_size=self.router.max_message_size,
-            python_path=testlib.data_path('python_never_responds.sh'),
+            python_path=testlib.data_path('python_never_responds.py'),
             connect_timeout=0.5,
         )
         self.assertRaises(mitogen.core.TimeoutError,
