@@ -124,9 +124,10 @@ class BannerTest(testlib.DockerMixin, unittest2.TestCase):
         self.assertEquals(name, context.name)
 
 
-class RequirePtyTest(testlib.DockerMixin, testlib.TestCase):
-    stream_class = mitogen.ssh.Stream
-
+class FakeSshMixin(testlib.RouterMixin):
+    """
+    Mix-in that provides :meth:`fake_ssh` executing the stub 'ssh.py'.
+    """
     def fake_ssh(self, FAKESSH_MODE=None, **kwargs):
         os.environ['FAKESSH_MODE'] = str(FAKESSH_MODE)
         try:
@@ -138,6 +139,20 @@ class RequirePtyTest(testlib.DockerMixin, testlib.TestCase):
             )
         finally:
             del os.environ['FAKESSH_MODE']
+
+
+class PermissionDeniedTest(FakeSshMixin, testlib.TestCase):
+    def test_classic_prompt(self):
+        self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.fake_ssh(FAKESSH_MODE='permdenied_classic'))
+
+    def test_openssh_75_prompt(self):
+        self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.fake_ssh(FAKESSH_MODE='permdenied_75'))
+
+
+class RequirePtyTest(FakeSshMixin, testlib.TestCase):
+    stream_class = mitogen.ssh.Stream
 
     def test_check_host_keys_accept(self):
         # required=true, host_key_checking=accept
