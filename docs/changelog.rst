@@ -36,6 +36,17 @@ Enhancements
 Fixes
 ^^^^^
 
+* `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
+   tilde-expands private key paths using Ansible's logic. Previously Mitogen
+   passed the path unmodified to SSH, which would expand it using
+   :func:`os.getpwent`.
+
+   This differs from :func:`os.path.expanduser`, which prefers the ``HOME``
+   environment variable if it is set, causing behaviour to diverge when Ansible
+   was invoked using sudo without appropriate flags to cause the ``HOME``
+   environment variable to be reset to match the target account.
+
+
 Core Library
 ~~~~~~~~~~~~
 
@@ -66,6 +77,14 @@ Core Library
 
 * `9ec360c2 <https://github.com/dw/mitogen/commit/9ec360c2>`_: a new
   :meth:`mitogen.core.Broker.defer_sync` utility function is provided.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, features and fixes in this release contributed by
+`Guy Knights <https://github.com/knightsg>`_.
 
 
 v0.2.3 (2018-10-23)
