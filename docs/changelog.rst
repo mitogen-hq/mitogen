@@ -46,6 +46,10 @@ Fixes
   was invoked using sudo without appropriate flags to cause the ``HOME``
   environment variable to be reset to match the target account.
 
+* `#373 <https://github.com/dw/mitogen/issues/373>`_: the LXC and LXD methods
+  now print a useful hint when Python fails to start, as no useful error is
+  normally logged to the console by these tools.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -83,6 +87,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
+`Brian Candler <https://github.com/candlerb>`_, and
 `Guy Knights <https://github.com/knightsg>`_.
 
 
