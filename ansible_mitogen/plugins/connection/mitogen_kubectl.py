@@ -64,7 +64,7 @@ class Connection(ansible_mitogen.connection.Connection):
 
     def get_extra_args(self):
         parameters = []
-        for key, option in iteritems(ansible.plugins.connection.kubectl.CONNECTION_OPTIONS):
+        for key, option in iteritems(kubectl.CONNECTION_OPTIONS):
             if self.get_task_var('ansible_' + key) is not None:
                 parameters += [ option, self.get_task_var('ansible_' + key) ]
 
