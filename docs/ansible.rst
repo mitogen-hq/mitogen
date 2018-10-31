@@ -768,10 +768,10 @@ Connect to classic LXC containers, like `lxc
 connection delegation is supported, and ``lxc-attach`` is always used rather
 than the LXC Python bindings, as is usual with ``lxc``.
 
-The ``lxc-attach`` command must be available on the host machine.
-
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+* ``mitogen_lxc_attach_path``: path to ``lxc-attach`` command if not available
+    on the system path.
 
 
 .. _method-lxd:
@@ -786,6 +786,8 @@ the host machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+* ``mitogen_lxc_path``: path to ``lxc`` command if not available on the system
+  path.
 
 
 .. _machinectl:

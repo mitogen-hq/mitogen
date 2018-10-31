@@ -172,6 +172,7 @@ def _connect_lxc(spec):
         'kwargs': {
             'container': spec['remote_addr'],
             'python_path': spec['python_path'],
+            'lxc_attach_path': spec['mitogen_lxc_attach_path'],
             'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
         }
     }
@@ -186,6 +187,7 @@ def _connect_lxd(spec):
         'kwargs': {
             'container': spec['remote_addr'],
             'python_path': spec['python_path'],
+            'lxc_path': spec['mitogen_lxc_path'],
             'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
         }
     }
@@ -210,6 +212,7 @@ def _connect_setns(spec):
             'python_path': spec['python_path'],
             'kind': spec['mitogen_kind'],
             'docker_path': spec['mitogen_docker_path'],
+            'lxc_path': spec['mitogen_lxc_path'],
             'lxc_info_path': spec['mitogen_lxc_info_path'],
             'machinectl_path': spec['mitogen_machinectl_path'],
         }
@@ -392,6 +395,10 @@ def config_from_play_context(transport, inventory_name, connection):
             connection.get_task_var('mitogen_docker_path'),
         'mitogen_kubectl_path':
             connection.get_task_var('mitogen_kubectl_path'),
+        'mitogen_lxc_path':
+            connection.get_task_var('mitogen_lxc_path'),
+        'mitogen_lxc_attach_path':
+            connection.get_task_var('mitogen_lxc_attach_path'),
         'mitogen_lxc_info_path':
             connection.get_task_var('mitogen_lxc_info_path'),
         'mitogen_machinectl_path':
@@ -427,6 +434,8 @@ def config_from_hostvars(transport, inventory_name, connection,
         'mitogen_kind': hostvars.get('mitogen_kind'),
         'mitogen_docker_path': hostvars.get('mitogen_docker_path'),
         'mitogen_kubectl_path': hostvars.get('mitogen_kubectl_path'),
+        'mitogen_lxc_path': hostvars.get('mitogen_lxc_path'),
+        'mitogen_lxc_attach_path': hostvars.get('mitogen_lxc_attach_path'),
         'mitogen_lxc_info_path': hostvars.get('mitogen_lxc_info_path'),
         'mitogen_machinectl_path': hostvars.get('mitogen_machinctl_path'),
     })
