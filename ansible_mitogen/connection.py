@@ -579,7 +579,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
-        self._reset(mode='put')
+        self._mitogen_reset(mode='put')
 
     def get_task_var(self, key, default=None):
         if self._task_vars and key in self._task_vars:
@@ -740,10 +740,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     def _reset_tmp_path(self):
         """
-        Called by _reset(); ask the remote context to delete any temporary
-        directory created for the action. CallChain is not used here to ensure
-        exception is logged by the context on failure, since the CallChain
-        itself is about to be destructed.
+        Called by _mitogen_reset(); ask the remote context to delete any
+        temporary directory created for the action. CallChain is not used here
+        to ensure exception is logged by the context on failure, since the
+        CallChain itself is about to be destructed.
         """
         if getattr(self._shell, 'tmpdir', None) is not None:
             self.context.call_no_reply(
@@ -770,9 +770,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         stack = self._build_stack()
         self._connect_stack(stack)
 
-    def _reset(self, mode):
+    def _mitogen_reset(self, mode):
         """
-        Forget everything we know about the connected context.
+        Forget everything we know about the connected context. This function
+        cannot be called _reset() since that name is used as a public API by
+        Ansible 2.4 wait_for_connection plug-in.
 
         :param str mode:
             Name of ContextService method to use to discard the context, either
@@ -815,7 +817,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         bad somehow, and should be shut down and discarded.
         """
         self._connect()
-        self._reset(mode='reset')
+        self._mitogen_reset(mode='reset')
+
+    # Compatibility with Ansible 2.4 wait_for_connection plug-in.
+    _reset = reset
 
     def get_chain(self, use_login=False, use_fork=False):
         """
