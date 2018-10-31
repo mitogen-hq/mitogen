@@ -51,8 +51,12 @@ Fixes
   normally logged to the console by these tools.
 
 * `#409 <https://github.com/dw/mitogen/issues/409>`_: the setns method was
-  silently broken due to missing tests. The issue was fixed and basic test
-  coverage was added.
+  silently broken due to missing tests. Basic coverage was added to prevent a
+  recurrence.
+
+* `#409 <https://github.com/dw/mitogen/issues/409>`_: the LXC and LXD methods
+  support ``mitogen_lxc_path`` and ``mitogen_lxc_attach`` variables to control
+  the location of third pary utilities.
 
 
 Core Library
