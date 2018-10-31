@@ -3,3 +3,4 @@
 - import_playbook: lxd.yml
 - import_playbook: setns_lxc.yml
 - import_playbook: setns_lxd.yml
+- import_playbook: sudo.yml
