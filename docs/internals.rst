@@ -32,7 +32,7 @@ PidfulStreamHandler Class
 
 
 Side Class
-----------
+==========
 
 .. currentmodule:: mitogen.core
 
@@ -105,7 +105,7 @@ Side Class
 
 
 Stream Classes
---------------
+==============
 
 .. currentmodule:: mitogen.core
 
@@ -196,7 +196,7 @@ Stream Classes
 
 
 Other Stream Subclasses
------------------------
+=======================
 
 .. currentmodule:: mitogen.core
 
@@ -208,7 +208,7 @@ Other Stream Subclasses
 
 
 Poller Class
-------------
+============
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Poller
@@ -221,7 +221,7 @@ Poller Class
 
 
 Importer Class
---------------
+==============
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Importer
@@ -229,15 +229,23 @@ Importer Class
 
 
 Responder Class
----------------
+===============
 
 .. currentmodule:: mitogen.master
 .. autoclass:: ModuleResponder
    :members:
 
 
+RouteMonitor Class
+==================
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: RouteMonitor
+   :members:
+
+
 Forwarder Class
----------------
+===============
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: ModuleForwarder
@@ -245,7 +253,7 @@ Forwarder Class
 
 
 ExternalContext Class
----------------------
+=====================
 
 .. currentmodule:: mitogen.core
 

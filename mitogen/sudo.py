@@ -55,7 +55,10 @@ SUDO_OPTIONS = [
     #(False, 'bool', '--list', '-l')
     #(False, 'bool', '--preserve-groups', '-P')
     #(False, 'str', '--prompt', '-p')
-    #(False, 'str', '--role', '-r')
+
+    # SELinux options. Passed through as-is.
+    (False, 'str', '--role', '-r'),
+    (False, 'str', '--type', '-t'),
 
     # These options are supplied by default by Ansible, but are ignored, as
     # sudo always runs under a TTY with Mitogen.
@@ -63,9 +66,8 @@ SUDO_OPTIONS = [
     (True, 'bool', '--non-interactive', '-n'),
 
     #(False, 'str', '--shell', '-s')
-    #(False, 'str', '--type', '-t')
     #(False, 'str', '--other-user', '-U')
-    #(False, 'str', '--user', '-u')
+    (False, 'str', '--user', '-u'),
     #(False, 'bool', '--version', '-V')
     #(False, 'bool', '--validate', '-v')
 ]
@@ -103,6 +105,13 @@ class PasswordError(mitogen.core.StreamError):
     pass
 
 
+def option(default, *args):
+    for arg in args:
+        if arg is not None:
+            return arg
+    return default
+
+
 class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
     child_is_immediate_subprocess = False
@@ -118,24 +127,24 @@ class Stream(mitogen.parent.Stream):
     set_home = False
     login = False
 
+    selinux_role = None
+    selinux_type = None
+
     def construct(self, username=None, sudo_path=None, password=None,
                   preserve_env=None, set_home=None, sudo_args=None,
-                  login=None, **kwargs):
+                  login=None, selinux_role=None, selinux_type=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         opts = parse_sudo_flags(sudo_args or [])
 
-        if username is not None:
-            self.username = username
-        if sudo_path is not None:
-            self.sudo_path = sudo_path
-        if password is not None:
-            self.password = password
-        if (preserve_env or opts.preserve_env) is not None:
-            self.preserve_env = preserve_env or opts.preserve_env
-        if (set_home or opts.set_home) is not None:
-            self.set_home = set_home or opts.set_home
-        if (login or opts.login) is not None:
-            self.login = True
+        self.username = option(self.username, username, opts.user)
+        self.sudo_path = option(self.sudo_path, sudo_path)
+        self.password = password or None
+        self.preserve_env = option(self.preserve_env,
+            preserve_env, opts.preserve_env)
+        self.set_home = option(self.set_home, set_home, opts.set_home)
+        self.login = option(self.login, login, opts.login)
+        self.selinux_role = option(self.selinux_role, selinux_role, opts.role)
+        self.selinux_type = option(self.selinux_type, selinux_type, opts.type)
 
     def connect(self):
         super(Stream, self).connect()
@@ -156,8 +165,12 @@ class Stream(mitogen.parent.Stream):
             bits += ['-H']
         if self.login:
             bits += ['-i']
+        if self.selinux_role:
+            bits += ['-r', self.selinux_role]
+        if self.selinux_type:
+            bits += ['-t', self.selinux_type]
 
-        bits = bits + super(Stream, self).get_boot_command()
+        bits = bits + ['--'] + super(Stream, self).get_boot_command()
         LOG.debug('sudo command line: %r', bits)
         return bits
 
