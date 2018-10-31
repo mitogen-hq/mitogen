@@ -14,7 +14,7 @@
 
     - debug: msg={{out}}
 
-    - command: sudo whoami
+    - command: sudo -n whoami
       args:
         warn: false
       ignore_errors: true
@@ -22,7 +22,7 @@
       when: out.ansible_facts.ansible_system == 'Linux'
 
     - command: |
-        sudo -E ansible
+        sudo -nE ansible
         -i localhost,
         -c setns
         -e mitogen_kind=lxc
