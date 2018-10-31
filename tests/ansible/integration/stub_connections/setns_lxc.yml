@@ -8,6 +8,9 @@
   any_errors_fatal: false
   connection: local
   tasks:
+    - meta: end_play
+      when: not is_mitogen
+
     - include_tasks: _end_play_if_not_sudo_linux.yml
 
     - command: |
@@ -22,9 +25,6 @@
       args:
         chdir: ../..
         warn: false
-      when: |
-        out.ansible_facts.ansible_system == 'Linux'
-        and sudo_available.rc == 0
       register: result
 
     - assert:
