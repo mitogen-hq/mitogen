@@ -142,6 +142,7 @@ def _connect_kubectl(spec):
             'pod': spec['remote_addr'],
             'python_path': spec['python_path'],
             'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'kubectl_path': spec['mitogen_kubectl_path'],
             'kubectl_args': spec['extra_args'],
         }
     }
@@ -209,7 +210,6 @@ def _connect_setns(spec):
             'python_path': spec['python_path'],
             'kind': spec['mitogen_kind'],
             'docker_path': spec['mitogen_docker_path'],
-            'kubectl_path': spec['mitogen_kubectl_path'],
             'lxc_info_path': spec['mitogen_lxc_info_path'],
             'machinectl_path': spec['mitogen_machinectl_path'],
         }
