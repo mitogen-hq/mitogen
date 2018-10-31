@@ -1,0 +1,30 @@
+
+# issue #409.
+# setns is hard -- it wants to do superuser syscalls, so we must run it in a
+# child Ansible via sudo. But that only works if sudo works.
+
+- name: integration/stub_connections/setns_lxc.yml
+  hosts: test-targets
+  gather_facts: false
+  any_errors_fatal: true
+  connection: local
+  tasks:
+    - setup:
+      register: out
+
+    - command: |
+        sudo -E ansible
+        -i localhost,
+        -c setns
+        -e mitogen_kind=lxc
+        -e mitogen_lxc_info_path=stub-lxc-info.py
+        -m shell
+        -a "echo hi"
+        localhost
+      args:
+        chdir: ../..
+        warn: false
+
+      # TODO: we don't know if sudo works on this machine, so hard wire it for
+      # me and for Travis CI.
+      when: out.ansible_facts.ansible_user_id in ['dmw', 'travis']
