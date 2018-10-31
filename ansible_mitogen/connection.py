@@ -31,6 +31,7 @@ from __future__ import unicode_literals
 
 import logging
 import os
+import pprint
 import random
 import stat
 import time
@@ -699,11 +700,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         representing the target. If no connection exists yet, ContextService
         will establish it before returning it or throwing an error.
         """
-        dct = self.parent.call_service(
-            service_name='ansible_mitogen.services.ContextService',
-            method_name='get',
-            stack=mitogen.utils.cast(list(stack)),
-        )
+        try:
+            dct = self.parent.call_service(
+                service_name='ansible_mitogen.services.ContextService',
+                method_name='get',
+                stack=mitogen.utils.cast(list(stack)),
+            )
+        except mitogen.core.CallError:
+            LOG.warning('Connection failed; stack configuration was:\n%s',
+                        pprint.pformat(stack))
+            raise
 
         if dct['msg']:
             if dct['method_name'] in self.become_methods:
@@ -809,6 +815,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             self.broker = None
             self.router = None
 
+    reset_compat_msg = (
+        'Mitogen only supports "reset_connection" on Ansible 2.5.6 or later'
+    )
+
     def reset(self):
         """
         Explicitly terminate the connection to the remote host. This discards
@@ -816,6 +826,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         the 'disconnected' state, and informs ContextService the connection is
         bad somehow, and should be shut down and discarded.
         """
+        if self._play_context.remote_addr is None:
+            # <2.5.6 incorrectly populate PlayContext for reset_connection
+            # https://github.com/ansible/ansible/issues/27520
+            raise ansible.errors.AnsibleConnectionFailure(
+                self.reset_compat_msg
+            )
+
         self._connect()
         self._mitogen_reset(mode='reset')
 

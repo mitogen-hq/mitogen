@@ -22,6 +22,7 @@
                     'docker_path': None,
                     'kind': 'lxc',
                     'lxc_info_path': None,
+                    'lxc_path': None,
                     'machinectl_path': None,
                     'python_path': None,
                     'username': None,
