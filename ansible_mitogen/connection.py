@@ -802,7 +802,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
-        self._reset(mode='put')
+        self._mitogen_reset(mode='put')
         if self.broker:
             self.broker.shutdown()
             self.broker.join()
