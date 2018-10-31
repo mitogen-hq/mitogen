@@ -1,0 +1,18 @@
+
+- name: integration/stub_connections/lxc.yml
+  hosts: test-targets
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - custom_python_detect_environment:
+    vars:
+      ansible_connection: lxc
+      mitogen_lxc_attach_path: stub-lxc-attach.py
+    register: out
+
+  - assert:
+      that:
+      - out.env.THIS_IS_STUB_LXC_ATTACH == '1'

@@ -22,7 +22,7 @@ class StubSshMixin(testlib.RouterMixin):
             return self.router.ssh(
                 hostname='hostname',
                 username='mitogen__has_sudo',
-                ssh_path=testlib.data_path('stubs/ssh.py'),
+                ssh_path=testlib.data_path('stubs/stub-ssh.py'),
                 **kwargs
             )
         finally:
@@ -34,7 +34,7 @@ class ConstructorTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.ssh(
             hostname='hostname',
             username='mitogen__has_sudo',
-            ssh_path=testlib.data_path('stubs/ssh.py'),
+            ssh_path=testlib.data_path('stubs/stub-ssh.py'),
         )
         #context.call(mitogen.utils.log_to_file, '/tmp/log')
         #context.call(mitogen.utils.disable_site_packages)

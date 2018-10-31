@@ -1,0 +1,21 @@
+
+- name: integration/stub_connections/kubectl.yml
+  hosts: test-targets
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - meta: end_play
+    when: ansible_version.full < '2.5'
+
+  - custom_python_detect_environment:
+    vars:
+      ansible_connection: kubectl
+      mitogen_kubectl_path: stub-kubectl.py
+    register: out
+
+  - assert:
+      that:
+      - out.env.THIS_IS_STUB_KUBECTL == '1'

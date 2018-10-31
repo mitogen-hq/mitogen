@@ -11,7 +11,7 @@ import testlib
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
-        lxc_path = testlib.data_path('stubs/lxc.py')
+        lxc_path = testlib.data_path('stubs/stub-lxc.py')
         context = self.router.lxd(
             container='container_name',
             lxc_path=lxc_path,

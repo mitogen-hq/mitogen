@@ -13,7 +13,7 @@ def has_subseq(seq, subseq):
 
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
-    lxc_attach_path = testlib.data_path('stubs/lxc-attach.py')
+    lxc_attach_path = testlib.data_path('stubs/stub-lxc-attach.py')
 
     def test_okay(self):
         context = self.router.lxc(

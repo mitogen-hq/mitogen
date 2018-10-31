@@ -93,7 +93,7 @@ class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
             remote_id=1234,
             old_router=self.router,
             max_message_size=self.router.max_message_size,
-            python_path=testlib.data_path('python_never_responds.sh'),
+            python_path=testlib.data_path('python_never_responds.py'),
             connect_timeout=0.5,
         )
         self.assertRaises(mitogen.core.TimeoutError,
@@ -215,7 +215,7 @@ class IterReadTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
-        args = [testlib.data_path('iter_read_generator.sh')]
+        args = [testlib.data_path('iter_read_generator.py')]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdout.fileno())
         return proc
@@ -267,7 +267,7 @@ class WriteAllTest(unittest2.TestCase):
     func = staticmethod(mitogen.parent.write_all)
 
     def make_proc(self):
-        args = [testlib.data_path('write_all_consumer.sh')]
+        args = [testlib.data_path('write_all_consumer.py')]
         proc = subprocess.Popen(args, stdin=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdin.fileno())
         return proc
