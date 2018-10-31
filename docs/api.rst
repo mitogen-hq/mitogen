@@ -717,6 +717,10 @@ Router Class
         :param bool preserve_env:
             If :data:`True`, request ``sudo`` to preserve the environment of
             the parent process.
+        :param str selinux_type:
+            If not :data:`None`, the SELinux security context to use.
+        :param str selinux_role:
+            If not :data:`None`, the SELinux role to use.
         :param list sudo_args:
             Arguments in the style of :data:`sys.argv` that would normally
             be passed to ``sudo``. The arguments are parsed in-process to set
