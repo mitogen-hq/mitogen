@@ -244,6 +244,8 @@ class ContextService(mitogen.service.Service):
         by `kwargs`, destroying the most recently created context if the list
         is full. Finally add `new_context` to the list.
         """
+        self._via_by_context[new_context] = via
+
         lru = self._lru_by_via.setdefault(via, [])
         if len(lru) < self.max_interpreters:
             lru.append(new_context)
@@ -257,7 +259,6 @@ class ContextService(mitogen.service.Service):
                         'but they are all marked as in-use.', via)
             return
 
-        self._via_by_context[new_context] = via
         self._shutdown_unlocked(context, lru=lru, new_context=new_context)
 
     def _update_lru(self, new_context, spec, via):

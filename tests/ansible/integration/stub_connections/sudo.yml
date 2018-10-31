@@ -1,0 +1,20 @@
+
+- name: integration/stub_connections/sudo.yml
+  hosts: test-targets
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - custom_python_detect_environment:
+    vars:
+      ansible_connection: mitogen_sudo
+      ansible_become_exe: stub-sudo.py
+      ansible_become_flags: --type=sometype --role=somerole
+    register: out
+
+  - assert:
+      that:
+      - out.env.THIS_IS_STUB_SUDO == '1'
+      - (out.env.ORIGINAL_ARGV|from_json)[1:9] == ['-u', 'root', '-H', '-r', 'somerole', '-t', 'sometype', '--']

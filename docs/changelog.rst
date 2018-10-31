@@ -58,6 +58,9 @@ Fixes
   support ``mitogen_lxc_path`` and ``mitogen_lxc_attach`` variables to control
   the location of third pary utilities.
 
+* `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
+  the SELinux ``--type`` and ``--role`` options.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -96,8 +99,9 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
 `Brian Candler <https://github.com/candlerb>`_,
-`Guy Knights <https://github.com/knightsg>`_, and
-`Jonathan Rosser <https://github.com/jrosser>`_.
+`Guy Knights <https://github.com/knightsg>`_,
+`Jonathan Rosser <https://github.com/jrosser>`_, and
+`Mehdi <https://github.com/mehdisat7>`_.
 
 
 v0.2.3 (2018-10-23)
