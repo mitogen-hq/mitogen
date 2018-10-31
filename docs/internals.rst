@@ -236,6 +236,14 @@ Responder Class
    :members:
 
 
+RouteMonitor Class
+------------------
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: RouteMonitor
+   :members:
+
+
 Forwarder Class
 ---------------
 
