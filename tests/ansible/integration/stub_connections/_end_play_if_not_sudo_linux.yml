@@ -1,0 +1,17 @@
+# End the play if we're not on Linux and a raw 'sudo' command isn't available.
+# Expects connection:local
+
+- shell: uname -s
+  register: out
+
+- meta: end_play
+  when: out.stdout != 'Linux'
+
+- command: sudo -n whoami
+  args:
+    warn: false
+  ignore_errors: true
+  register: sudo_available
+
+- meta: end_play
+  when: sudo_available.rc != 0

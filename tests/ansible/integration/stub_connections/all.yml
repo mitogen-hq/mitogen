@@ -1,2 +1,3 @@
 - import_playbook: kubectl.yml
 - import_playbook: setns_lxc.yml
+- import_playbook: setns_lxd.yml

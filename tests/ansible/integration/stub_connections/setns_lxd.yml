@@ -14,18 +14,16 @@
         sudo -nE ansible
         -i localhost,
         -c setns
-        -e mitogen_kind=lxc
-        -e mitogen_lxc_info_path=stub-lxc-info.py
+        -e mitogen_kind=lxd
+        -e mitogen_lxc_info_path=stub-lxc.py
         -m shell
         -a "echo hi"
         localhost
       args:
         chdir: ../..
         warn: false
-      when: |
-        out.ansible_facts.ansible_system == 'Linux'
-        and sudo_available.rc == 0
       register: result
 
     - assert:
         that: result.rc == 0
+
