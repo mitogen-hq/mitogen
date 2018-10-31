@@ -50,6 +50,10 @@ Fixes
   now print a useful hint when Python fails to start, as no useful error is
   normally logged to the console by these tools.
 
+* `#409 <https://github.com/dw/mitogen/issues/409>`_: the setns method was
+  silently broken due to missing tests. The issue was fixed and basic test
+  coverage was added.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -87,8 +91,9 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
-`Brian Candler <https://github.com/candlerb>`_, and
-`Guy Knights <https://github.com/knightsg>`_.
+`Brian Candler <https://github.com/candlerb>`_,
+`Guy Knights <https://github.com/knightsg>`_, and
+`Jonathan Rosser <https://github.com/jrosser>`_.
 
 
 v0.2.3 (2018-10-23)
