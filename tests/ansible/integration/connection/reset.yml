@@ -6,8 +6,9 @@
 - name: integration/connection/reset.yml
   hosts: test-targets
   tasks:
-  - when: is_mitogen
-    block:
+    - meta: end_play
+      when: not is_mitogen
+
     - custom_python_detect_environment:
       register: out
 
