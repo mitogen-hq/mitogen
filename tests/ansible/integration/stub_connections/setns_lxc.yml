@@ -6,11 +6,20 @@
 - name: integration/stub_connections/setns_lxc.yml
   hosts: test-targets
   gather_facts: false
-  any_errors_fatal: true
+  any_errors_fatal: false
   connection: local
   tasks:
     - setup:
       register: out
+
+    - debug: msg={{out}}
+
+    - command: sudo whoami
+      args:
+        warn: false
+      ignore_errors: true
+      register: sudo_available
+      when: out.ansible_facts.ansible_system == 'Linux'
 
     - command: |
         sudo -E ansible
@@ -24,7 +33,14 @@
       args:
         chdir: ../..
         warn: false
+      when: |
+        out.ansible_facts.ansible_system == 'Linux'
+        and sudo_available.rc == 0
+      register: result
 
-      # TODO: we don't know if sudo works on this machine, so hard wire it for
-      # me and for Travis CI.
-      when: out.ansible_facts.ansible_user_id in ['dmw', 'travis']
+    - assert:
+        that: |
+          (out.ansible_facts.ansible_system != 'Linux') or
+          (sudo_available != 0) or
+          (result.rc == 0)
+
