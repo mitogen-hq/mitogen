@@ -269,6 +269,23 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
 
     @mitogen.service.expose(mitogen.service.AllowParents())
+    def dump(self):
+        """
+        For testing, return a list of dicts describing every currently
+        connected context.
+        """
+        return [
+            {
+                'context_name': context.name,
+                'via': getattr(self._via_by_context.get(context),
+                               'name', None),
+                'refs': self._refs_by_context.get(context),
+            }
+            for context, key in sorted(self._key_by_context.items(),
+                                       key=lambda c_k: c_k[0].context_id)
+        ]
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
     def shutdown_all(self):
         """
         For testing use, arrange for all connections to be shut down.
