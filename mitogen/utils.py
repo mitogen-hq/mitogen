@@ -46,6 +46,11 @@ else:
 
 
 def disable_site_packages():
+    """
+    Remove all entries mentioning ``site-packages`` or ``Extras`` from
+    :attr:sys.path. Used primarily for testing on OS X within a virtualenv,
+    where OS X bundles some ancient version of the :mod:`six` module.
+    """
     for entry in sys.path[:]:
         if 'site-packages' in entry or 'Extras' in entry:
             sys.path.remove(entry)
@@ -65,6 +70,26 @@ def log_get_formatter():
 
 
 def log_to_file(path=None, io=False, level='INFO'):
+    """
+    Install a new :class:`logging.Handler` writing applications logs to the
+    filesystem. Useful when debugging slave IO problems.
+
+    Parameters to this function may be overridden at runtime using environment
+    variables. See :ref:`logging-env-vars`.
+
+    :param str path:
+        If not :data:`None`, a filesystem path to write logs to. Otherwise,
+        logs are written to :data:`sys.stderr`.
+
+    :param bool io:
+        If :data:`True`, include extremely verbose IO logs in the output.
+        Useful for debugging hangs, less useful for debugging application code.
+
+    :param str level:
+        Name of the :mod:`logging` package constant that is the minimum level
+        to log at. Useful levels are ``DEBUG``, ``INFO``, ``WARNING``, and
+        ``ERROR``.
+    """
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
@@ -94,6 +119,14 @@ def log_to_file(path=None, io=False, level='INFO'):
 
 
 def run_with_router(func, *args, **kwargs):
+    """
+    Arrange for `func(router, \*args, \**kwargs)` to run with a temporary
+    :class:`mitogen.master.Router`, ensuring the Router and Broker are
+    correctly shut down during normal or exceptional return.
+
+    :returns:
+        `func`'s return value.
+    """
     broker = mitogen.master.Broker()
     router = mitogen.master.Router(broker)
     try:
@@ -104,6 +137,17 @@ def run_with_router(func, *args, **kwargs):
 
 
 def with_router(func):
+    """
+    Decorator version of :func:`run_with_router`. Example:
+
+    .. code-block:: python
+
+        @with_router
+        def do_stuff(router, arg):
+            pass
+
+        do_stuff(blah, 123)
+    """
     def wrapper(*args, **kwargs):
         return run_with_router(func, *args, **kwargs)
     if mitogen.core.PY3:
@@ -122,7 +166,27 @@ PASSTHROUGH = (
     mitogen.core.Secret,
 )
 
+
 def cast(obj):
+    """
+    Many tools love to subclass built-in types in order to implement useful
+    functionality, such as annotating the safety of a Unicode string, or adding
+    additional methods to a dict. However, cPickle loves to preserve those
+    subtypes during serialization, resulting in CallError during :meth:`call
+    <mitogen.parent.Context.call>` in the target when it tries to deserialize
+    the data.
+
+    This function walks the object graph `obj`, producing a copy with any
+    custom sub-types removed. The functionality is not default since the
+    resulting walk may be computationally expensive given a large enough graph.
+
+    See :ref:`serialization-rules` for a list of supported types.
+
+    :param obj:
+        Object to undecorate.
+    :returns:
+        Undecorated object.
+    """
     if isinstance(obj, dict):
         return dict((cast(k), cast(v)) for k, v in iteritems(obj))
     if isinstance(obj, (list, tuple)):

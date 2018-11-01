@@ -1,5 +1,5 @@
 
-- name: integration/stub_connections/sudo.yml
+- name: integration/stub_connections/mitogen_sudo.yml
   hosts: test-targets
   gather_facts: false
   any_errors_fatal: true

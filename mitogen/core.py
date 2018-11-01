@@ -500,18 +500,53 @@ else:
 
 
 class Message(object):
+    """
+    Messages are the fundamental unit of communication, comprising fields from
+    the :ref:`stream-protocol` header, an optional reference to the receiving
+    :class:`mitogen.core.Router` for ingress messages, and helper methods for
+    deserialization and generating replies.
+    """
+    #: Integer target context ID. :class:`Router` delivers messages locally
+    #: when their :attr:`dst_id` matches :data:`mitogen.context_id`, otherwise
+    #: they are routed up or downstream.
     dst_id = None
+
+    #: Integer source context ID. Used as the target of replies if any are
+    #: generated.
     src_id = None
+
+    #: Context ID under whose authority the message is acting. See
+    #: :ref:`source-verification`.
     auth_id = None
+
+    #: Integer target handle in the destination context. This is one of the
+    #: :ref:`standard-handles`, or a dynamically generated handle used to
+    #: receive a one-time reply, such as the return value of a function call.
     handle = None
+
+    #: Integer target handle to direct any reply to this message. Used to
+    #: receive a one-time reply, such as the return value of a function call.
+    #: :data:`IS_DEAD` has a special meaning when it appears in this field.
     reply_to = None
+
+    #: Raw message data bytes.
     data = b('')
+
     _unpickled = object()
 
+    #: The :class:`Router` responsible for routing the message. This is
+    #: :data:`None` for locally originated messages.
     router = None
+
+    #: The :class:`Receiver` over which the message was last received. Part of
+    #: the :class:`mitogen.select.Select` interface. Defaults to :data:`None`.
     receiver = None
 
     def __init__(self, **kwargs):
+        """
+        Construct a message from from the supplied `kwargs`. :attr:`src_id` and
+        :attr:`auth_id` are always set to :data:`mitogen.context_id`.
+        """
         self.src_id = mitogen.context_id
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
@@ -551,14 +586,28 @@ class Message(object):
 
     @property
     def is_dead(self):
+        """
+        :data:`True` if :attr:`reply_to` is set to the magic value
+        :data:`IS_DEAD`, indicating the sender considers the channel dead.
+        """
         return self.reply_to == IS_DEAD
 
     @classmethod
     def dead(cls, **kwargs):
+        """
+        Syntax helper to construct a dead message.
+        """
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
     def pickled(cls, obj, **kwargs):
+        """
+        Construct a pickled message, setting :attr:`data` to the serialization
+        of `obj`, and setting remaining fields using `kwargs`.
+
+        :returns:
+            The new message.
+        """
         self = cls(**kwargs)
         try:
             self.data = pickle.dumps(obj, protocol=2)
@@ -568,6 +617,18 @@ class Message(object):
         return self
 
     def reply(self, msg, router=None, **kwargs):
+        """
+        Compose a reply to this message and send it using :attr:`router`, or
+        `router` is :attr:`router` is :data:`None`.
+
+        :param obj:
+            Either a :class:`Message`, or an object to be serialized in order
+            to construct a new message.
+        :param router:
+            Optional router to use if :attr:`router` is :data:`None`.
+        :param kwargs:
+            Optional keyword parameters overriding message fields in the reply.
+        """
         if not isinstance(msg, Message):
             msg = Message.pickled(msg)
         msg.dst_id = self.src_id
@@ -584,7 +645,18 @@ class Message(object):
         UNPICKLER_KWARGS = {}
 
     def unpickle(self, throw=True, throw_dead=True):
-        """Deserialize `data` into an object."""
+        """
+        Unpickle :attr:`data`, optionally raising any exceptions present.
+
+        :param bool throw_dead:
+            If :data:`True`, raise exceptions, otherwise it is the caller's
+            responsibility.
+
+        :raises CallError:
+            The serialized data contained CallError exception.
+        :raises ChannelError:
+            The `is_dead` field was set.
+        """
         _vv and IOLOG.debug('%r.unpickle()', self)
         if throw_dead and self.is_dead:
             raise ChannelError(ChannelError.remote_msg)
@@ -616,25 +688,42 @@ class Message(object):
 
 
 class Sender(object):
+    """
+    Senders are used to send pickled messages to a handle in another context,
+    it is the inverse of :class:`mitogen.core.Sender`.
+
+    Senders may be serialized, making them convenient to wire up data flows.
+    See :meth:`mitogen.core.Receiver.to_sender` for more information.
+
+    :param Context context:
+        Context to send messages to.
+    :param int dst_handle:
+        Destination handle to send messages to.
+    """
     def __init__(self, context, dst_handle):
         self.context = context
         self.dst_handle = dst_handle
+
+    def send(self, data):
+        """
+        Send `data` to the remote end.
+        """
+        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
+        self.context.send(Message.pickled(data, handle=self.dst_handle))
+
+    def close(self):
+        """
+        Send a dead message to the remote, causing :meth:`ChannelError` to be
+        raised in any waiting thread.
+        """
+        _vv and IOLOG.debug('%r.close()', self)
+        self.context.send(Message.dead(handle=self.dst_handle))
 
     def __repr__(self):
         return 'Sender(%r, %r)' % (self.context, self.dst_handle)
 
     def __reduce__(self):
         return _unpickle_sender, (self.context.context_id, self.dst_handle)
-
-    def close(self):
-        """Indicate this channel is closed to the remote side."""
-        _vv and IOLOG.debug('%r.close()', self)
-        self.context.send(Message.dead(handle=self.dst_handle))
-
-    def send(self, data):
-        """Send `data` to the remote."""
-        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
-        self.context.send(Message.pickled(data, handle=self.dst_handle))
 
 
 def _unpickle_sender(router, context_id, dst_handle):
@@ -646,12 +735,39 @@ def _unpickle_sender(router, context_id, dst_handle):
 
 
 class Receiver(object):
+    """
+    Receivers maintain a thread-safe queue of messages sent to a handle of this
+    context from another context.
+
+    :param mitogen.core.Router router:
+        Router to register the handler on.
+
+    :param int handle:
+        If not :data:`None`, an explicit handle to register, otherwise an
+        unused handle is chosen.
+
+    :param bool persist:
+        If :data:`False`, unregister the handler after one message is received.
+        Single-message receivers are intended for RPC-like transactions, such
+        as in the case of :meth:`mitogen.parent.Context.call_async`.
+
+    :param mitogen.core.Context respondent:
+        Context this receiver is receiving from. If not :data:`None`, arranges
+        for the receiver to receive a dead message if messages can no longer be
+        routed to the context, due to disconnection or exit.
+    """
+    #: If not :data:`None`, a reference to a function invoked as
+    #: `notify(receiver)` when a new message is delivered to this receiver.
+    #: Used by :class:`mitogen.select.Select` to implement waiting on multiple
+    #: receivers.
     notify = None
+
     raise_channelerror = True
 
     def __init__(self, router, handle=None, persist=True,
                  respondent=None, policy=None):
         self.router = router
+        #: The handle.
         self.handle = handle  # Avoid __repr__ crash in add_handler()
         self._latch = Latch()  # Must exist prior to .add_handler()
         self.handle = router.add_handler(
@@ -666,26 +782,73 @@ class Receiver(object):
         return 'Receiver(%r, %r)' % (self.router, self.handle)
 
     def to_sender(self):
+        """
+        Return a :class:`Sender` configured to deliver messages to this
+        receiver. As senders are serializable, this makes it convenient to pass
+        `(context_id, handle)` pairs around::
+
+            def deliver_monthly_report(sender):
+                for line in open('monthly_report.txt'):
+                    sender.send(line)
+                sender.close()
+
+            remote = router.ssh(hostname='mainframe')
+            recv = mitogen.core.Receiver(router)
+            remote.call(deliver_monthly_report, recv.to_sender())
+            for msg in recv:
+                print(msg)
+        """
         context = Context(self.router, mitogen.context_id)
         return Sender(context, self.handle)
 
     def _on_receive(self, msg):
-        """Callback from the Stream; appends data to the internal queue."""
+        """
+        Callback from the Stream; appends data to the internal queue.
+        """
         _vv and IOLOG.debug('%r._on_receive(%r)', self, msg)
         self._latch.put(msg)
         if self.notify:
             self.notify(self)
 
     def close(self):
+        """
+        Unregister the receiver's handle from its associated router, and cause
+        :class:`ChannelError` to be raised in any thread waiting in :meth:`get`
+        on this receiver.
+        """
         if self.handle:
             self.router.del_handler(self.handle)
             self.handle = None
         self._latch.put(Message.dead())
 
     def empty(self):
+        """
+        Return :data:`True` if calling :meth:`get` would block.
+
+        As with :class:`Queue.Queue`, :data:`True` may be returned even though
+        a subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`empty` and :meth:`get`.
+        """
         return self._latch.empty()
 
     def get(self, timeout=None, block=True, throw_dead=True):
+        """
+        Sleep waiting for a message to arrive on this receiver.
+
+        :param float timeout:
+            If not :data:`None`, specifies a timeout in seconds.
+
+        :raises mitogen.core.ChannelError:
+            The remote end indicated the channel should be closed, or
+            communication with its parent context was lost.
+
+        :raises mitogen.core.TimeoutError:
+            Timeout was reached.
+
+        :returns:
+            `(msg, data)` tuple, where `msg` is the :class:`Message` that was
+            received, and `data` is its unpickled data part.
+        """
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
         msg = self._latch.get(timeout=timeout, block=block)
         if msg.is_dead and throw_dead:
@@ -696,6 +859,10 @@ class Receiver(object):
         return msg
 
     def __iter__(self):
+        """
+        Yield consecutive :class:`Message` instances delivered to this receiver
+        until :class:`ChannelError` is raised.
+        """
         while True:
             msg = self.get(throw_dead=False)
             if msg.is_dead:
@@ -1213,6 +1380,28 @@ class Stream(BasicStream):
 
 
 class Context(object):
+    """
+    Represent a remote context regardless of the underlying connection method.
+    Context objects are simple facades that emit messages through an
+    associated router, and have :ref:`signals` raised against them in response
+    to various events relating to the context.
+
+    **Note:** This is the somewhat limited core version, used by child
+    contexts. The master subclass is documented below this one.
+
+    Contexts maintain no internal state and are thread-safe.
+
+    Prefer :meth:`Router.context_by_id` over constructing context objects
+    explicitly, as that method is deduplicating, and returns the only context
+    instance :ref:`signals` will be raised on.
+
+    :param Router router:
+        Router to emit messages through.
+    :param int context_id:
+        Context ID.
+    :param str name:
+        Context name.
+    """
     remote_name = None
 
     def __init__(self, router, context_id, name=None):
@@ -1231,6 +1420,23 @@ class Context(object):
         fire(self, 'disconnect')
 
     def send_async(self, msg, persist=False):
+        """
+        Arrange for `msg` to be delivered to this context, with replies
+        directed to a newly constructed receiver. :attr:`dst_id
+        <Message.dst_id>` is set to the target context ID, and :attr:`reply_to
+        <Message.reply_to>` is set to the newly constructed receiver's handle.
+
+        :param bool persist:
+            If :data:`False`, the handler will be unregistered after a single
+            message has been received.
+
+        :param mitogen.core.Message msg:
+            The message.
+
+        :returns:
+            :class:`Receiver` configured to receive any replies sent to the
+            message's `reply_to` handle.
+        """
         if self.router.broker._thread == threading.currentThread():  # TODO
             raise SystemError('Cannot making blocking call on broker thread')
 
@@ -1254,8 +1460,13 @@ class Context(object):
         return self.send_async(msg)
 
     def send(self, msg):
-        """send `obj` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
+        """
+        Arrange for `msg` to be delivered to this context. :attr:`dst_id
+        <Message.dst_id>` is set to the target context ID.
+
+        :param Message msg:
+            Message.
+        """
         msg.dst_id = self.context_id
         self.router.route(msg)
 
@@ -1264,7 +1475,19 @@ class Context(object):
         return recv.get().unpickle()
 
     def send_await(self, msg, deadline=None):
-        """Send `msg` and wait for a response with an optional timeout."""
+        """
+        Like :meth:`send_async`, but expect a single reply (`persist=False`)
+        delivered within `deadline` seconds.
+
+        :param mitogen.core.Message msg:
+            The message.
+        :param float deadline:
+            If not :data:`None`, seconds before timing out waiting for a reply.
+        :returns:
+            Deserialized reply.
+        :raises TimeoutError:
+            No message was received and `deadline` passed.
+        """
         receiver = self.send_async(msg)
         response = receiver.get(deadline)
         data = response.unpickle()
@@ -1710,8 +1933,33 @@ class IoLogger(BasicStream):
 
 
 class Router(object):
+    """
+    Route messages between contexts, and invoke local handlers for messages
+    addressed to this context. :meth:`Router.route() <route>` straddles the
+    :class:`Broker <mitogen.core.Broker>` and user threads, it is safe to call
+    anywhere.
+
+    **Note:** This is the somewhat limited core version of the Router class
+    used by child contexts. The master subclass is documented below this one.
+    """
     context_class = Context
     max_message_size = 128 * 1048576
+
+    #: When :data:`True`, permit children to only communicate with the current
+    #: context or a parent of the current context. Routing between siblings or
+    #: children of parents is prohibited, ensuring no communication is possible
+    #: between intentionally partitioned networks, such as when a program
+    #: simultaneously manipulates hosts spread across a corporate and a
+    #: production network, or production networks that are otherwise
+    #: air-gapped.
+    #:
+    #: Sending a prohibited message causes an error to be logged and a dead
+    #: message to be sent in reply to the errant message, if that message has
+    #: ``reply_to`` set.
+    #:
+    #: The value of :data:`unidirectional` becomes the default for the
+    #: :meth:`local() <mitogen.master.Router.local>` `unidirectional`
+    #: parameter.
     unidirectional = False
 
     def __init__(self, broker):
@@ -1751,7 +1999,7 @@ class Router(object):
 
             fire(self._context_by_id[target_id], 'disconnect')
 
-    def on_stream_disconnect(self, stream):
+    def _on_stream_disconnect(self, stream):
         for context in self._context_by_id.values():
             stream_ = self._stream_by_id.get(context.context_id)
             if stream_ is stream:
@@ -1764,6 +2012,10 @@ class Router(object):
             func(Message.dead())
 
     def context_by_id(self, context_id, via_id=None, create=True, name=None):
+        """
+        Messy factory/lookup function to find a context by its ID, or construct
+        it. In future this will be replaced by a much more sensible interface.
+        """
         context = self._context_by_id.get(context_id)
         if create and not context:
             context = self.context_class(self, context_id, name=name)
@@ -1773,21 +2025,85 @@ class Router(object):
         return context
 
     def register(self, context, stream):
+        """
+        Register a newly constructed context and its associated stream, and add
+        the stream's receive side to the I/O multiplexer. This method remains
+        public while the design has not yet settled.
+        """
         _v and LOG.debug('register(%r, %r)', context, stream)
         self._stream_by_id[context.context_id] = stream
         self._context_by_id[context.context_id] = context
         self.broker.start_receive(stream)
-        listen(stream, 'disconnect', lambda: self.on_stream_disconnect(stream))
+        listen(stream, 'disconnect', lambda: self._on_stream_disconnect(stream))
 
     def stream_by_id(self, dst_id):
+        """
+        Return the :class:`Stream` that should be used to communicate with
+        `dst_id`. If a specific route for `dst_id` is not known, a reference to
+        the parent context's stream is returned.
+        """
         return self._stream_by_id.get(dst_id,
             self._stream_by_id.get(mitogen.parent_id))
 
     def del_handler(self, handle):
+        """
+        Remove the handle registered for `handle`
+
+        :raises KeyError:
+            The handle wasn't registered.
+        """
         del self._handle_map[handle]
 
     def add_handler(self, fn, handle=None, persist=True,
                     policy=None, respondent=None):
+        """
+        Invoke `fn(msg)` for each Message sent to `handle` from this context.
+        Unregister after one invocation if `persist` is :data:`False`. If
+        `handle` is :data:`None`, a new handle is allocated and returned.
+
+        :param int handle:
+            If not :data:`None`, an explicit handle to register, usually one of
+            the ``mitogen.core.*`` constants. If unspecified, a new unused
+            handle will be allocated.
+
+        :param bool persist:
+            If :data:`False`, the handler will be unregistered after a single
+            message has been received.
+
+        :param Context respondent:
+            Context that messages to this handle are expected to be sent from.
+            If specified, arranges for a dead message to be delivered to `fn`
+            when disconnection of the context is detected.
+
+            In future `respondent` will likely also be used to prevent other
+            contexts from sending messages to the handle.
+
+        :param function policy:
+            Function invoked as `policy(msg, stream)` where `msg` is a
+            :class:`mitogen.core.Message` about to be delivered, and `stream`
+            is the :class:`mitogen.core.Stream` on which it was received. The
+            function must return :data:`True`, otherwise an error is logged and
+            delivery is refused.
+
+            Two built-in policy functions exist:
+
+            * :func:`has_parent_authority`: requires the message arrived from a
+              parent context, or a context acting with a parent context's
+              authority (``auth_id``).
+
+            * :func:`mitogen.parent.is_immediate_child`: requires the
+              message arrived from an immediately connected child, for use in
+              messaging patterns where either something becomes buggy or
+              insecure by permitting indirect upstream communication.
+
+            In case of refusal, and the message's ``reply_to`` field is
+            nonzero, a :class:`mitogen.core.CallError` is delivered to the
+            sender indicating refusal occurred.
+
+        :return:
+            `handle`, or if `handle` was :data:`None`, the newly allocated
+            handle.
+        """
         handle = handle or next(self._last_handle)
         _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
 
@@ -1848,6 +2164,19 @@ class Router(object):
             msg.reply(Message.dead(), router=self)
 
     def _async_route(self, msg, in_stream=None):
+        """
+        Arrange for `msg` to be forwarded towards its destination. If its
+        destination is the local context, then arrange for it to be dispatched
+        using the local handlers.
+
+        This is a lower overhead version of :meth:`route` that may only be
+        called from the I/O multiplexer thread.
+
+        :param Stream in_stream:
+            If not :data:`None`, the stream the message arrived on. Used for
+            performing source route verification, to ensure sensitive messages
+            such as ``CALL_FUNCTION`` arrive only from trusted contexts.
+        """
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
 
         if len(msg.data) > self.max_message_size:
@@ -1902,6 +2231,15 @@ class Router(object):
         out_stream._send(msg)
 
     def route(self, msg):
+        """
+        Arrange for the :class:`Message` `msg` to be delivered to its
+        destination using any relevant downstream context, or if none is found,
+        by forwarding the message upstream towards the master context. If `msg`
+        is destined for the local context, it is dispatched using the handles
+        registered with :meth:`add_handler`.
+
+        This may be called from any thread.
+        """
         self.broker.defer(self._async_route, msg)
 
 

@@ -24,6 +24,12 @@ Mitogen for Ansible
 Enhancements
 ^^^^^^^^^^^^
 
+* `#76 <https://github.com/dw/mitogen/issues/76>`_: disconnect propagation has
+  improved, allowing Ansible to cancel waits for responses from targets that
+  where abruptly disconnected. This increases the chance a task will fail
+  gracefully, rather than hanging due to the connection being severed, for
+  example because of network failure or EC2 instance maintenance.
+
 * `#369 <https://github.com/dw/mitogen/issues/369>`_: :meth:`Connection.reset`
   is implemented, allowing `meta: reset_connection
   <https://docs.ansible.com/ansible/latest/modules/meta_module.html>`_ to shut
@@ -49,6 +55,9 @@ Fixes
 * `#373 <https://github.com/dw/mitogen/issues/373>`_: the LXC and LXD methods
   now print a useful hint when Python fails to start, as no useful error is
   normally logged to the console by these tools.
+
+* `#400 <https://github.com/dw/mitogen/issues/400>`_: work around a threading
+  bug in the AWX display callback when running with high verbosity setting.
 
 * `#409 <https://github.com/dw/mitogen/issues/409>`_: the setns method was
   silently broken due to missing tests. Basic coverage was added to prevent a
@@ -100,6 +109,7 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
 `Brian Candler <https://github.com/candlerb>`_,
 `Guy Knights <https://github.com/knightsg>`_,
+`Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_, and
 `Mehdi <https://github.com/mehdisat7>`_.
 
