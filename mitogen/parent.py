@@ -1390,7 +1390,16 @@ class CallChain(object):
 
 
 class Context(mitogen.core.Context):
+    """
+    Extend :class:`mitogen.core.Context` with functionality useful to masters,
+    and child contexts who later become parents. Currently when this class is
+    required, the target context's router is upgraded at runtime.
+    """
+    #: A :class:`CallChain` instance constructed by default, with pipelining
+    #: disabled. :meth:`call`, :meth:`call_async` and :meth:`call_no_reply` use
+    #: this instance.
     call_chain_class = CallChain
+
     via = None
 
     def __init__(self, *args, **kwargs):
@@ -1406,15 +1415,41 @@ class Context(mitogen.core.Context):
         return hash((self.router, self.context_id))
 
     def call_async(self, fn, *args, **kwargs):
+        """
+        See :meth:`CallChain.call_async`.
+        """
         return self.default_call_chain.call_async(fn, *args, **kwargs)
 
     def call(self, fn, *args, **kwargs):
+        """
+        See :meth:`CallChain.call`.
+        """
         return self.default_call_chain.call(fn, *args, **kwargs)
 
     def call_no_reply(self, fn, *args, **kwargs):
+        """
+        See :meth:`CallChain.call_no_reply`.
+        """
         self.default_call_chain.call_no_reply(fn, *args, **kwargs)
 
     def shutdown(self, wait=False):
+        """
+        Arrange for the context to receive a ``SHUTDOWN`` message, triggering
+        graceful shutdown.
+
+        Due to a lack of support for timers, no attempt is made yet to force
+        terminate a hung context using this method. This will be fixed shortly.
+
+        :param bool wait:
+            If :data:`True`, block the calling thread until the context has
+            completely terminated.
+
+        :returns:
+            If `wait` is :data:`False`, returns a :class:`mitogen.core.Latch`
+            whose :meth:`get() <mitogen.core.Latch.get>` method returns
+            :data:`None` when shutdown completes. The `timeout` parameter may
+            be used to implement graceful timeouts.
+        """
         LOG.debug('%r.shutdown() sending SHUTDOWN', self)
         latch = mitogen.core.Latch()
         mitogen.core.listen(self, 'disconnect', lambda: latch.put(None))
@@ -1666,6 +1701,13 @@ class Router(mitogen.core.Router):
         msg.reply(None)
 
     def add_route(self, target_id, stream):
+        """
+        Arrange for messages whose `dst_id` is `target_id` to be forwarded on
+        the directly connected stream for `via_id`. This method is called
+        automatically in response to :data:`mitogen.core.ADD_ROUTE` messages,
+        but remains public while the design has not yet settled, and situations
+        may arise where routing is not fully automatic.
+        """
         LOG.debug('%r.add_route(%r, %r)', self, target_id, stream)
         assert isinstance(target_id, int)
         assert isinstance(stream, Stream)
