@@ -502,7 +502,31 @@ Mitogen for Ansible
 * Built-in file transfer compatible with connection delegation.
 
 
-**Known Issues**
+Core Library
+~~~~~~~~~~~~
+
+* Synchronous connection establishment via OpenSSH, sudo, su, Docker, LXC and
+  FreeBSD Jails, local subprocesses and :func:`os.fork`. Parallel connection
+  setup is possible using multiple threads. Connections may be used from one or
+  many threads after establishment.
+
+* UNIX masters and children, with Linux, MacOS, FreeBSD, NetBSD, OpenBSD and
+  Windows Subsystem for Linux explicitly supported.
+
+* Automatic tests covering Python 2.6, 2.7 and 3.6 on Linux only.
+
+
+Known Issues
+------------
+
+Mitogen For Ansible
+~~~~~~~~~~~~~~~~~~~
+
+* The Ansible 2.7 `reboot
+  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_ module
+  may require a ``pre_reboot_delay`` on systemd hosts, as insufficient time
+  exists for the reboot command's exit status to be reported before necessary
+  processes are torn down.
 
 * On OS X when a SSH password is specified and the default connection type of
   ``smart`` is used, Ansible may select the Paramiko plug-in rather than
@@ -541,8 +565,6 @@ Mitogen for Ansible
      ``ansible_python_interpreter`` setting, contrary to the Ansible
      documentation. This will be addressed in a future 0.2 release.
 
-* The Ansible 2.7 ``reboot`` module is not yet supported.
-
 * Performance does not scale linearly with target count. This requires
   significant additional work, as major bottlenecks exist in the surrounding
   Ansible code. Performance-related bug reports for any scenario remain
@@ -573,19 +595,6 @@ Mitogen for Ansible
 
 Core Library
 ~~~~~~~~~~~~
-
-* Synchronous connection establishment via OpenSSH, sudo, su, Docker, LXC and
-  FreeBSD Jails, local subprocesses and :func:`os.fork`. Parallel connection
-  setup is possible using multiple threads. Connections may be used from one or
-  many threads after establishment.
-
-* UNIX masters and children, with Linux, MacOS, FreeBSD, NetBSD, OpenBSD and
-  Windows Subsystem for Linux explicitly supported.
-
-* Automatic tests covering Python 2.6, 2.7 and 3.6 on Linux only.
-
-
-**Known Issues**
 
 * Serialization is still based on :mod:`pickle`. While there is high confidence
   remote code execution is impossible in Mitogen's configuration, an untrusted
