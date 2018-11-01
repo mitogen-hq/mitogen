@@ -57,7 +57,7 @@ write files.
 Installation
 ------------
 
-1. Thoroughly review :ref:`noteworthy_differences` and :ref:`changelog`.
+1. Thoroughly review :ref:`noteworthy_differences` and :ref:`known_issues`.
 2. Download and extract |mitogen_url|.
 3. Modify ``ansible.cfg``:
 
