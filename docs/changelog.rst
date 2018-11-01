@@ -499,6 +499,12 @@ Mitogen for Ansible
 
 **Known Issues**
 
+* On OS X when a SSH password is specified and the default connection type of
+  ``smart`` is used, Ansible may select the Paramiko plug-in rather than
+  Mitogen. If you specify a password on OS X, ensure ``connection: ssh``
+  appears in your playbook, ``ansible.cfg``, or as ``-c ssh`` on the
+  command-line.
+
 * The ``raw`` action executes as a regular Mitogen connection, which requires
   Python on the target, precluding its use for installing Python. This will be
   addressed in a future 0.2 release. For now, simply mix Mitogen and vanilla
