@@ -269,6 +269,23 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
 
     @mitogen.service.expose(mitogen.service.AllowParents())
+    def dump(self):
+        """
+        For testing, return a list of dicts describing every currently
+        connected context.
+        """
+        return [
+            {
+                'context_name': context.name,
+                'via': getattr(self._via_by_context.get(context),
+                               'name', None),
+                'refs': self._refs_by_context.get(context),
+            }
+            for context, key in sorted(self._key_by_context.items(),
+                                       key=lambda c_k: c_k[0].context_id)
+        ]
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
     def shutdown_all(self):
         """
         For testing use, arrange for all connections to be shut down.
@@ -280,23 +297,19 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
-    def _on_stream_disconnect(self, stream):
+    def _on_context_disconnect(self, context):
         """
-        Respond to Stream disconnection by deleting any record of contexts
-        reached via that stream. This method runs in the Broker thread and must
-        not to block.
+        Respond to Context disconnect event by deleting any record of the no
+        longer reachable context.  This method runs in the Broker thread and
+        must not to block.
         """
         # TODO: there is a race between creation of a context and disconnection
         # of its related stream. An error reply should be sent to any message
         # in _latches_by_key below.
         self._lock.acquire()
         try:
-            routes = self.router.route_monitor.get_routes(stream)
-            for context in list(self._key_by_context):
-                if context.context_id in routes:
-                    LOG.info('Dropping %r due to disconnect of %r',
-                             context, stream)
-                    self._forget_context_unlocked(context)
+            LOG.info('Forgetting %r due to stream disconnect', context)
+            self._forget_context_unlocked(context)
         finally:
             self._lock.release()
 
@@ -362,13 +375,10 @@ class ContextService(mitogen.service.Service):
         context = method(via=via, unidirectional=True, **spec['kwargs'])
         if via and spec.get('enable_lru'):
             self._update_lru(context, spec, via)
-        else:
-            # For directly connected contexts, listen to the associated
-            # Stream's disconnect event and use it to invalidate dependent
-            # Contexts.
-            stream = self.router.stream_by_id(context.context_id)
-            mitogen.core.listen(stream, 'disconnect',
-                                lambda: self._on_stream_disconnect(stream))
+
+        # Forget the context when its disconnect event fires.
+        mitogen.core.listen(context, 'disconnect',
+            lambda: self._on_context_disconnect(context))
 
         self._send_module_forwards(context)
         init_child_result = context.call(
