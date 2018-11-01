@@ -553,7 +553,7 @@ class Message(object):
         assert isinstance(self.data, BytesType)
 
     def _unpickle_context(self, context_id, name):
-        return _unpickle_context(self.router, context_id, name)
+        return _unpickle_context(context_id, name, router=self.router)
 
     def _unpickle_sender(self, context_id, dst_handle):
         return _unpickle_sender(self.router, context_id, dst_handle)
@@ -1498,14 +1498,16 @@ class Context(object):
         return 'Context(%s, %r)' % (self.context_id, self.name)
 
 
-def _unpickle_context(router, context_id, name):
-    if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id >= 0 and (
-                (name is None) or
-                (isinstance(name, UnicodeType) and len(name) < 100))
-            ):
+def _unpickle_context(context_id, name, router=None):
+    if not (isinstance(context_id, (int, long)) and context_id >= 0 and (
+        (name is None) or
+        (isinstance(name, UnicodeType) and len(name) < 100))
+    ):
         raise TypeError('cannot unpickle Context: bad input')
-    return router.context_by_id(context_id, name=name)
+
+    if isinstance(router, Router):
+        return router.context_by_id(context_id, name=name)
+    return Context(None, context_id, name)  # For plain Jane pickle.
 
 
 class Poller(object):
