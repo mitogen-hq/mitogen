@@ -1,4 +1,3 @@
-# coding: utf-8
 # Copyright 2018, Yannig Perré
 #
 # Redistribution and use in source and binary forms, with or without

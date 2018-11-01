@@ -395,11 +395,13 @@ class Service(object):
         Called when a message arrives on any of :attr:`select`'s registered
         receivers.
         """
+        pass
 
     def on_shutdown(self):
         """
         Called by Pool.shutdown() once the last worker thread has exitted.
         """
+        pass
 
 
 class Pool(object):

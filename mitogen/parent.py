@@ -618,6 +618,7 @@ class EofError(mitogen.core.StreamError):
     the child process.
     """
     # inherits from StreamError to maintain compatibility.
+    pass
 
 
 class Argv(object):

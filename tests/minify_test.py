@@ -1,3 +1,5 @@
+import glob
+
 import unittest2
 
 import mitogen.minify
@@ -12,7 +14,7 @@ def read_sample(fname):
     return sample
 
 
-class MinimizeSource(unittest2.TestCase):
+class MinimizeSourceTest(unittest2.TestCase):
     func = staticmethod(mitogen.minify.minimize_source)
 
     def test_class(self):
@@ -49,6 +51,24 @@ class MinimizeSource(unittest2.TestCase):
         original = read_sample('obstacle_course.py')
         expected = read_sample('obstacle_course_min.py')
         self.assertEqual(expected, self.func(original))
+
+
+class MitogenCoreTest(unittest2.TestCase):
+    # Verify minimize_source() succeeds for all built-in modules.
+    func = staticmethod(mitogen.minify.minimize_source)
+
+    def read_source(self, name):
+        fp = open(name)
+        try:
+            return fp.read()
+        finally:
+            fp.close()
+
+    def test_minify_all(self):
+        for name in glob.glob('mitogen/*.py'):
+            original = self.read_source(name)
+            minified = self.func(original)
+            compile(minified, name, 'exec')
 
 
 if __name__ == '__main__':
