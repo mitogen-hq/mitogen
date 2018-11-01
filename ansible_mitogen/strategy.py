@@ -28,10 +28,39 @@
 
 from __future__ import absolute_import
 import os
+import threading
 
 import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
+
+
+def _patch_awx_callback():
+    """
+    issue #400: AWX loads a display callback that suffers from thread-safety
+    issues. Detect the presence of older AWX versions and patch the bug.
+    """
+    # AWX uses sitecustomize.py to force-load this package. If it exists, we're
+    # running under AWX.
+    try:
+        from awx_display_callback.events import EventContext
+        from awx_display_callback.events import event_context
+    except ImportError:
+        return
+
+    if hasattr(EventContext(), '_local'):
+        # Patched version.
+        return
+
+    def patch_add_local(self, **kwargs):
+        tls = vars(self._local)
+        ctx = tls.setdefault('_ctx', {})
+        ctx.update(kwargs)
+
+    EventContext._local = threading.local()
+    EventContext.add_local = patch_add_local
+
+_patch_awx_callback()
 
 
 def wrap_action_loader__get(name, *args, **kwargs):
@@ -63,29 +92,6 @@ def wrap_connection_loader__get(name, *args, **kwargs):
                 'lxd', 'machinectl', 'setns', 'ssh'):
         name = 'mitogen_' + name
     return connection_loader__get(name, *args, **kwargs)
-
-
-def patch_awx_callback():
-    """
-    issue #400: AWX loads a display callback that suffers from thread-safety
-    issues. Detect the presence of older AWX versions and patch the bug.
-    """
-    cls = ansible_mitogen.loaders.callback_loader.get(
-        'awx_display',
-        class_only=True,
-    )
-    if cls is None:  # callback does not exist.
-        return
-
-    # Callback load will have updated sys.path. Now import its guts.
-    try:
-        from awx_display_callback.events import event_context
-    except ImportError:
-        return  # Newer or ancient AWX.
-
-    # Executing this before starting additional threads avoids race.
-    with event_context.set_global():
-        pass
 
 
 class StrategyMixin(object):
@@ -187,7 +193,6 @@ class StrategyMixin(object):
         ansible_mitogen.process.MuxProcess.start()
         self._add_connection_plugin_path()
         self._install_wrappers()
-        patch_awx_callback()
         try:
             return super(StrategyMixin, self).run(iterator, play_context)
         finally:

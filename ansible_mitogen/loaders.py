@@ -34,7 +34,6 @@ from __future__ import absolute_import
 
 try:
     from ansible.plugins.loader import action_loader
-    from ansible.plugins.loader import callback_loader
     from ansible.plugins.loader import connection_loader
     from ansible.plugins.loader import module_loader
     from ansible.plugins.loader import module_utils_loader
@@ -42,7 +41,6 @@ try:
     from ansible.plugins.loader import strategy_loader
 except ImportError:  # Ansible <2.4
     from ansible.plugins import action_loader
-    from ansible.plugins import callback_loader
     from ansible.plugins import connection_loader
     from ansible.plugins import module_loader
     from ansible.plugins import module_utils_loader
