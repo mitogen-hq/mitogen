@@ -1,4 +1,6 @@
+import codecs
 import glob
+import pprint
 
 import unittest2
 
@@ -58,17 +60,46 @@ class MitogenCoreTest(unittest2.TestCase):
     func = staticmethod(mitogen.minify.minimize_source)
 
     def read_source(self, name):
-        fp = open(name)
+        fp = codecs.open(name, encoding='utf-8')
         try:
             return fp.read()
         finally:
             fp.close()
 
+    def _test_syntax_valid(self, minified, name):
+        compile(minified, name, 'exec')
+
+    def _test_line_counts_match(self, original, minified):
+        self.assertEquals(original.count('\n'),
+                          minified.count('\n'))
+
+    def _test_non_blank_lines_match(self, name, original, minified):
+        # Verify first token matches. We just want to ensure line numbers make
+        # sense, this is good enough.
+        olines = original.splitlines()
+        mlines = minified.splitlines()
+        for i, (orig, mini) in enumerate(zip(olines, mlines)):
+            if i < 2:
+                assert orig == mini
+                continue
+
+            owords = orig.split()
+            mwords = mini.split()
+            assert len(mwords) == 0 or (mwords[0] == owords[0]), pprint.pformat({
+                'line': i+1,
+                'filename': name,
+                'owords': owords,
+                'mwords': mwords,
+            })
+
     def test_minify_all(self):
         for name in glob.glob('mitogen/*.py'):
             original = self.read_source(name)
             minified = self.func(original)
-            compile(minified, name, 'exec')
+
+            self._test_syntax_valid(minified, name)
+            self._test_line_counts_match(original, minified)
+            self._test_non_blank_lines_match(name, original, minified)
 
 
 if __name__ == '__main__':
