@@ -52,6 +52,10 @@ Fixes
   was invoked using sudo without appropriate flags to cause the ``HOME``
   environment variable to be reset to match the target account.
 
+* `#370 <https://github.com/dw/mitogen/issues/370>`_: the Ansible
+  `reboot <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
+  module is supported.
+
 * `#373 <https://github.com/dw/mitogen/issues/373>`_: the LXC and LXD methods
   now print a useful hint when Python fails to start, as no useful error is
   normally logged to the console by these tools.
@@ -110,8 +114,9 @@ bug reports, features and fixes in this release contributed by
 `Brian Candler <https://github.com/candlerb>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
-`Jonathan Rosser <https://github.com/jrosser>`_, and
-`Mehdi <https://github.com/mehdisat7>`_.
+`Jonathan Rosser <https://github.com/jrosser>`_,
+`Mehdi <https://github.com/mehdisat7>`_, and
+`Mohammed Naser <https://github.com/mnaser/>`_.
 
 
 v0.2.3 (2018-10-23)
