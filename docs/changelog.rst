@@ -134,9 +134,10 @@ Mitogen for Ansible
 Enhancements
 ^^^^^^^^^^^^
 
-* `#76 <https://github.com/dw/mitogen/issues/76>`_: disconnect propagation has
-  improved, allowing Ansible to cancel waits for responses from targets that
-  where abruptly disconnected. This increases the chance a task will fail
+* `#76 <https://github.com/dw/mitogen/issues/76>`_,
+  `#351 <https://github.com/dw/mitogen/issues/351>`_: disconnect propagation
+  has improved, allowing Ansible to cancel waits for responses from targets
+  that where abruptly disconnected. This increases the chance a task will fail
   gracefully, rather than hanging due to the connection being severed, for
   example because of network failure or EC2 instance maintenance.
 
@@ -221,6 +222,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
+`Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
