@@ -1930,8 +1930,8 @@ class Waker(BasicStream):
     def __repr__(self):
         return 'Waker(%r rfd=%r, wfd=%r)' % (
             self._broker,
-            self.receive_side.fd,
-            self.transmit_side.fd,
+            self.receive_side and self.receive_side.fd,
+            self.transmit_side and self.transmit_side.fd,
         )
 
     @property
