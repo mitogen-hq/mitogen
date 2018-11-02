@@ -137,15 +137,14 @@ Enhancements
 * `#76 <https://github.com/dw/mitogen/issues/76>`_,
   `#351 <https://github.com/dw/mitogen/issues/351>`_,
   `#352 <https://github.com/dw/mitogen/issues/352>`_: disconnect propagation
-  has improved, allowing Ansible to cancel waits for responses from targets
-  that where abruptly disconnected. This increases the chance a task will fail
-  gracefully, rather than hanging due to the connection being severed, for
-  example because of network failure or EC2 instance maintenance.
+  has improved, allowing Ansible to cancel waits for responses from abruptly
+  disconnected targets. This ensures a task will gracefully fail rather than
+  hang, for example on network failure or EC2 instance maintenance.
 
 * `#369 <https://github.com/dw/mitogen/issues/369>`_: :meth:`Connection.reset`
   is implemented, allowing `meta: reset_connection
   <https://docs.ansible.com/ansible/latest/modules/meta_module.html>`_ to shut
-  down the remote interpreter as expected, and improving support for the
+  down the remote interpreter as documented, and improving support for the
   `reboot
   <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
   module.
@@ -156,26 +155,22 @@ Fixes
 
 * `#323 <https://github.com/dw/mitogen/issues/323>`_,
   `#333 <https://github.com/dw/mitogen/issues/333>`_: work around a Windows
-  Subsystem for Linux bug that would cause tracebacks to be rendered during
-  shutdown.
+  Subsystem for Linux bug that caused tracebacks to appear during shutdown.
 
 * `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
-  tilde-expands private key paths using Ansible's logic. Previously Mitogen
-  passed the path unmodified to SSH, which would expand it using
-  :func:`os.getpwent`.
-
-  This differs from :func:`os.path.expanduser`, which prefers the ``HOME``
+  tilde-expands private key paths using Ansible's logic. Previously the path
+  was passed unmodified to SSH, which expanded it using :func:`os.getpwent`.
+  This differs from :func:`os.path.expanduser`, which uses the ``HOME``
   environment variable if it is set, causing behaviour to diverge when Ansible
-  was invoked using sudo without appropriate flags to cause the ``HOME``
-  environment variable to be reset to match the target account.
+  was invoked across user accounts via ``sudo``.
 
 * `#370 <https://github.com/dw/mitogen/issues/370>`_: the Ansible
   `reboot <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
   module is supported.
 
 * `#373 <https://github.com/dw/mitogen/issues/373>`_: the LXC and LXD methods
-  now print a useful hint when Python fails to start, as no useful error is
-  normally logged to the console by these tools.
+  print a useful hint on failure, as no useful error is normally logged to the
+  console by these tools.
 
 * `#400 <https://github.com/dw/mitogen/issues/400>`_: work around a threading
   bug in the AWX display callback when running with high verbosity setting.
@@ -195,21 +190,21 @@ Fixes
 Core Library
 ~~~~~~~~~~~~
 
-* `#76 <https://github.com/dw/mitogen/issues/76>`_: routing maintains the set
-  of destination context ID ever received on each stream, and when
-  disconnection occurs, propagates ``DEL_ROUTE`` messages downwards towards
-  every stream that ever communicated with a disappearing peer, rather than
-  simply toward parents.
+* `#76 <https://github.com/dw/mitogen/issues/76>`_: routing records the
+  destination context IDs ever received on each stream, and when disconnection
+  occurs, propagates :data:`mitogen.core.DEL_ROUTE` messages towards every
+  stream that ever communicated with the disappearing peer, rather than simply
+  towards parents.
 
-  Conversations between nodes in any level of the tree receive ``DEL_ROUTE``
-  messages when a participant disconnects, allowing receivers to be woken with
-  :class:`mitogen.core.ChannelError` to signal the connection has broken, even
-  when one participant is not a parent of the other.
+  Conversations between nodes anywhere in the tree receive
+  :data:`mitogen.core.DEL_ROUTE` when either participant disconnects, allowing
+  receivers to wake with :class:`mitogen.core.ChannelError`, even when one
+  participant is not a parent of the other.
 
-* `#405 <https://github.com/dw/mitogen/issues/405>`_: if a message is rejected
-  due to being too large, and it has a ``reply_to`` set, a dead message is
-  returned to the sender. This ensures function calls exceeding the configured
-  maximum size crash rather than hang.
+* `#405 <https://github.com/dw/mitogen/issues/405>`_: if an oversized message
+  is rejected, and it has a ``reply_to`` set, a dead message is returned to the
+  sender. This ensures function calls exceeding the configured maximum size
+  crash rather than hang.
 
 * `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
   "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
@@ -227,7 +222,7 @@ Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
-bug reports, features and fixes in this release contributed by
+bug reports, testing, features and fixes in this release contributed by
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
@@ -441,7 +436,7 @@ Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
-bug reports, features and fixes in this release contributed by
+bug reports, testing, features and fixes in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
 `Alex Willmer <https://github.com/moreati>`_,
 `atoom <https://github.com/atoom>`_,

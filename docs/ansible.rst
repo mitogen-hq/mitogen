@@ -429,7 +429,7 @@ Temporary Files
 
 Temporary file handling in Ansible is tricky, and the precise behaviour varies
 across major versions. A variety of temporary files and directories are
-created, depending on the operating mode:
+created, depending on the operating mode.
 
 In the best case when pipelining is enabled and no temporary uploads are
 required, for each task Ansible will create one directory below a
