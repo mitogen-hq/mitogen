@@ -108,6 +108,7 @@ try:
 except NameError:
     BaseException = Exception
 
+IS_WSL = 'Microsoft' in os.uname()[2]
 PY3 = sys.version_info > (3,)
 if PY3:
     b = str.encode
@@ -1920,7 +1921,9 @@ class IoLogger(BasicStream):
     def on_shutdown(self, broker):
         """Shut down the write end of the logging socket."""
         _v and LOG.debug('%r.on_shutdown()', self)
-        self._wsock.shutdown(socket.SHUT_WR)
+        if not IS_WSL:
+            # #333: WSL generates invalid readiness indication on shutdown()
+            self._wsock.shutdown(socket.SHUT_WR)
         self._wsock.close()
         self.transmit_side.close()
 
