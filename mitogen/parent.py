@@ -1822,6 +1822,10 @@ class Router(mitogen.core.Router):
 
 
 class ProcessMonitor(object):
+    """
+    Install a :data:`signal.SIGCHLD` handler that generates callbacks when a
+    specific child process has exitted. This class is obsolete, do not use.
+    """
     def __init__(self):
         # pid -> callback()
         self.callback_by_pid = {}
@@ -1835,6 +1839,16 @@ class ProcessMonitor(object):
                 del self.callback_by_pid[pid]
 
     def add(self, pid, callback):
+        """
+        Add a callback function to be notified of the exit status of a process.
+
+        :param int pid:
+            Process ID to be notified of.
+
+        :param callback:
+            Function invoked as `callback(status)`, where `status` is the raw
+            exit status of the child process.
+        """
         self.callback_by_pid[pid] = callback
 
     _instance = None
