@@ -2330,28 +2330,31 @@ class Broker(object):
         for (side, func) in self.poller.poll(timeout):
             self._call(side.stream, func)
 
+    def _broker_shutdown(self):
+        for _, (side, _) in self.poller.readers + self.poller.writers:
+            self._call(side.stream, side.stream.on_shutdown)
+
+        deadline = time.time() + self.shutdown_timeout
+        while self.keep_alive() and time.time() < deadline:
+            self._loop_once(max(0, deadline - time.time()))
+
+        if self.keep_alive():
+            LOG.error('%r: some streams did not close gracefully. '
+                      'The most likely cause for this is one or '
+                      'more child processes still connected to '
+                      'our stdout/stderr pipes.', self)
+
+        for _, (side, _) in self.poller.readers + self.poller.writers:
+            LOG.error('_broker_main() force disconnecting %r', side)
+            side.stream.on_disconnect(self)
+
     def _broker_main(self):
         try:
             while self._alive:
                 self._loop_once()
 
             fire(self, 'shutdown')
-            for _, (side, _) in self.poller.readers + self.poller.writers:
-                self._call(side.stream, side.stream.on_shutdown)
-
-            deadline = time.time() + self.shutdown_timeout
-            while self.keep_alive() and time.time() < deadline:
-                self._loop_once(max(0, deadline - time.time()))
-
-            if self.keep_alive():
-                LOG.error('%r: some streams did not close gracefully. '
-                          'The most likely cause for this is one or '
-                          'more child processes still connected to '
-                          'our stdout/stderr pipes.', self)
-
-            for _, (side, _) in self.poller.readers + self.poller.writers:
-                LOG.error('_broker_main() force disconnecting %r', side)
-                side.stream.on_disconnect(self)
+            self._broker_shutdown()
         except Exception:
             LOG.exception('_broker_main() crashed')
 
