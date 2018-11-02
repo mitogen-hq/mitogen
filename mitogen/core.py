@@ -2491,6 +2491,8 @@ class Broker(object):
             LOG.error('_broker_main() force disconnecting %r', side)
             side.stream.on_disconnect(self)
 
+        self.poller.close()
+
     def _broker_main(self):
         """
         Handle events until :meth:`shutdown`. On shutdown, invoke
