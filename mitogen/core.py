@@ -1284,6 +1284,7 @@ class BasicStream(object):
         called on them, and the method must call :meth:`on_disconect` if
         reading produces an empty string.
         """
+        pass
 
     def on_transmit(self, broker):
         """
@@ -1295,6 +1296,7 @@ class BasicStream(object):
         Subclasses must implement this if :meth:`Broker._start_transmit` is
         ever called on them.
         """
+        pass
 
     def on_shutdown(self, broker):
         """
