@@ -206,6 +206,10 @@ Core Library
   sender. This ensures function calls exceeding the configured maximum size
   crash rather than hang.
 
+* `#406 <https://github.com/dw/mitogen/issues/406>`_:
+  :class:`mitogen.core.Broker` did not call :meth:`mitogen.core.Poller.close`
+  during shutdown, leaking the underlying poller FD in masters and parents.
+
 * `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
   "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
   was configured. This would lead to connection timeouts due to the hung
