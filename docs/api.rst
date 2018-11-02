@@ -107,7 +107,8 @@ Router Class
 Connection Methods
 ==================
 
-.. method:: mitogen.parent.Router.fork (on_fork=None, on_start=None, debug=False, profiling=False, via=None)
+.. currentmodule:: mitogen.parent
+.. method:: Router.fork (on_fork=None, on_start=None, debug=False, profiling=False, via=None)
 
     Construct a context on the local machine by forking the current
     process. The forked child receives a new identity, sets up a new broker
@@ -203,7 +204,7 @@ Connection Methods
     :param bool profiling:
         Same as the `profiling` parameter for :meth:`local`.
 
-.. method:: mitogen.parent.Router.local (remote_name=None, python_path=None, debug=False, connect_timeout=None, profiling=False, via=None)
+.. method:: Router.local (remote_name=None, python_path=None, debug=False, connect_timeout=None, profiling=False, via=None)
 
     Construct a context on the local machine as a subprocess of the current
     process. The associated stream implementation is
@@ -264,7 +265,7 @@ Connection Methods
             # Use the SSH connection to create a sudo connection.
             remote_root = router.sudo(username='root', via=remote_machine)
 
-.. method:: mitogen.parent.Router.doas (username=None, password=None, doas_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
+.. method:: Router.doas (username=None, password=None, doas_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
 
     Construct a context on the local machine over a ``doas`` invocation.
     The ``doas`` process is started in a newly allocated pseudo-terminal,
@@ -289,7 +290,7 @@ Connection Methods
         A password was requested but none was provided, the supplied
         password was incorrect, or the target account did not exist.
 
-.. method:: mitogen.parent.Router.docker (container=None, image=None, docker_path=None, \**kwargs)
+.. method:: Router.docker (container=None, image=None, docker_path=None, \**kwargs)
 
     Construct a context on the local machine within an existing or
     temporary new Docker container using the ``docker`` program. One of
@@ -309,7 +310,7 @@ Connection Methods
         Filename or complete path to the Docker binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``docker``.
 
-.. method:: mitogen.parent.Router.jail (container, jexec_path=None, \**kwargs)
+.. method:: Router.jail (container, jexec_path=None, \**kwargs)
 
     Construct a context on the local machine within a FreeBSD jail using
     the ``jexec`` program.
@@ -325,7 +326,7 @@ Connection Methods
         Filename or complete path to the ``jexec`` binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``/usr/sbin/jexec``.
 
-.. method:: mitogen.parent.Router.kubectl (pod, kubectl_path=None, kubectl_args=None, \**kwargs)
+.. method:: Router.kubectl (pod, kubectl_path=None, kubectl_args=None, \**kwargs)
 
     Construct a context in a container via the Kubernetes ``kubectl``
     program.
@@ -340,7 +341,7 @@ Connection Methods
     :param list kubectl_args:
         Additional arguments to pass to the ``kubectl`` command.
 
-.. method:: mitogen.parent.Router.lxc (container, lxc_attach_path=None, \**kwargs)
+.. method:: Router.lxc (container, lxc_attach_path=None, \**kwargs)
 
     Construct a context on the local machine within an LXC classic
     container using the ``lxc-attach`` program.
@@ -354,7 +355,7 @@ Connection Methods
         will be searched if given as a filename. Defaults to
         ``lxc-attach``.
 
-.. method:: mitogen.parent.Router.lxc (container, lxc_attach_path=None, \**kwargs)
+.. method:: Router.lxc (container, lxc_attach_path=None, \**kwargs)
 
     Construct a context on the local machine within a LXD container using
     the ``lxc`` program.
@@ -367,7 +368,7 @@ Connection Methods
         Filename or complete path to the ``lxc`` binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``lxc``.
 
-.. method:: mitogen.parent.Router.setns (container, kind, username=None, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
+.. method:: Router.setns (container, kind, username=None, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
     Construct a context in the style of :meth:`local`, but change the
     active Linux process namespaces via calls to `setns(1)` before
@@ -401,7 +402,7 @@ Connection Methods
         will be searched if given as a filename. Defaults to
         ``machinectl``.
 
-.. method:: mitogen.parent.Router.su (username=None, password=None, su_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
+.. method:: Router.su (username=None, password=None, su_path=None, password_prompt=None, incorrect_prompts=None, \**kwargs)
 
     Construct a context on the local machine over a ``su`` invocation. The
     ``su`` process is started in a newly allocated pseudo-terminal, and
@@ -428,7 +429,7 @@ Connection Methods
         password was incorrect, or (on BSD) the target account did not
         exist.
 
-.. method:: mitogen.parent.Router.sudo (username=None, sudo_path=None, password=None, \**kwargs)
+.. method:: Router.sudo (username=None, sudo_path=None, password=None, \**kwargs)
 
     Construct a context on the local machine over a ``sudo`` invocation.
     The ``sudo`` process is started in a newly allocated pseudo-terminal,
@@ -464,7 +465,7 @@ Connection Methods
         :class:`mitogen.core.StreamError` to be raised, and that
         attributes of the stream match the actual behaviour of ``sudo``.
 
-.. method:: mitogen.parent.Router.ssh (hostname, username=None, ssh_path=None, ssh_args=None, port=None, check_host_keys='enforce', password=None, identity_file=None, identities_only=True, compression=True, \**kwargs)
+.. method:: Router.ssh (hostname, username=None, ssh_path=None, ssh_args=None, port=None, check_host_keys='enforce', password=None, identity_file=None, identities_only=True, compression=True, \**kwargs)
 
     Construct a remote context over an OpenSSH ``ssh`` invocation.
 

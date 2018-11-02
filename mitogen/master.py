@@ -815,9 +815,8 @@ class Router(mitogen.parent.Router):
     #: main threads existing in any child to write
     #: ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
     #: :mod:`cProfile` dump on graceful exit. Must be set prior to construction
-    #: of any :class:`Broker`, e.g. via:
+    #: of any :class:`Broker`, e.g. via::
     #:
-    #: .. code::
     #:      mitogen.master.Router.profiling = True
     profiling = False
 
