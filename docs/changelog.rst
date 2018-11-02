@@ -135,7 +135,8 @@ Enhancements
 ^^^^^^^^^^^^
 
 * `#76 <https://github.com/dw/mitogen/issues/76>`_,
-  `#351 <https://github.com/dw/mitogen/issues/351>`_: disconnect propagation
+  `#351 <https://github.com/dw/mitogen/issues/351>`_,
+  `#352 <https://github.com/dw/mitogen/issues/352>`_: disconnect propagation
   has improved, allowing Ansible to cancel waits for responses from targets
   that where abruptly disconnected. This increases the chance a task will fail
   gracefully, rather than hanging due to the connection being severed, for
@@ -152,6 +153,11 @@ Enhancements
 
 Fixes
 ^^^^^
+
+* `#323 <https://github.com/dw/mitogen/issues/323>`_,
+  `#333 <https://github.com/dw/mitogen/issues/333>`_: work around a Windows
+  Subsystem for Linux bug that would cause tracebacks to be rendered during
+  shutdown.
 
 * `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
   tilde-expands private key paths using Ansible's logic. Previously Mitogen
@@ -224,9 +230,11 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
+`Duane Zamrok <https://github.com/dewthefifth>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
+`Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_, and
 `Mohammed Naser <https://github.com/mnaser/>`_.
 

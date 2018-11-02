@@ -68,7 +68,6 @@ from mitogen.core import LOG
 from mitogen.core import IOLOG
 
 
-IS_WSL = 'Microsoft' in os.uname()[2]
 itervalues = getattr(dict, 'itervalues', dict.values)
 
 if mitogen.core.PY3:
@@ -178,7 +177,7 @@ def disable_echo(fd):
     old = termios.tcgetattr(fd)
     new = cfmakeraw(old)
     flags = getattr(termios, 'TCSASOFT', 0)
-    if not IS_WSL:
+    if not mitogen.core.IS_WSL:
         # issue #319: Windows Subsystem for Linux as of July 2018 throws EINVAL
         # if TCSAFLUSH is specified.
         flags |= termios.TCSAFLUSH
