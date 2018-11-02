@@ -154,6 +154,11 @@ Enhancements
 Fixes
 ^^^^^
 
+* `#323 <https://github.com/dw/mitogen/issues/323>`_,
+  `#333 <https://github.com/dw/mitogen/issues/333>`_: work around a Windows
+  Subsystem for Linux bug that would cause tracebacks to be rendered during
+  shutdown.
+
 * `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
   tilde-expands private key paths using Ansible's logic. Previously Mitogen
   passed the path unmodified to SSH, which would expand it using
@@ -225,6 +230,7 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, features and fixes in this release contributed by
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
+`Duane Zamrok <https://github.com/dewthefifth>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
