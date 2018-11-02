@@ -24,7 +24,7 @@
       that:
         - async_out.changed == True
         - async_out.cmd == "echo hi"
-        - 'async_out.delta.startswith("0:00:00")'
+        - 'async_out.delta.startswith("0:00:")'
         - async_out.end.startswith("20")
         - async_out.invocation.module_args._raw_params == "echo hi"
         - async_out.invocation.module_args._uses_shell == True
