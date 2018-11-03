@@ -6,7 +6,9 @@ import re
 import socket
 import subprocess
 import sys
+import threading
 import time
+import traceback
 
 import psutil
 import unittest2
@@ -175,6 +177,46 @@ def sync_with_broker(broker, timeout=10.0):
     sem.get(timeout=10.0)
 
 
+def log_fd_calls():
+    mypid = os.getpid()
+    l = threading.Lock()
+    real_pipe = os.pipe
+    def pipe():
+        with l:
+            rv = real_pipe()
+            if mypid == os.getpid():
+                print
+                print rv
+                traceback.print_stack(limit=3)
+                print
+            return rv
+
+    real_dup2 = os.dup2
+    def dup2(*args):
+        with l:
+            real_dup2(*args)
+            if mypid == os.getpid():
+                print
+                print '--', args
+                traceback.print_stack(limit=3)
+                print
+
+    real_dup = os.dup
+    def dup(*args):
+        with l:
+            rc = real_dup(*args)
+            if mypid == os.getpid():
+                print
+                print '--', args, '->', rv
+                traceback.print_stack(limit=3)
+                print
+            return rv
+
+    os.pipe = pipe
+    os.dup = dup
+    os.dup2 = dup2
+
+
 class CaptureStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwargs):
         logging.StreamHandler.__init__(self, *args, **kwargs)
@@ -232,10 +274,11 @@ class TestCase(unittest2.TestCase):
     def tearDownClass(cls):
         super(TestCase, cls).tearDownClass()
         mitogen.fork.on_fork()
-        assert get_fd_count() == cls._fd_count_before, \
-            "%s leaked FDs. Count before: %s, after: %s" % (
+        if get_fd_count() != cls._fd_count_before:
+            import os; os.system('lsof -p %s' % (os.getpid(),))
+            assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 cls, cls._fd_count_before, get_fd_count(),
-        )
+            )
 
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
