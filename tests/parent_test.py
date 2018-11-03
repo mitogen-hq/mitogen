@@ -153,7 +153,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(s in e.args[0])
 
 
-class ContextTest(testlib.RouterMixin, unittest2.TestCase):
+class ContextTest(testlib.RouterMixin, testlib.TestCase):
     def test_context_shutdown(self):
         local = self.router.local()
         pid = local.call(os.getpid)
@@ -181,7 +181,7 @@ class OpenPtyTest(testlib.TestCase):
         self.assertEquals(e.args[0], msg)
 
 
-class TtyCreateChildTest(unittest2.TestCase):
+class TtyCreateChildTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.tty_create_child)
 
     def test_dev_tty_open_succeeds(self):
@@ -211,7 +211,7 @@ class TtyCreateChildTest(unittest2.TestCase):
             tf.close()
 
 
-class IterReadTest(unittest2.TestCase):
+class IterReadTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
@@ -263,7 +263,7 @@ class IterReadTest(unittest2.TestCase):
             proc.terminate()
 
 
-class WriteAllTest(unittest2.TestCase):
+class WriteAllTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.write_all)
 
     def make_proc(self):

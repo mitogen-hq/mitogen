@@ -20,7 +20,7 @@ def get_os_environ():
     return dict(os.environ)
 
 
-class LocalTest(testlib.RouterMixin, unittest2.TestCase):
+class LocalTest(testlib.RouterMixin, testlib.TestCase):
     stream_class = mitogen.ssh.Stream
 
     def test_stream_name(self):
@@ -29,7 +29,7 @@ class LocalTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertEquals('local.%d' % (pid,), context.name)
 
 
-class PythonPathTest(testlib.RouterMixin, unittest2.TestCase):
+class PythonPathTest(testlib.RouterMixin, testlib.TestCase):
     stream_class = mitogen.ssh.Stream
 
     def test_inherited(self):

@@ -8,9 +8,11 @@ import subprocess
 import sys
 import time
 
+import psutil
 import unittest2
 
 import mitogen.core
+import mitogen.fork
 import mitogen.master
 import mitogen.utils
 
@@ -39,6 +41,13 @@ if mitogen.is_master:
 
 if faulthandler is not None:
     faulthandler.enable()
+
+
+def get_fd_count():
+    """
+    Return the number of FDs open by this process.
+    """
+    return psutil.Process().num_fds()
 
 
 def data_path(suffix):
@@ -211,6 +220,23 @@ class LogCapturer(object):
 
 
 class TestCase(unittest2.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # This is done in setUpClass() so we have a chance to run before any
+        # Broker() instantiations in setUp() etc.
+        mitogen.fork.on_fork()
+        cls._fd_count_before = get_fd_count()
+        super(TestCase, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super(TestCase, cls).tearDownClass()
+        mitogen.fork.on_fork()
+        assert get_fd_count() == cls._fd_count_before, \
+            "%s leaked FDs. Count before: %s, after: %s" % (
+                cls, cls._fd_count_before, get_fd_count(),
+        )
+
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
         raised. Can't use context manager because tests must run on Python2.4"""

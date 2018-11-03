@@ -6,6 +6,8 @@ import mitogen.core
 import mitogen.master
 import mitogen.utils
 
+import testlib
+
 
 def func0(router):
     return router
@@ -16,7 +18,7 @@ def func(router):
     return router
 
 
-class RunWithRouterTest(unittest2.TestCase):
+class RunWithRouterTest(testlib.TestCase):
     # test_shutdown_on_exception
     # test_shutdown_on_success
 
@@ -26,7 +28,7 @@ class RunWithRouterTest(unittest2.TestCase):
         self.assertFalse(router.broker._thread.isAlive())
 
 
-class WithRouterTest(unittest2.TestCase):
+class WithRouterTest(testlib.TestCase):
     def test_with_broker(self):
         router = func()
         self.assertIsInstance(router, mitogen.master.Router)
@@ -40,7 +42,7 @@ class Unicode(mitogen.core.UnicodeType): pass
 class Bytes(mitogen.core.BytesType): pass
 
 
-class CastTest(unittest2.TestCase):
+class CastTest(testlib.TestCase):
     def test_dict(self):
         self.assertEqual(type(mitogen.utils.cast({})), dict)
         self.assertEqual(type(mitogen.utils.cast(Dict())), dict)

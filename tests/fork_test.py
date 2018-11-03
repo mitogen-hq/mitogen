@@ -55,7 +55,7 @@ def exercise_importer(n):
     return simple_pkg.a.subtract_one_add_two(n)
 
 
-class ForkTest(testlib.RouterMixin, unittest2.TestCase):
+class ForkTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         context = self.router.fork()
         self.assertNotEqual(context.call(os.getpid), os.getpid())
@@ -84,7 +84,8 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.fork(on_start=on_start)
         self.assertEquals(123, recv.get().unpickle())
 
-class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
+
+class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         # When forking from the master process, Mitogen had nothing to do with
         # setting up stdio -- that was inherited wherever the Master is running

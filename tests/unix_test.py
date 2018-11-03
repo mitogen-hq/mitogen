@@ -30,7 +30,7 @@ class MyService(mitogen.service.Service):
         }
 
 
-class IsPathDeadTest(unittest2.TestCase):
+class IsPathDeadTest(testlib.TestCase):
     func = staticmethod(mitogen.unix.is_path_dead)
     path = '/tmp/stale-socket'
 
@@ -57,7 +57,7 @@ class IsPathDeadTest(unittest2.TestCase):
         os.unlink(self.path)
 
 
-class ListenerTest(testlib.RouterMixin, unittest2.TestCase):
+class ListenerTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.unix.Listener
 
     def test_constructor_basic(self):
@@ -66,7 +66,7 @@ class ListenerTest(testlib.RouterMixin, unittest2.TestCase):
         os.unlink(listener.path)
 
 
-class ClientTest(unittest2.TestCase):
+class ClientTest(testlib.TestCase):
     klass = mitogen.unix.Listener
 
     def _try_connect(self, path):

@@ -16,7 +16,7 @@ def read_sample(fname):
     return sample
 
 
-class MinimizeSourceTest(unittest2.TestCase):
+class MinimizeSourceTest(testlib.TestCase):
     func = staticmethod(mitogen.minify.minimize_source)
 
     def test_class(self):
@@ -55,7 +55,7 @@ class MinimizeSourceTest(unittest2.TestCase):
         self.assertEqual(expected, self.func(original))
 
 
-class MitogenCoreTest(unittest2.TestCase):
+class MitogenCoreTest(testlib.TestCase):
     # Verify minimize_source() succeeds for all built-in modules.
     func = staticmethod(mitogen.minify.minimize_source)
 

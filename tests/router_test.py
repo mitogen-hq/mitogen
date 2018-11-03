@@ -36,7 +36,7 @@ def send_n_sized_reply(sender, n):
     return 123
 
 
-class SourceVerifyTest(testlib.RouterMixin, unittest2.TestCase):
+class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
     def setUp(self):
         super(SourceVerifyTest, self).setUp()
         # Create some children, ping them, and store what their messages look
@@ -149,7 +149,7 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(e.args[0], self.router.refused_msg)
 
 
-class CrashTest(testlib.BrokerMixin, unittest2.TestCase):
+class CrashTest(testlib.BrokerMixin, testlib.TestCase):
     # This is testing both Broker's ability to crash nicely, and Router's
     # ability to respond to the crash event.
     klass = mitogen.master.Router
@@ -178,8 +178,7 @@ class CrashTest(testlib.BrokerMixin, unittest2.TestCase):
         self.assertTrue(expect in log.stop())
 
 
-
-class AddHandlerTest(unittest2.TestCase):
+class AddHandlerTest(testlib.TestCase):
     klass = mitogen.master.Router
 
     def test_invoked_at_shutdown(self):

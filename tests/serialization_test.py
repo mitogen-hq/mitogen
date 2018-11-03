@@ -20,7 +20,7 @@ def roundtrip(v):
     return mitogen.core.Message(data=msg.data).unpickle()
 
 
-class BlobTest(unittest2.TestCase):
+class BlobTest(testlib.TestCase):
     klass = mitogen.core.Blob
 
     # Python 3 pickle protocol 2 does weird stuff depending on whether an empty
@@ -36,7 +36,7 @@ class BlobTest(unittest2.TestCase):
         self.assertEquals(b(''), roundtrip(v))
 
 
-class ContextTest(testlib.RouterMixin, unittest2.TestCase):
+class ContextTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.core.Context
 
     # Ensure Context can be round-tripped by regular pickle in addition to

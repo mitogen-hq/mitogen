@@ -1,4 +1,5 @@
 -r docs/docs-requirements.txt
+psutil==5.4.8
 coverage==4.5.1
 Django==1.6.11  # Last version supporting 2.6.
 mock==2.0.0
