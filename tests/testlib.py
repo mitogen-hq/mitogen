@@ -190,6 +190,19 @@ def log_fd_calls():
                 traceback.print_stack(limit=3)
                 print
             return rv
+    os.pipe = pipe
+
+    real_socketpair = socket.socketpair
+    def socketpair(*args):
+        with l:
+            rv = real_socketpair(*args)
+            if mypid == os.getpid():
+                print
+                print '--', args, '->', rv
+                traceback.print_stack(limit=3)
+                print
+                return rv
+    socket.socketpair = socketpair
 
     real_dup2 = os.dup2
     def dup2(*args):
@@ -200,6 +213,7 @@ def log_fd_calls():
                 print '--', args
                 traceback.print_stack(limit=3)
                 print
+    os.dup2 = dup2
 
     real_dup = os.dup
     def dup(*args):
@@ -211,10 +225,7 @@ def log_fd_calls():
                 traceback.print_stack(limit=3)
                 print
             return rv
-
-    os.pipe = pipe
     os.dup = dup
-    os.dup2 = dup2
 
 
 class CaptureStreamHandler(logging.StreamHandler):
