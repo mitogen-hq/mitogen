@@ -230,6 +230,7 @@ class IterReadTest(testlib.TestCase):
                     break
         finally:
             proc.terminate()
+            proc.stdout.close()
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
@@ -244,6 +245,7 @@ class IterReadTest(testlib.TestCase):
                 self.assertEqual(len(got), 0)
         finally:
             proc.terminate()
+            proc.stdout.close()
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
@@ -261,6 +263,7 @@ class IterReadTest(testlib.TestCase):
                 self.assertLess(len(got), 5)
         finally:
             proc.terminate()
+            proc.stdout.close()
 
 
 class WriteAllTest(testlib.TestCase):
@@ -280,6 +283,7 @@ class WriteAllTest(testlib.TestCase):
             self.func(proc.stdin.fileno(), self.ten_ms_chunk)
         finally:
             proc.terminate()
+            proc.stdout.close()
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
@@ -289,6 +293,7 @@ class WriteAllTest(testlib.TestCase):
             ))
         finally:
             proc.terminate()
+            proc.stdout.close()
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
@@ -301,6 +306,7 @@ class WriteAllTest(testlib.TestCase):
             ))
         finally:
             proc.terminate()
+            proc.stdout.close()
 
 
 class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
