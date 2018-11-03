@@ -2473,6 +2473,13 @@ class Broker(object):
         for (side, func) in self.poller.poll(timeout):
             self._call(side.stream, func)
 
+    def _broker_exit(self):
+        for _, (side, _) in self.poller.readers + self.poller.writers:
+            LOG.error('_broker_main() force disconnecting %r', side)
+            side.stream.on_disconnect(self)
+
+        self.poller.close()
+
     def _broker_shutdown(self):
         for _, (side, _) in self.poller.readers + self.poller.writers:
             self._call(side.stream, side.stream.on_shutdown)
@@ -2486,12 +2493,6 @@ class Broker(object):
                       'The most likely cause for this is one or '
                       'more child processes still connected to '
                       'our stdout/stderr pipes.', self)
-
-        for _, (side, _) in self.poller.readers + self.poller.writers:
-            LOG.error('_broker_main() force disconnecting %r', side)
-            side.stream.on_disconnect(self)
-
-        self.poller.close()
 
     def _broker_main(self):
         """
@@ -2509,6 +2510,7 @@ class Broker(object):
         except Exception:
             LOG.exception('_broker_main() crashed')
 
+        self._broker_exit()
         fire(self, 'exit')
 
     def shutdown(self):
