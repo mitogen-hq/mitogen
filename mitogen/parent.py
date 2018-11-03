@@ -211,7 +211,7 @@ def create_socketpair():
     return parentfp, childfp
 
 
-def detach_popen(*args, **kwargs):
+def detach_popen(close_on_error=None, **kwargs):
     """
     Use :class:`subprocess.Popen` to construct a child process, then hack the
     Popen so that it forgets the child it created, allowing it to survive a
@@ -223,6 +223,8 @@ def detach_popen(*args, **kwargs):
     delivered to this process, causing later 'legitimate' calls to fail with
     ECHILD.
 
+    :param list close_on_error:
+        Array of integer file descriptors to close on exception.
     :returns:
         Process ID of the new child.
     """
@@ -230,7 +232,13 @@ def detach_popen(*args, **kwargs):
     # handling, without tying the surrounding code into managing a Popen
     # object, which isn't possible for at least :mod:`mitogen.fork`. This
     # should be replaced by a swappable helper class in a future version.
-    proc = subprocess.Popen(*args, **kwargs)
+    try:
+        proc = subprocess.Popen(**kwargs)
+    except Exception:
+        for fd in close_on_error or ():
+            os.close(fd)
+        raise
+
     proc._child_created = False
     return proc.pid
 
@@ -277,6 +285,7 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
         stdout=childfp,
         close_fds=True,
         preexec_fn=preexec_fn,
+        close_on_error=[parentfp.fileno(), childfp.fileno()],
         **extra
     )
     if stderr_pipe:
@@ -344,6 +353,7 @@ def tty_create_child(args):
         stdout=slave_fd,
         stderr=slave_fd,
         preexec_fn=_acquire_controlling_tty,
+        close_on_error=[master_fd, slave_fd],
         close_fds=True,
     )
 
@@ -372,6 +382,7 @@ def hybrid_tty_create_child(args):
     mitogen.core.set_block(childfp)
     disable_echo(master_fd)
     disable_echo(slave_fd)
+
     pid = detach_popen(
         args=args,
         stdin=childfp,
@@ -379,6 +390,7 @@ def hybrid_tty_create_child(args):
         stderr=slave_fd,
         preexec_fn=_acquire_controlling_tty,
         close_fds=True,
+        close_on_error=[master_fd, slave_fd, parentfp.fileno(), childfp.fileno()],
     )
 
     os.close(slave_fd)
