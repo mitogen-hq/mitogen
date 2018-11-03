@@ -32,6 +32,7 @@ class DeferSyncTest(testlib.TestCase):
             self.assertEquals(th, broker._thread)
         finally:
             broker.shutdown()
+            broker.join()
 
     def test_exception(self):
         broker = self.klass()
@@ -40,6 +41,7 @@ class DeferSyncTest(testlib.TestCase):
                 broker.defer_sync, lambda: int('dave'))
         finally:
             broker.shutdown()
+            broker.join()
 
 
 if __name__ == '__main__':
