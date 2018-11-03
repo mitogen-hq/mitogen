@@ -1,4 +1,5 @@
 
+import _ssl
 import ctypes
 import os
 import random
@@ -13,21 +14,29 @@ import testlib
 import plain_old_module
 
 
-IS_64BIT = struct.calcsize('P') == 8
-PLATFORM_TO_PATH = {
-    ('darwin', False): '/usr/lib/libssl.dylib',
-    ('darwin', True): '/usr/lib/libssl.dylib',
-    ('linux2', False): '/usr/lib/libssl.so',
-    ('linux2', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
-    # Python 2.6
-    ('linux3', False): '/usr/lib/libssl.so',
-    ('linux3', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
-    # Python 3
-    ('linux', False): '/usr/lib/libssl.so',
-    ('linux', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
-}
+def _find_ssl_linux():
+    s = testlib.subprocess__check_output(['ldd', _ssl.__file__])
+    for line in s.splitlines():
+        bits = line.split()
+        if bits[0].startswith('libssl'):
+            return bits[2]
 
-c_ssl = ctypes.CDLL(PLATFORM_TO_PATH[sys.platform, IS_64BIT])
+def _find_ssl_darwin():
+    s = testlib.subprocess__check_output(['otool', '-l', _ssl.__file__])
+    for line in s.splitlines():
+        bits = line.split()
+        if bits[0] == 'name' and 'libssl' in bits[1]:
+            return bits[1]
+
+
+if sys.platform.startswith('linux'):
+    LIBSSL_PATH = _find_ssl_linux()
+elif sys.platform == 'darwin':
+    LIBSSL_PATH = _find_ssl_darwin()
+else:
+    assert 0, "Don't know how to find libssl on this platform"
+
+c_ssl = ctypes.CDLL(LIBSSL_PATH)
 c_ssl.RAND_pseudo_bytes.argtypes = [ctypes.c_char_p, ctypes.c_int]
 c_ssl.RAND_pseudo_bytes.restype = ctypes.c_int
 
