@@ -1152,10 +1152,14 @@ class Stream(mitogen.core.Stream):
         try:
             self._connect_bootstrap(extra_fd)
         except EofError:
+            self.receive_side.close()
+            self.transmit_side.close()
             e = sys.exc_info()[1]
             self._adorn_eof_error(e)
             raise
         except Exception:
+            self.receive_side.close()
+            self.transmit_side.close()
             self._reap_child()
             raise
 
