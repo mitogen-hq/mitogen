@@ -218,7 +218,7 @@ def log_fd_calls():
     real_dup = os.dup
     def dup(*args):
         with l:
-            rc = real_dup(*args)
+            rv = real_dup(*args)
             if mypid == os.getpid():
                 print
                 print '--', args, '->', rv
