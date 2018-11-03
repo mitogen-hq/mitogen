@@ -281,15 +281,37 @@ class TestCase(unittest2.TestCase):
         cls._fd_count_before = get_fd_count()
         super(TestCase, cls).setUpClass()
 
+    ALLOWED_THREADS = set([
+        'MainThread',
+        'mitogen.master.join_thread_async'
+    ])
+
     @classmethod
-    def tearDownClass(cls):
-        super(TestCase, cls).tearDownClass()
-        mitogen.fork.on_fork()
+    def _teardown_check_threads(cls):
+        counts = {}
+        for thread in threading.enumerate():
+            assert thread.name in cls.ALLOWED_THREADS, \
+                'Found thread %r still running after tests.' % (thread.name,)
+            counts[thread.name] = counts.get(thread.name, 0) + 1
+
+        for name in counts:
+            assert counts[name] == 1, \
+                'Found %d copies of thread %r running after tests.' % (name,)
+
+    @classmethod
+    def _teardown_check_fds(cls):
+        mitogen.core.Latch._on_fork()
         if get_fd_count() != cls._fd_count_before:
             import os; os.system('lsof -p %s' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 cls, cls._fd_count_before, get_fd_count(),
             )
+
+    @classmethod
+    def tearDownClass(cls):
+        super(TestCase, cls).tearDownClass()
+        cls._teardown_check_threads()
+        cls._teardown_check_fds()
 
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
