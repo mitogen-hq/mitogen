@@ -223,6 +223,10 @@ Core Library
   was configured. This would lead to connection timeouts due to the hung
   response.
 
+* `#416 <https://github.com/dw/mitogen/issues/416>`_: around 1.4KiB of memory
+  was leaked on every RPC, due to a list of strong references keeping alive any
+  handler ever registered for disconnect notification.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
