@@ -319,7 +319,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c1.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
 
     def test_indirect_child_disconnected(self):
         # Achievement unlocked: process notices an indirectly connected child
@@ -330,7 +330,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c2.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
 
     def test_indirect_child_intermediary_disconnected(self):
         # Battlefield promotion: process notices indirect child disconnected
@@ -341,7 +341,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c1.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
 
     def test_near_sibling_disconnected(self):
         # Hard mode: child notices sibling connected to same parent has
@@ -357,9 +357,8 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c2.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.CallError,
             lambda: recv.get().unpickle())
-        self.assertTrue(e.args[0].startswith(
-            'mitogen.core.ChannelError: Channel closed by local end.'
-        ))
+        s = 'mitogen.core.ChannelError: ' + self.router.respondent_disconnect_msg
+        self.assertTrue(e.args[0].startswith(s))
 
     def test_far_sibling_disconnected(self):
         # God mode: child of child notices child of child of parent has
@@ -378,9 +377,8 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c22.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.CallError,
             lambda: recv.get().unpickle())
-        self.assertTrue(e.args[0].startswith(
-            'mitogen.core.ChannelError: Channel closed by local end.'
-        ))
+        s = 'mitogen.core.ChannelError: ' + self.router.respondent_disconnect_msg
+        self.assertTrue(e.args[0].startswith(s))
 
 
 if __name__ == '__main__':

@@ -137,14 +137,13 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         self.sync_with_broker()
 
         # Verify log.
-        expect = '%r: policy refused message: ' % (self.router,)
-        self.assertTrue(expect in log.stop())
+        self.assertTrue(self.router.refused_msg in log.stop())
 
         # Verify message was not delivered.
         self.assertTrue(recv.empty())
 
         # Verify CallError received by reply_to target.
-        e = self.assertRaises(mitogen.core.CallError,
+        e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: reply_target.get().unpickle())
         self.assertEquals(e.args[0], self.router.refused_msg)
 
@@ -212,14 +211,15 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         logs = testlib.LogCapturer()
         logs.start()
 
+        expect = router.too_large_msg % (4096,)
+
         # Try function call. Receiver should be woken by a dead message sent by
         # router due to message size exceeded.
         child = router.fork()
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: child.call(zlib.crc32, ' '*8192))
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(e.args[0], expect)
 
-        expect = 'message too large (max 4096 bytes)'
         self.assertTrue(expect in logs.stop())
 
     def test_remote_configured(self):
@@ -252,11 +252,12 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         msg = recv.get(throw_dead=False)
         self.assertEquals(msg.is_dead, True)
         self.assertEquals(msg.src_id, l1.context_id)
+        self.assertEquals(msg.data, self.router.invalid_handle_msg.encode())
 
         recv = l1.send_async(mitogen.core.Message(handle=999))
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.remote_msg)
+        self.assertEquals(e.args[0], self.router.invalid_handle_msg)
 
     def test_totally_invalid_context_returns_dead(self):
         recv = mitogen.core.Receiver(self.router)
@@ -269,11 +270,18 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         rmsg = recv.get(throw_dead=False)
         self.assertEquals(rmsg.is_dead, True)
         self.assertEquals(rmsg.src_id, mitogen.context_id)
+        self.assertEquals(rmsg.data, (self.router.no_route_msg % (
+            1234,
+            mitogen.context_id,
+        )).encode())
 
         self.router.route(msg)
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(e.args[0], (self.router.no_route_msg % (
+            1234,
+            mitogen.context_id,
+        )))
 
     def test_previously_alive_context_returns_dead(self):
         l1 = self.router.fork()
@@ -288,11 +296,18 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         rmsg = recv.get(throw_dead=False)
         self.assertEquals(rmsg.is_dead, True)
         self.assertEquals(rmsg.src_id, mitogen.context_id)
+        self.assertEquals(rmsg.data, (self.router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        )).encode())
 
         self.router.route(msg)
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
-        self.assertEquals(e.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(e.args[0], self.router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
 
 
 class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
@@ -305,7 +320,10 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.CallError,
                               lambda: l2.call(ping_context, l1))
 
-        msg = 'mitogen.core.ChannelError: Channel closed by remote end.'
+        msg = self.router.unidirectional_msg % (
+            l2.context_id,
+            l1.context_id,
+        )
         self.assertTrue(msg in str(e))
         self.assertTrue('routing mode prevents forward of ' in logs.stop())
 
@@ -319,14 +337,11 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         l1s.is_privileged = True
 
         l2 = self.router.fork()
-        logs = testlib.LogCapturer()
-        logs.start()
         e = self.assertRaises(mitogen.core.CallError,
                               lambda: l2.call(ping_context, l1))
 
-        msg = 'mitogen.core.CallError: Refused by policy.'
-        self.assertTrue(msg in str(e))
-        self.assertTrue('policy refused message: ' in logs.stop())
+        msg = 'mitogen.core.ChannelError: %s' % (self.router.refused_msg,)
+        self.assertTrue(str(e).startswith(msg))
 
 
 class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):

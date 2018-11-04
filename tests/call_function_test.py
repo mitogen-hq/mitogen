@@ -90,7 +90,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.broker.defer(stream.on_disconnect, self.broker)
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(exc.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(exc.args[0], self.router.respondent_disconnect_msg)
 
     def test_aborted_on_local_broker_shutdown(self):
         stream = self.router._stream_by_id[self.local.context_id]
@@ -99,7 +99,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.broker.shutdown()
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(exc.args[0], mitogen.core.ChannelError.local_msg)
+        self.assertEquals(exc.args[0], self.router.respondent_disconnect_msg)
 
     def test_accepts_returns_context(self):
         context = self.local.call(func_returns_arg, self.local)

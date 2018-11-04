@@ -594,10 +594,11 @@ class Message(object):
         return self.reply_to == IS_DEAD
 
     @classmethod
-    def dead(cls, **kwargs):
+    def dead(cls, reason=None, **kwargs):
         """
         Syntax helper to construct a dead message.
         """
+        kwargs['data'] = (reason or u'').encode()
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
@@ -645,6 +646,14 @@ class Message(object):
     else:
         UNPICKLER_KWARGS = {}
 
+    def _throw_dead(self):
+        if len(self.data):
+            raise ChannelError(self.data.decode(errors='replace'))
+        elif self.src_id == mitogen.context_id:
+            raise ChannelError(ChannelError.local_msg)
+        else:
+            raise ChannelError(ChannelError.remote_msg)
+
     def unpickle(self, throw=True, throw_dead=True):
         """
         Unpickle :attr:`data`, optionally raising any exceptions present.
@@ -660,7 +669,7 @@ class Message(object):
         """
         _vv and IOLOG.debug('%r.unpickle()', self)
         if throw_dead and self.is_dead:
-            raise ChannelError(ChannelError.remote_msg)
+            self._throw_dead()
 
         obj = self._unpickled
         if obj is Message._unpickled:
@@ -811,6 +820,8 @@ class Receiver(object):
         if self.notify:
             self.notify(self)
 
+    closed_msg = 'the Receiver has been closed'
+
     def close(self):
         """
         Unregister the receiver's handle from its associated router, and cause
@@ -820,7 +831,7 @@ class Receiver(object):
         if self.handle:
             self.router.del_handler(self.handle)
             self.handle = None
-        self._latch.put(Message.dead())
+        self._latch.put(Message.dead(self.closed_msg))
 
     def empty(self):
         """
@@ -853,10 +864,7 @@ class Receiver(object):
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
         msg = self._latch.get(timeout=timeout, block=block)
         if msg.is_dead and throw_dead:
-            if msg.src_id == mitogen.context_id:
-                raise ChannelError(ChannelError.local_msg)
-            else:
-                raise ChannelError(ChannelError.remote_msg)
+            msg._throw_dead()
         return msg
 
     def __iter__(self):
@@ -2117,10 +2125,12 @@ class Router(object):
                 del self._stream_by_id[context.context_id]
                 context.on_disconnect()
 
+    broker_exit_msg = 'Broker has exitted'
+
     def _on_broker_exit(self):
         while self._handle_map:
             _, (_, func, _, _) = self._handle_map.popitem()
-            func(Message.dead())
+            func(Message.dead(self.broker_exit_msg))
 
     def context_by_id(self, context_id, via_id=None, create=True, name=None):
         """
@@ -2230,10 +2240,21 @@ class Router(object):
 
         return handle
 
+    refused_msg = 'refused by policy'
+    invalid_handle_msg = 'invalid handle'
+    too_large_msg = 'message too large (max %d bytes)'
+    respondent_disconnect_msg = 'the respondent Context has disconnected'
+    broker_shutdown_msg = 'Broker is shutting down'
+    no_route_msg = 'no route to %r, my ID is %r'
+    unidirectional_msg = (
+        'routing mode prevents forward of message from context %d via '
+        'context %d'
+    )
+
     def _on_respondent_disconnect(self, context):
         for handle in self._handles_by_respondent.pop(context, ()):
             _, fn, _, _  = self._handle_map[handle]
-            fn(Message.dead())
+            fn(Message.dead(self.respondent_disconnect_msg))
             del self._handle_map[handle]
 
     def on_shutdown(self, broker):
@@ -2243,37 +2264,30 @@ class Router(object):
         fire(self, 'shutdown')
         for handle, (persist, fn) in self._handle_map.iteritems():
             _v and LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
-            fn(Message.dead())
+            fn(Message.dead(self.broker_shutdown_msg))
 
-    def _maybe_send_dead(self, msg):
+    def _maybe_send_dead(self, msg, reason, *args):
+        if args:
+            reason %= args
+        LOG.debug('%r: %r is dead: %r', self, msg, reason)
         if msg.reply_to and not msg.is_dead:
-            msg.reply(Message.dead(), router=self)
-
-    refused_msg = 'Refused by policy.'
+            msg.reply(Message.dead(reason=reason), router=self)
 
     def _invoke(self, msg, stream):
         # IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
             persist, fn, policy, respondent = self._handle_map[msg.handle]
         except KeyError:
-            LOG.error('%r: invalid handle: %r', self, msg)
-            self._maybe_send_dead(msg)
+            self._maybe_send_dead(msg, reason=self.invalid_handle_msg)
             return
 
         if respondent and not (msg.is_dead or
                                msg.src_id == respondent.context_id):
-            LOG.error('%r: reply from unexpected context: %r', self, msg)
-            self._maybe_send_dead(msg)
+            self._maybe_send_dead(msg, 'reply from unexpected context')
             return
 
         if policy and not policy(msg, stream):
-            LOG.error('%r: policy refused message: %r', self, msg)
-            if msg.reply_to:
-                self.route(Message.pickled(
-                    CallError(self.refused_msg),
-                    dst_id=msg.src_id,
-                    handle=msg.reply_to
-                ))
+            self._maybe_send_dead(msg, self.refused_msg)
             return
 
         if not persist:
@@ -2301,9 +2315,9 @@ class Router(object):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
 
         if len(msg.data) > self.max_message_size:
-            LOG.error('message too large (max %d bytes): %r',
-                      self.max_message_size, msg)
-            self._maybe_send_dead(msg)
+            self._maybe_send_dead(msg, self.too_large_msg % (
+                self.max_message_size,
+            ))
             return
 
         # Perform source verification.
@@ -2336,17 +2350,14 @@ class Router(object):
             out_stream = self._stream_by_id.get(mitogen.parent_id)
 
         if out_stream is None:
-            if msg.reply_to not in (0, IS_DEAD):
-                LOG.error('%r: no route for %r, my ID is %r',
-                          self, msg, mitogen.context_id)
-            self._maybe_send_dead(msg)
+            self._maybe_send_dead(msg, self.no_route_msg,
+                                  msg.dst_id, mitogen.context_id)
             return
 
         if in_stream and self.unidirectional and not \
                 (in_stream.is_privileged or out_stream.is_privileged):
-            LOG.error('routing mode prevents forward of %r from %r -> %r',
-                      msg, in_stream, out_stream)
-            self._maybe_send_dead(msg)
+            self._maybe_send_dead(msg, self.unidirectional_msg,
+                in_stream.remote_id, out_stream.remote_id)
             return
 
         out_stream._send(msg)
