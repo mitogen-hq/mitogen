@@ -7,7 +7,7 @@ import unittest2
 import testlib
 
 
-class ConstructorTest(testlib.RouterMixin, unittest2.TestCase):
+class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         docker_path = testlib.data_path('stubs/stub-docker.py')
         context = self.router.docker(

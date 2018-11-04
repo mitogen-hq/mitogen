@@ -6,11 +6,14 @@ import re
 import socket
 import subprocess
 import sys
+import threading
 import time
+import traceback
 
 import unittest2
 
 import mitogen.core
+import mitogen.fork
 import mitogen.master
 import mitogen.utils
 
@@ -39,6 +42,14 @@ if mitogen.is_master:
 
 if faulthandler is not None:
     faulthandler.enable()
+
+
+def get_fd_count():
+    """
+    Return the number of FDs open by this process.
+    """
+    import psutil
+    return psutil.Process().num_fds()
 
 
 def data_path(suffix):
@@ -166,6 +177,53 @@ def sync_with_broker(broker, timeout=10.0):
     sem.get(timeout=10.0)
 
 
+def log_fd_calls():
+    mypid = os.getpid()
+    l = threading.Lock()
+    real_pipe = os.pipe
+    def pipe():
+        with l:
+            rv = real_pipe()
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s\n' % (rv,))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+            return rv
+    os.pipe = pipe
+
+    real_socketpair = socket.socketpair
+    def socketpair(*args):
+        with l:
+            rv = real_socketpair(*args)
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s -> %s\n' % (args, rv))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+                return rv
+    socket.socketpair = socketpair
+
+    real_dup2 = os.dup2
+    def dup2(*args):
+        with l:
+            real_dup2(*args)
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s\n' % (args,))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+    os.dup2 = dup2
+
+    real_dup = os.dup
+    def dup(*args):
+        with l:
+            rv = real_dup(*args)
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s -> %s\n' % (args, rv))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+            return rv
+    os.dup = dup
+
+
 class CaptureStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwargs):
         logging.StreamHandler.__init__(self, *args, **kwargs)
@@ -211,6 +269,46 @@ class LogCapturer(object):
 
 
 class TestCase(unittest2.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # This is done in setUpClass() so we have a chance to run before any
+        # Broker() instantiations in setUp() etc.
+        mitogen.fork.on_fork()
+        cls._fd_count_before = get_fd_count()
+        super(TestCase, cls).setUpClass()
+
+    ALLOWED_THREADS = set([
+        'MainThread',
+        'mitogen.master.join_thread_async'
+    ])
+
+    @classmethod
+    def _teardown_check_threads(cls):
+        counts = {}
+        for thread in threading.enumerate():
+            assert thread.name in cls.ALLOWED_THREADS, \
+                'Found thread %r still running after tests.' % (thread.name,)
+            counts[thread.name] = counts.get(thread.name, 0) + 1
+
+        for name in counts:
+            assert counts[name] == 1, \
+                'Found %d copies of thread %r running after tests.' % (name,)
+
+    @classmethod
+    def _teardown_check_fds(cls):
+        mitogen.core.Latch._on_fork()
+        if get_fd_count() != cls._fd_count_before:
+            import os; os.system('lsof -p %s' % (os.getpid(),))
+            assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
+                cls, cls._fd_count_before, get_fd_count(),
+            )
+
+    @classmethod
+    def tearDownClass(cls):
+        super(TestCase, cls).tearDownClass()
+        cls._teardown_check_threads()
+        cls._teardown_check_fds()
+
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
         raised. Can't use context manager because tests must run on Python2.4"""

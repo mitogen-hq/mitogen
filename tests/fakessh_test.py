@@ -10,7 +10,7 @@ import mitogen.fakessh
 import testlib
 
 
-class RsyncTest(testlib.DockerMixin, unittest2.TestCase):
+class RsyncTest(testlib.DockerMixin, testlib.TestCase):
     @timeoutcontext.timeout(5)
     @unittest2.skip('broken')
     def test_rsync_from_master(self):

@@ -153,7 +153,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(s in e.args[0])
 
 
-class ContextTest(testlib.RouterMixin, unittest2.TestCase):
+class ContextTest(testlib.RouterMixin, testlib.TestCase):
     def test_context_shutdown(self):
         local = self.router.local()
         pid = local.call(os.getpid)
@@ -181,7 +181,7 @@ class OpenPtyTest(testlib.TestCase):
         self.assertEquals(e.args[0], msg)
 
 
-class TtyCreateChildTest(unittest2.TestCase):
+class TtyCreateChildTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.tty_create_child)
 
     def test_dev_tty_open_succeeds(self):
@@ -207,11 +207,12 @@ class TtyCreateChildTest(unittest2.TestCase):
             self.assertEquals(pid, waited_pid)
             self.assertEquals(0, status)
             self.assertEquals(mitogen.core.b(''), tf.read())
+            os.close(fd)
         finally:
             tf.close()
 
 
-class IterReadTest(unittest2.TestCase):
+class IterReadTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
@@ -230,6 +231,7 @@ class IterReadTest(unittest2.TestCase):
                     break
         finally:
             proc.terminate()
+            proc.stdout.close()
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
@@ -244,6 +246,7 @@ class IterReadTest(unittest2.TestCase):
                 self.assertEqual(len(got), 0)
         finally:
             proc.terminate()
+            proc.stdout.close()
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
@@ -261,9 +264,10 @@ class IterReadTest(unittest2.TestCase):
                 self.assertLess(len(got), 5)
         finally:
             proc.terminate()
+            proc.stdout.close()
 
 
-class WriteAllTest(unittest2.TestCase):
+class WriteAllTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.write_all)
 
     def make_proc(self):
@@ -280,6 +284,7 @@ class WriteAllTest(unittest2.TestCase):
             self.func(proc.stdin.fileno(), self.ten_ms_chunk)
         finally:
             proc.terminate()
+            proc.stdin.close()
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
@@ -289,6 +294,7 @@ class WriteAllTest(unittest2.TestCase):
             ))
         finally:
             proc.terminate()
+            proc.stdin.close()
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
@@ -301,6 +307,7 @@ class WriteAllTest(unittest2.TestCase):
             ))
         finally:
             proc.terminate()
+            proc.stdin.close()
 
 
 class DisconnectTest(testlib.RouterMixin, testlib.TestCase):

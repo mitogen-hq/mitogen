@@ -29,7 +29,7 @@ class StubSshMixin(testlib.RouterMixin):
             del os.environ['STUBSSH_MODE']
 
 
-class ConstructorTest(testlib.RouterMixin, unittest2.TestCase):
+class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         context = self.router.ssh(
             hostname='hostname',
@@ -165,7 +165,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             fp.close()
 
 
-class BannerTest(testlib.DockerMixin, unittest2.TestCase):
+class BannerTest(testlib.DockerMixin, testlib.TestCase):
     # Verify the ability to disambiguate random spam appearing in the SSHd's
     # login banner from a legitimate password prompt.
     stream_class = mitogen.ssh.Stream

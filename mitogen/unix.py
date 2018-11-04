@@ -49,10 +49,13 @@ from mitogen.core import LOG
 def is_path_dead(path):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        s.connect(path)
-    except socket.error:
-        e = sys.exc_info()[1]
-        return e.args[0] in (errno.ECONNREFUSED, errno.ENOENT)
+        try:
+            s.connect(path)
+        except socket.error:
+            e = sys.exc_info()[1]
+            return e.args[0] in (errno.ECONNREFUSED, errno.ENOENT)
+    finally:
+        s.close()
     return False
 
 
@@ -77,6 +80,11 @@ class Listener(mitogen.core.BasicStream):
         self._sock.listen(backlog)
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
+
+    def on_shutdown(self, broker):
+        broker.stop_receive(self)
+        self._sock.close()
+        self.receive_side.closed = True
 
     def _accept_client(self, sock):
         sock.setblocking(True)

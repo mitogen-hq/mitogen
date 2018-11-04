@@ -13,7 +13,7 @@ import plain_old_module
 import simple_pkg.a
 
 
-class NeutralizeMainTest(testlib.RouterMixin, unittest2.TestCase):
+class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.master.ModuleResponder
 
     def call(self, *args, **kwargs):
@@ -67,7 +67,7 @@ class NeutralizeMainTest(testlib.RouterMixin, unittest2.TestCase):
 
 
 
-class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
+class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
@@ -89,7 +89,7 @@ class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertEquals(output, "['__main__', 50]\n")
 
 
-class BrokenModulesTest(unittest2.TestCase):
+class BrokenModulesTest(testlib.TestCase):
     def test_obviously_missing(self):
         # Ensure we don't crash in the case of a module legitimately being
         # unavailable. Should never happen in the real world.
@@ -144,7 +144,7 @@ class BrokenModulesTest(unittest2.TestCase):
         self.assertIsInstance(msg.unpickle(), tuple)
 
 
-class BlacklistTest(unittest2.TestCase):
+class BlacklistTest(testlib.TestCase):
     @unittest2.skip('implement me')
     def test_whitelist_no_blacklist(self):
         assert 0

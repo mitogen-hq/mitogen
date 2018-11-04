@@ -100,7 +100,7 @@ CALL_SERVICE = 110
 #:  * a remote receiver is disconnected or explicitly closed.
 #:  * a related message could not be delivered due to no route existing for it.
 #:  * a router is being torn down, as a sentinel value to notify
-#:    :py:meth:`mitogen.core.Router.add_handler` callbacks to clean up.
+#:    :meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 IS_DEAD = 999
 
 try:
@@ -187,7 +187,7 @@ class Error(Exception):
 
 
 class LatchError(Error):
-    """Raised when an attempt is made to use a :py:class:`mitogen.core.Latch`
+    """Raised when an attempt is made to use a :class:`mitogen.core.Latch`
     that has been marked closed."""
     pass
 
@@ -239,7 +239,7 @@ class Kwargs(dict):
 
 class CallError(Error):
     """Serializable :class:`Error` subclass raised when
-    :py:meth:`Context.call() <mitogen.parent.Context.call>` fails. A copy of
+    :meth:`Context.call() <mitogen.parent.Context.call>` fails. A copy of
     the traceback from the external context is appended to the exception
     message."""
     def __init__(self, fmt=None, *args):
@@ -872,6 +872,15 @@ class Receiver(object):
 
 
 class Channel(Sender, Receiver):
+    """
+    A channel inherits from :class:`mitogen.core.Sender` and
+    `mitogen.core.Receiver` to provide bidirectional functionality.
+
+    Since all handles aren't known until after both ends are constructed, for
+    both ends to communicate through a channel, it is necessary for one end to
+    retrieve the handle allocated to the other and reconfigure its own channel
+    to match. Currently this is a manual task.
+    """
     def __init__(self, router, context, dst_handle, handle=None):
         Sender.__init__(self, context, dst_handle)
         Receiver.__init__(self, router, handle)
@@ -1160,12 +1169,35 @@ class LogHandler(logging.Handler):
 
 
 class Side(object):
+    """
+    Represent a single side of a :class:`BasicStream`. This exists to allow
+    streams implemented using unidirectional (e.g. UNIX pipe) and bidirectional
+    (e.g. UNIX socket) file descriptors to operate identically.
+
+    :param mitogen.core.Stream stream:
+        The stream this side is associated with.
+
+    :param int fd:
+        Underlying file descriptor.
+
+    :param bool keep_alive:
+        Value for :attr:`keep_alive`
+
+    During construction, the file descriptor has its :data:`os.O_NONBLOCK` flag
+    enabled using :func:`fcntl.fcntl`.
+    """
     _fork_refs = weakref.WeakValueDictionary()
 
     def __init__(self, stream, fd, cloexec=True, keep_alive=True, blocking=False):
+        #: The :class:`Stream` for which this is a read or write side.
         self.stream = stream
+        #: Integer file descriptor to perform IO on, or :data:`None` if
+        #: :meth:`close` has been called.
         self.fd = fd
         self.closed = False
+        #: If :data:`True`, causes presence of this side in
+        #: :class:`Broker`'s active reader set to defer shutdown until the
+        #: side is disconnected.
         self.keep_alive = keep_alive
         self._fork_refs[id(self)] = self
         if cloexec:
@@ -1182,12 +1214,29 @@ class Side(object):
             side.close()
 
     def close(self):
+        """
+        Call :func:`os.close` on :attr:`fd` if it is not :data:`None`,
+        then set it to :data:`None`.
+        """
         if not self.closed:
             _vv and IOLOG.debug('%r.close()', self)
             self.closed = True
             os.close(self.fd)
 
     def read(self, n=CHUNK_SIZE):
+        """
+        Read up to `n` bytes from the file descriptor, wrapping the underlying
+        :func:`os.read` call with :func:`io_op` to trap common disconnection
+        conditions.
+
+        :meth:`read` always behaves as if it is reading from a regular UNIX
+        file; socket, pipe, and TTY disconnection errors are masked and result
+        in a 0-sized read like a regular file.
+
+        :returns:
+            Bytes read, or the empty to string to indicate disconnection was
+            detected.
+        """
         if self.closed:
             # Refuse to touch the handle after closed, it may have been reused
             # by another thread. TODO: synchronize read()/write()/close().
@@ -1198,6 +1247,15 @@ class Side(object):
         return s
 
     def write(self, s):
+        """
+        Write as much of the bytes from `s` as possible to the file descriptor,
+        wrapping the underlying :func:`os.write` call with :func:`io_op` to
+        trap common disconnection connditions.
+
+        :returns:
+            Number of bytes written, or :data:`None` if disconnection was
+            detected.
+        """
         if self.closed or self.fd is None:
             # Refuse to touch the handle after closed, it may have been reused
             # by another thread.
@@ -1210,10 +1268,52 @@ class Side(object):
 
 
 class BasicStream(object):
+    #: A :class:`Side` representing the stream's receive file descriptor.
     receive_side = None
+
+    #: A :class:`Side` representing the stream's transmit file descriptor.
     transmit_side = None
 
+    def on_receive(self, broker):
+        """
+        Called by :class:`Broker` when the stream's :attr:`receive_side` has
+        been marked readable using :meth:`Broker.start_receive` and the broker
+        has detected the associated file descriptor is ready for reading.
+
+        Subclasses must implement this if :meth:`Broker.start_receive` is ever
+        called on them, and the method must call :meth:`on_disconect` if
+        reading produces an empty string.
+        """
+        pass
+
+    def on_transmit(self, broker):
+        """
+        Called by :class:`Broker` when the stream's :attr:`transmit_side`
+        has been marked writeable using :meth:`Broker._start_transmit` and
+        the broker has detected the associated file descriptor is ready for
+        writing.
+
+        Subclasses must implement this if :meth:`Broker._start_transmit` is
+        ever called on them.
+        """
+        pass
+
+    def on_shutdown(self, broker):
+        """
+        Called by :meth:`Broker.shutdown` to allow the stream time to
+        gracefully shutdown. The base implementation simply called
+        :meth:`on_disconnect`.
+        """
+        _v and LOG.debug('%r.on_shutdown()', self)
+        fire(self, 'shutdown')
+        self.on_disconnect(broker)
+
     def on_disconnect(self, broker):
+        """
+        Called by :class:`Broker` to force disconnect the stream. The base
+        implementation simply closes :attr:`receive_side` and
+        :attr:`transmit_side` and unregisters the stream from the broker.
+        """
         LOG.debug('%r.on_disconnect()', self)
         if self.receive_side:
             broker.stop_receive(self)
@@ -1223,19 +1323,14 @@ class BasicStream(object):
             self.transmit_side.close()
         fire(self, 'disconnect')
 
-    def on_shutdown(self, broker):
-        _v and LOG.debug('%r.on_shutdown()', self)
-        fire(self, 'shutdown')
-        self.on_disconnect(broker)
-
 
 class Stream(BasicStream):
     """
-    :py:class:`BasicStream` subclass implementing mitogen's :ref:`stream
+    :class:`BasicStream` subclass implementing mitogen's :ref:`stream
     protocol <stream-protocol>`.
     """
-    #: If not :data:`None`, :py:class:`Router` stamps this into
-    #: :py:attr:`Message.auth_id` of every message received on this stream.
+    #: If not :data:`None`, :class:`Router` stamps this into
+    #: :attr:`Message.auth_id` of every message received on this stream.
     auth_id = None
 
     #: If not :data:`False`, indicates the stream has :attr:`auth_id` set and
@@ -1272,7 +1367,7 @@ class Stream(BasicStream):
 
     def on_receive(self, broker):
         """Handle the next complete message on the stream. Raise
-        :py:class:`StreamError` on failure."""
+        :class:`StreamError` on failure."""
         _vv and IOLOG.debug('%r.on_receive()', self)
 
         buf = self.receive_side.read()
@@ -1329,6 +1424,14 @@ class Stream(BasicStream):
         return True
 
     def pending_bytes(self):
+        """
+        Return the number of bytes queued for transmission on this stream. This
+        can be used to limit the amount of data buffered in RAM by an otherwise
+        unlimited consumer.
+
+        For an accurate result, this method should be called from the Broker
+        thread, for example by using :meth:`Broker.defer_sync`.
+        """
         return self._output_buf_len
 
     def on_transmit(self, broker):
@@ -1572,15 +1675,15 @@ class Poller(object):
 
 class Latch(object):
     """
-    A latch is a :py:class:`Queue.Queue`-like object that supports mutation and
-    waiting from multiple threads, however unlike :py:class:`Queue.Queue`,
+    A latch is a :class:`Queue.Queue`-like object that supports mutation and
+    waiting from multiple threads, however unlike :class:`Queue.Queue`,
     waiting threads always remain interruptible, so CTRL+C always succeeds, and
     waits where a timeout is set experience no wake up latency. These
     properties are not possible in combination using the built-in threading
     primitives available in Python 2.x.
 
     Latches implement queues using the UNIX self-pipe trick, and a per-thread
-    :py:func:`socket.socketpair` that is lazily created the first time any
+    :func:`socket.socketpair` that is lazily created the first time any
     latch attempts to sleep on a thread, and dynamically associated with the
     waiting Latch only for duration of the wait.
 
@@ -1626,7 +1729,7 @@ class Latch(object):
     def close(self):
         """
         Mark the latch as closed, and cause every sleeping thread to be woken,
-        with :py:class:`mitogen.core.LatchError` raised in each thread.
+        with :class:`mitogen.core.LatchError` raised in each thread.
         """
         self._lock.acquire()
         try:
@@ -1640,17 +1743,17 @@ class Latch(object):
 
     def empty(self):
         """
-        Return :py:data:`True` if calling :py:meth:`get` would block.
+        Return :data:`True` if calling :meth:`get` would block.
 
-        As with :py:class:`Queue.Queue`, :py:data:`True` may be returned even
-        though a subsequent call to :py:meth:`get` will succeed, since a
-        message may be posted at any moment between :py:meth:`empty` and
-        :py:meth:`get`.
+        As with :class:`Queue.Queue`, :data:`True` may be returned even
+        though a subsequent call to :meth:`get` will succeed, since a
+        message may be posted at any moment between :meth:`empty` and
+        :meth:`get`.
 
-        As with :py:class:`Queue.Queue`, :py:data:`False` may be returned even
-        though a subsequent call to :py:meth:`get` will block, since another
-        waiting thread may be woken at any moment between :py:meth:`empty` and
-        :py:meth:`get`.
+        As with :class:`Queue.Queue`, :data:`False` may be returned even
+        though a subsequent call to :meth:`get` will block, since another
+        waiting thread may be woken at any moment between :meth:`empty` and
+        :meth:`get`.
         """
         return len(self._queue) == 0
 
@@ -1683,14 +1786,14 @@ class Latch(object):
         Return the next enqueued object, or sleep waiting for one.
 
         :param float timeout:
-            If not :py:data:`None`, specifies a timeout in seconds.
+            If not :data:`None`, specifies a timeout in seconds.
 
         :param bool block:
-            If :py:data:`False`, immediately raise
-            :py:class:`mitogen.core.TimeoutError` if the latch is empty.
+            If :data:`False`, immediately raise
+            :class:`mitogen.core.TimeoutError` if the latch is empty.
 
         :raises mitogen.core.LatchError:
-            :py:meth:`close` has been called, and the object is no longer valid.
+            :meth:`close` has been called, and the object is no longer valid.
 
         :raises mitogen.core.TimeoutError:
             Timeout was reached.
@@ -1771,7 +1874,7 @@ class Latch(object):
         exists.
 
         :raises mitogen.core.LatchError:
-            :py:meth:`close` has been called, and the object is no longer valid.
+            :meth:`close` has been called, and the object is no longer valid.
         """
         _vv and IOLOG.debug('%r.put(%r)', self, obj)
         self._lock.acquire()
@@ -1807,7 +1910,7 @@ class Latch(object):
 
 class Waker(BasicStream):
     """
-    :py:class:`BasicStream` subclass implementing the `UNIX self-pipe trick`_.
+    :class:`BasicStream` subclass implementing the `UNIX self-pipe trick`_.
     Used to wake the multiplexer when another thread needs to modify its state
     (via a cross-thread function call).
 
@@ -1827,8 +1930,8 @@ class Waker(BasicStream):
     def __repr__(self):
         return 'Waker(%r rfd=%r, wfd=%r)' % (
             self._broker,
-            self.receive_side.fd,
-            self.transmit_side.fd,
+            self.receive_side and self.receive_side.fd,
+            self.transmit_side and self.transmit_side.fd,
         )
 
     @property
@@ -1844,17 +1947,14 @@ class Waker(BasicStream):
 
     def on_receive(self, broker):
         """
-        Drain the pipe and fire callbacks. Reading multiple bytes is safe since
-        new bytes corresponding to future .defer() calls are written only after
-        .defer() takes _lock: either a byte we read corresponds to something
-        already on the queue by the time we take _lock, or a byte remains
-        buffered, causing another wake up, because it was written after we
-        released _lock.
+        Drain the pipe and fire callbacks. Since :attr:`_deferred` is
+        synchronized, :meth:`defer` and :meth:`on_receive` can conspire to
+        ensure only one byte needs to be pending regardless of queue length.
         """
         _vv and IOLOG.debug('%r.on_receive()', self)
-        self.receive_side.read(128)
         self._lock.acquire()
         try:
+            self.receive_side.read(1)
             deferred = self._deferred
             self._deferred = []
         finally:
@@ -1868,6 +1968,18 @@ class Waker(BasicStream):
                               func, args, kwargs)
                 self._broker.shutdown()
 
+    def _wake(self):
+        """
+        Wake the multiplexer by writing a byte. If Broker is midway through
+        teardown, the FD may already be closed, so ignore EBADF.
+        """
+        try:
+            self.transmit_side.write(b(' '))
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] != errno.EBADF:
+                raise
+
     def defer(self, func, *args, **kwargs):
         if threading.currentThread().ident == self.broker_ident:
             _vv and IOLOG.debug('%r.defer() [immediate]', self)
@@ -1876,25 +1988,17 @@ class Waker(BasicStream):
         _vv and IOLOG.debug('%r.defer() [fd=%r]', self, self.transmit_side.fd)
         self._lock.acquire()
         try:
+            if not self._deferred:
+                self._wake()
             self._deferred.append((func, args, kwargs))
         finally:
             self._lock.release()
 
-        # Wake the multiplexer by writing a byte. If the broker is in the midst
-        # of tearing itself down, the waker fd may already have been closed, so
-        # ignore EBADF here.
-        try:
-            self.transmit_side.write(b(' '))
-        except OSError:
-            e = sys.exc_info()[1]
-            if e.args[0] != errno.EBADF:
-                raise
-
 
 class IoLogger(BasicStream):
     """
-    :py:class:`BasicStream` subclass that sets up redirection of a standard
-    UNIX file descriptor back into the Python :py:mod:`logging` package.
+    :class:`BasicStream` subclass that sets up redirection of a standard
+    UNIX file descriptor back into the Python :mod:`logging` package.
     """
     _buf = ''
 
@@ -2126,8 +2230,8 @@ class Router(object):
         return handle
 
     def on_shutdown(self, broker):
-        """Called during :py:meth:`Broker.shutdown`, informs callbacks
-        registered with :py:meth:`add_handle_cb` the connection is dead."""
+        """Called during :meth:`Broker.shutdown`, informs callbacks registered
+        with :meth:`add_handle_cb` the connection is dead."""
         _v and LOG.debug('%r.on_shutdown(%r)', self, broker)
         fire(self, 'shutdown')
         for handle, (persist, fn) in self._handle_map.iteritems():
@@ -2249,14 +2353,26 @@ class Router(object):
 
 
 class Broker(object):
+    """
+    Responsible for handling I/O multiplexing in a private thread.
+
+    **Note:** This is the somewhat limited core version of the Broker class
+    used by child contexts. The master subclass is documented below.
+    """
     poller_class = Poller
     _waker = None
     _thread = None
+
+    #: Seconds grace to allow :class:`streams <Stream>` to shutdown gracefully
+    #: before force-disconnecting them during :meth:`shutdown`.
     shutdown_timeout = 3.0
 
     def __init__(self, poller_class=None):
         self._alive = True
         self._waker = Waker(self)
+        #: Arrange for `func(\*args, \**kwargs)` to be executed on the broker
+        #: thread, or immediately if the current thread is the broker thread.
+        #: Safe to call from any thread.
         self.defer = self._waker.defer
         self.poller = self.poller_class()
         self.poller.start_receive(
@@ -2272,6 +2388,12 @@ class Broker(object):
         self._waker.broker_ident = self._thread.ident
 
     def start_receive(self, stream):
+        """
+        Mark the :attr:`receive_side <Stream.receive_side>` on `stream` as
+        ready for reading. Safe to call from any thread. When the associated
+        file descriptor becomes ready for reading,
+        :meth:`BasicStream.on_receive` will be called.
+        """
         _vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
         side = stream.receive_side
         assert side and side.fd is not None
@@ -2279,26 +2401,47 @@ class Broker(object):
                    side.fd, (side, stream.on_receive))
 
     def stop_receive(self, stream):
+        """
+        Mark the :attr:`receive_side <Stream.receive_side>` on `stream` as not
+        ready for reading. Safe to call from any thread.
+        """
         _vv and IOLOG.debug('%r.stop_receive(%r)', self, stream)
         self.defer(self.poller.stop_receive, stream.receive_side.fd)
 
     def _start_transmit(self, stream):
+        """
+        Mark the :attr:`transmit_side <Stream.transmit_side>` on `stream` as
+        ready for writing. Must only be called from the Broker thread. When the
+        associated file descriptor becomes ready for writing,
+        :meth:`BasicStream.on_transmit` will be called.
+        """
         _vv and IOLOG.debug('%r._start_transmit(%r)', self, stream)
         side = stream.transmit_side
         assert side and side.fd is not None
         self.poller.start_transmit(side.fd, (side, stream.on_transmit))
 
     def _stop_transmit(self, stream):
+        """
+        Mark the :attr:`transmit_side <Stream.receive_side>` on `stream` as not
+        ready for writing.
+        """
         _vv and IOLOG.debug('%r._stop_transmit(%r)', self, stream)
         self.poller.stop_transmit(stream.transmit_side.fd)
 
     def keep_alive(self):
+        """
+        Return :data:`True` if any reader's :attr:`Side.keep_alive` attribute
+        is :data:`True`, or any :class:`Context` is still registered that is
+        not the master. Used to delay shutdown while some important work is in
+        progress (e.g. log draining).
+        """
         it = (side.keep_alive for (_, (side, _)) in self.poller.readers)
         return sum(it, 0)
 
     def defer_sync(self, func):
         """
-        Block the calling thread while `func` runs on a broker thread.
+        Arrange for `func()` to execute on the broker thread, blocking the
+        current thread until a result or exception is available.
 
         :returns:
             Return value of `func()`.
@@ -2330,40 +2473,61 @@ class Broker(object):
         for (side, func) in self.poller.poll(timeout):
             self._call(side.stream, func)
 
+    def _broker_exit(self):
+        for _, (side, _) in self.poller.readers + self.poller.writers:
+            LOG.error('_broker_main() force disconnecting %r', side)
+            side.stream.on_disconnect(self)
+
+        self.poller.close()
+
+    def _broker_shutdown(self):
+        for _, (side, _) in self.poller.readers + self.poller.writers:
+            self._call(side.stream, side.stream.on_shutdown)
+
+        deadline = time.time() + self.shutdown_timeout
+        while self.keep_alive() and time.time() < deadline:
+            self._loop_once(max(0, deadline - time.time()))
+
+        if self.keep_alive():
+            LOG.error('%r: some streams did not close gracefully. '
+                      'The most likely cause for this is one or '
+                      'more child processes still connected to '
+                      'our stdout/stderr pipes.', self)
+
     def _broker_main(self):
+        """
+        Handle events until :meth:`shutdown`. On shutdown, invoke
+        :meth:`Stream.on_shutdown` for every active stream, then allow up to
+        :attr:`shutdown_timeout` seconds for the streams to unregister
+        themselves before forcefully calling :meth:`Stream.on_disconnect`.
+        """
         try:
             while self._alive:
                 self._loop_once()
 
             fire(self, 'shutdown')
-            for _, (side, _) in self.poller.readers + self.poller.writers:
-                self._call(side.stream, side.stream.on_shutdown)
-
-            deadline = time.time() + self.shutdown_timeout
-            while self.keep_alive() and time.time() < deadline:
-                self._loop_once(max(0, deadline - time.time()))
-
-            if self.keep_alive():
-                LOG.error('%r: some streams did not close gracefully. '
-                          'The most likely cause for this is one or '
-                          'more child processes still connected to '
-                          'our stdout/stderr pipes.', self)
-
-            for _, (side, _) in self.poller.readers + self.poller.writers:
-                LOG.error('_broker_main() force disconnecting %r', side)
-                side.stream.on_disconnect(self)
+            self._broker_shutdown()
         except Exception:
             LOG.exception('_broker_main() crashed')
 
+        self._broker_exit()
         fire(self, 'exit')
 
     def shutdown(self):
+        """
+        Request broker gracefully disconnect streams and stop. Safe to call
+        from any thread.
+        """
         _v and LOG.debug('%r.shutdown()', self)
         def _shutdown():
             self._alive = False
         self.defer(_shutdown)
 
     def join(self):
+        """
+        Wait for the broker to stop, expected to be called after
+        :meth:`shutdown`.
+        """
         self._thread.join()
 
     def __repr__(self):
@@ -2435,6 +2599,34 @@ class Dispatcher(object):
 
 
 class ExternalContext(object):
+    """
+    External context implementation.
+
+    .. attribute:: broker
+        The :class:`mitogen.core.Broker` instance.
+
+    .. attribute:: context
+        The :class:`mitogen.core.Context` instance.
+
+    .. attribute:: channel
+        The :class:`mitogen.core.Channel` over which :data:`CALL_FUNCTION`
+        requests are received.
+
+    .. attribute:: stdout_log
+        The :class:`mitogen.core.IoLogger` connected to ``stdout``.
+
+    .. attribute:: importer
+        The :class:`mitogen.core.Importer` instance.
+
+    .. attribute:: stdout_log
+        The :class:`IoLogger` connected to ``stdout``.
+
+    .. attribute:: stderr_log
+        The :class:`IoLogger` connected to ``stderr``.
+
+    .. method:: _dispatch_calls
+        Implementation for the main thread in every child context.
+    """
     detached = False
 
     def __init__(self, config):

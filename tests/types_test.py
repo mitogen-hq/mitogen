@@ -11,8 +11,10 @@ import unittest2
 import mitogen.core
 from mitogen.core import b
 
+import testlib
 
-class BlobTest(unittest2.TestCase):
+
+class BlobTest(testlib.TestCase):
     klass = mitogen.core.Blob
 
     def make(self):
@@ -43,7 +45,7 @@ class BlobTest(unittest2.TestCase):
                           mitogen.core.BytesType(blob2))
 
 
-class SecretTest(unittest2.TestCase):
+class SecretTest(testlib.TestCase):
     klass = mitogen.core.Secret
 
     def make(self):

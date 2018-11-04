@@ -10,7 +10,7 @@ import testlib
 import plain_old_module
 
 
-class ConstructorTest(unittest2.TestCase):
+class ConstructorTest(testlib.TestCase):
     klass = mitogen.core.CallError
 
     def test_string_noargs(self):
@@ -44,7 +44,7 @@ class ConstructorTest(unittest2.TestCase):
         self.assertTrue('test_from_exc_tb' in e.args[0])
 
 
-class PickleTest(unittest2.TestCase):
+class PickleTest(testlib.TestCase):
     klass = mitogen.core.CallError
 
     def test_string_noargs(self):

@@ -754,6 +754,26 @@ class ModuleResponder(object):
 
 
 class Broker(mitogen.core.Broker):
+    """
+    .. note::
+
+        You may construct as many brokers as desired, and use the same broker
+        for multiple routers, however usually only one broker need exist.
+        Multiple brokers may be useful when dealing with sets of children with
+        differing lifetimes. For example, a subscription service where
+        non-payment results in termination for one customer.
+
+    :param bool install_watcher:
+        If :data:`True`, an additional thread is started to monitor the
+        lifetime of the main thread, triggering :meth:`shutdown`
+        automatically in case the user forgets to call it, or their code
+        crashed.
+
+        You should not rely on this functionality in your program, it is only
+        intended as a fail-safe and to simplify the API for new users. In
+        particular, alternative Python implementations may not be able to
+        support watching the main thread.
+    """
     shutdown_timeout = 5.0
     _watcher = None
     poller_class = mitogen.parent.PREFERRED_POLLER
@@ -773,7 +793,31 @@ class Broker(mitogen.core.Broker):
 
 
 class Router(mitogen.parent.Router):
+    """
+    Extend :class:`mitogen.core.Router` with functionality useful to masters,
+    and child contexts who later become masters. Currently when this class is
+    required, the target context's router is upgraded at runtime.
+
+    .. note::
+
+        You may construct as many routers as desired, and use the same broker
+        for multiple routers, however usually only one broker and router need
+        exist. Multiple routers may be useful when dealing with separate trust
+        domains, for example, manipulating infrastructure belonging to separate
+        customers or projects.
+
+    :param mitogen.master.Broker broker:
+        Broker to use. If not specified, a private :class:`Broker` is created.
+    """
     broker_class = Broker
+
+    #: When :data:`True`, cause the broker thread and any subsequent broker and
+    #: main threads existing in any child to write
+    #: ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
+    #: :mod:`cProfile` dump on graceful exit. Must be set prior to construction
+    #: of any :class:`Broker`, e.g. via::
+    #:
+    #:      mitogen.master.Router.profiling = True
     profiling = False
 
     def __init__(self, broker=None, max_message_size=None):
@@ -796,6 +840,10 @@ class Router(mitogen.parent.Router):
         )
 
     def enable_debug(self):
+        """
+        Cause this context and any descendant child contexts to write debug
+        logs to ``/tmp/mitogen.<pid>.log``.
+        """
         mitogen.core.enable_debug_logging()
         self.debug = True
 
@@ -830,6 +878,12 @@ class IdAllocator(object):
     BLOCK_SIZE = 1000
 
     def allocate(self):
+        """
+        Arrange for a unique context ID to be allocated and associated with a
+        route leading to the active context. In masters, the ID is generated
+        directly, in children it is forwarded to the master via a
+        :data:`mitogen.core.ALLOCATE_ID` message.
+        """
         self.lock.acquire()
         try:
             id_ = self.next_id

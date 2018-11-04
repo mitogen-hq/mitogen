@@ -30,7 +30,7 @@ class MyService(mitogen.service.Service):
         }
 
 
-class IsPathDeadTest(unittest2.TestCase):
+class IsPathDeadTest(testlib.TestCase):
     func = staticmethod(mitogen.unix.is_path_dead)
     path = '/tmp/stale-socket'
 
@@ -57,7 +57,7 @@ class IsPathDeadTest(unittest2.TestCase):
         os.unlink(self.path)
 
 
-class ListenerTest(testlib.RouterMixin, unittest2.TestCase):
+class ListenerTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.unix.Listener
 
     def test_constructor_basic(self):
@@ -66,7 +66,7 @@ class ListenerTest(testlib.RouterMixin, unittest2.TestCase):
         os.unlink(listener.path)
 
 
-class ClientTest(unittest2.TestCase):
+class ClientTest(testlib.TestCase):
     klass = mitogen.unix.Listener
 
     def _try_connect(self, path):
@@ -87,6 +87,8 @@ class ClientTest(unittest2.TestCase):
         resp = context.call_service(service_name=MyService, method_name='ping')
         self.assertEquals(mitogen.context_id, resp['src_id'])
         self.assertEquals(0, resp['auth_id'])
+        router.broker.shutdown()
+        router.broker.join()
 
     def _test_simple_server(self, path):
         router = mitogen.master.Router()
@@ -102,7 +104,9 @@ class ClientTest(unittest2.TestCase):
                 time.sleep(0.1)
             finally:
                 pool.shutdown()
+                pool.join()
                 router.broker.shutdown()
+                router.broker.join()
         finally:
             os._exit(0)
 

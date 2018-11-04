@@ -188,6 +188,6 @@ class Stream(mitogen.parent.Stream):
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)
 
-    def _connect_bootstrap(self, extra_fd):
+    def _connect_bootstrap(self):
         # None required.
         pass
