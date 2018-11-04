@@ -80,9 +80,6 @@ class Stream(mitogen.parent.Stream):
         super(Stream, self).connect()
         self.name = u'su.' + mitogen.core.to_text(self.username)
 
-    def on_disconnect(self, broker):
-        super(Stream, self).on_disconnect(broker)
-
     def get_boot_command(self):
         argv = mitogen.parent.Argv(super(Stream, self).get_boot_command())
         return [self.su_path, self.username, '-c', str(argv)]
@@ -90,7 +87,7 @@ class Stream(mitogen.parent.Stream):
     password_incorrect_msg = 'su password is incorrect'
     password_required_msg = 'su password is required'
 
-    def _connect_bootstrap(self, extra_fd):
+    def _connect_bootstrap(self):
         password_sent = False
         it = mitogen.parent.iter_read(
             fds=[self.receive_side.fd],

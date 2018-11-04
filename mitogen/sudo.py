@@ -150,10 +150,6 @@ class Stream(mitogen.parent.Stream):
         super(Stream, self).connect()
         self.name = u'sudo.' + mitogen.core.to_text(self.username)
 
-    def on_disconnect(self, broker):
-        self.tty_stream.on_disconnect(broker)
-        super(Stream, self).on_disconnect(broker)
-
     def get_boot_command(self):
         # Note: sudo did not introduce long-format option processing until July
         # 2013, so even though we parse long-format options, supply short-form
@@ -177,12 +173,14 @@ class Stream(mitogen.parent.Stream):
     password_incorrect_msg = 'sudo password is incorrect'
     password_required_msg = 'sudo password is required'
 
-    def _connect_bootstrap(self, extra_fd):
-        self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
+    def _connect_bootstrap(self):
+        fds = [self.receive_side.fd]
+        if self.diag_stream is not None:
+            fds.append(self.diag_stream.receive_side.fd)
 
         password_sent = False
         it = mitogen.parent.iter_read(
-            fds=[self.receive_side.fd, extra_fd],
+            fds=fds,
             deadline=self.connect_deadline,
         )
 

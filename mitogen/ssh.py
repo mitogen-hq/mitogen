@@ -127,10 +127,6 @@ class Stream(mitogen.parent.Stream):
     #: Number of -v invocations to pass on command line.
     ssh_debug_level = 0
 
-    #: If batch_mode=False, points to the corresponding DiagLogStream, allowing
-    #: it to be disconnected at the same time this stream is being torn down.
-    tty_stream = None
-
     #: The path to the SSH binary.
     ssh_path = 'ssh'
 
@@ -194,11 +190,6 @@ class Stream(mitogen.parent.Stream):
             self.create_child_args = {
                 'stderr_pipe': True,
             }
-
-    def on_disconnect(self, broker):
-        if self.tty_stream is not None:
-            self.tty_stream.on_disconnect(broker)
-        super(Stream, self).on_disconnect(broker)
 
     def get_boot_command(self):
         bits = [self.ssh_path]
@@ -265,7 +256,7 @@ class Stream(mitogen.parent.Stream):
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
             LOG.debug('%r: accepting host key', self)
-            self.tty_stream.transmit_side.write(b('yes\n'))
+            self.diag_stream.transmit_side.write(b('yes\n'))
             return
 
         # _host_key_prompt() should never be reached with ignore or enforce
@@ -273,16 +264,10 @@ class Stream(mitogen.parent.Stream):
         # with ours.
         raise HostKeyError(self.hostkey_config_msg)
 
-    def _ec0_received(self):
-        if self.tty_stream is not None:
-            self._router.broker.start_receive(self.tty_stream)
-        return super(Stream, self)._ec0_received()
-
-    def _connect_bootstrap(self, extra_fd):
+    def _connect_bootstrap(self):
         fds = [self.receive_side.fd]
-        if extra_fd is not None:
-            self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
-            fds.append(extra_fd)
+        if self.diag_stream is not None:
+            fds.append(self.diag_stream.receive_side.fd)
 
         it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
 
@@ -311,7 +296,7 @@ class Stream(mitogen.parent.Stream):
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 LOG.debug('%r: sending password', self)
-                self.tty_stream.transmit_side.write(
+                self.diag_stream.transmit_side.write(
                     (self.password + '\n').encode()
                 )
                 password_sent = True
