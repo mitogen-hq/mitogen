@@ -2,6 +2,7 @@
 - hosts: all
   strategy: linear
   gather_facts: false
+  become: true
   tasks:
     - raw: >
         if ! python -c ''; then
