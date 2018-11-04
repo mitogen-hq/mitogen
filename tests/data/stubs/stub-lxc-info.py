@@ -1,4 +1,4 @@
 #!/usr/bin/env python
 # Mainly for use in stubconnections/kubectl.yml
 
-print 'PID: 1'
+print('PID: 1')
