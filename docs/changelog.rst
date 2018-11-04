@@ -213,6 +213,10 @@ Core Library
 * `#406 <https://github.com/dw/mitogen/issues/406>`_: connections could leak
   FDs when a child process failed to start.
 
+* `#406 <https://github.com/dw/mitogen/issues/406>`_: connections could leave
+  FD wrapper objects that had not been closed lying around to be closed during
+  garbage collection, causing reused FD numbers to be closed at random moments.
+
 * `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
   "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
   was configured. This would lead to connection timeouts due to the hung
