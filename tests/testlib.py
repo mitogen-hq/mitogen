@@ -20,7 +20,7 @@ import mitogen.utils
 try:
     import faulthandler
 except ImportError:
-    pass
+    faulthandler = None
 
 try:
     import urlparse
