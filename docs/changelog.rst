@@ -201,7 +201,8 @@ Core Library
   receivers to wake with :class:`mitogen.core.ChannelError`, even when one
   participant is not a parent of the other.
 
-* `#387 <https://github.com/dw/mitogen/issues/387>`_: dead messages include an
+* `#387 <https://github.com/dw/mitogen/issues/387>`_,
+  `#413 <https://github.com/dw/mitogen/issues/413>`_: dead messages include an
   optional reason in their body. This is used to cause
   :class:`mitogen.core.ChannelError` to report far more useful diagnostics at
   the point the error occurs that previously would have been buried in debug
