@@ -1169,6 +1169,8 @@ class Stream(mitogen.core.Stream):
         except Exception:
             self.receive_side.close()
             self.transmit_side.close()
+            if extra_fd is not None:
+                os.close(extra_fd)
             self._reap_child()
             raise
 
