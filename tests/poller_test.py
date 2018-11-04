@@ -43,7 +43,7 @@ class SockMixin(object):
         """Make `fd` unwriteable."""
         while True:
             try:
-                os.write(fd, 'x'*4096)
+                os.write(fd, mitogen.core.b('x')*4096)
             except OSError:
                 e = sys.exc_info()[1]
                 if e.args[0] == errno.EAGAIN:

@@ -16,14 +16,14 @@ import plain_old_module
 
 def _find_ssl_linux():
     s = testlib.subprocess__check_output(['ldd', _ssl.__file__])
-    for line in s.splitlines():
+    for line in s.decode().splitlines():
         bits = line.split()
         if bits[0].startswith('libssl'):
             return bits[2]
 
 def _find_ssl_darwin():
     s = testlib.subprocess__check_output(['otool', '-l', _ssl.__file__])
-    for line in s.splitlines():
+    for line in s.decode().splitlines():
         bits = line.split()
         if bits[0] == 'name' and 'libssl' in bits[1]:
             return bits[1]

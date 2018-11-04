@@ -648,7 +648,7 @@ class Message(object):
 
     def _throw_dead(self):
         if len(self.data):
-            raise ChannelError(self.data.decode(errors='replace'))
+            raise ChannelError(self.data.decode('utf-8', 'replace'))
         elif self.src_id == mitogen.context_id:
             raise ChannelError(ChannelError.local_msg)
         else:
