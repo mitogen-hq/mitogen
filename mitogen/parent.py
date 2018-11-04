@@ -211,7 +211,7 @@ def create_socketpair():
     return parentfp, childfp
 
 
-def detach_popen(close_on_error=None, **kwargs):
+def detach_popen(**kwargs):
     """
     Use :class:`subprocess.Popen` to construct a child process, then hack the
     Popen so that it forgets the child it created, allowing it to survive a
@@ -232,13 +232,7 @@ def detach_popen(close_on_error=None, **kwargs):
     # handling, without tying the surrounding code into managing a Popen
     # object, which isn't possible for at least :mod:`mitogen.fork`. This
     # should be replaced by a swappable helper class in a future version.
-    try:
-        proc = subprocess.Popen(**kwargs)
-    except Exception:
-        for fd in close_on_error or ():
-            os.close(fd)
-        raise
-
+    proc = subprocess.Popen(**kwargs)
     proc._child_created = False
     return proc.pid
 
@@ -279,15 +273,20 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
         mitogen.core.set_cloexec(stderr_w)
         extra = {'stderr': stderr_w}
 
-    pid = detach_popen(
-        args=args,
-        stdin=childfp,
-        stdout=childfp,
-        close_fds=True,
-        preexec_fn=preexec_fn,
-        close_on_error=[parentfp.fileno(), childfp.fileno()],
-        **extra
-    )
+    try:
+        pid = detach_popen(
+            args=args,
+            stdin=childfp,
+            stdout=childfp,
+            close_fds=True,
+            preexec_fn=preexec_fn,
+            **extra
+        )
+    except Exception:
+        childfp.close()
+        parentfp.close()
+        raise
+
     if stderr_pipe:
         os.close(stderr_w)
     childfp.close()
@@ -347,15 +346,19 @@ def tty_create_child(args):
     disable_echo(master_fd)
     disable_echo(slave_fd)
 
-    pid = detach_popen(
-        args=args,
-        stdin=slave_fd,
-        stdout=slave_fd,
-        stderr=slave_fd,
-        preexec_fn=_acquire_controlling_tty,
-        close_on_error=[master_fd, slave_fd],
-        close_fds=True,
-    )
+    try:
+        pid = detach_popen(
+            args=args,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            preexec_fn=_acquire_controlling_tty,
+            close_fds=True,
+        )
+    except Exception:
+        os.close(master_fd)
+        os.close(slave_fd)
+        raise
 
     os.close(slave_fd)
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
@@ -383,15 +386,21 @@ def hybrid_tty_create_child(args):
     disable_echo(master_fd)
     disable_echo(slave_fd)
 
-    pid = detach_popen(
-        args=args,
-        stdin=childfp,
-        stdout=childfp,
-        stderr=slave_fd,
-        preexec_fn=_acquire_controlling_tty,
-        close_fds=True,
-        close_on_error=[master_fd, slave_fd, parentfp.fileno(), childfp.fileno()],
-    )
+    try:
+        pid = detach_popen(
+            args=args,
+            stdin=childfp,
+            stdout=childfp,
+            stderr=slave_fd,
+            preexec_fn=_acquire_controlling_tty,
+            close_fds=True,
+        )
+    except Exception:
+        os.close(master_fd)
+        os.close(slave_fd)
+        parentfp.close()
+        childfp.close()
+        raise
 
     os.close(slave_fd)
     childfp.close()
