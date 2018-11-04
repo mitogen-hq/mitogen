@@ -95,7 +95,11 @@ class MitogenCoreTest(testlib.TestCase):
     def test_minify_all(self):
         for name in glob.glob('mitogen/*.py'):
             original = self.read_source(name)
-            minified = self.func(original)
+            try:
+                minified = self.func(original)
+            except Exception:
+                print('file was: ' + name)
+                raise
 
             self._test_syntax_valid(minified, name)
             self._test_line_counts_match(original, minified)
