@@ -87,6 +87,8 @@ class ClientTest(testlib.TestCase):
         resp = context.call_service(service_name=MyService, method_name='ping')
         self.assertEquals(mitogen.context_id, resp['src_id'])
         self.assertEquals(0, resp['auth_id'])
+        router.broker.shutdown()
+        router.broker.join()
 
     def _test_simple_server(self, path):
         router = mitogen.master.Router()
@@ -102,7 +104,9 @@ class ClientTest(testlib.TestCase):
                 time.sleep(0.1)
             finally:
                 pool.shutdown()
+                pool.join()
                 router.broker.shutdown()
+                router.broker.join()
         finally:
             os._exit(0)
 
