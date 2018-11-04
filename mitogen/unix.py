@@ -78,6 +78,11 @@ class Listener(mitogen.core.BasicStream):
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
 
+    def on_shutdown(self, broker):
+        self._sock.close()
+        self.receive_side.closed = True
+        broker.stop_receive(self)
+
     def _accept_client(self, sock):
         sock.setblocking(True)
         try:
