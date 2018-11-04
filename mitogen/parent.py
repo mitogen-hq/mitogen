@@ -1558,6 +1558,9 @@ class RouteMonitor(object):
         #: stream; used to cleanup routes during disconnection.
         self._routes_by_stream = {}
 
+    def __repr__(self):
+        return 'RouteMonitor()'
+
     def _send_one(self, stream, handle, target_id, name):
         """
         Compose and send an update message on a stream.
@@ -1644,7 +1647,8 @@ class RouteMonitor(object):
         Respond to disconnection of a local stream by
         """
         routes = self._routes_by_stream.pop(stream)
-        LOG.debug('%r is gone; propagating DEL_ROUTE for %r', stream, routes)
+        LOG.debug('%r: %r is gone; propagating DEL_ROUTE for %r',
+                  self, stream, routes)
         for target_id in routes:
             self.router.del_route(target_id)
             self._propagate_up(mitogen.core.DEL_ROUTE, target_id)
@@ -1692,18 +1696,21 @@ class RouteMonitor(object):
 
         target_id = int(msg.data)
         registered_stream = self.router.stream_by_id(target_id)
+        if registered_stream is None:
+            return
+
         stream = self.router.stream_by_id(msg.auth_id)
         if registered_stream != stream:
-            LOG.error('Received DEL_ROUTE for %d from %r, expected %r',
-                      target_id, stream, registered_stream)
+            LOG.error('%r: received DEL_ROUTE for %d from %r, expected %r',
+                      self, target_id, stream, registered_stream)
             return
 
         context = self.router.context_by_id(target_id, create=False)
         if context:
-            LOG.debug('%r: Firing local disconnect for %r', self, context)
+            LOG.debug('%r: firing local disconnect for %r', self, context)
             mitogen.core.fire(context, 'disconnect')
 
-        LOG.debug('Deleting route to %d via %r', target_id, stream)
+        LOG.debug('%r: deleting route to %d via %r', self, target_id, stream)
         routes = self._routes_by_stream.get(stream)
         if routes:
             routes.discard(target_id)

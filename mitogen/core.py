@@ -2104,8 +2104,8 @@ class Router(object):
 
     def _on_del_route(self, msg):
         """
-        Stub DEL_ROUTE handler; fires 'disconnect' events on the corresponding
-        member of :attr:`_context_by_id`. This handler is replaced by
+        Stub :data:`DEL_ROUTE` handler; fires 'disconnect' events on the
+        corresponding :attr:`_context_by_id` member. This is replaced by
         :class:`mitogen.parent.RouteMonitor` in an upgraded context.
         """
         LOG.error('%r._on_del_route() %r', self, msg)
