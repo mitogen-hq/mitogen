@@ -49,10 +49,13 @@ from mitogen.core import LOG
 def is_path_dead(path):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        s.connect(path)
-    except socket.error:
-        e = sys.exc_info()[1]
-        return e.args[0] in (errno.ECONNREFUSED, errno.ENOENT)
+        try:
+            s.connect(path)
+        except socket.error:
+            e = sys.exc_info()[1]
+            return e.args[0] in (errno.ECONNREFUSED, errno.ENOENT)
+    finally:
+        s.close()
     return False
 
 
