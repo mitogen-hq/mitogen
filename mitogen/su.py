@@ -88,6 +88,8 @@ class Stream(mitogen.parent.Stream):
     password_required_msg = 'su password is required'
 
     def _connect_input_loop(self, it):
+        password_sent = False
+
         for buf in it:
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith(self.EC0_MARKER):
@@ -106,10 +108,10 @@ class Stream(mitogen.parent.Stream):
                     mitogen.core.to_text(self.password + '\n').encode('utf-8')
                 )
                 password_sent = True
+
         raise mitogen.core.StreamError('bootstrap failed')
 
     def _connect_bootstrap(self):
-        password_sent = False
         it = mitogen.parent.iter_read(
             fds=[self.receive_side.fd],
             deadline=self.connect_deadline,
