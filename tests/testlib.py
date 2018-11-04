@@ -10,7 +10,6 @@ import threading
 import time
 import traceback
 
-import psutil
 import unittest2
 
 import mitogen.core
@@ -49,6 +48,7 @@ def get_fd_count():
     """
     Return the number of FDs open by this process.
     """
+    import psutil
     return psutil.Process().num_fds()
 
 
@@ -185,10 +185,9 @@ def log_fd_calls():
         with l:
             rv = real_pipe()
             if mypid == os.getpid():
-                print
-                print rv
+                sys.stdout.write('\n%s\n' % (rv,))
                 traceback.print_stack(limit=3)
-                print
+                sys.stdout.write('\n')
             return rv
     os.pipe = pipe
 
@@ -197,10 +196,9 @@ def log_fd_calls():
         with l:
             rv = real_socketpair(*args)
             if mypid == os.getpid():
-                print
-                print '--', args, '->', rv
+                sys.stdout.write('\n%s -> %s\n' % (args, rv))
                 traceback.print_stack(limit=3)
-                print
+                sys.stdout.write('\n')
                 return rv
     socket.socketpair = socketpair
 
@@ -209,10 +207,9 @@ def log_fd_calls():
         with l:
             real_dup2(*args)
             if mypid == os.getpid():
-                print
-                print '--', args
+                sys.stdout.write('\n%s\n' % (args,))
                 traceback.print_stack(limit=3)
-                print
+                sys.stdout.write('\n')
     os.dup2 = dup2
 
     real_dup = os.dup
@@ -220,10 +217,9 @@ def log_fd_calls():
         with l:
             rv = real_dup(*args)
             if mypid == os.getpid():
-                print
-                print '--', args, '->', rv
+                sys.stdout.write('\n%s -> %s\n' % (args, rv))
                 traceback.print_stack(limit=3)
-                print
+                sys.stdout.write('\n')
             return rv
     os.dup = dup
 
