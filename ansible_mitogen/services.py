@@ -303,12 +303,9 @@ class ContextService(mitogen.service.Service):
         longer reachable context.  This method runs in the Broker thread and
         must not to block.
         """
-        # TODO: there is a race between creation of a context and disconnection
-        # of its related stream. An error reply should be sent to any message
-        # in _latches_by_key below.
         self._lock.acquire()
         try:
-            LOG.info('Forgetting %r due to stream disconnect', context)
+            LOG.info('%r: Forgetting %r due to stream disconnect', self, context)
             self._forget_context_unlocked(context)
         finally:
             self._lock.release()
