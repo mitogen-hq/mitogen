@@ -532,12 +532,16 @@ def discard_until(fd, s, deadline):
     :raises mitogen.core.StreamError:
         Attempt to read past end of file.
     """
-    for buf in iter_read([fd], deadline):
-        if IOLOG.level == logging.DEBUG:
-            for line in buf.splitlines():
-                IOLOG.debug('discard_until: discarding %r', line)
-        if buf.endswith(s):
-            return
+    it = iter_read([fd], deadline)
+    try:
+        for buf in it:
+            if IOLOG.level == logging.DEBUG:
+                for line in buf.splitlines():
+                    IOLOG.debug('discard_until: discarding %r', line)
+            if buf.endswith(s):
+                return
+    finally:
+        it.close()  # ensure Poller.close() is called.
 
 
 def _upgrade_broker(broker):

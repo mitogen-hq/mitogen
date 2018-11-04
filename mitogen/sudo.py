@@ -173,17 +173,7 @@ class Stream(mitogen.parent.Stream):
     password_incorrect_msg = 'sudo password is incorrect'
     password_required_msg = 'sudo password is required'
 
-    def _connect_bootstrap(self):
-        fds = [self.receive_side.fd]
-        if self.diag_stream is not None:
-            fds.append(self.diag_stream.receive_side.fd)
-
-        password_sent = False
-        it = mitogen.parent.iter_read(
-            fds=fds,
-            deadline=self.connect_deadline,
-        )
-
+    def _connect_input_loop(self, it):
         for buf in it:
             LOG.debug('%r: received %r', self, buf)
             if buf.endswith(self.EC0_MARKER):
@@ -199,3 +189,19 @@ class Stream(mitogen.parent.Stream):
                 )
                 password_sent = True
         raise mitogen.core.StreamError('bootstrap failed')
+
+    def _connect_bootstrap(self):
+        fds = [self.receive_side.fd]
+        if self.diag_stream is not None:
+            fds.append(self.diag_stream.receive_side.fd)
+
+        password_sent = False
+        it = mitogen.parent.iter_read(
+            fds=fds,
+            deadline=self.connect_deadline,
+        )
+
+        try:
+            self._connect_input_loop(it)
+        finally:
+            it.close()

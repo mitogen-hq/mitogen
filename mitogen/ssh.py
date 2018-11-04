@@ -264,13 +264,7 @@ class Stream(mitogen.parent.Stream):
         # with ours.
         raise HostKeyError(self.hostkey_config_msg)
 
-    def _connect_bootstrap(self):
-        fds = [self.receive_side.fd]
-        if self.diag_stream is not None:
-            fds.append(self.diag_stream.receive_side.fd)
-
-        it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
-
+    def _connect_input_loop(self, it):
         password_sent = False
         for buf, partial in filter_debug(self, it):
             LOG.debug('%r: received %r', self, buf)
@@ -302,3 +296,14 @@ class Stream(mitogen.parent.Stream):
                 password_sent = True
 
         raise mitogen.core.StreamError('bootstrap failed')
+
+    def _connect_bootstrap(self):
+        fds = [self.receive_side.fd]
+        if self.diag_stream is not None:
+            fds.append(self.diag_stream.receive_side.fd)
+
+        it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
+        try:
+            self._connect_input_loop(it)
+        finally:
+            it.close()
