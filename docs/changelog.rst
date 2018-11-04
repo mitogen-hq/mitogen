@@ -213,7 +213,8 @@ Core Library
 * `#406 <https://github.com/dw/mitogen/issues/406>`_: connections could leak
   FDs when a child process failed to start.
 
-* `#406 <https://github.com/dw/mitogen/issues/406>`_: connections could leave
+* `#406 <https://github.com/dw/mitogen/issues/406>`_,
+  `#417 <https://github.com/dw/mitogen/issues/417>`_: connections could leave
   FD wrapper objects that had not been closed lying around to be closed during
   garbage collection, causing reused FD numbers to be closed at random moments.
 
