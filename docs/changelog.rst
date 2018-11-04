@@ -201,6 +201,12 @@ Core Library
   receivers to wake with :class:`mitogen.core.ChannelError`, even when one
   participant is not a parent of the other.
 
+* `#387 <https://github.com/dw/mitogen/issues/387>`_: dead messages include an
+  optional reason in their body. This is used to cause
+  :class:`mitogen.core.ChannelError` to report far more useful diagnostics at
+  the point the error occurs that previously would have been buried in debug
+  log output from an unrelated context.
+
 * `#405 <https://github.com/dw/mitogen/issues/405>`_: if an oversized message
   is rejected, and it has a ``reply_to`` set, a dead message is returned to the
   sender. This ensures function calls exceeding the configured maximum size
