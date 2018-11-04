@@ -285,6 +285,9 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
     except Exception:
         childfp.close()
         parentfp.close()
+        if stderr_pipe:
+            os.close(stderr_r)
+            os.close(stderr_w)
         raise
 
     if stderr_pipe:
