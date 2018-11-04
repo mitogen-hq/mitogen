@@ -82,9 +82,9 @@ class Listener(mitogen.core.BasicStream):
         router.broker.start_receive(self)
 
     def on_shutdown(self, broker):
+        broker.stop_receive(self)
         self._sock.close()
         self.receive_side.closed = True
-        broker.stop_receive(self)
 
     def _accept_client(self, sock):
         sock.setblocking(True)
