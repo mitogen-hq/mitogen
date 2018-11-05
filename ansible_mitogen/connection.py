@@ -914,9 +914,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             emulate_tty=emulate_tty,
         )
 
-        stderr += 'Shared connection to %s closed.%s' % (
-            self._play_context.remote_addr,
-            ('\r\n' if emulate_tty else '\n'),
+        stderr += b'Shared connection to %s closed.%s' % (
+            self._play_context.remote_addr.encode(),
+            (b'\r\n' if emulate_tty else b'\n'),
         )
         return rc, stdout, stderr
 
