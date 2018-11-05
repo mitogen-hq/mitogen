@@ -42,6 +42,7 @@ import ansible.errors
 import ansible.plugins.connection
 import ansible.utils.shlex
 
+import mitogen.fork
 import mitogen.unix
 import mitogen.utils
 
@@ -802,6 +803,23 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.init_child_result = None
         self.chain = None
 
+    def _shutdown_broker(self):
+        """
+        Shutdown the broker thread during :meth:`close` or :meth:`reset`.
+        """
+        if self.broker:
+            self.broker.shutdown()
+            self.broker.join()
+            self.broker = None
+            self.router = None
+
+        # #420: Ansible executes "meta" actions in the top-level process,
+        # meaning "reset_connection" will cause :class:`mitogen.core.Latch` FDs
+        # to be cached and subsequently erroneously shared by children on
+        # subsequent task forks. To handle that, call on_fork() to ensure any
+        # shared state is discarded.
+        mitogen.fork.on_fork()
+
     def close(self):
         """
         Arrange for the mitogen.master.Router running in the worker to
@@ -809,11 +827,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         multiple times.
         """
         self._mitogen_reset(mode='put')
-        if self.broker:
-            self.broker.shutdown()
-            self.broker.join()
-            self.broker = None
-            self.router = None
+        self._shutdown_broker()
 
     reset_compat_msg = (
         'Mitogen only supports "reset_connection" on Ansible 2.5.6 or later'
@@ -835,6 +849,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self._connect()
         self._mitogen_reset(mode='reset')
+        self._shutdown_broker()
 
     # Compatibility with Ansible 2.4 wait_for_connection plug-in.
     _reset = reset
