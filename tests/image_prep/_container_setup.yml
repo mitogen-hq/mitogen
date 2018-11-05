@@ -2,7 +2,6 @@
 - hosts: all
   strategy: linear
   gather_facts: false
-  become: true
   tasks:
     - raw: >
         if ! python -c ''; then
@@ -95,6 +94,11 @@
     - copy:
         dest: /etc/sudoers.d/001-mitogen
         src: ../data/docker/001-mitogen.sudo
+
+    - lineinfile:
+        path: /etc/sudoers
+        line: "%wheel ALL=(ALL) ALL"
+      when: distro == "CentOS"
 
     - lineinfile:
         path: /etc/ssh/sshd_config
