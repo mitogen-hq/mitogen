@@ -5,20 +5,67 @@
 
 jobs:
 
-- job: 'Test'
+- job: 'MitogenTests'
   pool:
     vmImage: 'Ubuntu 16.04'
   strategy:
     matrix:
-      Python27:
+      Mitogen27Debian_27:
         python.version: '2.7'
-      Python35:
-        python.version: '3.5'
-      Python36:
+        MODE: mitogen
+        DISTRO: debian
+
+      MitogenPy27CentOS6_26:
+        python.version: '2.7'
+        MODE: mitogen
+        DISTRO: centos6
+
+      #Py26CentOS7:
+        #python.version: '2.7'
+        #MODE: mitogen
+        #DISTRO: centos6
+
+      Mitogen36CentOS6_26:
         python.version: '3.6'
-      Python37:
-        python.version: '3.7'
-    maxParallel: 4
+        MODE: mitogen
+        DISTRO: centos6
+
+      DebOps_2460_27_27:
+        python.version: '2.7'
+        MODE: debops_common
+        VER: 2.4.6.0
+
+      DebOps_262_36_27:
+        python.version: '3.6'
+        MODE: debops_common
+        VER: 2.6.2
+
+      Ansible_2460_26:
+        python.version: '2.7'
+        MODE: ansible
+        VER: 2.4.6.0
+
+      Ansible_262_26:
+        python.version: '2.7'
+        MODE: ansible
+        VER: 2.6.2
+
+      Ansible_2460_36:
+        python.version: '3.6'
+        MODE: ansible
+        VER: 2.4.6.0
+
+      Ansible_262_36:
+        python.version: '3.6'
+        MODE: ansible
+        VER: 2.6.2
+
+      Vanilla_262_27:
+        python.version: '2.7'
+        MODE: ansible
+        VER: 2.6.2
+        DISTROS: debian
+        STRATEGY: linear
 
   steps:
   - task: UsePythonVersion@0
@@ -26,30 +73,14 @@ jobs:
       versionSpec: '$(python.version)'
       architecture: 'x64'
 
-  - script: python -m pip install --upgrade pip && pip install -r requirements.txt
-    displayName: 'Install dependencies'
+  - script: .ci/prep_azure.py
+    displayName: "Install requirements."
 
   - script: |
-      pip install pytest
-      pytest tests --doctest-modules --junitxml=junit/test-results.xml
-    displayName: 'pytest'
-
-  - task: PublishTestResults@2
-    inputs:
-      testResultsFiles: '**/test-results.xml'
-      testRunTitle: 'Python $(python.version)'
-    condition: succeededOrFailed()
-
-- job: 'Publish'
-  dependsOn: 'Test'
-  pool:
-    vmImage: 'Ubuntu 16.04'
-
-  steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '3.x'
-      architecture: 'x64'
-
-  - script: python setup.py sdist
-    displayName: 'Build sdist'
+      export TRAVIS_BUILD_DIR=`pwd`
+      if [ -f ".ci/$(MODE)_tests.sh" ]; then
+        .ci/$(MODE)_tests.sh;
+      else
+        .ci/$(MODE)_tests.py;
+      fi
+    displayName: Run tests.

@@ -41,6 +41,7 @@ with ci_lib.Fold('job_setup'):
     run("mkdir %s", HOSTS_DIR)
     run("ln -s %s/hosts/common-hosts %s", TESTS_DIR, HOSTS_DIR)
 
+    docker_hostname = ci_lib.get_docker_hostname()
     with open(os.path.join(HOSTS_DIR, 'target'), 'w') as fp:
         fp.write('[test-targets]\n')
         for i, distro in enumerate(ci_lib.DISTROS):
@@ -51,7 +52,7 @@ with ci_lib.Fold('job_setup'):
                      "ansible_password=has_sudo_nopw_password"
                      "\n" % (
                 distro,
-                ci_lib.DOCKER_HOSTNAME,
+                docker_hostname,
                 BASE_PORT + i,
             ))
 
