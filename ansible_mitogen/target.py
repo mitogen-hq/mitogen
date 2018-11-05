@@ -541,7 +541,7 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
 
     if emulate_tty:
         stdout = stdout.replace(b'\n', b'\r\n')
-    return proc.returncode, stdout, stderr or ''
+    return proc.returncode, stdout, stderr or b''
 
 
 def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):

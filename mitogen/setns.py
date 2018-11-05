@@ -69,7 +69,7 @@ def _run_command(args):
 
     output, _ = proc.communicate()
     if not proc.returncode:
-        return output
+        return output.decode('utf-8', 'replace')
 
     raise Error("%s exitted with status %d: %s",
                 mitogen.parent.Argv(args), proc.returncode, output)

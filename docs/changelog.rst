@@ -186,6 +186,11 @@ Fixes
 * `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
   the SELinux ``--type`` and ``--role`` options.
 
+* `#420 <https://github.com/dw/mitogen/issues/420>`_: if a :class:`Connection`
+  was constructed in the Ansible top-level process, for example while executing
+  ``meta: reset_connection``, resources could become undesirably shared in
+  subsequent children.
+
 
 Core Library
 ~~~~~~~~~~~~

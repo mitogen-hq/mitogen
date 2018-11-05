@@ -37,11 +37,20 @@ if not hasattr(subprocess, 'check_output'):
 
 # Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
 
-sys.stdout = os.popen('stdbuf -oL cat', 'w', 1)
-os.dup2(sys.stdout.fileno(), 1)
+proc = subprocess.Popen(
+    args=['stdbuf', '-oL', 'cat'],
+    stdin=subprocess.PIPE
+)
 
-sys.stderr = sys.stdout
-os.dup2(sys.stderr.fileno(), 2)
+os.dup2(proc.stdin.fileno(), 1)
+os.dup2(proc.stdin.fileno(), 2)
+
+def cleanup_travis_junk(stdout=sys.stdout, stderr=sys.stderr, proc=proc):
+    stdout.close()
+    stderr.close()
+    proc.terminate()
+
+atexit.register(cleanup_travis_junk)
 
 # -----------------
 
@@ -54,7 +63,9 @@ def _argv(s, *args):
 def run(s, *args, **kwargs):
     argv = _argv(s, *args)
     print('Running: %s' % (argv,))
-    return subprocess.check_call(argv, **kwargs)
+    ret = subprocess.check_call(argv, **kwargs)
+    print('Finished running: %s' % (argv,))
+    return ret
 
 
 def get_output(s, *args, **kwargs):
