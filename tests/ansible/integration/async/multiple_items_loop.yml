@@ -1,0 +1,36 @@
+# issue #414: verify behaviour of async tasks created in a loop.
+
+- name: integration/async/multiple_items_loop.yml
+  hosts: test-targets
+  any_errors_fatal: true
+  tasks:
+
+  - name: start long running ops
+    become: true
+    shell: "{{item}}"
+    async: 15
+    poll: 0
+    register: jobs
+    with_items:
+    - "sleep 3; echo hi-from-job-1"
+    - "sleep 5; echo hi-from-job-2"
+
+  - name: Ensure static files are collected and compressed
+    async_status:
+      jid: "{{ item.ansible_job_id }}"
+    become: yes
+    register: out
+    until: out.finished
+    retries: 30
+    with_items:
+      - "{{ jobs.results }}"
+
+  - assert:
+      that:
+      - out.results[0].stdout == 'hi-from-job-1'
+      - out.results[0].rc == 0
+      - out.results[0].delta > '0:00:03'
+
+      - out.results[1].stdout == 'hi-from-job-2'
+      - out.results[1].rc == 0
+      - out.results[1].delta > '0:00:05'
