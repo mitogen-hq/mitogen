@@ -14,7 +14,7 @@
     - include_tasks: _end_play_if_not_sudo_linux.yml
 
     - command: |
-        sudo -nE ansible
+        sudo -nE "{{lookup('env', 'VIRTUAL_ENV')}}/bin/ansible"
         -i localhost,
         -c setns
         -e mitogen_kind=lxc
