@@ -6,9 +6,10 @@ Build the Docker images used for testing.
 
 import commands
 import os
-import tempfile
 import shlex
 import subprocess
+import sys
+import tempfile
 
 
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -42,7 +43,7 @@ with tempfile.NamedTemporaryFile() as fp:
     try:
         subprocess.check_call(
             cwd=BASEDIR,
-            args=sh('ansible-playbook -i %s -c docker setup.yml', fp.name),
+            args=sh('ansible-playbook -i %s -c docker setup.yml', fp.name) + sys.argv[1:],
         )
 
         for container_id, label in label_by_id.items():
