@@ -159,7 +159,7 @@ Fixes
 
 * `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
   tilde-expands private key paths using Ansible's logic. Previously the path
-  was passed unmodified to SSH, which expanded it using :func:`os.getpwent`.
+  was passed unmodified to SSH, which expanded it using :func:`pwd.getpwnam`.
   This differs from :func:`os.path.expanduser`, which uses the ``HOME``
   environment variable if it is set, causing behaviour to diverge when Ansible
   was invoked across user accounts via ``sudo``.
@@ -180,8 +180,8 @@ Fixes
   recurrence.
 
 * `#409 <https://github.com/dw/mitogen/issues/409>`_: the LXC and LXD methods
-  support ``mitogen_lxc_path`` and ``mitogen_lxc_attach`` variables to control
-  the location of third pary utilities.
+  support ``mitogen_lxc_path`` and ``mitogen_lxc_attach_path`` variables to
+  control the location of third pary utilities.
 
 * `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
   the SELinux ``--type`` and ``--role`` options.
