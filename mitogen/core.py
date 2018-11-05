@@ -1778,16 +1778,16 @@ class Latch(object):
             self._cls_all_sockets.extend((rsock, wsock))
             return rsock, wsock
 
-    COOKIE_SIZE = 33
-
     def _make_cookie(self):
         """
-        Return a 33-byte string encoding the ID of the instance and the current
-        thread. This disambiguates legitimate wake-ups, accidental writes to
-        the FD, and buggy internal FD sharing.
+        Return a string encoding the ID of the instance and the current thread.
+        This disambiguates legitimate wake-ups, accidental writes to the FD,
+        and buggy internal FD sharing.
         """
         ident = threading.currentThread().ident
-        return b(u'%016x-%016x' % (int(id(self)), ident))
+        return b(u'%010d-%016x-%016x' % (os.getpid(), int(id(self)), ident))
+
+    COOKIE_SIZE = len(_make_cookie(None))
 
     def get(self, timeout=None, block=True):
         """
