@@ -63,5 +63,6 @@ with ci_lib.Fold('job_setup'):
 
 
 with ci_lib.Fold('ansible'):
-    run('/usr/bin/time ./run_ansible_playbook.py all.yml -i "%s" %s',
-        HOSTS_DIR, ' '.join(sys.argv[1:]))
+    playbook = os.environ.get('PLAYBOOK', 'all.yml')
+    run('/usr/bin/time ./run_ansible_playbook.py %s -i "%s" %s',
+        playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))

@@ -12,6 +12,11 @@ GIT_BASEDIR = os.path.dirname(
     )
 )
 
+# Ensure VIRTUAL_ENV is exported.
+os.environ.setdefault(
+    'VIRTUAL_ENV',
+    os.path.dirname(os.path.dirname(sys.executable))
+)
 
 # Used by delegate_to.yml to ensure "sudo -E" preserves environment.
 os.environ['I_WAS_PRESERVED'] = '1'
