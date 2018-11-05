@@ -19,10 +19,10 @@ install:
 
 script:
 - |
-  if [ -f "${TRAVIS_BUILD_DIR}/.travis/${MODE}_tests.sh" ]; then
-    ${TRAVIS_BUILD_DIR}/.travis/${MODE}_tests.sh;
+  if [ -f "${TRAVIS_BUILD_DIR}/.ci/${MODE}_tests.sh" ]; then
+    ${TRAVIS_BUILD_DIR}/.ci/${MODE}_tests.sh;
   else
-    ${TRAVIS_BUILD_DIR}/.travis/${MODE}_tests.py;
+    ${TRAVIS_BUILD_DIR}/.ci/${MODE}_tests.py;
   fi
 
 
