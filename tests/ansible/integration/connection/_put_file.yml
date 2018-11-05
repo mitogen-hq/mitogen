@@ -19,4 +19,4 @@
 - assert:
     that:
     - original.stat.checksum == copied.stat.checksum
-    - original.stat.mtime|int == copied.stat.mtime|int
+    - (not is_mitogen) or (original.stat.mtime|int == copied.stat.mtime|int)
