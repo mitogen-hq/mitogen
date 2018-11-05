@@ -6,6 +6,9 @@
   gather_facts: no
   any_errors_fatal: false
   tasks:
+  - meta: end_play
+    when: not is_mitogen
+
   - connection: local
     command: |
       ansible-playbook
