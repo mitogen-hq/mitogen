@@ -45,9 +45,9 @@ proc = subprocess.Popen(
 os.dup2(proc.stdin.fileno(), 1)
 os.dup2(proc.stdin.fileno(), 2)
 
-def cleanup_travis_junk():
-    sys.stdout.close()
-    sys.stderr.close()
+def cleanup_travis_junk(stdout=sys.stdout, stderr=sys.stderr, proc=proc):
+    stdout.close()
+    stderr.close()
     proc.terminate()
 
 atexit.register(cleanup_travis_junk)
