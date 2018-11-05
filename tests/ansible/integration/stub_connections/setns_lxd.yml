@@ -18,7 +18,7 @@
         -i localhost,
         -c setns
         -e mitogen_kind=lxd
-        -e mitogen_lxc_path=stub-lxc.py
+        -e mitogen_lxc_path={{git_basedir}}/tests/data/stubs/stub-lxc.py
         -m shell
         -a "echo hi"
         localhost
