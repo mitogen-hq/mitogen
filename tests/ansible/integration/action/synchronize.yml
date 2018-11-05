@@ -5,6 +5,7 @@
   any_errors_fatal: true
   vars:
     ansible_user: mitogen__has_sudo_pubkey
+    ansible_become_pass: has_sudo_pubkey_password
     ansible_ssh_private_key_file: /tmp/synchronize-action-key
   tasks:
     # must copy git file to set proper file mode.
