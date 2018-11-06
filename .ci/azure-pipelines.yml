@@ -76,11 +76,8 @@ jobs:
   - script: .ci/prep_azure.py
     displayName: "Install requirements."
 
-  - script: |
-      export TRAVIS_BUILD_DIR=`pwd`
-      if [ -f ".ci/$(MODE)_tests.sh" ]; then
-        .ci/$(MODE)_tests.sh;
-      else
-        .ci/$(MODE)_tests.py;
-      fi
+  - script: .ci/$(MODE)_install.py
+    displayName: "Install requirements."
+
+  - script: .ci/$(MODE)_tests.py
     displayName: Run tests.

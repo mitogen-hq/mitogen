@@ -4,11 +4,16 @@ from __future__ import print_function
 
 import atexit
 import os
-import subprocess
-import sys
 import shlex
 import shutil
+import subprocess
+import sys
 import tempfile
+
+try:
+    import urlparse
+except ImportError:
+    import urllib.parse as urlparse
 
 
 #
@@ -60,11 +65,24 @@ def _argv(s, *args):
 
 
 def run(s, *args, **kwargs):
-    argv = _argv(s, *args)
+    argv = ['/usr/bin/time', '--'] + _argv(s, *args)
     print('Running: %s' % (argv,))
     ret = subprocess.check_call(argv, **kwargs)
     print('Finished running: %s' % (argv,))
     return ret
+
+
+def run_batches(batches):
+    combine = lambda batch: 'set -x; ' + (' && '.join(
+        '( %s; )' % (cmd,)
+        for cmd in batch
+    ))
+
+    procs = [
+        subprocess.Popen(combine(batch), shell=True)
+        for batch in batches
+    ]
+    assert [proc.wait() for proc in procs] == [0] * len(procs)
 
 
 def get_output(s, *args, **kwargs):
@@ -103,7 +121,10 @@ os.environ.setdefault('ANSIBLE_STRATEGY',
     os.environ.get('STRATEGY', 'mitogen_linear'))
 ANSIBLE_VERSION = os.environ.get('VER', '2.6.2')
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DISTRO = os.environ.get('DISTRO', 'debian')
 DISTROS = os.environ.get('DISTROS', 'debian centos6 centos7').split()
+TARGET_COUNT = int(os.environ.get('TARGET_COUNT', '2'))
+BASE_PORT = 2200
 TMP = TempDir().path
 
 os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
@@ -113,10 +134,44 @@ os.environ['PYTHONPATH'] = '%s:%s' % (
 )
 
 def get_docker_hostname():
-    return subprocess.check_output([
-        sys.executable,
-        os.path.join(GIT_ROOT, 'tests/show_docker_hostname.py'),
-    ]).decode().strip()
+    url = os.environ.get('DOCKER_HOST')
+    if url in (None, 'http+docker://localunixsocket'):
+        return 'localhost'
+
+    parsed = urlparse.urlparse(url)
+    return parsed.netloc.partition(':')[0]
+
+
+def make_containers():
+    docker_hostname = get_docker_hostname()
+    return [
+        {
+            "distro": distro,
+            "name": "target-%s-%s" % (distro, i),
+            "hostname": docker_hostname,
+            "port": BASE_PORT + i,
+        }
+        for i, distro in enumerate(DISTROS, 1)
+    ]
+
+
+def start_containers(containers):
+    run_batches([
+        [
+            "docker rm -f %(name)s || true" % container,
+            "docker run "
+                "--rm "
+                "--detach "
+                "--publish 0.0.0.0:%(port)s:22/tcp "
+                "--hostname=%(name)s "
+                "--name=%(name)s "
+                "mitogen/%(distro)s-test "
+            % container
+        ]
+        for container in containers
+    ])
+    return containers
+
 
 # SSH passes these through to the container when run interactively, causing
 # stdout to get messed up with libc warnings.
