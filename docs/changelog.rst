@@ -164,6 +164,10 @@ Fixes
   environment variable if it is set, causing behaviour to diverge when Ansible
   was invoked across user accounts via ``sudo``.
 
+* `#364 <https://github.com/dw/mitogen/issues/364>`_: file transfers from
+  controllers running Python 2.7.2 or earlier could be interrupted due to a
+  forking bug in the :mod:`tempfile` module.
+
 * `#370 <https://github.com/dw/mitogen/issues/370>`_: the Ansible
   `reboot <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
   module is supported.

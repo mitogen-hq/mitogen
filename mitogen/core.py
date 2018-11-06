@@ -721,13 +721,19 @@ class Sender(object):
         _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
         self.context.send(Message.pickled(data, handle=self.dst_handle))
 
+    explicit_close_msg = 'Sender was explicitly closed'
+
     def close(self):
         """
         Send a dead message to the remote, causing :meth:`ChannelError` to be
         raised in any waiting thread.
         """
         _vv and IOLOG.debug('%r.close()', self)
-        self.context.send(Message.dead(handle=self.dst_handle))
+        self.context.send(
+            Message.dead(
+                reason=self.explicit_close_msg,
+                handle=self.dst_handle)
+        )
 
     def __repr__(self):
         return 'Sender(%r, %r)' % (self.context, self.dst_handle)
