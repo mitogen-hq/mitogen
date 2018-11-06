@@ -159,7 +159,7 @@ Fixes
 
 * `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
   tilde-expands private key paths using Ansible's logic. Previously the path
-  was passed unmodified to SSH, which expanded it using :func:`os.getpwent`.
+  was passed unmodified to SSH, which expanded it using :func:`pwd.getpwnam`.
   This differs from :func:`os.path.expanduser`, which uses the ``HOME``
   environment variable if it is set, causing behaviour to diverge when Ansible
   was invoked across user accounts via ``sudo``.
@@ -180,8 +180,8 @@ Fixes
   recurrence.
 
 * `#409 <https://github.com/dw/mitogen/issues/409>`_: the LXC and LXD methods
-  support ``mitogen_lxc_path`` and ``mitogen_lxc_attach`` variables to control
-  the location of third pary utilities.
+  support ``mitogen_lxc_path`` and ``mitogen_lxc_attach_path`` variables to
+  control the location of third pary utilities.
 
 * `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
   the SELinux ``--type`` and ``--role`` options.
@@ -244,6 +244,10 @@ Core Library
   :func:`mitogen.parent.iter_read` helper would leak poller FDs, because
   execution of its :keyword:`finally` block was delayed on Python 3. Now
   callers explicitly close the generator when finished.
+
+* `#421 <https://github.com/dw/mitogen/issues/421>`_: the fork method could
+  fail to start if :data:`sys.stdout` was opened in block buffered mode, and
+  buffered data was pending in the parent prior to fork.
 
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.

@@ -2808,28 +2808,32 @@ class ExternalContext(object):
         mitogen.parent_ids = self.config['parent_ids'][:]
         mitogen.parent_id = mitogen.parent_ids[0]
 
-    def _setup_stdio(self):
-        # We must open this prior to closing stdout, otherwise it will recycle
-        # a standard handle, the dup2() will not error, and on closing it, we
-        # lose a standrd handle, causing later code to again recycle a standard
-        # handle.
-        fp = open('/dev/null')
-
-        # When sys.stdout was opened by the runtime, overwriting it will not
-        # cause close to be called. However when forking from a child that
-        # previously used fdopen, overwriting it /will/ cause close to be
-        # called. So we must explicitly close it before IoLogger overwrites the
-        # file descriptor, otherwise the assignment below will cause stdout to
-        # be closed.
-        sys.stdout.close()
-        sys.stdout = None
-
+    def _nullify_stdio(self):
+        """
+        Open /dev/null to replace stdin, and stdout/stderr temporarily. In case
+        of odd startup, assume we may be allocated a standard handle.
+        """
+        fd = os.open('/dev/null', os.O_RDWR)
         try:
-            os.dup2(fp.fileno(), 0)
-            os.dup2(fp.fileno(), 1)
-            os.dup2(fp.fileno(), 2)
+            for stdfd in (0, 1, 2):
+                if fd != stdfd:
+                    os.dup2(fd, stdfd)
         finally:
-            fp.close()
+            if fd not in (0, 1, 2):
+                os.close(fd)
+
+    def _setup_stdio(self):
+        # When sys.stdout was opened by the runtime, overwriting it will not
+        # close FD 1. However when forking from a child that previously used
+        # fdopen(), overwriting it /will/ close FD 1. So we must swallow the
+        # close before IoLogger overwrites FD 1, otherwise its new FD 1 will be
+        # clobbered. Additionally, stdout must be replaced with /dev/null prior
+        # to stdout.close(), since if block buffering was active in the parent,
+        # any pre-fork buffered data will be flushed on close(), corrupting the
+        # connection to the parent.
+        self._nullify_stdio()
+        sys.stdout.close()
+        self._nullify_stdio()
 
         self.stdout_log = IoLogger(self.broker, 'stdout', 1)
         self.stderr_log = IoLogger(self.broker, 'stderr', 2)

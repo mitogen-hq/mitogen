@@ -10,8 +10,6 @@ import shlex
 import shutil
 import tempfile
 
-import os
-os.system('curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/machine-type')
 
 #
 # check_output() monkeypatch cutpasted from testlib.py
@@ -37,20 +35,21 @@ if not hasattr(subprocess, 'check_output'):
 
 # Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
 
-proc = subprocess.Popen(
-    args=['stdbuf', '-oL', 'cat'],
-    stdin=subprocess.PIPE
-)
+if sys.platform.startswith('linux'):
+    proc = subprocess.Popen(
+        args=['stdbuf', '-oL', 'cat'],
+        stdin=subprocess.PIPE
+    )
 
-os.dup2(proc.stdin.fileno(), 1)
-os.dup2(proc.stdin.fileno(), 2)
+    os.dup2(proc.stdin.fileno(), 1)
+    os.dup2(proc.stdin.fileno(), 2)
 
-def cleanup_travis_junk(stdout=sys.stdout, stderr=sys.stderr, proc=proc):
-    stdout.close()
-    stderr.close()
-    proc.terminate()
+    def cleanup_travis_junk(stdout=sys.stdout, stderr=sys.stderr, proc=proc):
+        stdout.close()
+        stderr.close()
+        proc.terminate()
 
-atexit.register(cleanup_travis_junk)
+    atexit.register(cleanup_travis_junk)
 
 # -----------------
 
@@ -113,10 +112,11 @@ os.environ['PYTHONPATH'] = '%s:%s' % (
     GIT_ROOT
 )
 
-DOCKER_HOSTNAME = subprocess.check_output([
-    sys.executable,
-    os.path.join(GIT_ROOT, 'tests/show_docker_hostname.py'),
-]).decode().strip()
+def get_docker_hostname():
+    return subprocess.check_output([
+        sys.executable,
+        os.path.join(GIT_ROOT, 'tests/show_docker_hostname.py'),
+    ]).decode().strip()
 
 # SSH passes these through to the container when run interactively, causing
 # stdout to get messed up with libc warnings.
