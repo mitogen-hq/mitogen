@@ -9,6 +9,6 @@
   hosts: test-targets
   tasks:
 
-  - script: scripts/print_env.sh
+  - script: scripts/print_env.py
     register: env
   - debug: msg={{env}}
