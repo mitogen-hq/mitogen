@@ -1,6 +1,6 @@
 # Verify copy module for small and large files, and inline content.
 
-- name: integration/action/synchronize.yml
+- name: integration/action/copy.yml
   hosts: test-targets
   any_errors_fatal: true
   tasks:
