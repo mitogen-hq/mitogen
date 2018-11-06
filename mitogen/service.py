@@ -772,7 +772,7 @@ class FileService(Service):
     def register(self, path):
         """
         Authorize a path for access by children. Repeat calls with the same
-        path is harmless.
+        path has no effect.
 
         :param str path:
             File path.
@@ -949,6 +949,7 @@ class FileService(Service):
             sender=recv.to_sender(),
         )
 
+        received_bytes = 0
         for chunk in recv:
             s = chunk.unpickle()
             LOG.debug('get_file(%r): received %d bytes', path, len(s))
@@ -958,11 +959,19 @@ class FileService(Service):
                 size=len(s),
             ).close()
             out_fp.write(s)
+            received_bytes += len(s)
 
-        ok = out_fp.tell() == metadata['size']
-        if not ok:
+        ok = received_bytes == metadata['size']
+        if received_bytes < metadata['size']:
             LOG.error('get_file(%r): receiver was closed early, controller '
-                      'is likely shutting down.', path)
+                      'may be shutting down, or the file was truncated '
+                      'during transfer. Expected %d bytes, received %d.',
+                      path, metadata['size'], received_bytes)
+        elif received_bytes > metadata['size']:
+            LOG.error('get_file(%r): the file appears to have grown '
+                      'while transfer was in progress. Expected %d '
+                      'bytes, received %d.',
+                      path, metadata['size'], received_bytes)
 
         LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
                   metadata['size'], path, context, 1000 * (time.time() - t0))
