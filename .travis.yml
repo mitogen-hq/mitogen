@@ -1,7 +1,4 @@
 sudo: required
-addons:
-  apt:
-    update: true
 
 notifications:
   email: false
@@ -14,20 +11,10 @@ cache:
   - /home/travis/virtualenv
 
 install:
-# |cat to disable progress bar.
-- pip install -r dev_requirements.txt |cat
+- .ci/${MODE}_install.py
 
 script:
-- |
-  if [ -f "${TRAVIS_BUILD_DIR}/.ci/${MODE}_tests.sh" ]; then
-    ${TRAVIS_BUILD_DIR}/.ci/${MODE}_tests.sh;
-  else
-    ${TRAVIS_BUILD_DIR}/.ci/${MODE}_tests.py;
-  fi
-
-
-services:
-  - docker
+- .ci/${MODE}_tests.py
 
 
 # To avoid matrix explosion, just test against oldest->newest and
