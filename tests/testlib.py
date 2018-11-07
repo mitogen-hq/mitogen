@@ -331,13 +331,17 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    image = None
+    distro, _, _py3 = (
+        os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
+        .partition('-')
+    )
 
-    def get_image(self):
-        if not self.image:
-            distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
-            self.image = 'mitogen/%s-test' % (distro,)
-        return self.image
+    python_path = (
+        '/usr/bin/python3'
+        if _py3 == 'py3'
+        else '/usr/bin/python'
+    )
+    image = 'mitogen/%s-test' % (distro,)
 
     # 22/tcp -> 0.0.0.0:32771
     PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
@@ -363,7 +367,7 @@ class DockerizedSshDaemon(object):
             '--privileged',
             '--publish-all',
             '--name', self.container_name,
-            self.get_image()
+            self.image,
         ]
         subprocess__check_output(args)
         self._get_container_port()
@@ -423,6 +427,7 @@ class DockerMixin(RouterMixin):
         kwargs.setdefault('port', self.dockerized_ssh.port)
         kwargs.setdefault('check_host_keys', 'ignore')
         kwargs.setdefault('ssh_debug_level', 3)
+        kwargs.setdefault('python_path', self.dockerized_ssh.python_path)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):
