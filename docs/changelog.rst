@@ -210,6 +210,12 @@ Core Library
   receivers to wake with :class:`mitogen.core.ChannelError`, even when one
   participant is not a parent of the other.
 
+* `#109 <https://github.com/dw/mitogen/issues/109>`_,
+  `57504ba6 <https://github.com/dw/mitogen/commit/57504ba6>`_: newer Python 3
+  releases explicitly populate :data:`sys.meta_path` with importer internals,
+  causing Mitogen to install itself at the end of the importer chain rather
+  than the front.
+
 * `#387 <https://github.com/dw/mitogen/issues/387>`_,
   `#413 <https://github.com/dw/mitogen/issues/413>`_: dead messages include an
   optional reason in their body. This is used to cause
