@@ -14,7 +14,7 @@ batches = [
 ]
 
 batches.extend(
-    ['docker pull mitogen/%s-test' % (distro,)]
+    ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
     for distro in ci_lib.DISTROS
 )
 

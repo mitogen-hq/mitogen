@@ -142,14 +142,26 @@ def get_docker_hostname():
     return parsed.netloc.partition(':')[0]
 
 
+def image_for_distro(distro):
+    return 'mitogen/%s-test' % (distro.partition('-')[0],)
+
+
 def make_containers():
     docker_hostname = get_docker_hostname()
+    firstbit = lambda s: (s+'-').split('-')[0]
+    secondbit = lambda s: (s+'-').split('-')[1]
+
     return [
         {
-            "distro": distro,
+            "distro": firstbit(distro),
             "name": "target-%s-%s" % (distro, i),
             "hostname": docker_hostname,
             "port": BASE_PORT + i,
+            "python_path": (
+                '/usr/bin/python3'
+                if secondbit(distro) == 'py3'
+                else '/usr/bin/python'
+            )
         }
         for i, distro in enumerate(DISTROS, 1)
     ]
@@ -171,6 +183,16 @@ def start_containers(containers):
         for container in containers
     ])
     return containers
+
+
+def dump_file(path):
+    print()
+    print('--- %s ---' % (path,))
+    print()
+    with open(path, 'r') as fp:
+        print(fp.read().rstrip())
+    print('---')
+    print()
 
 
 # SSH passes these through to the container when run interactively, causing

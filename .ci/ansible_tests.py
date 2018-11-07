@@ -32,12 +32,14 @@ with ci_lib.Fold('job_setup'):
     run("mkdir %s", HOSTS_DIR)
     run("ln -s %s/hosts/common-hosts %s", TESTS_DIR, HOSTS_DIR)
 
-    with open(os.path.join(HOSTS_DIR, 'target'), 'w') as fp:
+    inventory_path = os.path.join(HOSTS_DIR, 'target')
+    with open(inventory_path, 'w') as fp:
         fp.write('[test-targets]\n')
         fp.writelines(
             "%(name)s "
             "ansible_host=%(hostname)s "
             "ansible_port=%(port)s "
+            "ansible_python_interpreter=%(python_path)s "
             "ansible_user=mitogen__has_sudo_nopw "
             "ansible_password=has_sudo_nopw_password"
             "\n"
@@ -45,8 +47,8 @@ with ci_lib.Fold('job_setup'):
             for container in containers
         )
 
-    # Build the binaries.
-    # run("make -C %s", TESTS_DIR)
+    ci_lib.dump_file(inventory_path)
+
     if not ci_lib.exists_in_path('sshpass'):
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")

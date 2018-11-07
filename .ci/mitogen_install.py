@@ -8,7 +8,7 @@ batches = [
         'pip install -r tests/requirements.txt',
     ],
     [
-        'docker pull mitogen/%s-test' % (ci_lib.DISTRO,),
+        'docker pull %s' % (ci_lib.image_for_distro(ci_lib.DISTRO),),
     ]
 ]
 

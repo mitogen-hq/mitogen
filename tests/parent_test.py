@@ -233,6 +233,7 @@ class IterReadTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
+        # I produce text every 100ms.
         args = [testlib.data_path('iter_read_generator.py')]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdout.fileno())
@@ -267,18 +268,22 @@ class IterReadTest(testlib.TestCase):
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
-        reader = self.func([proc.stdout.fileno()], time.time() + 0.4)
+        deadline = time.time() + 0.4
+
+        reader = self.func([proc.stdout.fileno()], deadline)
         try:
             got = []
             try:
                 for chunk in reader:
+                    if time.time() > (deadline + 1.0):
+                        assert 0, 'TimeoutError not raised'
                     got.append(chunk)
-                assert 0, 'TimeoutError not raised'
             except mitogen.core.TimeoutError:
                 # Give a little wiggle room in case of imperfect scheduling.
                 # Ideal number should be 9.
-                self.assertLess(3, len(got))
-                self.assertLess(len(got), 5)
+                self.assertLess(deadline, time.time())
+                self.assertLess(1, len(got))
+                self.assertLess(len(got), 20)
         finally:
             proc.terminate()
             proc.stdout.close()

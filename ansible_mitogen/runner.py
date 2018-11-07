@@ -255,7 +255,7 @@ class Runner(object):
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
-        self.args = json.loads(json_args)
+        self.args = json.loads(mitogen.core.to_text(json_args))
         self.good_temp_dir = good_temp_dir
         self.extra_env = extra_env
         self.env = env

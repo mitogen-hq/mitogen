@@ -55,6 +55,7 @@ with ci_lib.Fold('job_setup'):
             '%(name)s '
             'ansible_host=%(hostname)s '
             'ansible_port=%(port)d '
+            'ansible_python_interpreter=%(python_path)s '
             '\n'
             % container
             for container in containers

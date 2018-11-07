@@ -13,6 +13,6 @@ ci_lib.run_batches([
         'pip install -qqqU debops==0.7.2 ansible==%s' % ci_lib.ANSIBLE_VERSION,
     ],
     [
-        'docker pull mitogen/debian-test',
+        'docker pull %s' % (ci_lib.image_for_distro('debian'),),
     ],
 ])

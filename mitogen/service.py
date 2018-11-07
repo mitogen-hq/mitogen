@@ -787,12 +787,12 @@ class FileService(Service):
             raise IOError('%r is not a regular file.' % (path,))
 
         return {
-            'size': st.st_size,
-            'mode': st.st_mode,
-            'owner': self._name_or_none(pwd.getpwuid, 0, 'pw_name'),
-            'group': self._name_or_none(grp.getgrgid, 0, 'gr_name'),
-            'mtime': st.st_mtime,
-            'atime': st.st_atime,
+            u'size': st.st_size,
+            u'mode': st.st_mode,
+            u'owner': self._name_or_none(pwd.getpwuid, 0, 'pw_name'),
+            u'group': self._name_or_none(grp.getgrgid, 0, 'gr_name'),
+            u'mtime': st.st_mtime,
+            u'atime': st.st_atime,
         }
 
     def on_shutdown(self):

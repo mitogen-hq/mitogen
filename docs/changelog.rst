@@ -176,6 +176,11 @@ Fixes
   print a useful hint on failure, as no useful error is normally logged to the
   console by these tools.
 
+* `#391 <https://github.com/dw/mitogen/issues/391>`_: file transfer from 2.x
+  controllers to 3.x targets was broken due to a regression caused by
+  refactoring, and compounded by `#426
+  <https://github.com/dw/mitogen/issues/426>`_.
+
 * `#400 <https://github.com/dw/mitogen/issues/400>`_: work around a threading
   bug in the AWX display callback when running with high verbosity setting.
 
@@ -209,6 +214,12 @@ Core Library
   :data:`mitogen.core.DEL_ROUTE` when either participant disconnects, allowing
   receivers to wake with :class:`mitogen.core.ChannelError`, even when one
   participant is not a parent of the other.
+
+* `#109 <https://github.com/dw/mitogen/issues/109>`_,
+  `57504ba6 <https://github.com/dw/mitogen/commit/57504ba6>`_: newer Python 3
+  releases explicitly populate :data:`sys.meta_path` with importer internals,
+  causing Mitogen to install itself at the end of the importer chain rather
+  than the front.
 
 * `#387 <https://github.com/dw/mitogen/issues/387>`_,
   `#413 <https://github.com/dw/mitogen/issues/413>`_: dead messages include an
