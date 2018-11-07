@@ -142,6 +142,10 @@ def get_docker_hostname():
     return parsed.netloc.partition(':')[0]
 
 
+def image_for_distro(distro):
+    return 'mitogen/%s-test' % (distro.partition('-')[0],)
+
+
 def make_containers():
     docker_hostname = get_docker_hostname()
     return [
