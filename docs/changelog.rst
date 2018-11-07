@@ -180,9 +180,10 @@ Fixes
   print a useful hint on failure, as no useful error is normally logged to the
   console by these tools.
 
-* `#391 <https://github.com/dw/mitogen/issues/391>`_: file transfer from 2.x
-  controllers to 3.x targets was broken due to a regression caused by
-  refactoring, and compounded by `#426
+* `#374 <https://github.com/dw/mitogen/issues/374>`_,
+  `#391 <https://github.com/dw/mitogen/issues/391>`_: file transfer and module
+  execution from 2.x controllers to 3.x targets was broken due to a regression
+  caused by refactoring, and compounded by `#426
   <https://github.com/dw/mitogen/issues/426>`_.
 
 * `#400 <https://github.com/dw/mitogen/issues/400>`_: work around a threading
