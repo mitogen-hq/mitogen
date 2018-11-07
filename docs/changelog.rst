@@ -328,6 +328,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
+`Eric Chang <https://github.com/changchichung>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
