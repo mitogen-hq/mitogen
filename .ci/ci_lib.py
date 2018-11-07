@@ -177,6 +177,16 @@ def start_containers(containers):
     return containers
 
 
+def dump_file(path):
+    print()
+    print('--- %s ---' % (path,))
+    print()
+    with open(path, 'r') as fp:
+        print(fp.read().rstrip())
+    print('---')
+    print()
+
+
 # SSH passes these through to the container when run interactively, causing
 # stdout to get messed up with libc warnings.
 os.environ.pop('LANG', None)
