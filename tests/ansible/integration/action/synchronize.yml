@@ -13,22 +13,22 @@
         dest: /tmp/synchronize-action-key
         src: ../../../data/docker/mitogen__has_sudo_pubkey.key
         mode: u=rw,go=
-      connection: local
+      delegate_to: localhost
 
     - file:
         path: /tmp/sync-test
         state: absent
-      connection: local
+      delegate_to: localhost
 
     - file:
         path: /tmp/sync-test
         state: directory
-      connection: local
+      delegate_to: localhost
 
     - copy:
         dest: /tmp/sync-test/item
         content: "item!"
-      connection: local
+      delegate_to: localhost
 
     - file:
         path: /tmp/sync-test.out

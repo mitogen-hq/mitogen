@@ -9,7 +9,7 @@
   - meta: end_play
     when: not is_mitogen
 
-  - connection: local
+  - delegate_to: localhost
     command: |
       ansible-playbook
       -i "{{inventory_file}}"

@@ -1,6 +1,6 @@
 # Verify the behaviour of _low_level_execute_command().
 
-- name: integration/action__low_level_execute_command.yml
+- name: integration/action/low_level_execute_command.yml
   hosts: test-targets
   any_errors_fatal: true
   tasks:
@@ -14,8 +14,8 @@
       assert:
         that:
           - 'raw.rc == 0'
-          - 'raw.stdout_lines == ["2"]'
-          - 'raw.stdout == "2"'
+          - 'raw.stdout_lines[-1].decode() == "2"'
+          - 'raw.stdout[-1].decode() == "2"'
 
     - name: Run raw module with sudo
       become: true
@@ -27,6 +27,12 @@
       assert:
         that:
         - raw.rc == 0
-        # WHY DOES VANILLA ANSIBLE INSERT NEWLINES HERE!?!?!?!?!?!ONE
-        - raw.stdout in ("\r\nroot\r\n", "root\r\n")
-        - raw.stdout_lines in (["", "root"], ["root"])
+        # WHY DOES VANILLA INSERT NEWLINES HERE!?!?!?!?!?!ONE
+        #- raw.stdout in ("\r\nroot\r\n", "root\r\n")
+        - 'raw.stdout.decode().endswith("root\r\n")'
+        - |
+          raw.stdout_lines in (
+            ["\r\n".encode()],
+            ["root\r\n".encode()],
+            ["root".encode()],
+          )
