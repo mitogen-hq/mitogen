@@ -2791,7 +2791,7 @@ class ExternalContext(object):
 
         self.importer = importer
         self.router.importer = importer
-        sys.meta_path.append(self.importer)
+        sys.meta_path.insert(0, self.importer)
 
     def _setup_package(self):
         global mitogen
