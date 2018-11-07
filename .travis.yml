@@ -32,6 +32,9 @@ matrix:
     # 2.6 -> 2.7
     - python: "2.6"
       env: MODE=mitogen DISTRO=centos7
+    # 2.6 -> 3.5
+    - python: "2.6"
+      env: MODE=mitogen DISTRO=debian-py3
     # 3.6 -> 2.6
     - python: "3.6"
       env: MODE=mitogen DISTRO=centos6
