@@ -148,12 +148,20 @@ def image_for_distro(distro):
 
 def make_containers():
     docker_hostname = get_docker_hostname()
+    firstbit = lambda s: (s+'-').split('-')[0]
+    secondbit = lambda s: (s+'-').split('-')[1]
+
     return [
         {
-            "distro": distro,
+            "distro": firstbit(distro),
             "name": "target-%s-%s" % (distro, i),
             "hostname": docker_hostname,
             "port": BASE_PORT + i,
+            "python_path": (
+                '/usr/bin/python3'
+                if secondbit(distro) == 'py3'
+                else '/usr/bin/python'
+            )
         }
         for i, distro in enumerate(DISTROS, 1)
     ]
