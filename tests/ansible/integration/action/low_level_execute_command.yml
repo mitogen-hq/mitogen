@@ -14,8 +14,8 @@
       assert:
         that:
           - 'raw.rc == 0'
-          - 'raw.stdout_lines[-1].decode() == "2"'
-          - 'raw.stdout[-1].decode() == "2"'
+          - 'raw.stdout_lines[-1]|to_text == "2"'
+          - 'raw.stdout[-1]|to_text == "2"'
 
     - name: Run raw module with sudo
       become: true
@@ -29,10 +29,10 @@
         - raw.rc == 0
         # WHY DOES VANILLA INSERT NEWLINES HERE!?!?!?!?!?!ONE
         #- raw.stdout in ("\r\nroot\r\n", "root\r\n")
-        - 'raw.stdout.decode().endswith("root\r\n")'
+        - '(raw.stdout|to_text).endswith("root\r\n")'
         - |
-          raw.stdout_lines in (
-            ["\r\n".encode()],
-            ["root\r\n".encode()],
-            ["root".encode()],
+          raw.stdout_lines|to_text in (
+            ["\r\n"],
+            ["root\r\n"],
+            ["root"],
           )
