@@ -71,8 +71,8 @@ mitogen.parent
 mitogen.fakessh
 ---------------
 
-.. image:: images/fakessh.png
-    :align: right
+.. image:: images/fakessh.svg
+    :class: mitogen-right-300
 
 .. automodule:: mitogen.fakessh
 .. currentmodule:: mitogen.fakessh
