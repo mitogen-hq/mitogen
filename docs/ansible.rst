@@ -1,6 +1,7 @@
 
-.. image:: images/ansible/cell_division.png
-    :align: right
+.. image:: images/ansible/ansible_mitogen.svg
+    :class: mitogen-right-225
+
 
 Mitogen for Ansible
 ===================
@@ -211,8 +212,8 @@ New Features & Notes
 Connection Delegation
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. image:: images/jumpbox.png
-    :align: right
+.. image:: images/jumpbox.svg
+    :class: mitogen-right-275
 
 Included is a preview of **Connection Delegation**, a Mitogen-specific
 implementation of `stackable connection plug-ins`_. This enables connections
@@ -957,12 +958,12 @@ Sample Profiles
 Local VM connection
 ~~~~~~~~~~~~~~~~~~~
 
-This demonstrates Mitogen vs. connection pipelining to a local VM, executing
-the 100 simple repeated steps of ``run_hostname_100_times.yml`` from the
-examples directory. Mitogen requires **43x less bandwidth and 4.25x less
-time**.
+This demonstrates Mitogen vs. connection pipelining to a local VM executing
+``bench/loop-100-items.yml``, which simply executes ``hostname`` 100 times.
+Mitogen requires **43x less bandwidth and 6.5x less time**.
 
-.. image:: images/ansible/run_hostname_100_times.png
+.. image:: images/ansible/run_hostname_100_times_mito.svg
+.. image:: images/ansible/run_hostname_100_times_plain.svg
 
 
 Kathmandu to Paris

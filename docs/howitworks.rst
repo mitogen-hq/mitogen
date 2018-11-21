@@ -554,7 +554,8 @@ associated with that stream if the stream is disconnected for any reason.
 Example
 #######
 
-.. image:: images/context-tree.png
+.. image:: images/context-tree.svg
+    :class: mitogen-full-width
 
 In the diagram, when ``node12b`` is creating the ``sudo:node12b:webapp``
 context, it must send ``ADD_ROUTE`` messages to ``rack12``, which will
@@ -572,7 +573,8 @@ When ``sudo:node22a:webapp`` wants to send a message to
 
 ``sudo:node22a:webapp -> node22a -> rack22 -> dc2 -> bastion -> dc1 -> rack12 -> node12b -> sudo:node12b:webapp``
 
-.. image:: images/route.png
+.. image:: images/route.svg
+    :class: mitogen-full-width
 
 
 .. _source-verification:

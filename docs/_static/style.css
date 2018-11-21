@@ -10,3 +10,43 @@ div.figure {
 div.body li {
     margin-bottom: 0.5em;
 }
+
+
+
+/*
+ * Setting :width; on an image causes Sphinx to turn the image into a link, so
+ * set :Class: instead.
+ */
+.mitogen-full-width {
+    width: 100%;
+}
+
+.mitogen-right-150 {
+    float: right;
+    padding-left: 8px;
+    width: 150px;
+}
+
+.mitogen-right-225 {
+    float: right;
+    padding-left: 8px;
+    width: 225px;
+}
+
+.mitogen-right-275 {
+    float: right;
+    padding-left: 8px;
+    width: 275px;
+}
+
+.mitogen-right-300 {
+    float: right;
+    padding-left: 8px;
+    width: 300px;
+}
+
+.mitogen-right-350 {
+    float: right;
+    padding-left: 8px;
+    width: 350px;
+}

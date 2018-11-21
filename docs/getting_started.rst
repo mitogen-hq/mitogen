@@ -13,8 +13,8 @@ Liability Waiver
 Before proceeding, it is critical you understand what you're involving yourself
 and possibly your team and its successors with:
 
-.. image:: images/pandora.jpg
-    :align: right
+.. image:: images/pandora.svg
+    :class: mitogen-right-350
 
 * Constructing the most fundamental class, :py:class:`Broker
   <mitogen.master.Broker>`, causes a new thread to be spawned, exposing a huge
@@ -78,7 +78,9 @@ operate across machines and privilege domains:
 Broker And Router
 -----------------
 
-.. image:: images/layout.png
+.. image:: images/layout.svg
+    :class: mitogen-full-width
+
 .. currentmodule:: mitogen.core
 
 Execution starts when your program constructs a :py:class:`Broker` and
