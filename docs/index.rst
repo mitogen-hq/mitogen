@@ -12,8 +12,8 @@ Mitogen is a Python library for writing distributed self-replicating programs.
         }
     </style>
 
-.. image:: images/cell_division.png
-    :align: right
+.. image:: images/mitogen.svg
+    :class: mitogen-right-225
 
 There is no requirement for installing packages, copying files around, writing
 shell snippets, upfront configuration, or providing any secondary link to a
@@ -76,8 +76,8 @@ program's domain of control outward to other machines, enabling your program to
 **manipulate machines behind a firewall**, or enable its **data plane to cohere
 to your network topology**.
 
-.. image:: images/billing.png
-    :align: right
+.. image:: images/billing.svg
+    :class: mitogen-right-150
 
 .. code::
 
@@ -158,8 +158,8 @@ Common sources of import latency and bandwidth consumption are mitigated:
 SSH Client Emulation
 ####################
 
-.. image:: images/fakessh.png
-    :align: right
+.. image:: images/fakessh.svg
+    :class: mitogen-right-300
 
 Support is included for starting subprocesses with a modified environment, that
 cause their attempt to use SSH to be redirected back into the host program. In
@@ -192,7 +192,8 @@ for example enforce an interactive TTY and account password.
 Message Routing
 ###############
 
-.. image:: images/route.png
+.. image:: images/route.svg
+    :class: mitogen-full-width
 
 Slaves may communicate autonomously without direct interaction with the master,
 allowing a wide variety of complex data and control flows to be expressed using
@@ -230,7 +231,8 @@ uptime')** without further need to capture or manage output.
 Detached Subtrees
 #################
 
-.. image:: images/detached-subtree.png
+.. image:: images/detached-subtree.svg
+    :class: mitogen-full-width
 
 Contexts may detach from and outlive the running program, while maintaining
 communication with descendents in their subtree. This enables persistent
