@@ -12,6 +12,17 @@ div.body li {
 }
 
 
+/*
+ * Undo the hyphens: auto in Sphinx basic.css.
+ */
+div.body p, div.body dd, div.body li, div.body blockquote {
+    -moz-hyphens: inherit;
+    -ms-hyphens: inherit;
+    -webkit-hyphens: inherit;
+    hyphens: inherit;
+}
+
+
 
 /*
  * Setting :width; on an image causes Sphinx to turn the image into a link, so
