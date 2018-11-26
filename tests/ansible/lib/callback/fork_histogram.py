@@ -87,6 +87,6 @@ class CallbackModule(ansible.plugins.callback.CallbackBase):
             1e6 / self.hist.get_value_at_percentile(99),
         ))
 
-        self.hist.output_percentile_distribution(sys.stdout, 10)
+        self.hist.output_percentile_distribution(sys.stdout, 1000)
         print('--- End fork statistics ---')
         print()
