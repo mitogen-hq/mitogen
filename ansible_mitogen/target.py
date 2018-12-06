@@ -96,9 +96,9 @@ good_temp_dir = None
 # default, resulting in huge (>500ms) runtime waste running many commands.
 # Therefore if we are a child, cap the range to something reasonable.
 rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-if (rlimit[0] > 512 or rlimit[1] > 512) and not mitogen.is_master:
-    resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
-    subprocess.MAXFD = 512  # Python <3.x
+if (rlimit[0] > 4096 or rlimit[1] > 4096) and not mitogen.is_master:
+    resource.setrlimit(resource.RLIMIT_NOFILE, (4096, 4096))
+    subprocess.MAXFD = 4096  # Python <3.x
 del rlimit
 
 
