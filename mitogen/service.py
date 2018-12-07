@@ -937,8 +937,12 @@ class FileService(Service):
         :param bytes out_path:
             Name of the output path on the local disk.
         :returns:
-            :data:`True` on success, or :data:`False` if the transfer was
-            interrupted and the output should be discarded.
+            Tuple of (`ok`, `metadata`), where `ok` is :data:`True` on success,
+            or :data:`False` if the transfer was interrupted and the output
+            should be discarded.
+
+            `metadata` is a dictionary of file metadata as documented in
+            :meth:`fetch`.
         """
         LOG.debug('get_file(): fetching %r from %r', path, context)
         t0 = time.time()
