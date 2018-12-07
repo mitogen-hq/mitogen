@@ -44,7 +44,12 @@ def streamy_download_file(context, path):
     Fetch a file from the FileService hosted by `context`.
     """
     bio = io.BytesIO()
+
+    # FileService.get() is not actually an exposed service method, it's just a
+    # classmethod that wraps up the complicated dance of implementing the
+    # transfer.
     ok, metadata = mitogen.service.FileService.get(context, path, bio)
+
     return {
         'success': ok,
         'metadata': metadata,
