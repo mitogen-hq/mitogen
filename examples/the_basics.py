@@ -15,6 +15,7 @@ import spwd
 import mitogen.core
 import mitogen.master
 import mitogen.service
+import mitogen.utils
 
 
 
@@ -204,6 +205,15 @@ def work_on_machine(context):
 
 
 def main():
+    # Setup logging. Mitogen produces a LOT of logging. Over the course of the
+    # stable series, Mitogen's loggers will be carved up so more selective /
+    # user-friendly logging is possible. mitogen.log_to_file() just sets up
+    # something basic, defaulting to INFO level, but you can override from the
+    # command-line by passing MITOGEN_LOG_LEVEL=debug or MITOGEN_LOG_LEVEL=io.
+    # IO logging is sometimes useful for hangs, but it is often creates more
+    # confusion than it solves.
+    mitogen.utils.log_to_file()
+
     # Construct the Broker thread. It manages an async IO loop listening for
     # reads from any active connection, or wakes from any non-Broker thread.
     # Because Mitogen uses a background worker thread, it is extremely
@@ -234,6 +244,14 @@ def main():
         # the context as a subprocess, the simplest possible case.
         child = router.local()
         print("Created a context:", child)
+        print()
+
+        # This demonstrates the standard IO redirection. We call the print
+        # function in the remote context, that should cause a log message to be
+        # emitted. Any subprocesses started by the remote also get the same
+        # treatment, so it's very easy to spot otherwise discarded errors/etc.
+        # from remote tools.
+        child.call(print, "Hello from child.")
 
         # Context objects make it semi-convenient to treat the local machine the
         # same as a remote machine.
