@@ -43,7 +43,6 @@ import operator
 import os
 import pwd
 import re
-import resource
 import signal
 import stat
 import subprocess
@@ -91,15 +90,41 @@ _fork_parent = None
 good_temp_dir = None
 
 
-# issue #362: subprocess.Popen(close_fds=True) aka. AnsibleModule.run_command()
-# loops the entire SC_OPEN_MAX space. CentOS>5 ships with 1,048,576 FDs by
-# default, resulting in huge (>500ms) runtime waste running many commands.
-# Therefore if we are a child, cap the range to something reasonable.
-rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-if (rlimit[0] > 4096 or rlimit[1] > 4096) and not mitogen.is_master:
-    resource.setrlimit(resource.RLIMIT_NOFILE, (4096, 4096))
-    subprocess.MAXFD = 4096  # Python <3.x
-del rlimit
+def subprocess__Popen__close_fds(self, but):
+    """
+    issue #362, #435: subprocess.Popen(close_fds=True) aka.
+    AnsibleModule.run_command() loops the entire FD space on Python<3.2.
+    CentOS>5 ships with 1,048,576 FDs by default, resulting in huge (>500ms)
+    latency starting children. Therefore replace Popen._close_fds on Linux with
+    a version that is O(fds) rather than O(_SC_OPEN_MAX).
+    """
+    try:
+        names = os.listdir('/proc/self/fd')
+    except OSError:
+        # May fail if acting on a container that does not have /proc mounted.
+        self._original_close_fds(but)
+        return
+
+    for name in names:
+        if not name.isdigit():
+            continue
+
+        fd = int(name, 10)
+        if fd > 2 and fd != but:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+
+if (
+    sys.platform.startswith('linux') and
+    sys.version < '3.0' and
+    hasattr(subprocess.Popen, '_close_fds') and
+    not mitogen.is_master
+):
+    subprocess.Popen._original_close_fds = subprocess.Popen._close_fds
+    subprocess.Popen._close_fds = subprocess__Popen__close_fds
 
 
 def get_small_file(context, path):
