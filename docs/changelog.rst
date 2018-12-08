@@ -200,6 +200,12 @@ Fixes
   ``meta: reset_connection``, resources could become undesirably shared in
   subsequent children.
 
+* `#362 <https://github.com/dw/mitogen/issues/362>`_,
+  `#435 <https://github.com/dw/mitogen/issues/435>`_: the previous fix for slow
+  Python 2.x subprocess creation on Red Hat caused newly spawned children to
+  have a reduced open files limit. A more intrusive fix has been added to
+  directly address the problem without modifying the subprocess environment.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -282,9 +288,11 @@ bug reports, testing, features and fixes in this release contributed by
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
+`Johan Beisser <https://github.com/jbeisser >`_,
 `Josh Smift <https://github.com/jbscare>`_,
-`Mehdi <https://github.com/mehdisat7>`_, and
-`Mohammed Naser <https://github.com/mnaser/>`_.
+`Mehdi <https://github.com/mehdisat7>`_,
+`Mohammed Naser <https://github.com/mnaser/>`_, and
+`yodatk <https://github.com/yodatk/>`_.
 
 
 v0.2.3 (2018-10-23)
