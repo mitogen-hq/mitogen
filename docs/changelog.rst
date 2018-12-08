@@ -290,7 +290,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_, and
-`yodatk <https://github.com/yodatk/>`_.
+`yodatak <https://github.com/yodatak/>`_.
 
 
 v0.2.3 (2018-10-23)
