@@ -286,7 +286,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
-`Johan Beisser <https://github.com/jbeisser >`_,
+`Johan Beisser <https://github.com/jbeisser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_, and
