@@ -351,6 +351,7 @@ usual into the slave process.
         os.system('tar zxvf my_app.tar.gz')
 
 
+    @mitogen.main()
     def main(broker):
         if len(sys.argv) != 2:
             print(__doc__)
@@ -358,10 +359,6 @@ usual into the slave process.
 
         context = mitogen.ssh.connect(broker, sys.argv[1])
         context.call(install_app)
-
-    if __name__ == '__main__' and mitogen.is_master:
-        import mitogen.utils
-        mitogen.utils.run_with_broker(main)
 
 
 Event-driven IO

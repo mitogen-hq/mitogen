@@ -185,9 +185,9 @@ nested.py:
 .. code-block:: python
 
     import os
-    import mitogen.utils
+    import mitogen
 
-    @mitogen.utils.run_with_router
+    @mitogen.main()
     def main(router):
         mitogen.utils.log_to_file()
 
