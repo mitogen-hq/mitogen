@@ -64,6 +64,17 @@ def optional_secret(value):
         return mitogen.core.Secret(value)
 
 
+def optional_int(value):
+    """
+    Convert `value` to an integer if it is not :data:`None`, otherwise return
+    :data:`None`.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def parse_python_path(s):
     """
     Given the string set for ansible_python_interpeter, parse it using shell
@@ -406,7 +417,9 @@ def config_from_play_context(transport, inventory_name, connection):
         'mitogen_machinectl_path':
             connection.get_task_var('mitogen_machinectl_path'),
         'mitogen_ssh_debug_level':
-            connection.get_task_var('mitogen_ssh_debug_level'),
+            optional_int(
+                connection.get_task_var('mitogen_ssh_debug_level')
+            ),
         'extra_args':
             connection.get_extra_args(),
     }
