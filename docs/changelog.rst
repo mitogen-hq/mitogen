@@ -214,9 +214,7 @@ Core Library
   destination context IDs ever received on each stream, and when disconnection
   occurs, propagates :data:`mitogen.core.DEL_ROUTE` messages towards every
   stream that ever communicated with the disappearing peer, rather than simply
-  towards parents.
-
-  Conversations between nodes anywhere in the tree receive
+  towards parents. Conversations between nodes anywhere in the tree receive
   :data:`mitogen.core.DEL_ROUTE` when either participant disconnects, allowing
   receivers to wake with :class:`mitogen.core.ChannelError`, even when one
   participant is not a parent of the other.
