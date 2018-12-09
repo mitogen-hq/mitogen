@@ -36,7 +36,6 @@ import collections
 import encodings.latin_1
 import errno
 import fcntl
-import imp
 import itertools
 import logging
 import os
@@ -50,6 +49,10 @@ import traceback
 import warnings
 import weakref
 import zlib
+
+# Python >3.7 deprecated the imp module.
+warnings.filterwarnings('ignore', message='the imp module is deprecated')
+import imp
 
 # Absolute imports for <2.5.
 select = __import__('select')
