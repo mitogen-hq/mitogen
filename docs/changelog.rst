@@ -232,6 +232,11 @@ Core Library
   the point the error occurs that previously would have been buried in debug
   log output from an unrelated context.
 
+* `#399 <https://github.com/dw/mitogen/issues/399>`_,
+  `#437 <https://github.com/dw/mitogen/issues/437>`_: ignore a
+  :class:`DeprecationWarning` to avoid failure of the ``su`` method on Python
+  3.7.
+
 * `#405 <https://github.com/dw/mitogen/issues/405>`_: if an oversized message
   is rejected, and it has a ``reply_to`` set, a dead message is returned to the
   sender. This ensures function calls exceeding the configured maximum size
@@ -280,6 +285,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Andreas Krüger <https://github.com/woopstar>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
@@ -289,8 +295,9 @@ bug reports, testing, features and fixes in this release contributed by
 `Johan Beisser <https://github.com/jbeisser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
-`Mohammed Naser <https://github.com/mnaser/>`_, and
-`yodatak <https://github.com/yodatak/>`_.
+`Mohammed Naser <https://github.com/mnaser/>`_,
+`@syntonym <https://github.com/syntonym/>`_, and
+`@yodatak <https://github.com/yodatak/>`_.
 
 
 v0.2.3 (2018-10-23)
