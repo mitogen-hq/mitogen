@@ -155,5 +155,34 @@ class CallChainTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals('x3', c1.call(func_returns_arg, 'x3'))
 
 
+class UnsupportedCallablesTest(testlib.RouterMixin, testlib.TestCase):
+    # Verify mitogen_chain functionality.
+    klass = mitogen.parent.CallChain
+
+    def setUp(self):
+        super(UnsupportedCallablesTest, self).setUp()
+        self.local = self.router.fork()
+
+    def test_closures_unsuppored(self):
+        a = 1
+        closure = lambda: a
+        e = self.assertRaises(TypeError,
+            lambda: self.local.call(closure))
+        self.assertEquals(e.args[0], self.klass.closures_msg)
+
+    def test_lambda_unsupported(self):
+        lam = lambda: None
+        e = self.assertRaises(TypeError,
+            lambda: self.local.call(lam))
+        self.assertEquals(e.args[0], self.klass.lambda_msg)
+
+    def test_instance_method_unsupported(self):
+        class X:
+            def x(): pass
+        e = self.assertRaises(TypeError,
+            lambda: self.local.call(X().x))
+        self.assertEquals(e.args[0], self.klass.method_msg)
+
+
 if __name__ == '__main__':
     unittest2.main()

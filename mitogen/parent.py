@@ -72,6 +72,10 @@ itervalues = getattr(dict, 'itervalues', dict.values)
 
 if mitogen.core.PY3:
     xrange = range
+    closure_attr = '__closure__'
+else:
+    closure_attr = 'func_closure'
+
 
 try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
@@ -1344,8 +1348,31 @@ class CallChain(object):
         finally:
             self.chain_id = saved
 
+    closures_msg = (
+        'Mitogen cannot invoke closures, as doing so would require '
+        'serializing arbitrary program state, and no universal '
+        'method exists to recover a reference to them.'
+    )
+
+    lambda_msg = (
+        'Mitogen cannot invoke anonymous functions, as no universal method '
+        'exists to recover a reference to an anonymous function.'
+    )
+
+    method_msg = (
+        'Mitogen cannot invoke instance methods, as doing so would require '
+        'serializing arbitrary program state.'
+    )
+
     def make_msg(self, fn, *args, **kwargs):
-        if inspect.ismethod(fn) and inspect.isclass(fn.__self__):
+        if getattr(fn, closure_attr, None) is not None:
+            raise TypeError(self.closures_msg)
+        if fn.__name__ == '<lambda>':
+            raise TypeError(self.lambda_msg)
+
+        if inspect.ismethod(fn):
+            if not inspect.isclass(fn.__self__):
+                raise TypeError(self.method_msg)
             klass = mitogen.core.to_text(fn.__self__.__name__)
         else:
             klass = None
