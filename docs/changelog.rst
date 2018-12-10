@@ -273,6 +273,9 @@ Core Library
   fail to start if :data:`sys.stdout` was opened in block buffered mode, and
   buffered data was pending in the parent prior to fork.
 
+* `#438 <https://github.com/dw/mitogen/issues/438>`_: a descriptive error is
+  logged when stream corruption is detected.
+
 * `#439 <https://github.com/dw/mitogen/issues/439>`_: descriptive errors are
   raised when attempting to invoke unsupported function types.
 

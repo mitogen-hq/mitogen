@@ -1393,8 +1393,16 @@ class Stream(BasicStream):
 
         self._internal_receive(broker, buf)
 
-    HEADER_FMT = '>LLLLLL'
+    HEADER_FMT = '>hLLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
+    HEADER_MAGIC = 0x4d49  # 'MI'
+
+    corrupt_msg = (
+        'Corruption detected: frame signature incorrect. This likely means '
+        'some external process is interfering with the connection. Received:'
+        '\n\n'
+        '%r'
+    )
 
     def _receive_one(self, broker):
         if self._input_buf_len < self.HEADER_LEN:
@@ -1402,11 +1410,16 @@ class Stream(BasicStream):
 
         msg = Message()
         msg.router = self._router
-        (msg.dst_id, msg.src_id, msg.auth_id,
+        (magic, msg.dst_id, msg.src_id, msg.auth_id,
          msg.handle, msg.reply_to, msg_len) = struct.unpack(
             self.HEADER_FMT,
             self._input_buf[0][:self.HEADER_LEN],
         )
+
+        if magic != self.HEADER_MAGIC:
+            LOG.error(self.corrupt_msg, self._input_buf[0][:128])
+            self.on_disconnect(broker)
+            return False
 
         if msg_len > self._router.max_message_size:
             LOG.error('Maximum message size exceeded (got %d, max %d)',
@@ -1473,9 +1486,9 @@ class Stream(BasicStream):
 
     def _send(self, msg):
         _vv and IOLOG.debug('%r._send(%r)', self, msg)
-        pkt = struct.pack(self.HEADER_FMT, msg.dst_id, msg.src_id,
-                          msg.auth_id, msg.handle, msg.reply_to or 0,
-                          len(msg.data)) + msg.data
+        pkt = struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, msg.dst_id,
+                          msg.src_id, msg.auth_id, msg.handle,
+                          msg.reply_to or 0, len(msg.data)) + msg.data
         if not self._output_buf_len:
             self._router.broker._start_transmit(self)
         self._output_buf.append(pkt)

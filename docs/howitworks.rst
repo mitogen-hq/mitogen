@@ -273,6 +273,10 @@ parent and child. Integers use big endian in their encoded form.
       - Size
       - Description
 
+    * - `magic`
+      - 2
+      - Integer 0x4d49 (``MI``), used to detect stream corruption.
+
     * - `dst_id`
       - 4
       - Integer target context ID. :py:class:`Router` delivers messages
