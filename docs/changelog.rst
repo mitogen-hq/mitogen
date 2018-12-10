@@ -273,6 +273,9 @@ Core Library
   fail to start if :data:`sys.stdout` was opened in block buffered mode, and
   buffered data was pending in the parent prior to fork.
 
+* `#439 <https://github.com/dw/mitogen/issues/439>`_: descriptive errors are
+  raised when attempting to invoke unsupported function types.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
