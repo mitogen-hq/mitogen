@@ -635,7 +635,9 @@ class ModuleResponder(object):
 
         path, source, is_pkg = self._finder.get_module_source(fullname)
         if source is None:
-            LOG.error('_build_tuple(%r): could not locate source', fullname)
+            # TODO: make this .warning() or similar again once importer has its
+            # own logging category.
+            LOG.debug('_build_tuple(%r): could not locate source', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
