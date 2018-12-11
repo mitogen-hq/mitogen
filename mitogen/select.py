@@ -135,6 +135,8 @@ class Select(object):
         """
         return bool(self._receivers)
 
+    __nonzero__ = __bool__
+
     def __enter__(self):
         return self
 
