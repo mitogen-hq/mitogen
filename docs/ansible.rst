@@ -70,8 +70,9 @@ Installation
 
    The ``strategy`` key is optional. If omitted, the
    ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable can be set on a
-   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
-   to mimic the ``free`` strategy.
+   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` and
+   ``mitogen_host_pinned`` strategies exists to mimic the ``free`` and
+   ``host_pinned`` strategies.
 
 4. If targets have a restrictive ``sudoers`` file, add a rule like:
 
