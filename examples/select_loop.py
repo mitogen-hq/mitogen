@@ -33,7 +33,9 @@ def main(router):
         for i in range(5)
     }
 
-    # Used later to recover hostname from failed call.
+    # Used later to recover hostname. A future Mitogen will provide a better
+    # way to get app data references back out of its IO primitives, for now you
+    # need to do it manually.
     hostname_by_context_id = {
         context.context_id: hostname
         for hostname, context in contexts.items()
@@ -60,11 +62,14 @@ def main(router):
         )
 
     # Create a select subscribed to the function call result Select, and to the
-    # number-counting receiver.
+    # number-counting receiver. Any message arriving on any child of this
+    # Select will wake it up -- be it a message arriving on the status
+    # receiver, or any message arriving on any of the function call result
+    # receivers.
     both_sel = mitogen.select.Select([status_recv, calls_sel], oneshot=False)
 
-    # Once last call is completed, calls will be empty since it's oneshot=True
-    # (the default), causing __bool__ to be False
+    # Once last call is completed, calls_sel will be empty since it's
+    # oneshot=True (the default), causing __bool__ to be False
     while calls_sel:
         try:
             msg = both_sel.get(timeout=60.0)
