@@ -149,6 +149,10 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
   module.
 
+* `09aa27a6 <https://github.com/dw/mitogen/commit/09aa27a6>`_: the
+  ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
+  introduced in Ansible 2.7.
+
 
 Fixes
 ^^^^^
