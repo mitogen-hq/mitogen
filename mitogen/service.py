@@ -756,6 +756,8 @@ class FileService(Service):
         super(FileService, self).__init__(router)
         #: Set of registered paths.
         self._paths = set()
+        #: Set of registered directory prefixes.
+        self._prefixes = set()
         #: Mapping of Stream->FileStreamState.
         self._state_by_stream = {}
 
@@ -780,6 +782,22 @@ class FileService(Service):
         if path not in self._paths:
             LOG.debug('%r: registering %r', self, path)
             self._paths.add(path)
+
+    @expose(policy=AllowParents())
+    @arg_spec({
+        'path': mitogen.core.FsPathTypes,
+    })
+    def register_prefix(self, path):
+        """
+        Authorize a path and any subpaths for access by children. Repeat calls
+        with the same path has no effect.
+
+        :param str path:
+            File path.
+        """
+        if path not in self._prefixes:
+            LOG.debug('%r: registering prefix %r', self, path)
+            self._prefixes.add(path)
 
     def _generate_stat(self, path):
         st = os.stat(path)
@@ -844,6 +862,24 @@ class FileService(Service):
                 fp.close()
                 state.jobs.pop(0)
 
+    def _prefix_is_authorized(self, path):
+        """
+        Return the set of all possible directory prefixes for `path`.
+        :func:`os.path.abspath` is used to ensure the path is absolute.
+
+        :param str path:
+            The path.
+        :returns: Set of prefixes.
+        """
+        path = os.path.abspath(path)
+        while True:
+            if path in self._prefixes:
+                return True
+            if path == '/':
+                break
+            path = os.path.dirname(path)
+        return False
+
     @expose(policy=AllowAny())
     @no_reply()
     @arg_spec({
@@ -870,7 +906,7 @@ class FileService(Service):
         :raises Error:
             Unregistered path, or Sender did not match requestee context.
         """
-        if path not in self._paths:
+        if path not in self._paths and not self._prefix_is_authorized(path):
             raise Error(self.unregistered_msg)
         if msg.src_id != sender.context.context_id:
             raise Error(self.context_mismatch_msg)
