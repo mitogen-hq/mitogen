@@ -2154,6 +2154,16 @@ class Router(object):
             _, (_, func, _, _) = self._handle_map.popitem()
             func(Message.dead(self.broker_exit_msg))
 
+    def self(self):
+        """
+        Return a :class:`Context` referring to the current process.
+        """
+        return self.context_class(
+            router=self,
+            context_id=mitogen.context_id,
+            name='self',
+        )
+
     def context_by_id(self, context_id, via_id=None, create=True, name=None):
         """
         Messy factory/lookup function to find a context by its ID, or construct
