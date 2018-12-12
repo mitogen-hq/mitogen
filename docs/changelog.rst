@@ -289,6 +289,15 @@ Core Library
 * `9ec360c2 <https://github.com/dw/mitogen/commit/9ec360c2>`_: a new
   :meth:`mitogen.core.Broker.defer_sync` utility function is provided.
 
+* `f20e0bba <https://github.com/dw/mitogen/commit/f20e0bba>`_:
+  :meth:`mitogen.service.FileService.register_prefix` permits granting
+  unprivileged access to whole filesystem subtrees, rather than single files at
+  a time.
+
+* `8f85ee03 <https://github.com/dw/mitogen/commit/8f85ee03>`_:
+  :meth:`mitogen.core.Router.self` returns a :class:`mitogen.core.Context`
+  referring to the current process.
+
 
 Thanks!
 ~~~~~~~
