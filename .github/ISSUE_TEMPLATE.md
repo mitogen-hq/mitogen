@@ -1,4 +1,6 @@
 
+Please drag-drop large logs as text file attachments.
+
 Feel free to write an issue in your preferred format, however if in doubt, use
 the following checklist as a guide for what to include.
 
