@@ -66,28 +66,38 @@ def main(router):
     # Select will wake it up -- be it a message arriving on the status
     # receiver, or any message arriving on any of the function call result
     # receivers.
-    both_sel = mitogen.select.Select([status_recv, calls_sel], oneshot=False)
 
     # Once last call is completed, calls_sel will be empty since it's
     # oneshot=True (the default), causing __bool__ to be False
-    while calls_sel:
-        try:
-            msg = both_sel.get(timeout=60.0)
-        except mitogen.core.TimeoutError:
-            print("No update in 60 seconds, something's broke")
-            raise Crash()
+    both_sel = mitogen.select.Select([status_recv, calls_sel], oneshot=False)
 
-        hostname = hostname_by_context_id[msg.src_id]
-
-        if msg.receiver is status_recv:   # https://mitogen.readthedocs.io/en/stable/api.html#mitogen.core.Message.receiver
-            # handle a status update
-            print('Got status update from %s: %s' % (hostname, msg.unpickle()))
-        elif msg.receiver is calls_sel:  # subselect
-            # handle a function call result.
+    # Internally selects store a strong reference from Receiver->Select that
+    # will keep the Select alive as long as the receiver is alive. If a
+    # receiver or select otherwise 'outlives' some parent select, attempting to
+    # re-add it to a new select will raise an error. In all cases it's
+    # desirable to call Select.close(). This can be done as a context manager.
+    with calls_sel, both_sel:
+        while calls_sel:
             try:
-                assert None == msg.unpickle()
-                print('Task succeeded on %s' % (hostname,))
-            except mitogen.core.CallError as e:
-                print('Task failed on host %s: %s' % (hostname, e))
+                msg = both_sel.get(timeout=60.0)
+            except mitogen.core.TimeoutError:
+                print("No update in 60 seconds, something's broke")
+                break
 
-    print('All tasks completed.')
+            hostname = hostname_by_context_id[msg.src_id]
+
+            if msg.receiver is status_recv:   # https://mitogen.readthedocs.io/en/stable/api.html#mitogen.core.Message.receiver
+                # handle a status update
+                print('Got status update from %s: %s' % (hostname, msg.unpickle()))
+            elif msg.receiver is calls_sel:  # subselect
+                # handle a function call result.
+                try:
+                    assert None == msg.unpickle()
+                    print('Task succeeded on %s' % (hostname,))
+                except mitogen.core.CallError as e:
+                    print('Task failed on host %s: %s' % (hostname, e))
+
+        if calls_sel:
+            print('Some tasks did not complete.')
+        else:
+            print('All tasks completed.')
