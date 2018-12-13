@@ -2154,7 +2154,7 @@ class Router(object):
             _, (_, func, _, _) = self._handle_map.popitem()
             func(Message.dead(self.broker_exit_msg))
 
-    def self(self):
+    def myself(self):
         """
         Return a :class:`Context` referring to the current process.
         """

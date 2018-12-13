@@ -295,7 +295,7 @@ Core Library
   a time.
 
 * `8f85ee03 <https://github.com/dw/mitogen/commit/8f85ee03>`_:
-  :meth:`mitogen.core.Router.self` returns a :class:`mitogen.core.Context`
+  :meth:`mitogen.core.Router.myself` returns a :class:`mitogen.core.Context`
   referring to the current process.
 
 
