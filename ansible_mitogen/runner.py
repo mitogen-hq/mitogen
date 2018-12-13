@@ -46,6 +46,7 @@ import json
 import logging
 import os
 import shlex
+import shutil
 import sys
 import tempfile
 import types
@@ -352,6 +353,55 @@ class Runner(object):
             return self._run()
         finally:
             self.revert()
+
+
+class AtExitWrapper(object):
+    """
+    Newer Ansibles use :func:`atexit.register` to trigger tmpdir cleanup when
+    AnsibleModule.tmpdir is responsible for creating its own temporary
+    directory, however with Mitogen processes are preserved across tasks,
+    meaning cleanup must happen earlier.
+
+    Patch :func:`atexit.register`, catching :func:`shutil.rmtree` calls so they
+    can be executed on task completion, rather than on process shutdown.
+    """
+    # Wrapped in a dict to avoid instance method decoration.
+    original = {
+        'register': atexit.register
+    }
+
+    def __init__(self):
+        assert atexit.register == self.original['register'], \
+            "AtExitWrapper installed twice."
+        atexit.register = self._atexit__register
+        self.deferred = []
+
+    def revert(self):
+        """
+        Restore the original :func:`atexit.register`.
+        """
+        assert atexit.register == self._atexit__register, \
+            "AtExitWrapper not installed."
+        atexit.register = self.original['register']
+
+    def run_callbacks(self):
+        while self.deferred:
+            func, targs, kwargs = self.deferred.pop()
+            try:
+                func(*targs, **kwargs)
+            except Exception:
+                LOG.exception('While running atexit callbacks')
+
+    def _atexit__register(self, func, *targs, **kwargs):
+        """
+        Intercept :func:`atexit.register` calls, diverting any to
+        :func:`shutil.rmtree` into a private list.
+        """
+        if func == shutil.rmtree:
+            self.deferred.append((func, targs, kwargs))
+            return
+
+        self.original_register(func, *targs, **kwargs)
 
 
 class ModuleUtilsImporter(object):
@@ -701,6 +751,7 @@ class NewStyleRunner(ScriptRunner):
         )
         self._setup_imports()
         self._setup_excepthook()
+        self.atexit_wrapper = AtExitWrapper()
         if libc__res_init:
             libc__res_init()
 
@@ -708,6 +759,7 @@ class NewStyleRunner(ScriptRunner):
         sys.excepthook = self.original_excepthook
 
     def revert(self):
+        self.atexit_wrapper.revert()
         self._argv.revert()
         self._stdio.revert()
         self._revert_excepthook()
@@ -768,14 +820,6 @@ class NewStyleRunner(ScriptRunner):
             self._handle_magic_exception(mod, e)
             raise
 
-    def _run_atexit_funcs(self):
-        """
-        Newer Ansibles use atexit.register() to trigger tmpdir cleanup, when
-        AnsibleModule.tmpdir is responsible for creating its own temporary
-        directory.
-        """
-        atexit._run_exitfuncs()
-
     def _run(self):
         mod = types.ModuleType(self.main_module_name)
         mod.__package__ = None
@@ -793,10 +837,10 @@ class NewStyleRunner(ScriptRunner):
         try:
             try:
                 self._run_code(code, mod)
-            finally:
-                self._run_atexit_funcs()
-        except SystemExit as e:
-            exc = e
+            except SystemExit as e:
+                exc = e
+        finally:
+            self.atexit_wrapper.run_callbacks()
 
         return {
             'rc': exc.args[0] if exc else 2,

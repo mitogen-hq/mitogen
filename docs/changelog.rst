@@ -210,6 +210,12 @@ Fixes
   have a reduced open files limit. A more intrusive fix has been added to
   directly address the problem without modifying the subprocess environment.
 
+* `#397 <https://github.com/dw/mitogen/issues/397>`_,
+  `#454 <https://github.com/dw/mitogen/issues/454>`_: the previous approach to
+  handling modern Ansible temporary file cleanup was too aggressive, and could
+  trigger early finalization of Cython-based extension modules, leading to
+  segmentation faults.
+
 
 Core Library
 ~~~~~~~~~~~~
