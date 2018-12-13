@@ -283,6 +283,11 @@ Core Library
 * `#439 <https://github.com/dw/mitogen/issues/439>`_: descriptive errors are
   raised when attempting to invoke unsupported function types.
 
+* `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
+  children for standard IO redirection have propagation disabled, preventing
+  accidental reconfiguration of the :mod:`logging` package in a child from
+  setting up a feedback loop.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
