@@ -2035,10 +2035,15 @@ class IoLogger(BasicStream):
     def __init__(self, broker, name, dest_fd):
         self._broker = broker
         self._name = name
-        self._log = logging.getLogger(name)
         self._rsock, self._wsock = socket.socketpair()
         os.dup2(self._wsock.fileno(), dest_fd)
         set_cloexec(self._wsock.fileno())
+
+        self._log = logging.getLogger(name)
+        # #453: prevent accidental log initialization in a child creating a
+        # feedback loop.
+        self._log.propagate = False
+        self._log.handlers = logging.getLogger().handlers[:]
 
         self.receive_side = Side(self, self._rsock.fileno())
         self.transmit_side = Side(self, dest_fd, cloexec=False, blocking=True)
