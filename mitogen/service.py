@@ -749,7 +749,7 @@ class FileService(Service):
            proceed normally, without the associated thread needing to be
            forcefully killed.
     """
-    unregistered_msg = 'Path is not registered with FileService.'
+    unregistered_msg = 'Path %r is not registered with FileService.'
     context_mismatch_msg = 'sender= kwarg context must match requestee context'
 
     #: Burst size. With 1MiB and 10ms RTT max throughput is 100MiB/sec, which
@@ -911,7 +911,7 @@ class FileService(Service):
             Unregistered path, or Sender did not match requestee context.
         """
         if path not in self._paths and not self._prefix_is_authorized(path):
-            raise Error(self.unregistered_msg)
+            raise Error(self.unregistered_msg % (path,))
         if msg.src_id != sender.context.context_id:
             raise Error(self.context_mismatch_msg)
 
