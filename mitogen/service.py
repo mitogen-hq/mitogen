@@ -911,9 +911,16 @@ class FileService(Service):
             Unregistered path, or Sender did not match requestee context.
         """
         if path not in self._paths and not self._prefix_is_authorized(path):
-            raise Error(self.unregistered_msg % (path,))
+            msg.reply(mitogen.core.CallError(
+                Error(self.unregistered_msg % (path,))
+            ))
+            return
+
         if msg.src_id != sender.context.context_id:
-            raise Error(self.context_mismatch_msg)
+            msg.reply(mitogen.core.CallError(
+                Error(self.context_mismatch_msg)
+            ))
+            return
 
         LOG.debug('Serving %r', path)
 
