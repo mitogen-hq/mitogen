@@ -168,17 +168,19 @@ def work_on_machine(context):
     # child context from any more privileged context.
     file_service.register('/etc/passwd')
 
-    # To avoid hard-wiring streamy_download_file() below, we want to pass it a
-    # Context object that hosts the file service it is downloading from.
-    # Mitogen has no nice public API for getting a Context object that means
-    # "this process" yet, so we hack it here.
-    myself = mitogen.core.Context(context.router, mitogen.context_id)
-
     # Now call our wrapper function that knows how to handle the transfer. In a
     # real app, this wrapper might also set ownership/modes or do any other
     # app-specific stuff relating to the file that was transferred.
     print("Streamy upload /etc/passwd: remote result: %s" % (
-        context.call(streamy_download_file, myself, '/etc/passwd'),
+        context.call(
+            streamy_download_file,
+            # To avoid hard-wiring streamy_download_file(), we want to pass it
+            # a Context object that hosts the file service it should request
+            # files from. Router.myself() returns a Context referring to this
+            # process.
+            context=router.myself(),
+            path='/etc/passwd',
+        ),
     ))
 
     # Shut down the pool now we're done with it, else app will hang at exit.
