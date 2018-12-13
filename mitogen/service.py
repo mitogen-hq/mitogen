@@ -52,9 +52,13 @@ _pool_lock = threading.Lock()
 if mitogen.core.PY3:
     def func_code(func):
         return func.__code__
+    def func_name(func):
+        return func.__name__
 else:
     def func_code(func):
         return func.func_code
+    def func_name(func):
+        return func.func_name
 
 
 @mitogen.core.takes_router
@@ -244,7 +248,7 @@ class Invoker(object):
             if no_reply:
                 LOG.exception('While calling no-reply method %s.%s',
                               type(self.service).__name__,
-                              method.func_name)
+                              func_name(method))
             else:
                 raise
 
