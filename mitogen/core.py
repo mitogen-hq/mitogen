@@ -2012,8 +2012,8 @@ class Waker(BasicStream):
 
     dead_msg = (
         "An attempt was made to enqueue a message with a Broker that has "
-        "already begun shut down. If you are receiving this message, it is "
-        "likely your program indirectly called Broker.shutdown() too early."
+        "already begun shutting down. If you are receiving this message, it "
+        "is likely your program indirectly called Broker.shutdown() too early."
     )
 
     def defer(self, func, *args, **kwargs):
