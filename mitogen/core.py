@@ -2010,10 +2010,18 @@ class Waker(BasicStream):
             if e.args[0] != errno.EBADF:
                 raise
 
+    dead_msg = (
+        "An attempt was made to enqueue a message with a Broker that has "
+        "already begun shut down. If you are receiving this message, it is "
+        "likely your program indirectly called Broker.shutdown() too early."
+    )
+
     def defer(self, func, *args, **kwargs):
         if threading.currentThread().ident == self.broker_ident:
             _vv and IOLOG.debug('%r.defer() [immediate]', self)
             return func(*args, **kwargs)
+        if not self._broker._alive:
+            raise Error(self.dead_msg)
 
         _vv and IOLOG.debug('%r.defer() [fd=%r]', self, self.transmit_side.fd)
         self._lock.acquire()

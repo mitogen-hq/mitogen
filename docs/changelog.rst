@@ -294,6 +294,11 @@ Core Library
   accidental reconfiguration of the :mod:`logging` package in a child from
   setting up a feedback loop.
 
+* `#456 <https://github.com/dw/mitogen/issues/456>`_: a descriptive error is
+  logged when :meth:`mitogen.core.Broker.defer` is called after the broker has
+  shut down, preventing new messages being enqueued that will never be sent,
+  and subsequently producing a program hang.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
@@ -325,6 +330,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Johan Beisser <https://github.com/jbeisser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
+`Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `@syntonym <https://github.com/syntonym/>`_, and
 `@yodatak <https://github.com/yodatak/>`_.
