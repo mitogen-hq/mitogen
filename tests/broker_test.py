@@ -43,7 +43,7 @@ class DeferTest(testlib.TestCase):
 
         e = self.assertRaises(mitogen.core.Error,
             lambda: broker.defer(lambda: latch.put(123)))
-        self.assertEquals(e.args[0], mitogen.core.Waker.dead_msg)
+        self.assertEquals(e.args[0], mitogen.core.Waker.broker_shutdown_msg)
 
 
 class DeferSyncTest(testlib.TestCase):
