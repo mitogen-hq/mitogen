@@ -918,44 +918,51 @@ class Importer(object):
 
     :param context: Context to communicate via.
     """
+    # The Mitogen package is handled specially, since the child context must
+    # construct it manually during startup.
+    MITOGEN_PKG_CONTENT = [
+        'compat',
+        'debug',
+        'doas',
+        'docker',
+        'kubectl',
+        'fakessh',
+        'fork',
+        'jail',
+        'lxc',
+        'lxd',
+        'master',
+        'minify',
+        'parent',
+        'select',
+        'service',
+        'setns',
+        'ssh',
+        'su',
+        'sudo',
+        'utils',
+    ]
+
+    ALWAYS_BLACKLIST = [
+        # 2.x generates needless imports for 'builtins', while 3.x does the
+        # same for '__builtin__'. The correct one is built-in, the other always
+        # a negative round-trip.
+        'builtins',
+        '__builtin__',
+        # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
+        # very unlikely to trigger a bug report.
+        'org',
+    ]
+
+    if PY3:
+        ALWAYS_BLACKLIST += ['cStringIO']
+
     def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
         self._context = context
-        self._present = {'mitogen': [
-            'compat',
-            'debug',
-            'doas',
-            'docker',
-            'kubectl',
-            'fakessh',
-            'fork',
-            'jail',
-            'lxc',
-            'lxd',
-            'master',
-            'minify',
-            'parent',
-            'select',
-            'service',
-            'setns',
-            'ssh',
-            'su',
-            'sudo',
-            'utils',
-        ]}
+        self._present = {'mitogen': self.MITOGEN_PKG_CONTENT}
         self._lock = threading.Lock()
         self.whitelist = list(whitelist) or ['']
-        self.blacklist = list(blacklist) + [
-            # 2.x generates needless imports for 'builtins', while 3.x does the
-            # same for '__builtin__'. The correct one is built-in, the other
-            # always a negative round-trip.
-            'builtins',
-            '__builtin__',
-            # org.python.core imported by copy, pickle, xml.sax; breaks Jython,
-            # but very unlikely to trigger a bug report.
-            'org',
-        ]
-        if PY3:
-            self.blacklist += ['cStringIO']
+        self.blacklist = list(blacklist) + self.ALWAYS_BLACKLIST
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
