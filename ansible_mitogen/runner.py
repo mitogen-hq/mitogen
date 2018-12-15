@@ -357,10 +357,10 @@ class Runner(object):
 
 class AtExitWrapper(object):
     """
-    Newer Ansibles use :func:`atexit.register` to trigger tmpdir cleanup when
-    AnsibleModule.tmpdir is responsible for creating its own temporary
-    directory, however with Mitogen processes are preserved across tasks,
-    meaning cleanup must happen earlier.
+    issue #397, #454: Newer Ansibles use :func:`atexit.register` to trigger
+    tmpdir cleanup when AnsibleModule.tmpdir is responsible for creating its
+    own temporary directory, however with Mitogen processes are preserved
+    across tasks, meaning cleanup must happen earlier.
 
     Patch :func:`atexit.register`, catching :func:`shutil.rmtree` calls so they
     can be executed on task completion, rather than on process shutdown.
@@ -401,7 +401,7 @@ class AtExitWrapper(object):
             self.deferred.append((func, targs, kwargs))
             return
 
-        self.original_register(func, *targs, **kwargs)
+        self.original['register'](func, *targs, **kwargs)
 
 
 class ModuleUtilsImporter(object):
