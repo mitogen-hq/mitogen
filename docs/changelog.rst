@@ -314,6 +314,10 @@ Core Library
   :meth:`mitogen.core.Router.myself` returns a :class:`mitogen.core.Context`
   referring to the current process.
 
+* `824c7931 <https://github.com/dw/mitogen/commit/824c7931>`_: exceptions
+  raised by the import hook were updated to include probable reasons for
+  a failure.
+
 
 Thanks!
 ~~~~~~~
