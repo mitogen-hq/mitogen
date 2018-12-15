@@ -1032,9 +1032,25 @@ class Importer(object):
         finally:
             del _tls.running
 
+    blacklisted_msg = (
+        '%r is present in the Mitogen importer blacklist, therefore this '
+        'context will not attempt to request it from the master, as the '
+        'request will always be refused.'
+    )
+    pkg_resources_msg = (
+        'pkg_resources is prohibited from importing __main__, as it causes '
+        'problems in applications whose main module is not designed to be '
+        're-imported by children.'
+    )
+    absent_msg = (
+        'The Mitogen master process was unable to serve %r. It may be a '
+        'native Python extension, or it may be missing entirely. Check the '
+        'importer debug logs on the master for more information.'
+    )
+
     def _refuse_imports(self, fullname):
         if is_blacklisted_import(self, fullname):
-            raise ImportError('Refused: ' + fullname)
+            raise ImportError(self.blacklisted_msg % (fullname,))
 
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']
@@ -1046,7 +1062,7 @@ class Importer(object):
             # breaks any app that is not expecting its __main__ to suddenly be
             # sucked over a network and injected into a remote process, like
             # py.test.
-            raise ImportError('Refused')
+            raise ImportError(self.pkg_resources_msg)
 
         if fullname == 'pbr':
             # It claims to use pkg_resources to read version information, which
@@ -1106,7 +1122,7 @@ class Importer(object):
 
         ret = self._cache[fullname]
         if ret[2] is None:
-            raise ImportError('Master does not have %r' % (fullname,))
+            raise ImportError(self.absent_msg % (fullname,))
 
         pkg_present = ret[1]
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
@@ -1139,14 +1155,14 @@ class Importer(object):
                 # reveals the module can't be loaded, and so load_module()
                 # throws ImportError, on Python 3.x it is still possible for
                 # the loader to be called to fetch metadata.
-                raise ImportError('master cannot serve %r' % (fullname,))
+                raise ImportError(self.absent_msg % (fullname,))
             return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
             compressed = self._cache[fullname][3]
             if compressed is None:
-                raise ImportError('master cannot serve %r' % (fullname,))
+                raise ImportError(self.absent_msg % (fullname,))
 
             source = zlib.decompress(self._cache[fullname][3])
             if PY3:
