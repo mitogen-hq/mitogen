@@ -355,7 +355,7 @@ Connection Methods
         will be searched if given as a filename. Defaults to
         ``lxc-attach``.
 
-.. method:: Router.lxc (container, lxc_attach_path=None, \**kwargs)
+.. method:: Router.lxd (container, lxc_path=None, \**kwargs)
 
     Construct a context on the local machine within a LXD container using
     the ``lxc`` program.
@@ -371,7 +371,7 @@ Connection Methods
 .. method:: Router.setns (container, kind, username=None, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
     Construct a context in the style of :meth:`local`, but change the
-    active Linux process namespaces via calls to `setns(1)` before
+    active Linux process namespaces via calls to `setns(2)` before
     executing Python.
 
     The namespaces to use, and the active root file system are taken from
