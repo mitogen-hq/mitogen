@@ -1738,8 +1738,10 @@ class Poller(object):
 
     def stop_receive(self, fd):
         """
-        Stop yielding readability events for `fd`. Redundant calls to
-        :meth:`stop_receive` are silently ignored, this may change in future.
+        Stop yielding readability events for `fd`.
+
+        Redundant calls to :meth:`stop_receive` are silently ignored, this may
+        change in future.
         """
         self._rfds.pop(fd, None)
 
@@ -1751,8 +1753,10 @@ class Poller(object):
 
     def stop_transmit(self, fd):
         """
-        Stop yielding writeability events for `fd`. Redundant calls to
-        :meth:`stop_transmit` are silently ignored, this may change in future.
+        Stop yielding writeability events for `fd`.
+
+        Redundant calls to :meth:`stop_transmit` are silently ignored, this may
+        change in future.
         """
         self._wfds.pop(fd, None)
 
