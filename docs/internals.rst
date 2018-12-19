@@ -15,6 +15,20 @@ Constants
 .. autodata:: CHUNK_SIZE
 
 
+Poller Classes
+==============
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Poller
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: EpollPoller
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: KqueuePoller
+
+
 Latch Class
 ===========
 

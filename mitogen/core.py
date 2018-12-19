@@ -1670,6 +1670,33 @@ def _unpickle_context(context_id, name, router=None):
 
 
 class Poller(object):
+    """
+    A poller manages OS file descriptors the user is waiting to become
+    available for IO. The :meth:`poll` method blocks the calling thread
+    until one or more become ready.
+
+    Each descriptor has an associated `data` element, which is unique for each
+    readiness state, and defaults to being the same as the file descriptor. The
+    :meth:`poll` method yields the data associated with a a descriptor, rather
+    than the descriptor itself, allowing for concise loops of the form::
+
+        p = Poller()
+        p.start_receive(first_fd, data=handle_first_fd_read)
+        p.start_transmit(first_fd, data=handle_first_fd_write)
+
+        for callback in p.poll():
+            callback()
+
+    Pollers may be modified while :meth:`poll` is yielding results. Removals
+    are processed immediately, causing pendings event for the descriptor to be
+    discarded.
+
+    The :meth:`close` method must be called when a poller is disacrded to avoid
+    a resource leak.
+
+    Pollers may only be used by one thread at a time.
+    """
+
     #: Increments on every poll(). Used to version _rfds and _wfds.
     _generation = 1
 
@@ -1677,30 +1704,52 @@ class Poller(object):
         self._rfds = {}
         self._wfds = {}
 
+    def __repr__(self):
+        return '%s(%#x)' % (type(self).__name__, id(self))
+
     @property
     def readers(self):
+        """
+        Return a list of tuples of the form `(fd, data)` for every FD
+        registered for receive readiness.
+        """
         return list((fd, data) for fd, (data, gen) in self._rfds.items())
 
     @property
     def writers(self):
+        """
+        Return a list of tuples of the form `(fd, data)` for every FD
+        registered for transmit readiness.
+        """
         return list((fd, data) for fd, (data, gen) in self._wfds.items())
 
-    def __repr__(self):
-        return '%s(%#x)' % (type(self).__name__, id(self))
-
     def close(self):
-        pass
+        """
+        Close any underlying OS resource used by the poller.
+        """
 
     def start_receive(self, fd, data=None):
+        """
+        Cause :meth:`poll` to emit `data` when `fd` is readable.
+        """
         self._rfds[fd] = (data or fd, self._generation)
 
     def stop_receive(self, fd):
+        """
+        Stop emitting readability events for `fd`.
+        """
         self._rfds.pop(fd, None)
 
     def start_transmit(self, fd, data=None):
+        """
+        Cause :meth:`poll` to emit `data` when `fd` is writeable.
+        """
         self._wfds[fd] = (data or fd, self._generation)
 
     def stop_transmit(self, fd):
+        """
+        Stop emitting writability events for `fd`.
+        """
         self._wfds.pop(fd, None)
 
     def _poll(self, timeout):
@@ -1723,6 +1772,15 @@ class Poller(object):
                 yield data
 
     def poll(self, timeout=None):
+        """
+        Block the calling thread until one or more FDs are ready for IO.
+
+        :param float timeout:
+            If not :data:`None`, seconds to wait without an event before
+            returning an empty iterable.
+        :returns:
+            Iterable of `data` elements associated with ready FDs.
+        """
         _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
         self._generation += 1
         return self._poll(timeout)

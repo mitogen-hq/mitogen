@@ -715,15 +715,18 @@ class CallSpec(object):
 
 
 class KqueuePoller(mitogen.core.Poller):
+    """
+    Poller based on the FreeBSD/Darwin kqueue(2) interface.
+    """
     _repr = 'KqueuePoller()'
 
     def __init__(self):
+        super(KqueuePoller, self).__init__()
         self._kqueue = select.kqueue()
-        self._rfds = {}
-        self._wfds = {}
         self._changelist = []
 
     def close(self):
+        super(KqueuePoller, self).close()
         self._kqueue.close()
 
     def _control(self, fd, filters, flags):
@@ -789,15 +792,18 @@ class KqueuePoller(mitogen.core.Poller):
 
 
 class EpollPoller(mitogen.core.Poller):
+    """
+    Poller based on the Linux epoll(2) interface.
+    """
     _repr = 'EpollPoller()'
 
     def __init__(self):
+        super(EpollPoller, self).__init__()
         self._epoll = select.epoll(32)
         self._registered_fds = set()
-        self._rfds = {}
-        self._wfds = {}
 
     def close(self):
+        super(EpollPoller, self).close()
         self._epoll.close()
 
     def _control(self, fd):
