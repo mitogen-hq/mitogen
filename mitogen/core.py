@@ -1711,16 +1711,16 @@ class Poller(object):
     @property
     def readers(self):
         """
-        Return a list of tuples of the form `(fd, data)` for every FD
-        registered for receive readiness.
+        Return a list of `(fd, data)` tuples for every FD registered for
+        receive readiness.
         """
         return list((fd, data) for fd, (data, gen) in self._rfds.items())
 
     @property
     def writers(self):
         """
-        Return a list of tuples of the form `(fd, data)` for every FD
-        registered for transmit readiness.
+        Return a list of `(fd, data)` tuples for every FD registered for
+        transmit readiness.
         """
         return list((fd, data) for fd, (data, gen) in self._wfds.items())
 
@@ -1738,7 +1738,8 @@ class Poller(object):
 
     def stop_receive(self, fd):
         """
-        Stop emitting readability events for `fd`.
+        Stop emitting readability events for `fd`. Redundant calls to
+        :meth:`stop_receive` are silently ignored, this may change in future.
         """
         self._rfds.pop(fd, None)
 
@@ -1750,7 +1751,8 @@ class Poller(object):
 
     def stop_transmit(self, fd):
         """
-        Stop emitting writability events for `fd`.
+        Stop emitting writeability events for `fd`. Redundant calls to
+        :meth:`stop_transmit` are silently ignored, this may change in future.
         """
         self._wfds.pop(fd, None)
 
