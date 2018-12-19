@@ -1673,25 +1673,26 @@ class Poller(object):
     """
     A poller manages OS file descriptors the user is waiting to become
     available for IO. The :meth:`poll` method blocks the calling thread
-    until one or more become ready.
+    until one or more become ready. The default implementation is based on
+    :func:`select.select`.
 
     Each descriptor has an associated `data` element, which is unique for each
-    readiness state, and defaults to being the same as the file descriptor. The
-    :meth:`poll` method yields the data associated with a a descriptor, rather
-    than the descriptor itself, allowing for concise loops of the form::
+    readiness type, and defaults to being the same as the file descriptor. The
+    :meth:`poll` method yields the data associated with a descriptor, rather
+    than the descriptor itself, allowing concise loops like::
 
         p = Poller()
-        p.start_receive(first_fd, data=handle_first_fd_read)
-        p.start_transmit(first_fd, data=handle_first_fd_write)
+        p.start_receive(conn.fd, data=conn.on_read)
+        p.start_transmit(conn.fd, data=conn.on_write)
 
         for callback in p.poll():
-            callback()
+            callback()  # invoke appropriate bound instance method
 
     Pollers may be modified while :meth:`poll` is yielding results. Removals
     are processed immediately, causing pendings event for the descriptor to be
     discarded.
 
-    The :meth:`close` method must be called when a poller is disacrded to avoid
+    The :meth:`close` method must be called when a poller is discarded to avoid
     a resource leak.
 
     Pollers may only be used by one thread at a time.
@@ -1727,6 +1728,7 @@ class Poller(object):
         """
         Close any underlying OS resource used by the poller.
         """
+        pass
 
     def start_receive(self, fd, data=None):
         """
