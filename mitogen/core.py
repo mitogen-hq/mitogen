@@ -1732,26 +1732,26 @@ class Poller(object):
 
     def start_receive(self, fd, data=None):
         """
-        Cause :meth:`poll` to emit `data` when `fd` is readable.
+        Cause :meth:`poll` to yield `data` when `fd` is readable.
         """
         self._rfds[fd] = (data or fd, self._generation)
 
     def stop_receive(self, fd):
         """
-        Stop emitting readability events for `fd`. Redundant calls to
+        Stop yielding readability events for `fd`. Redundant calls to
         :meth:`stop_receive` are silently ignored, this may change in future.
         """
         self._rfds.pop(fd, None)
 
     def start_transmit(self, fd, data=None):
         """
-        Cause :meth:`poll` to emit `data` when `fd` is writeable.
+        Cause :meth:`poll` to yield `data` when `fd` is writeable.
         """
         self._wfds[fd] = (data or fd, self._generation)
 
     def stop_transmit(self, fd):
         """
-        Stop emitting writeability events for `fd`. Redundant calls to
+        Stop yielding writeability events for `fd`. Redundant calls to
         :meth:`stop_transmit` are silently ignored, this may change in future.
         """
         self._wfds.pop(fd, None)
