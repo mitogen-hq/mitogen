@@ -604,7 +604,20 @@ def stream_by_method_name(name):
 
 @mitogen.core.takes_econtext
 def _proxy_connect(name, method_name, kwargs, econtext):
+    """
+    Implements the target portion of Router._proxy_connect() by upgrading the
+    local context to a parent if it was not already, then calling back into
+    Router._connect() using the arguments passed to the parent's
+    Router.connect().
+
+    :returns:
+        Dict containing:
+        * ``id``: :data:`None`, or integer new context ID.
+        * ``name``: :data:`None`, or string name attribute of new Context.
+        * ``msg``: :data:`None`, or StreamError exception text.
+    """
     upgrade_router(econtext)
+
     try:
         context = econtext.router._connect(
             klass=stream_by_method_name(method_name),
