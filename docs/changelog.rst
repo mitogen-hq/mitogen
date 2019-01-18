@@ -299,6 +299,12 @@ Core Library
   shut down, preventing new messages being enqueued that will never be sent,
   and subsequently producing a program hang.
 
+* `#462 <https://github.com/dw/mitogen/issues/462>`_: Mitogen could fail to
+  open a PTY on broken Linux systems due to a bad interaction between the glibc
+  :func:`grantpt` function and an incorrectly mounted ``/dev/pts`` filesystem.
+  Since correct group ownership is not required in most scenarios, when this
+  problem is detected, the PTY is allocated and opened directly by the library.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
@@ -336,8 +342,10 @@ bug reports, testing, features and fixes in this release contributed by
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
-`@syntonym <https://github.com/syntonym/>`_, and
-`@yodatak <https://github.com/yodatak/>`_.
+`Stéphane <https://github.com/sboisson/>`_,
+`@syntonym <https://github.com/syntonym/>`_,
+`@yodatak <https://github.com/yodatak/>`_, and
+`Younès HAFRI <https://github.com/yhafri>`_.
 
 
 v0.2.3 (2018-10-23)
