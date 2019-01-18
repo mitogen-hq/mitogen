@@ -1,4 +1,5 @@
 import errno
+import fcntl
 import os
 import signal
 import subprocess
@@ -196,6 +197,26 @@ class OpenPtyTest(testlib.TestCase):
                               lambda: self.func())
         msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
         self.assertEquals(e.args[0], msg)
+
+    @unittest2.skipIf(condition=(os.uname()[0] != 'Linux'),
+                      reason='Fallback only supported on Linux')
+    @mock.patch('os.openpty')
+    def test_broken_linux_fallback(self, openpty):
+        openpty.side_effect = OSError(errno.EPERM)
+        master_fd, slave_fd = self.func()
+        try:
+            st = os.fstat(master_fd)
+            self.assertEquals(5, os.major(st.st_rdev))
+            flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+            self.assertTrue(flags & os.O_RDWR)
+
+            st = os.fstat(slave_fd)
+            self.assertEquals(136, os.major(st.st_rdev))
+            flags = fcntl.fcntl(slave_fd, fcntl.F_GETFL)
+            self.assertTrue(flags & os.O_RDWR)
+        finally:
+            os.close(master_fd)
+            os.close(slave_fd)
 
 
 class TtyCreateChildTest(testlib.TestCase):

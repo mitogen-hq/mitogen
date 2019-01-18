@@ -41,6 +41,7 @@ import logging
 import os
 import signal
 import socket
+import struct
 import subprocess
 import sys
 import termios
@@ -96,6 +97,10 @@ SYS_EXECUTABLE_MSG = (
     "'/usr/bin/python'"
 )
 _sys_executable_warning_logged = False
+
+LINUX_TIOCGPTN = 2147767344  # Get PTY number; asm-generic/ioctls.h
+LINUX_TIOCSPTLCK = 1074025521  # Lock/unlock PTY; asm-generic/ioctls.h
+IS_LINUX = os.uname()[0] == 'Linux'
 
 SIGNAL_BY_NUM = dict(
     (getattr(signal, name), name)
@@ -318,6 +323,48 @@ def _acquire_controlling_tty():
         fcntl.ioctl(2, termios.TIOCSCTTY)
 
 
+def _linux_broken_devpts_openpty():
+    """
+    #462: On broken Linux hosts with mismatched configuration (e.g. old
+    /etc/fstab template installed), /dev/pts may be mounted without the gid=
+    mount option, causing new slave devices to be created with the group ID of
+    the calling process. This upsets glibc, whose openpty() is required by
+    specification to produce a slave owned by a special group ID (which is
+    always the 'tty' group).
+
+    Glibc attempts to use "pt_chown" to fix ownership. If that fails, it
+    chown()s the PTY directly, which fails due to non-root, causing openpty()
+    to fail with EPERM ("Operation not permitted"). Since we don't need the
+    magical TTY group to run sudo and su, open the PTY ourselves in this case.
+    """
+    master_fd = None
+    try:
+        # Opening /dev/ptmx causes a PTY pair to be allocated, and the
+        # corresponding slave /dev/pts/* device to be created, owned by UID/GID
+        # matching this process.
+        master_fd = os.open('/dev/ptmx', os.O_RDWR)
+        # Clear the lock bit from the PTY. This a prehistoric feature from a
+        # time when slave device files were persistent.
+        fcntl.ioctl(master_fd, LINUX_TIOCSPTLCK, struct.pack('i', 0))
+        # Since v4.13 TIOCGPTPEER exists to open the slave in one step, but we
+        # must support older kernels. Ask for the PTY number.
+        pty_num_s = fcntl.ioctl(master_fd, LINUX_TIOCGPTN,
+                                struct.pack('i', 0))
+        pty_num, = struct.unpack('i', pty_num_s)
+        pty_name = '/dev/pts/%d' % (pty_num,)
+        # Now open it with O_NOCTTY to ensure it doesn't change our controlling
+        # TTY. Otherwise when we close the FD we get killed by the kernel, and
+        # the child we spawn that should really attach to it will get EPERM
+        # during _acquire_controlling_tty().
+        slave_fd = os.open(pty_name, os.O_RDWR|os.O_NOCTTY)
+        return master_fd, slave_fd
+    except OSError:
+        if master_fd is not None:
+            os.close(master_fd)
+        e = sys.exc_info()[1]
+        raise mitogen.core.StreamError(OPENPTY_MSG, e)
+
+
 def openpty():
     """
     Call :func:`os.openpty`, raising a descriptive error if the call fails.
@@ -331,6 +378,8 @@ def openpty():
         return os.openpty()
     except OSError:
         e = sys.exc_info()[1]
+        if IS_LINUX and e.args[0] == errno.EPERM:
+            return _linux_broken_devpts_openpty()
         raise mitogen.core.StreamError(OPENPTY_MSG, e)
 
 
