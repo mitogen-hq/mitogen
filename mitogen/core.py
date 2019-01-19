@@ -848,7 +848,7 @@ class Receiver(object):
         if self.handle:
             self.router.del_handler(self.handle)
             self.handle = None
-        self._latch.put(Message.dead(self.closed_msg))
+        self._latch.close()
 
     def empty(self):
         """
@@ -879,7 +879,10 @@ class Receiver(object):
             received, and `data` is its unpickled data part.
         """
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
-        msg = self._latch.get(timeout=timeout, block=block)
+        try:
+            msg = self._latch.get(timeout=timeout, block=block)
+        except LatchError:
+            raise ChannelError(self.closed_msg)
         if msg.is_dead and throw_dead:
             msg._throw_dead()
         return msg
