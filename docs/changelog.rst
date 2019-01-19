@@ -298,6 +298,12 @@ Core Library
 * `#444 <https://github.com/dw/mitogen/issues/444>`_: messages regarding
   unforwardable extension module are no longer logged as errors.
 
+* `#445 <https://github.com/dw/mitogen/issues/445>`_: service pools unregister
+  the :data:`mitogen.core.CALL_SERVICE` handle at shutdown, ensuring any
+  outstanding messages are either processed by the pool as it shuts down, or
+  have dead messages sent in reply to them, preventing peer contexts from
+  hanging due to a forgotten buffered message.
+
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
   accidental reconfiguration of the :mod:`logging` package in a child from

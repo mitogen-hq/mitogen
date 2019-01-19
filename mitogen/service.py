@@ -479,6 +479,7 @@ class Pool(object):
 
     def stop(self, join=True):
         self.closed = True
+        self._receiver.close()
         self._select.close()
         if join:
             self.join()

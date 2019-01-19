@@ -89,5 +89,18 @@ class PermissionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(msg in exc.args[0])
 
 
+class CloseTest(testlib.RouterMixin, testlib.TestCase):
+    klass = mitogen.service.Pool
+
+    def test_receiver_closed(self):
+        pool = self.klass(router=self.router, services=[])
+        pool.stop()
+        self.assertEquals(None, pool._receiver.handle)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: self.router.myself().call_service(MyService, 'foobar'))
+        self.assertEquals(e.args[0], self.router.invalid_handle_msg)
+
+
 if __name__ == '__main__':
     unittest2.main()
