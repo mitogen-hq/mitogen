@@ -66,6 +66,13 @@ def make_socket_path():
 class Listener(mitogen.core.BasicStream):
     keep_alive = True
 
+    def __repr__(self):
+        return '%s.%s(%r)' % (
+            __name__,
+            self.__class__.__name__,
+            self.path,
+        )
+
     def __init__(self, router, path=None, backlog=100):
         self._router = router
         self.path = path or make_socket_path()
