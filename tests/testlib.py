@@ -388,13 +388,15 @@ class DockerizedSshDaemon(object):
 
 class BrokerMixin(object):
     broker_class = mitogen.master.Broker
+    broker_shutdown = False
 
     def setUp(self):
         super(BrokerMixin, self).setUp()
         self.broker = self.broker_class()
 
     def tearDown(self):
-        self.broker.shutdown()
+        if not self.broker_shutdown:
+            self.broker.shutdown()
         self.broker.join()
         super(BrokerMixin, self).tearDown()
 

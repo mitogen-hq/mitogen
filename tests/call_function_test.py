@@ -97,6 +97,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         recv = self.local.call_async(time.sleep, 120)
         time.sleep(0.05)  # Ensure GIL is released
         self.broker.shutdown()
+        self.broker_shutdown = True
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
         self.assertEquals(exc.args[0], self.router.respondent_disconnect_msg)
