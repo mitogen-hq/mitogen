@@ -791,7 +791,7 @@ class Receiver(object):
     raise_channelerror = True
 
     def __init__(self, router, handle=None, persist=True,
-                 respondent=None, policy=None):
+                 respondent=None, policy=None, overwrite=False):
         self.router = router
         #: The handle.
         self.handle = handle  # Avoid __repr__ crash in add_handler()
@@ -802,6 +802,7 @@ class Receiver(object):
             policy=policy,
             persist=persist,
             respondent=respondent,
+            overwrite=overwrite,
         )
 
     def __repr__(self):

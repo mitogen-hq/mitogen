@@ -17,7 +17,8 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.master.ModuleResponder
 
     def call(self, *args, **kwargs):
-        return self.klass(self.router).neutralize_main(*args, **kwargs)
+        router = mock.Mock()
+        return self.klass(router).neutralize_main(*args, **kwargs)
 
     def test_missing_exec_guard(self):
         path = testlib.data_path('main_with_no_exec_guard.py')

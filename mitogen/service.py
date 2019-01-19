@@ -68,7 +68,8 @@ def get_or_create_pool(size=None, router=None):
     _pool_lock.acquire()
     try:
         if _pool_pid != os.getpid():
-            _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE)
+            _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
+                         overwrite=True)
             _pool_pid = os.getpid()
         return _pool
     finally:
@@ -432,12 +433,13 @@ class Pool(object):
     """
     activator_class = Activator
 
-    def __init__(self, router, services, size=1):
+    def __init__(self, router, services, size=1, overwrite=False):
         self.router = router
         self._activator = self.activator_class()
         self._receiver = mitogen.core.Receiver(
             router=router,
             handle=mitogen.core.CALL_SERVICE,
+            overwrite=overwrite,
         )
 
         self._select = mitogen.select.Select(oneshot=False)
