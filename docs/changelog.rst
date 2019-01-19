@@ -205,6 +205,11 @@ Fixes
   ``meta: reset_connection``, resources could become undesirably shared in
   subsequent children.
 
+* `#426 <https://github.com/dw/mitogen/issues/426>`_: an oversight while
+  porting to Python 3 meant no automated 2->3 tests were running. A significant
+  number of 2->3 bugs were fixed, mostly in the form of Unicode/bytes
+  mismatches.
+
 * `#362 <https://github.com/dw/mitogen/issues/362>`_,
   `#435 <https://github.com/dw/mitogen/issues/435>`_: the previous fix for slow
   Python 2.x subprocess creation on Red Hat caused newly spawned children to
@@ -293,6 +298,22 @@ Core Library
 * `#444 <https://github.com/dw/mitogen/issues/444>`_: messages regarding
   unforwardable extension module are no longer logged as errors.
 
+* `#445 <https://github.com/dw/mitogen/issues/445>`_: service pools unregister
+  the :data:`mitogen.core.CALL_SERVICE` handle at shutdown, ensuring any
+  outstanding messages are either processed by the pool as it shuts down, or
+  have dead messages sent in reply to them, preventing peer contexts from
+  hanging due to a forgotten buffered message.
+
+* `#447 <https://github.com/dw/mitogen/issues/447>`_: duplicate attempts to
+  invoke :meth:`mitogen.core.Router.add_handler` cause an error to be raised,
+  ensuring accidental re-registration of service pools are reported correctly.
+
+* `#448 <https://github.com/dw/mitogen/issues/448>`_: the import hook
+  implementation now raises :class:`ModuleNotFoundError` instead of
+  :class:`ImportError` in Python 3.6 and above, to cope with an uncoming
+  version of the :class:`subprocess` module requiring this new subclass in the
+  middle of a minor Python release series.
+
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
   accidental reconfiguration of the :mod:`logging` package in a child from
@@ -302,6 +323,10 @@ Core Library
   logged when :meth:`mitogen.core.Broker.defer` is called after the broker has
   shut down, preventing new messages being enqueued that will never be sent,
   and subsequently producing a program hang.
+
+* `#459 <https://github.com/dw/mitogen/issues/459>`_: the beginnings of a
+  :meth:`mitogen.master.Router.get_stats` call has been added. The initial
+  statistics cover the module loader only.
 
 * `#462 <https://github.com/dw/mitogen/issues/462>`_: Mitogen could fail to
   open a PTY on broken Linux systems due to a bad interaction between the glibc

@@ -67,6 +67,11 @@ try:
 except ImportError:
     from io import BytesIO
 
+try:
+    ModuleNotFoundError
+except NameError:
+    ModuleNotFoundError = ImportError
+
 # TODO: usage of 'import' after setting __name__, but before fixing up
 # sys.modules generates a warning. This happens when profiling = True.
 warnings.filterwarnings('ignore',
@@ -786,7 +791,7 @@ class Receiver(object):
     raise_channelerror = True
 
     def __init__(self, router, handle=None, persist=True,
-                 respondent=None, policy=None):
+                 respondent=None, policy=None, overwrite=False):
         self.router = router
         #: The handle.
         self.handle = handle  # Avoid __repr__ crash in add_handler()
@@ -797,6 +802,7 @@ class Receiver(object):
             policy=policy,
             persist=persist,
             respondent=respondent,
+            overwrite=overwrite,
         )
 
     def __repr__(self):
@@ -992,7 +998,7 @@ class Importer(object):
         # built-in module. That means it exists on a special linked list deep
         # within the bowels of the interpreter. We must special case it.
         if fullname == '__main__':
-            raise ImportError()
+            raise ModuleNotFoundError()
 
         parent, _, modname = fullname.rpartition('.')
         if parent:
@@ -1057,7 +1063,7 @@ class Importer(object):
 
     def _refuse_imports(self, fullname):
         if is_blacklisted_import(self, fullname):
-            raise ImportError(self.blacklisted_msg % (fullname,))
+            raise ModuleNotFoundError(self.blacklisted_msg % (fullname,))
 
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']
@@ -1069,7 +1075,7 @@ class Importer(object):
             # breaks any app that is not expecting its __main__ to suddenly be
             # sucked over a network and injected into a remote process, like
             # py.test.
-            raise ImportError(self.pkg_resources_msg)
+            raise ModuleNotFoundError(self.pkg_resources_msg)
 
         if fullname == 'pbr':
             # It claims to use pkg_resources to read version information, which
@@ -1129,7 +1135,7 @@ class Importer(object):
 
         ret = self._cache[fullname]
         if ret[2] is None:
-            raise ImportError(self.absent_msg % (fullname,))
+            raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
         pkg_present = ret[1]
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
@@ -1162,14 +1168,14 @@ class Importer(object):
                 # reveals the module can't be loaded, and so load_module()
                 # throws ImportError, on Python 3.x it is still possible for
                 # the loader to be called to fetch metadata.
-                raise ImportError(self.absent_msg % (fullname,))
+                raise ModuleNotFoundError(self.absent_msg % (fullname,))
             return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
             compressed = self._cache[fullname][3]
             if compressed is None:
-                raise ImportError(self.absent_msg % (fullname,))
+                raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
             source = zlib.decompress(self._cache[fullname][3])
             if PY3:
@@ -2321,7 +2327,8 @@ class Router(object):
             self._handles_by_respondent[respondent].discard(handle)
 
     def add_handler(self, fn, handle=None, persist=True,
-                    policy=None, respondent=None):
+                    policy=None, respondent=None,
+                    overwrite=False):
         """
         Invoke `fn(msg)` on the :class:`Broker` thread for each Message sent to
         `handle` from this context. Unregister after one invocation if
@@ -2367,12 +2374,19 @@ class Router(object):
             nonzero, a :class:`mitogen.core.CallError` is delivered to the
             sender indicating refusal occurred.
 
+        :param bool overwrite:
+            If :data:`True`, allow existing handles to be silently overwritten.
+
         :return:
             `handle`, or if `handle` was :data:`None`, the newly allocated
             handle.
+        :raises Error:
+            Attemp to register handle that was already registered.
         """
         handle = handle or next(self._last_handle)
         _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
+        if handle in self._handle_map and not overwrite:
+            raise Error(self.duplicate_handle_msg)
 
         self._handle_map[handle] = persist, fn, policy, respondent
         if respondent:
@@ -2384,6 +2398,7 @@ class Router(object):
 
         return handle
 
+    duplicate_handle_msg = 'cannot register a handle that is already exists'
     refused_msg = 'refused by policy'
     invalid_handle_msg = 'invalid handle'
     too_large_msg = 'message too large (max %d bytes)'
