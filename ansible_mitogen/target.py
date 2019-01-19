@@ -669,7 +669,7 @@ def apply_mode_spec(spec, mode):
     Given a symbolic file mode change specification in the style of chmod(1)
     `spec`, apply changes in the specification to the numeric file mode `mode`.
     """
-    for clause in spec.split(','):
+    for clause in mitogen.core.to_text(spec).split(','):
         match = CHMOD_CLAUSE_PAT.match(clause)
         who, op, perms = match.groups()
         for ch in who or 'a':
