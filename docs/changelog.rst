@@ -324,6 +324,10 @@ Core Library
   shut down, preventing new messages being enqueued that will never be sent,
   and subsequently producing a program hang.
 
+* `#459 <https://github.com/dw/mitogen/issues/459>`_: the beginnings of a
+  :meth:`mitogen.master.Router.get_stats` call has been added. The initial
+  statistics cover the module loader only.
+
 * `#462 <https://github.com/dw/mitogen/issues/462>`_: Mitogen could fail to
   open a PTY on broken Linux systems due to a bad interaction between the glibc
   :func:`grantpt` function and an incorrectly mounted ``/dev/pts`` filesystem.

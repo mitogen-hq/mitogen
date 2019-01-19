@@ -43,6 +43,7 @@ import pkgutil
 import re
 import string
 import sys
+import time
 import threading
 import types
 import zlib
@@ -583,6 +584,18 @@ class ModuleResponder(object):
         self._cache = {}  # fullname -> pickled
         self.blacklist = []
         self.whitelist = ['']
+
+        #: Number of GET_MODULE messages received.
+        self.get_module_count = 0
+        #: Total time spent in uncached GET_MODULE.
+        self.get_module_secs = 0.0
+        #: Number of successful LOAD_MODULE messages sent.
+        self.good_load_module_count = 0
+        #: Total bytes in successful LOAD_MODULE payloads.
+        self.good_load_module_size = 0
+        #: Number of negative LOAD_MODULE messages sent.
+        self.bad_load_module_count = 0
+
         router.add_handler(
             fn=self._on_get_module,
             handle=mitogen.core.GET_MODULE,
@@ -671,19 +684,25 @@ class ModuleResponder(object):
     def _send_load_module(self, stream, fullname):
         if fullname not in stream.sent_modules:
             LOG.debug('_send_load_module(%r, %r)', stream, fullname)
-            self._router._async_route(
-                mitogen.core.Message.pickled(
-                    self._build_tuple(fullname),
-                    dst_id=stream.remote_id,
-                    handle=mitogen.core.LOAD_MODULE,
-                )
+            tup = self._build_tuple(fullname)
+            msg = mitogen.core.Message.pickled(
+                tup,
+                dst_id=stream.remote_id,
+                handle=mitogen.core.LOAD_MODULE,
             )
+            self._router._async_route(msg)
             stream.sent_modules.add(fullname)
+            if tup[2] is not None:
+                self.good_load_module_count += 1
+                self.good_load_module_size += len(msg.data)
+            else:
+                self.bad_load_module_count += 1
 
     def _send_module_load_failed(self, stream, fullname):
+        self.bad_load_module_count += 1
         stream.send(
             mitogen.core.Message.pickled(
-                (fullname, None, None, None, ()),
+                self._make_negative_response(fullname),
                 dst_id=stream.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
@@ -717,13 +736,18 @@ class ModuleResponder(object):
             return
 
         LOG.debug('%r._on_get_module(%r)', self, msg.data)
+        self.get_module_count += 1
         stream = self._router.stream_by_id(msg.src_id)
         fullname = msg.data.decode()
         if fullname in stream.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
 
-        self._send_module_and_related(stream, fullname)
+        t0 = time.time()
+        try:
+            self._send_module_and_related(stream, fullname)
+        finally:
+            self.get_module_secs += time.time() - t0
 
     def _send_forward_module(self, stream, context, fullname):
         if stream.remote_id != context.context_id:
@@ -840,6 +864,60 @@ class Router(mitogen.parent.Router):
             handle=mitogen.core.DETACHING,
             persist=True,
         )
+
+    def _on_broker_exit(self):
+        super(Router, self)._on_broker_exit()
+        dct = self.get_stats()
+        dct['self'] = self
+        dct['get_module_ms'] = 1000 * dct['get_module_secs']
+        dct['good_load_module_size_kb'] = dct['good_load_module_size'] / 1024.0
+        dct['good_load_module_size_avg'] = (
+            (
+                dct['good_load_module_size'] /
+                (float(dct['good_load_module_count']) or 1.0)
+            ) / 1024.0
+        )
+
+        LOG.debug(
+            '%(self)r: stats:\n'
+            '   GET_MODULE requests: %(get_module_count)d\n'
+            '   GET_MODULE runtime: %(get_module_ms)d ms\n'
+            '   LOAD_MODULE responses: %(good_load_module_count)d\n'
+            '   Negative LOAD_MODULE responses: '
+                    '%(bad_load_module_count)d\n'
+            '   LOAD_MODULE total bytes sent: '
+                    '%(good_load_module_size_kb).02f kb\n'
+            '   LOAD_MODULE avg bytes sent: '
+                    '%(good_load_module_size_avg).02f kb'
+            % dct
+        )
+
+    def get_stats(self):
+        """
+        Return performance data for the module responder.
+
+        :returns:
+
+            Dict containing keys:
+
+            * `get_module_count`: Integer count of
+              :data:`mitogen.core.GET_MODULE` messages received.
+            * `get_module_secs`: Floating point total seconds spent servicing
+              :data:`mitogen.core.GET_MODULE` requests.
+            * `good_load_module_count`: Integer count of successful
+              :data:`mitogen.core.LOAD_MODULE` messages sent.
+            * `good_load_module_size`: Integer total bytes sent in
+              :data:`mitogen.core.LOAD_MODULE` message payloads.
+            * `bad_load_module_count`: Integer count of negative
+              :data:`mitogen.core.LOAD_MODULE` messages sent.
+        """
+        return {
+            'get_module_count': self.responder.get_module_count,
+            'get_module_secs': self.responder.get_module_secs,
+            'good_load_module_count': self.responder.good_load_module_count,
+            'good_load_module_size': self.responder.good_load_module_size,
+            'bad_load_module_count': self.responder.bad_load_module_count,
+        }
 
     def enable_debug(self):
         """

@@ -74,6 +74,9 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # package machinery damage.
         context = self.router.local()
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
+        self.assertEquals(1, self.router.responder.get_module_count)
+        self.assertEquals(1, self.router.responder.good_load_module_count)
+        self.assertEquals(359, self.router.responder.good_load_module_size)
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
@@ -81,6 +84,10 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.local()
         self.assertEquals(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
+        self.assertEquals(2, self.router.responder.get_module_count)
+        self.assertEquals(3, self.router.responder.good_load_module_count)
+        self.assertEquals(0, self.router.responder.bad_load_module_count)
+        self.assertEquals(537, self.router.responder.good_load_module_size)
 
     def test_self_contained_program(self):
         # Ensure a program composed of a single script can be imported
@@ -109,6 +116,11 @@ class BrokenModulesTest(testlib.TestCase):
         responder = mitogen.master.ModuleResponder(router)
         responder._on_get_module(msg)
         self.assertEquals(1, len(router._async_route.mock_calls))
+
+        self.assertEquals(1, responder.get_module_count)
+        self.assertEquals(0, responder.good_load_module_count)
+        self.assertEquals(0, responder.good_load_module_size)
+        self.assertEquals(1, responder.bad_load_module_count)
 
         call = router._async_route.mock_calls[0]
         msg, = call[1]
@@ -139,10 +151,27 @@ class BrokenModulesTest(testlib.TestCase):
         responder._on_get_module(msg)
         self.assertEquals(1, len(router._async_route.mock_calls))
 
+        self.assertEquals(1, responder.get_module_count)
+        self.assertEquals(0, responder.good_load_module_count)
+        self.assertEquals(0, responder.good_load_module_size)
+        self.assertEquals(1, responder.bad_load_module_count)
+
         call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
         self.assertIsInstance(msg.unpickle(), tuple)
+
+
+class ForwardTest(testlib.RouterMixin, testlib.TestCase):
+    def test_stats(self):
+        # Forwarding stats broken because forwarding is broken. See #469.
+        c1 = self.router.local()
+        c2 = self.router.fork(via=c1)
+
+        self.assertEquals(256, c2.call(plain_old_module.pow, 2, 8))
+        self.assertEquals(3, self.router.responder.get_module_count)
+        self.assertEquals(5, self.router.responder.good_load_module_count)
+        self.assertEquals(28148, self.router.responder.good_load_module_size)
 
 
 class BlacklistTest(testlib.TestCase):
