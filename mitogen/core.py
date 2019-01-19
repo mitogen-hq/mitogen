@@ -742,7 +742,8 @@ class Sender(object):
         self.context.send(
             Message.dead(
                 reason=self.explicit_close_msg,
-                handle=self.dst_handle)
+                handle=self.dst_handle
+            )
         )
 
     def __repr__(self):
@@ -1884,8 +1885,17 @@ class Latch(object):
         though a subsequent call to :meth:`get` will block, since another
         waiting thread may be woken at any moment between :meth:`empty` and
         :meth:`get`.
+
+        :raises LatchError:
+            The latch has already been marked closed.
         """
-        return len(self._queue) == 0
+        self._lock.acquire()
+        try:
+            if self.closed:
+                raise LatchError()
+            return len(self._queue) == 0
+        finally:
+            self._lock.release()
 
     def _get_socketpair(self):
         """

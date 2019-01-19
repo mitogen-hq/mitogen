@@ -21,6 +21,13 @@ class EmptyTest(testlib.TestCase):
         latch.put(None)
         self.assertTrue(not latch.empty())
 
+    def test_closed_is_empty(self):
+        latch = self.klass()
+        latch.put(None)
+        latch.close()
+        self.assertRaises(mitogen.core.LatchError,
+            lambda: latch.empty())
+
 
 class GetTest(testlib.TestCase):
     klass = mitogen.core.Latch
