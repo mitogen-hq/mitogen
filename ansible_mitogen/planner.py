@@ -172,7 +172,7 @@ class BinaryPlanner(Planner):
         return module_common._is_binary(self._inv.module_source)
 
     def get_push_files(self):
-        return [self._inv.module_path]
+        return [mitogen.core.to_text(self._inv.module_path)]
 
     def get_kwargs(self, **kwargs):
         return super(BinaryPlanner, self).get_kwargs(
@@ -285,7 +285,7 @@ class NewStylePlanner(ScriptPlanner):
 
     def get_push_files(self):
         return super(NewStylePlanner, self).get_push_files() + [
-            path
+            mitogen.core.to_text(path)
             for fullname, path, is_pkg in self.get_module_map()['custom']
         ]
 
