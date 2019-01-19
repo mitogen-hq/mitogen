@@ -205,6 +205,11 @@ Fixes
   ``meta: reset_connection``, resources could become undesirably shared in
   subsequent children.
 
+* `#426 <https://github.com/dw/mitogen/issues/426>`_: an oversight while
+  porting to Python 3 meant no automated 2->3 tests were running. A significant
+  number of 2->3 bugs were fixed, mostly in the form of Unicode/bytes
+  mismatches.
+
 * `#362 <https://github.com/dw/mitogen/issues/362>`_,
   `#435 <https://github.com/dw/mitogen/issues/435>`_: the previous fix for slow
   Python 2.x subprocess creation on Red Hat caused newly spawned children to
