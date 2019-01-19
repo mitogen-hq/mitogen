@@ -290,6 +290,9 @@ Core Library
 * `#439 <https://github.com/dw/mitogen/issues/439>`_: descriptive errors are
   raised when attempting to invoke unsupported function types.
 
+* `#444 <https://github.com/dw/mitogen/issues/444>`_: messages regarding
+  unforwardable extension module are no longer logged as errors.
+
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
   accidental reconfiguration of the :mod:`logging` package in a child from
