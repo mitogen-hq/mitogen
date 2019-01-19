@@ -67,6 +67,11 @@ try:
 except ImportError:
     from io import BytesIO
 
+try:
+    ModuleNotFoundError
+except NameError:
+    ModuleNotFoundError = ImportError
+
 # TODO: usage of 'import' after setting __name__, but before fixing up
 # sys.modules generates a warning. This happens when profiling = True.
 warnings.filterwarnings('ignore',
@@ -992,7 +997,7 @@ class Importer(object):
         # built-in module. That means it exists on a special linked list deep
         # within the bowels of the interpreter. We must special case it.
         if fullname == '__main__':
-            raise ImportError()
+            raise ModuleNotFoundError()
 
         parent, _, modname = fullname.rpartition('.')
         if parent:
@@ -1057,7 +1062,7 @@ class Importer(object):
 
     def _refuse_imports(self, fullname):
         if is_blacklisted_import(self, fullname):
-            raise ImportError(self.blacklisted_msg % (fullname,))
+            raise ModuleNotFoundError(self.blacklisted_msg % (fullname,))
 
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']
@@ -1069,7 +1074,7 @@ class Importer(object):
             # breaks any app that is not expecting its __main__ to suddenly be
             # sucked over a network and injected into a remote process, like
             # py.test.
-            raise ImportError(self.pkg_resources_msg)
+            raise ModuleNotFoundError(self.pkg_resources_msg)
 
         if fullname == 'pbr':
             # It claims to use pkg_resources to read version information, which
@@ -1129,7 +1134,7 @@ class Importer(object):
 
         ret = self._cache[fullname]
         if ret[2] is None:
-            raise ImportError(self.absent_msg % (fullname,))
+            raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
         pkg_present = ret[1]
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
@@ -1162,14 +1167,14 @@ class Importer(object):
                 # reveals the module can't be loaded, and so load_module()
                 # throws ImportError, on Python 3.x it is still possible for
                 # the loader to be called to fetch metadata.
-                raise ImportError(self.absent_msg % (fullname,))
+                raise ModuleNotFoundError(self.absent_msg % (fullname,))
             return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
             compressed = self._cache[fullname][3]
             if compressed is None:
-                raise ImportError(self.absent_msg % (fullname,))
+                raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
             source = zlib.decompress(self._cache[fullname][3])
             if PY3:

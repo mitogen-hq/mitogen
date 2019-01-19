@@ -308,6 +308,12 @@ Core Library
   invoke :meth:`mitogen.core.Router.add_handler` cause an error to be raised,
   ensuring accidental re-registration of service pools are reported correctly.
 
+* `#448 <https://github.com/dw/mitogen/issues/448>`_: the import hook
+  implementation now raises :class:`ModuleNotFoundError` instead of
+  :class:`ImportError` in Python 3.6 and above, to cope with an uncoming
+  version of the :class:`subprocess` module requiring this new subclass in the
+  middle of a minor Python release series.
+
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
   accidental reconfiguration of the :mod:`logging` package in a child from
