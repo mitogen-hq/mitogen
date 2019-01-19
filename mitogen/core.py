@@ -742,7 +742,8 @@ class Sender(object):
         self.context.send(
             Message.dead(
                 reason=self.explicit_close_msg,
-                handle=self.dst_handle)
+                handle=self.dst_handle
+            )
         )
 
     def __repr__(self):
@@ -848,7 +849,7 @@ class Receiver(object):
         if self.handle:
             self.router.del_handler(self.handle)
             self.handle = None
-        self._latch.put(Message.dead(self.closed_msg))
+        self._latch.close()
 
     def empty(self):
         """
@@ -879,7 +880,10 @@ class Receiver(object):
             received, and `data` is its unpickled data part.
         """
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
-        msg = self._latch.get(timeout=timeout, block=block)
+        try:
+            msg = self._latch.get(timeout=timeout, block=block)
+        except LatchError:
+            raise ChannelError(self.closed_msg)
         if msg.is_dead and throw_dead:
             msg._throw_dead()
         return msg
@@ -1881,8 +1885,17 @@ class Latch(object):
         though a subsequent call to :meth:`get` will block, since another
         waiting thread may be woken at any moment between :meth:`empty` and
         :meth:`get`.
+
+        :raises LatchError:
+            The latch has already been marked closed.
         """
-        return len(self._queue) == 0
+        self._lock.acquire()
+        try:
+            if self.closed:
+                raise LatchError()
+            return len(self._queue) == 0
+        finally:
+            self._lock.release()
 
     def _get_socketpair(self):
         """

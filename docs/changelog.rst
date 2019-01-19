@@ -304,6 +304,12 @@ Core Library
   have dead messages sent in reply to them, preventing peer contexts from
   hanging due to a forgotten buffered message.
 
+* `#446 <https://github.com/dw/mitogen/issues/446>`_: given thread A calling
+  :meth:`mitogen.core.Receiver.close`, and thread B, C, and D sleeping in
+  :meth:`mitogen.core.Receiver.get`, previously only one sleeping thread would
+  be woken with :class:`mitogen.core.ChannelError` when the receiver was
+  closed. Now all threads are woken per the docstring.
+
 * `#447 <https://github.com/dw/mitogen/issues/447>`_: duplicate attempts to
   invoke :meth:`mitogen.core.Router.add_handler` cause an error to be raised,
   ensuring accidental re-registration of service pools are reported correctly.
