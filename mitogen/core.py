@@ -2321,7 +2321,8 @@ class Router(object):
             self._handles_by_respondent[respondent].discard(handle)
 
     def add_handler(self, fn, handle=None, persist=True,
-                    policy=None, respondent=None):
+                    policy=None, respondent=None,
+                    overwrite=False):
         """
         Invoke `fn(msg)` on the :class:`Broker` thread for each Message sent to
         `handle` from this context. Unregister after one invocation if
@@ -2367,12 +2368,19 @@ class Router(object):
             nonzero, a :class:`mitogen.core.CallError` is delivered to the
             sender indicating refusal occurred.
 
+        :param bool overwrite:
+            If :data:`True`, allow existing handles to be silently overwritten.
+
         :return:
             `handle`, or if `handle` was :data:`None`, the newly allocated
             handle.
+        :raises Error:
+            Attemp to register handle that was already registered.
         """
         handle = handle or next(self._last_handle)
         _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
+        if handle in self._handle_map and not overwrite:
+            raise Error(self.duplicate_handle_msg)
 
         self._handle_map[handle] = persist, fn, policy, respondent
         if respondent:
@@ -2384,6 +2392,7 @@ class Router(object):
 
         return handle
 
+    duplicate_handle_msg = 'cannot register a handle that is already exists'
     refused_msg = 'refused by policy'
     invalid_handle_msg = 'invalid handle'
     too_large_msg = 'message too large (max %d bytes)'

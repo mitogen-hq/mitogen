@@ -304,6 +304,10 @@ Core Library
   have dead messages sent in reply to them, preventing peer contexts from
   hanging due to a forgotten buffered message.
 
+* `#447 <https://github.com/dw/mitogen/issues/447>`_: duplicate attempts to
+  invoke :meth:`mitogen.core.Router.add_handler` cause an error to be raised,
+  ensuring accidental re-registration of service pools are reported correctly.
+
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
   accidental reconfiguration of the :mod:`logging` package in a child from

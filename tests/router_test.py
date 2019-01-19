@@ -180,12 +180,36 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
 class AddHandlerTest(testlib.TestCase):
     klass = mitogen.master.Router
 
-    def test_invoked_at_shutdown(self):
+    def test_dead_message_sent_at_shutdown(self):
         router = self.klass()
         queue = Queue.Queue()
         handle = router.add_handler(queue.put)
         router.broker.shutdown()
         self.assertTrue(queue.get(timeout=5).is_dead)
+        router.broker.join()
+
+    def test_cannot_double_register(self):
+        router = self.klass()
+        try:
+            router.add_handler((lambda: None), handle=1234)
+            e = self.assertRaises(mitogen.core.Error,
+                lambda: router.add_handler((lambda: None), handle=1234))
+            self.assertEquals(router.duplicate_handle_msg, e.args[0])
+            router.del_handler(1234)
+        finally:
+            router.broker.shutdown()
+            router.broker.join()
+
+    def test_can_reregister(self):
+        router = self.klass()
+        try:
+            router.add_handler((lambda: None), handle=1234)
+            router.del_handler(1234)
+            router.add_handler((lambda: None), handle=1234)
+            router.del_handler(1234)
+        finally:
+            router.broker.shutdown()
+            router.broker.join()
 
 
 class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):

@@ -1646,12 +1646,14 @@ class RouteMonitor(object):
             handle=mitogen.core.ADD_ROUTE,
             persist=True,
             policy=is_immediate_child,
+            overwrite=True,
         )
         self.router.add_handler(
             fn=self._on_del_route,
             handle=mitogen.core.DEL_ROUTE,
             persist=True,
             policy=is_immediate_child,
+            overwrite=True,
         )
         #: Mapping of Stream instance to integer context IDs reachable via the
         #: stream; used to cleanup routes during disconnection.
