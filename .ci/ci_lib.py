@@ -15,6 +15,13 @@ try:
 except ImportError:
     import urllib.parse as urlparse
 
+os.chdir(
+    os.path.join(
+        os.path.dirname(__file__),
+        '..'
+    )
+)
+
 
 #
 # check_output() monkeypatch cutpasted from testlib.py
