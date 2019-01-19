@@ -454,6 +454,8 @@ class TemporaryEnvironment(object):
         self.original = dict(os.environ)
         self.env = env or {}
         for key, value in iteritems(self.env):
+            key = mitogen.core.to_text(key)
+            value = mitogen.core.to_text(value)
             if value is None:
                 os.environ.pop(key, None)
             else:

@@ -1626,7 +1626,7 @@ class RouteMonitor(object):
         """
         data = str(target_id)
         if name:
-            data = '%s:%s' % (target_id, mitogen.core.b(name))
+            data = '%s:%s' % (target_id, name)
         stream.send(
             mitogen.core.Message(
                 handle=handle,

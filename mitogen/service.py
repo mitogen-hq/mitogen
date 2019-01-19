@@ -594,6 +594,7 @@ class PushFileService(Service):
         self._sent_by_stream = {}
 
     def get(self, path):
+        assert isinstance(path, mitogen.core.UnicodeType)
         self._lock.acquire()
         try:
             if path in self._cache:
@@ -641,7 +642,7 @@ class PushFileService(Service):
         with a set of small files and Python modules.
         """
         for path in paths:
-            self.propagate_to(context, path)
+            self.propagate_to(context, mitogen.core.to_text(path))
         self.router.responder.forward_modules(context, modules)
 
     @expose(policy=AllowParents())
@@ -670,7 +671,7 @@ class PushFileService(Service):
     @expose(policy=AllowParents())
     @no_reply()
     @arg_spec({
-        'path': mitogen.core.FsPathTypes,
+        'path': mitogen.core.UnicodeType,
         'data': mitogen.core.Blob,
         'context': mitogen.core.Context,
     })

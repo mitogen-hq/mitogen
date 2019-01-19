@@ -2,6 +2,7 @@ sudo: required
 
 notifications:
   email: false
+  irc: "chat.freenode.net#mitogen-builds"
 
 language: python
 

@@ -34,6 +34,7 @@ import os
 import pprint
 import random
 import stat
+import sys
 import time
 
 import jinja2.runtime
@@ -842,6 +843,19 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._mitogen_reset(mode='put')
         self._shutdown_broker()
 
+    def _reset_find_task_vars(self):
+        """
+        Monsterous hack: since "meta: reset_connection" does not run from an
+        action, we cannot capture task variables via :meth:`on_action_run`.
+        Instead walk the parent frames searching for the `all_vars` local from
+        StrategyBase._execute_meta(). If this fails, just leave task_vars
+        unset, likely causing the wrong configuration to be created.
+        """
+        frame = sys._getframe()
+        while frame and not self._task_vars:
+            self._task_vars = frame.f_locals.get('all_vars')
+            frame = frame.f_back
+
     reset_compat_msg = (
         'Mitogen only supports "reset_connection" on Ansible 2.5.6 or later'
     )
@@ -853,6 +867,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         the 'disconnected' state, and informs ContextService the connection is
         bad somehow, and should be shut down and discarded.
         """
+        if self._task_vars is None:
+            self._reset_find_task_vars()
+
         if self._play_context.remote_addr is None:
             # <2.5.6 incorrectly populate PlayContext for reset_connection
             # https://github.com/ansible/ansible/issues/27520

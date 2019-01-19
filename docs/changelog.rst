@@ -180,9 +180,10 @@ Fixes
   print a useful hint on failure, as no useful error is normally logged to the
   console by these tools.
 
-* `#391 <https://github.com/dw/mitogen/issues/391>`_: file transfer from 2.x
-  controllers to 3.x targets was broken due to a regression caused by
-  refactoring, and compounded by `#426
+* `#374 <https://github.com/dw/mitogen/issues/374>`_,
+  `#391 <https://github.com/dw/mitogen/issues/391>`_: file transfer and module
+  execution from 2.x controllers to 3.x targets was broken due to a regression
+  caused by refactoring, and compounded by `#426
   <https://github.com/dw/mitogen/issues/426>`_.
 
 * `#400 <https://github.com/dw/mitogen/issues/400>`_: work around a threading
@@ -289,6 +290,9 @@ Core Library
 * `#439 <https://github.com/dw/mitogen/issues/439>`_: descriptive errors are
   raised when attempting to invoke unsupported function types.
 
+* `#444 <https://github.com/dw/mitogen/issues/444>`_: messages regarding
+  unforwardable extension module are no longer logged as errors.
+
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
   accidental reconfiguration of the :mod:`logging` package in a child from
@@ -328,6 +332,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
+`Eric Chang <https://github.com/changchichung>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,

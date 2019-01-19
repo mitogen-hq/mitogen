@@ -492,14 +492,16 @@ class ModuleDepService(mitogen.service.Service):
 
     def _get_builtin_names(self, builtin_path, resolved):
         return [
-            fullname
+            mitogen.core.to_text(fullname)
             for fullname, path, is_pkg in resolved
             if os.path.abspath(path).startswith(builtin_path)
         ]
 
     def _get_custom_tups(self, builtin_path, resolved):
         return [
-            (fullname, path, is_pkg)
+            (mitogen.core.to_text(fullname),
+             mitogen.core.to_text(path),
+             is_pkg)
             for fullname, path, is_pkg in resolved
             if not os.path.abspath(path).startswith(builtin_path)
         ]

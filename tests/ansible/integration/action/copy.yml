@@ -8,13 +8,13 @@
         dest: /tmp/copy-tiny-file
         content:
           this is a tiny file.
-      connection: local
+      delegate_to: localhost
 
     - copy:
         dest: /tmp/copy-large-file
         # Must be larger than Connection.SMALL_SIZE_LIMIT.
         content: "{% for x in range(200000) %}x{% endfor %}"
-      connection: local
+      delegate_to: localhost
 
     # end of making files
 

@@ -18,6 +18,12 @@ os.environ.setdefault(
     os.path.dirname(os.path.dirname(sys.executable))
 )
 
+# Set LANG and LC_ALL to C in order to avoid locale errors spammed by vanilla
+# during exec_command().
+os.environ.pop('LANG', None)
+os.environ.pop('LC_ALL', None)
+
+
 # Used by delegate_to.yml to ensure "sudo -E" preserves environment.
 os.environ['I_WAS_PRESERVED'] = '1'
 
