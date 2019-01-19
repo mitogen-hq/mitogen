@@ -641,7 +641,7 @@ class PushFileService(Service):
         with a set of small files and Python modules.
         """
         for path in paths:
-            self.propagate_to(context, path)
+            self.propagate_to(context, mitogen.core.to_text(path))
         self.router.responder.forward_modules(context, modules)
 
     @expose(policy=AllowParents())
