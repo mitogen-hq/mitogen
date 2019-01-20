@@ -28,7 +28,6 @@
 
 import logging
 import optparse
-import time
 
 import mitogen.core
 import mitogen.parent
