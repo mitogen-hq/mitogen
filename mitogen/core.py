@@ -920,6 +920,10 @@ class Channel(Sender, Receiver):
         Sender.__init__(self, context, dst_handle)
         Receiver.__init__(self, router, handle)
 
+    def close(self):
+        Receiver.close(self)
+        Sender.close(self)
+
     def __repr__(self):
         return 'Channel(%s, %s)' % (
             Sender.__repr__(self),
