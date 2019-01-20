@@ -714,7 +714,7 @@ class Message(object):
 class Sender(object):
     """
     Senders are used to send pickled messages to a handle in another context,
-    it is the inverse of :class:`mitogen.core.Sender`.
+    it is the inverse of :class:`mitogen.core.Receiver`.
 
     Senders may be serialized, making them convenient to wire up data flows.
     See :meth:`mitogen.core.Receiver.to_sender` for more information.
@@ -785,10 +785,12 @@ class Receiver(object):
     :param mitogen.core.Context respondent:
         Context this receiver is receiving from. If not :data:`None`, arranges
         for the receiver to receive a dead message if messages can no longer be
-        routed to the context, due to disconnection or exit.
+        routed to the context due to disconnection, and ignores messages that
+        did not originate from the respondent context.
     """
     #: If not :data:`None`, a reference to a function invoked as
-    #: `notify(receiver)` when a new message is delivered to this receiver.
+    #: `notify(receiver)` when a new message is delivered to this receiver. The
+    #: function is invoked on the broker thread, therefore it must not block.
     #: Used by :class:`mitogen.select.Select` to implement waiting on multiple
     #: receivers.
     notify = None
@@ -830,17 +832,20 @@ class Receiver(object):
                     sender.send(line)
                 sender.close()
 
-            remote = router.ssh(hostname='mainframe')
-            recv = mitogen.core.Receiver(router)
-            remote.call(deliver_monthly_report, recv.to_sender())
-            for msg in recv:
-                print(msg)
+            @mitogen.main()
+            def main(router):
+                remote = router.ssh(hostname='mainframe')
+                recv = mitogen.core.Receiver(router)
+                remote.call(deliver_monthly_report, recv.to_sender())
+                for msg in recv:
+                    print(msg)
         """
         return Sender(self.router.myself(), self.handle)
 
     def _on_receive(self, msg):
         """
-        Callback from the Stream; appends data to the internal queue.
+        Callback registered for the handle with :class:`Router`; appends data
+        to the internal queue.
         """
         _vv and IOLOG.debug('%r._on_receive(%r)', self, msg)
         self._latch.put(msg)
@@ -878,15 +883,15 @@ class Receiver(object):
             If not :data:`None`, specifies a timeout in seconds.
 
         :raises mitogen.core.ChannelError:
-            The remote end indicated the channel should be closed, or
-            communication with its parent context was lost.
+            The remote end indicated the channel should be closed,
+            communication with it was lost, or :meth:`close` was called in the
+            local process.
 
         :raises mitogen.core.TimeoutError:
             Timeout was reached.
 
         :returns:
-            `(msg, data)` tuple, where `msg` is the :class:`Message` that was
-            received, and `data` is its unpickled data part.
+            :class:`Message` that was received.
         """
         _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
         try:
@@ -914,6 +919,13 @@ class Channel(Sender, Receiver):
     """
     A channel inherits from :class:`mitogen.core.Sender` and
     `mitogen.core.Receiver` to provide bidirectional functionality.
+
+    This class is incomplete and obsolete, it will be removed in Mitogen 0.3.
+    Channels were an early attempt at syntax sugar. It is always easier to pass
+    around unidirectional pairs of senders/receivers, even though the syntax is
+    baroque:
+
+    .. literalinclude:: ../examples/ping_pong.py
 
     Since all handles aren't known until after both ends are constructed, for
     both ends to communicate through a channel, it is necessary for one end to
