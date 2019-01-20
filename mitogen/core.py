@@ -2738,7 +2738,8 @@ class Broker(object):
         _v and LOG.debug('%r.shutdown()', self)
         def _shutdown():
             self._alive = False
-        self.defer(_shutdown)
+        if self._alive and not self._exitted:
+            self.defer(_shutdown)
 
     def join(self):
         """
