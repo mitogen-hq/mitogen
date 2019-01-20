@@ -70,7 +70,7 @@ else:
 
 try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
-except:
+except ValueError:
     SC_OPEN_MAX = 1024
 
 OPENPTY_MSG = (
