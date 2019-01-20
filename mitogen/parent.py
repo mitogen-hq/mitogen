@@ -2079,15 +2079,6 @@ class ModuleForwarder(object):
         callback = lambda: self._on_cache_callback(msg, fullname)
         self.importer._request_module(fullname, callback)
 
-    def _send_one_module(self, msg, tup):
-        self.router._async_route(
-            mitogen.core.Message.pickled(
-                tup,
-                dst_id=msg.src_id,
-                handle=mitogen.core.LOAD_MODULE,
-            )
-        )
-
     def _on_cache_callback(self, msg, fullname):
         LOG.debug('%r._on_get_module(): sending %r', self, fullname)
         stream = self.router.stream_by_id(msg.src_id)
