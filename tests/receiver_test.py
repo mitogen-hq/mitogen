@@ -146,5 +146,14 @@ class OnReceiveTest(testlib.RouterMixin, testlib.TestCase):
     # TODO: what happens to a Select subscribed to the receiver in this case?
 
 
+class ToSenderTest(testlib.RouterMixin, testlib.TestCase):
+    klass = mitogen.core.Receiver
+
+    def test_returned_context(self):
+        myself = self.router.myself()
+        recv = self.klass(self.router)
+        self.assertEquals(myself, recv.to_sender().context)
+
+
 if __name__ == '__main__':
     unittest2.main()

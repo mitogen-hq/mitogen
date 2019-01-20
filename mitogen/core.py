@@ -830,8 +830,7 @@ class Receiver(object):
             for msg in recv:
                 print(msg)
         """
-        context = Context(self.router, mitogen.context_id)
-        return Sender(context, self.handle)
+        return Sender(self.router.myself(), self.handle)
 
     def _on_receive(self, msg):
         """
