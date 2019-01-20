@@ -70,7 +70,7 @@ else:
 
 try:
     SC_OPEN_MAX = os.sysconf('SC_OPEN_MAX')
-except:
+except ValueError:
     SC_OPEN_MAX = 1024
 
 OPENPTY_MSG = (
@@ -1554,6 +1554,9 @@ class Context(mitogen.core.Context):
         super(Context, self).__init__(*args, **kwargs)
         self.default_call_chain = self.call_chain_class(self)
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __eq__(self, other):
         return (isinstance(other, mitogen.core.Context) and
                 (other.context_id == self.context_id) and
@@ -2078,15 +2081,6 @@ class ModuleForwarder(object):
         fullname = msg.data.decode('utf-8')
         callback = lambda: self._on_cache_callback(msg, fullname)
         self.importer._request_module(fullname, callback)
-
-    def _send_one_module(self, msg, tup):
-        self.router._async_route(
-            mitogen.core.Message.pickled(
-                tup,
-                dst_id=msg.src_id,
-                handle=mitogen.core.LOAD_MODULE,
-            )
-        )
 
     def _on_cache_callback(self, msg, fullname):
         LOG.debug('%r._on_get_module(): sending %r', self, fullname)

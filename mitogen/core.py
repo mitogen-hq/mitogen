@@ -261,7 +261,6 @@ class CallError(Error):
         else:
             e = fmt
             fmt = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
-            args = ()
             tb = sys.exc_info()[2]
             if tb:
                 fmt += '\n'
@@ -919,6 +918,10 @@ class Channel(Sender, Receiver):
     def __init__(self, router, context, dst_handle, handle=None):
         Sender.__init__(self, context, dst_handle)
         Receiver.__init__(self, router, handle)
+
+    def close(self):
+        Receiver.close(self)
+        Sender.close(self)
 
     def __repr__(self):
         return 'Channel(%s, %s)' % (

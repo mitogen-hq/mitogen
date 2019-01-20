@@ -3,8 +3,6 @@
 # hopefully lose those hard-coded magic numbers somehow), but meanwhile this is
 # a taster of how it looks today.
 
-import time
-
 import mitogen
 import mitogen.service
 import mitogen.unix

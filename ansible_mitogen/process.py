@@ -154,13 +154,16 @@ class MuxProcess(object):
     _instance = None
 
     @classmethod
-    def start(cls):
+    def start(cls, _init_logging=True):
         """
         Arrange for the subprocess to be started, if it is not already running.
 
         The parent process picks a UNIX socket path the child will use prior to
         fork, creates a socketpair used essentially as a semaphore, then blocks
         waiting for the child to indicate the UNIX socket is ready for use.
+
+        :param bool _init_logging:
+            For testing, if :data:`False`, don't initialize logging.
         """
         if cls.worker_sock is not None:
             return
@@ -180,7 +183,8 @@ class MuxProcess(object):
 
         cls.original_env = dict(os.environ)
         cls.child_pid = os.fork()
-        ansible_mitogen.logging.setup()
+        if _init_logging:
+            ansible_mitogen.logging.setup()
         if cls.child_pid:
             cls.child_sock.close()
             cls.child_sock = None

@@ -205,15 +205,13 @@ class ScriptPlanner(BinaryPlanner):
             involved here, the vanilla implementation uses it and that use is
             exploited in common playbooks.
         """
+        key = u'ansible_%s_interpreter' % os.path.basename(path).strip()
         try:
-            key = u'ansible_%s_interpreter' % os.path.basename(path).strip()
             template = self._inv.task_vars[key]
         except KeyError:
             return path
 
-        return mitogen.utils.cast(
-            self._inv.templar.template(self._inv.task_vars[key])
-        )
+        return mitogen.utils.cast(self._inv.templar.template(template))
 
     def _get_interpreter(self):
         path, arg = ansible_mitogen.parsing.parse_hashbang(

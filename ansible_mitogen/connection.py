@@ -29,6 +29,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import errno
 import logging
 import os
 import pprint
@@ -1007,6 +1008,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: slightly more overhead, so just randomly subtract 4KiB.
     SMALL_FILE_LIMIT = mitogen.core.CHUNK_SIZE - 4096
 
+    def _throw_io_error(self, e, path):
+        if e.args[0] == errno.ENOENT:
+            s = 'file or module does not exist: ' + path
+            raise ansible.errors.AnsibleFileNotFound(s)
+
     def put_file(self, in_path, out_path):
         """
         Implement put_file() by streamily transferring the file via
@@ -1017,7 +1023,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Remote filesystem path to write.
         """
-        st = os.stat(in_path)
+        try:
+            st = os.stat(in_path)
+        except OSError as e:
+            self._throw_io_error(e, in_path)
+            raise
+
         if not stat.S_ISREG(st.st_mode):
             raise IOError('%r is not a regular file.' % (in_path,))
 
@@ -1025,17 +1036,22 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         # rather than introducing an extra RTT for the child to request it from
         # FileService.
         if st.st_size <= self.SMALL_FILE_LIMIT:
-            fp = open(in_path, 'rb')
             try:
-                s = fp.read(self.SMALL_FILE_LIMIT + 1)
-            finally:
-                fp.close()
+                fp = open(in_path, 'rb')
+                try:
+                    s = fp.read(self.SMALL_FILE_LIMIT + 1)
+                finally:
+                    fp.close()
+            except OSError:
+                self._throw_io_error(e, in_path)
+                raise
 
             # Ensure did not grow during read.
             if len(s) == st.st_size:
                 return self.put_data(out_path, s, mode=st.st_mode,
                                      utimes=(st.st_atime, st.st_mtime))
 
+        self._connect()
         self.parent.call_service(
             service_name='mitogen.service.FileService',
             method_name='register',

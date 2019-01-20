@@ -75,7 +75,6 @@ def wrap_action_loader__get(name, *args, **kwargs):
     """
     klass = action_loader__get(name, class_only=True)
     if klass:
-        wrapped_name = 'MitogenActionModule_' + name
         bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
         if kwargs.get('class_only'):
