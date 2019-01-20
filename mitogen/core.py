@@ -58,6 +58,11 @@ import imp
 select = __import__('select')
 
 try:
+    import thread
+except ImportError:
+    import threading as thread
+
+try:
     import cPickle as pickle
 except ImportError:
     import pickle
@@ -1917,7 +1922,7 @@ class Latch(object):
         This disambiguates legitimate wake-ups, accidental writes to the FD,
         and buggy internal FD sharing.
         """
-        ident = threading.currentThread().ident
+        ident = thread.get_ident()
         return b(u'%010d-%016x-%016x' % (os.getpid(), int(id(self)), ident))
 
     COOKIE_SIZE = len(_make_cookie(None))
