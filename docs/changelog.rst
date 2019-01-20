@@ -153,6 +153,11 @@ Enhancements
   ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
   introduced in Ansible 2.7.
 
+* `#415 <https://github.com/dw/mitogen/issues/415>`_: the interface employed for
+  in-process queues was changed from Kqueue/epoll() to poll(), which requires
+  no setup or teardown, yielding a 30% latency reduction for inter-thread
+  communication. This may manifest as a runtime improvement in many-host runs.
+
 
 Fixes
 ^^^^^
