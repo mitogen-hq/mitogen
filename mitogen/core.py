@@ -894,8 +894,9 @@ class Receiver(object):
         until :class:`ChannelError` is raised.
         """
         while True:
-            msg = self.get(throw_dead=False)
-            if msg.is_dead:
+            try:
+                msg = self.get()
+            except ChannelError:
                 return
             yield msg
 
