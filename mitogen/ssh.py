@@ -32,7 +32,6 @@ Functionality to allow establishing new slave contexts over an SSH connection.
 
 import logging
 import re
-import time
 
 try:
     from shlex import quote as shlex_quote
