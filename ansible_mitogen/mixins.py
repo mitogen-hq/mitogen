@@ -30,7 +30,6 @@ from __future__ import absolute_import
 import logging
 import os
 import pwd
-import shutil
 import traceback
 
 try:
