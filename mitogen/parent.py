@@ -1554,6 +1554,9 @@ class Context(mitogen.core.Context):
         super(Context, self).__init__(*args, **kwargs)
         self.default_call_chain = self.call_chain_class(self)
 
+    def __ne__(self, other):
+        return not (self == other)
+
     def __eq__(self, other):
         return (isinstance(other, mitogen.core.Context) and
                 (other.context_id == self.context_id) and
