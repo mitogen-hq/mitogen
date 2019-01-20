@@ -261,7 +261,6 @@ class CallError(Error):
         else:
             e = fmt
             fmt = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
-            args = ()
             tb = sys.exc_info()[2]
             if tb:
                 fmt += '\n'
