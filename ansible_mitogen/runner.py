@@ -40,7 +40,6 @@ from __future__ import unicode_literals
 
 import atexit
 import ctypes
-import errno
 import imp
 import json
 import logging
