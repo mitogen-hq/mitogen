@@ -20,7 +20,6 @@ import mitogen.master
 import mitogen.utils
 
 import __main__
-import posix
 import os
 
 
