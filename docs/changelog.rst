@@ -246,6 +246,10 @@ Core Library
   causing Mitogen to install itself at the end of the importer chain rather
   than the front.
 
+* `#349 <https://github.com/dw/mitogen/issues/349>`_: an incorrect format
+  string could cause large stack traces when attempting to import built-in
+  modules on Python 3.
+
 * `#387 <https://github.com/dw/mitogen/issues/387>`_,
   `#413 <https://github.com/dw/mitogen/issues/413>`_: dead messages include an
   optional reason in their body. This is used to cause
@@ -390,6 +394,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
+`Peter V. Saveliev <https://github.com/svinota/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
 `@whky <https://github.com/whky/>`_,
 `@syntonym <https://github.com/syntonym/>`_,
