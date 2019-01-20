@@ -508,6 +508,7 @@ def write_all(fd, s, deadline=None):
 class IteratingRead(object):
     def __init__(self, fds, deadline=None):
         self.deadline = deadline
+        self.timeout = None
         self.poller = PREFERRED_POLLER()
         for fd in fds:
             self.poller.start_receive(fd)
@@ -524,11 +525,11 @@ class IteratingRead(object):
     def next(self):
         while self.poller.readers:
             if self.deadline is not None:
-                timeout = max(0, self.deadline - time.time())
-                if timeout == 0:
+                self.timeout = max(0, self.deadline - time.time())
+                if self.timeout == 0:
                     break
 
-            for fd in self.poller.poll(timeout):
+            for fd in self.poller.poll(self.timeout):
                 s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
                 if disconnected or not s:
                     IOLOG.debug('iter_read(%r) -> disconnected', fd)
@@ -538,7 +539,7 @@ class IteratingRead(object):
                     self.bits.append(s)
                     return s
 
-        if not poller.readers:
+        if not self.poller.readers:
             raise EofError(u'EOF on stream; last 300 bytes received: %r' %
                            (b('').join(self.bits)[-300:].decode('latin1'),))
 
