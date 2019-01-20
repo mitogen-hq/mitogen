@@ -99,10 +99,6 @@ def get_router_info():
     }
 
 
-def get_router_info(router):
-    pass
-
-
 def get_stream_info(router_id):
     router = get_routers().get(router_id)
     return {
