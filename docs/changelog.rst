@@ -367,6 +367,10 @@ Core Library
   raised by the import hook were updated to include probable reasons for
   a failure.
 
+* `57b652ed <https://github.com/dw/mitogen/commit/57b652ed>`_: a stray import
+  meant an extra roundtrip and ~20KiB of data was wasted for any context that
+  imported :mod:`mitogen.parent`.
+
 
 Thanks!
 ~~~~~~~
