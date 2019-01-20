@@ -145,24 +145,23 @@ LOAD_CONST = dis.opname.index('LOAD_CONST')
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 
 
+def _getarg(nextb, c):
+    if c > dis.HAVE_ARGUMENT:
+        return nextb() | (nextb() << 8)
+
+
 if sys.version_info < (3, 0):
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.
         ordit = imap(ord, co.co_code)
         nextb = ordit.next
-        return ((c, (None
-                     if c < dis.HAVE_ARGUMENT else
-                     (nextb() | (nextb() << 8))))
-                    for c in ordit)
+        return ((c, _getarg(nextb, c)) for c in ordit)
 elif sys.version_info < (3, 6):
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.
         ordit = iter(co.co_code)
         nextb = ordit.__next__
-        return ((c, (None
-                     if c < dis.HAVE_ARGUMENT else
-                     (nextb() | (nextb() << 8))))
-                    for c in ordit)
+        return ((c, _getarg(nextb, c)) for c in ordit)
 else:
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.

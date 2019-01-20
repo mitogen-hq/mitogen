@@ -100,7 +100,8 @@ def filter_debug(stream, it):
                 if b('\n') not in buf:
                     break
                 line, _, buf = buf.partition(b('\n'))
-                LOG.debug('%r: %s', stream, line.rstrip())
+                LOG.debug('%r: %s', stream,
+                          mitogen.core.to_text(line.rstrip()))
                 state = 'start_of_line'
             elif state == 'in_plain':
                 line, nl, buf = buf.partition(b('\n'))

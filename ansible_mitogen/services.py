@@ -79,14 +79,17 @@ else:
 
 
 def _get_candidate_temp_dirs():
-    options = ansible.constants.config.get_plugin_options('shell', 'sh')
+    try:
+        # >=2.5
+        options = ansible.constants.config.get_plugin_options('shell', 'sh')
+        remote_tmp = options.get('remote_tmp') or ansible.constants.DEFAULT_REMOTE_TMP
+        system_tmpdirs = options.get('system_tmpdirs', ('/var/tmp', '/tmp'))
+    except AttributeError:
+        # 2.3
+        remote_tmp = ansible.constants.DEFAULT_REMOTE_TMP
+        system_tmpdirs = ('/var/tmp', '/tmp')
 
-    # Pre 2.5 this came from ansible.constants.
-    remote_tmp = (options.get('remote_tmp') or
-                  ansible.constants.DEFAULT_REMOTE_TMP)
-    dirs = list(options.get('system_tmpdirs', ('/var/tmp', '/tmp')))
-    dirs.insert(0, remote_tmp)
-    return mitogen.utils.cast(dirs)
+    return mitogen.utils.cast([remote_tmp] + list(system_tmpdirs))
 
 
 def key_from_dict(**kwargs):

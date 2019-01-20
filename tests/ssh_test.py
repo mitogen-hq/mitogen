@@ -44,6 +44,21 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 class SshTest(testlib.DockerMixin, testlib.TestCase):
     stream_class = mitogen.ssh.Stream
 
+    def test_debug_decoding(self):
+        # ensure filter_debug_logs() decodes the logged string.
+        capture = testlib.LogCapturer()
+        capture.start()
+        try:
+            context = self.docker_ssh(
+                username='mitogen__has_sudo',
+                password='has_sudo_password',
+                ssh_debug_level=3,
+            )
+        finally:
+            s = capture.stop()
+
+        self.assertTrue("'): debug1: Reading configuration data" in s)
+
     def test_stream_name(self):
         context = self.docker_ssh(
             username='mitogen__has_sudo',

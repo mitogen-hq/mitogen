@@ -223,7 +223,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_fixup_perms2(%r, remote_user=%r, execute=%r)',
                   remote_paths, remote_user, execute)
-        if execute and self._load_name not in self.FIXUP_PERMS_RED_HERRING:
+        if execute and self._task.action not in self.FIXUP_PERMS_RED_HERRING:
             return self._remote_chmod(remote_paths, mode='u+x')
         return self.COMMAND_RESULT.copy()
 
