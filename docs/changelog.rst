@@ -155,9 +155,13 @@ Enhancements
   introduced in Ansible 2.7.
 
 * `#415 <https://github.com/dw/mitogen/issues/415>`_: the interface employed for
-  in-process queues was changed from Kqueue/epoll() to poll(), which requires
+  in-process queues was changed from `kqueue
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ /
+  `epoll <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to
+  `poll() <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires
   no setup or teardown, yielding a 30% latency reduction for inter-thread
-  communication. This may manifest as a runtime improvement in many-host runs.
+  communication and a 50% reduction in context switches. This will manifest as
+  a runtime improvement in many-host runs.
 
 
 Fixes
