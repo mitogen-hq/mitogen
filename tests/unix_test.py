@@ -74,6 +74,7 @@ class ListenerTest(testlib.RouterMixin, testlib.TestCase):
         finally:
             capture.stop()
 
+
 class ClientTest(testlib.TestCase):
     klass = mitogen.unix.Listener
 
@@ -97,6 +98,7 @@ class ClientTest(testlib.TestCase):
         self.assertEquals(0, resp['auth_id'])
         router.broker.shutdown()
         router.broker.join()
+        os.unlink(path)
 
     def _test_simple_server(self, path):
         router = mitogen.master.Router()
