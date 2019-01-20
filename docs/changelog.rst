@@ -246,6 +246,15 @@ Core Library
   causing Mitogen to install itself at the end of the importer chain rather
   than the front.
 
+* `#310 <https://github.com/dw/mitogen/issues/310>`_: support has returned for
+  trying to figure out the real source of non-module objects installed in
+  :data:`sys.modules`, so they can be imported. This is needed to handle syntax
+  sugar used by packages like :mod:`plumbum`.
+
+* `#349 <https://github.com/dw/mitogen/issues/349>`_: an incorrect format
+  string could cause large stack traces when attempting to import built-in
+  modules on Python 3.
+
 * `#387 <https://github.com/dw/mitogen/issues/387>`_,
   `#413 <https://github.com/dw/mitogen/issues/413>`_: dead messages include an
   optional reason in their body. This is used to cause
@@ -367,6 +376,10 @@ Core Library
   raised by the import hook were updated to include probable reasons for
   a failure.
 
+* `57b652ed <https://github.com/dw/mitogen/commit/57b652ed>`_: a stray import
+  meant an extra roundtrip and ~20KiB of data was wasted for any context that
+  imported :mod:`mitogen.parent`.
+
 
 Thanks!
 ~~~~~~~
@@ -379,6 +392,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Duane Zamrok <https://github.com/dewthefifth>`_,
 `Eric Chang <https://github.com/changchichung>`_,
 `Guy Knights <https://github.com/knightsg>`_,
+`Jesse London <https://github.com/jesteria>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
 `Johan Beisser <https://github.com/jbeisser>`_,
@@ -386,6 +400,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
+`Peter V. Saveliev <https://github.com/svinota/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
 `@whky <https://github.com/whky/>`_,
 `@syntonym <https://github.com/syntonym/>`_,

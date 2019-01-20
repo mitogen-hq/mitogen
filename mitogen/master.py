@@ -453,8 +453,47 @@ class ModuleFinder(object):
 
         return path, source, is_pkg
 
+    def _get_module_via_parent_enumeration(self, fullname):
+        """
+        Attempt to fetch source code by examining the module's (hopefully less
+        insane) parent package. Required for older versions of
+        ansible.compat.six and plumbum.colors.
+        """
+        if fullname not in sys.modules:
+            # Don't attempt this unless a module really exists in sys.modules,
+            # else we could return junk.
+            return
+
+        pkgname, _, modname = fullname.rpartition('.')
+        pkg = sys.modules.get(pkgname)
+        if pkg is None or not hasattr(pkg, '__file__'):
+            return
+
+        pkg_path = os.path.dirname(pkg.__file__)
+        try:
+            fp, path, ext = imp.find_module(modname, [pkg_path])
+            try:
+                path = self._py_filename(path)
+                if not path:
+                    fp.close()
+                    return
+
+                source = fp.read()
+            finally:
+                fp.close()
+
+            if isinstance(source, mitogen.core.UnicodeType):
+                # get_source() returns "string" according to PEP-302, which was
+                # reinterpreted for Python 3 to mean a Unicode string.
+                source = source.encode('utf-8')
+            return path, source, False
+        except ImportError:
+            e = sys.exc_info()[1]
+            LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
+
     get_module_methods = [_get_module_via_pkgutil,
-                          _get_module_via_sys_modules]
+                          _get_module_via_sys_modules,
+                          _get_module_via_parent_enumeration]
 
     def get_module_source(self, fullname):
         """Given the name of a loaded module `fullname`, attempt to find its
@@ -471,6 +510,7 @@ class ModuleFinder(object):
         for method in self.get_module_methods:
             tup = method(self, fullname)
             if tup:
+                #LOG.debug('%r returned %r', method, tup)
                 break
         else:
             tup = None, None, None
