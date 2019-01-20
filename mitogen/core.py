@@ -813,6 +813,12 @@ class Receiver(object):
     def __repr__(self):
         return 'Receiver(%r, %r)' % (self.router, self.handle)
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _1, _2, _3):
+        self.close()
+
     def to_sender(self):
         """
         Return a :class:`Sender` configured to deliver messages to this
