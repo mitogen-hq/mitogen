@@ -248,6 +248,9 @@ Core Library
   the point the error occurs that previously would have been buried in debug
   log output from an unrelated context.
 
+* `#408 <https://github.com/dw/mitogen/issues/408>`_: a variety of fixes were
+  made to restore Python 2.4 compatibility.
+
 * `#399 <https://github.com/dw/mitogen/issues/399>`_,
   `#437 <https://github.com/dw/mitogen/issues/437>`_: ignore a
   :class:`DeprecationWarning` to avoid failure of the ``su`` method on Python
@@ -379,6 +382,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
+`@whky <https://github.com/whky/>`_,
 `@syntonym <https://github.com/syntonym/>`_,
 `@yodatak <https://github.com/yodatak/>`_, and
 `Younès HAFRI <https://github.com/yhafri>`_.
