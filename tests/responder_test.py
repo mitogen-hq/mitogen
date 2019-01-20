@@ -76,7 +76,7 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
         self.assertEquals(1, self.router.responder.get_module_count)
         self.assertEquals(1, self.router.responder.good_load_module_count)
-        self.assertEquals(359, self.router.responder.good_load_module_size)
+        self.assertLess(300, self.router.responder.good_load_module_size)
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
@@ -87,7 +87,7 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(2, self.router.responder.get_module_count)
         self.assertEquals(3, self.router.responder.good_load_module_count)
         self.assertEquals(0, self.router.responder.bad_load_module_count)
-        self.assertEquals(537, self.router.responder.good_load_module_size)
+        self.assertLess(450, self.router.responder.good_load_module_size)
 
     def test_self_contained_program(self):
         # Ensure a program composed of a single script can be imported
@@ -171,7 +171,7 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(256, c2.call(plain_old_module.pow, 2, 8))
         self.assertEquals(3, self.router.responder.get_module_count)
         self.assertEquals(5, self.router.responder.good_load_module_count)
-        self.assertEquals(28148, self.router.responder.good_load_module_size)
+        self.assertLess(27000, self.router.responder.good_load_module_size)
 
 
 class BlacklistTest(testlib.TestCase):
