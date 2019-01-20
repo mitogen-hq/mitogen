@@ -105,6 +105,39 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         self.assertIsNone(tup)
 
 
+class GetModuleViaParentEnumerationTest(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+
+    def call(self, fullname):
+        return self.klass()._get_module_via_parent_enumeration(fullname)
+
+    def test_main_fails(self):
+        import __main__
+        self.assertIsNone(self.call('__main__'))
+
+    def test_dylib_fails(self):
+        # _socket comes from a .so
+        import _socket
+        tup = self.call('_socket')
+        self.assertIsNone(tup)
+
+    def test_builtin_fails(self):
+        # sys is built-in
+        tup = self.call('sys')
+        self.assertIsNone(tup)
+
+    def test_plumbum_colors_like_pkg_succeeds(self):
+        # plumbum has been eating too many rainbow-colored pills
+        import pkg_like_plumbum.colors
+        path, src, is_pkg = self.call('pkg_like_plumbum.colors')
+        self.assertEquals(path,
+            testlib.data_path('pkg_like_plumbum/colors.py'))
+
+        s = open(testlib.data_path('pkg_like_plumbum/colors.py')).read()
+        self.assertEquals(mitogen.core.to_text(src), s)
+        self.assertFalse(is_pkg)
+
+
 class ResolveRelPathTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 

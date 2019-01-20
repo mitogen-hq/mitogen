@@ -246,6 +246,11 @@ Core Library
   causing Mitogen to install itself at the end of the importer chain rather
   than the front.
 
+* `#310 <https://github.com/dw/mitogen/issues/310>`_: support has returned for
+  trying to figure out the real source of non-module objects installed in
+  :data:`sys.modules`, so they can be imported. This is needed to handle syntax
+  sugar used by packages like :mod:`plumbum`.
+
 * `#349 <https://github.com/dw/mitogen/issues/349>`_: an incorrect format
   string could cause large stack traces when attempting to import built-in
   modules on Python 3.
@@ -387,6 +392,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Duane Zamrok <https://github.com/dewthefifth>`_,
 `Eric Chang <https://github.com/changchichung>`_,
 `Guy Knights <https://github.com/knightsg>`_,
+`Jesse London <https://github.com/jesteria>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
 `Johan Beisser <https://github.com/jbeisser>`_,
