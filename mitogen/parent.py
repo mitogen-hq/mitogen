@@ -53,16 +53,6 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
-
-try:
-    from functools import lru_cache
-except ImportError:
-    from mitogen.compat.functools import lru_cache
-
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import LOG
