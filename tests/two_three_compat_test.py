@@ -13,6 +13,7 @@ import testlib
 def roundtrip(*args):
     return args
 
+
 class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
     if mitogen.core.PY3:
         python_path = 'python2'

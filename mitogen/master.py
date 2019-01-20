@@ -714,8 +714,8 @@ class ModuleResponder(object):
             if tup[2] and is_stdlib_path(tup[2]):
                 # Prevent loading of 2.x<->3.x stdlib modules! This costs one
                 # RTT per hit, so a client-side solution is also required.
-                LOG.warning('%r: refusing to serve stdlib module %r',
-                            self, fullname)
+                LOG.debug('%r: refusing to serve stdlib module %r',
+                          self, fullname)
                 self._send_module_load_failed(stream, fullname)
                 return
 
