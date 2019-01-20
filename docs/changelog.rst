@@ -141,7 +141,8 @@ Enhancements
   disconnected targets. This ensures a task will gracefully fail rather than
   hang, for example on network failure or EC2 instance maintenance.
 
-* `#369 <https://github.com/dw/mitogen/issues/369>`_: :meth:`Connection.reset`
+* `#369 <https://github.com/dw/mitogen/issues/369>`_,
+  `#407 <https://github.com/dw/mitogen/issues/407>`_: :meth:`Connection.reset`
   is implemented, allowing `meta: reset_connection
   <https://docs.ansible.com/ansible/latest/modules/meta_module.html>`_ to shut
   down the remote interpreter as documented, and improving support for the
@@ -391,6 +392,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Brian Candler <https://github.com/candlerb>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
 `Eric Chang <https://github.com/changchichung>`_,
+`Gerben Meijer <https://github.com/infernix>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jesse London <https://github.com/jesteria>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
