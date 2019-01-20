@@ -714,8 +714,8 @@ class ModuleResponder(object):
             if tup[2] and is_stdlib_path(tup[2]):
                 # Prevent loading of 2.x<->3.x stdlib modules! This costs one
                 # RTT per hit, so a client-side solution is also required.
-                LOG.warning('%r: refusing to serve stdlib module %r',
-                            self, fullname)
+                LOG.debug('%r: refusing to serve stdlib module %r',
+                          self, fullname)
                 self._send_module_load_failed(stream, fullname)
                 return
 
@@ -879,16 +879,13 @@ class Router(mitogen.parent.Router):
         )
 
         LOG.debug(
-            '%(self)r: stats:\n'
-            '   GET_MODULE requests: %(get_module_count)d\n'
-            '   GET_MODULE runtime: %(get_module_ms)d ms\n'
-            '   LOAD_MODULE responses: %(good_load_module_count)d\n'
-            '   Negative LOAD_MODULE responses: '
-                    '%(bad_load_module_count)d\n'
-            '   LOAD_MODULE total bytes sent: '
-                    '%(good_load_module_size_kb).02f kb\n'
-            '   LOAD_MODULE avg bytes sent: '
-                    '%(good_load_module_size_avg).02f kb'
+            '%(self)r: stats: '
+                '%(get_module_count)d module requests in '
+                '%(get_module_ms)d ms, '
+                '%(good_load_module_count)d sent, '
+                '%(bad_load_module_count)d negative responses. '
+                'Sent %(good_load_module_size_kb).01f kb total, '
+                '%(good_load_module_size_avg).01f kb avg.'
             % dct
         )
 

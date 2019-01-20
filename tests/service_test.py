@@ -54,8 +54,13 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.fork()
         l2 = self.router.fork()
         l1.call_service(MyService, 'get_id')  # force framework activation
-        exc = self.assertRaises(mitogen.core.CallError,
-            lambda: l2.call(call_service_in, l1, MyService2.name(), 'get_id'))
+        capture = testlib.LogCapturer()
+        capture.start()
+        try:
+            exc = self.assertRaises(mitogen.core.CallError,
+                lambda: l2.call(call_service_in, l1, MyService2.name(), 'get_id'))
+        finally:
+            capture.stop()
         msg = mitogen.service.Activator.not_active_msg % (MyService2.name(),)
         self.assertTrue(msg in exc.args[0])
 
@@ -80,8 +85,13 @@ class PermissionTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.fork()
         l1.call_service(MyService, 'get_id')
         l2 = self.router.fork()
-        exc = self.assertRaises(mitogen.core.CallError, lambda:
-            l2.call(call_service_in, l1, MyService.name(), 'privileged_op'))
+        capture = testlib.LogCapturer()
+        capture.start()
+        try:
+            exc = self.assertRaises(mitogen.core.CallError, lambda:
+                l2.call(call_service_in, l1, MyService.name(), 'privileged_op'))
+        finally:
+            capture.stop()
         msg = mitogen.service.Invoker.unauthorized_msg % (
             u'privileged_op',
             MyService.name(),

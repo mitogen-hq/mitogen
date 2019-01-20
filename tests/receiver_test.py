@@ -37,6 +37,27 @@ class IterationTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(list(range(5)), list(m.unpickle() for m in recv))
         self.assertEquals(10, ret.get().unpickle())
 
+    def iter_and_put(self, recv, latch):
+        try:
+            for msg in recv:
+                latch.put(msg)
+        except Exception:
+            latch.put(sys.exc_info()[1])
+
+    def test_close_stops_iteration(self):
+        recv = mitogen.core.Receiver(self.router)
+        latch = mitogen.core.Latch()
+        t = threading.Thread(
+            target=self.iter_and_put,
+            args=(recv, latch),
+        )
+        t.start()
+        t.join(0.1)
+        recv.close()
+        t.join()
+        self.assertTrue(latch.empty())
+
+
 
 class CloseTest(testlib.RouterMixin, testlib.TestCase):
     def wait(self, latch, wait_recv):

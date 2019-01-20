@@ -894,8 +894,9 @@ class Receiver(object):
         until :class:`ChannelError` is raised.
         """
         while True:
-            msg = self.get(throw_dead=False)
-            if msg.is_dead:
+            try:
+                msg = self.get()
+            except ChannelError:
                 return
             yield msg
 
@@ -2122,8 +2123,8 @@ class Waker(BasicStream):
 
     broker_shutdown_msg = (
         "An attempt was made to enqueue a message with a Broker that has "
-        "already begun shutting down. It is likely your program called "
-        "Broker.shutdown() too early."
+        "already exitted. It is likely your program called Broker.shutdown() "
+        "too early."
     )
 
     def defer(self, func, *args, **kwargs):
@@ -2138,7 +2139,7 @@ class Waker(BasicStream):
         if threading.currentThread().ident == self.broker_ident:
             _vv and IOLOG.debug('%r.defer() [immediate]', self)
             return func(*args, **kwargs)
-        if not self._broker._alive:
+        if self._broker._exitted:
             raise Error(self.broker_shutdown_msg)
 
         _vv and IOLOG.debug('%r.defer() [fd=%r]', self, self.transmit_side.fd)
@@ -2564,6 +2565,7 @@ class Broker(object):
 
     def __init__(self, poller_class=None):
         self._alive = True
+        self._exitted = False
         self._waker = Waker(self)
         #: Arrange for `func(\*args, \**kwargs)` to be executed on the broker
         #: thread, or immediately if the current thread is the broker thread.
@@ -2724,6 +2726,7 @@ class Broker(object):
         except Exception:
             LOG.exception('_broker_main() crashed')
 
+        self._exitted = True
         self._broker_exit()
         fire(self, 'exit')
 
@@ -2735,7 +2738,8 @@ class Broker(object):
         _v and LOG.debug('%r.shutdown()', self)
         def _shutdown():
             self._alive = False
-        self.defer(_shutdown)
+        if self._alive and not self._exitted:
+            self.defer(_shutdown)
 
     def join(self):
         """

@@ -542,7 +542,7 @@ class Pool(object):
                 msg = self._select.get()
             except (mitogen.core.ChannelError, mitogen.core.LatchError):
                 e = sys.exc_info()[1]
-                LOG.info('%r: channel or latch closed, exitting: %s', self, e)
+                LOG.debug('%r: channel or latch closed, exitting: %s', self, e)
                 return
 
             func = self._func_by_recv[msg.receiver]
