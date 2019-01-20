@@ -133,8 +133,8 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         self.assertEquals(path,
             testlib.data_path('pkg_like_plumbum/colors.py'))
 
-        s = open(testlib.data_path('pkg_like_plumbum/colors.py')).read()
-        self.assertEquals(mitogen.core.to_text(src), s)
+        s = open(testlib.data_path('pkg_like_plumbum/colors.py'), 'rb').read()
+        self.assertEquals(src, s)
         self.assertFalse(is_pkg)
 
 
