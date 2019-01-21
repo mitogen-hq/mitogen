@@ -212,6 +212,14 @@ class AddHandlerTest(testlib.TestCase):
             router.broker.join()
 
 
+class MyselfTest(testlib.RouterMixin, testlib.TestCase):
+    def test_myself(self):
+        myself = self.router.myself()
+        self.assertEquals(myself.context_id, mitogen.context_id)
+        # TODO: context should know its own name too.
+        self.assertEquals(myself.name, 'self')
+
+
 class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
     klass = mitogen.master.Router
 

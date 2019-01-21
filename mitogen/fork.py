@@ -85,6 +85,10 @@ def on_fork():
     mitogen.core.Latch._on_fork()
     mitogen.core.Side._on_fork()
 
+    mitogen__service = sys.modules.get('mitogen.service')
+    if mitogen__service:
+        mitogen__service._pool_lock = threading.Lock()
+
 
 def handle_child_crash():
     """

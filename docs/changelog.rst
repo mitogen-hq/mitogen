@@ -155,9 +155,13 @@ Enhancements
   introduced in Ansible 2.7.
 
 * `#415 <https://github.com/dw/mitogen/issues/415>`_: the interface employed for
-  in-process queues was changed from Kqueue/epoll() to poll(), which requires
+  in-process queues was changed from `kqueue
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ /
+  `epoll <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to
+  `poll() <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires
   no setup or teardown, yielding a 30% latency reduction for inter-thread
-  communication. This may manifest as a runtime improvement in many-host runs.
+  communication and a 50% reduction in context switches. This will manifest as
+  a runtime improvement in many-host runs.
 
 
 Fixes
@@ -294,6 +298,10 @@ Core Library
   was configured. This would lead to connection timeouts due to the hung
   response.
 
+* `#414 <https://github.com/dw/mitogen/issues/414>`_,
+  `#425 <https://github.com/dw/mitogen/issues/425>`_: avoid deadlock of forked
+  children by reinitializing the :mod:`mitogen.service` pool lock.
+
 * `#416 <https://github.com/dw/mitogen/issues/416>`_: around 1.4KiB of memory
   was leaked on every RPC, due to a list of strong references keeping alive any
   handler ever registered for disconnect notification.
@@ -390,22 +398,23 @@ bug reports, testing, features and fixes in this release contributed by
 `Andreas Krüger <https://github.com/woopstar>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
+`dsgnr <https://github.com/dsgnr>`_,
 `Duane Zamrok <https://github.com/dewthefifth>`_,
 `Eric Chang <https://github.com/changchichung>`_,
 `Gerben Meijer <https://github.com/infernix>`_,
 `Guy Knights <https://github.com/knightsg>`_,
 `Jesse London <https://github.com/jesteria>`_,
 `Jiří Vávra <https://github.com/Houbovo>`_,
-`Jonathan Rosser <https://github.com/jrosser>`_,
 `Johan Beisser <https://github.com/jbeisser>`_,
+`Jonathan Rosser <https://github.com/jrosser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Peter V. Saveliev <https://github.com/svinota/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
-`@whky <https://github.com/whky/>`_,
 `@syntonym <https://github.com/syntonym/>`_,
+`@whky <https://github.com/whky/>`_,
 `@yodatak <https://github.com/yodatak/>`_, and
 `Younès HAFRI <https://github.com/yhafri>`_.
 
