@@ -1,6 +1,6 @@
 # Verify one OSA-style container has the correct config.
 
-- name: integration/delegation/container_standalone.yml
+- name: integration/connection_delegation/container_standalone.yml
   hosts: dtc-container-1
   gather_facts: false
   tasks:

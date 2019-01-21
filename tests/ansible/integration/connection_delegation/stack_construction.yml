@@ -16,7 +16,7 @@
 # the result list element, it seems to cause assert to silently succeed!
 
 
-- name: integration/delegation/stack_construction.yml
+- name: integration/connection_delegation/stack_construction.yml
   hosts: cd-normal
   tasks:
     - meta: end_play

@@ -1,6 +1,6 @@
 # OSA: Verify delegating the connection back to the container succeeds.
 
-- name: integration/delegation/osa_delegate_to_self.yml
+- name: integration/connection_delegation/osa_delegate_to_self.yml
   hosts: osa-container-1
   vars:
     target: osa-container-1
