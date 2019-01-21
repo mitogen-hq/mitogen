@@ -27,7 +27,8 @@ class CallbackModule(ansible.plugins.callback.CallbackBase):
 
         self.hist = hdrh.histogram.HdrHistogram(1, int(1e6*60), 3)
         self.fork_latency_sum_usec = 0.0
-        self.install()
+        if 'FORK_HISTOGRAM' in os.environ:
+            self.install()
 
     def install(self):
         self.faults_at_start = get_fault_count(resource.RUSAGE_SELF)
@@ -53,6 +54,9 @@ class CallbackModule(ansible.plugins.callback.CallbackBase):
             self.hist.record_value(latency_usec)
 
     def playbook_on_stats(self, stats):
+        if 'FORK_HISTOGRAM' not in os.environ:
+            return
+
         self_faults = get_fault_count(resource.RUSAGE_SELF) - self.faults_at_start
         child_faults = get_fault_count()
         run_duration_sec = time.time() - self.run_start_time
