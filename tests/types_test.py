@@ -26,14 +26,14 @@ class BlobTest(testlib.TestCase):
 
     def test_decays_on_constructor(self):
         blob = self.make()
-        self.assertEquals(b('x')*128, mitogen.core.BytesType(blob))
+        self.assertEquals(b('x') * 128, mitogen.core.BytesType(blob))
 
     def test_decays_on_write(self):
         blob = self.make()
         io = BytesIO()
         io.write(blob)
         self.assertEquals(128, io.tell())
-        self.assertEquals(b('x')*128, io.getvalue())
+        self.assertEquals(b('x') * 128, io.getvalue())
 
     def test_message_roundtrip(self):
         blob = self.make()

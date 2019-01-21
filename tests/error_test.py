@@ -1,15 +1,8 @@
 
-import logging
-import subprocess
-import time
-import zlib
-
 import unittest2
 
 import testlib
-import mitogen.master
-import mitogen.parent
-import mitogen.utils
+import mitogen.core
 
 
 class ConstructorTest(testlib.TestCase):

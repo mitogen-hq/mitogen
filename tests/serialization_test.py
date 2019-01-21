@@ -1,11 +1,4 @@
 
-try:
-    from io import StringIO
-    from io import BytesIO
-except ImportError:
-    from StringIO import StringIO as StringIO
-    from StringIO import StringIO as BytesIO
-
 import pickle
 import unittest2
 
