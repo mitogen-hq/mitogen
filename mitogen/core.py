@@ -329,7 +329,8 @@ def fire(obj, name, *args, **kwargs):
     registered for the named signal on `obj`.
     """
     signals = vars(obj).get('_signals', {})
-    return [func(*args, **kwargs) for func in signals.get(name, ())]
+    for func in signals.get(name, ()):
+        func(*args, **kwargs)
 
 
 def takes_econtext(func):
