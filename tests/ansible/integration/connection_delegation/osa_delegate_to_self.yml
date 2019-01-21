@@ -13,20 +13,20 @@
     delegate_to: "{{target}}"
     register: out
 
-  - assert:
-      that: |
-        out.result == [
-            {
-                'kwargs': {
-                    'container': 'osa-container-1',
-                    'docker_path': None,
-                    'kind': 'lxc',
-                    'lxc_info_path': None,
-                    'lxc_path': None,
-                    'machinectl_path': None,
-                    'python_path': None,
-                    'username': None,
-                },
-                'method': 'setns',
-            },
-        ]
+  - assert_equal:
+      left: out.result
+      right: [
+        {
+          'kwargs': {
+            'container': 'osa-container-1',
+            'docker_path': null,
+            'kind': 'lxc',
+            'lxc_info_path': null,
+            'lxc_path': null,
+            'machinectl_path': null,
+            'python_path': null,
+            'username': null,
+          },
+          'method': 'setns',
+        },
+      ]
