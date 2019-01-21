@@ -1,4 +1,4 @@
-# - import_playbook: multiple_items_loop.yml
+- import_playbook: multiple_items_loop.yml
 - import_playbook: result_binary_producing_json.yml
 - import_playbook: result_binary_producing_junk.yml
 - import_playbook: result_shell_echo_hi.yml
