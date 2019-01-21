@@ -6,11 +6,21 @@
 
 __metaclass__ = type
 
+import inspect
 import unittest2
+
+import ansible.template
 
 from ansible.errors import AnsibleError
 from ansible.plugins.action import ActionBase
 from ansible.module_utils.six import string_types
+
+
+TEMPLATE_KWARGS = {}
+
+_argspec = inspect.getargspec(ansible.template.Templar.template)
+if 'bare_deprecated' in _argspec.args:
+    TEMPLATE_KWARGS['bare_deprecated'] = False
 
 
 class TestCase(unittest2.TestCase):
@@ -34,18 +44,17 @@ class ActionModule(ActionBase):
     TRANSFERS_FILES = False
     _VALID_ARGS = frozenset(('left', 'right'))
 
+    def template(self, obj):
+        return self._templar.template(
+            obj,
+            convert_bare=True,
+            **TEMPLATE_KWARGS
+        )
+
     def run(self, tmp=None, task_vars=None):
         result = super(ActionModule, self).run(tmp, task_vars or {})
-
-        left = self._templar.template(
-            self._task.args['left'],
-            convert_bare=True,
-            bare_deprecated=False,
-        )
-        right = self._templar.template(self._task.args['right'],
-            convert_bare=True,
-            bare_deprecated=False,
-        )
+        left = self.template(self._task.args['left'])
+        right = self.template(self._task.args['right'])
 
         diff = text_diff(left, right)
         if diff is None:
