@@ -1076,6 +1076,39 @@ For example, this method can be used to ascertain whether SSH attempted agent
 authentication, or what private key files it was able to access and which it tried.
 
 
+Post-authentication Bootstrap Failure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If logging indicates Mitogen was able to authenticate, but some error occurred
+after authentication preventing the Python bootstrap from completing, it can be
+immensely useful to temporarily replace ``ansible_python_interpreter`` with a
+wrapper that runs Python under ``strace``::
+
+    $ ssh badbox
+
+    badbox$ cat > strace-python.sh
+    #!/bin/sh
+    strace -o /tmp/strace-python.$$ -ff -s 100 python "$@"
+    ^D
+
+    badbox$ chmod +x strace-python.sh
+    badbox$ logout
+
+    $ ansible-playbook site.yml \
+        -e ansible_python_interpreter=./strace-python.sh \
+        -l badbox
+
+This will produce a potentially large number of log files under ``/tmp/``. The
+lowest-numbered traced PID is generally the main Python interpreter. The most
+intricate bootstrap steps happen there, any error should be visible near the
+end of the trace.
+
+It is also possible the first stage bootstrap failed. That is usually the next
+lowest-numbered PID and tends to be the smallest file. Even if you can't
+ascertain the problem with your configuration from these logs, including them
+in a bug report can save days of detective effort.
+
+
 .. _diagnosing-hangs:
 
 Diagnosing Hangs
