@@ -21,6 +21,7 @@
         -e mitogen_lxc_path={{git_basedir}}/tests/data/stubs/stub-lxc.py
         -m shell
         -a "echo hi"
+        -u root
         localhost
       args:
         chdir: ../..
@@ -29,4 +30,3 @@
 
     - assert:
         that: result.rc == 0
-

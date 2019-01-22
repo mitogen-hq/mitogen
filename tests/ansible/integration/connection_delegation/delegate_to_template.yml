@@ -70,7 +70,7 @@
               ],
               'ssh_debug_level': null,
               'ssh_path': 'ssh',
-              'username': null,
+              'username': 'ansible-cfg-remote-user',
             },
             'method': 'ssh',
           }
