@@ -174,6 +174,7 @@ Fixes
 ^^^^^
 
 * `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#396 <https://github.com/dw/mitogen/issues/396>`_,
   `#404 <https://github.com/dw/mitogen/issues/404>`_,
   `#412 <https://github.com/dw/mitogen/issues/412>`_,
   `#436 <https://github.com/dw/mitogen/issues/436>`_,
@@ -429,6 +430,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Michal Medvecky <https://github.com/michalmedvecky>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Peter V. Saveliev <https://github.com/svinota/>`_,
+`Pieter Avonts <https://github.com/pieteravonts/>`_,
 `Sergey <https://github.com/LuckySB/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
 `Tom Parker-Shemilt <https://github.com/palfrey/>`_,
