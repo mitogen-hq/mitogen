@@ -174,8 +174,14 @@ Fixes
 ^^^^^
 
 * `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#359 <https://github.com/dw/mitogen/issues/359>`_,
+  `#396 <https://github.com/dw/mitogen/issues/396>`_,
+  `#401 <https://github.com/dw/mitogen/issues/401>`_,
   `#404 <https://github.com/dw/mitogen/issues/404>`_,
-  `#412 <https://github.com/dw/mitogen/issues/412>`_: connection delegation and
+  `#412 <https://github.com/dw/mitogen/issues/412>`_,
+  `#434 <https://github.com/dw/mitogen/issues/434>`_,
+  `#436 <https://github.com/dw/mitogen/issues/436>`_,
+  `#465 <https://github.com/dw/mitogen/issues/465>`_: connection delegation and
   ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
   behaviour has been restored, and further work has been made to improve the
   compatibility of connection delegation's configuration building methods.
@@ -355,9 +361,9 @@ Core Library
 
 * `#448 <https://github.com/dw/mitogen/issues/448>`_: the import hook
   implementation now raises :class:`ModuleNotFoundError` instead of
-  :class:`ImportError` in Python 3.6 and above, to cope with an uncoming
-  version of the :class:`subprocess` module requiring this new subclass in the
-  middle of a minor Python release series.
+  :class:`ImportError` in Python 3.6 and above, to cope with an upcoming
+  version of the :mod:`subprocess` module requiring this new subclass to be
+  raised.
 
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
@@ -424,13 +430,19 @@ bug reports, testing, features and fixes in this release contributed by
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
+`Michal Medvecky <https://github.com/michalmedvecky>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Peter V. Saveliev <https://github.com/svinota/>`_,
+`Pieter Avonts <https://github.com/pieteravonts/>`_,
+`Ross Williams <https://github.com/overhacked/>`_,
+`Sergey <https://github.com/LuckySB/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
+`Strahinja Kustudic <https://github.com/kustodian>`_,
 `Tom Parker-Shemilt <https://github.com/palfrey/>`_,
 `Younès HAFRI <https://github.com/yhafri>`_,
 `@myssa91 <https://github.com/myssa91>`_,
 `@syntonym <https://github.com/syntonym/>`_,
+`@trim777 <https://github.com/trim777/>`_,
 `@whky <https://github.com/whky/>`_, and
 `@yodatak <https://github.com/yodatak/>`_.
 

@@ -959,7 +959,7 @@ reporting it:
 **External Tool Integration Differences**
     Mitogen reimplements any aspect of Ansible that involves integrating with
     SSH, sudo, Docker, or related tools. For this reason, sometimes its support
-    for those tools doffers or is less mature than in Ansible.
+    for those tools differs or is less mature than in Ansible.
 
     In the past Mitogen has had bug reports due to failing to recognize a
     particular variation of a login or password prompt on an exotic or
