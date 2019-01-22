@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Run tests/ansible/all.yml under Ansible and Ansible-Mitogen
 
+import glob
 import os
 import sys
 
@@ -30,7 +31,9 @@ with ci_lib.Fold('job_setup'):
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
 
     run("mkdir %s", HOSTS_DIR)
-    run("ln -s %s/hosts/common-hosts %s", TESTS_DIR, HOSTS_DIR)
+    for path in glob.glob(TESTS_DIR + '/hosts/*'):
+        if not path.endswith('default.hosts'):
+            run("ln -s %s %s", path, HOSTS_DIR)
 
     inventory_path = os.path.join(HOSTS_DIR, 'target')
     with open(inventory_path, 'w') as fp:
