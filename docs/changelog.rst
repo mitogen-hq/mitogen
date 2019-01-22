@@ -426,6 +426,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Josh Smift <https://github.com/jbscare>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
+`Michal Medvecky <https://github.com/michalmedvecky>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Peter V. Saveliev <https://github.com/svinota/>`_,
 `Sergey <https://github.com/LuckySB/>`_,
