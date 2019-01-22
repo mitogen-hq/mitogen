@@ -175,7 +175,8 @@ Fixes
 
 * `#251 <https://github.com/dw/mitogen/issues/251>`_,
   `#404 <https://github.com/dw/mitogen/issues/404>`_,
-  `#412 <https://github.com/dw/mitogen/issues/412>`_: connection delegation and
+  `#412 <https://github.com/dw/mitogen/issues/412>`_,
+  `#465 <https://github.com/dw/mitogen/issues/465>`_: connection delegation and
   ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
   behaviour has been restored, and further work has been made to improve the
   compatibility of connection delegation's configuration building methods.
@@ -426,6 +427,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Peter V. Saveliev <https://github.com/svinota/>`_,
+`Sergey <https://github.com/LuckySB/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
 `Tom Parker-Shemilt <https://github.com/palfrey/>`_,
 `Younès HAFRI <https://github.com/yhafri>`_,
