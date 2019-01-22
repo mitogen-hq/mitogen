@@ -154,6 +154,11 @@ Enhancements
   ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
   introduced in Ansible 2.7.
 
+* `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
+  issues with connection configuration, Mitogen ships with a
+  ``mitogen_get_stack`` action that is automatically added to the action
+  plug-in path. See :ref:`mitogen-get-stack` for more information.
+
 * `#415 <https://github.com/dw/mitogen/issues/415>`_: the interface employed for
   in-process queues was changed from `kqueue
   <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ /
@@ -162,6 +167,7 @@ Enhancements
   no setup or teardown, yielding a 30% latency reduction for inter-thread
   communication and a 50% reduction in context switches. This will manifest as
   a runtime improvement in many-host runs.
+
 
 
 Fixes
@@ -209,6 +215,11 @@ Fixes
 
 * `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
   the SELinux ``--type`` and ``--role`` options.
+
+* `#412 <https://github.com/dw/mitogen/issues/412>`_: connection delegation and
+  ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
+  behaviour has been restored, and further work has been made to improve the
+  compatibility of connection delegation's configuration building methods.
 
 * `#420 <https://github.com/dw/mitogen/issues/420>`_: if a :class:`Connection`
   was constructed in the Ansible top-level process, for example while executing
