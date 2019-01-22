@@ -935,13 +935,20 @@ reporting it:
     example, Mitogen may pick the wrong username or SSH parameters.
 
     To detect this, use the special ``mitogen_get_stack`` action described
-    below to verify all the configuration variables Mitogen has chosen for the
-    connection make sense.
+    below to verify the settings Mitogen has chosen for the connection make
+    sense.
 
 **Process Environment Differences**
-    Mitogen's process model differs significantly to Ansible's in certain
-    places. In the past, bugs have been reported because Ansible plug-ins
-    modify an environment variable after Mitogen processes are started
+    Mitogen's process model differs significantly to Ansible's in many places.
+    In the past, bugs have been reported because Ansible plug-ins modify an
+    environment variable after Mitogen processes are started.
+
+    If your task's failure may relate to the process environment in some way,
+    for example, ``SSH_AUTH_SOCK``, ``LC_ALL`` or ``PATH``, then an environment
+    difference may explain it. Environment differences are always considered
+    bugs in the extension, and are very easy to repair, so even if you find a
+    workaround, please report them to avoid someone else encountering the same
+    problem.
 
 **Variable Expansion Differences**
     To avoid many classes of bugs, Mitogen avoids shell wherever possible.
@@ -1067,6 +1074,39 @@ review of every action SSH attempted during authentication.
 
 For example, this method can be used to ascertain whether SSH attempted agent
 authentication, or what private key files it was able to access and which it tried.
+
+
+Post-authentication Bootstrap Failure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If logging indicates Mitogen was able to authenticate, but some error occurred
+after authentication preventing the Python bootstrap from completing, it can be
+immensely useful to temporarily replace ``ansible_python_interpreter`` with a
+wrapper that runs Python under ``strace``::
+
+    $ ssh badbox
+
+    badbox$ cat > strace-python.sh
+    #!/bin/sh
+    strace -o /tmp/strace-python.$$ -ff -s 100 python "$@"
+    ^D
+
+    badbox$ chmod +x strace-python.sh
+    badbox$ logout
+
+    $ ansible-playbook site.yml \
+        -e ansible_python_interpreter=./strace-python.sh \
+        -l badbox
+
+This will produce a potentially large number of log files under ``/tmp/``. The
+lowest-numbered traced PID is generally the main Python interpreter. The most
+intricate bootstrap steps happen there, any error should be visible near the
+end of the trace.
+
+It is also possible the first stage bootstrap failed. That is usually the next
+lowest-numbered PID and tends to be the smallest file. Even if you can't
+ascertain the problem with your configuration from these logs, including them
+in a bug report can save days of detective effort.
 
 
 .. _diagnosing-hangs:
