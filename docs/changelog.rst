@@ -176,6 +176,7 @@ Fixes
 * `#251 <https://github.com/dw/mitogen/issues/251>`_,
   `#404 <https://github.com/dw/mitogen/issues/404>`_,
   `#412 <https://github.com/dw/mitogen/issues/412>`_,
+  `#436 <https://github.com/dw/mitogen/issues/436>`_,
   `#465 <https://github.com/dw/mitogen/issues/465>`_: connection delegation and
   ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
   behaviour has been restored, and further work has been made to improve the
@@ -433,6 +434,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Younès HAFRI <https://github.com/yhafri>`_,
 `@myssa91 <https://github.com/myssa91>`_,
 `@syntonym <https://github.com/syntonym/>`_,
+`@trim777 <https://github.com/trim777/>`_,
 `@whky <https://github.com/whky/>`_, and
 `@yodatak <https://github.com/yodatak/>`_.
 
