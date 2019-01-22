@@ -173,6 +173,12 @@ Enhancements
 Fixes
 ^^^^^
 
+* `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#412 <https://github.com/dw/mitogen/issues/412>`_: connection delegation and
+  ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
+  behaviour has been restored, and further work has been made to improve the
+  compatibility of connection delegation's configuration building methods.
+
 * `#323 <https://github.com/dw/mitogen/issues/323>`_,
   `#333 <https://github.com/dw/mitogen/issues/333>`_: work around a Windows
   Subsystem for Linux bug that caused tracebacks to appear during shutdown.
@@ -215,11 +221,6 @@ Fixes
 
 * `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
   the SELinux ``--type`` and ``--role`` options.
-
-* `#412 <https://github.com/dw/mitogen/issues/412>`_: connection delegation and
-  ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
-  behaviour has been restored, and further work has been made to improve the
-  compatibility of connection delegation's configuration building methods.
 
 * `#420 <https://github.com/dw/mitogen/issues/420>`_: if a :class:`Connection`
   was constructed in the Ansible top-level process, for example while executing
@@ -407,6 +408,7 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Andreas Krüger <https://github.com/woopstar>`_,
+`Anton Stroganov <https://github.com/Aeon>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `dsgnr <https://github.com/dsgnr>`_,
