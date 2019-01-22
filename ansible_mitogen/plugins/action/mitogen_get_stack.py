@@ -50,4 +50,5 @@ class ActionModule(ActionBase):
         return {
             'changed': True,
             'result': self._connection._build_stack(),
+            '_ansible_verbose_always': True,
         }
