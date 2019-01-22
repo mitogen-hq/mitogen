@@ -361,9 +361,9 @@ Core Library
 
 * `#448 <https://github.com/dw/mitogen/issues/448>`_: the import hook
   implementation now raises :class:`ModuleNotFoundError` instead of
-  :class:`ImportError` in Python 3.6 and above, to cope with an uncoming
-  version of the :class:`subprocess` module requiring this new subclass in the
-  middle of a minor Python release series.
+  :class:`ImportError` in Python 3.6 and above, to cope with an upcoming
+  version of the :mod:`subprocess` module requiring this new subclass to be
+  raised.
 
 * `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
   children for standard IO redirection have propagation disabled, preventing
