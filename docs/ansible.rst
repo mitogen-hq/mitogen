@@ -935,13 +935,20 @@ reporting it:
     example, Mitogen may pick the wrong username or SSH parameters.
 
     To detect this, use the special ``mitogen_get_stack`` action described
-    below to verify all the configuration variables Mitogen has chosen for the
-    connection make sense.
+    below to verify the settings Mitogen has chosen for the connection make
+    sense.
 
 **Process Environment Differences**
-    Mitogen's process model differs significantly to Ansible's in certain
-    places. In the past, bugs have been reported because Ansible plug-ins
-    modify an environment variable after Mitogen processes are started
+    Mitogen's process model differs significantly to Ansible's in many places.
+    In the past, bugs have been reported because Ansible plug-ins modify an
+    environment variable after Mitogen processes are started.
+
+    If your task's failure may relate to the process environment in some way,
+    for example, ``SSH_AUTH_SOCK``, ``LC_ALL`` or ``PATH``, then an environment
+    difference may explain it. Environment differences are always considered
+    bugs in the extension, and are very easy to repair, so even if you find a
+    workaround, please report them to avoid someone else encountering the same
+    problem.
 
 **Variable Expansion Differences**
     To avoid many classes of bugs, Mitogen avoids shell wherever possible.

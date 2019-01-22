@@ -487,8 +487,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         the delegated-to machine.
 
         When running with delegate_to, Ansible tasks have variables associated
-        with the original machine, therefore it does not make sense to extract
-        connection-related configuration information from them.
+        with the original machine, not the delegated-to machine, therefore it
+        does not make sense to extract connection-related configuration for the
+        delegated-to machine from them.
         """
         if self._task_vars:
             if self.delegate_to_hostname is None:
@@ -515,7 +516,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def _spec_from_via(self, via_spec):
         """
         Produce a dict connection specifiction given a string `via_spec`, of
-        the form `[become_user@]inventory_hostname`.
+        the form `[[become_method:]become_user@]inventory_hostname`.
         """
         become_user, _, inventory_name = via_spec.rpartition('@')
         become_method, _, become_user = become_user.rpartition(':')
@@ -540,6 +541,33 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     via_cycle_msg = 'mitogen_via=%s of %s creates a cycle (%s)'
 
     def _stack_from_spec(self, spec, stack=(), seen_names=()):
+        """
+        Return a tuple of ContextService parameter dictionaries corresponding
+        to the connection described by `spec`, and any connection referenced by
+        its `mitogen_via` or `become` fields. Each element is a dict of the
+        form::
+
+            {
+                # Optional. If present and `True`, this hop is elegible for
+                # interpreter recycling.
+                "enable_lru": True,
+                # mitogen.master.Router method name.
+                "method": "ssh",
+                # mitogen.master.Router method kwargs.
+                "kwargs": {
+                    "hostname": "..."
+                }
+            }
+
+        :param ansible_mitogen.transport_config.Spec spec:
+            Connection specification.
+        :param tuple stack:
+            Stack elements from parent call (used for recursion).
+        :param tuple seen_names:
+            Inventory hostnames from parent call (cycle detection).
+        :returns:
+            Tuple `(stack, seen_names)`.
+        """
         if spec.inventory_name() in seen_names:
             raise ansible.errors.AnsibleConnectionFailure(
                 self.via_cycle_msg % (
@@ -599,8 +627,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def _connect_stack(self, stack):
         """
         Pass `stack` to ContextService, requesting a copy of the context object
-        representing the target. If no connection exists yet, ContextService
-        will establish it before returning it or throwing an error.
+        representing the last tuple element. If no connection exists yet,
+        ContextService will recursively establish it before returning it or
+        throwing an error.
+
+        See :meth:`ansible_mitogen.services.ContextService.get` docstring for
+        description of the returned dictionary.
         """
         try:
             dct = self.parent.call_service(
@@ -628,6 +660,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.init_child_result = dct['init_child_result']
 
     def get_good_temp_dir(self):
+        """
+        Return the 'good temporary directory' as discovered by
+        :func:`ansible_mitogen.target.init_child` immediately after
+        ContextService constructed the target context.
+        """
         self._connect()
         return self.init_child_result['good_temp_dir']
 
@@ -716,8 +753,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         # #420: Ansible executes "meta" actions in the top-level process,
         # meaning "reset_connection" will cause :class:`mitogen.core.Latch` FDs
-        # to be cached and subsequently erroneously shared by children on
-        # subsequent task forks. To handle that, call on_fork() to ensure any
+        # to be cached and erroneously shared by children on subsequent
+        # WorkerProcess forks. To handle that, call on_fork() to ensure any
         # shared state is discarded.
         mitogen.fork.on_fork()
 
@@ -736,7 +773,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         action, we cannot capture task variables via :meth:`on_action_run`.
         Instead walk the parent frames searching for the `all_vars` local from
         StrategyBase._execute_meta(). If this fails, just leave task_vars
-        unset, likely causing the wrong configuration to be created.
+        unset, likely causing a subtly wrong configuration to be selected.
         """
         frame = sys._getframe()
         while frame and not self._task_vars:
