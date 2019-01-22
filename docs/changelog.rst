@@ -179,6 +179,7 @@ Fixes
   `#401 <https://github.com/dw/mitogen/issues/401>`_,
   `#404 <https://github.com/dw/mitogen/issues/404>`_,
   `#412 <https://github.com/dw/mitogen/issues/412>`_,
+  `#434 <https://github.com/dw/mitogen/issues/434>`_,
   `#436 <https://github.com/dw/mitogen/issues/436>`_,
   `#465 <https://github.com/dw/mitogen/issues/465>`_: connection delegation and
   ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
