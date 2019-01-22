@@ -154,6 +154,11 @@ Enhancements
   ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
   introduced in Ansible 2.7.
 
+* `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
+  issues with connection configuration, Mitogen ships with a
+  ``mitogen_get_stack`` action that is automatically added to the action
+  plug-in path. See :ref:`mitogen-get-stack` for more information.
+
 * `#415 <https://github.com/dw/mitogen/issues/415>`_: the interface employed for
   in-process queues was changed from `kqueue
   <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ /
@@ -164,8 +169,16 @@ Enhancements
   a runtime improvement in many-host runs.
 
 
+
 Fixes
 ^^^^^
+
+* `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#404 <https://github.com/dw/mitogen/issues/404>`_,
+  `#412 <https://github.com/dw/mitogen/issues/412>`_: connection delegation and
+  ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
+  behaviour has been restored, and further work has been made to improve the
+  compatibility of connection delegation's configuration building methods.
 
 * `#323 <https://github.com/dw/mitogen/issues/323>`_,
   `#333 <https://github.com/dw/mitogen/issues/333>`_: work around a Windows
@@ -396,6 +409,7 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Andreas Krüger <https://github.com/woopstar>`_,
+`Anton Stroganov <https://github.com/Aeon>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
 `Brian Candler <https://github.com/candlerb>`_,
 `dsgnr <https://github.com/dsgnr>`_,
@@ -413,10 +427,12 @@ bug reports, testing, features and fixes in this release contributed by
 `Mohammed Naser <https://github.com/mnaser/>`_,
 `Peter V. Saveliev <https://github.com/svinota/>`_,
 `Stéphane <https://github.com/sboisson/>`_,
+`Tom Parker-Shemilt <https://github.com/palfrey/>`_,
+`Younès HAFRI <https://github.com/yhafri>`_,
+`@myssa91 <https://github.com/myssa91>`_,
 `@syntonym <https://github.com/syntonym/>`_,
-`@whky <https://github.com/whky/>`_,
-`@yodatak <https://github.com/yodatak/>`_, and
-`Younès HAFRI <https://github.com/yhafri>`_.
+`@whky <https://github.com/whky/>`_, and
+`@yodatak <https://github.com/yodatak/>`_.
 
 
 v0.2.3 (2018-10-23)

@@ -194,7 +194,10 @@ class MuxProcess(object):
             cls.worker_sock = None
             self = cls()
             self.worker_main()
-            sys.exit()
+            # Test frameworks living somewhere higher on the stack of the
+            # original parent process may try to catch sys.exit(), so do a C
+            # level exit instead.
+            os._exit(0)
 
     def worker_main(self):
         """

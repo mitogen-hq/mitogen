@@ -1,0 +1,10 @@
+# vim: syntax=dosini
+
+# This must be defined explicitly, otherwise _create_implicit_localhost()
+# generates its own copy, which includes an ansible_python_interpreter that
+# varies according to host machine.
+localhost
+
+# This is only used for manual testing.
+[localhost-x10]
+localhost-[01:10]

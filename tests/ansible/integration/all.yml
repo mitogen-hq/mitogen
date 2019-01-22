@@ -7,9 +7,9 @@
 - import_playbook: async/all.yml
 - import_playbook: become/all.yml
 - import_playbook: connection/all.yml
+- import_playbook: connection_delegation/all.yml
 - import_playbook: connection_loader/all.yml
 - import_playbook: context_service/all.yml
-- import_playbook: delegation/all.yml
 - import_playbook: glibc_caches/all.yml
 - import_playbook: local/all.yml
 - import_playbook: module_utils/all.yml

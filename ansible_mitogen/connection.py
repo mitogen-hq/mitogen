@@ -52,18 +52,10 @@ import ansible_mitogen.parsing
 import ansible_mitogen.process
 import ansible_mitogen.services
 import ansible_mitogen.target
+import ansible_mitogen.transport_config
 
 
 LOG = logging.getLogger(__name__)
-
-
-def optional_secret(value):
-    """
-    Wrap `value` in :class:`mitogen.core.Secret` if it is not :data:`None`,
-    otherwise return :data:`None`.
-    """
-    if value is not None:
-        return mitogen.core.Secret(value)
 
 
 def optional_int(value):
@@ -77,15 +69,6 @@ def optional_int(value):
         return None
 
 
-def parse_python_path(s):
-    """
-    Given the string set for ansible_python_interpeter, parse it using shell
-    syntax and return an appropriate argument vector.
-    """
-    if s:
-        return ansible.utils.shlex.shlex_split(s)
-
-
 def _connect_local(spec):
     """
     Return ContextService arguments for a local connection.
@@ -93,7 +76,7 @@ def _connect_local(spec):
     return {
         'method': 'local',
         'kwargs': {
-            'python_path': spec['python_path'],
+            'python_path': spec.python_path(),
         }
     }
 
@@ -109,7 +92,7 @@ def _connect_ssh(spec):
 
     # #334: tilde-expand private_key_file to avoid implementation difference
     # between Python and OpenSSH.
-    private_key_file = spec['private_key_file']
+    private_key_file = spec.private_key_file()
     if private_key_file is not None:
         private_key_file = os.path.expanduser(private_key_file)
 
@@ -117,17 +100,17 @@ def _connect_ssh(spec):
         'method': 'ssh',
         'kwargs': {
             'check_host_keys': check_host_keys,
-            'hostname': spec['remote_addr'],
-            'username': spec['remote_user'],
-            'password': optional_secret(spec['password']),
-            'port': spec['port'],
-            'python_path': spec['python_path'],
+            'hostname': spec.remote_addr(),
+            'username': spec.remote_user(),
+            'password': spec.password(),
+            'port': spec.port(),
+            'python_path': spec.python_path(),
             'identity_file': private_key_file,
             'identities_only': False,
-            'ssh_path': spec['ssh_executable'],
-            'connect_timeout': spec['ansible_ssh_timeout'],
-            'ssh_args': spec['ssh_args'],
-            'ssh_debug_level': spec['mitogen_ssh_debug_level'],
+            'ssh_path': spec.ssh_executable(),
+            'connect_timeout': spec.ansible_ssh_timeout(),
+            'ssh_args': spec.ssh_args(),
+            'ssh_debug_level': spec.mitogen_ssh_debug_level(),
         }
     }
 
@@ -139,10 +122,10 @@ def _connect_docker(spec):
     return {
         'method': 'docker',
         'kwargs': {
-            'username': spec['remote_user'],
-            'container': spec['remote_addr'],
-            'python_path': spec['python_path'],
-            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'username': spec.remote_user(),
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
@@ -154,11 +137,11 @@ def _connect_kubectl(spec):
     return {
         'method': 'kubectl',
         'kwargs': {
-            'pod': spec['remote_addr'],
-            'python_path': spec['python_path'],
-            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
-            'kubectl_path': spec['mitogen_kubectl_path'],
-            'kubectl_args': spec['extra_args'],
+            'pod': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
+            'kubectl_path': spec.mitogen_kubectl_path(),
+            'kubectl_args': spec.extra_args(),
         }
     }
 
@@ -170,10 +153,10 @@ def _connect_jail(spec):
     return {
         'method': 'jail',
         'kwargs': {
-            'username': spec['remote_user'],
-            'container': spec['remote_addr'],
-            'python_path': spec['python_path'],
-            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'username': spec.remote_user(),
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
@@ -185,10 +168,10 @@ def _connect_lxc(spec):
     return {
         'method': 'lxc',
         'kwargs': {
-            'container': spec['remote_addr'],
-            'python_path': spec['python_path'],
-            'lxc_attach_path': spec['mitogen_lxc_attach_path'],
-            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'lxc_attach_path': spec.mitogen_lxc_attach_path(),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
@@ -200,10 +183,10 @@ def _connect_lxd(spec):
     return {
         'method': 'lxd',
         'kwargs': {
-            'container': spec['remote_addr'],
-            'python_path': spec['python_path'],
-            'lxc_path': spec['mitogen_lxc_path'],
-            'connect_timeout': spec['ansible_ssh_timeout'] or spec['timeout'],
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'lxc_path': spec.mitogen_lxc_path(),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
@@ -212,24 +195,24 @@ def _connect_machinectl(spec):
     """
     Return ContextService arguments for a machinectl connection.
     """
-    return _connect_setns(dict(spec, mitogen_kind='machinectl'))
+    return _connect_setns(spec, kind='machinectl')
 
 
-def _connect_setns(spec):
+def _connect_setns(spec, kind=None):
     """
     Return ContextService arguments for a mitogen_setns connection.
     """
     return {
         'method': 'setns',
         'kwargs': {
-            'container': spec['remote_addr'],
-            'username': spec['remote_user'],
-            'python_path': spec['python_path'],
-            'kind': spec['mitogen_kind'],
-            'docker_path': spec['mitogen_docker_path'],
-            'lxc_path': spec['mitogen_lxc_path'],
-            'lxc_info_path': spec['mitogen_lxc_info_path'],
-            'machinectl_path': spec['mitogen_machinectl_path'],
+            'container': spec.remote_addr(),
+            'username': spec.remote_user(),
+            'python_path': spec.python_path(),
+            'kind': kind or spec.mitogen_kind(),
+            'docker_path': spec.mitogen_docker_path(),
+            'lxc_path': spec.mitogen_lxc_path(),
+            'lxc_info_path': spec.mitogen_lxc_info_path(),
+            'machinectl_path': spec.mitogen_machinectl_path(),
         }
     }
 
@@ -242,11 +225,11 @@ def _connect_su(spec):
         'method': 'su',
         'enable_lru': True,
         'kwargs': {
-            'username': spec['become_user'],
-            'password': optional_secret(spec['become_pass']),
-            'python_path': spec['python_path'],
-            'su_path': spec['become_exe'],
-            'connect_timeout': spec['timeout'],
+            'username': spec.become_user(),
+            'password': spec.become_pass(),
+            'python_path': spec.python_path(),
+            'su_path': spec.become_exe(),
+            'connect_timeout': spec.timeout(),
         }
     }
 
@@ -259,12 +242,12 @@ def _connect_sudo(spec):
         'method': 'sudo',
         'enable_lru': True,
         'kwargs': {
-            'username': spec['become_user'],
-            'password': optional_secret(spec['become_pass']),
-            'python_path': spec['python_path'],
-            'sudo_path': spec['become_exe'],
-            'connect_timeout': spec['timeout'],
-            'sudo_args': spec['sudo_args'],
+            'username': spec.become_user(),
+            'password': spec.become_pass(),
+            'python_path': spec.python_path(),
+            'sudo_path': spec.become_exe(),
+            'connect_timeout': spec.timeout(),
+            'sudo_args': spec.sudo_args(),
         }
     }
 
@@ -277,11 +260,11 @@ def _connect_doas(spec):
         'method': 'doas',
         'enable_lru': True,
         'kwargs': {
-            'username': spec['become_user'],
-            'password': optional_secret(spec['become_pass']),
-            'python_path': spec['python_path'],
-            'doas_path': spec['become_exe'],
-            'connect_timeout': spec['timeout'],
+            'username': spec.become_user(),
+            'password': spec.become_pass(),
+            'python_path': spec.python_path(),
+            'doas_path': spec.become_exe(),
+            'connect_timeout': spec.timeout(),
         }
     }
 
@@ -293,11 +276,11 @@ def _connect_mitogen_su(spec):
     return {
         'method': 'su',
         'kwargs': {
-            'username': spec['remote_user'],
-            'password': optional_secret(spec['password']),
-            'python_path': spec['python_path'],
-            'su_path': spec['become_exe'],
-            'connect_timeout': spec['timeout'],
+            'username': spec.remote_user(),
+            'password': spec.password(),
+            'python_path': spec.python_path(),
+            'su_path': spec.become_exe(),
+            'connect_timeout': spec.timeout(),
         }
     }
 
@@ -309,12 +292,12 @@ def _connect_mitogen_sudo(spec):
     return {
         'method': 'sudo',
         'kwargs': {
-            'username': spec['remote_user'],
-            'password': optional_secret(spec['password']),
-            'python_path': spec['python_path'],
-            'sudo_path': spec['become_exe'],
-            'connect_timeout': spec['timeout'],
-            'sudo_args': spec['sudo_args'],
+            'username': spec.remote_user(),
+            'password': spec.password(),
+            'python_path': spec.python_path(),
+            'sudo_path': spec.become_exe(),
+            'connect_timeout': spec.timeout(),
+            'sudo_args': spec.sudo_args(),
         }
     }
 
@@ -326,11 +309,11 @@ def _connect_mitogen_doas(spec):
     return {
         'method': 'doas',
         'kwargs': {
-            'username': spec['remote_user'],
-            'password': optional_secret(spec['password']),
-            'python_path': spec['python_path'],
-            'doas_path': spec['become_exe'],
-            'connect_timeout': spec['timeout'],
+            'username': spec.remote_user(),
+            'password': spec.password(),
+            'python_path': spec.python_path(),
+            'doas_path': spec.become_exe(),
+            'connect_timeout': spec.timeout(),
         }
     }
 
@@ -355,107 +338,6 @@ CONNECTION_METHOD = {
     'mitogen_sudo': _connect_mitogen_sudo,
     'mitogen_doas': _connect_mitogen_doas,
 }
-
-
-def config_from_play_context(transport, inventory_name, connection):
-    """
-    Return a dict representing all important connection configuration, allowing
-    the same functions to work regardless of whether configuration came from
-    play_context (direct connection) or host vars (mitogen_via=).
-    """
-    return {
-        'transport': transport,
-        'inventory_name': inventory_name,
-        'remote_addr': connection._play_context.remote_addr,
-        'remote_user': connection._play_context.remote_user,
-        'become': connection._play_context.become,
-        'become_method': connection._play_context.become_method,
-        'become_user': connection._play_context.become_user,
-        'become_pass': connection._play_context.become_pass,
-        'password': connection._play_context.password,
-        'port': connection._play_context.port,
-        'python_path': parse_python_path(
-            connection.get_task_var('ansible_python_interpreter',
-                                    default='/usr/bin/python')
-        ),
-        'private_key_file': connection._play_context.private_key_file,
-        'ssh_executable': connection._play_context.ssh_executable,
-        'timeout': connection._play_context.timeout,
-        'ansible_ssh_timeout':
-            connection.get_task_var('ansible_ssh_timeout',
-                                    default=C.DEFAULT_TIMEOUT),
-        'ssh_args': [
-            mitogen.core.to_text(term)
-            for s in (
-                getattr(connection._play_context, 'ssh_args', ''),
-                getattr(connection._play_context, 'ssh_common_args', ''),
-                getattr(connection._play_context, 'ssh_extra_args', '')
-            )
-            for term in ansible.utils.shlex.shlex_split(s or '')
-        ],
-        'become_exe': connection._play_context.become_exe,
-        'sudo_args': [
-            mitogen.core.to_text(term)
-            for s in (
-                connection._play_context.sudo_flags,
-                connection._play_context.become_flags
-            )
-            for term in ansible.utils.shlex.shlex_split(s or '')
-        ],
-        'mitogen_via':
-            connection.get_task_var('mitogen_via'),
-        'mitogen_kind':
-            connection.get_task_var('mitogen_kind'),
-        'mitogen_docker_path':
-            connection.get_task_var('mitogen_docker_path'),
-        'mitogen_kubectl_path':
-            connection.get_task_var('mitogen_kubectl_path'),
-        'mitogen_lxc_path':
-            connection.get_task_var('mitogen_lxc_path'),
-        'mitogen_lxc_attach_path':
-            connection.get_task_var('mitogen_lxc_attach_path'),
-        'mitogen_lxc_info_path':
-            connection.get_task_var('mitogen_lxc_info_path'),
-        'mitogen_machinectl_path':
-            connection.get_task_var('mitogen_machinectl_path'),
-        'mitogen_ssh_debug_level':
-            optional_int(
-                connection.get_task_var('mitogen_ssh_debug_level')
-            ),
-        'extra_args':
-            connection.get_extra_args(),
-    }
-
-
-def config_from_hostvars(transport, inventory_name, connection,
-                         hostvars, become_user):
-    """
-    Override config_from_play_context() to take equivalent information from
-    host vars.
-    """
-    config = config_from_play_context(transport, inventory_name, connection)
-    hostvars = dict(hostvars)
-    return dict(config, **{
-        'remote_addr': hostvars.get('ansible_host', inventory_name),
-        'become': bool(become_user),
-        'become_user': become_user,
-        'become_pass': None,
-        'remote_user': hostvars.get('ansible_user'),  # TODO
-        'password': (hostvars.get('ansible_ssh_pass') or
-                     hostvars.get('ansible_password')),
-        'port': hostvars.get('ansible_port'),
-        'python_path': parse_python_path(hostvars.get('ansible_python_interpreter')),
-        'private_key_file': (hostvars.get('ansible_ssh_private_key_file') or
-                             hostvars.get('ansible_private_key_file')),
-        'mitogen_via': hostvars.get('mitogen_via'),
-        'mitogen_kind': hostvars.get('mitogen_kind'),
-        'mitogen_docker_path': hostvars.get('mitogen_docker_path'),
-        'mitogen_kubectl_path': hostvars.get('mitogen_kubectl_path'),
-        'mitogen_lxc_path': hostvars.get('mitogen_lxc_path'),
-        'mitogen_lxc_attach_path': hostvars.get('mitogen_lxc_attach_path'),
-        'mitogen_lxc_info_path': hostvars.get('mitogen_lxc_info_path'),
-        'mitogen_machinectl_path': hostvars.get('mitogen_machinctl_path'),
-    })
 
 
 class CallChain(mitogen.parent.CallChain):
@@ -599,8 +481,26 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._mitogen_reset(mode='put')
 
     def get_task_var(self, key, default=None):
-        if self._task_vars and key in self._task_vars:
-            return self._task_vars[key]
+        """
+        Fetch the value of a task variable related to connection configuration,
+        or, if delegate_to is active, fetch the same variable via HostVars for
+        the delegated-to machine.
+
+        When running with delegate_to, Ansible tasks have variables associated
+        with the original machine, therefore it does not make sense to extract
+        connection-related configuration information from them.
+        """
+        if self._task_vars:
+            if self.delegate_to_hostname is None:
+                if key in self._task_vars:
+                    return self._task_vars[key]
+            else:
+                delegated_vars = self._task_vars['ansible_delegated_vars']
+                if self.delegate_to_hostname in delegated_vars:
+                    task_vars = delegated_vars[self.delegate_to_hostname]
+                    if key in task_vars:
+                        return task_vars[key]
+
         return default
 
     @property
@@ -612,12 +512,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def connected(self):
         return self.context is not None
 
-    def _config_from_via(self, via_spec):
+    def _spec_from_via(self, via_spec):
         """
         Produce a dict connection specifiction given a string `via_spec`, of
         the form `[become_user@]inventory_hostname`.
         """
         become_user, _, inventory_name = via_spec.rpartition('@')
+        become_method, _, become_user = become_user.rpartition(':')
+
         via_vars = self.host_vars[inventory_name]
         if isinstance(via_vars, jinja2.runtime.Undefined):
             raise ansible.errors.AnsibleConnectionFailure(
@@ -627,39 +529,38 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 )
             )
 
-        return config_from_hostvars(
-            transport=via_vars.get('ansible_connection', 'ssh'),
+        return ansible_mitogen.transport_config.MitogenViaSpec(
             inventory_name=inventory_name,
-            connection=self,
-            hostvars=via_vars,
+            host_vars=dict(via_vars),  # TODO: make it lazy
+            become_method=become_method or None,
             become_user=become_user or None,
         )
 
     unknown_via_msg = 'mitogen_via=%s of %s specifies an unknown hostname'
     via_cycle_msg = 'mitogen_via=%s of %s creates a cycle (%s)'
 
-    def _stack_from_config(self, config, stack=(), seen_names=()):
-        if config['inventory_name'] in seen_names:
+    def _stack_from_spec(self, spec, stack=(), seen_names=()):
+        if spec.inventory_name() in seen_names:
             raise ansible.errors.AnsibleConnectionFailure(
                 self.via_cycle_msg % (
-                    config['mitogen_via'],
-                    config['inventory_name'],
+                    spec.mitogen_via(),
+                    spec.inventory_name(),
                     ' -> '.join(reversed(
-                        seen_names + (config['inventory_name'],)
+                        seen_names + (spec.inventory_name(),)
                     )),
                 )
             )
 
-        if config['mitogen_via']:
-            stack, seen_names = self._stack_from_config(
-                self._config_from_via(config['mitogen_via']),
+        if spec.mitogen_via():
+            stack, seen_names = self._stack_from_spec(
+                self._spec_from_via(spec.mitogen_via()),
                 stack=stack,
-                seen_names=seen_names + (config['inventory_name'],)
+                seen_names=seen_names + (spec.inventory_name(),),
             )
 
-        stack += (CONNECTION_METHOD[config['transport']](config),)
-        if config['become']:
-            stack += (CONNECTION_METHOD[config['become_method']](config),)
+        stack += (CONNECTION_METHOD[spec.transport()](spec),)
+        if spec.become():
+            stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
         return stack, seen_names
 
@@ -675,24 +576,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 broker=self.broker,
             )
 
-    def _config_from_direct_connection(self):
-        """
-        """
-        return config_from_play_context(
-            transport=self.transport,
-            inventory_name=self.inventory_hostname,
-            connection=self
-        )
-
-    def _config_from_delegate_to(self):
-        return config_from_hostvars(
-            transport=self._play_context.connection,
-            inventory_name=self.delegate_to_hostname,
+    def _build_spec(self):
+        inventory_hostname = self.inventory_hostname
+        return ansible_mitogen.transport_config.PlayContextSpec(
             connection=self,
-            hostvars=self.host_vars[self.delegate_to_hostname],
-            become_user=(self._play_context.become_user
-                         if self._play_context.become
-                         else None),
+            play_context=self._play_context,
+            transport=self.transport,
+            inventory_name=inventory_hostname,
         )
 
     def _build_stack(self):
@@ -702,12 +592,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         additionally used by the integration tests "mitogen_get_stack" action
         to fetch the would-be connection configuration.
         """
-        if self.delegate_to_hostname is not None:
-            target_config = self._config_from_delegate_to()
-        else:
-            target_config = self._config_from_direct_connection()
-
-        stack, _ = self._stack_from_config(target_config)
+        config = self._build_spec()
+        stack, _ = self._stack_from_spec(config)
         return stack
 
     def _connect_stack(self, stack):

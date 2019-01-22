@@ -174,14 +174,17 @@ class StrategyMixin(object):
         ansible_mitogen.loaders.action_loader.get = action_loader__get
         ansible_mitogen.loaders.connection_loader.get = connection_loader__get
 
-    def _add_connection_plugin_path(self):
+    def _add_plugin_paths(self):
         """
-        Add the mitogen connection plug-in directory to the ModuleLoader path,
-        avoiding the need for manual configuration.
+        Add the Mitogen plug-in directories to the ModuleLoader path, avoiding
+        the need for manual configuration.
         """
         base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
         ansible_mitogen.loaders.connection_loader.add_directory(
             os.path.join(base_dir, 'connection')
+        )
+        ansible_mitogen.loaders.action_loader.add_directory(
+            os.path.join(base_dir, 'action')
         )
 
     def run(self, iterator, play_context, result=0):
@@ -190,7 +193,7 @@ class StrategyMixin(object):
         the strategy's real run() method.
         """
         ansible_mitogen.process.MuxProcess.start()
-        self._add_connection_plugin_path()
+        self._add_plugin_paths()
         self._install_wrappers()
         try:
             return super(StrategyMixin, self).run(iterator, play_context)

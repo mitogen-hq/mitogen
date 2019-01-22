@@ -4,7 +4,7 @@
 # 'connection stack' -- this is just a list of dictionaries specifying a
 # sequence of proxied Router connection methods and their kwargs used to
 # establish the connection. That list is passed to ContextService, which loops
-# over the stack specifying via=(None or previous entry) for each connection
+# over the stack specifying via=(null or previous entry) for each connection
 # method.
 
 # mitogen_get_stack is a magic action that returns the stack, so we can test
@@ -16,7 +16,7 @@
 # the result list element, it seems to cause assert to silently succeed!
 
 
-- name: integration/delegation/stack_construction.yml
+- name: integration/connection_delegation/stack_construction.yml
   hosts: cd-normal
   tasks:
     - meta: end_play
@@ -35,20 +35,20 @@
 
     - mitogen_get_stack:
       register: out
-    - assert:
-        that: |
-          out.result == [
-            {
-              "kwargs": {
-                "connect_timeout": 10,
-                "doas_path": None,
-                "password": None,
-                "python_path": ["/usr/bin/python"],
-                "username": "normal-user",
-              },
-              "method": "doas",
-            }
-          ]
+    - assert_equal:
+        left: out.result
+        right: [
+          {
+            "kwargs": {
+              "connect_timeout": 10,
+              "doas_path": null,
+              "password": null,
+              "python_path": null,
+              "username": "normal-user",
+            },
+            "method": "doas",
+          }
+        ]
 
 
 - hosts: cd-normal
@@ -59,19 +59,19 @@
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
-    - assert:
-        that: |
-          out.result == [
+    - assert_equal:
+        left: out.result
+        right: [
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': None,
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -80,7 +80,7 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
                       'username': 'alias-user',
                   },
@@ -96,19 +96,19 @@
 
     - mitogen_get_stack:
       register: out
-    - assert:
-        that: |
-          out.result == [
+    - assert_equal:
+        left: out.result
+        right: [
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': ['/usr/bin/python'],
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -117,7 +117,7 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
                       'username': 'alias-user',
                   },
@@ -133,15 +133,15 @@
 
     - mitogen_get_stack:
       register: out
-    - assert:
-        that: |
-          out.result == [
+    - assert_equal:
+        left: out.result
+        right: [
               {
                   'kwargs': {
                       'connect_timeout': 10,
-                      'doas_path': None,
-                      'password': None,
-                      'python_path': None,
+                      'doas_path': null,
+                      'password': null,
+                      'python_path': null,
                       'username': 'normal-user',
                   },
                   'method': 'doas',
@@ -152,10 +152,10 @@
                       'connect_timeout': 10,
                       'hostname': 'cd-normal-normal',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': ['/usr/bin/python'],
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -164,9 +164,9 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
-                      'username': None,
+                      'username': 'ansible-cfg-remote-user',
                   },
                   'method': 'ssh',
               },
@@ -180,19 +180,19 @@
 
     - mitogen_get_stack:
       register: out
-    - assert:
-        that: |
-          out.result == [
+    - assert_equal:
+        left: out.result
+        right: [
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': None,
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -201,7 +201,7 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
                       'username': 'alias-user',
                   },
@@ -213,10 +213,10 @@
                       'connect_timeout': 10,
                       'hostname': 'cd-normal-alias',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': ['/usr/bin/python'],
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -225,9 +225,9 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
-                      'username': None,
+                      'username': 'ansible-cfg-remote-user',
                   },
                   'method': 'ssh',
               },
@@ -241,15 +241,15 @@
 
     - mitogen_get_stack:
       register: out
-    - assert:
-        that: |
-          out.result == [
+    - assert_equal:
+        left: out.result
+        right: [
               {
                   'kwargs': {
                       'connect_timeout': 10,
-                      'doas_path': None,
-                      'password': None,
-                      'python_path': None,
+                      'doas_path': null,
+                      'password': null,
+                      'python_path': null,
                       'username': 'normal-user',
                   },
                   'method': 'doas',
@@ -260,10 +260,10 @@
                       'connect_timeout': 10,
                       'hostname': 'cd-newuser-normal-normal',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': ['/usr/bin/python'],
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -272,7 +272,7 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
                       'username': 'newuser-normal-normal-user',
                   },
@@ -289,19 +289,19 @@
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
-    - assert:
-        that: |
-          out.result == [
+    - assert_equal:
+        left: out.result
+        right: [
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
-                      'identity_file': None,
-                      'password': None,
-                      'port': None,
-                      'python_path': None,
+                      'identity_file': null,
+                      'password': null,
+                      'port': null,
+                      'python_path': null,
                       'ssh_args': [
                           '-o',
                           'ForwardAgent=yes',
@@ -310,7 +310,7 @@
                           '-o',
                           'ControlPersist=60s',
                       ],
-                      'ssh_debug_level': None,
+                      'ssh_debug_level': null,
                       'ssh_path': 'ssh',
                       'username': 'alias-user',
                   },
@@ -326,16 +326,16 @@
 
     - local_action: mitogen_get_stack
       register: out
-    - assert:
-        that: |
-          out.result == [
-              {
-                  'kwargs': {
-                      'python_path': None
-                  },
-                  'method': 'local',
-              },
-          ]
+    - assert_equal:
+        left: out.result
+        right: [
+          {
+            'kwargs': {
+              'python_path': null
+            },
+            'method': 'local',
+          },
+        ]
 
 
 - hosts: cd-newuser-doas-normal
@@ -345,27 +345,27 @@
 
     - mitogen_get_stack:
       register: out
-    - assert:
-        that: |
-          out.result == [
-              {
-                  'kwargs': {
-                      'connect_timeout': 10,
-                      'doas_path': None,
-                      'password': None,
-                      'python_path': None,
-                      'username': 'normal-user',
-                  },
-                  'method': 'doas',
-              },
-              {
-                  'kwargs': {
-                      'connect_timeout': 10,
-                      'doas_path': None,
-                      'password': None,
-                      'python_path': ['/usr/bin/python'],
-                      'username': 'newuser-doas-normal-user',
-                  },
-                  'method': 'doas',
-              },
-          ]
+    - assert_equal:
+        left: out.result
+        right: [
+          {
+            'kwargs': {
+              'connect_timeout': 10,
+              'doas_path': null,
+              'password': null,
+              'python_path': null,
+              'username': 'normal-user',
+            },
+            'method': 'doas',
+          },
+          {
+            'kwargs': {
+              'connect_timeout': 10,
+              'doas_path': null,
+              'password': null,
+              'python_path': null,
+              'username': 'newuser-doas-normal-user',
+            },
+            'method': 'doas',
+          },
+      ]

@@ -921,6 +921,154 @@ logging is necessary. File-based logging can be enabled by setting
 enabled, one file per context will be created on the local machine and every
 target machine, as ``/tmp/mitogen.<pid>.log``.
 
+
+Common Problems
+~~~~~~~~~~~~~~~
+
+The most common bug reports fall into the following categories, so it is worth
+checking whether you can categorize a problem using the tools provided before
+reporting it:
+
+**Missed/Incorrect Configuration Variables**
+    In some cases Ansible may support a configuration variable that Mitogen
+    does not yet support, or Mitogen supports, but the support is broken. For
+    example, Mitogen may pick the wrong username or SSH parameters.
+
+    To detect this, use the special ``mitogen_get_stack`` action described
+    below to verify all the configuration variables Mitogen has chosen for the
+    connection make sense.
+
+**Process Environment Differences**
+    Mitogen's process model differs significantly to Ansible's in certain
+    places. In the past, bugs have been reported because Ansible plug-ins
+    modify an environment variable after Mitogen processes are started
+
+**Variable Expansion Differences**
+    To avoid many classes of bugs, Mitogen avoids shell wherever possible.
+    Ansible however is traditionally built on shell, and it is often difficult
+    to tell just how many times a configuration parameter will pass through
+    shell expansion and quoting, and in what context before it is used.
+
+    Due to this, in some circumstances Mitogen may parse some expanded
+    variables differently, for example, in the wrong user account. Careful
+    review of ``-vvv`` and ``mitogen_ssh_debug_level`` logs can reveal this.
+    For example in the past, Mitogen used a different method of expanding
+    ``~/.ssh/id_rsa``, causing authentication to fail when ``ansible-playbook``
+    was run via ``sudo -E``.
+
+**External Tool Integration Differences**
+    Mitogen reimplements any aspect of Ansible that involves integrating with
+    SSH, sudo, Docker, or related tools. For this reason, sometimes its support
+    for those tools doffers or is less mature than in Ansible.
+
+    In the past Mitogen has had bug reports due to failing to recognize a
+    particular variation of a login or password prompt on an exotic or
+    non-English operating system, or confusing a login banner for a password
+    prompt. Careful review of ``-vvv`` logs help identify these cases, as
+    Mitogen logs all strings it receives during connection, and how it
+    interprets them.
+
+
+.. _mitogen-get-stack:
+
+The `mitogen_get_stack` Action
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a Mitogen strategy is loaded, a special ``mitogen_get_stack`` action is
+available that returns a concise description of the connection configuration as
+extracted from Ansible and passed to the core library. Using it, you can learn
+whether a problem lies in the Ansible extension or deeper in library code.
+
+The action may be used in a playbook as ``mitogen_get_stack:`` just like a
+regular module, or directly from the command-line::
+
+    $ ANSIBLE_STRATEGY=mitogen_linear ansible -m mitogen_get_stack -b -k k3
+    SSH password:
+    k3 | SUCCESS => {
+        "changed": true,
+        "result": [
+            {
+                "kwargs": {
+                    "check_host_keys": "enforce",
+                    "connect_timeout": 10,
+                    "hostname": "k3",
+                    "identities_only": false,
+                    "identity_file": null,
+                    "password": "mysecretpassword",
+                    "port": null,
+                    "python_path": null,
+                    "ssh_args": [
+                        "-C",
+                        "-o",
+                        "ControlMaster=auto",
+                        "-o",
+                        "ControlPersist=60s"
+                    ],
+                    "ssh_debug_level": null,
+                    "ssh_path": "ssh",
+                    "username": null
+                },
+                "method": "ssh"
+            },
+            {
+                "enable_lru": true,
+                "kwargs": {
+                    "connect_timeout": 10,
+                    "password": null,
+                    "python_path": null,
+                    "sudo_args": [
+                        "-H",
+                        "-S",
+                        "-n"
+                    ],
+                    "sudo_path": null,
+                    "username": "root"
+                },
+                "method": "sudo"
+            }
+        ]
+    }
+
+Each object in the list represents a single 'hop' in the connection, from
+nearest to furthest. Unlike in Ansible, the core library treats ``become``
+steps and SSH steps identically, so they are represented distinctly in the
+output.
+
+The presence of ``null`` means no explicit value was extracted from Ansible,
+and either the Mitogen library or SSH will choose a value for the parameter. In
+the example above, Mitogen will choose ``/usr/bin/python`` for ``python_path``,
+and SSH will choose ``22`` for ``port``, or whatever ``Port`` it parses from
+``~/.ssh/config``. Note the presence of ``null`` may indicate the extension
+failed to extract the correct value.
+
+When using ``mitogen_get_stack`` to diagnose a problem, pay special attention
+to ensuring the invocation exactly matches the problematic task. For example,
+if the failing task has ``delegate_to:`` or ``become:`` enabled, the
+``mitogen_get_stack`` invocation must include those statements in order for the
+output to be accurate.
+
+If a playbook cannot start at all, you may need to temporarily use
+``gather_facts: no`` to allow the first task to proceed. This action does not
+create connections, so if it is the first task, it is still possible to review
+its output.
+
+
+The `mitogen_ssh_debug_level` Variable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mitogen has support for capturing SSH diagnostic logs, and integrating them
+into the regular debug log output produced when ``-vvv`` is active. This
+provides a single audit trail of every component active during SSH
+authentication.
+
+Particularly for authentication failures, setting this variable to 3, in
+combination with ``-vvv``, allows review of every parameter passed to SSH, and
+review of every action SSH attempted during authentication.
+
+For example, this method can be used to ascertain whether SSH attempted agent
+authentication, or what private key files it was able to access and which it tried.
+
+
 .. _diagnosing-hangs:
 
 Diagnosing Hangs

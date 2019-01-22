@@ -1,0 +1,8 @@
+# vim: syntax=dosini
+
+# When running the tests outside CI, make a single 'target' host which is the
+# local machine.
+target ansible_host=localhost
+
+[test-targets]
+target
