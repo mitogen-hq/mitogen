@@ -58,15 +58,6 @@ import ansible_mitogen.transport_config
 LOG = logging.getLogger(__name__)
 
 
-def optional_secret(value):
-    """
-    Wrap `value` in :class:`mitogen.core.Secret` if it is not :data:`None`,
-    otherwise return :data:`None`.
-    """
-    if value is not None:
-        return mitogen.core.Secret(value)
-
-
 def optional_int(value):
     """
     Convert `value` to an integer if it is not :data:`None`, otherwise return
@@ -111,7 +102,7 @@ def _connect_ssh(spec):
             'check_host_keys': check_host_keys,
             'hostname': spec.remote_addr(),
             'username': spec.remote_user(),
-            'password': optional_secret(spec.password()),
+            'password': spec.password(),
             'port': spec.port(),
             'python_path': spec.python_path(),
             'identity_file': private_key_file,
@@ -235,7 +226,7 @@ def _connect_su(spec):
         'enable_lru': True,
         'kwargs': {
             'username': spec.become_user(),
-            'password': optional_secret(spec.become_pass()),
+            'password': spec.become_pass(),
             'python_path': spec.python_path(),
             'su_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
@@ -252,7 +243,7 @@ def _connect_sudo(spec):
         'enable_lru': True,
         'kwargs': {
             'username': spec.become_user(),
-            'password': optional_secret(spec.become_pass()),
+            'password': spec.become_pass(),
             'python_path': spec.python_path(),
             'sudo_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
@@ -270,7 +261,7 @@ def _connect_doas(spec):
         'enable_lru': True,
         'kwargs': {
             'username': spec.become_user(),
-            'password': optional_secret(spec.become_pass()),
+            'password': spec.become_pass(),
             'python_path': spec.python_path(),
             'doas_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
@@ -286,7 +277,7 @@ def _connect_mitogen_su(spec):
         'method': 'su',
         'kwargs': {
             'username': spec.remote_user(),
-            'password': optional_secret(spec.password()),
+            'password': spec.password(),
             'python_path': spec.python_path(),
             'su_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
@@ -302,7 +293,7 @@ def _connect_mitogen_sudo(spec):
         'method': 'sudo',
         'kwargs': {
             'username': spec.remote_user(),
-            'password': optional_secret(spec.password()),
+            'password': spec.password(),
             'python_path': spec.python_path(),
             'sudo_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
@@ -319,7 +310,7 @@ def _connect_mitogen_doas(spec):
         'method': 'doas',
         'kwargs': {
             'username': spec.remote_user(),
-            'password': optional_secret(spec.password()),
+            'password': spec.password(),
             'python_path': spec.python_path(),
             'doas_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
