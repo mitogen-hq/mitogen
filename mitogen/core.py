@@ -1479,7 +1479,7 @@ class Stream(BasicStream):
         )
 
         if magic != self.HEADER_MAGIC:
-            LOG.error(self.corrupt_msg, self._input_buf[0][:128])
+            LOG.error(self.corrupt_msg, self._input_buf[0][:2048])
             self.on_disconnect(broker)
             return False
 
