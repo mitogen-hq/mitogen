@@ -53,6 +53,11 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
+try:
+    import thread
+except ImportError:
+    import threading as thread
+
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import LOG
@@ -1389,7 +1394,7 @@ class CallChain(object):
         return '%s-%s-%x-%x' % (
             socket.gethostname(),
             os.getpid(),
-            threading.currentThread().ident,
+            thread.get_ident(),
             int(1e6 * time.time()),
         )
 

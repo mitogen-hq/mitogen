@@ -2185,7 +2185,7 @@ class Waker(BasicStream):
         :raises mitogen.core.Error:
             :meth:`defer` was called after :class:`Broker` has begun shutdown.
         """
-        if threading.currentThread().ident == self.broker_ident:
+        if thread.get_ident() == self.broker_ident:
             _vv and IOLOG.debug('%r.defer() [immediate]', self)
             return func(*args, **kwargs)
         if self._broker._exitted:
@@ -2631,7 +2631,6 @@ class Broker(object):
             name='mitogen-broker'
         )
         self._thread.start()
-        self._waker.broker_ident = self._thread.ident
 
     def start_receive(self, stream):
         """
@@ -2766,6 +2765,8 @@ class Broker(object):
         Broker thread main function. Dispatches IO events until
         :meth:`shutdown` is called.
         """
+        # For Python 2.4, no way to retrieve ident except on thread.
+        self._waker.broker_ident = thread.get_ident()
         try:
             while self._alive:
                 self._loop_once()
