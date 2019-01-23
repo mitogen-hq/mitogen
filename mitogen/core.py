@@ -1238,7 +1238,12 @@ class Importer(object):
             mod.__package__ = mod.__package__.encode()
 
         source = self.get_source(fullname)
-        code = compile(source, mod.__file__, 'exec', 0, 1)
+        try:
+            code = compile(source, mod.__file__, 'exec', 0, 1)
+        except SyntaxError:
+            LOG.exception('while importing %r', fullname)
+            raise
+
         if PY3:
             exec(code, vars(mod))
         else:
