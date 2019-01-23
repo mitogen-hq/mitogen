@@ -76,8 +76,10 @@ itervalues = getattr(dict, 'itervalues', dict.values)
 if mitogen.core.PY3:
     xrange = range
     closure_attr = '__closure__'
+    IM_SELF_ATTR = '__self__'
 else:
     closure_attr = 'func_closure'
+    IM_SELF_ATTR = 'im_self'
 
 
 try:
@@ -786,8 +788,9 @@ class CallSpec(object):
     def _get_name(self):
         bits = [self.func.__module__]
         if inspect.ismethod(self.func):
-            bits.append(getattr(self.func.__self__, '__name__', None) or
-                        getattr(type(self.func.__self__), '__name__', None))
+            im_self = getattr(self.func, IM_SELF_ATTR)
+            bits.append(getattr(im_self, '__name__', None) or
+                        getattr(type(im_self), '__name__', None))
         bits.append(self.func.__name__)
         return u'.'.join(bits)
 
@@ -1472,9 +1475,10 @@ class CallChain(object):
             raise TypeError(self.lambda_msg)
 
         if inspect.ismethod(fn):
-            if not inspect.isclass(fn.__self__):
+            im_self = getattr(fn, IM_SELF_ATTR)
+            if not inspect.isclass(im_self):
                 raise TypeError(self.method_msg)
-            klass = mitogen.core.to_text(fn.__self__.__name__)
+            klass = mitogen.core.to_text(im_self.__name__)
         else:
             klass = None
 

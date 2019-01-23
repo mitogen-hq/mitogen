@@ -6,6 +6,7 @@ import unittest2
 import mitogen.core
 import mitogen.parent
 import mitogen.master
+from mitogen.core import str_partition
 
 import testlib
 import plain_old_module
@@ -50,7 +51,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
     def setUp(self):
         super(CallFunctionTest, self).setUp()
-        self.local = self.router.fork()
+        self.local = self.router.local()
 
     def test_succeeds(self):
         self.assertEqual(3, self.local.call(function_that_adds_numbers, 1, 2))
@@ -65,11 +66,11 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         exc = self.assertRaises(mitogen.core.CallError,
             lambda: self.local.call(function_that_fails))
 
-        s = str(exc)
-        etype, _, s = s.partition(': ')
-        self.assertEqual(etype, 'plain_old_module.MyError')
+        s = mitogen.core.to_text(exc)
+        etype, _, s = str_partition(s, u': ')
+        self.assertEqual(etype, u'plain_old_module.MyError')
 
-        msg, _, s = s.partition('\n')
+        msg, _, s = str_partition(s, u'\n')
         self.assertEqual(msg, 'exception text')
 
         # Traceback
@@ -127,7 +128,7 @@ class CallChainTest(testlib.RouterMixin, testlib.TestCase):
 
     def setUp(self):
         super(CallChainTest, self).setUp()
-        self.local = self.router.fork()
+        self.local = self.router.local()
 
     def test_subsequent_calls_produce_same_error(self):
         chain = self.klass(self.local, pipelined=True)
@@ -162,7 +163,7 @@ class UnsupportedCallablesTest(testlib.RouterMixin, testlib.TestCase):
 
     def setUp(self):
         super(UnsupportedCallablesTest, self).setUp()
-        self.local = self.router.fork()
+        self.local = self.router.local()
 
     def test_closures_unsuppored(self):
         a = 1
