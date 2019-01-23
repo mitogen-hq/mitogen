@@ -31,9 +31,10 @@ class ConstructorTest(testlib.TestCase):
     def test_form_base_exc(self):
         ve = SystemExit('eek')
         e = self.klass(ve)
+        cls = ve.__class__
         self.assertEquals(e.args[0],
             # varies across 2/3.
-            '%s.%s: eek' % (type(ve).__module__, type(ve).__name__))
+            '%s.%s: eek' % (cls.__module__, cls.__name__))
         self.assertTrue(isinstance(e.args[0], mitogen.core.UnicodeType))
 
     def test_from_exc_tb(self):

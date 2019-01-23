@@ -263,7 +263,8 @@ class CallError(Error, object):
             Error.__init__(self, fmt, *args)
         else:
             e = fmt
-            fmt = '%s.%s: %s' % (type(e).__module__, type(e).__name__, e)
+            cls = e.__class__
+            fmt = '%s.%s: %s' % (cls.__module__, cls.__name__, e)
             tb = sys.exc_info()[2]
             if tb:
                 fmt += '\n'
