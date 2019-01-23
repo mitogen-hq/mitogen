@@ -491,6 +491,25 @@ class ModuleFinder(object):
             e = sys.exc_info()[1]
             LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
 
+    def add_source_override(self, fullname, path, source, is_pkg):
+        """
+        Explicitly install a source cache entry, preventing usual lookup
+        methods from being used.
+
+        Beware the value of `path` is critical when `is_pkg` is specified,
+        since it directs where submodules are searched for.
+
+        :param str fullname:
+            Name of the module to override.
+        :param str path:
+            Module's path as it will appear in the cache.
+        :param bytes source:
+            Module source code as a bytestring.
+        :param bool is_pkg:
+            :data:`True` if the module is a package.
+        """
+        self._found_cache[fullname] = (path, source, is_pkg)
+
     get_module_methods = [_get_module_via_pkgutil,
                           _get_module_via_sys_modules,
                           _get_module_via_parent_enumeration]
@@ -642,6 +661,12 @@ class ModuleResponder(object):
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
+
+    def add_source_override(self, fullname, path, source, is_pkg):
+        """
+        See :meth:`ModuleFinder.add_source_override.
+        """
+        self._finder.add_source_override(fullname, path, source, is_pkg)
 
     MAIN_RE = re.compile(b(r'^if\s+__name__\s*==\s*.__main__.\s*:'), re.M)
     main_guard_msg = (
