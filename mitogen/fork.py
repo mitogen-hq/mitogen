@@ -184,10 +184,11 @@ class Stream(mitogen.parent.Stream):
             config['on_start'] = self.on_start
 
         try:
-            mitogen.core.ExternalContext(config).main()
-        except Exception:
-            # TODO: report exception somehow.
-            os._exit(72)
+            try:
+                mitogen.core.ExternalContext(config).main()
+            except Exception:
+                # TODO: report exception somehow.
+                os._exit(72)
         finally:
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)
