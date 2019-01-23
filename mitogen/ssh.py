@@ -42,6 +42,11 @@ import mitogen.parent
 from mitogen.core import b
 from mitogen.core import bytes_partition
 
+try:
+    any
+except NameError:
+    from mitogen.core import any
+
 
 LOG = logging.getLogger('mitogen')
 
@@ -92,7 +97,7 @@ def filter_debug(stream, it):
                     # interesting token from above or the bootstrap
                     # ('password', 'MITO000\n').
                     break
-                elif buf.startswith(DEBUG_PREFIXES):
+                elif any(buf.startswith(p) for p in DEBUG_PREFIXES):
                     state = 'in_debug'
                 else:
                     state = 'in_plain'
