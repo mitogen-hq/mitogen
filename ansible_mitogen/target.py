@@ -724,7 +724,7 @@ def set_file_mode(path, spec, fd=None):
     """
     if isinstance(spec, int):
         new_mode = spec
-    elif mitogen.core.PY2 and isinstance(spec, long):
+    elif not mitogen.core.PY3 and isinstance(spec, long):
         new_mode = spec
     elif spec.isdigit():
         new_mode = int(spec, 8)
