@@ -50,6 +50,7 @@ from mitogen.core import b
 from mitogen.core import bytes_partition
 from mitogen.core import str_partition
 from mitogen.core import str_rpartition
+from mitogen.core import to_text
 
 try:
     import ctypes
@@ -455,7 +456,7 @@ class ModuleUtilsImporter(object):
             mod.__path__ = []
             mod.__package__ = str(fullname)
         else:
-            mod.__package__ = str(str_rpartition(fullname, '.')[0])
+            mod.__package__ = str(str_rpartition(to_text(fullname), '.')[0])
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
