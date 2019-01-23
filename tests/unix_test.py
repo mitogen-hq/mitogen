@@ -132,7 +132,13 @@ class ClientTest(testlib.TestCase):
         proc = subprocess.Popen(
             [sys.executable, __file__, 'ClientTest_server', path]
         )
-        self._test_simple_client(path)
+        try:
+            self._test_simple_client(path)
+        finally:
+            # TODO :)
+            mitogen.context_id = 0
+            mitogen.parent_id = None
+            mitogen.parent_ids = []
         proc.wait()
 
 
