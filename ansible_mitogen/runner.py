@@ -35,6 +35,7 @@ how to build arguments for it, preseed related data, etc.
 """
 
 import atexit
+import codecs
 import imp
 import os
 import shlex
@@ -47,6 +48,7 @@ import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import b
 from mitogen.core import bytes_partition
+from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 
 try:
@@ -131,7 +133,7 @@ class EnvironmentFileWatcher(object):
 
     def _load(self):
         try:
-            fp = open(self.path, 'r')
+            fp = codecs.open(self.path, 'r', encoding='utf-8')
             try:
                 return list(self._parse(fp))
             finally:
@@ -149,10 +151,10 @@ class EnvironmentFileWatcher(object):
             if (not bits) or bits[0].startswith('#'):
                 continue
 
-            if bits[0] == 'export':
+            if bits[0] == u'export':
                 bits.pop(0)
 
-            key, sep, value = bytes_partition(' '.join(bits), '=')
+            key, sep, value = str_partition(u' '.join(bits), u'=')
             if key and sep:
                 yield key, value
 

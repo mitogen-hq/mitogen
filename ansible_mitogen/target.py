@@ -61,8 +61,8 @@ except ImportError:
 
 try:
     reduce
-except ImportError:
-    # Python 2.4
+except NameError:
+    # Python 3.x.
     from functools import reduce
 
 try:
