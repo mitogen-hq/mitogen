@@ -936,11 +936,15 @@ class EpollPoller(mitogen.core.Poller):
                     yield data
 
 
-POLLER_BY_SYSNAME = {
-    'Darwin': KqueuePoller,
-    'FreeBSD': KqueuePoller,
-    'Linux': EpollPoller,
-}
+if sys.version_info < (2, 6):
+    # 2.4 and 2.5 only had select.select() and select.poll().
+    POLLER_BY_SYSNAME = {}
+else:
+    POLLER_BY_SYSNAME = {
+        'Darwin': KqueuePoller,
+        'FreeBSD': KqueuePoller,
+        'Linux': EpollPoller,
+    }
 
 PREFERRED_POLLER = POLLER_BY_SYSNAME.get(
     os.uname()[0],
