@@ -60,6 +60,7 @@ except ImportError:
 
 import mitogen.core
 from mitogen.core import b
+from mitogen.core import bytes_partition
 from mitogen.core import LOG
 from mitogen.core import IOLOG
 
@@ -1785,7 +1786,7 @@ class RouteMonitor(object):
         if msg.is_dead:
             return
 
-        target_id_s, _, target_name = msg.data.partition(b(':'))
+        target_id_s, _, target_name = bytes_partition(msg.data, b(':'))
         target_name = target_name.decode()
         target_id = int(target_id_s)
         self.router.context_by_id(target_id).name = target_name
@@ -2066,7 +2067,7 @@ class ModuleForwarder(object):
         if msg.is_dead:
             return
 
-        context_id_s, _, fullname = msg.data.partition(b('\x00'))
+        context_id_s, _, fullname = bytes_partition(msg.data, b('\x00'))
         fullname = mitogen.core.to_text(fullname)
         context_id = int(context_id_s)
         stream = self.router.stream_by_id(context_id)
