@@ -182,45 +182,61 @@ def log_fd_calls():
     l = threading.Lock()
     real_pipe = os.pipe
     def pipe():
-        with l:
+        l.acquire()
+        try:
             rv = real_pipe()
             if mypid == os.getpid():
                 sys.stdout.write('\n%s\n' % (rv,))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
             return rv
+        finally:
+            l.release()
+
     os.pipe = pipe
 
     real_socketpair = socket.socketpair
     def socketpair(*args):
-        with l:
+        l.acquire()
+        try:
             rv = real_socketpair(*args)
             if mypid == os.getpid():
                 sys.stdout.write('\n%s -> %s\n' % (args, rv))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
                 return rv
+        finally:
+            l.release()
+
     socket.socketpair = socketpair
 
     real_dup2 = os.dup2
     def dup2(*args):
-        with l:
+        l.acquire()
+        try:
             real_dup2(*args)
             if mypid == os.getpid():
                 sys.stdout.write('\n%s\n' % (args,))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
+        finally:
+            l.release()
+
     os.dup2 = dup2
 
     real_dup = os.dup
     def dup(*args):
-        with l:
+        l.acquire()
+        try:
             rv = real_dup(*args)
             if mypid == os.getpid():
                 sys.stdout.write('\n%s -> %s\n' % (args, rv))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
             return rv
+        finally:
+            l.release()
+
     os.dup = dup
 
 
