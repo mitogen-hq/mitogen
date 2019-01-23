@@ -73,6 +73,11 @@ except ImportError:
     from io import BytesIO
 
 try:
+    BaseException
+except NameError:
+    BaseException = Exception
+
+try:
     ModuleNotFoundError
 except NameError:
     ModuleNotFoundError = ImportError
