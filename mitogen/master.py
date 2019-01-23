@@ -62,10 +62,21 @@ from mitogen.core import b
 from mitogen.core import IOLOG
 from mitogen.core import LOG
 from mitogen.core import str_partition
+from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
+
+try:
+    next
+except NameError:
+    from mitogen.core import next
 
 
 RLOG = logging.getLogger('mitogen.ctx')
@@ -560,7 +571,7 @@ class ModuleFinder(object):
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
-            fullname, _, _ = str_partition(fullname, '.')
+            fullname, _, _ = str_partition(fullname, u'.')
             yield fullname
 
     def find_related_imports(self, fullname):
@@ -603,7 +614,7 @@ class ModuleFinder(object):
 
         return self._related_cache.setdefault(fullname, sorted(
             set(
-                name
+                mitogen.core.to_text(name)
                 for name in maybe_names
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
@@ -828,7 +839,7 @@ class ModuleResponder(object):
         path = []
         while fullname:
             path.append(fullname)
-            fullname, _, _ = fullname.rpartition('.')
+            fullname, _, _ = str_rpartition(fullname, u'.')
 
         for fullname in reversed(path):
             stream = self._router.stream_by_id(context.context_id)
@@ -838,7 +849,7 @@ class ModuleResponder(object):
     def _forward_modules(self, context, fullnames):
         IOLOG.debug('%r._forward_modules(%r, %r)', self, context, fullnames)
         for fullname in fullnames:
-            self._forward_one_module(context, fullname)
+            self._forward_one_module(context, mitogen.core.to_text(fullname))
 
     def forward_modules(self, context, fullnames):
         self._router.broker.defer(self._forward_modules, context, fullnames)
