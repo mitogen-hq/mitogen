@@ -302,7 +302,8 @@ class TestCase(unittest2.TestCase):
         counts = {}
         for thread in threading.enumerate():
             name = thread.getName()
-            assert name in self.ALLOWED_THREADS, \
+            # Python 2.4: enumerate() may return stopped threads.
+            assert (not thread.isAlive()) or name in self.ALLOWED_THREADS, \
                 'Found thread %r still running after tests.' % (name,)
             counts[name] = counts.get(name, 0) + 1
 
