@@ -348,16 +348,18 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    distro, _, _py3 = (
-        os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
-        .partition('-')
-    )
+    mitogen_test_distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
+    if '-'  in mitogen_test_distro:
+        distro, _py3 = mitogen_test_distro.split('-')
+    else:
+        distro = mitogen_test_distro
+        _py3 = None
 
-    python_path = (
-        '/usr/bin/python3'
-        if _py3 == 'py3'
-        else '/usr/bin/python'
-    )
+    if _py3 == 'py3':
+        python_path = '/usr/bin/python3'
+    else:
+        python_path = '/usr/bin/python'
+
     image = 'mitogen/%s-test' % (distro,)
 
     # 22/tcp -> 0.0.0.0:32771
