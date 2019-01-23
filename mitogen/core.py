@@ -318,7 +318,7 @@ except NameError:
                 return True
 
 
-def UnicodeType__rpartition(s, splitter):
+def unicode__rpartition(s, splitter):
     """
     unicode.rpartition() for Python 2.4/2.5.
     """
@@ -326,11 +326,11 @@ def UnicodeType__rpartition(s, splitter):
     if idx == -1:
         return u'', u'', s
     left = s[0:idx]
-    mid = s[idx:len(splitter)]
+    mid = s[idx:idx+len(splitter)]
     return left, mid, s[len(left)+len(mid)]
 
 if hasattr(UnicodeType, 'rpartition'):
-    UnicodeType__rpartition = UnicodeType.rpartition
+    unicode__rpartition = UnicodeType.rpartition
 
 
 def has_parent_authority(msg, _stream=None):
@@ -1060,7 +1060,7 @@ class Importer(object):
         if fullname == '__main__':
             raise ModuleNotFoundError()
 
-        parent, _, modname = fullname.rpartition('.')
+        parent, _, modname = unicode__rpartition(fullname, '.')
         if parent:
             path = sys.modules[parent].__path__
         else:
@@ -1078,7 +1078,7 @@ class Importer(object):
         try:
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
             fullname = to_text(fullname)
-            pkgname, dot, _ = UnicodeType__rpartition(fullname, '.')
+            pkgname, dot, _ = unicode__rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
                 LOG.debug('%r: %r is submodule of a package we did not load',
@@ -1207,7 +1207,7 @@ class Importer(object):
             mod.__package__ = fullname
             self._present[fullname] = pkg_present
         else:
-            mod.__package__ = fullname.rpartition('.')[0] or None
+            mod.__package__ = unicode__rpartition(fullname, '.')[0] or None
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
