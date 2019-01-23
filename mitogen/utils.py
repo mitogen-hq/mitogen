@@ -62,7 +62,9 @@ def _formatTime(record, datefmt=None):
 
 
 def log_get_formatter():
-    datefmt = '%H:%M:%S.%f'
+    datefmt = '%H:%M:%S'
+    if sys.version_info > (2, 6):
+        datefmt += '.%f'
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     formatter = logging.Formatter(fmt, datefmt)
     formatter.formatTime = _formatTime
