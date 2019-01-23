@@ -343,7 +343,7 @@ def _partition(s, splitter, find):
         return type(s)(), type(s)(), s
     left = s[0:idx]
     mid = s[idx:idx+len(splitter)]
-    return left, mid, s[len(left)+len(mid)]
+    return left, mid, s[len(left)+len(mid):]
 
 
 if hasattr(UnicodeType, 'rpartition'):
