@@ -38,6 +38,7 @@ import errno
 import fcntl
 import itertools
 import logging
+import pickle as py_pickle
 import os
 import signal
 import socket
@@ -267,7 +268,7 @@ class Kwargs(dict):
         return (Kwargs, (dict(self),))
 
 
-class CallError(Error, object):
+class CallError(Error):
     """
     Serializable :class:`Error` subclass raised when :meth:`Context.call()
     <mitogen.parent.Context.call>` fails. A copy of the traceback from the
@@ -295,9 +296,7 @@ class CallError(Error, object):
 def _unpickle_call_error(s):
     if not (type(s) is UnicodeType and len(s) < 10000):
         raise TypeError('cannot unpickle CallError: bad input')
-    inst = CallError.__new__(CallError)
-    Exception.__init__(inst, s)
-    return inst
+    return CallError(s)
 
 
 class ChannelError(Error):
@@ -554,13 +553,48 @@ def import_module(modname):
     return __import__(modname, None, None, [''])
 
 
+class Py24Pickler(py_pickle.Pickler):
+    """
+    Exceptions were "classic" classes until Python 2.5. Sadly for 2.4, cPickle
+    has no sensible override to control how an object is reified. Therefore for
+    2.4 we use the pure-Python pickler, so CallError can be made to look as it
+    does on newer Pythons.
+
+    This mess will go away once proper serialization exists.
+    """
+    @classmethod
+    def dumps(cls, obj, protocol):
+        bio = BytesIO()
+        self = cls(bio, protocol=protocol)
+        self.dump(obj)
+        return bio.getvalue()
+
+    def save_exc_inst(self, obj):
+        if isinstance(obj, CallError):
+            func, args = obj.__reduce__()
+            self.save(func)
+            self.save(args)
+            self.write(py_pickle.REDUCE)
+        else:
+            py_pickle.Pickler.save_inst(self, obj)
+
+    dispatch = py_pickle.Pickler.dispatch.copy()
+    dispatch[py_pickle.InstanceType] = save_exc_inst
+
+
 if PY3:
     # In 3.x Unpickler is a class exposing find_class as an overridable, but it
     # cannot be overridden without subclassing.
     class _Unpickler(pickle.Unpickler):
         def find_class(self, module, func):
             return self.find_global(module, func)
+    pickle__dumps = pickle.dumps
+elif sys.version_info < (2, 5):
+    # On Python 2.4, we must use a pure-Python pickler.
+    pickle__dumps = Py24Pickler.dumps
+    _Unpickler = pickle.Unpickler
 else:
+    pickle__dumps = pickle.dumps
     # In 2.x Unpickler is a function exposing a writeable find_global
     # attribute.
     _Unpickler = pickle.Unpickler
@@ -633,7 +667,7 @@ class Message(object):
         """Return the class implementing `module_name.class_name` or raise
         `StreamError` if the module is not whitelisted."""
         if module == __name__:
-            if func == '_unpickle_call_error':
+            if func == '_unpickle_call_error' or func == 'CallError':
                 return _unpickle_call_error
             elif func == '_unpickle_sender':
                 return self._unpickle_sender
@@ -680,10 +714,10 @@ class Message(object):
         """
         self = cls(**kwargs)
         try:
-            self.data = pickle.dumps(obj, protocol=2)
+            self.data = pickle__dumps(obj, protocol=2)
         except pickle.PicklingError:
             e = sys.exc_info()[1]
-            self.data = pickle.dumps(CallError(e), protocol=2)
+            self.data = pickle__dumps(CallError(e), protocol=2)
         return self
 
     def reply(self, msg, router=None, **kwargs):
