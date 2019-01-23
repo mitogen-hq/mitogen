@@ -661,7 +661,7 @@ class ModuleFinder(object):
         while stack:
             name = stack.pop(0)
             names = self.find_related_imports(name)
-            stack.extend(set(names).difference(found, stack))
+            stack.extend(set(names).difference(set(found).union(stack)))
             found.update(names)
 
         found.discard(fullname)
