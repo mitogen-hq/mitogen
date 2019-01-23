@@ -40,7 +40,7 @@ import mitogen.core
 import mitogen.select
 from mitogen.core import b
 from mitogen.core import LOG
-from mitogen.core import unicode__rpartition
+from mitogen.core import str_rpartition
 
 try:
     all
@@ -202,7 +202,7 @@ class Activator(object):
     )
 
     def activate(self, pool, service_name, msg):
-        mod_name, _, class_name = unicode__rpartition(service_name, '.')
+        mod_name, _, class_name = str_rpartition(service_name, '.')
         if msg and not self.is_permitted(mod_name, class_name, msg):
             raise mitogen.core.CallError(self.not_active_msg, service_name)
 
