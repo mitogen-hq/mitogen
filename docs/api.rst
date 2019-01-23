@@ -115,6 +115,9 @@ Connection Methods
     and router, and responds to function calls identically to children
     created using other methods.
 
+    The use of this method is strongly discouraged. It requires Python 2.6 or
+    newer, as older Pythons made no effort to reset threading state upon fork.
+
     For long-lived processes, :meth:`local` is always better as it
     guarantees a pristine interpreter state that inherited little from the
     parent. Forking should only be used in performance-sensitive scenarios
@@ -158,7 +161,9 @@ Connection Methods
 
     * Locks held in the parent causing random deadlocks in the child, such
       as when another thread emits a log entry via the :mod:`logging`
-      package concurrent to another thread calling :meth:`fork`.
+      package concurrent to another thread calling :meth:`fork`, or when a C
+      extension module calls the C library allocator, or when a thread is using
+      the C library DNS resolver, for example via :func:`socket.gethostbyname`.
 
     * Objects existing in Thread-Local Storage of every non-:meth:`fork`
       thread becoming permanently inaccessible, and never having their
