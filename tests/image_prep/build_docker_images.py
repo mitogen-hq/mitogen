@@ -25,9 +25,10 @@ def sh(s, *args):
 label_by_id = {}
 
 for base_image, label in [
-        ('debian:stretch', 'debian'),  # Python 2.7.13, 3.5.3
-        ('centos:6', 'centos6'),       # Python 2.6.6
-        ('centos:7', 'centos7')        # Python 2.7.5
+        ('astj/centos5-vault', 'centos5'),  # Python 2.4.3
+        ('debian:stretch', 'debian'),       # Python 2.7.13, 3.5.3
+        ('centos:6', 'centos6'),            # Python 2.6.6
+        ('centos:7', 'centos7')             # Python 2.7.5
     ]:
     args = sh('docker run --rm -it -d -h mitogen-%s %s /bin/bash',
               label, base_image)
