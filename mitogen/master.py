@@ -476,7 +476,7 @@ class ModuleFinder(object):
             # else we could return junk.
             return
 
-        pkgname, _, modname = str_partition(fullname, '.')
+        pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
         pkg = sys.modules.get(pkgname)
         if pkg is None or not hasattr(pkg, '__file__'):
             return
@@ -492,7 +492,8 @@ class ModuleFinder(object):
 
                 source = fp.read()
             finally:
-                fp.close()
+                if fp:
+                    fp.close()
 
             if isinstance(source, mitogen.core.UnicodeType):
                 # get_source() returns "string" according to PEP-302, which was
@@ -571,7 +572,7 @@ class ModuleFinder(object):
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
-            fullname, _, _ = str_partition(fullname, u'.')
+            fullname, _, _ = str_rpartition(to_text(fullname), u'.')
             yield fullname
 
     def find_related_imports(self, fullname):
