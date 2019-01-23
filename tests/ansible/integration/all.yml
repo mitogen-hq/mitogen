@@ -3,18 +3,18 @@
 # This playbook imports all tests that are known to work at present.
 #
 
-- import_playbook: action/all.yml
-- import_playbook: async/all.yml
-- import_playbook: become/all.yml
-- import_playbook: connection/all.yml
-- import_playbook: connection_delegation/all.yml
-- import_playbook: connection_loader/all.yml
-- import_playbook: context_service/all.yml
-- import_playbook: glibc_caches/all.yml
-- import_playbook: local/all.yml
-- import_playbook: module_utils/all.yml
-- import_playbook: playbook_semantics/all.yml
-- import_playbook: runner/all.yml
-- import_playbook: ssh/all.yml
-- import_playbook: strategy/all.yml
-- import_playbook: stub_connections/all.yml
+- include: action/all.yml
+- include: async/all.yml
+- include: become/all.yml
+- include: connection/all.yml
+- include: connection_delegation/all.yml
+- include: connection_loader/all.yml
+- include: context_service/all.yml
+- include: glibc_caches/all.yml
+- include: local/all.yml
+- include: module_utils/all.yml
+- include: playbook_semantics/all.yml
+- include: runner/all.yml
+- include: ssh/all.yml
+- include: strategy/all.yml
+- include: stub_connections/all.yml
