@@ -212,5 +212,10 @@ class ImporterBlacklistTest(testlib.TestCase):
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
 
 
+class Python24LineCacheTest(testlib.TestCase):
+    # TODO: mitogen.core.Importer._update_linecache()
+    pass
+
+
 if __name__ == '__main__':
     unittest2.main()

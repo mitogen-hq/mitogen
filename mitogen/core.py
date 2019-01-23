@@ -1117,7 +1117,7 @@ class Importer(object):
             linecache.cache[path] = (
                 len(data),
                 0.0,
-                data.splitlines(),
+                [line+'\n' for line in data.splitlines()],
                 path,
             )
 
