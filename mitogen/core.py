@@ -593,7 +593,7 @@ if PY3:
         def find_class(self, module, func):
             return self.find_global(module, func)
     pickle__dumps = pickle.dumps
-elif sys.version_info < (2, 5):
+elif PY24:
     # On Python 2.4, we must use a pure-Python pickler.
     pickle__dumps = Py24Pickler.dumps
     _Unpickler = pickle.Unpickler
