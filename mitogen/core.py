@@ -2222,7 +2222,7 @@ class Latch(object):
         return 'Latch(%#x, size=%d, t=%r)' % (
             id(self),
             len(self._queue),
-            threading.currentThread().name,
+            threading.currentThread().getName(),
         )
 
 
