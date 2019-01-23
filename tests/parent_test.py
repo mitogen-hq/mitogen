@@ -10,6 +10,7 @@ import time
 import mock
 import unittest2
 import testlib
+from testlib import Popen__terminate
 
 import mitogen.parent
 
@@ -269,7 +270,7 @@ class IterReadTest(testlib.TestCase):
                 if i > 3:
                     break
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
             proc.stdout.close()
 
     def test_deadline_exceeded_before_call(self):
@@ -284,7 +285,7 @@ class IterReadTest(testlib.TestCase):
             except mitogen.core.TimeoutError:
                 self.assertEqual(len(got), 0)
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
             proc.stdout.close()
 
     def test_deadline_exceeded_during_call(self):
@@ -306,7 +307,7 @@ class IterReadTest(testlib.TestCase):
                 self.assertLess(1, len(got))
                 self.assertLess(len(got), 20)
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
             proc.stdout.close()
 
 
@@ -326,7 +327,7 @@ class WriteAllTest(testlib.TestCase):
         try:
             self.func(proc.stdin.fileno(), self.ten_ms_chunk)
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
             proc.stdin.close()
 
     def test_deadline_exceeded_before_call(self):
@@ -336,7 +337,7 @@ class WriteAllTest(testlib.TestCase):
                 lambda: self.func(proc.stdin.fileno(), self.ten_ms_chunk, 0)
             ))
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
             proc.stdin.close()
 
     def test_deadline_exceeded_during_call(self):
@@ -349,7 +350,7 @@ class WriteAllTest(testlib.TestCase):
                                   deadline)
             ))
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
             proc.stdin.close()
 
 

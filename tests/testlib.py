@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -77,8 +78,16 @@ def subprocess__check_output(*popenargs, **kwargs):
         raise subprocess.CalledProcessError(retcode, cmd)
     return output
 
+
+def Popen__terminate(proc):
+    os.kill(proc.pid, signal.SIGTERM)
+
+
 if hasattr(subprocess, 'check_output'):
     subprocess__check_output = subprocess.check_output
+
+if hasattr(subprocess.Popen, 'terminate'):
+    Popen__terminate = subprocess.Popen.terminate
 
 
 def wait_for_port(
