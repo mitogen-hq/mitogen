@@ -617,6 +617,7 @@ A random assortment of utility functions useful on masters and children.
 
 
 .. currentmodule:: mitogen.utils
+.. autofunction:: setup_gil
 .. autofunction:: disable_site_packages
 .. autofunction:: log_to_file
 .. autofunction:: run_with_router(func, \*args, \**kwargs)
