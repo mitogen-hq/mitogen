@@ -2,7 +2,11 @@ import os
 
 import mitogen
 import mitogen.lxc
-from mitogen.core import any
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
 
 import unittest2
 
