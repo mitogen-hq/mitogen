@@ -250,11 +250,14 @@ class Kwargs(dict):
         return (Kwargs, (dict(self),))
 
 
-class CallError(Error):
-    """Serializable :class:`Error` subclass raised when
-    :meth:`Context.call() <mitogen.parent.Context.call>` fails. A copy of
-    the traceback from the external context is appended to the exception
-    message."""
+class CallError(Error, object):
+    """
+    Serializable :class:`Error` subclass raised when :meth:`Context.call()
+    <mitogen.parent.Context.call>` fails. A copy of the traceback from the
+    external context is appended to the exception message.
+    """
+    # Derives from object to force <2.7 pickle to call reduce. This may have
+    # unintended consequences, Exceptions in 2.x are classic classes.
     def __init__(self, fmt=None, *args):
         if not isinstance(fmt, BaseException):
             Error.__init__(self, fmt, *args)
