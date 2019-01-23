@@ -335,19 +335,26 @@ except NameError:
                 return True
 
 
-def unicode__rpartition(s, splitter):
+def _partition(s, splitter, find):
     """
-    unicode.rpartition() for Python 2.4/2.5.
+    (str|unicode).(partition|rpartition) for Python 2.4/2.5.
     """
-    idx = s.rfind(splitter)
+    idx = find(splitter)
     if idx == -1:
-        return u'', u'', s
+        return type(s)(), type(s)(), s
     left = s[0:idx]
     mid = s[idx:idx+len(splitter)]
     return left, mid, s[len(left)+len(mid)]
 
+
 if hasattr(UnicodeType, 'rpartition'):
+    unicode__partition = UnicodeType.partition
     unicode__rpartition = UnicodeType.rpartition
+    bytes__partition = BytesType.partition
+else:
+    unicode__partition = lambda s, splitter: _partition(s, splitter, s.find)
+    unicode__rpartition = lambda s, splitter: _partition(s, splitter, s.rfind)
+    bytes__partition = lambda s, splitter: _partition(s, splitter, s.find)
 
 
 def has_parent_authority(msg, _stream=None):
@@ -2277,7 +2284,7 @@ class IoLogger(BasicStream):
 
     def _log_lines(self):
         while self._buf.find('\n') != -1:
-            line, _, self._buf = self._buf.partition('\n')
+            line, _, self._buf = bytes__partition(self._buf, '\n')
             self._log.info('%s', line.rstrip('\n'))
 
     def on_shutdown(self, broker):
@@ -2359,7 +2366,7 @@ class Router(object):
         """
         LOG.error('%r._on_del_route() %r', self, msg)
         if not msg.is_dead:
-            target_id_s, _, name = msg.data.partition(b(':'))
+            target_id_s, _, name = bytes__partition(msg.data, b(':'))
             target_id = int(target_id_s, 10)
             if target_id not in self._context_by_id:
                 LOG.debug('DEL_ROUTE for unknown ID %r: %r', target_id, msg)
