@@ -50,6 +50,7 @@ import mitogen.service
 import mitogen.unix
 import mitogen.utils
 
+import ansible
 import ansible.constants as C
 import ansible_mitogen.logging
 import ansible_mitogen.services
@@ -58,6 +59,11 @@ from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
+
+ANSIBLE_PKG_OVERRIDE = (
+    u"__version__ = %r\n"
+    u"__author__ = %r\n"
+)
 
 
 def clean_shutdown(sock):
@@ -229,6 +235,19 @@ class MuxProcess(object):
         self.router = mitogen.master.Router(max_message_size=4096 * 1048576)
         self.router.responder.whitelist_prefix('ansible')
         self.router.responder.whitelist_prefix('ansible_mitogen')
+        # Ansible 2.3 is compatible with Python 2.4 targets, however
+        # ansible/__init__.py is not. Instead, executor/module_common.py writes
+        # out a 2.4-compatible namespace package for unknown reasons. So we
+        # copy it here.
+        self.router.responder.add_source_override(
+            fullname='ansible',
+            path=ansible.__file__,
+            source=(ANSIBLE_PKG_OVERRIDE % (
+                ansible.__version__,
+                ansible.__author__,
+            )).encode(),
+            is_pkg=True,
+        )
         mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)
         mitogen.core.listen(self.router.broker, 'exit', self.on_broker_exit)
         self.listener = mitogen.unix.Listener(
