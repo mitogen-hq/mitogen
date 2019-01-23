@@ -31,14 +31,8 @@ Helper functions intended to be executed on the target. These are entrypoints
 for file transfer, module execution and sundry bits like changing file modes.
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import errno
-import functools
 import grp
-import json
-import logging
 import operator
 import os
 import pwd
@@ -51,10 +45,32 @@ import tempfile
 import traceback
 import types
 
+# Absolute imports for <2.5.
+logging = __import__('logging')
+
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
 import mitogen.service
+from mitogen.core import b
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
+try:
+    reduce
+except ImportError:
+    # Python 2.4
+    from functools import reduce
+
+try:
+    BaseException
+except NameError:
+    # Python 2.4
+    BaseException = Exception
+
 
 # Ansible since PR #41749 inserts "import __main__" into
 # ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
@@ -70,14 +86,14 @@ import ansible_mitogen.runner
 LOG = logging.getLogger(__name__)
 
 MAKE_TEMP_FAILED_MSG = (
-    "Unable to find a useable temporary directory. This likely means no\n"
-    "system-supplied TMP directory can be written to, or all directories\n"
-    "were mounted on 'noexec' filesystems.\n"
-    "\n"
-    "The following paths were tried:\n"
-    "    %(namelist)s\n"
-    "\n"
-    "Please check '-vvv' output for a log of individual path errors."
+    u"Unable to find a useable temporary directory. This likely means no\n"
+    u"system-supplied TMP directory can be written to, or all directories\n"
+    u"were mounted on 'noexec' filesystems.\n"
+    u"\n"
+    u"The following paths were tried:\n"
+    u"    %(namelist)s\n"
+    u"\n"
+    u"Please check '-vvv' output for a log of individual path errors."
 )
 
 
@@ -99,7 +115,7 @@ def subprocess__Popen__close_fds(self, but):
     a version that is O(fds) rather than O(_SC_OPEN_MAX).
     """
     try:
-        names = os.listdir('/proc/self/fd')
+        names = os.listdir(u'/proc/self/fd')
     except OSError:
         # May fail if acting on a container that does not have /proc mounted.
         self._original_close_fds(but)
@@ -118,9 +134,9 @@ def subprocess__Popen__close_fds(self, but):
 
 
 if (
-    sys.platform.startswith('linux') and
-    sys.version < '3.0' and
-    hasattr(subprocess.Popen, '_close_fds') and
+    sys.platform.startswith(u'linux') and
+    sys.version < u'3.0' and
+    hasattr(subprocess.Popen, u'_close_fds') and
     not mitogen.is_master
 ):
     subprocess.Popen._original_close_fds = subprocess.Popen._close_fds
@@ -142,7 +158,7 @@ def get_small_file(context, path):
         Bytestring file data.
     """
     pool = mitogen.service.get_or_create_pool(router=context.router)
-    service = pool.get_service('mitogen.service.PushFileService')
+    service = pool.get_service(u'mitogen.service.PushFileService')
     return service.get(path)
 
 
@@ -184,9 +200,10 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
             if not ok:
                 raise IOError('transfer of %r was interrupted.' % (in_path,))
 
-            os.fchmod(fp.fileno(), metadata['mode'])
+            set_file_mode(tmp_path, metadata['mode'], fd=fp.fileno())
             if set_owner:
-                set_fd_owner(fp.fileno(), metadata['owner'], metadata['group'])
+                set_file_owner(tmp_path, metadata['owner'], metadata['group'],
+                               fd=fp.fileno())
         finally:
             fp.close()
 
@@ -209,7 +226,8 @@ def prune_tree(path):
     try:
         os.unlink(path)
         return
-    except OSError as e:
+    except OSError:
+        e = sys.exc_info()[1]
         if not (os.path.isdir(path) and
                 e.args[0] in (errno.EPERM, errno.EISDIR)):
             LOG.error('prune_tree(%r): %s', path, e)
@@ -219,7 +237,8 @@ def prune_tree(path):
         # Ensure write access for readonly directories. Ignore error in case
         # path is on a weird filesystem (e.g. vfat).
         os.chmod(path, int('0700', 8))
-    except OSError as e:
+    except OSError:
+        e = sys.exc_info()[1]
         LOG.warning('prune_tree(%r): %s', path, e)
 
     try:
@@ -227,7 +246,8 @@ def prune_tree(path):
             if name not in ('.', '..'):
                 prune_tree(os.path.join(path, name))
         os.rmdir(path)
-    except OSError as e:
+    except OSError:
+        e = sys.exc_info()[1]
         LOG.error('prune_tree(%r): %s', path, e)
 
 
@@ -248,7 +268,8 @@ def is_good_temp_dir(path):
     if not os.path.exists(path):
         try:
             os.makedirs(path, mode=int('0700', 8))
-        except OSError as e:
+        except OSError:
+            e = sys.exc_info()[1]
             LOG.debug('temp dir %r unusable: did not exist and attempting '
                       'to create it failed: %s', path, e)
             return False
@@ -258,14 +279,16 @@ def is_good_temp_dir(path):
             prefix='ansible_mitogen_is_good_temp_dir',
             dir=path,
         )
-    except (OSError, IOError) as e:
+    except (OSError, IOError):
+        e = sys.exc_info()[1]
         LOG.debug('temp dir %r unusable: %s', path, e)
         return False
 
     try:
         try:
             os.chmod(tmp.name, int('0700', 8))
-        except OSError as e:
+        except OSError:
+            e = sys.exc_info()[1]
             LOG.debug('temp dir %r unusable: chmod failed: %s', path, e)
             return False
 
@@ -273,7 +296,8 @@ def is_good_temp_dir(path):
             # access(.., X_OK) is sufficient to detect noexec.
             if not os.access(tmp.name, os.X_OK):
                 raise OSError('filesystem appears to be mounted noexec')
-        except OSError as e:
+        except OSError:
+            e = sys.exc_info()[1]
             LOG.debug('temp dir %r unusable: %s', path, e)
             return False
     finally:
@@ -351,9 +375,9 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     good_temp_dir = find_good_temp_dir(candidate_temp_dirs)
 
     return {
-        'fork_context': _fork_parent,
-        'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
-        'good_temp_dir': good_temp_dir,
+        u'fork_context': _fork_parent,
+        u'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
+        u'good_temp_dir': good_temp_dir,
     }
 
 
@@ -379,7 +403,7 @@ def run_module(kwargs):
     """
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
-    impl = klass(**kwargs)
+    impl = klass(**mitogen.core.Kwargs(kwargs))
     return impl.run()
 
 
@@ -412,8 +436,11 @@ class AsyncRunner(object):
         dct.setdefault('ansible_job_id', self.job_id)
         dct.setdefault('data', '')
 
-        with open(self.path + '.tmp', 'w') as fp:
+        fp = open(self.path + '.tmp', 'w')
+        try:
             fp.write(json.dumps(dct))
+        finally:
+            fp.close()
         os.rename(self.path + '.tmp', self.path)
 
     def _on_sigalrm(self, signum, frame):
@@ -565,8 +592,8 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     stdout, stderr = proc.communicate(in_data)
 
     if emulate_tty:
-        stdout = stdout.replace(b'\n', b'\r\n')
-    return proc.returncode, stdout, stderr or b''
+        stdout = stdout.replace(b('\n'), b('\r\n'))
+    return proc.returncode, stdout, stderr or b('')
 
 
 def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
@@ -598,7 +625,7 @@ def read_path(path):
     return open(path, 'rb').read()
 
 
-def set_fd_owner(fd, owner, group=None):
+def set_file_owner(path, owner, group=None, fd=None):
     if owner:
         uid = pwd.getpwnam(owner).pw_uid
     else:
@@ -609,7 +636,11 @@ def set_fd_owner(fd, owner, group=None):
     else:
         gid = os.getegid()
 
-    os.fchown(fd, (uid, gid))
+    if fd is not None and hasattr(os, 'fchown'):
+        os.fchown(fd, (uid, gid))
+    else:
+        # Python<2.6
+        os.chown(path, (uid, gid))
 
 
 def write_path(path, s, owner=None, group=None, mode=None,
@@ -627,9 +658,9 @@ def write_path(path, s, owner=None, group=None, mode=None,
     try:
         try:
             if mode:
-                os.fchmod(fp.fileno(), mode)
+                set_file_mode(tmp_path, mode, fd=fp.fileno())
             if owner or group:
-                set_fd_owner(fp.fileno(), owner, group)
+                set_file_owner(tmp_path, owner, group, fd=fp.fileno())
             fp.write(s)
         finally:
             fp.close()
@@ -676,7 +707,7 @@ def apply_mode_spec(spec, mode):
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = functools.reduce(operator.or_, (bits[p] for p in perms), 0)
+            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
@@ -687,15 +718,19 @@ def apply_mode_spec(spec, mode):
     return mode
 
 
-def set_file_mode(path, spec):
+def set_file_mode(path, spec, fd=None):
     """
     Update the permissions of a file using the same syntax as chmod(1).
     """
-    mode = os.stat(path).st_mode
-
-    if spec.isdigit():
+    if isinstance(spec, (int, long)):
+        new_mode = spec
+    elif spec.isdigit():
         new_mode = int(spec, 8)
     else:
+        mode = os.stat(path).st_mode
         new_mode = apply_mode_spec(spec, mode)
 
-    os.chmod(path, new_mode)
+    if fd is not None and hasattr(os, 'fchmod'):
+        os.fchmod(fd, new_mode)
+    else:
+        os.chmod(path, new_mode)
