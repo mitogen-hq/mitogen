@@ -138,7 +138,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_via_eof(self):
         # Verify FD leakage does not keep failed process open.
-        local = self.router.fork()
+        local = self.router.local()
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
                 via=local,
@@ -160,7 +160,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(e.args[0].startswith(prefix))
 
     def test_via_enoent(self):
-        local = self.router.fork()
+        local = self.router.local()
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
                 via=local,
@@ -265,9 +265,9 @@ class IterReadTest(testlib.TestCase):
         proc = self.make_proc()
         try:
             reader = self.func([proc.stdout.fileno()])
-            for i, chunk in enumerate(reader, 1):
-                self.assertEqual(i, int(chunk))
-                if i > 3:
+            for i, chunk in enumerate(reader):
+                self.assertEqual(1+i, int(chunk))
+                if i > 2:
                     break
         finally:
             Popen__terminate(proc)
@@ -358,7 +358,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
     def test_child_disconnected(self):
         # Easy mode: process notices its own directly connected child is
         # disconnected.
-        c1 = self.router.fork()
+        c1 = self.router.local()
         recv = c1.call_async(time.sleep, 9999)
         c1.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
@@ -368,8 +368,8 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
     def test_indirect_child_disconnected(self):
         # Achievement unlocked: process notices an indirectly connected child
         # is disconnected.
-        c1 = self.router.fork()
-        c2 = self.router.fork(via=c1)
+        c1 = self.router.local()
+        c2 = self.router.local(via=c1)
         recv = c2.call_async(time.sleep, 9999)
         c2.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
@@ -379,8 +379,8 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
     def test_indirect_child_intermediary_disconnected(self):
         # Battlefield promotion: process notices indirect child disconnected
         # due to an intermediary child disconnecting.
-        c1 = self.router.fork()
-        c2 = self.router.fork(via=c1)
+        c1 = self.router.local()
+        c2 = self.router.local(via=c1)
         recv = c2.call_async(time.sleep, 9999)
         c1.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
@@ -390,8 +390,8 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
     def test_near_sibling_disconnected(self):
         # Hard mode: child notices sibling connected to same parent has
         # disconnected.
-        c1 = self.router.fork()
-        c2 = self.router.fork()
+        c1 = self.router.local()
+        c2 = self.router.local()
 
         # Let c1 call functions in c2.
         self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
@@ -412,11 +412,11 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
     def test_far_sibling_disconnected(self):
         # God mode: child of child notices child of child of parent has
         # disconnected.
-        c1 = self.router.fork()
-        c11 = self.router.fork(via=c1)
+        c1 = self.router.local()
+        c11 = self.router.local(via=c1)
 
-        c2 = self.router.fork()
-        c22 = self.router.fork(via=c2)
+        c2 = self.router.local()
+        c22 = self.router.local(via=c2)
 
         # Let c1 call functions in c2.
         self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
