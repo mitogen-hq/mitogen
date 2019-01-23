@@ -931,7 +931,18 @@ class Router(mitogen.parent.Router):
 
     :param mitogen.master.Broker broker:
         Broker to use. If not specified, a private :class:`Broker` is created.
+
+    :param int max_message_size:
+        Override the maximum message size this router is willing to receive or
+        transmit. Any value set here is automatically inherited by any children
+        created by the router.
+
+        This has a liberal default of 128 MiB, but may be set much lower.
+        Beware that setting it below 64KiB may encourage unexpected failures as
+        parents and children can no longer route large Python modules that may
+        be required by your application.
     """
+
     broker_class = Broker
 
     #: When :data:`True`, cause the broker thread and any subsequent broker and
