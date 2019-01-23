@@ -238,13 +238,13 @@ class Secret(UnicodeType):
 
 class Kwargs(dict):
     """
-    A serializable dict subclass that indicates the contained keys should be be
-    coerced to Unicode on Python 3 and to bytes on Python<2.6.
+    A serializable dict subclass that indicates its keys should be coerced to
+    Unicode on Python 3 and bytes on Python<2.6.
 
-    Python 2 produces keyword argument dicts whose keys are bytestrings,
-    requiring a helper to ensure compatibility with Python 3, whereas Python 3
-    produces keyword argument dicts whose keys are unicode, requiring a helper
-    to ensure compatibility with Python 2.4 and 2.5.
+    Python 2 produces keyword argument dicts whose keys are bytes, requiring a
+    helper to ensure compatibility with Python 3 where Unicode is required,
+    whereas Python 3 produces keyword argument dicts whose keys are Unicode,
+    requiring a helper for Python 2.4/2.5, where bytes are required.
     """
     if PY3:
         def __init__(self, dct):
@@ -274,8 +274,6 @@ class CallError(Error):
     <mitogen.parent.Context.call>` fails. A copy of the traceback from the
     external context is appended to the exception message.
     """
-    # Derives from object to force <2.7 pickle to call reduce. This may have
-    # unintended consequences, Exceptions in 2.x are classic classes.
     def __init__(self, fmt=None, *args):
         if not isinstance(fmt, BaseException):
             Error.__init__(self, fmt, *args)
@@ -555,10 +553,10 @@ def import_module(modname):
 
 class Py24Pickler(py_pickle.Pickler):
     """
-    Exceptions were "classic" classes until Python 2.5. Sadly for 2.4, cPickle
-    has no sensible override to control how an object is reified. Therefore for
-    2.4 we use the pure-Python pickler, so CallError can be made to look as it
-    does on newer Pythons.
+    Exceptions were classic classes until Python 2.5. Sadly for 2.4, cPickle
+    offers little control over how a classic instance is pickled. Therefore 2.4
+    uses a pure-Python pickler, so CallError can be made to look as it does on
+    newer Pythons.
 
     This mess will go away once proper serialization exists.
     """
@@ -1315,6 +1313,11 @@ class LogHandler(logging.Handler):
         self._buffer = []
 
     def uncork(self):
+        """
+        #305: during startup :class:`LogHandler` may be installed before it is
+        possible to route messages, therefore messages are buffered until
+        :meth:`uncork` is called by :class:`ExternalContext`.
+        """
         self._send = self.context.send
         for msg in self._buffer:
             self._send(msg)
