@@ -158,7 +158,7 @@ IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 
 
 def _getarg(nextb, c):
-    if c > dis.HAVE_ARGUMENT:
+    if c >= dis.HAVE_ARGUMENT:
         return nextb() | (nextb() << 8)
 
 
@@ -184,9 +184,10 @@ else:
 
 
 def scan_code_imports(co):
-    """Given a code object `co`, scan its bytecode yielding any
-    ``IMPORT_NAME`` and associated prior ``LOAD_CONST`` instructions
-    representing an `Import` statement or `ImportFrom` statement.
+    """
+    Given a code object `co`, scan its bytecode yielding any ``IMPORT_NAME``
+    and associated prior ``LOAD_CONST`` instructions representing an `Import`
+    statement or `ImportFrom` statement.
 
     :return:
         Generator producing `(level, modname, namelist)` tuples, where:
@@ -200,6 +201,7 @@ def scan_code_imports(co):
     """
     opit = iter_opcodes(co)
     opit, opit2, opit3 = itertools.tee(opit, 3)
+
     try:
         next(opit2)
         next(opit3)
@@ -207,14 +209,22 @@ def scan_code_imports(co):
     except StopIteration:
         return
 
-    for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
-        if op3 == IMPORT_NAME:
-            op2, arg2 = oparg2
-            op1, arg1 = oparg1
-            if op1 == op2 == LOAD_CONST:
-                yield (co.co_consts[arg1],
-                       co.co_names[arg3],
-                       co.co_consts[arg2] or ())
+    if sys.version_info >= (2, 5):
+        for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
+            if op3 == IMPORT_NAME:
+                op2, arg2 = oparg2
+                op1, arg1 = oparg1
+                if op1 == op2 == LOAD_CONST:
+                    yield (co.co_consts[arg1],
+                           co.co_names[arg3],
+                           co.co_consts[arg2] or ())
+    else:
+        # Python 2.4 did not yet have 'level', so stack format differs.
+        for oparg1, (op2, arg2) in izip(opit, opit2):
+            if op2 == IMPORT_NAME:
+                op1, arg1 = oparg1
+                if op1 == LOAD_CONST:
+                    yield (-1, co.co_names[arg2], co.co_consts[arg1] or ())
 
 
 class ThreadWatcher(object):
