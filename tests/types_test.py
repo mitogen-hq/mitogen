@@ -101,7 +101,7 @@ class KwargsTest(testlib.TestCase):
                       reason='py3 only')
     def test_unicode_conversion(self):
         kw = self.klass({mitogen.core.b('key'): 123})
-        self.assertEquals({mitogen.core.b('key'): 123}, kw)
+        self.assertEquals({u'key': 123}, kw)
         self.assertEquals("Kwargs({'key': 123})", repr(kw))
         klass, (dct,) = kw.__reduce__()
         self.assertTrue(klass is self.klass)
