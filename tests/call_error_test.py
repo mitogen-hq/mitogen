@@ -73,7 +73,7 @@ class UnpickleCallErrorTest(testlib.TestCase):
 
     def test_reify(self):
         e = self.func(u'some error')
-        self.assertEquals(mitogen.core.CallError, type(e))
+        self.assertEquals(mitogen.core.CallError, e.__class__)
         self.assertEquals(1, len(e.args))
         self.assertEquals(mitogen.core.UnicodeType, type(e.args[0]))
         self.assertEquals(u'some error', e.args[0])
