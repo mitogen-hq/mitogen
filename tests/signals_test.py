@@ -5,7 +5,7 @@ import testlib
 import mitogen.core
 
 
-class Thing():
+class Thing:
     pass
 
 

@@ -7,7 +7,6 @@ import time
 import unittest2
 
 import mitogen
-import mitogen.fork
 import mitogen.master
 import mitogen.service
 import mitogen.unix

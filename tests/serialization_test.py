@@ -38,7 +38,7 @@ class ContextTest(testlib.RouterMixin, testlib.TestCase):
     # together (e.g. Ansible).
 
     def test_mitogen_roundtrip(self):
-        c = self.router.fork()
+        c = self.router.local()
         r = mitogen.core.Receiver(self.router)
         r.to_sender().send(c)
         c2 = r.get().unpickle()
@@ -47,7 +47,7 @@ class ContextTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(c.name, c2.name)
 
     def test_vanilla_roundtrip(self):
-        c = self.router.fork()
+        c = self.router.local()
         c2 = pickle.loads(pickle.dumps(c))
         self.assertEquals(None, c2.router)
         self.assertEquals(c.context_id, c2.context_id)
