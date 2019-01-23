@@ -307,6 +307,21 @@ def to_text(o):
     return UnicodeType(o)
 
 
+def UnicodeType__rpartition(s, splitter):
+    """
+    unicode.rpartition() for Python 2.4/2.5.
+    """
+    idx = s.rfind(splitter)
+    if idx == -1:
+        return u'', u'', s
+    left = s[0:idx]
+    mid = s[idx:len(splitter)]
+    return left, mid, s[len(left)+len(mid)]
+
+if hasattr(UnicodeType, 'rpartition'):
+    UnicodeType__rpartition = UnicodeType.rpartition
+
+
 def has_parent_authority(msg, _stream=None):
     """Policy function for use with :class:`Receiver` and
     :meth:`Router.add_handler` that requires incoming messages to originate
@@ -1051,7 +1066,8 @@ class Importer(object):
         _tls.running = True
         try:
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
-            pkgname, dot, _ = fullname.rpartition('.')
+            fullname = to_text(fullname)
+            pkgname, dot, _ = UnicodeType__rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
                 LOG.debug('%r: %r is submodule of a package we did not load',
