@@ -1900,8 +1900,10 @@ class Poller(object):
         """
         pass
 
+    _readmask = select.POLLIN | select.POLLHUP
+
     def _update(self, fd):
-        mask = (((fd in self._rfds) and select.POLLIN) |
+        mask = (((fd in self._rfds) and self._readmask) |
                 ((fd in self._wfds) and select.POLLOUT))
         if mask:
             self._pollobj.register(fd, mask)
@@ -1951,8 +1953,8 @@ class Poller(object):
 
         events, _ = io_op(self._pollobj.poll, timeout)
         for fd, event in events:
-            if event & select.POLLIN:
-                _vv and IOLOG.debug('%r: POLLIN for %r', self, fd)
+            if event & self._readmask:
+                _vv and IOLOG.debug('%r: POLLIN|POLLHUP for %r', self, fd)
                 data, gen = self._rfds.get(fd, (None, None))
                 if gen and gen < self._generation:
                     yield data
