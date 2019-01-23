@@ -582,8 +582,9 @@ class Py24Pickler(py_pickle.Pickler):
         else:
             py_pickle.Pickler.save_inst(self, obj)
 
-    dispatch = py_pickle.Pickler.dispatch.copy()
-    dispatch[py_pickle.InstanceType] = save_exc_inst
+    if PY24:
+        dispatch = py_pickle.Pickler.dispatch.copy()
+        dispatch[py_pickle.InstanceType] = save_exc_inst
 
 
 if PY3:
