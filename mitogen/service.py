@@ -41,6 +41,15 @@ import mitogen.select
 from mitogen.core import b
 from mitogen.core import LOG
 
+try:
+    all
+except NameError:
+    def all(it):
+        for elem in it:
+            if not elem:
+                return False
+        return True
+
 
 DEFAULT_POOL_SIZE = 16
 _pool = None
