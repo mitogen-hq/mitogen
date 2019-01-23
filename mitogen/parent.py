@@ -63,6 +63,12 @@ from mitogen.core import b
 from mitogen.core import LOG
 from mitogen.core import IOLOG
 
+try:
+    next
+except NameError:
+    # Python 2.4/2.5
+    from mitogen.core import next
+
 
 itervalues = getattr(dict, 'itervalues', dict.values)
 

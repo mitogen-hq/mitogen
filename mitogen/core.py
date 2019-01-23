@@ -147,8 +147,11 @@ else:
 
 AnyTextType = (BytesType, UnicodeType)
 
-if sys.version_info < (2, 5):
+try:
+    next
+except NameError:
     next = lambda it: it.next()
+
 
 #: Default size for calls to :meth:`Side.read` or :meth:`Side.write`, and the
 #: size of buffers configured by :func:`mitogen.parent.create_socketpair`. This
