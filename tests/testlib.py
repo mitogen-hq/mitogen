@@ -301,9 +301,10 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_threads(self):
         counts = {}
         for thread in threading.enumerate():
-            assert thread.name in self.ALLOWED_THREADS, \
-                'Found thread %r still running after tests.' % (thread.name,)
-            counts[thread.name] = counts.get(thread.name, 0) + 1
+            name = thread.getName()
+            assert name in self.ALLOWED_THREADS, \
+                'Found thread %r still running after tests.' % (name,)
+            counts[name] = counts.get(name, 0) + 1
 
         for name in counts:
             assert counts[name] == 1, \
