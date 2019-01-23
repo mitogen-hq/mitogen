@@ -307,6 +307,16 @@ def to_text(o):
     return UnicodeType(o)
 
 
+# Python 2.4
+try:
+    any
+except NameError:
+    def any(it):
+        for elem in it:
+            if elem:
+                return True
+
+
 def UnicodeType__rpartition(s, splitter):
     """
     unicode.rpartition() for Python 2.4/2.5.
