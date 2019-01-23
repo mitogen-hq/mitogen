@@ -59,9 +59,10 @@ import mitogen.minify
 import mitogen.parent
 
 from mitogen.core import b
-from mitogen.core import to_text
-from mitogen.core import LOG
 from mitogen.core import IOLOG
+from mitogen.core import LOG
+from mitogen.core import str_partition
+from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
@@ -464,7 +465,7 @@ class ModuleFinder(object):
             # else we could return junk.
             return
 
-        pkgname, _, modname = fullname.rpartition('.')
+        pkgname, _, modname = str_partition(fullname, '.')
         pkg = sys.modules.get(pkgname)
         if pkg is None or not hasattr(pkg, '__file__'):
             return
@@ -559,7 +560,7 @@ class ModuleFinder(object):
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
-            fullname, _, _ = fullname.rpartition('.')
+            fullname, _, _ = str_partition(fullname, '.')
             yield fullname
 
     def find_related_imports(self, fullname):
@@ -784,7 +785,7 @@ class ModuleResponder(object):
                 return
 
             for name in tup[4]:  # related
-                parent, _, _ = name.partition('.')
+                parent, _, _ = str_partition(name, '.')
                 if parent != fullname and parent not in stream.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue

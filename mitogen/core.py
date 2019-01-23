@@ -332,26 +332,27 @@ except NameError:
                 return True
 
 
-def _partition(s, splitter, find):
+def _partition(s, sep, find):
     """
     (str|unicode).(partition|rpartition) for Python 2.4/2.5.
     """
-    idx = find(splitter)
-    if idx == -1:
-        return type(s)(), type(s)(), s
-    left = s[0:idx]
-    mid = s[idx:idx+len(splitter)]
-    return left, mid, s[len(left)+len(mid):]
+    idx = find(sep)
+    if idx != -1:
+        left = s[0:idx]
+        return left, sep, s[len(left)+len(sep):]
 
 
 if hasattr(UnicodeType, 'rpartition'):
-    unicode__partition = UnicodeType.partition
-    unicode__rpartition = UnicodeType.rpartition
-    bytes__partition = BytesType.partition
+    str_partition = UnicodeType.partition
+    str_rpartition = UnicodeType.rpartition
+    bytes_partition = BytesType.partition
 else:
-    unicode__partition = lambda s, splitter: _partition(s, splitter, s.find)
-    unicode__rpartition = lambda s, splitter: _partition(s, splitter, s.rfind)
-    bytes__partition = lambda s, splitter: _partition(s, splitter, s.find)
+    def str_partition(s, sep):
+        return _partition(s, sep, s.find) or (s, u'', u'')
+    def str_rpartition(s, sep):
+        return _partition(s, sep, s.rfind) or (u'', u'', s)
+    def bytes_partition(s, sep):
+        return _partition(s, sep, s.find) or (s, '', '')
 
 
 def has_parent_authority(msg, _stream=None):
@@ -1116,7 +1117,7 @@ class Importer(object):
         if fullname == '__main__':
             raise ModuleNotFoundError()
 
-        parent, _, modname = unicode__rpartition(fullname, '.')
+        parent, _, modname = str_rpartition(fullname, '.')
         if parent:
             path = sys.modules[parent].__path__
         else:
@@ -1134,7 +1135,7 @@ class Importer(object):
         try:
             _v and LOG.debug('%r.find_module(%r)', self, fullname)
             fullname = to_text(fullname)
-            pkgname, dot, _ = unicode__rpartition(fullname, '.')
+            pkgname, dot, _ = str_rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
                 LOG.debug('%r: %r is submodule of a package we did not load',
@@ -1263,7 +1264,7 @@ class Importer(object):
             mod.__package__ = fullname
             self._present[fullname] = pkg_present
         else:
-            mod.__package__ = unicode__rpartition(fullname, '.')[0] or None
+            mod.__package__ = str_rpartition(fullname, '.')[0] or None
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
@@ -2326,7 +2327,7 @@ class IoLogger(BasicStream):
 
     def _log_lines(self):
         while self._buf.find('\n') != -1:
-            line, _, self._buf = bytes__partition(self._buf, '\n')
+            line, _, self._buf = str_partition(self._buf, '\n')
             self._log.info('%s', line.rstrip('\n'))
 
     def on_shutdown(self, broker):
@@ -2408,7 +2409,7 @@ class Router(object):
         """
         LOG.error('%r._on_del_route() %r', self, msg)
         if not msg.is_dead:
-            target_id_s, _, name = bytes__partition(msg.data, b(':'))
+            target_id_s, _, name = bytes_partition(msg.data, b(':'))
             target_id = int(target_id_s, 10)
             if target_id not in self._context_by_id:
                 LOG.debug('DEL_ROUTE for unknown ID %r: %r', target_id, msg)
