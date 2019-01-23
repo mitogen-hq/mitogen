@@ -40,6 +40,7 @@ import mitogen.core
 import mitogen.select
 from mitogen.core import b
 from mitogen.core import LOG
+from mitogen.core import unicode__rpartition
 
 try:
     all
@@ -201,7 +202,7 @@ class Activator(object):
     )
 
     def activate(self, pool, service_name, msg):
-        mod_name, _, class_name = service_name.rpartition('.')
+        mod_name, _, class_name = unicode__rpartition(service_name, '.')
         if msg and not self.is_permitted(mod_name, class_name, msg):
             raise mitogen.core.CallError(self.not_active_msg, service_name)
 
@@ -565,7 +566,7 @@ class Pool(object):
             self._worker_run()
         except Exception:
             th = threading.currentThread()
-            LOG.exception('%r: worker %r crashed', self, th.name)
+            LOG.exception('%r: worker %r crashed', self, th.getName())
             raise
 
     def __repr__(self):
@@ -573,7 +574,7 @@ class Pool(object):
         return 'mitogen.service.Pool(%#x, size=%d, th=%r)' % (
             id(self),
             len(self._threads),
-            th.name,
+            th.getName(),
         )
 
 
