@@ -8,8 +8,12 @@
       register: out
 
     - assert:
-        that: |
-          (not out.changed) and
-          (not out.results[0].changed) and
-          out.results[0].input[0].foo and
-          out.results[0].message == 'I am a want JSON perl script! Here is my input.'
+        that:
+        - out.results[0].input[0].foo
+        - out.results[0].message == 'I am a want JSON perl script! Here is my input.'
+
+    - when: ansible_version.full > '2.4'
+      assert:
+        that:
+        - (not out.changed)
+        - (not out.results[0].changed)
