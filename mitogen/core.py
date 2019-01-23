@@ -455,20 +455,20 @@ def io_op(func, *args):
       signalled by :data:`errno.EPIPE`.
 
     :returns:
-        Tuple of `(return_value, disconnected)`, where `return_value` is the
-        return value of `func(*args)`, and `disconnected` is :data:`True` if
-        disconnection was detected, otherwise :data:`False`.
+        Tuple of `(return_value, disconnect_reason)`, where `return_value` is
+        the return value of `func(*args)`, and `disconnected` is an exception
+        instance when disconnection was detected, otherwise :data:`None`.
     """
     while True:
         try:
-            return func(*args), False
+            return func(*args), None
         except (select.error, OSError, IOError):
             e = sys.exc_info()[1]
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
             if e.args[0] == errno.EINTR:
                 continue
             if e.args[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
-                return None, True
+                return None, e
             raise
 
 

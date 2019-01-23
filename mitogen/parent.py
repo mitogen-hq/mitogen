@@ -544,7 +544,8 @@ class IteratingRead(object):
             for fd in self.poller.poll(self.timeout):
                 s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
                 if disconnected or not s:
-                    IOLOG.debug('iter_read(%r) -> disconnected', fd)
+                    LOG.debug('iter_read(%r) -> disconnected: %s',
+                              fd, disconnected)
                     self.poller.stop_receive(fd)
                 else:
                     IOLOG.debug('iter_read(%r) -> %r', fd, s)
