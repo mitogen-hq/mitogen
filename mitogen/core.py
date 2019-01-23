@@ -1078,6 +1078,8 @@ class Importer(object):
         # a negative round-trip.
         'builtins',
         '__builtin__',
+        'thread',
+
         # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
         # very unlikely to trigger a bug report.
         'org',
