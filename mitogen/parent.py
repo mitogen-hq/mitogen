@@ -100,8 +100,25 @@ SYS_EXECUTABLE_MSG = (
 )
 _sys_executable_warning_logged = False
 
-LINUX_TIOCGPTN = 2147767344  # Get PTY number; asm-generic/ioctls.h
-LINUX_TIOCSPTLCK = 1074025521  # Lock/unlock PTY; asm-generic/ioctls.h
+
+def _ioctl_cast(n):
+    """
+    Linux ioctl() request parameter is unsigned, whereas on BSD/Darwin it is
+    signed. Until 2.5 Python exclusively implemented the BSD behaviour,
+    preventing use of large unsigned int requests like the TTY layer uses
+    below. So on 2.4, we cast our unsigned to look like signed for Python.
+    """
+    if sys.version_info < (2, 5):
+        n, = struct.unpack('i', struct.pack('I', n))
+    return n
+
+
+# Get PTY number; asm-generic/ioctls.h
+LINUX_TIOCGPTN = _ioctl_cast(2147767344)
+
+# Lock/unlock PTY; asm-generic/ioctls.h
+LINUX_TIOCSPTLCK = _ioctl_cast(1074025521)
+
 IS_LINUX = os.uname()[0] == 'Linux'
 
 SIGNAL_BY_NUM = dict(
