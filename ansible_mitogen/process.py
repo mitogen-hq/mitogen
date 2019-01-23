@@ -228,18 +228,22 @@ class MuxProcess(object):
         if secs:
             mitogen.debug.dump_to_logger(secs=secs)
 
-    def _setup_master(self):
+    def _setup_responder(self, responder):
         """
-        Construct a Router, Broker, and mitogen.unix listener
+        Configure :class:`mitogen.master.ModuleResponder` to only permit
+        certain packages, and to generate custom responses for certain modules.
         """
-        self.router = mitogen.master.Router(max_message_size=4096 * 1048576)
-        self.router.responder.whitelist_prefix('ansible')
-        self.router.responder.whitelist_prefix('ansible_mitogen')
+        responder.whitelist_prefix('ansible')
+        responder.whitelist_prefix('ansible_mitogen')
+        responder.whitelist_prefix('simplejson')
+        simplejson_path = os.path.join(os.path.dirname(__file__), 'compat')
+        sys.path.insert(0, simplejson_path)
+
         # Ansible 2.3 is compatible with Python 2.4 targets, however
         # ansible/__init__.py is not. Instead, executor/module_common.py writes
         # out a 2.4-compatible namespace package for unknown reasons. So we
         # copy it here.
-        self.router.responder.add_source_override(
+        responder.add_source_override(
             fullname='ansible',
             path=ansible.__file__,
             source=(ANSIBLE_PKG_OVERRIDE % (
@@ -248,6 +252,13 @@ class MuxProcess(object):
             )).encode(),
             is_pkg=True,
         )
+
+    def _setup_master(self):
+        """
+        Construct a Router, Broker, and mitogen.unix listener
+        """
+        self.router = mitogen.master.Router(max_message_size=4096 * 1048576)
+        self._setup_responder(self.router.responder)
         mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)
         mitogen.core.listen(self.router.broker, 'exit', self.on_broker_exit)
         self.listener = mitogen.unix.Listener(
