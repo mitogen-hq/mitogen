@@ -827,8 +827,8 @@ class FileService(Service):
             u'mode': st.st_mode,
             u'owner': self._name_or_none(pwd.getpwuid, 0, 'pw_name'),
             u'group': self._name_or_none(grp.getgrgid, 0, 'gr_name'),
-            u'mtime': st.st_mtime,
-            u'atime': st.st_atime,
+            u'mtime': float(st.st_mtime),  # Python 2.4 uses int.
+            u'atime': float(st.st_atime),  # Python 2.4 uses int.
         }
 
     def on_shutdown(self):
