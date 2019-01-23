@@ -2,6 +2,7 @@ import os
 
 import mitogen
 import mitogen.lxc
+from mitogen.core import any
 
 import unittest2
 
