@@ -236,15 +236,27 @@ class Secret(UnicodeType):
 
 
 class Kwargs(dict):
-    """A serializable dict subclass that indicates the contained keys should be
-    be coerced to Unicode on Python 3 as required. Python 2 produces keyword
-    argument dicts whose keys are bytestrings, requiring a helper to ensure
-    compatibility with Python 3."""
+    """
+    A serializable dict subclass that indicates the contained keys should be be
+    coerced to Unicode on Python 3 and to bytes on Python<2.6.
+
+    Python 2 produces keyword argument dicts whose keys are bytestrings,
+    requiring a helper to ensure compatibility with Python 3, whereas Python 3
+    produces keyword argument dicts whose keys are unicode, requiring a helper
+    to ensure compatibility with Python 2.4 and 2.5.
+    """
     if PY3:
         def __init__(self, dct):
             for k, v in dct.items():
                 if type(k) is bytes:
                     self[k.decode()] = v
+                else:
+                    self[k] = v
+    elif sys.version_info < (2, 6):
+        def __init__(self, dct):
+            for k, v in dct.iteritems():
+                if type(k) is unicode:
+                    self[k.encode()] = v
                 else:
                     self[k] = v
 

@@ -1935,8 +1935,10 @@ class Router(mitogen.core.Router):
 
         via = kwargs.pop(u'via', None)
         if via is not None:
-            return self.proxy_connect(via, method_name, name=name, **kwargs)
-        return self._connect(klass, name=name, **kwargs)
+            return self.proxy_connect(via, method_name, name=name,
+                                      **mitogen.core.Kwargs(kwargs))
+        return self._connect(klass, name=name,
+                             **mitogen.core.Kwargs(kwargs))
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
         resp = via_context.call(_proxy_connect,
