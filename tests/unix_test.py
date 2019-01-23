@@ -1,6 +1,7 @@
 
 import os
 import socket
+import subprocess
 import sys
 import time
 
@@ -19,6 +20,12 @@ class MyService(mitogen.service.Service):
         super(MyService, self).__init__(**kwargs)
         # used to wake up main thread once client has made its request
         self.latch = latch
+
+    @classmethod
+    def name(cls):
+        # Because this is loaded from both __main__ and whatever unit2 does,
+        # specify a fixed name.
+        return 'unix_test.MyService'
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
     def ping(self, msg):
@@ -99,12 +106,13 @@ class ClientTest(testlib.TestCase):
         router.broker.join()
         os.unlink(path)
 
-    def _test_simple_server(self, path):
+    @classmethod
+    def _test_simple_server(cls, path):
         router = mitogen.master.Router()
         latch = mitogen.core.Latch()
         try:
             try:
-                listener = self.klass(path=path, router=router)
+                listener = cls.klass(path=path, router=router)
                 pool = mitogen.service.Pool(router=router, services=[
                     MyService(latch=latch, router=router),
                 ])
@@ -121,12 +129,15 @@ class ClientTest(testlib.TestCase):
 
     def test_simple(self):
         path = mitogen.unix.make_socket_path()
-        if os.fork():
-            self._test_simple_client(path)
-        else:
-            mitogen.fork.on_fork()
-            self._test_simple_server(path)
+        proc = subprocess.Popen(
+            [sys.executable, __file__, 'ClientTest_server', path]
+        )
+        self._test_simple_client(path)
+        proc.wait()
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    if len(sys.argv) == 3 and sys.argv[1] == 'ClientTest_server':
+        ClientTest._test_simple_server(path=sys.argv[2])
+    else:
+        unittest2.main()
