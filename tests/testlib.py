@@ -32,6 +32,11 @@ try:
 except ImportError:
     from io import StringIO
 
+try:
+    BaseException
+except NameError:
+    BaseException = Exception
+
 
 LOG = logging.getLogger(__name__)
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
