@@ -1123,6 +1123,10 @@ class Stream(mitogen.core.Stream):
             LOG.debug('%r: immediate child is detached, won\'t reap it', self)
             return
 
+        if self.profiling:
+            LOG.info('%r: wont kill child because profiling=True', self)
+            return
+
         if self._reaped:
             # on_disconnect() may be invoked more than once, for example, if
             # there is still a pending message to be sent after the first
