@@ -1,4 +1,6 @@
 
+import sys
+
 try:
     from io import StringIO
     from io import BytesIO
@@ -88,11 +90,18 @@ class KwargsTest(testlib.TestCase):
         self.assertTrue(type(dct) is dict)
         self.assertEquals({}, dct)
 
-    @unittest2.skipIf(condition=lambda: not mitogen.core.PY3,
+    @unittest2.skipIf(condition=(sys.version_info >= (2, 6)),
+                      reason='py<2.6 only')
+    def test_bytes_conversion(self):
+        kw = self.klass({u'key': 123})
+        self.assertEquals({'key': 123}, kw)
+        self.assertEquals("Kwargs({'key': 123})", repr(kw))
+
+    @unittest2.skipIf(condition=not mitogen.core.PY3,
                       reason='py3 only')
     def test_unicode_conversion(self):
         kw = self.klass({mitogen.core.b('key'): 123})
-        self.assertEquals({mitogen.core.b('key'): 123}, kw)
+        self.assertEquals({u'key': 123}, kw)
         self.assertEquals("Kwargs({'key': 123})", repr(kw))
         klass, (dct,) = kw.__reduce__()
         self.assertTrue(klass is self.klass)

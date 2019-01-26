@@ -40,6 +40,12 @@ except ImportError:
 
 import mitogen.parent
 from mitogen.core import b
+from mitogen.core import bytes_partition
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
 
 
 LOG = logging.getLogger('mitogen')
@@ -91,19 +97,19 @@ def filter_debug(stream, it):
                     # interesting token from above or the bootstrap
                     # ('password', 'MITO000\n').
                     break
-                elif buf.startswith(DEBUG_PREFIXES):
+                elif any(buf.startswith(p) for p in DEBUG_PREFIXES):
                     state = 'in_debug'
                 else:
                     state = 'in_plain'
             elif state == 'in_debug':
                 if b('\n') not in buf:
                     break
-                line, _, buf = buf.partition(b('\n'))
+                line, _, buf = bytes_partition(buf, b('\n'))
                 LOG.debug('%r: %s', stream,
                           mitogen.core.to_text(line.rstrip()))
                 state = 'start_of_line'
             elif state == 'in_plain':
-                line, nl, buf = buf.partition(b('\n'))
+                line, nl, buf = bytes_partition(buf, b('\n'))
                 yield line + nl, not (nl or buf)
                 if nl:
                     state = 'start_of_line'

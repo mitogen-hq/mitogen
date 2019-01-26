@@ -1,1 +1,1 @@
-- import_playbook: mixed_vanilla_mitogen.yml
+- include: mixed_vanilla_mitogen.yml

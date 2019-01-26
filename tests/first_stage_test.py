@@ -30,15 +30,18 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         # success.
 
         fp = open("/dev/null", "r")
-        proc = subprocess.Popen(args,
-            stdin=fp,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        stdout, stderr = proc.communicate()
-        self.assertEquals(0, proc.returncode)
-        self.assertEquals(mitogen.parent.Stream.EC0_MARKER, stdout)
-        self.assertIn(b("Error -5 while decompressing data: incomplete or truncated stream"), stderr)
+        try:
+            proc = subprocess.Popen(args,
+                stdin=fp,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            stdout, stderr = proc.communicate()
+            self.assertEquals(0, proc.returncode)
+            self.assertEquals(mitogen.parent.Stream.EC0_MARKER, stdout)
+            self.assertIn(b("Error -5 while decompressing data"), stderr)
+        finally:
+            fp.close()
 
 
 if __name__ == '__main__':

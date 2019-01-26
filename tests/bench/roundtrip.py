@@ -2,11 +2,12 @@
 Measure latency of local RPC.
 """
 
-import mitogen
 import time
 
-import ansible_mitogen.process
-ansible_mitogen.process.setup_gil()
+import mitogen
+import mitogen.utils
+
+mitogen.utils.setup_gil()
 
 try:
     xrange

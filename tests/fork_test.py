@@ -1,11 +1,24 @@
 
-import _ssl
-import ctypes
 import os
 import random
-import ssl
 import struct
 import sys
+
+try:
+    import _ssl
+except ImportError:
+    _ssl = None
+
+try:
+    import ssl
+except ImportError:
+    ssl = None
+
+try:
+    import ctypes
+except ImportError:
+    # Python 2.4
+    ctypes = None
 
 import mitogen
 import unittest2
@@ -29,16 +42,17 @@ def _find_ssl_darwin():
             return bits[1]
 
 
-if sys.platform.startswith('linux'):
+if ctypes and sys.platform.startswith('linux'):
     LIBSSL_PATH = _find_ssl_linux()
-elif sys.platform == 'darwin':
+elif ctypes and sys.platform == 'darwin':
     LIBSSL_PATH = _find_ssl_darwin()
 else:
-    assert 0, "Don't know how to find libssl on this platform"
+    LIBSSL_PATH = None
 
-c_ssl = ctypes.CDLL(LIBSSL_PATH)
-c_ssl.RAND_pseudo_bytes.argtypes = [ctypes.c_char_p, ctypes.c_int]
-c_ssl.RAND_pseudo_bytes.restype = ctypes.c_int
+if ctypes and LIBSSL_PATH:
+    c_ssl = ctypes.CDLL(LIBSSL_PATH)
+    c_ssl.RAND_pseudo_bytes.argtypes = [ctypes.c_char_p, ctypes.c_int]
+    c_ssl.RAND_pseudo_bytes.restype = ctypes.c_int
 
 
 def ping():
@@ -64,6 +78,12 @@ def exercise_importer(n):
     return simple_pkg.a.subtract_one_add_two(n)
 
 
+skipIfUnsupported = unittest2.skipIf(
+    condition=(not mitogen.fork.FORK_SUPPORTED),
+    reason="mitogen.fork unsupported on this platform"
+)
+
+
 class ForkTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         context = self.router.fork()
@@ -74,6 +94,10 @@ class ForkTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.fork()
         self.assertNotEqual(context.call(random_random), random_random())
 
+    @unittest2.skipIf(
+        condition=LIBSSL_PATH is None or ctypes is None,
+        reason='cant test libssl on this platform',
+    )
     def test_ssl_module_diverges(self):
         # Ensure generator state is initialized.
         RAND_pseudo_bytes()
@@ -92,6 +116,8 @@ class ForkTest(testlib.RouterMixin, testlib.TestCase):
             sender.send(123)
         context = self.router.fork(on_start=on_start)
         self.assertEquals(123, recv.get().unpickle())
+
+ForkTest = skipIfUnsupported(ForkTest)
 
 
 class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
@@ -114,6 +140,8 @@ class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
         c1 = self.router.fork(name='c1')
         c2 = self.router.fork(name='c2', via=c1)
         self.assertEqual(2, c2.call(exercise_importer, 1))
+
+DoubleChildTest = skipIfUnsupported(DoubleChildTest)
 
 
 if __name__ == '__main__':

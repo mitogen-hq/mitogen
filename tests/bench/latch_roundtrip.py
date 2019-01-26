@@ -6,9 +6,9 @@ import threading
 import time
 
 import mitogen
+import mitogen.utils
 
-import ansible_mitogen.process
-ansible_mitogen.process.setup_gil()
+mitogen.utils.setup_gil()
 
 X = 20000
 

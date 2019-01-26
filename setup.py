@@ -50,7 +50,6 @@ setup(
     packages = find_packages(exclude=['tests', 'examples']),
     zip_safe = False,
     classifiers = [
-        'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: BSD License',

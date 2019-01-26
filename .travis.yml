@@ -24,6 +24,9 @@ script:
 matrix:
   include:
     # Mitogen tests.
+    # 2.4 -> 2.4
+    - language: c
+      env: MODE=mitogen_py24 DISTRO=centos5
     # 2.7 -> 2.7
     - python: "2.7"
       env: MODE=mitogen DISTRO=debian

@@ -9,6 +9,15 @@ import testlib
 import mitogen.core
 
 
+def py24_mock_fix(m):
+    def wrapper(*args, **kwargs):
+        ret = m(*args, **kwargs)
+        if isinstance(ret, Exception):
+            raise ret
+        return ret
+    return wrapper
+
+
 class RestartTest(object):
     func = staticmethod(mitogen.core.io_op)
     exception_class = None
@@ -21,7 +30,7 @@ class RestartTest(object):
             self.exception_class(errno.EINTR),
             'yay',
         ]
-        rc, disconnected = self.func(m, 'input')
+        rc, disconnected = self.func(py24_mock_fix(m), 'input')
         self.assertEquals(rc, 'yay')
         self.assertFalse(disconnected)
         self.assertEquals(4, m.call_count)

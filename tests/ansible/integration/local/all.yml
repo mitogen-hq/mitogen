@@ -1,4 +1,4 @@
 
-- import_playbook: cwd_preserved.yml
-- import_playbook: env_preserved.yml
+- include: cwd_preserved.yml
+- include: env_preserved.yml
 

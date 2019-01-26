@@ -128,6 +128,10 @@ class BrokenModulesTest(testlib.TestCase):
         self.assertEquals(('non_existent_module', None, None, None, ()),
                           msg.unpickle())
 
+    @unittest2.skipIf(
+        condition=sys.version_info < (2, 6),
+        reason='Ancient Python lacked "from . import foo"',
+    )
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
         # __path__ subsequently ends up empty, which prevents pkgutil from
@@ -166,12 +170,12 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
     def test_stats(self):
         # Forwarding stats broken because forwarding is broken. See #469.
         c1 = self.router.local()
-        c2 = self.router.fork(via=c1)
+        c2 = self.router.local(via=c1)
 
         self.assertEquals(256, c2.call(plain_old_module.pow, 2, 8))
-        self.assertEquals(3, self.router.responder.get_module_count)
-        self.assertEquals(3, self.router.responder.good_load_module_count)
-        self.assertLess(23000, self.router.responder.good_load_module_size)
+        self.assertEquals(2, self.router.responder.get_module_count)
+        self.assertEquals(2, self.router.responder.good_load_module_count)
+        self.assertLess(20000, self.router.responder.good_load_module_size)
 
 
 class BlacklistTest(testlib.TestCase):

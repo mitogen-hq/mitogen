@@ -8,16 +8,25 @@ echo
 set -o errexit
 set -o pipefail
 
-UNIT2="$(which unit2)"
+if [ ! "$UNIT2" ]; then
+    UNIT2="$(which unit2)"
+fi
 
-coverage erase
+[ "$NOCOVERAGE" ] || coverage erase
 
 # First run overwites coverage output.
 [ "$SKIP_MITOGEN" ] || {
-    coverage run "${UNIT2}" discover \
-                            --start-directory "tests" \
-                            --pattern '*_test.py' \
-                            "$@"
+    if [ ! "$NOCOVERAGE" ]; then
+        coverage run "${UNIT2}" discover \
+            --start-directory "tests" \
+            --pattern '*_test.py' \
+            "$@"
+    else
+        "${UNIT2}" discover \
+            --start-directory "tests" \
+            --pattern '*_test.py' \
+            "$@"
+    fi
 }
 
 # Second run appends. This is since 'discover' treats subdirs as packages and
@@ -27,11 +36,18 @@ coverage erase
 # mess of Git history.
 [ "$SKIP_ANSIBLE" ] || {
     export PYTHONPATH=`pwd`/tests:$PYTHONPATH
-    coverage run -a "${UNIT2}" discover \
-                            --start-directory "tests/ansible" \
-                            --pattern '*_test.py' \
-                            "$@"
+    if [ ! "$NOCOVERAGE" ]; then
+        coverage run -a "${UNIT2}" discover \
+            --start-directory "tests/ansible" \
+            --pattern '*_test.py' \
+            "$@"
+    else
+        coverage run -a "${UNIT2}" discover \
+            --start-directory "tests/ansible" \
+            --pattern '*_test.py' \
+            "$@"
+    fi
 }
 
-coverage html
-echo coverage report is at "file://$(pwd)/htmlcov/index.html"
+[ "$NOCOVERAGE" ] || coverage html
+[ "$NOCOVERAGE" ] || echo coverage report is at "file://$(pwd)/htmlcov/index.html"

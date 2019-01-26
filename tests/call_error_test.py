@@ -31,9 +31,10 @@ class ConstructorTest(testlib.TestCase):
     def test_form_base_exc(self):
         ve = SystemExit('eek')
         e = self.klass(ve)
+        cls = ve.__class__
         self.assertEquals(e.args[0],
             # varies across 2/3.
-            '%s.%s: eek' % (type(ve).__module__, type(ve).__name__))
+            '%s.%s: eek' % (cls.__module__, cls.__name__))
         self.assertTrue(isinstance(e.args[0], mitogen.core.UnicodeType))
 
     def test_from_exc_tb(self):
@@ -72,7 +73,7 @@ class UnpickleCallErrorTest(testlib.TestCase):
 
     def test_reify(self):
         e = self.func(u'some error')
-        self.assertEquals(mitogen.core.CallError, type(e))
+        self.assertEquals(mitogen.core.CallError, e.__class__)
         self.assertEquals(1, len(e.args))
         self.assertEquals(mitogen.core.UnicodeType, type(e.args[0]))
         self.assertEquals(u'some error', e.args[0])
