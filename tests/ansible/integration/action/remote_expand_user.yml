@@ -8,12 +8,12 @@
     - name: "Find out root's homedir."
       # Runs first because it blats regular Ansible facts with junk, so
       # non-become run fixes that up.
-      setup: gather_subset=min
+      setup:
       become: true
       register: root_facts
 
     - name: "Find regular homedir"
-      setup: gather_subset=min
+      setup:
       register: user_facts
 
     # ------------------------
