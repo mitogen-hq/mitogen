@@ -91,7 +91,8 @@ class Listener(mitogen.core.BasicStream):
     def _unlink_socket(self):
         try:
             os.unlink(self.path)
-        except OSError as e:
+        except OSError:
+            e = sys.exc_info()[1]
             # Prevent a shutdown race with the parent process.
             if e.args[0] != errno.ENOENT:
                 raise
