@@ -12,10 +12,11 @@
       ansible_connection: mitogen_sudo
       ansible_user: root
       ansible_become_exe: stub-sudo.py
-      ansible_become_flags: --type=sometype --role=somerole
+      ansible_become_flags: -H --type=sometype --role=somerole
     register: out
 
   - assert:
-      that:
-      - out.env.THIS_IS_STUB_SUDO == '1'
-      - (out.env.ORIGINAL_ARGV|from_json)[1:9] == ['-u', 'root', '-H', '-r', 'somerole', '-t', 'sometype', '--']
+      that: out.env.THIS_IS_STUB_SUDO == '1'
+  - assert_equal:
+      left: (out.env.ORIGINAL_ARGV|from_json)[1:9]
+      right: ['-u', 'root', '-H', '-r', 'somerole', '-t', 'sometype', '--']
