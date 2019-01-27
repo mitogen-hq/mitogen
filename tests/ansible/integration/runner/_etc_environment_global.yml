@@ -17,8 +17,10 @@
       MAGIC_ETC_ENV=555
   become: true
 
-- mitogen_shutdown_all:
-  when: not is_mitogen
+- meta: reset_connection
+
+#- mitogen_shutdown_all:
+  #when: not is_mitogen
 
 - shell: echo $MAGIC_ETC_ENV
   register: echo
@@ -30,6 +32,8 @@
     path: /etc/environment
     state: absent
   become: true
+
+- meta: reset_connection
 
 - mitogen_shutdown_all:
   when: not is_mitogen
