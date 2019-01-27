@@ -14,6 +14,7 @@
 - include: local/all.yml
 - include: module_utils/all.yml
 - include: playbook_semantics/all.yml
+- include: process/all.yml
 - include: runner/all.yml
 - include: ssh/all.yml
 - include: strategy/all.yml
