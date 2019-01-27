@@ -1,0 +1,39 @@
+# Verify the value of the Connection.homedir attribute is as expected.
+
+- name: integration/connection/home_dir.yml
+  hosts: test-targets
+  any_errors_fatal: true
+  tasks:
+    - name: "Find out root's homedir."
+      # Runs first because it blats regular Ansible facts with junk, so
+      # non-become run fixes that up.
+      setup:
+      become: true
+      register: root_facts
+      when: is_mitogen
+
+    - name: "Find regular homedir"
+      setup:
+      register: user_facts
+      when: is_mitogen
+
+    - name: "Verify Connection.homedir correct when become:false"
+      mitogen_action_script:
+        script: |
+          self._connection._connect()
+          assert self._connection.homedir == "{{user_facts.ansible_facts.ansible_user_dir}}", {
+            "connection homedir": self._connection.homedir,
+            "homedir from facts": "{{user_facts.ansible_facts.ansible_user_dir}}"
+          }
+      when: is_mitogen
+
+    - name: "Verify Connection.homedir correct when become:true"
+      become: true
+      mitogen_action_script:
+        script: |
+          self._connection._connect()
+          assert self._connection.homedir == "{{root_facts.ansible_facts.ansible_user_dir}}", {
+            "connection homedir": self._connection.homedir,
+            "homedir from facts": "{{root_facts.ansible_facts.ansible_user_dir}}"
+          }
+      when: is_mitogen

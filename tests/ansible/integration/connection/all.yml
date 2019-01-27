@@ -3,6 +3,7 @@
 - include: disconnect_during_module.yml
 - include: disconnect_resets_connection.yml
 - include: exec_command.yml
+- include: home_dir.yml
 - include: put_large_file.yml
 - include: put_small_file.yml
 - include: reset.yml
