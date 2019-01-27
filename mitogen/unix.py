@@ -60,7 +60,7 @@ def is_path_dead(path):
 
 
 def make_socket_path():
-    return tempfile.mktemp(prefix='mitogen_unix_')
+    return tempfile.mktemp(prefix='mitogen_unix_', suffix='.sock')
 
 
 class Listener(mitogen.core.BasicStream):
@@ -88,8 +88,17 @@ class Listener(mitogen.core.BasicStream):
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
 
+    def _unlink_socket(self):
+        try:
+            os.unlink(self.path)
+        except OSError as e:
+            # Prevent a shutdown race with the parent process.
+            if e.args[0] != errno.ENOENT:
+                raise
+
     def on_shutdown(self, broker):
         broker.stop_receive(self)
+        self._unlink_socket()
         self._sock.close()
         self.receive_side.closed = True
 

@@ -179,10 +179,6 @@ class MuxProcess(object):
             cls.worker_sock = None
             self = cls()
             self.worker_main()
-            # Test frameworks living somewhere higher on the stack of the
-            # original parent process may try to catch sys.exit(), so do a C
-            # level exit instead.
-            os._exit(0)
 
     def worker_main(self):
         """
@@ -193,10 +189,19 @@ class MuxProcess(object):
         self._setup_master()
         self._setup_services()
 
-        # Let the parent know our listening socket is ready.
-        mitogen.core.io_op(self.child_sock.send, b('1'))
-        # Block until the socket is closed, which happens on parent exit.
-        mitogen.core.io_op(self.child_sock.recv, 1)
+        try:
+            # Let the parent know our listening socket is ready.
+            mitogen.core.io_op(self.child_sock.send, b('1'))
+            # Block until the socket is closed, which happens on parent exit.
+            mitogen.core.io_op(self.child_sock.recv, 1)
+        finally:
+            self.broker.shutdown()
+            self.broker.join()
+
+            # Test frameworks living somewhere higher on the stack of the
+            # original parent process may try to catch sys.exit(), so do a C
+            # level exit instead.
+            os._exit(0)
 
     def _enable_router_debug(self):
         if 'MITOGEN_ROUTER_DEBUG' in os.environ:
@@ -236,10 +241,14 @@ class MuxProcess(object):
         """
         Construct a Router, Broker, and mitogen.unix listener
         """
-        self.router = mitogen.master.Router(max_message_size=4096 * 1048576)
+        self.broker = mitogen.master.Broker(install_watcher=False)
+        self.router = mitogen.master.Router(
+            broker=self.broker,
+            max_message_size=4096 * 1048576,
+        )
         self._setup_responder(self.router.responder)
-        mitogen.core.listen(self.router.broker, 'shutdown', self.on_broker_shutdown)
-        mitogen.core.listen(self.router.broker, 'exit', self.on_broker_exit)
+        mitogen.core.listen(self.broker, 'shutdown', self.on_broker_shutdown)
+        mitogen.core.listen(self.broker, 'exit', self.on_broker_exit)
         self.listener = mitogen.unix.Listener(
             router=self.router,
             path=self.unix_listener_path,
@@ -273,12 +282,6 @@ class MuxProcess(object):
         threads to exit gracefully.
         """
         self.pool.stop(join=False)
-        try:
-            os.unlink(self.listener.path)
-        except OSError as e:
-            # Prevent a shutdown race with the parent process.
-            if e.args[0] != errno.ENOENT:
-                raise
 
     def on_broker_exit(self):
         """
