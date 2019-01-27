@@ -1456,7 +1456,7 @@ class Side(object):
         """
         Write as much of the bytes from `s` as possible to the file descriptor,
         wrapping the underlying :func:`os.write` call with :func:`io_op` to
-        trap common disconnection connditions.
+        trap common disconnection conditions.
 
         :returns:
             Number of bytes written, or :data:`None` if disconnection was
@@ -1854,7 +1854,7 @@ class Poller(object):
             callback()  # invoke appropriate bound instance method
 
     Pollers may be modified while :meth:`poll` is yielding results. Removals
-    are processed immediately, causing pendings event for the descriptor to be
+    are processed immediately, causing pending events for the descriptor to be
     discarded.
 
     The :meth:`close` method must be called when a poller is discarded to avoid
@@ -1906,6 +1906,7 @@ class Poller(object):
         pass
 
     _readmask = select.POLLIN | select.POLLHUP
+    # TODO: no proof we dont need writemask too
 
     def _update(self, fd):
         mask = (((fd in self._rfds) and self._readmask) |
@@ -2005,14 +2006,14 @@ class Latch(object):
     # The _cls_ prefixes here are to make it crystal clear in the code which
     # state mutation isn't covered by :attr:`_lock`.
 
-    #: List of reusable :func:`socket.socketpair` tuples. The list is from
-    #: multiple threads, the only safe operations are `append()` and `pop()`.
+    #: List of reusable :func:`socket.socketpair` tuples. The list is mutated
+    #: from multiple threads, the only safe operations are `append()` and
+    #: `pop()`.
     _cls_idle_socketpairs = []
 
     #: List of every socket object that must be closed by :meth:`_on_fork`.
     #: Inherited descriptors cannot be reused, as the duplicated handles
-    #: reference the same underlying kernel-side sockets still in use by
-    #: the parent process.
+    #: reference the same underlying kernel object in use by the parent.
     _cls_all_sockets = []
 
     def __init__(self):
