@@ -50,6 +50,33 @@ class IsStdlibNameTest(testlib.TestCase):
         self.assertFalse(self.func('mitogen.fakessh'))
 
 
+class GetMainModuleDefectivePython3x(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+
+    def call(self, fullname):
+        return self.klass()._get_main_module_defective_python_3x(fullname)
+
+    def test_builtin(self):
+        self.assertEquals(None, self.call('sys'))
+
+    def test_not_main(self):
+        self.assertEquals(None, self.call('mitogen'))
+
+    def test_main(self):
+        import __main__
+
+        path, source, is_pkg = self.call('__main__')
+        self.assertTrue(path is not None)
+        self.assertTrue(os.path.exists(path))
+        self.assertEquals(path, __main__.__file__)
+        fp = open(path, 'rb')
+        try:
+            self.assertEquals(source, fp.read())
+        finally:
+            fp.close()
+        self.assertFalse(is_pkg)
+
+
 class GetModuleViaPkgutilTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 

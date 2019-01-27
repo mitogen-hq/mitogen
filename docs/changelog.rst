@@ -402,6 +402,10 @@ Core Library
   Since correct group ownership is not required in most scenarios, when this
   problem is detected, the PTY is allocated and opened directly by the library.
 
+* `#479 <https://github.com/dw/mitogen/issues/479>`_: Mitogen could fail to
+  import :mod:`__main__` on Python 3.4 and newer due to a breaking change in
+  the :mod:`pkgutil` API. The program's main script is now handled specially.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 

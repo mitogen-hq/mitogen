@@ -117,6 +117,7 @@ class Listener(mitogen.core.BasicStream):
                       self, pid, sys.exc_info()[1])
             return
 
+        LOG.debug('%r: accepted %r', self, stream)
         stream.accept(sock.fileno(), sock.fileno())
         self._router.register(context, stream)
 

@@ -747,12 +747,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             self.broker = None
             self.router = None
 
-        # #420: Ansible executes "meta" actions in the top-level process,
-        # meaning "reset_connection" will cause :class:`mitogen.core.Latch` FDs
-        # to be cached and erroneously shared by children on subsequent
-        # WorkerProcess forks. To handle that, call on_fork() to ensure any
-        # shared state is discarded.
-        mitogen.fork.on_fork()
+            # #420: Ansible executes "meta" actions in the top-level process,
+            # meaning "reset_connection" will cause :class:`mitogen.core.Latch`
+            # FDs to be cached and erroneously shared by children on subsequent
+            # WorkerProcess forks. To handle that, call on_fork() to ensure any
+            # shared state is discarded.
+            # #490: only attempt to clean up when it's known that some
+            # resources exist to cleanup, otherwise later __del__ double-call
+            # to close() due to GC at random moment may obliterate an unrelated
+            # Connection's resources.
+            mitogen.fork.on_fork()
 
     def close(self):
         """

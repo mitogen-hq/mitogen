@@ -1415,7 +1415,9 @@ class Side(object):
 
     @classmethod
     def _on_fork(cls):
-        for side in list(cls._fork_refs.values()):
+        while cls._fork_refs:
+            _, side = cls._fork_refs.popitem()
+            _vv and IOLOG.debug('Side._on_fork() closing %r', side)
             side.close()
 
     def close(self):
