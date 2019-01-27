@@ -1448,6 +1448,7 @@ class Side(object):
             return b('')
         s, disconnected = io_op(os.read, self.fd, n)
         if disconnected:
+            LOG.debug('%r.read(): disconnected: %s', self, disconnected)
             return b('')
         return s
 
@@ -1468,6 +1469,7 @@ class Side(object):
 
         written, disconnected = io_op(os.write, self.fd, s)
         if disconnected:
+            LOG.debug('%r.write(): disconnected: %s', self, disconnected)
             return None
         return written
 
