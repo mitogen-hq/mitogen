@@ -1181,6 +1181,9 @@ class Stream(mitogen.core.Stream):
     #   r: read side of core_src FD.
     #   w: write side of core_src FD.
     #   C: the decompressed core source.
+
+    # Final os.close(2) to avoid --py-debug build from corrupting stream with
+    # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
         R,W=os.pipe()
@@ -1206,6 +1209,7 @@ class Stream(mitogen.core.Stream):
         fp.write(C)
         fp.close()
         os.write(1,'MITO001\n'.encode())
+        os.close(2)
 
     def get_python_argv(self):
         """
