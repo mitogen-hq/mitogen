@@ -19,6 +19,9 @@
     - meta: end_play
       when: not is_mitogen
 
+    - meta: end_play
+      when: ansible_version.full < '2.4'
+
     - mitogen_get_stack:
       delegate_to: "{{ physical_host }}"
       register: out
