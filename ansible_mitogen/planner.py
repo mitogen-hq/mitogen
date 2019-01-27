@@ -46,6 +46,7 @@ from ansible.executor import module_common
 import ansible.errors
 import ansible.module_utils
 import mitogen.core
+import mitogen.select
 
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
@@ -416,22 +417,33 @@ def _invoke_async_task(invocation, planner):
     job_id = '%016x' % random.randint(0, 2**64)
     context = invocation.connection.spawn_isolated_child()
     _propagate_deps(invocation, planner, context)
-    context.call_no_reply(
-        ansible_mitogen.target.run_module_async,
-        job_id=job_id,
-        timeout_secs=invocation.timeout_secs,
-        kwargs=planner.get_kwargs(),
-    )
 
-    return {
-        'stdout': json.dumps({
-            # modules/utilities/logic/async_wrapper.py::_run_module().
-            'changed': True,
-            'started': 1,
-            'finished': 0,
-            'ansible_job_id': job_id,
-        })
-    }
+    with mitogen.core.Receiver(context.router) as started_recv:
+        call_recv = context.call_async(
+            ansible_mitogen.target.run_module_async,
+            job_id=job_id,
+            timeout_secs=invocation.timeout_secs,
+            started_sender=started_recv.to_sender(),
+            kwargs=planner.get_kwargs(),
+        )
+
+        # Wait for run_module_async() to crash, or for AsyncRunner to indicate
+        # the job file has been written.
+        for msg in mitogen.select.Select([started_recv, call_recv]):
+            if msg.receiver is call_recv:
+                # It can only be an exception.
+                raise msg.unpickle()
+            break
+
+        return {
+            'stdout': json.dumps({
+                # modules/utilities/logic/async_wrapper.py::_run_module().
+                'changed': True,
+                'started': 1,
+                'finished': 0,
+                'ansible_job_id': job_id,
+            })
+        }
 
 
 def _invoke_isolated_task(invocation, planner):

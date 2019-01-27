@@ -430,9 +430,10 @@ def _get_async_dir():
 
 
 class AsyncRunner(object):
-    def __init__(self, job_id, timeout_secs, econtext, kwargs):
+    def __init__(self, job_id, timeout_secs, started_sender, econtext, kwargs):
         self.job_id = job_id
         self.timeout_secs = timeout_secs
+        self.started_sender = started_sender
         self.econtext = econtext
         self.kwargs = kwargs
         self._timed_out = False
@@ -515,6 +516,7 @@ class AsyncRunner(object):
             'finished': 0,
             'pid': os.getpid()
         })
+        self.started_sender.send(True)
 
         if self.timeout_secs > 0:
             self._install_alarm()
@@ -550,13 +552,26 @@ class AsyncRunner(object):
 
 
 @mitogen.core.takes_econtext
-def run_module_async(kwargs, job_id, timeout_secs, econtext):
+def run_module_async(kwargs, job_id, timeout_secs, started_sender, econtext):
     """
     Execute a module with its run status and result written to a file,
     terminating on the process on completion. This function must run in a child
     forked using :func:`create_fork_child`.
+
+    @param mitogen.core.Sender started_sender:
+        A sender that will receive :data:`True` once the job has reached a
+        point where its initial job file has been written. This is required to
+        avoid a race where an overly eager controller can check for a task
+        before it has reached that point in execution, which is possible at
+        least on Python 2.4, where forking is not available for async tasks.
     """
-    arunner = AsyncRunner(job_id, timeout_secs, econtext, kwargs)
+    arunner = AsyncRunner(
+        job_id,
+        timeout_secs,
+        started_sender,
+        econtext,
+        kwargs
+    )
     arunner.run()
 
 
