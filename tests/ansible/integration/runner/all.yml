@@ -14,7 +14,8 @@
 - include: custom_python_want_json_module.yml
 - include: custom_script_interpreter.yml
 - include: environment_isolation.yml
-- include: etc_environment.yml
+# I hate this test. I hope it dies, it has caused nothing but misery and suffering
+#- include: etc_environment.yml
 - include: forking_active.yml
 - include: forking_correct_parent.yml
 - include: forking_inactive.yml
