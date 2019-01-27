@@ -32,6 +32,7 @@
           - python-virtualenv
       CentOS:
         "5":
+        - perl
         - sudo
           #- perl-JSON  -- skipped on CentOS 5, packages are a pain.
         "6":
