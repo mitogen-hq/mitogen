@@ -68,6 +68,11 @@
       - /var/lib/apt/lists
       when: distro == "Debian"
 
+    # Vanilla Ansible needs simplejson on CentOS 5.
+    - synchronize:
+        dest: /usr/lib/python2.4/site-packages/simplejson/
+        src: ../../ansible_mitogen/compat/simplejson/
+
     - user:
         name: root
         password: "{{ 'rootpassword' | password_hash('sha256') }}"
