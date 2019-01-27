@@ -6,7 +6,7 @@
     - connection: local
       command: |
         ansible -vvv
-        -i "{{inventory_file}}"
+        -i "{{MITOGEN_INVENTORY_FILE}}"
         test-targets
         -m custom_python_detect_environment
         -e ansible_user=mitogen__slow_user -e ansible_password=slow_user_password
