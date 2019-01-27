@@ -414,7 +414,7 @@ def _propagate_deps(invocation, planner, context):
 
 def _invoke_async_task(invocation, planner):
     job_id = '%016x' % random.randint(0, 2**64)
-    context = invocation.connection.create_fork_child()
+    context = invocation.connection.spawn_isolated_child()
     _propagate_deps(invocation, planner, context)
     context.call_no_reply(
         ansible_mitogen.target.run_module_async,
@@ -434,8 +434,8 @@ def _invoke_async_task(invocation, planner):
     }
 
 
-def _invoke_forked_task(invocation, planner):
-    context = invocation.connection.create_fork_child()
+def _invoke_isolated_task(invocation, planner):
+    context = invocation.connection.spawn_isolated_child()
     _propagate_deps(invocation, planner, context)
     try:
         return context.call(
@@ -475,7 +475,7 @@ def invoke(invocation):
     if invocation.wrap_async:
         response = _invoke_async_task(invocation, planner)
     elif planner.should_fork():
-        response = _invoke_forked_task(invocation, planner)
+        response = _invoke_isolated_task(invocation, planner)
     else:
         _propagate_deps(invocation, planner, invocation.connection.context)
         response = invocation.connection.get_chain().call(

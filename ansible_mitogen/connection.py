@@ -819,21 +819,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect()
         if use_login:
             return self.login_context.default_call_chain
-        if use_fork:
+        # See FORK_SUPPORTED comments in target.py.
+        if use_fork and self.init_child_result['fork_context'] is not None:
             return self.init_child_result['fork_context'].default_call_chain
         return self.chain
 
-    def create_fork_child(self):
+    def spawn_isolated_child(self):
         """
-        Fork a new child off the target context. The actual fork occurs from
-        the 'virginal fork parent', which does not any Ansible modules prior to
-        fork, to avoid conflicts resulting from custom module_utils paths.
+        Fork or launch a new child off the target context.
 
         :returns:
             mitogen.core.Context of the new child.
         """
         return self.get_chain(use_fork=True).call(
-            ansible_mitogen.target.create_fork_child
+            ansible_mitogen.target.spawn_isolated_child
         )
 
     def get_extra_args(self):

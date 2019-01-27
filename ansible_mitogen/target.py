@@ -96,6 +96,13 @@ MAKE_TEMP_FAILED_MSG = (
     u"Please check '-vvv' output for a log of individual path errors."
 )
 
+# Python 2.4/2.5 cannot support fork+threads whatsoever, it doesn't even fix up
+# interpreter state. So 2.4/2.5 interpreters start .local() contexts for
+# isolation instead. Since we don't have any crazy memory sharing problems to
+# avoid, there is no virginal fork parent either. The child is started directly
+# from the login/become process. In future this will be default everywhere,
+# fork is brainwrong from the stone age.
+FORK_SUPPORTED = sys.version_info >= (2, 6)
 
 #: Initialized to an econtext.parent.Context pointing at a pristine fork of
 #: the target Python interpreter before it executes any code or imports.
@@ -353,8 +360,9 @@ def init_child(econtext, log_level, candidate_temp_dirs):
         Dict like::
 
             {
-                'fork_context': mitogen.core.Context.
-                'home_dir': str.
+                'fork_context': mitogen.core.Context or None,
+                'good_temp_dir': ...
+                'home_dir': str
             }
 
         Where `fork_context` refers to the newly forked 'fork parent' context
@@ -368,8 +376,9 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
     global _fork_parent
-    mitogen.parent.upgrade_router(econtext)
-    _fork_parent = econtext.router.fork()
+    if FORK_SUPPORTED:
+        mitogen.parent.upgrade_router(econtext)
+        _fork_parent = econtext.router.fork()
 
     global good_temp_dir
     good_temp_dir = find_good_temp_dir(candidate_temp_dirs)
@@ -382,14 +391,21 @@ def init_child(econtext, log_level, candidate_temp_dirs):
 
 
 @mitogen.core.takes_econtext
-def create_fork_child(econtext):
+def spawn_isolated_child(econtext):
     """
     For helper functions executed in the fork parent context, arrange for
     the context's router to be upgraded as necessary and for a new child to be
     prepared.
+
+    The actual fork occurs from the 'virginal fork parent', which does not have
+    any Ansible modules loaded prior to fork, to avoid conflicts resulting from
+    custom module_utils paths.
     """
     mitogen.parent.upgrade_router(econtext)
-    context = econtext.router.fork()
+    if FORK_SUPPORTED:
+        context = econtext.router.fork()
+    else:
+        context = econtext.router.local()
     LOG.debug('create_fork_child() -> %r', context)
     return context
 
