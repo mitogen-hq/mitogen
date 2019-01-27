@@ -1703,7 +1703,7 @@ class Stream(BasicStream):
 
     def __repr__(self):
         cls = type(self)
-        return '%s.%s(%r)' % (cls.__module__, cls.__name__, self.name)
+        return "%s.%s('%s')" % (cls.__module__, cls.__name__, self.name)
 
 
 class Context(object):

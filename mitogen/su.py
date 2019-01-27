@@ -80,9 +80,8 @@ class Stream(mitogen.parent.Stream):
         if incorrect_prompts is not None:
             self.incorrect_prompts = map(str.lower, incorrect_prompts)
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'su.' + mitogen.core.to_text(self.username)
+    def _get_name(self):
+        return u'su.' + mitogen.core.to_text(self.username)
 
     def get_boot_command(self):
         argv = mitogen.parent.Argv(super(Stream, self).get_boot_command())

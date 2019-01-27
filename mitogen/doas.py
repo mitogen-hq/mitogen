@@ -66,9 +66,8 @@ class Stream(mitogen.parent.Stream):
         if incorrect_prompts is not None:
             self.incorrect_prompts = map(str.lower, incorrect_prompts)
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'doas.' + mitogen.core.to_text(self.username)
+    def _get_name(self):
+        return u'doas.' + mitogen.core.to_text(self.username)
 
     def get_boot_command(self):
         bits = [self.doas_path, '-u', self.username, '--']

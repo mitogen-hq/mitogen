@@ -1001,7 +1001,7 @@ class DiagLogStream(mitogen.core.BasicStream):
         self.buf = ''
 
     def __repr__(self):
-        return 'mitogen.parent.DiagLogStream(fd=%r, %r)' % (
+        return "mitogen.parent.DiagLogStream(fd=%r, '%s')" % (
             self.receive_side.fd,
             self.stream.name,
         )
@@ -1017,11 +1017,11 @@ class DiagLogStream(mitogen.core.BasicStream):
             return self.on_disconnect(broker)
 
         self.buf += buf.decode('utf-8', 'replace')
-        while '\n' in self.buf:
+        while u'\n' in self.buf:
             lines = self.buf.split('\n')
             self.buf = lines[-1]
             for line in lines[:-1]:
-                LOG.debug('%r:  %r', self, line.rstrip())
+                LOG.debug('%s: %s', self.stream.name, line.rstrip())
 
 
 class Stream(mitogen.core.Stream):
@@ -1288,10 +1288,18 @@ class Stream(mitogen.core.Stream):
         if self.eof_error_hint:
             e.args = ('%s\n\n%s' % (e.args[0], self.eof_error_hint),)
 
+    def _get_name(self):
+        """
+        Called by :meth:`connect` after :attr:`pid` is known. Subclasses can
+        override it to specify a default stream name, or set
+        :attr:`name_prefix` to generate a default format.
+        """
+        return u'%s.%s' % (self.name_prefix, self.pid)
+
     def connect(self):
         LOG.debug('%r.connect()', self)
         self.pid, fd, diag_fd = self.start_child()
-        self.name = u'%s.%s' % (self.name_prefix, self.pid)
+        self.name = self._get_name()
         self.receive_side = mitogen.core.Side(self, fd)
         self.transmit_side = mitogen.core.Side(self, os.dup(fd))
         if diag_fd is not None:
@@ -1299,8 +1307,8 @@ class Stream(mitogen.core.Stream):
         else:
             self.diag_stream = None
 
-        LOG.debug('%r.connect(): stdin=%r, stdout=%r, diag=%r',
-                  self, self.receive_side.fd, self.transmit_side.fd,
+        LOG.debug('%r.connect(): pid:%r stdin:%r, stdout:%r, diag:%r',
+                  self, self.pid, self.receive_side.fd, self.transmit_side.fd,
                   self.diag_stream and self.diag_stream.receive_side.fd)
 
         try:

@@ -55,9 +55,8 @@ class Stream(mitogen.parent.Stream):
             self.kubectl_path = kubectl_path
         self.kubectl_args = kubectl_args or []
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'kubectl.%s%s' % (self.pod, self.kubectl_args)
+    def _get_name(self):
+        return u'kubectl.%s%s' % (self.pod, self.kubectl_args)
 
     def get_boot_command(self):
         bits = [self.kubectl_path] + self.kubectl_args + ['exec', '-it', self.pod]

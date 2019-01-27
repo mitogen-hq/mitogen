@@ -140,9 +140,8 @@ class Stream(mitogen.parent.Stream):
         self.selinux_role = option(self.selinux_role, selinux_role, opts.role)
         self.selinux_type = option(self.selinux_type, selinux_type, opts.type)
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'sudo.' + mitogen.core.to_text(self.username)
+    def _get_name(self):
+        return u'sudo.' + mitogen.core.to_text(self.username)
 
     def get_boot_command(self):
         # Note: sudo did not introduce long-format option processing until July

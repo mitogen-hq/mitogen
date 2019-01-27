@@ -223,11 +223,14 @@ class Stream(mitogen.parent.Stream):
     def create_child(self, args):
         return mitogen.parent.create_child(args, preexec_fn=self.preexec_fn)
 
+    def _get_name(self):
+        return u'setns.' + self.container
+
     def connect(self):
+        self.name = self._get_name()
         attr, func = self.GET_LEADER_BY_KIND[self.kind]
         tool_path = getattr(self, attr)
         self.leader_pid = func(tool_path, self.container)
         LOG.debug('Leader PID for %s container %r: %d',
                   self.kind, self.container, self.leader_pid)
         super(Stream, self).connect()
-        self.name = u'setns.' + self.container

@@ -61,9 +61,8 @@ class Stream(mitogen.parent.Stream):
         if lxc_path:
             self.lxc_path = lxc_path
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'lxd.' + self.container
+    def _get_name(self):
+        return u'lxd.' + self.container
 
     def get_boot_command(self):
         bits = [

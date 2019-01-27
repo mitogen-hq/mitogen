@@ -105,7 +105,7 @@ def filter_debug(stream, it):
                 if b('\n') not in buf:
                     break
                 line, _, buf = bytes_partition(buf, b('\n'))
-                LOG.debug('%r: %s', stream,
+                LOG.debug('%s: %s', stream.name,
                           mitogen.core.to_text(line.rstrip()))
                 state = 'start_of_line'
             elif state == 'in_plain':
@@ -239,11 +239,11 @@ class Stream(mitogen.parent.Stream):
         base = super(Stream, self).get_boot_command()
         return bits + [shlex_quote(s).strip() for s in base]
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'ssh.' + mitogen.core.to_text(self.hostname)
+    def _get_name(self):
+        s = u'ssh.' + mitogen.core.to_text(self.hostname)
         if self.port:
-            self.name += u':%s' % (self.port,)
+            s += u':%s' % (self.port,)
+        return s
 
     auth_incorrect_msg = 'SSH authentication is incorrect'
     password_incorrect_msg = 'SSH password is incorrect'
@@ -261,7 +261,7 @@ class Stream(mitogen.parent.Stream):
 
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
-            LOG.debug('%r: accepting host key', self)
+            LOG.debug('%s: accepting host key', self.name)
             self.diag_stream.transmit_side.write(b('yes\n'))
             return
 
@@ -273,7 +273,7 @@ class Stream(mitogen.parent.Stream):
     def _connect_input_loop(self, it):
         password_sent = False
         for buf, partial in filter_debug(self, it):
-            LOG.debug('%r: received %r', self, buf)
+            LOG.debug('%s: stdout: %s', self.name, buf.rstrip())
             if buf.endswith(self.EC0_MARKER):
                 self._ec0_received()
                 return
@@ -295,7 +295,7 @@ class Stream(mitogen.parent.Stream):
             elif partial and PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
-                LOG.debug('%r: sending password', self)
+                LOG.debug('%s: sending password', self.name)
                 self.diag_stream.transmit_side.write(
                     (self.password + '\n').encode()
                 )
