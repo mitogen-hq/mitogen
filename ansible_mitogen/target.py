@@ -145,7 +145,7 @@ if (
 
 def get_small_file(context, path):
     """
-    Basic in-memory caching module fetcher. This generates an one roundtrip for
+    Basic in-memory caching module fetcher. This generates one roundtrip for
     every previously unseen file, so it is only a temporary solution.
 
     :param context:
@@ -168,8 +168,8 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
     controller.
 
     :param mitogen.core.Context context:
-        Reference to the context hosting the FileService that will be used to
-        fetch the file.
+        Reference to the context hosting the FileService that will transmit the
+        file.
     :param bytes in_path:
         FileService registered name of the input file.
     :param bytes out_path:
