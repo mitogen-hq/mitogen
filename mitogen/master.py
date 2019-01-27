@@ -409,9 +409,37 @@ class ModuleFinder(object):
         if os.path.exists(path) and self._looks_like_script(path):
             return path
 
+    def _get_main_module_defective_python_3x(self, fullname):
+        """
+        Recent versions of Python 3.x introduced an incomplete notion of
+        importer specs, and in doing so created permanent asymmetry in the
+        :mod:`pkgutil` interface handling for the `__main__` module. Therefore
+        we must handle `__main__` specially.
+        """
+        if fullname != '__main__':
+            return None
+
+        mod = sys.modules.get(fullname)
+        if not mod:
+            return None
+
+        path = getattr(mod, '__file__', None)
+        if not (os.path.exists(path) and self._looks_like_script(path)):
+            return None
+
+        fp = open(path, 'rb')
+        try:
+            source = fp.read()
+        finally:
+            fp.close()
+
+        return path, source, False
+
     def _get_module_via_pkgutil(self, fullname):
-        """Attempt to fetch source code via pkgutil. In an ideal world, this
-        would be the only required implementation of get_module()."""
+        """
+        Attempt to fetch source code via pkgutil. In an ideal world, this would
+        be the only required implementation of get_module().
+        """
         try:
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
@@ -543,9 +571,12 @@ class ModuleFinder(object):
         """
         self._found_cache[fullname] = (path, source, is_pkg)
 
-    get_module_methods = [_get_module_via_pkgutil,
-                          _get_module_via_sys_modules,
-                          _get_module_via_parent_enumeration]
+    get_module_methods = [
+        _get_main_module_defective_python_3x,
+        _get_module_via_pkgutil,
+        _get_module_via_sys_modules,
+        _get_module_via_parent_enumeration,
+    ]
 
     def get_module_source(self, fullname):
         """Given the name of a loaded module `fullname`, attempt to find its
