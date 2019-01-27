@@ -2094,7 +2094,7 @@ class Latch(object):
             self._cls_all_sockets.extend((rsock, wsock))
             return rsock, wsock
 
-    COOKIE_MAGIC, = struct.unpack('L', 'LTCH' * (struct.calcsize('L')/4))
+    COOKIE_MAGIC, = struct.unpack('L', 'LTCH' * (struct.calcsize('L')//4))
     COOKIE_FMT = 'Llll'
     COOKIE_SIZE = struct.calcsize(COOKIE_FMT)
 
