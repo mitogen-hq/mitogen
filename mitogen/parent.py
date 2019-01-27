@@ -1723,6 +1723,10 @@ class RouteMonitor(object):
         :param str name:
             Context name or :data:`None`.
         """
+        if not stream:
+            # We may not have a stream during shutdown.
+            return
+
         data = str(target_id)
         if name:
             data = '%s:%s' % (target_id, name)
