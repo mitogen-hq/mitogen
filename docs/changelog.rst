@@ -251,6 +251,10 @@ Fixes
   trigger early finalization of Cython-based extension modules, leading to
   segmentation faults.
 
+* `dc1d4251 <https://github.com/dw/mitogen/commit/dc1d4251 >`_: the
+  ``synchronize`` module could fail with the Docker transport due to a missing
+  attribute.
+
 
 Core Library
 ~~~~~~~~~~~~
