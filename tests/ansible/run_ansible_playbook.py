@@ -42,6 +42,11 @@ extra = {
     'git_basedir': GIT_BASEDIR,
 }
 
+if '-i' in sys.argv:
+    extra['MITOGEN_INVENTORY_FILE'] = (
+        os.path.abspath(sys.argv[1 + sys.argv.index('-i')])
+    )
+
 args = ['ansible-playbook']
 args += ['-e', json.dumps(extra)]
 args += sys.argv[1:]

@@ -6,7 +6,7 @@
     - connection: local
       command: |
         ansible-playbook
-        -i "{{inventory_file}}"
+        -i "{{MITOGEN_INVENTORY_FILE}}"
         -vvv
         integration/strategy/_mixed_mitogen_vanilla.yml
       args:
@@ -16,7 +16,7 @@
     - connection: local
       command: |
         ansible-playbook
-        -i "{{inventory_file}}"
+        -i "{{MITOGEN_INVENTORY_FILE}}"
         -vvv
         integration/strategy/_mixed_vanilla_mitogen.yml
       args:

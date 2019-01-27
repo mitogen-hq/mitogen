@@ -45,6 +45,27 @@ else:
     iteritems = dict.iteritems
 
 
+def setup_gil():
+    """
+    Set extremely long GIL release interval to let threads naturally progress
+    through CPU-heavy sequences without forcing the wake of another thread that
+    may contend trying to run the same CPU-heavy code. For the new-style
+    Ansible work, this drops runtime ~33% and involuntary context switches by
+    >80%, essentially making threads cooperatively scheduled.
+    """
+    try:
+        # Python 2.
+        sys.setcheckinterval(100000)
+    except AttributeError:
+        pass
+
+    try:
+        # Python 3.
+        sys.setswitchinterval(10)
+    except AttributeError:
+        pass
+
+
 def disable_site_packages():
     """
     Remove all entries mentioning ``site-packages`` or ``Extras`` from
@@ -62,7 +83,9 @@ def _formatTime(record, datefmt=None):
 
 
 def log_get_formatter():
-    datefmt = '%H:%M:%S.%f'
+    datefmt = '%H:%M:%S'
+    if sys.version_info > (2, 6):
+        datefmt += '.%f'
     fmt = '%(asctime)s %(levelname).1s %(name)s: %(message)s'
     formatter = logging.Formatter(fmt, datefmt)
     formatter.formatTime = _formatTime

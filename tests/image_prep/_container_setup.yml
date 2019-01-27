@@ -22,7 +22,6 @@
 
     packages:
       common:
-        - git
         - openssh-server
         - rsync
         - strace
@@ -32,6 +31,10 @@
           - libjson-perl
           - python-virtualenv
       CentOS:
+        "5":
+        - perl
+        - sudo
+          #- perl-JSON  -- skipped on CentOS 5, packages are a pain.
         "6":
           - perl-JSON
         "7":
@@ -66,6 +69,11 @@
       - /var/lib/apt/lists
       when: distro == "Debian"
 
+    # Vanilla Ansible needs simplejson on CentOS 5.
+    - synchronize:
+        dest: /usr/lib/python2.4/site-packages/simplejson/
+        src: ../../ansible_mitogen/compat/simplejson/
+
     - user:
         name: root
         password: "{{ 'rootpassword' | password_hash('sha256') }}"
@@ -91,9 +99,23 @@
         dest: /etc/ssh/banner.txt
         src: ../data/docker/ssh_login_banner.txt
 
-    - copy:
-        dest: /etc/sudoers.d/001-mitogen
-        src: ../data/docker/001-mitogen.sudo
+    - name: Ensure /etc/sudoers.d exists
+      file:
+        state: directory
+        path: /etc/sudoers.d
+        mode: 'u=rwx,go='
+
+    - blockinfile:
+        path: /etc/sudoers
+        block: |
+          # https://www.toofishes.net/blog/trouble-sudoers-or-last-entry-wins/
+          %mitogen__sudo_nopw ALL=(ALL:ALL) NOPASSWD:ALL
+          mitogen__has_sudo_nopw ALL = (mitogen__pw_required) ALL
+          mitogen__has_sudo_nopw ALL = (mitogen__require_tty_pw_required) ALL
+
+          Defaults>mitogen__pw_required targetpw
+          Defaults>mitogen__require_tty requiretty
+          Defaults>mitogen__require_tty_pw_required requiretty,targetpw
 
     - lineinfile:
         path: /etc/sudoers

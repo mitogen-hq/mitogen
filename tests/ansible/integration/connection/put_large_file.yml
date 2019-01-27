@@ -9,4 +9,4 @@
     file_name: large-file
     file_size: 512
   tasks:
-  - include_tasks: _put_file.yml
+  - include: _put_file.yml

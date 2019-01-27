@@ -3,6 +3,7 @@ import logging
 import os
 import random
 import re
+import signal
 import socket
 import subprocess
 import sys
@@ -31,6 +32,11 @@ try:
     from cStringIO import StringIO
 except ImportError:
     from io import StringIO
+
+try:
+    BaseException
+except NameError:
+    BaseException = Exception
 
 
 LOG = logging.getLogger(__name__)
@@ -72,8 +78,16 @@ def subprocess__check_output(*popenargs, **kwargs):
         raise subprocess.CalledProcessError(retcode, cmd)
     return output
 
+
+def Popen__terminate(proc):
+    os.kill(proc.pid, signal.SIGTERM)
+
+
 if hasattr(subprocess, 'check_output'):
     subprocess__check_output = subprocess.check_output
+
+if hasattr(subprocess.Popen, 'terminate'):
+    Popen__terminate = subprocess.Popen.terminate
 
 
 def wait_for_port(
@@ -182,45 +196,61 @@ def log_fd_calls():
     l = threading.Lock()
     real_pipe = os.pipe
     def pipe():
-        with l:
+        l.acquire()
+        try:
             rv = real_pipe()
             if mypid == os.getpid():
                 sys.stdout.write('\n%s\n' % (rv,))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
             return rv
+        finally:
+            l.release()
+
     os.pipe = pipe
 
     real_socketpair = socket.socketpair
     def socketpair(*args):
-        with l:
+        l.acquire()
+        try:
             rv = real_socketpair(*args)
             if mypid == os.getpid():
                 sys.stdout.write('\n%s -> %s\n' % (args, rv))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
                 return rv
+        finally:
+            l.release()
+
     socket.socketpair = socketpair
 
     real_dup2 = os.dup2
     def dup2(*args):
-        with l:
+        l.acquire()
+        try:
             real_dup2(*args)
             if mypid == os.getpid():
                 sys.stdout.write('\n%s\n' % (args,))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
+        finally:
+            l.release()
+
     os.dup2 = dup2
 
     real_dup = os.dup
     def dup(*args):
-        with l:
+        l.acquire()
+        try:
             rv = real_dup(*args)
             if mypid == os.getpid():
                 sys.stdout.write('\n%s -> %s\n' % (args, rv))
                 traceback.print_stack(limit=3)
                 sys.stdout.write('\n')
             return rv
+        finally:
+            l.release()
+
     os.dup = dup
 
 
@@ -285,9 +315,11 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_threads(self):
         counts = {}
         for thread in threading.enumerate():
-            assert thread.name in self.ALLOWED_THREADS, \
-                'Found thread %r still running after tests.' % (thread.name,)
-            counts[thread.name] = counts.get(thread.name, 0) + 1
+            name = thread.getName()
+            # Python 2.4: enumerate() may return stopped threads.
+            assert (not thread.isAlive()) or name in self.ALLOWED_THREADS, \
+                'Found thread %r still running after tests.' % (name,)
+            counts[name] = counts.get(name, 0) + 1
 
         for name in counts:
             assert counts[name] == 1, \
@@ -331,16 +363,18 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    distro, _, _py3 = (
-        os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
-        .partition('-')
-    )
+    mitogen_test_distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
+    if '-'  in mitogen_test_distro:
+        distro, _py3 = mitogen_test_distro.split('-')
+    else:
+        distro = mitogen_test_distro
+        _py3 = None
 
-    python_path = (
-        '/usr/bin/python3'
-        if _py3 == 'py3'
-        else '/usr/bin/python'
-    )
+    if _py3 == 'py3':
+        python_path = '/usr/bin/python3'
+    else:
+        python_path = '/usr/bin/python'
+
     image = 'mitogen/%s-test' % (distro,)
 
     # 22/tcp -> 0.0.0.0:32771

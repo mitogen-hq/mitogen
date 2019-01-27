@@ -53,10 +53,22 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
+try:
+    import thread
+except ImportError:
+    import threading as thread
+
 import mitogen.core
 from mitogen.core import b
+from mitogen.core import bytes_partition
 from mitogen.core import LOG
 from mitogen.core import IOLOG
+
+try:
+    next
+except NameError:
+    # Python 2.4/2.5
+    from mitogen.core import next
 
 
 itervalues = getattr(dict, 'itervalues', dict.values)
@@ -64,8 +76,10 @@ itervalues = getattr(dict, 'itervalues', dict.values)
 if mitogen.core.PY3:
     xrange = range
     closure_attr = '__closure__'
+    IM_SELF_ATTR = '__self__'
 else:
     closure_attr = 'func_closure'
+    IM_SELF_ATTR = 'im_self'
 
 
 try:
@@ -88,8 +102,25 @@ SYS_EXECUTABLE_MSG = (
 )
 _sys_executable_warning_logged = False
 
-LINUX_TIOCGPTN = 2147767344  # Get PTY number; asm-generic/ioctls.h
-LINUX_TIOCSPTLCK = 1074025521  # Lock/unlock PTY; asm-generic/ioctls.h
+
+def _ioctl_cast(n):
+    """
+    Linux ioctl() request parameter is unsigned, whereas on BSD/Darwin it is
+    signed. Until 2.5 Python exclusively implemented the BSD behaviour,
+    preventing use of large unsigned int requests like the TTY layer uses
+    below. So on 2.4, we cast our unsigned to look like signed for Python.
+    """
+    if sys.version_info < (2, 5):
+        n, = struct.unpack('i', struct.pack('I', n))
+    return n
+
+
+# Get PTY number; asm-generic/ioctls.h
+LINUX_TIOCGPTN = _ioctl_cast(2147767344)
+
+# Lock/unlock PTY; asm-generic/ioctls.h
+LINUX_TIOCSPTLCK = _ioctl_cast(1074025521)
+
 IS_LINUX = os.uname()[0] == 'Linux'
 
 SIGNAL_BY_NUM = dict(
@@ -532,7 +563,8 @@ class IteratingRead(object):
             for fd in self.poller.poll(self.timeout):
                 s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
                 if disconnected or not s:
-                    IOLOG.debug('iter_read(%r) -> disconnected', fd)
+                    LOG.debug('iter_read(%r) -> disconnected: %s',
+                              fd, disconnected)
                     self.poller.stop_receive(fd)
                 else:
                     IOLOG.debug('iter_read(%r) -> %r', fd, s)
@@ -756,8 +788,9 @@ class CallSpec(object):
     def _get_name(self):
         bits = [self.func.__module__]
         if inspect.ismethod(self.func):
-            bits.append(getattr(self.func.__self__, '__name__', None) or
-                        getattr(type(self.func.__self__), '__name__', None))
+            im_self = getattr(self.func, IM_SELF_ATTR)
+            bits.append(getattr(im_self, '__name__', None) or
+                        getattr(type(im_self), '__name__', None))
         bits.append(self.func.__name__)
         return u'.'.join(bits)
 
@@ -931,11 +964,15 @@ class EpollPoller(mitogen.core.Poller):
                     yield data
 
 
-POLLER_BY_SYSNAME = {
-    'Darwin': KqueuePoller,
-    'FreeBSD': KqueuePoller,
-    'Linux': EpollPoller,
-}
+if sys.version_info < (2, 6):
+    # 2.4 and 2.5 only had select.select() and select.poll().
+    POLLER_BY_SYSNAME = {}
+else:
+    POLLER_BY_SYSNAME = {
+        'Darwin': KqueuePoller,
+        'FreeBSD': KqueuePoller,
+        'Linux': EpollPoller,
+    }
 
 PREFERRED_POLLER = POLLER_BY_SYSNAME.get(
     os.uname()[0],
@@ -1086,6 +1123,10 @@ class Stream(mitogen.core.Stream):
             LOG.debug('%r: immediate child is detached, won\'t reap it', self)
             return
 
+        if self.profiling:
+            LOG.info('%r: wont kill child because profiling=True', self)
+            return
+
         if self._reaped:
             # on_disconnect() may be invoked more than once, for example, if
             # there is still a pending message to be sent after the first
@@ -1140,6 +1181,9 @@ class Stream(mitogen.core.Stream):
     #   r: read side of core_src FD.
     #   w: write side of core_src FD.
     #   C: the decompressed core source.
+
+    # Final os.close(2) to avoid --py-debug build from corrupting stream with
+    # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
         R,W=os.pipe()
@@ -1165,6 +1209,7 @@ class Stream(mitogen.core.Stream):
         fp.write(C)
         fp.close()
         os.write(1,'MITO001\n'.encode())
+        os.close(2)
 
     def get_python_argv(self):
         """
@@ -1389,7 +1434,7 @@ class CallChain(object):
         return '%s-%s-%x-%x' % (
             socket.gethostname(),
             os.getpid(),
-            threading.currentThread().ident,
+            thread.get_ident(),
             int(1e6 * time.time()),
         )
 
@@ -1438,9 +1483,10 @@ class CallChain(object):
             raise TypeError(self.lambda_msg)
 
         if inspect.ismethod(fn):
-            if not inspect.isclass(fn.__self__):
+            im_self = getattr(fn, IM_SELF_ATTR)
+            if not inspect.isclass(im_self):
                 raise TypeError(self.method_msg)
-            klass = mitogen.core.to_text(fn.__self__.__name__)
+            klass = mitogen.core.to_text(im_self.__name__)
         else:
             klass = None
 
@@ -1774,7 +1820,7 @@ class RouteMonitor(object):
         if msg.is_dead:
             return
 
-        target_id_s, _, target_name = msg.data.partition(b(':'))
+        target_id_s, _, target_name = bytes_partition(msg.data, b(':'))
         target_name = target_name.decode()
         target_id = int(target_id_s)
         self.router.context_by_id(target_id).name = target_name
@@ -1930,8 +1976,10 @@ class Router(mitogen.core.Router):
 
         via = kwargs.pop(u'via', None)
         if via is not None:
-            return self.proxy_connect(via, method_name, name=name, **kwargs)
-        return self._connect(klass, name=name, **kwargs)
+            return self.proxy_connect(via, method_name, name=name,
+                                      **mitogen.core.Kwargs(kwargs))
+        return self._connect(klass, name=name,
+                             **mitogen.core.Kwargs(kwargs))
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
         resp = via_context.call(_proxy_connect,
@@ -2053,7 +2101,7 @@ class ModuleForwarder(object):
         if msg.is_dead:
             return
 
-        context_id_s, _, fullname = msg.data.partition(b('\x00'))
+        context_id_s, _, fullname = bytes_partition(msg.data, b('\x00'))
         fullname = mitogen.core.to_text(fullname)
         context_id = int(context_id_s)
         stream = self.router.stream_by_id(context_id)

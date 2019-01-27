@@ -47,7 +47,7 @@ if not hasattr(subprocess, 'check_output'):
 
 # Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
 
-if sys.platform.startswith('linux'):
+if 'TRAVIS_HOME' in os.environ:
     proc = subprocess.Popen(
         args=['stdbuf', '-oL', 'cat'],
         stdin=subprocess.PIPE

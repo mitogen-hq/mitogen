@@ -580,7 +580,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         if spec.mitogen_via():
-            stack, seen_names = self._stack_from_spec(
+            stack = self._stack_from_spec(
                 self._spec_from_via(spec.mitogen_via()),
                 stack=stack,
                 seen_names=seen_names + (spec.inventory_name(),),
@@ -590,7 +590,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if spec.become():
             stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
-        return stack, seen_names
+        return stack
 
     def _connect_broker(self):
         """
@@ -604,15 +604,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 broker=self.broker,
             )
 
-    def _build_spec(self):
-        inventory_hostname = self.inventory_hostname
-        return ansible_mitogen.transport_config.PlayContextSpec(
-            connection=self,
-            play_context=self._play_context,
-            transport=self.transport,
-            inventory_name=inventory_hostname,
-        )
-
     def _build_stack(self):
         """
         Construct a list of dictionaries representing the connection
@@ -620,9 +611,14 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         additionally used by the integration tests "mitogen_get_stack" action
         to fetch the would-be connection configuration.
         """
-        config = self._build_spec()
-        stack, _ = self._stack_from_spec(config)
-        return stack
+        return self._stack_from_spec(
+            ansible_mitogen.transport_config.PlayContextSpec(
+                connection=self,
+                play_context=self._play_context,
+                transport=self.transport,
+                inventory_name=self.inventory_hostname,
+            )
+        )
 
     def _connect_stack(self, stack):
         """
@@ -823,21 +819,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect()
         if use_login:
             return self.login_context.default_call_chain
-        if use_fork:
+        # See FORK_SUPPORTED comments in target.py.
+        if use_fork and self.init_child_result['fork_context'] is not None:
             return self.init_child_result['fork_context'].default_call_chain
         return self.chain
 
-    def create_fork_child(self):
+    def spawn_isolated_child(self):
         """
-        Fork a new child off the target context. The actual fork occurs from
-        the 'virginal fork parent', which does not any Ansible modules prior to
-        fork, to avoid conflicts resulting from custom module_utils paths.
+        Fork or launch a new child off the target context.
 
         :returns:
             mitogen.core.Context of the new child.
         """
         return self.get_chain(use_fork=True).call(
-            ansible_mitogen.target.create_fork_child
+            ansible_mitogen.target.spawn_isolated_child
         )
 
     def get_extra_args(self):

@@ -32,7 +32,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 class IterationTest(testlib.RouterMixin, testlib.TestCase):
     def test_dead_stops_iteration(self):
         recv = mitogen.core.Receiver(self.router)
-        fork = self.router.fork()
+        fork = self.router.local()
         ret = fork.call_async(yield_stuff_then_die, recv.to_sender())
         self.assertEquals(list(range(5)), list(m.unpickle() for m in recv))
         self.assertEquals(10, ret.get().unpickle())

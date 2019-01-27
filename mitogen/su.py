@@ -32,6 +32,11 @@ import mitogen.core
 import mitogen.parent
 from mitogen.core import b
 
+try:
+    any
+except NameError:
+    from mitogen.core import any
+
 
 LOG = logging.getLogger(__name__)
 

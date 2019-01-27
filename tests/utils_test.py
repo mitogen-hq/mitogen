@@ -5,6 +5,7 @@ import unittest2
 import mitogen.core
 import mitogen.master
 import mitogen.utils
+from mitogen.core import b
 
 import testlib
 
@@ -86,7 +87,7 @@ class CastTest(testlib.TestCase):
         self.assertEqual(type(mitogen.utils.cast(Unicode())), mitogen.core.UnicodeType)
 
     def test_bytes(self):
-        self.assertEqual(type(mitogen.utils.cast(b'')), mitogen.core.BytesType)
+        self.assertEqual(type(mitogen.utils.cast(b(''))), mitogen.core.BytesType)
         self.assertEqual(type(mitogen.utils.cast(Bytes())), mitogen.core.BytesType)
 
     def test_unknown(self):

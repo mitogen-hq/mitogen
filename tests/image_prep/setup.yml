@@ -10,5 +10,5 @@
         Ubuntu: sudo
         CentOS: wheel
 
-- import_playbook: _container_setup.yml
-- import_playbook: _user_accounts.yml
+- include: _container_setup.yml
+- include: _user_accounts.yml

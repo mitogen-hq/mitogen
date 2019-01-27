@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # I am an Ansible new-style Python module. I should receive an encoding string.
 
-import json
 import sys
 
 # This is the magic marker Ansible looks for:

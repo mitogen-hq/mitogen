@@ -1,12 +1,10 @@
 
-import email.utils
 import sys
 import threading
 import types
 import zlib
 
 import mock
-import pytest
 import unittest2
 
 import mitogen.core
@@ -144,7 +142,6 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
 
 
 class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
-    @pytest.fixture(autouse=True)
     def initdir(self, caplog):
         self.caplog = caplog
 
@@ -210,6 +207,11 @@ class ImporterBlacklistTest(testlib.TestCase):
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
         self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+
+
+class Python24LineCacheTest(testlib.TestCase):
+    # TODO: mitogen.core.Importer._update_linecache()
+    pass
 
 
 if __name__ == '__main__':

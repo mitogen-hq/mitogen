@@ -40,6 +40,16 @@ import mitogen.core
 import mitogen.select
 from mitogen.core import b
 from mitogen.core import LOG
+from mitogen.core import str_rpartition
+
+try:
+    all
+except NameError:
+    def all(it):
+        for elem in it:
+            if not elem:
+                return False
+        return True
 
 
 DEFAULT_POOL_SIZE = 16
@@ -192,7 +202,7 @@ class Activator(object):
     )
 
     def activate(self, pool, service_name, msg):
-        mod_name, _, class_name = service_name.rpartition('.')
+        mod_name, _, class_name = str_rpartition(service_name, '.')
         if msg and not self.is_permitted(mod_name, class_name, msg):
             raise mitogen.core.CallError(self.not_active_msg, service_name)
 
@@ -556,7 +566,7 @@ class Pool(object):
             self._worker_run()
         except Exception:
             th = threading.currentThread()
-            LOG.exception('%r: worker %r crashed', self, th.name)
+            LOG.exception('%r: worker %r crashed', self, th.getName())
             raise
 
     def __repr__(self):
@@ -564,7 +574,7 @@ class Pool(object):
         return 'mitogen.service.Pool(%#x, size=%d, th=%r)' % (
             id(self),
             len(self._threads),
-            th.name,
+            th.getName(),
         )
 
 
@@ -817,8 +827,8 @@ class FileService(Service):
             u'mode': st.st_mode,
             u'owner': self._name_or_none(pwd.getpwuid, 0, 'pw_name'),
             u'group': self._name_or_none(grp.getgrgid, 0, 'gr_name'),
-            u'mtime': st.st_mtime,
-            u'atime': st.st_atime,
+            u'mtime': float(st.st_mtime),  # Python 2.4 uses int.
+            u'atime': float(st.st_atime),  # Python 2.4 uses int.
         }
 
     def on_shutdown(self):

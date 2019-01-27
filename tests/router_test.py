@@ -39,11 +39,11 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         super(SourceVerifyTest, self).setUp()
         # Create some children, ping them, and store what their messages look
         # like so we can mess with them later.
-        self.child1 = self.router.fork()
+        self.child1 = self.router.local()
         self.child1_msg = self.child1.call_async(ping).get()
         self.child1_stream = self.router._stream_by_id[self.child1.context_id]
 
-        self.child2 = self.router.fork()
+        self.child2 = self.router.local()
         self.child2_msg = self.child2.call_async(ping).get()
         self.child2_stream = self.router._stream_by_id[self.child2.context_id]
 
@@ -68,7 +68,7 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(recv.empty())
 
         # Ensure error was logged.
-        expect = 'bad auth_id: got %d via' % (self.child2_msg.auth_id,)
+        expect = 'bad auth_id: got %r via' % (self.child2_msg.auth_id,)
         self.assertTrue(expect in log.stop())
 
     def test_bad_src_id(self):
@@ -245,7 +245,7 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
 
         # Try function call. Receiver should be woken by a dead message sent by
         # router due to message size exceeded.
-        child = router.fork()
+        child = router.local()
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: child.call(zlib.crc32, ' '*8192))
         self.assertEquals(e.args[0], expect)
@@ -253,23 +253,22 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         self.assertTrue(expect in logs.stop())
 
     def test_remote_configured(self):
-        router = self.klass(broker=self.broker, max_message_size=4096)
-        remote = router.fork()
+        router = self.klass(broker=self.broker, max_message_size=64*1024)
+        remote = router.local()
         size = remote.call(return_router_max_message_size)
-        self.assertEquals(size, 4096)
+        self.assertEquals(size, 64*1024)
 
     def test_remote_exceeded(self):
         # Ensure new contexts receive a router with the same value.
-        router = self.klass(broker=self.broker, max_message_size=4096)
+        router = self.klass(broker=self.broker, max_message_size=64*1024)
         recv = mitogen.core.Receiver(router)
 
         logs = testlib.LogCapturer()
         logs.start()
+        remote = router.local()
+        remote.call(send_n_sized_reply, recv.to_sender(), 128*1024)
 
-        remote = router.fork()
-        remote.call(send_n_sized_reply, recv.to_sender(), 8192)
-
-        expect = 'message too large (max 4096 bytes)'
+        expect = 'message too large (max %d bytes)' % (64*1024,)
         self.assertTrue(expect in logs.stop())
 
 
@@ -277,7 +276,7 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
     def test_invalid_handle_returns_dead(self):
         # Verify sending a message to an invalid handle yields a dead message
         # from the target context.
-        l1 = self.router.fork()
+        l1 = self.router.local()
         recv = l1.send_async(mitogen.core.Message(handle=999))
         msg = recv.get(throw_dead=False)
         self.assertEquals(msg.is_dead, True)
@@ -314,7 +313,7 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         )))
 
     def test_previously_alive_context_returns_dead(self):
-        l1 = self.router.fork()
+        l1 = self.router.local()
         l1.shutdown(wait=True)
         recv = mitogen.core.Receiver(self.router)
         msg = mitogen.core.Message(
@@ -343,8 +342,8 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
 class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
     def test_siblings_cant_talk(self):
         self.router.unidirectional = True
-        l1 = self.router.fork()
-        l2 = self.router.fork()
+        l1 = self.router.local()
+        l2 = self.router.local()
         logs = testlib.LogCapturer()
         logs.start()
         e = self.assertRaises(mitogen.core.CallError,
@@ -361,12 +360,12 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         self.router.unidirectional = True
         # One stream has auth_id stamped to that of the master, so it should be
         # treated like a parent.
-        l1 = self.router.fork()
+        l1 = self.router.local()
         l1s = self.router.stream_by_id(l1.context_id)
         l1s.auth_id = mitogen.context_id
         l1s.is_privileged = True
 
-        l2 = self.router.fork()
+        l2 = self.router.local()
         e = self.assertRaises(mitogen.core.CallError,
                               lambda: l2.call(ping_context, l1))
 
@@ -377,7 +376,7 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
 class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
     def test_egress_ids_populated(self):
         # Ensure Stream.egress_ids is populated on message reception.
-        c1 = self.router.fork()
+        c1 = self.router.local()
         stream = self.router.stream_by_id(c1.context_id)
         self.assertEquals(set(), stream.egress_ids)
 

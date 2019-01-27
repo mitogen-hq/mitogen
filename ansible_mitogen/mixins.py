@@ -155,7 +155,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_remote_file_exists(%r)', path)
         return self._connection.get_chain().call(
-            os.path.exists,
+            ansible_mitogen.target.file_exists,
             mitogen.utils.cast(path)
         )
 

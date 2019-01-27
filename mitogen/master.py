@@ -59,12 +59,24 @@ import mitogen.minify
 import mitogen.parent
 
 from mitogen.core import b
-from mitogen.core import to_text
-from mitogen.core import LOG
 from mitogen.core import IOLOG
+from mitogen.core import LOG
+from mitogen.core import str_partition
+from mitogen.core import str_rpartition
+from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
+
+try:
+    next
+except NameError:
+    from mitogen.core import next
 
 
 RLOG = logging.getLogger('mitogen.ctx')
@@ -146,7 +158,7 @@ IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 
 
 def _getarg(nextb, c):
-    if c > dis.HAVE_ARGUMENT:
+    if c >= dis.HAVE_ARGUMENT:
         return nextb() | (nextb() << 8)
 
 
@@ -172,9 +184,10 @@ else:
 
 
 def scan_code_imports(co):
-    """Given a code object `co`, scan its bytecode yielding any
-    ``IMPORT_NAME`` and associated prior ``LOAD_CONST`` instructions
-    representing an `Import` statement or `ImportFrom` statement.
+    """
+    Given a code object `co`, scan its bytecode yielding any ``IMPORT_NAME``
+    and associated prior ``LOAD_CONST`` instructions representing an `Import`
+    statement or `ImportFrom` statement.
 
     :return:
         Generator producing `(level, modname, namelist)` tuples, where:
@@ -188,6 +201,7 @@ def scan_code_imports(co):
     """
     opit = iter_opcodes(co)
     opit, opit2, opit3 = itertools.tee(opit, 3)
+
     try:
         next(opit2)
         next(opit3)
@@ -195,14 +209,22 @@ def scan_code_imports(co):
     except StopIteration:
         return
 
-    for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
-        if op3 == IMPORT_NAME:
-            op2, arg2 = oparg2
-            op1, arg1 = oparg1
-            if op1 == op2 == LOAD_CONST:
-                yield (co.co_consts[arg1],
-                       co.co_names[arg3],
-                       co.co_consts[arg2] or ())
+    if sys.version_info >= (2, 5):
+        for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
+            if op3 == IMPORT_NAME:
+                op2, arg2 = oparg2
+                op1, arg1 = oparg1
+                if op1 == op2 == LOAD_CONST:
+                    yield (co.co_consts[arg1],
+                           co.co_names[arg3],
+                           co.co_consts[arg2] or ())
+    else:
+        # Python 2.4 did not yet have 'level', so stack format differs.
+        for oparg1, (op2, arg2) in izip(opit, opit2):
+            if op2 == IMPORT_NAME:
+                op1, arg1 = oparg1
+                if op1 == LOAD_CONST:
+                    yield (-1, co.co_names[arg2], co.co_consts[arg1] or ())
 
 
 class ThreadWatcher(object):
@@ -324,11 +346,21 @@ class LogForwarder(object):
             self._cache[msg.src_id] = logger = logging.getLogger(name)
 
         name, level_s, s = msg.data.decode('latin1').split('\x00', 2)
-        logger.log(int(level_s), '%s: %s', name, s, extra={
-            'mitogen_message': s,
-            'mitogen_context': self._router.context_by_id(msg.src_id),
-            'mitogen_name': name,
-        })
+
+        # See logging.Handler.makeRecord()
+        record = logging.LogRecord(
+            name=logger.name,
+            level=int(level_s),
+            pathname='(unknown file)',
+            lineno=0,
+            msg=('%s: %s' % (name, s)),
+            args=(),
+            exc_info=None,
+        )
+        record.mitogen_message = s
+        record.mitogen_context = self._router.context_by_id(msg.src_id)
+        record.mitogen_name = name
+        logger.handle(record)
 
     def __repr__(self):
         return 'LogForwarder(%r)' % (self._router,)
@@ -464,7 +496,7 @@ class ModuleFinder(object):
             # else we could return junk.
             return
 
-        pkgname, _, modname = fullname.rpartition('.')
+        pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
         pkg = sys.modules.get(pkgname)
         if pkg is None or not hasattr(pkg, '__file__'):
             return
@@ -480,7 +512,8 @@ class ModuleFinder(object):
 
                 source = fp.read()
             finally:
-                fp.close()
+                if fp:
+                    fp.close()
 
             if isinstance(source, mitogen.core.UnicodeType):
                 # get_source() returns "string" according to PEP-302, which was
@@ -490,6 +523,25 @@ class ModuleFinder(object):
         except ImportError:
             e = sys.exc_info()[1]
             LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
+
+    def add_source_override(self, fullname, path, source, is_pkg):
+        """
+        Explicitly install a source cache entry, preventing usual lookup
+        methods from being used.
+
+        Beware the value of `path` is critical when `is_pkg` is specified,
+        since it directs where submodules are searched for.
+
+        :param str fullname:
+            Name of the module to override.
+        :param str path:
+            Module's path as it will appear in the cache.
+        :param bytes source:
+            Module source code as a bytestring.
+        :param bool is_pkg:
+            :data:`True` if the module is a package.
+        """
+        self._found_cache[fullname] = (path, source, is_pkg)
 
     get_module_methods = [_get_module_via_pkgutil,
                           _get_module_via_sys_modules,
@@ -540,7 +592,7 @@ class ModuleFinder(object):
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
-            fullname, _, _ = fullname.rpartition('.')
+            fullname, _, _ = str_rpartition(to_text(fullname), u'.')
             yield fullname
 
     def find_related_imports(self, fullname):
@@ -583,7 +635,7 @@ class ModuleFinder(object):
 
         return self._related_cache.setdefault(fullname, sorted(
             set(
-                name
+                mitogen.core.to_text(name)
                 for name in maybe_names
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
@@ -609,7 +661,7 @@ class ModuleFinder(object):
         while stack:
             name = stack.pop(0)
             names = self.find_related_imports(name)
-            stack.extend(set(names).difference(found, stack))
+            stack.extend(set(names).difference(set(found).union(stack)))
             found.update(names)
 
         found.discard(fullname)
@@ -642,6 +694,12 @@ class ModuleResponder(object):
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
+
+    def add_source_override(self, fullname, path, source, is_pkg):
+        """
+        See :meth:`ModuleFinder.add_source_override.
+        """
+        self._finder.add_source_override(fullname, path, source, is_pkg)
 
     MAIN_RE = re.compile(b(r'^if\s+__name__\s*==\s*.__main__.\s*:'), re.M)
     main_guard_msg = (
@@ -759,7 +817,7 @@ class ModuleResponder(object):
                 return
 
             for name in tup[4]:  # related
-                parent, _, _ = name.partition('.')
+                parent, _, _ = str_partition(name, '.')
                 if parent != fullname and parent not in stream.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
@@ -802,7 +860,7 @@ class ModuleResponder(object):
         path = []
         while fullname:
             path.append(fullname)
-            fullname, _, _ = fullname.rpartition('.')
+            fullname, _, _ = str_rpartition(fullname, u'.')
 
         for fullname in reversed(path):
             stream = self._router.stream_by_id(context.context_id)
@@ -812,7 +870,7 @@ class ModuleResponder(object):
     def _forward_modules(self, context, fullnames):
         IOLOG.debug('%r._forward_modules(%r, %r)', self, context, fullnames)
         for fullname in fullnames:
-            self._forward_one_module(context, fullname)
+            self._forward_one_module(context, mitogen.core.to_text(fullname))
 
     def forward_modules(self, context, fullnames):
         self._router.broker.defer(self._forward_modules, context, fullnames)
@@ -873,7 +931,18 @@ class Router(mitogen.parent.Router):
 
     :param mitogen.master.Broker broker:
         Broker to use. If not specified, a private :class:`Broker` is created.
+
+    :param int max_message_size:
+        Override the maximum message size this router is willing to receive or
+        transmit. Any value set here is automatically inherited by any children
+        created by the router.
+
+        This has a liberal default of 128 MiB, but may be set much lower.
+        Beware that setting it below 64KiB may encourage unexpected failures as
+        parents and children can no longer route large Python modules that may
+        be required by your application.
     """
+
     broker_class = Broker
 
     #: When :data:`True`, cause the broker thread and any subsequent broker and

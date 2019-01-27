@@ -1134,6 +1134,25 @@ cases `faulthandler <https://faulthandler.readthedocs.io/>`_ may be used:
    of the stacks, along with a description of the last task executing prior to
    the hang.
 
+It is possible the hang occurred in a process on a target. If ``strace`` is
+available, look for the host name not listed in Ansible output as reporting a
+result for the most recent task, log into it, and use ``strace -ff -p <pid>``
+on each process whose name begins with ``mitogen:``::
+
+    $ strace -ff -p 29858
+    strace: Process 29858 attached with 3 threads
+    [pid 29864] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff <unfinished ...>
+    [pid 29860] restart_syscall(<... resuming interrupted poll ...> <unfinished ...>
+    [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
+    ^C
+
+    $ 
+
+This shows one thread waiting on IO (``poll``) and two more waiting on the same
+lock. It is taken from a real example of a deadlock due to a forking bug.
+Please include any such information for all processes that you are able to
+collect in any bug report.
+
 
 Getting Help
 ~~~~~~~~~~~~

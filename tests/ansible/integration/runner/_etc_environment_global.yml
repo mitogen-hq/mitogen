@@ -17,8 +17,10 @@
       MAGIC_ETC_ENV=555
   become: true
 
-- include_tasks: _reset_conn.yml
-  when: not is_mitogen
+- meta: reset_connection
+
+#- mitogen_shutdown_all:
+  #when: not is_mitogen
 
 - shell: echo $MAGIC_ETC_ENV
   register: echo
@@ -31,7 +33,9 @@
     state: absent
   become: true
 
-- include_tasks: _reset_conn.yml
+- meta: reset_connection
+
+- mitogen_shutdown_all:
   when: not is_mitogen
 
 - shell: echo $MAGIC_ETC_ENV

@@ -9,4 +9,4 @@
     file_name: small-file
     file_size: 123
   tasks:
-  - include_tasks: _put_file.yml
+  - include: _put_file.yml

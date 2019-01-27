@@ -38,21 +38,21 @@ def call_service_in(context, service_name, method_name):
 
 class ActivationTest(testlib.RouterMixin, testlib.TestCase):
     def test_parent_can_activate(self):
-        l1 = self.router.fork()
+        l1 = self.router.local()
         counter, id_ = l1.call_service(MyService, 'get_id')
         self.assertEquals(1, counter)
         self.assertTrue(isinstance(id_, int))
 
     def test_sibling_cannot_activate_framework(self):
-        l1 = self.router.fork()
-        l2 = self.router.fork()
+        l1 = self.router.local()
+        l2 = self.router.local()
         exc = self.assertRaises(mitogen.core.CallError,
             lambda: l2.call(call_service_in, l1, MyService2.name(), 'get_id'))
         self.assertTrue(mitogen.core.Router.refused_msg in exc.args[0])
 
     def test_sibling_cannot_activate_service(self):
-        l1 = self.router.fork()
-        l2 = self.router.fork()
+        l1 = self.router.local()
+        l2 = self.router.local()
         l1.call_service(MyService, 'get_id')  # force framework activation
         capture = testlib.LogCapturer()
         capture.start()
@@ -65,7 +65,7 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(msg in exc.args[0])
 
     def test_activates_only_once(self):
-        l1 = self.router.fork()
+        l1 = self.router.local()
         counter, id_ = l1.call_service(MyService, 'get_id')
         counter2, id_2 = l1.call_service(MyService, 'get_id')
         self.assertEquals(1, counter)
@@ -75,16 +75,16 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
 
 class PermissionTest(testlib.RouterMixin, testlib.TestCase):
     def test_sibling_unprivileged_ok(self):
-        l1 = self.router.fork()
+        l1 = self.router.local()
         l1.call_service(MyService, 'get_id')
-        l2 = self.router.fork()
+        l2 = self.router.local()
         self.assertEquals('unprivileged!',
             l2.call(call_service_in, l1, MyService.name(), 'unprivileged_op'))
 
     def test_sibling_privileged_bad(self):
-        l1 = self.router.fork()
+        l1 = self.router.local()
         l1.call_service(MyService, 'get_id')
-        l2 = self.router.fork()
+        l2 = self.router.local()
         capture = testlib.LogCapturer()
         capture.start()
         try:
