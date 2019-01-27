@@ -752,3 +752,12 @@ def set_file_mode(path, spec, fd=None):
         os.fchmod(fd, new_mode)
     else:
         os.chmod(path, new_mode)
+
+
+def file_exists(path):
+    """
+    Return :data:`True` if `path` exists. This is a wrapper function over
+    :func:`os.path.exists`, since its implementation module varies across
+    Python versions.
+    """
+    return os.path.exists(path)
