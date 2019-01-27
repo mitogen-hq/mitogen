@@ -96,7 +96,11 @@ class PutFileTest(ConnectionMixin, unittest2.TestCase):
     def setUpClass(cls):
         super(PutFileTest, cls).setUpClass()
         cls.big_path = tempfile.mktemp(prefix='mitotestbig')
-        open(cls.big_path, 'w').write('x'*1048576)
+        fp = open(cls.big_path, 'w')
+        try:
+            fp.write('x'*1048576)
+        finally:
+            fp.close()
 
     @classmethod
     def tearDownClass(cls):
