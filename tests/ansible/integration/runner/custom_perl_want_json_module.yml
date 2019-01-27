@@ -9,7 +9,7 @@
 
     - assert:
         that:
-        - out.results[0].input[0].foo
+        - out.results[0].input.foo
         - out.results[0].message == 'I am a want JSON perl script! Here is my input.'
 
     - when: ansible_version.full > '2.4'
