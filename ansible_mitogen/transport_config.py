@@ -89,6 +89,16 @@ def optional_secret(value):
         return mitogen.core.Secret(value)
 
 
+def first_true(it, default=None):
+    """
+    Return the first truthy element from `it`.
+    """
+    for elem in it:
+        if elem:
+            return elem
+    return default
+
+
 class Spec(with_metaclass(abc.ABCMeta, object)):
     """
     A source for variables that comprise a connection configuration.
@@ -350,15 +360,15 @@ class PlayContextSpec(Spec):
     def sudo_args(self):
         return [
             mitogen.core.to_text(term)
-            for s in (
-                self._play_context.sudo_flags,
-                self._play_context.become_flags,
-                # Ansible 2.3.
-                getattr(C, 'DEFAULT_BECOME_FLAGS', ''),
-                getattr(C, 'DEFAULT_SUDO_FLAGS', ''),
-
+            for term in ansible.utils.shlex.shlex_split(
+                first_true((
+                    self._play_context.become_flags,
+                    self._play_context.sudo_flags,
+                    # Ansible 2.3.
+                    getattr(C, 'DEFAULT_BECOME_FLAGS', ''),
+                    getattr(C, 'DEFAULT_SUDO_FLAGS', '')
+                ), default='')
             )
-            for term in ansible.utils.shlex.shlex_split(s or '')
         ]
 
     def mitogen_via(self):
