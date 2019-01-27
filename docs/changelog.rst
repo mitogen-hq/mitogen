@@ -159,14 +159,14 @@ Enhancements
   ``mitogen_get_stack`` action that is automatically added to the action
   plug-in path. See :ref:`mitogen-get-stack` for more information.
 
-* `#415 <https://github.com/dw/mitogen/issues/415>`_: the interface employed for
-  in-process queues was changed from `kqueue
-  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ /
-  `epoll <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to
-  `poll() <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires
-  no setup or teardown, yielding a 30% latency reduction for inter-thread
-  communication and a 50% reduction in context switches. This will manifest as
-  a runtime improvement in many-host runs.
+* `#415 <https://github.com/dw/mitogen/issues/415>`_,
+  `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
+  for in-process queues changed from `kqueue
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ / `epoll
+  <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
+  <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
+  or teardown, yielding a 38% latency reduction for inter-thread communication.
+  This may manifest as a runtime improvement in many-host runs.
 
 * `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
   supported by the core library and tested automatically, in any parent/child
