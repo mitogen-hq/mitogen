@@ -2414,11 +2414,7 @@ class Router(object):
     def __init__(self, broker):
         self.broker = broker
         listen(broker, 'exit', self._on_broker_exit)
-
-        # Here seems as good a place as any.
-        global _v, _vv
-        _v = logging.getLogger().level <= logging.DEBUG
-        _vv = IOLOG.level <= logging.DEBUG
+        self._setup_logging()
 
         #: context ID -> Stream
         self._stream_by_id = {}
@@ -2433,6 +2429,18 @@ class Router(object):
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
+
+    def _setup_logging(self):
+        """
+        This is done in the :class:`Router` constructor for historical reasons.
+        It must be called before ExternalContext logs its first messages, but
+        after logging has been setup. It must also be called when any router is
+        constructed for a consumer app.
+        """
+        # Here seems as good a place as any.
+        global _v, _vv
+        _v = logging.getLogger().level <= logging.DEBUG
+        _vv = IOLOG.level <= logging.DEBUG
 
     def _on_del_route(self, msg):
         """
@@ -3240,11 +3248,16 @@ class ExternalContext(object):
 
                 self.dispatcher = Dispatcher(self)
                 self.router.register(self.parent, self.stream)
+                self.router._setup_logging()
                 self.log_handler.uncork()
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
-                _v and LOG.debug('Connected to %s; my ID is %r, PID is %r',
-                                 self.parent, mitogen.context_id, os.getpid())
+                _v and LOG.debug('Connected to context %s; my ID is %r',
+                                 self.parent, mitogen.context_id)
+                _v and LOG.debug('pid:%r ppid:%r uid:%r/%r, gid:%r/%r host:%r',
+                                 os.getpid(), os.getppid(), os.geteuid(),
+                                 os.getuid(), os.getegid(), os.getgid(),
+                                 socket.gethostname())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 self.dispatcher.run()
