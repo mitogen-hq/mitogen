@@ -31,8 +31,8 @@ matrix:
     - python: "2.7"
       env: MODE=mitogen DISTRO=debian
     # 2.7 -> 2.6
-    - python: "2.7"
-      env: MODE=mitogen DISTRO=centos6
+    #- python: "2.7"
+      #env: MODE=mitogen DISTRO=centos6
     # 2.6 -> 2.7
     - python: "2.6"
       env: MODE=mitogen DISTRO=centos7
@@ -52,6 +52,10 @@ matrix:
       env: MODE=debops_common VER=2.6.2
 
     # ansible_mitogen tests.
+
+    # 2.3 -> {centos5}
+    - python: "2.6"
+      env: MODE=ansible VER=2.3.3.0 DISTRO=centos5
 
     # 2.6 -> {debian, centos6, centos7}
     - python: "2.6"
