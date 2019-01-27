@@ -32,6 +32,7 @@ non-essential code in order to reduce its size, since it is also serves as the
 bootstrap implementation sent to every new slave context.
 """
 
+import binascii
 import collections
 import encodings.latin_1
 import errno
@@ -2093,16 +2094,18 @@ class Latch(object):
             self._cls_all_sockets.extend((rsock, wsock))
             return rsock, wsock
 
+    COOKIE_MAGIC, = struct.unpack('L', 'LTCH' * (struct.calcsize('L')/4))
+    COOKIE_FMT = 'Llll'
+    COOKIE_SIZE = struct.calcsize(COOKIE_FMT)
+
     def _make_cookie(self):
         """
-        Return a string encoding the ID of the instance and the current thread.
+        Return a string encoding the ID of the process, instance and thread.
         This disambiguates legitimate wake-ups, accidental writes to the FD,
         and buggy internal FD sharing.
         """
-        ident = thread.get_ident()
-        return b(u'%010d-%016x-%016x' % (os.getpid(), int(id(self)), ident))
-
-    COOKIE_SIZE = len(_make_cookie(None))
+        return struct.pack(self.COOKIE_FMT, self.COOKIE_MAGIC,
+                           os.getpid(), id(self), thread.get_ident())
 
     def get(self, timeout=None, block=True):
         """
@@ -2178,7 +2181,8 @@ class Latch(object):
 
             assert cookie == got_cookie, (
                 "Cookie incorrect; got %r, expected %r" \
-                % (got_cookie, cookie)
+                % (binascii.hexlify(got_cookie),
+                   binascii.hexlify(cookie))
             )
             assert i < self._waking, (
                 "Cookie correct, but no queue element assigned."
