@@ -100,6 +100,14 @@ iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
 
+if mitogen.core.PY3:
+    shlex_split = shlex.split
+else:
+    def shlex_split(s, comments=False):
+        return [mitogen.core.to_text(token)
+                for token in shlex.split(str(s), comments=comments)]
+
+
 class EnvironmentFileWatcher(object):
     """
     Usually Ansible edits to /etc/environment and ~/.pam_environment are
@@ -148,7 +156,7 @@ class EnvironmentFileWatcher(object):
         """
         for line in fp:
             # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
-            bits = shlex.split(line, comments=True)
+            bits = shlex_split(line, comments=True)
             if (not bits) or bits[0].startswith('#'):
                 continue
 
