@@ -168,6 +168,15 @@ Enhancements
   communication and a 50% reduction in context switches. This will manifest as
   a runtime improvement in many-host runs.
 
+* `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
+  supported by the core library and tested automatically, in any parent/child
+  combination of 2.4, 2.6, 2.7 and 3.6 interpreters.
+
+* `#477 <https://github.com/dw/mitogen/issues/477>`_: Ansible 2.3 is fully
+  supported and tested automatically. In combination with the core library
+  Python 2.4 support, this allows Red Hat Enterprise Linux 5 targets to be
+  managed with Mitogen. The ``simplejson`` package need not be installed on
+  such targets, as is usually required by Ansible.
 
 
 Fixes
@@ -449,6 +458,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Tom Parker-Shemilt <https://github.com/palfrey/>`_,
 `Younès HAFRI <https://github.com/yhafri>`_,
 `@myssa91 <https://github.com/myssa91>`_,
+`@s3c70r <https://github.com/s3c70r/>`_,
 `@syntonym <https://github.com/syntonym/>`_,
 `@trim777 <https://github.com/trim777/>`_,
 `@whky <https://github.com/whky/>`_, and
