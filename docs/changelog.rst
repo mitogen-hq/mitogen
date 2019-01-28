@@ -469,6 +469,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Younès HAFRI <https://github.com/yhafri>`_,
 `@killua-eu <https://github.com/killua-eu>`_,
 `@myssa91 <https://github.com/myssa91>`_,
+`@ohmer1 <https://github.com/ohmer1>`_,
 `@s3c70r <https://github.com/s3c70r/>`_,
 `@syntonym <https://github.com/syntonym/>`_,
 `@trim777 <https://github.com/trim777/>`_,
