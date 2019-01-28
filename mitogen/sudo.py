@@ -26,8 +26,10 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+import base64
 import logging
 import optparse
+import re
 
 import mitogen.core
 import mitogen.parent
@@ -35,6 +37,73 @@ from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
+
+# These are base64-encoded UTF-8 as our existing minifier/module server
+# struggles with Unicode Python source in some (forgotten) circumstances.
+PASSWORD_PROMPTS = [
+    'cGFzc3dvcmQ=',                                              # english
+    'bG96aW5rYQ==',                                              # sr@latin.po
+    '44OR44K544Ov44O844OJ',                                      # ja.po
+    '4Kaq4Ka+4Ka44KaT4Kef4Ka+4Kaw4KeN4Kah',                      # bn.po
+    '2YPZhNmF2Kkg2KfZhNiz2LE=',                                  # ar.po
+    'cGFzYWhpdHph',                                              # eu.po
+    '0L/QsNGA0L7Qu9GM',                                          # uk.po
+    'cGFyb29s',                                                  # et.po
+    'c2FsYXNhbmE=',                                              # fi.po
+    '4Kiq4Ki+4Ki44Ki14Kiw4Kih',                                  # pa.po
+    'Y29udHJhc2lnbm8=',                                          # ia.po
+    'Zm9jYWwgZmFpcmU=',                                          # ga.po
+    '16HXodee15Q=',                                              # he.po
+    '4Kqq4Kq+4Kq44Kq14Kqw4KuN4Kqh',                              # gu.po
+    '0L/QsNGA0L7Qu9Cw',                                          # bg.po
+    '4Kyq4K2N4Kyw4Kys4K2H4Ky2IOCsuOCsmeCtjeCsleCth+CspA==',      # or.po
+    '4K6V4K6f4K614K+B4K6a4K+N4K6a4K+K4K6y4K+N',                  # ta.po
+    'cGFzc3dvcnQ=',                                              # de.po
+    '7JWU7Zi4',                                                  # ko.po
+    '0LvQvtC30LjQvdC60LA=',                                      # sr.po
+    'beG6rXQga2jhuql1',                                          # vi.po
+    'c2VuaGE=',                                                  # pt_BR.po
+    'cGFzc3dvcmQ=',                                              # it.po
+    'aGVzbG8=',                                                  # cs.po
+    '5a+G56K877ya',                                              # zh_TW.po
+    'aGVzbG8=',                                                  # sk.po
+    '4LC44LCC4LCV4LGH4LCk4LCq4LCm4LCu4LGB',                      # te.po
+    '0L/QsNGA0L7Qu9GM',                                          # kk.po
+    'aGFzxYJv',                                                  # pl.po
+    'Y29udHJhc2VueWE=',                                          # ca.po
+    'Y29udHJhc2XDsWE=',                                          # es.po
+    '4LSF4LSf4LSv4LS+4LSz4LS14LS+4LSV4LWN4LSV4LWN',              # ml.po
+    'c2VuaGE=',                                                  # pt.po
+    '5a+G56CB77ya',                                              # zh_CN.po
+    '4KSX4KWB4KSq4KWN4KSk4KS24KSs4KWN4KSm',                      # mr.po
+    'bMO2c2Vub3Jk',                                              # sv.po
+    '4YOe4YOQ4YOg4YOd4YOa4YOY',                                  # ka.po
+    '4KS24KSs4KWN4KSm4KSV4KWC4KSf',                              # hi.po
+    'YWRnYW5nc2tvZGU=',                                          # da.po
+    '4La74LeE4LeD4LeK4La04Lav4La6',                              # si.po
+    'cGFzc29yZA==',                                              # nb.po
+    'd2FjaHR3b29yZA==',                                          # nl.po
+    '4Kaq4Ka+4Ka44KaT4Kef4Ka+4Kaw4KeN4Kah',                      # bn_IN.po
+    'cGFyb2xh',                                                  # tr.po
+    '4LKX4LOB4LKq4LON4LKk4LKq4LKm',                              # kn.po
+    'c2FuZGk=',                                                  # id.po
+    '0L/QsNGA0L7Qu9GM',                                          # ru.po
+    'amVsc3rDsw==',                                              # hu.po
+    'bW90IGRlIHBhc3Nl',                                          # fr.po
+    'aXBoYXNpd2VkaQ==',                                          # zu.po
+    '4Z6W4Z624Z6A4Z+S4Z6Z4Z6f4Z6Y4Z+S4Z6E4Z624Z6P4Z+LwqDhn5Y=',  # km.po
+    '4KaX4KeB4Kaq4KeN4Kak4Ka24Kas4KeN4Kam',                      # as.po
+]
+
+
+PASSWORD_PROMPT_RE = re.compile(
+    u'|'.join(
+        base64.b64decode(s).decode('utf-8')
+        for s in PASSWORD_PROMPTS
+    )
+)
+
+
 PASSWORD_PROMPT = b('password')
 SUDO_OPTIONS = [
     #(False, 'bool', '--askpass', '-A')
@@ -170,11 +239,15 @@ class Stream(mitogen.parent.Stream):
         password_sent = False
 
         for buf in it:
-            LOG.debug('%r: received %r', self, buf)
+            LOG.debug('%s: received %r', self.name, buf)
             if buf.endswith(self.EC0_MARKER):
                 self._ec0_received()
                 return
-            elif PASSWORD_PROMPT in buf.lower():
+
+            match = PASSWORD_PROMPT_RE.search(buf.decode('utf-8').lower())
+            if match is not None:
+                LOG.debug('%s: matched password prompt %r',
+                          self.name, match.group(0))
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
                 if password_sent:
