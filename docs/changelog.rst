@@ -248,6 +248,9 @@ Fixes
   number of 2->3 bugs were fixed, mostly in the form of Unicode/bytes
   mismatches.
 
+* `#429 <https://github.com/dw/mitogen/issues/429>`_: the ``sudo`` method can
+  now recognize internationalized password prompts.
+
 * `#362 <https://github.com/dw/mitogen/issues/362>`_,
   `#435 <https://github.com/dw/mitogen/issues/435>`_: the previous fix for slow
   Python 2.x subprocess creation on Red Hat caused newly spawned children to
@@ -464,6 +467,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Strahinja Kustudic <https://github.com/kustodian>`_,
 `Tom Parker-Shemilt <https://github.com/palfrey/>`_,
 `Younès HAFRI <https://github.com/yhafri>`_,
+`@killua-eu <https://github.com/killua-eu>`_,
 `@myssa91 <https://github.com/myssa91>`_,
 `@s3c70r <https://github.com/s3c70r/>`_,
 `@syntonym <https://github.com/syntonym/>`_,
