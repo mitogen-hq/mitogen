@@ -163,7 +163,8 @@ class MuxProcess(object):
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
 
-        if os.environ.get('MITOGEN_PROFILING'):
+        cls.profiling = os.environ.get('MITOGEN_PROFILING') is not None
+        if cls.profiling:
             mitogen.core.enable_profiling()
 
         cls.original_env = dict(os.environ)
@@ -281,7 +282,9 @@ class MuxProcess(object):
         then cannot clean up pending handlers, which is required for the
         threads to exit gracefully.
         """
-        self.pool.stop(join=False)
+        # In normal operation we presently kill the process because there is
+        # not yet any way to cancel connect().
+        self.pool.stop(join=self.profiling)
 
     def on_broker_exit(self):
         """
@@ -289,10 +292,9 @@ class MuxProcess(object):
         ourself. In future this should gracefully join the pool, but TERM is
         fine for now.
         """
-        if os.environ.get('MITOGEN_PROFILING'):
-            # TODO: avoid killing pool threads before they have written their
-            # .pstats. Really shouldn't be using kill() here at all, but hard
-            # to guarantee services can always be unblocked during shutdown.
-            time.sleep(1)
-
-        os.kill(os.getpid(), signal.SIGTERM)
+        if not self.profiling:
+            # In normal operation we presently kill the process because there is
+            # not yet any way to cancel connect(). When profiling, threads
+            # including the broker must shut down gracefully, otherwise pstats
+            # won't be written.
+            os.kill(os.getpid(), signal.SIGTERM)
