@@ -11,4 +11,4 @@
       mode: 0755
       content:
         Hello from {{item}}
-    with_sequence: start=1 end=20
+    with_sequence: start=1 end={{end|default(20)}}
