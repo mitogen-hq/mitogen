@@ -768,13 +768,22 @@ class ModuleResponder(object):
         return (fullname, None, None, None, ())
 
     def _build_tuple(self, fullname):
-        if mitogen.core.is_blacklisted_import(self, fullname):
-            raise ImportError('blacklisted')
-
         if fullname in self._cache:
             return self._cache[fullname]
 
+        if mitogen.core.is_blacklisted_import(self, fullname):
+            raise ImportError('blacklisted')
+
         path, source, is_pkg = self._finder.get_module_source(fullname)
+        if path and is_stdlib_path(path):
+            # Prevent loading of 2.x<->3.x stdlib modules! This costs one
+            # RTT per hit, so a client-side solution is also required.
+            LOG.debug('%r: refusing to serve stdlib module %r',
+                      self, fullname)
+            tup = self._make_negative_response(fullname)
+            self._cache[fullname] = tup
+            return tup
+
         if source is None:
             # TODO: make this .warning() or similar again once importer has its
             # own logging category.
@@ -839,14 +848,6 @@ class ModuleResponder(object):
     def _send_module_and_related(self, stream, fullname):
         try:
             tup = self._build_tuple(fullname)
-            if tup[2] and is_stdlib_path(tup[2]):
-                # Prevent loading of 2.x<->3.x stdlib modules! This costs one
-                # RTT per hit, so a client-side solution is also required.
-                LOG.debug('%r: refusing to serve stdlib module %r',
-                          self, fullname)
-                self._send_module_load_failed(stream, fullname)
-                return
-
             for name in tup[4]:  # related
                 parent, _, _ = str_partition(name, '.')
                 if parent != fullname and parent not in stream.sent_modules:
@@ -893,8 +894,8 @@ class ModuleResponder(object):
             path.append(fullname)
             fullname, _, _ = str_rpartition(fullname, u'.')
 
+        stream = self._router.stream_by_id(context.context_id)
         for fullname in reversed(path):
-            stream = self._router.stream_by_id(context.context_id)
             self._send_module_and_related(stream, fullname)
             self._send_forward_module(stream, context, fullname)
 

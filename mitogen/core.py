@@ -540,7 +540,7 @@ def enable_profiling():
         try:
             return func(*args)
         finally:
-            profiler.dump_stats('/tmp/mitogen.%d.%s.pstat' % (os.getpid(), name))
+            profiler.dump_stats('/tmp/mitogen.stats.%d.%s.pstat' % (os.getpid(), name))
             profiler.create_stats()
             fp = open('/tmp/mitogen.stats.%d.%s.log' % (os.getpid(), name), 'w')
             try:
@@ -1682,6 +1682,22 @@ class Stream(BasicStream):
         pkt = struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, msg.dst_id,
                           msg.src_id, msg.auth_id, msg.handle,
                           msg.reply_to or 0, len(msg.data)) + msg.data
+
+        if not self._output_buf_len:
+            # Modifying epoll/Kqueue state is expensive, as is needless broker
+            # loop iterations. Rather than wait for writeability, simply
+            # attempt to write immediately, and only fall back to
+            # start_transmit()/on_transmit() if an error occurred or the socket
+            # buffer was full.
+            try:
+                n = self.transmit_side.write(pkt)
+                if n:
+                    if n == len(pkt):
+                        return
+                    pkt = pkt[n:]
+            except OSError:
+                pass
+
         if not self._output_buf_len:
             self._router.broker._start_transmit(self)
         self._output_buf.append(pkt)
@@ -2457,7 +2473,8 @@ class Router(object):
             return
 
         target_id_s, _, name = bytes_partition(msg.data, b(':'))
-        context = self._context_by_id.get(int(target_id_s, 10))
+        target_id = int(target_id_s, 10)
+        context = self._context_by_id.get(target_id)
         if context:
             fire(context, 'disconnect')
         else:
@@ -2798,8 +2815,7 @@ class Broker(object):
             (self._waker.receive_side, self._waker.on_receive)
         )
         self._thread = threading.Thread(
-            target=_profile_hook,
-            args=('broker', self._broker_main),
+            target=self._broker_main,
             name='mitogen-broker'
         )
         self._thread.start()
@@ -2907,7 +2923,7 @@ class Broker(object):
         to shut down gracefully, then discard the :class:`Poller`.
         """
         for _, (side, _) in self.poller.readers + self.poller.writers:
-            LOG.error('_broker_main() force disconnecting %r', side)
+            LOG.debug('_broker_main() force disconnecting %r', side)
             side.stream.on_disconnect(self)
 
         self.poller.close()
@@ -2932,7 +2948,7 @@ class Broker(object):
                       'more child processes still connected to '
                       'our stdout/stderr pipes.', self)
 
-    def _broker_main(self):
+    def _do_broker_main(self):
         """
         Broker thread main function. Dispatches IO events until
         :meth:`shutdown` is called.
@@ -2950,6 +2966,9 @@ class Broker(object):
 
         self._exitted = True
         self._broker_exit()
+
+    def _broker_main(self):
+        _profile_hook('mitogen-broker', self._do_broker_main)
         fire(self, 'exit')
 
     def shutdown(self):
