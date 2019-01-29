@@ -1,5 +1,6 @@
 ---
 
+- include: become_same_user.yml
 - include: disconnect_during_module.yml
 - include: disconnect_resets_connection.yml
 - include: exec_command.yml
