@@ -1812,9 +1812,15 @@ class RouteMonitor(object):
 
     def _on_stream_disconnect(self, stream):
         """
-        Respond to disconnection of a local stream by
+        Respond to disconnection of a local stream by propagating DEL_ROUTE for
+        any contexts we know were attached to it.
         """
-        routes = self._routes_by_stream.pop(stream)
+        # During a stream crash it is possible for disconnect signal to fire
+        # twice, in which case ignore the second instance.
+        routes = self._routes_by_stream.pop(stream, None)
+        if routes is None:
+            return
+
         LOG.debug('%r: %r is gone; propagating DEL_ROUTE for %r',
                   self, stream, routes)
         for target_id in routes:
