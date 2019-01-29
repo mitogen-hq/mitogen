@@ -57,7 +57,8 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         finally:
             s = capture.stop()
 
-        self.assertTrue("'): debug1: Reading configuration data" in s)
+        expect = "%s: debug1: Reading configuration data" % (context.name,)
+        self.assertTrue(expect in s)
 
     def test_stream_name(self):
         context = self.docker_ssh(

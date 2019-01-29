@@ -30,6 +30,7 @@
         "9":
           - libjson-perl
           - python-virtualenv
+          - locales
       CentOS:
         "5":
         - perl
@@ -67,12 +68,25 @@
       with_items:
       - /var/cache/apt
       - /var/lib/apt/lists
+
+    - copy:
+        dest: /etc/locale.gen
+        content: |
+          en_US.UTF-8 UTF-8
+          fr_FR.UTF-8 UTF-8
+      when: distro == "Debian"
+
+    - shell: locale-gen
       when: distro == "Debian"
 
     # Vanilla Ansible needs simplejson on CentOS 5.
+    - shell: mkdir -p /usr/lib/python2.4/site-packages/simplejson/
+      when: distro == "CentOS" and ver == "5"
+
     - synchronize:
         dest: /usr/lib/python2.4/site-packages/simplejson/
         src: ../../ansible_mitogen/compat/simplejson/
+      when: distro == "CentOS" and ver == "5"
 
     - user:
         name: root
@@ -116,6 +130,11 @@
           Defaults>mitogen__pw_required targetpw
           Defaults>mitogen__require_tty requiretty
           Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+
+    # Prevent permission denied errors.
+    - file:
+        path: /etc/sudoers.d/README
+        state: absent
 
     - lineinfile:
         path: /etc/sudoers
