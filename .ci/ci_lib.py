@@ -162,7 +162,7 @@ def make_containers():
     lst = []
 
     for distro in DISTROS:
-        distro, star, count = distro.rpartition('*')
+        distro, star, count = distro.partition('*')
         if star:
             count = int(count)
         else:
