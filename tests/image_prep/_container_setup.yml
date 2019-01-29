@@ -130,6 +130,11 @@
           Defaults>mitogen__require_tty requiretty
           Defaults>mitogen__require_tty_pw_required requiretty,targetpw
 
+    # Prevent permission denied errors.
+    - file:
+        path: /etc/sudoers.d/README
+        state: absent
+
     - lineinfile:
         path: /etc/sudoers
         line: "%wheel ALL=(ALL) ALL"
