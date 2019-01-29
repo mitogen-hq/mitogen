@@ -34,14 +34,16 @@ bootstrap implementation sent to every new slave context.
 
 import binascii
 import collections
+import cProfile
 import encodings.latin_1
 import errno
 import fcntl
 import itertools
 import linecache
 import logging
-import pickle as py_pickle
 import os
+import pickle as py_pickle
+import pstats
 import signal
 import socket
 import struct
@@ -528,27 +530,48 @@ def enable_debug_logging():
 
 
 _profile_hook = lambda name, func, *args: func(*args)
+_profile_fmt = os.environ.get(
+    'MITOGEN_PROFILE_FMT',
+    '/tmp/mitogen.stats.%(pid)s.%(identity)s.%(now)s.%(ext)s',
+)
 
 
-def enable_profiling():
-    global _profile_hook
-    import cProfile
-    import pstats
-    def _profile_hook(name, func, *args):
-        profiler = cProfile.Profile()
-        profiler.enable()
+def _profile_hook(name, func, *args):
+    """
+    Call `func(*args)` and return its result. This function is replaced by
+    :func:`_real_profile_hook` when :func:`enable_profiling` is called. This
+    interface is obsolete and will be replaced by a signals-based integration
+    later on.
+    """
+    return func(*args)
+
+
+def _real_profile_hook(name, func, *args):
+    profiler = cProfile.Profile()
+    profiler.enable()
+    try:
+        return func(*args)
+    finally:
+        path = _profile_fmt % {
+            'now': int(1e6 * time.time()),
+            'identity': name,
+            'pid': os.getpid(),
+            'ext': '%s'
+        }
+        profiler.dump_stats(path % ('pstats',))
+        profiler.create_stats()
+        fp = open(path % ('log',), 'w')
         try:
-            return func(*args)
+            stats = pstats.Stats(profiler, stream=fp)
+            stats.sort_stats('cumulative')
+            stats.print_stats()
         finally:
-            profiler.dump_stats('/tmp/mitogen.stats.%d.%s.pstat' % (os.getpid(), name))
-            profiler.create_stats()
-            fp = open('/tmp/mitogen.stats.%d.%s.log' % (os.getpid(), name), 'w')
-            try:
-                stats = pstats.Stats(profiler, stream=fp)
-                stats.sort_stats('cumulative')
-                stats.print_stats()
-            finally:
-                fp.close()
+            fp.close()
+
+
+def enable_profiling(econtext=None):
+    global _profile_hook
+    _profile_hook = _real_profile_hook
 
 
 def import_module(modname):
@@ -2813,7 +2836,7 @@ class Broker(object):
         )
         self._thread = threading.Thread(
             target=self._broker_main,
-            name='mitogen-broker'
+            name='mitogen.broker'
         )
         self._thread.start()
 
@@ -2965,7 +2988,7 @@ class Broker(object):
         self._broker_exit()
 
     def _broker_main(self):
-        _profile_hook('mitogen-broker', self._do_broker_main)
+        _profile_hook('mitogen.broker', self._do_broker_main)
         fire(self, 'exit')
 
     def shutdown(self):
@@ -3061,7 +3084,7 @@ class Dispatcher(object):
         if self.econtext.config.get('on_start'):
             self.econtext.config['on_start'](self.econtext)
 
-        _profile_hook('main', self._dispatch_calls)
+        _profile_hook('mitogen.child_main', self._dispatch_calls)
 
 
 class ExternalContext(object):
