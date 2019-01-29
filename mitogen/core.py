@@ -2923,7 +2923,7 @@ class Broker(object):
         to shut down gracefully, then discard the :class:`Poller`.
         """
         for _, (side, _) in self.poller.readers + self.poller.writers:
-            LOG.error('_broker_main() force disconnecting %r', side)
+            LOG.debug('_broker_main() force disconnecting %r', side)
             side.stream.on_disconnect(self)
 
         self.poller.close()
