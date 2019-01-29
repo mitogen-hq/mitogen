@@ -707,6 +707,9 @@ class ModuleResponder(object):
         self.blacklist = []
         self.whitelist = ['']
 
+        #: Context -> set([fullname, ..])
+        self._forwarded_by_context = {}
+
         #: Number of GET_MODULE messages received.
         self.get_module_count = 0
         #: Total time spent in uncached GET_MODULE.
@@ -846,6 +849,9 @@ class ModuleResponder(object):
         )
 
     def _send_module_and_related(self, stream, fullname):
+        if fullname in stream.sent_modules:
+            return
+
         try:
             tup = self._build_tuple(fullname)
             for name in tup[4]:  # related
@@ -889,6 +895,14 @@ class ModuleResponder(object):
             )
 
     def _forward_one_module(self, context, fullname):
+        forwarded = self._forwarded_by_context.get(context)
+        if forwarded is None:
+            forwarded = set()
+            self._forwarded_by_context[context] = forwarded
+
+        if fullname in forwarded:
+            return
+
         path = []
         while fullname:
             path.append(fullname)
