@@ -12,12 +12,14 @@
     become: true
     become_user: joe
     register: out
+    when: is_mitogen
 
   - assert:
       that:
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.username == "joe"
       - out.result|length == 1  # no sudo
+    when: is_mitogen
 
 
   # Now try with a different account.
@@ -25,6 +27,7 @@
     become: true
     become_user: james
     register: out
+    when: is_mitogen
 
   - assert:
       that:
@@ -33,3 +36,4 @@
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "james"
       - out.result|length == 2  # no sudo
+    when: is_mitogen
