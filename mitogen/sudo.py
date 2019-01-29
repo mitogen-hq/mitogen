@@ -253,7 +253,7 @@ class Stream(mitogen.parent.Stream):
                 if password_sent:
                     raise PasswordError(self.password_incorrect_msg)
                 self.diag_stream.transmit_side.write(
-                    mitogen.core.to_text(self.password + '\n').encode('utf-8')
+                    (mitogen.core.to_text(self.password) + '\n').encode('utf-8')
                 )
                 password_sent = True
 
