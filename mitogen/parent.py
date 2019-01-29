@@ -1688,6 +1688,10 @@ class RouteMonitor(object):
     child is beging upgraded in preparation to become a parent of children of
     its own.
 
+    By virtue of only being active while responding to messages from a handler,
+    RouteMonitor lives entirely on the broker thread, so its data requires no
+    locking.
+
     :param Router router:
         Router to install handlers on.
     :param Context parent:
@@ -1697,6 +1701,9 @@ class RouteMonitor(object):
     def __init__(self, router, parent=None):
         self.router = router
         self.parent = parent
+        #: Mapping of Stream instance to integer context IDs reachable via the
+        #: stream; used to cleanup routes during disconnection.
+        self._routes_by_stream = {}
         self.router.add_handler(
             fn=self._on_add_route,
             handle=mitogen.core.ADD_ROUTE,
@@ -1711,9 +1718,6 @@ class RouteMonitor(object):
             policy=is_immediate_child,
             overwrite=True,
         )
-        #: Mapping of Stream instance to integer context IDs reachable via the
-        #: stream; used to cleanup routes during disconnection.
-        self._routes_by_stream = {}
 
     def __repr__(self):
         return 'RouteMonitor()'
@@ -1775,7 +1779,7 @@ class RouteMonitor(object):
         :param int target_id:
             ID of the connecting or disconnecting context.
         """
-        for stream in itervalues(self.router._stream_by_id):
+        for stream in self.router.get_streams():
             if target_id in stream.egress_ids:
                 self._send_one(stream, mitogen.core.DEL_ROUTE, target_id, None)
 
@@ -1918,6 +1922,16 @@ class Router(mitogen.core.Router):
         stream.detached = True
         msg.reply(None)
 
+    def get_streams(self):
+        """
+        Return a snapshot of all streams in existence at time of call.
+        """
+        self._write_lock.acquire()
+        try:
+            return itervalues(self._stream_by_id)
+        finally:
+            self._write_lock.release()
+
     def add_route(self, target_id, stream):
         """
         Arrange for messages whose `dst_id` is `target_id` to be forwarded on
@@ -1929,11 +1943,12 @@ class Router(mitogen.core.Router):
         LOG.debug('%r.add_route(%r, %r)', self, target_id, stream)
         assert isinstance(target_id, int)
         assert isinstance(stream, Stream)
+
+        self._write_lock.acquire()
         try:
             self._stream_by_id[target_id] = stream
-        except KeyError:
-            LOG.error('%r: cant add route to %r via %r: no such stream',
-                      self, target_id, stream)
+        finally:
+            self._write_lock.release()
 
     def del_route(self, target_id):
         LOG.debug('%r.del_route(%r)', self, target_id)
@@ -1942,7 +1957,11 @@ class Router(mitogen.core.Router):
         # 'disconnect' event on the appropriate Context instance. In that case,
         # we won't a matching _stream_by_id entry for the disappearing route,
         # so don't raise an error for a missing key here.
-        self._stream_by_id.pop(target_id, None)
+        self._write_lock.acquire()
+        try:
+            self._stream_by_id.pop(target_id, None)
+        finally:
+            self._write_lock.release()
 
     def get_module_blacklist(self):
         if mitogen.context_id == 0:
@@ -2001,7 +2020,11 @@ class Router(mitogen.core.Router):
         name = u'%s.%s' % (via_context.name, resp['name'])
         context = self.context_class(self, resp['id'], name=name)
         context.via = via_context
-        self._context_by_id[context.context_id] = context
+        self._write_lock.acquire()
+        try:
+            self._context_by_id[context.context_id] = context
+        finally:
+            self._write_lock.release()
         return context
 
     def doas(self, **kwargs):
