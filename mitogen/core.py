@@ -2220,12 +2220,8 @@ class Latch(object):
             self._lock.release()
 
     def _wake(self, wsock, cookie):
-        try:
-            os.write(wsock.fileno(), cookie)
-        except OSError:
-            e = sys.exc_info()[1]
-            if e.args[0] != errno.EBADF:
-                raise
+        written, disconnected = io_op(os.write, wsock.fileno(), cookie)
+        assert written == len(cookie) and not disconnected
 
     def __repr__(self):
         return 'Latch(%#x, size=%d, t=%r)' % (
