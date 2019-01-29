@@ -22,6 +22,8 @@
       raw: 'whoami'
       register: raw
 
+    - debug: msg="x{{raw}}x"
+
     # Can't test stdout because TTY inserts \r in Ansible version.
     - name: Verify raw module output.
       assert:
@@ -33,6 +35,7 @@
         - |
           raw.stdout_lines|to_text in (
             ["\r\n"],
+            ["", "root"],
             ["root\r\n"],
             ["root"],
           )

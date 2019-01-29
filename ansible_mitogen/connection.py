@@ -587,7 +587,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         stack += (CONNECTION_METHOD[spec.transport()](spec),)
-        if spec.become():
+        if spec.become() and ((spec.become_user() != spec.remote_user()) or
+                              C.BECOME_ALLOW_SAME_USER):
             stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
         return stack

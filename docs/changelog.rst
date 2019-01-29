@@ -260,6 +260,9 @@ Fixes
   trigger early finalization of Cython-based extension modules, leading to
   segmentation faults.
 
+* `#499 <https://github.com/dw/mitogen/issues/499>`_: the ``allow_same_user``
+  Ansible configuration setting is respected.
+
 * `dc1d4251 <https://github.com/dw/mitogen/commit/dc1d4251>`_: the
   ``synchronize`` module could fail with the Docker transport due to a missing
   attribute.
