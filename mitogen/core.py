@@ -1684,11 +1684,9 @@ class Stream(BasicStream):
                           msg.reply_to or 0, len(msg.data)) + msg.data
 
         if not self._output_buf_len:
-            # Modifying epoll/Kqueue state is expensive, as is needless broker
-            # loop iterations. Rather than wait for writeability, simply
-            # attempt to write immediately, and only fall back to
-            # start_transmit()/on_transmit() if an error occurred or the socket
-            # buffer was full.
+            # Modifying epoll/Kqueue state is expensive, as are needless broker
+            # loops. Rather than wait for writeability, just write immediately,
+            # and fall back to the broker loop on error or full buffer.
             try:
                 n = self.transmit_side.write(pkt)
                 if n:
@@ -1698,7 +1696,6 @@ class Stream(BasicStream):
             except OSError:
                 pass
 
-        if not self._output_buf_len:
             self._router.broker._start_transmit(self)
         self._output_buf.append(pkt)
         self._output_buf_len += len(pkt)
