@@ -1682,6 +1682,22 @@ class Stream(BasicStream):
         pkt = struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, msg.dst_id,
                           msg.src_id, msg.auth_id, msg.handle,
                           msg.reply_to or 0, len(msg.data)) + msg.data
+
+        if not self._output_buf_len:
+            # Modifying epoll/Kqueue state is expensive, as is needless broker
+            # loop iterations. Rather than wait for writeability, simply
+            # attempt to write immediately, and only fall back to
+            # start_transmit()/on_transmit() if an error occurred or the socket
+            # buffer was full.
+            try:
+                n = self.transmit_side.write(pkt)
+                if n:
+                    if n == len(pkt):
+                        return
+                    pkt = pkt[n:]
+            except OSError:
+                pass
+
         if not self._output_buf_len:
             self._router.broker._start_transmit(self)
         self._output_buf.append(pkt)
