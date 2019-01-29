@@ -158,23 +158,37 @@ def make_containers():
     firstbit = lambda s: (s+'-').split('-')[0]
     secondbit = lambda s: (s+'-').split('-')[1]
 
-    return [
-        {
-            "distro": firstbit(distro),
-            "name": "target-%s-%s" % (distro, i),
-            "hostname": docker_hostname,
-            "port": BASE_PORT + i,
-            "python_path": (
-                '/usr/bin/python3'
-                if secondbit(distro) == 'py3'
-                else '/usr/bin/python'
-            )
-        }
-        for i, distro in enumerate(DISTROS, 1)
-    ]
+    i = 1
+    lst = []
+
+    for distro in DISTROS:
+        distro, star, count = distro.rpartition('*')
+        if star:
+            count = int(count)
+        else:
+            count = 1
+
+        for x in range(count):
+            lst.append({
+                "distro": firstbit(distro),
+                "name": "target-%s-%s" % (distro, i),
+                "hostname": docker_hostname,
+                "port": BASE_PORT + i,
+                "python_path": (
+                    '/usr/bin/python3'
+                    if secondbit(distro) == 'py3'
+                    else '/usr/bin/python'
+                )
+            })
+            i += 1
+
+    return lst
 
 
 def start_containers(containers):
+    if os.environ.get('KEEP'):
+        return
+
     run_batches([
         [
             "docker rm -f %(name)s || true" % container,
