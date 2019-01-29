@@ -2473,7 +2473,8 @@ class Router(object):
             return
 
         target_id_s, _, name = bytes_partition(msg.data, b(':'))
-        context = self._context_by_id.get(int(target_id_s, 10))
+        target_id = int(target_id_s, 10)
+        context = self._context_by_id.get(target_id)
         if context:
             fire(context, 'disconnect')
         else:
