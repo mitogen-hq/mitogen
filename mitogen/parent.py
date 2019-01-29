@@ -1780,7 +1780,10 @@ class RouteMonitor(object):
             ID of the connecting or disconnecting context.
         """
         for stream in self.router.get_streams():
-            if target_id in stream.egress_ids:
+            if target_id in stream.egress_ids and (
+                    (self.parent is None) or
+                    (self.parent.context_id != stream.remote_id)
+                ):
                 self._send_one(stream, mitogen.core.DEL_ROUTE, target_id, None)
 
     def notice_stream(self, stream):
