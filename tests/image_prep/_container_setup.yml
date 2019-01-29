@@ -72,6 +72,7 @@
     - copy:
         dest: /etc/locale.gen
         content: |
+          en_US.UTF-8 UTF-8
           fr_FR.UTF-8 UTF-8
       when: distro == "Debian"
 
