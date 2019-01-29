@@ -540,7 +540,7 @@ def enable_profiling():
         try:
             return func(*args)
         finally:
-            profiler.dump_stats('/tmp/mitogen.%d.%s.pstat' % (os.getpid(), name))
+            profiler.dump_stats('/tmp/mitogen.stats.%d.%s.pstat' % (os.getpid(), name))
             profiler.create_stats()
             fp = open('/tmp/mitogen.stats.%d.%s.log' % (os.getpid(), name), 'w')
             try:
@@ -2798,8 +2798,7 @@ class Broker(object):
             (self._waker.receive_side, self._waker.on_receive)
         )
         self._thread = threading.Thread(
-            target=_profile_hook,
-            args=('broker', self._broker_main),
+            target=self._broker_main,
             name='mitogen-broker'
         )
         self._thread.start()
@@ -2932,7 +2931,7 @@ class Broker(object):
                       'more child processes still connected to '
                       'our stdout/stderr pipes.', self)
 
-    def _broker_main(self):
+    def _do_broker_main(self):
         """
         Broker thread main function. Dispatches IO events until
         :meth:`shutdown` is called.
@@ -2950,6 +2949,9 @@ class Broker(object):
 
         self._exitted = True
         self._broker_exit()
+
+    def _broker_main(self):
+        _profile_hook('mitogen-broker', self._do_broker_main)
         fire(self, 'exit')
 
     def shutdown(self):
