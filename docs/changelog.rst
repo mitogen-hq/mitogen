@@ -131,6 +131,9 @@ v0.2.4 (2018-??-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
+This release includes a huge variety of important fixes and new optimizations.
+On a synthetic run with 64 hosts it is over 35% faster than v0.2.3.
+
 Enhancements
 ^^^^^^^^^^^^
 
@@ -159,11 +162,16 @@ Enhancements
   ``mitogen_get_stack`` action that is automatically added to the action
   plug-in path. See :ref:`mitogen-get-stack` for more information.
 
-* `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_: multiplexer
+* `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_,
+  `bd4b04ae <https://github.com/dw/mitogen/commit/bd4b04ae>`_: multiplexer
   threads are pinned to one CPU, reducing latency and SMP overhead on a hot
-  path exercised for every task. This yielded an 8% speedup in a 64-target job
+  path exercised for every task. This yielded a 19% speedup in a 64-target job
   composed of many short tasks, and should easily be visible as a runtime
   improvement in many-host runs.
+
+* `0979422a <https://github.com/dw/mitogen/commit/0979422a>`_: an expensive
+  module dependency scanning step was redundantly invoked for every task,
+  bottlenecking the connection multiplexer.
 
 * `#260 <https://github.com/dw/mitogen/issues/260>`_,
   `a18a083c <https://github.com/dw/mitogen/commit/a18a083c>`_: brokers no
@@ -181,7 +189,6 @@ Enhancements
   <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
   <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
   or teardown, yielding a 38% latency reduction for inter-thread communication.
-  This may manifest as a runtime improvement in many-host runs.
 
 * `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
   supported by the core library and tested automatically, in any parent/child
