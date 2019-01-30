@@ -176,6 +176,7 @@ class MuxProcess(object):
             cls.child_sock = None
             mitogen.core.io_op(cls.worker_sock.recv, 1)
         else:
+            mitogen.utils.reset_affinity()
             cls.worker_sock.close()
             cls.worker_sock = None
             self = cls()
