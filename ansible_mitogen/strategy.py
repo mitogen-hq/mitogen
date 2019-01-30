@@ -211,6 +211,32 @@ class StrategyMixin(object):
             os.path.join(base_dir, 'action')
         )
 
+    def _queue_task(self, host, task, task_vars, play_context):
+        """
+        Many PluginLoader caches are defective as they are only populated in
+        the ephemeral WorkerProcess. Touch each plug-in path before forking to
+        ensure all workers receive a hot cache.
+        """
+        ansible_mitogen.loaders.module_loader.find_plugin(
+            name=task.action,
+            mod_type='',
+        )
+        ansible_mitogen.loaders.connection_loader.get(
+            name=play_context.connection,
+            class_only=True,
+        )
+        ansible_mitogen.loaders.action_loader.get(
+            name=task.action,
+            class_only=True,
+        )
+
+        return super(StrategyMixin, self)._queue_task(
+            host=host,
+            task=task,
+            task_vars=task_vars,
+            play_context=play_context,
+        )
+
     def run(self, iterator, play_context, result=0):
         """
         Arrange for a mitogen.master.Router to be available for the duration of
