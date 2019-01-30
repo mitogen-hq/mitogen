@@ -126,7 +126,7 @@ class Manager(object):
         finally:
             self.state.lock.release()
 
-        self.set_cpu(2 + (n % (self.cpu_count() - 2)))
+        self.set_cpu(2 + (n % max(1, (self.cpu_count() - 2))))
 
 
 manager = Manager()
