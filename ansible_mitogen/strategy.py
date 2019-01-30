@@ -31,6 +31,7 @@ import os
 import threading
 
 import mitogen.core
+import ansible_mitogen.affinity
 import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
@@ -105,6 +106,7 @@ def wrap_worker__run(*args, **kwargs):
         import signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
+    ansible_mitogen.affinity.manager.assign()
     return mitogen.core._profile_hook('WorkerProcess',
         lambda: worker__run(*args, **kwargs)
     )

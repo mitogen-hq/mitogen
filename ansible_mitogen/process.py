@@ -56,6 +56,7 @@ import ansible_mitogen.logging
 import ansible_mitogen.services
 
 from mitogen.core import b
+import ansible_mitogen.affinity
 
 
 LOG = logging.getLogger(__name__)
@@ -172,11 +173,12 @@ class MuxProcess(object):
         if _init_logging:
             ansible_mitogen.logging.setup()
         if cls.child_pid:
+            ansible_mitogen.affinity.manager.set_cpu(1)
             cls.child_sock.close()
             cls.child_sock = None
             mitogen.core.io_op(cls.worker_sock.recv, 1)
         else:
-            mitogen.utils.reset_affinity()
+            ansible_mitogen.affinity.manager.set_cpu(0)
             cls.worker_sock.close()
             cls.worker_sock = None
             self = cls()
