@@ -159,6 +159,11 @@ Enhancements
   ``mitogen_get_stack`` action that is automatically added to the action
   plug-in path. See :ref:`mitogen-get-stack` for more information.
 
+* Multiplexer threads are pinned to one CPU, reducing latency and SMP overhead
+  on a hot path exercised for every task. This yielded an 8% speedup in a
+  64-target job composed of many short tasks, and should easily be visible as a
+  runtime improvement in many-host runs.
+
 * `#415 <https://github.com/dw/mitogen/issues/415>`_,
   `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
   for in-process queues changed from `kqueue
