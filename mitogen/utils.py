@@ -42,6 +42,7 @@ except ImportError:
 import mitogen
 import mitogen.core
 import mitogen.master
+import mitogen.parent
 
 
 LOG = logging.getLogger('mitogen')
@@ -60,16 +61,42 @@ if ctypes:
         _sched_setaffinity = None
 
 
-def reset_affinity():
+def reset_affinity(clear=False):
     """
+    Bind this process to a randomly selected CPU. If done prior to starting
+    threads, all threads will be bound to the same CPU. This call is a no-op on
+    systems other than Linux.
+
+    :param bool clear:
+        If :data:`True`, clear any prior binding.
+
+    A hook is installed that causes `reset_affinity(clear=True)` to run in the
+    child of any process created with :func:`mitogen.parent.detach_popen`,
+    ensuring CPU-intensive children like SSH are not forced to share the same
+    core as the (otherwise potentially very busy) parent.
+
+    Threads bound to the same CPU share cache and experience the lowest
+    possible inter-thread roundtrip latency, for example ensuring the minimum
+    possible time required for :class:`mitogen.service.Pool` to interact with
+    :class:`mitogen.core.Broker`, as required for every message transmitted or
+    received.
+
+    Binding threads of a Python process to one CPU makes sense, as they are
+    otherwise unable to operate in parallel, and all must acquire the same lock
+    prior to executing.
     """
     if _sched_setaffinity is None:
         return
 
-    cpus = multiprocessing.cpu_count()
-    cpu = random.randint(0, cpus - 1)
-    bits = struct.pack('L', 1 << cpu)
-    _sched_setaffinity(os.getpid(), len(bits), bits)
+    if clear:
+        mask = 0xffffffff
+    else:
+        mask = 1 << random.randint(0, multiprocessing.cpu_count() - 1)
+
+    s = struct.pack('L', mask)
+    _sched_setaffinity(os.getpid(), len(s), s)
+    mitogen.parent._preexec_hook = lambda: reset_affinity(clear=True)
+
 
 def setup_gil():
     """

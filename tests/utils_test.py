@@ -1,8 +1,13 @@
 #!/usr/bin/env python
 
+import os
+import tempfile
+
 import unittest2
+import mock
 
 import mitogen.core
+import mitogen.parent
 import mitogen.master
 import mitogen.utils
 from mitogen.core import b
@@ -17,6 +22,53 @@ def func0(router):
 @mitogen.utils.with_router
 def func(router):
     return router
+
+
+class ResetAffinityTest(testlib.TestCase):
+    func = staticmethod(mitogen.utils.reset_affinity)
+
+    def _get_cpus(self, path='/proc/self/status'):
+        fp = open(path)
+        try:
+            for line in fp:
+                if line.startswith('Cpus_allowed'):
+                    return int(line.split()[1], 16)
+        finally:
+            fp.close()
+
+    @mock.patch('random.randint')
+    def test_set_reset(self, randint):
+        randint.return_value = 3
+        before = self._get_cpus()
+        self.func()
+        self.assertEquals(self._get_cpus(), 1 << 3)
+        self.func(clear=True)
+        self.assertEquals(self._get_cpus(), before)
+
+    @mock.patch('random.randint')
+    def test_clear_on_popen(self, randint):
+        randint.return_value = 3
+        tf = tempfile.NamedTemporaryFile()
+        try:
+            before = self._get_cpus()
+            self.func()
+            my_cpu = self._get_cpus()
+
+            pid = mitogen.parent.detach_popen(
+                args=['cp', '/proc/self/status', tf.name]
+            )
+            os.waitpid(pid, 0)
+
+            his_cpu = self._get_cpus(tf.name)
+            self.assertNotEquals(my_cpu, his_cpu)
+            self.func(clear=True)
+        finally:
+            tf.close()
+
+ResetAffinityTest = unittest2.skipIf(
+    reason='Linux only',
+    condition=os.uname()[0] != 'Linux'
+)(ResetAffinityTest)
 
 
 class RunWithRouterTest(testlib.TestCase):

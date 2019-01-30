@@ -9,6 +9,7 @@ import mitogen
 import mitogen.utils
 
 mitogen.utils.setup_gil()
+mitogen.utils.reset_affinity()
 
 X = 20000
 

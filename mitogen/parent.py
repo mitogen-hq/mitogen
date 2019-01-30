@@ -115,6 +115,11 @@ def _ioctl_cast(n):
     return n
 
 
+# If not :data:`None`, called prior to exec() of any new child process. Used by
+# :func:`mitogen.utils.reset_affinity` to allow the child to be freely
+# scheduled.
+_preexec_hook = None
+
 # Get PTY number; asm-generic/ioctls.h
 LINUX_TIOCGPTN = _ioctl_cast(2147767344)
 
@@ -262,7 +267,13 @@ def detach_popen(**kwargs):
     # handling, without tying the surrounding code into managing a Popen
     # object, which isn't possible for at least :mod:`mitogen.fork`. This
     # should be replaced by a swappable helper class in a future version.
-    proc = subprocess.Popen(**kwargs)
+    real_preexec_fn = kwargs.pop('preexec_fn', None)
+    def preexec_fn():
+        if _preexec_hook:
+            _preexec_hook()
+        if real_preexec_fn:
+            real_preexec_fn()
+    proc = subprocess.Popen(preexec_fn=preexec_fn, **kwargs)
     proc._child_created = False
     return proc.pid
 
