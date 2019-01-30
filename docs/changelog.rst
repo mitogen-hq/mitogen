@@ -174,6 +174,7 @@ Enhancements
   latency.
 
 * `#415 <https://github.com/dw/mitogen/issues/415>`_,
+  `#491 <https://github.com/dw/mitogen/issues/491>`_,
   `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
   for in-process queues changed from `kqueue
   <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ / `epoll
