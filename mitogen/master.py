@@ -998,7 +998,7 @@ class Router(mitogen.parent.Router):
     #: of any :class:`Broker`, e.g. via::
     #:
     #:      mitogen.master.Router.profiling = True
-    profiling = False
+    profiling = os.environ.get('MITOGEN_PROFILING') is not None
 
     def __init__(self, broker=None, max_message_size=None):
         if broker is None:
