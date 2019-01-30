@@ -28,8 +28,16 @@
 
 import datetime
 import logging
+import multiprocessing
 import os
+import random
+import struct
 import sys
+
+try:
+    import ctypes
+except ImportError:
+    ctypes = None
 
 import mitogen
 import mitogen.core
@@ -44,6 +52,24 @@ if mitogen.core.PY3:
 else:
     iteritems = dict.iteritems
 
+if ctypes:
+    try:
+        _libc = ctypes.CDLL(None)
+        _sched_setaffinity = _libc.sched_setaffinity
+    except (OSError, AttributeError):
+        _sched_setaffinity = None
+
+
+def reset_affinity():
+    """
+    """
+    if _sched_setaffinity is None:
+        return
+
+    cpus = multiprocessing.cpu_count()
+    cpu = random.randint(0, cpus - 1)
+    bits = struct.pack('L', 1 << cpu)
+    _sched_setaffinity(os.getpid(), len(bits), bits)
 
 def setup_gil():
     """
