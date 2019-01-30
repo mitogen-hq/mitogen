@@ -159,10 +159,19 @@ Enhancements
   ``mitogen_get_stack`` action that is automatically added to the action
   plug-in path. See :ref:`mitogen-get-stack` for more information.
 
-* Multiplexer threads are pinned to one CPU, reducing latency and SMP overhead
-  on a hot path exercised for every task. This yielded an 8% speedup in a
-  64-target job composed of many short tasks, and should easily be visible as a
-  runtime improvement in many-host runs.
+* `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_: multiplexer
+  threads are pinned to one CPU, reducing latency and SMP overhead on a hot
+  path exercised for every task. This yielded an 8% speedup in a 64-target job
+  composed of many short tasks, and should easily be visible as a runtime
+  improvement in many-host runs.
+
+* `#260 <https://github.com/dw/mitogen/issues/260>`_,
+  `a18a083c <https://github.com/dw/mitogen/commit/a18a083c>`_: brokers no
+  longer wait for indication of readiness from the OS to transmit data, and
+  instead assume transmission will probably succeed. As this is often true, one
+  IO loop iteration and two poller reconfigurations are avoided for many
+  messages, yielding a significant reduction in interprocess round-trip
+  latency.
 
 * `#415 <https://github.com/dw/mitogen/issues/415>`_,
   `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
