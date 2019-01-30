@@ -1147,15 +1147,16 @@ class Stream(mitogen.core.Stream):
             LOG.debug('%r: PID %d %s', self, pid, wstatus_to_str(status))
             return
 
-        # For processes like sudo we cannot actually send sudo a signal,
-        # because it is setuid, so this is best-effort only.
-        LOG.debug('%r: child process still alive, sending SIGTERM', self)
-        try:
-            os.kill(self.pid, signal.SIGTERM)
-        except OSError:
-            e = sys.exc_info()[1]
-            if e.args[0] != errno.EPERM:
-                raise
+        if not self._router.profiling:
+            # For processes like sudo we cannot actually send sudo a signal,
+            # because it is setuid, so this is best-effort only.
+            LOG.debug('%r: child process still alive, sending SIGTERM', self)
+            try:
+                os.kill(self.pid, signal.SIGTERM)
+            except OSError:
+                e = sys.exc_info()[1]
+                if e.args[0] != errno.EPERM:
+                    raise
 
     def on_disconnect(self, broker):
         super(Stream, self).on_disconnect(broker)
