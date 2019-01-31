@@ -155,13 +155,35 @@ def get_sys_executable():
     return '/usr/bin/python'
 
 
-def get_core_source():
+_core_source_cache = None
+_core_source_lock = threading.Lock()
+
+
+def _get_core_source():
     """
     In non-masters, simply fetch the cached mitogen.core source code via the
     import mechanism. In masters, this function is replaced with a version that
     performs minification directly.
     """
     return inspect.getsource(mitogen.core)
+
+
+def get_core_source():
+    """
+    _get_core_source() is expensive, even with @lru_cache in minify.py, threads
+    can enter it simultaneously causing severe slowdowns.
+    """
+    global _core_source_cache
+    if _core_source_cache is not None:
+        return _core_source_cache
+
+    _core_source_lock.acquire()
+    try:
+        if _core_source_cache is None:
+            _core_source_cache = _get_core_source()
+        return _core_source_cache
+    finally:
+        _core_source_lock.release()
 
 
 def get_default_remote_name():
@@ -430,11 +452,11 @@ def tty_create_child(args):
         `(pid, tty_fd, None)`
     """
     master_fd, slave_fd = openpty()
-    mitogen.core.set_block(slave_fd)
-    disable_echo(master_fd)
-    disable_echo(slave_fd)
-
     try:
+        mitogen.core.set_block(slave_fd)
+        disable_echo(master_fd)
+        disable_echo(slave_fd)
+
         pid = detach_popen(
             args=args,
             stdin=slave_fd,
@@ -467,27 +489,30 @@ def hybrid_tty_create_child(args):
         `(pid, socketpair_fd, tty_fd)`
     """
     master_fd, slave_fd = openpty()
-    parentfp, childfp = create_socketpair()
-
-    mitogen.core.set_block(slave_fd)
-    mitogen.core.set_block(childfp)
-    disable_echo(master_fd)
-    disable_echo(slave_fd)
 
     try:
-        pid = detach_popen(
-            args=args,
-            stdin=childfp,
-            stdout=childfp,
-            stderr=slave_fd,
-            preexec_fn=_acquire_controlling_tty,
-            close_fds=True,
-        )
+        disable_echo(master_fd)
+        disable_echo(slave_fd)
+        mitogen.core.set_block(slave_fd)
+
+        parentfp, childfp = create_socketpair()
+        try:
+            mitogen.core.set_block(childfp)
+            pid = detach_popen(
+                args=args,
+                stdin=childfp,
+                stdout=childfp,
+                stderr=slave_fd,
+                preexec_fn=_acquire_controlling_tty,
+                close_fds=True,
+            )
+        except Exception:
+            parentfp.close()
+            childfp.close()
+            raise
     except Exception:
         os.close(master_fd)
         os.close(slave_fd)
-        parentfp.close()
-        childfp.close()
         raise
 
     os.close(slave_fd)
