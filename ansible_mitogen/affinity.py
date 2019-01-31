@@ -211,7 +211,7 @@ class LinuxPolicy(Policy):
 
         self._set_cpu(self._reserve_shift + (
             (n % max(1, (self._cpu_count() - self._reserve_shift)))
-        )
+        ))
 
     def _set_cpu(self, cpu):
         self._set_affinity(1 << cpu)
