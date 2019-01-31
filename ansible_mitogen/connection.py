@@ -70,6 +70,16 @@ def optional_int(value):
         return None
 
 
+def convert_bool(obj):
+    if isinstance(obj, bool):
+        return obj
+    if str(obj).lower() in ('no', 'false', '0'):
+        return False
+    if str(obj).lower() not in ('yes', 'true', '1'):
+        raise ValueError('expected yes/no/true/false/0/1, got %r' % (obj,))
+    return True
+
+
 def default(value, default):
     """
     Return `default` is `value` is :data:`None`, otherwise return `value`.
@@ -112,7 +122,9 @@ def _connect_ssh(spec):
             'check_host_keys': check_host_keys,
             'hostname': spec.remote_addr(),
             'username': spec.remote_user(),
-            'compression': default(spec.mitogen_ssh_compression(), True),
+            'compression': convert_bool(
+                default(spec.mitogen_ssh_compression(), True)
+            ),
             'password': spec.password(),
             'port': spec.port(),
             'python_path': spec.python_path(),
