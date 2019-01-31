@@ -168,6 +168,10 @@ class LinuxPolicy(Policy):
       more CPUs exist.
     - Children such as SSH may be scheduled on any CPU except 0/1.
 
+    If the machine has less than 4 cores available, the top-level and workers
+    are pinned between CPU 2..N, i.e. no CPU is reserved for the top-level
+    process.
+
     This could at least be improved by having workers pinned to independent
     cores, before reusing the second hyperthread of an existing core.
 
@@ -180,6 +184,14 @@ class LinuxPolicy(Policy):
         self.mem = mmap.mmap(-1, 4096)
         self.state = State.from_buffer(self.mem)
         self.state.lock.init()
+        if self._cpu_count() < 4:
+            self._reserve_mask = 3
+            self._reserve_shift = 2
+            self._reserve_controller = True
+        else:
+            self._reserve_mask = 1
+            self._reserve_shift = 1
+            self._reserve_controller = False
 
     def _set_affinity(self, mask):
         mitogen.parent._preexec_hook = self._clear
@@ -197,16 +209,21 @@ class LinuxPolicy(Policy):
         finally:
             self.state.lock.release()
 
-        self._set_cpu(2 + (n % max(1, (self._cpu_count() - 2))))
+        self._set_cpu(self._reserve_shift + (
+            (n % max(1, (self._cpu_count() - self._reserve_shift)))
+        )
 
     def _set_cpu(self, cpu):
         self._set_affinity(1 << cpu)
 
     def _clear(self):
-        self._set_affinity(0xffffffff & ~3)
+        self._set_affinity(0xffffffff & ~self._reserve_mask)
 
     def assign_controller(self):
-        self._set_cpu(1)
+        if self._reserve_controller:
+            self._set_cpu(1)
+        else:
+            self._balance()
 
     def assign_muxprocess(self):
         self._set_cpu(0)
