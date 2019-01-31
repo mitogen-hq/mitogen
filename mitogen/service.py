@@ -467,7 +467,7 @@ class Pool(object):
             thread = threading.Thread(
                 name=name,
                 target=mitogen.core._profile_hook,
-                args=(name, self._worker_main),
+                args=('mitogen.service.pool', self._worker_main),
             )
             thread.start()
             self._threads.append(thread)
