@@ -70,6 +70,15 @@ def optional_int(value):
         return None
 
 
+def default(value, default):
+    """
+    Return `default` is `value` is :data:`None`, otherwise return `value`.
+    """
+    if value is None:
+        return default
+    return value
+
+
 def _connect_local(spec):
     """
     Return ContextService arguments for a local connection.
@@ -103,6 +112,7 @@ def _connect_ssh(spec):
             'check_host_keys': check_host_keys,
             'hostname': spec.remote_addr(),
             'username': spec.remote_user(),
+            'compression': default(spec.mitogen_ssh_compression(), True),
             'password': spec.password(),
             'port': spec.port(),
             'python_path': spec.python_path(),

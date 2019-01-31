@@ -901,6 +901,10 @@ except connection delegation is supported.
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 * ``mitogen_ssh_debug_level``: integer between `0..3` indicating the SSH client
   debug level. Ansible must also be run with '-vvv' to view the output.
+* ``mitogen_ssh_compression``: :data:`True` to enable SSH compression,
+  otherwise :data:`False`. This will change to off by default in a future
+  release. If you are targetting many hosts on a fast network, please consider
+  disabling SSH compression.
 
 
 Debugging

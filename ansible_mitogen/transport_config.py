@@ -274,6 +274,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_ssh_compression(self):
+        """
+        Whether SSH compression is enabled.
+        """
+
+    @abc.abstractmethod
     def extra_args(self):
         """
         Connection-specific arguments.
@@ -397,6 +403,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_ssh_debug_level(self):
         return self._connection.get_task_var('mitogen_ssh_debug_level')
+
+    def mitogen_ssh_compression(self):
+        return self._connection.get_task_var('mitogen_ssh_compression')
 
     def extra_args(self):
         return self._connection.get_extra_args()
@@ -576,6 +585,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_ssh_debug_level(self):
         return self._host_vars.get('mitogen_ssh_debug_level')
+
+    def mitogen_ssh_compression(self):
+        return self._host_vars.get('mitogen_ssh_compression')
 
     def extra_args(self):
         return []  # TODO
