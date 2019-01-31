@@ -634,7 +634,7 @@ class PushFileService(Service):
                 path=path,
                 context=context
             ).close()
-        else:
+        elif path not in sent:
             child.call_service_async(
                 service_name=self.name(),
                 method_name='store_and_forward',
@@ -642,6 +642,7 @@ class PushFileService(Service):
                 data=self._cache[path],
                 context=context
             ).close()
+            sent.add(path)
 
     @expose(policy=AllowParents())
     @arg_spec({
