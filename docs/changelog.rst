@@ -142,7 +142,7 @@ Enhancements
   `#351 <https://github.com/dw/mitogen/issues/351>`_,
   `#352 <https://github.com/dw/mitogen/issues/352>`_: disconnect propagation
   has improved, allowing Ansible to cancel waits for responses from abruptly
-  disconnected targets. This ensures a task will gracefully fail rather than
+  disconnected targets. This ensures a task will reliably fail rather than
   hang, for example on network failure or EC2 instance maintenance.
 
 * `#369 <https://github.com/dw/mitogen/issues/369>`_,
@@ -159,9 +159,9 @@ Enhancements
   introduced in Ansible 2.7.
 
 * `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
-  issues with connection configuration, Mitogen ships with a
-  ``mitogen_get_stack`` action that is automatically added to the action
-  plug-in path. See :ref:`mitogen-get-stack` for more information.
+  connection configuration problems, Mitogen ships a ``mitogen_get_stack``
+  action that is automatically added to the action plug-in path. See
+  :ref:`mitogen-get-stack` for more information.
 
 * `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_,
   `bd4b04ae <https://github.com/dw/mitogen/commit/bd4b04ae>`_: a CPU affinity
@@ -170,17 +170,20 @@ Enhancements
   job composed of many short tasks, and should easily be visible as a runtime
   improvement in many-host runs.
 
+* `2b44d598 <https://github.com/dw/mitogen/commit/2b44d598>`_: work around a
+  defective caching mechanism by pre-heating it before spawning workers. This
+  saves 40% runtime on a synthetic repetitive task.
+
 * `0979422a <https://github.com/dw/mitogen/commit/0979422a>`_: an expensive
-  module dependency scanning step was redundantly invoked for every task,
+  dependency scanning step was redundantly invoked for every task,
   bottlenecking the connection multiplexer.
 
 * `#260 <https://github.com/dw/mitogen/issues/260>`_,
   `a18a083c <https://github.com/dw/mitogen/commit/a18a083c>`_: brokers no
-  longer wait for indication of readiness from the OS to transmit data, and
-  instead assume transmission will probably succeed. As this is often true, one
-  IO loop iteration and two poller reconfigurations are avoided for many
-  messages, yielding a significant reduction in interprocess round-trip
-  latency.
+  longer wait for readiness indication to transmit, and instead assume
+  transmission will succeed. As this is usually true, one loop iteration and
+  two poller reconfigurations are avoided, yielding a significant reduction in
+  interprocess round-trip latency.
 
 * `#415 <https://github.com/dw/mitogen/issues/415>`_,
   `#491 <https://github.com/dw/mitogen/issues/491>`_,
