@@ -140,7 +140,7 @@ def get_child_modules(path):
     return [to_text(name) for _, name, _ in it]
 
 
-def get_core_source():
+def _get_core_source():
     """
     Master version of parent.get_core_source().
     """
@@ -150,7 +150,7 @@ def get_core_source():
 
 if mitogen.is_master:
     # TODO: find a less surprising way of installing this.
-    mitogen.parent.get_core_source = get_core_source
+    mitogen.parent._get_core_source = _get_core_source
 
 
 LOAD_CONST = dis.opname.index('LOAD_CONST')
@@ -823,13 +823,14 @@ class ModuleResponder(object):
 
     def _send_load_module(self, stream, fullname):
         if fullname not in stream.sent_modules:
-            LOG.debug('_send_load_module(%r, %r)', stream, fullname)
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
                 tup,
                 dst_id=stream.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
+            LOG.debug('%s: sending module %s (%.2f KiB)',
+                      stream.name, fullname, len(msg.data) / 1024.0)
             self._router._async_route(msg)
             stream.sent_modules.add(fullname)
             if tup[2] is not None:

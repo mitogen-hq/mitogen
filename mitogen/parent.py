@@ -155,8 +155,8 @@ def get_sys_executable():
     return '/usr/bin/python'
 
 
-_core_source_cache = None
 _core_source_lock = threading.Lock()
+_core_source_partial = None
 
 
 def _get_core_source():
@@ -168,22 +168,24 @@ def _get_core_source():
     return inspect.getsource(mitogen.core)
 
 
-def get_core_source():
+def get_core_source_partial():
     """
     _get_core_source() is expensive, even with @lru_cache in minify.py, threads
     can enter it simultaneously causing severe slowdowns.
     """
-    global _core_source_cache
-    if _core_source_cache is not None:
-        return _core_source_cache
+    global _core_source_partial
 
-    _core_source_lock.acquire()
-    try:
-        if _core_source_cache is None:
-            _core_source_cache = _get_core_source()
-        return _core_source_cache
-    finally:
-        _core_source_lock.release()
+    if _core_source_partial is None:
+        _core_source_lock.acquire()
+        try:
+            if _core_source_partial is None:
+                _core_source_partial = PartialZlib(
+                    _get_core_source().encode('utf-8')
+                )
+        finally:
+            _core_source_lock.release()
+
+    return _core_source_partial
 
 
 def get_default_remote_name():
@@ -570,6 +572,26 @@ def write_all(fd, s, deadline=None):
                 written += n
     finally:
         poller.close()
+
+
+class PartialZlib(object):
+    def __init__(self, s):
+        self.s = s
+        if sys.version_info > (2, 5):
+            self._compressor = zlib.compressobj(9)
+            self._out = self._compressor.compress(s)
+            self._out += self._compressor.flush(zlib.Z_SYNC_FLUSH)
+        else:
+            self._compressor = None
+
+    def append(self, s):
+        if self._compressor is None:
+            return zlib.compress(self.s + s, 9)
+        else:
+            compressor = self._compressor.copy()
+            out = self._out
+            out += compressor.compress(s)
+            return out + compressor.flush()
 
 
 class IteratingRead(object):
@@ -1300,11 +1322,12 @@ class Stream(mitogen.core.Stream):
         }
 
     def get_preamble(self):
-        source = get_core_source()
-        source += '\nExternalContext(%r).main()\n' % (
-            self.get_econtext_config(),
+        suffix = (
+            '\nExternalContext(%r).main()\n' %\
+            (self.get_econtext_config(),)
         )
-        return zlib.compress(source.encode('utf-8'), 9)
+        partial = get_core_source_partial()
+        return partial.append(suffix.encode('utf-8'))
 
     def start_child(self):
         args = self.get_boot_command()
