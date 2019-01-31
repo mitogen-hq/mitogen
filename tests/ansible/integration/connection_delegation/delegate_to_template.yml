@@ -41,6 +41,8 @@
               'python_path': null,
               'ssh_args': [
                 '-o',
+                'UserKnownHostsFile=/dev/null',
+                '-o',
                 'ForwardAgent=yes',
                 '-o',
                 'ControlMaster=auto',
@@ -64,6 +66,8 @@
               'port': null,
               'python_path': null,
               'ssh_args': [
+                '-o',
+                'UserKnownHostsFile=/dev/null',
                 '-o',
                 'ForwardAgent=yes',
                 '-o',
