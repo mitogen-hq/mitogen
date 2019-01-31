@@ -132,7 +132,8 @@ Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
 This release includes a huge variety of important fixes and new optimizations.
-On a synthetic run with 64 hosts it is over 35% faster than v0.2.3.
+It is 35% faster than 0.2.3 on a synthetic 64 target run that places heavy load
+on the connection multiplexer.
 
 Enhancements
 ^^^^^^^^^^^^
@@ -163,10 +164,10 @@ Enhancements
   plug-in path. See :ref:`mitogen-get-stack` for more information.
 
 * `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_,
-  `bd4b04ae <https://github.com/dw/mitogen/commit/bd4b04ae>`_: multiplexer
-  threads are pinned to one CPU, reducing latency and SMP overhead on a hot
-  path exercised for every task. This yielded a 19% speedup in a 64-target job
-  composed of many short tasks, and should easily be visible as a runtime
+  `bd4b04ae <https://github.com/dw/mitogen/commit/bd4b04ae>`_: a CPU affinity
+  policy was added for Linux controllers, reducing latency and SMP overhead on
+  hot paths exercised for every task. This yielded a 19% speedup in a 64-target
+  job composed of many short tasks, and should easily be visible as a runtime
   improvement in many-host runs.
 
 * `0979422a <https://github.com/dw/mitogen/commit/0979422a>`_: an expensive

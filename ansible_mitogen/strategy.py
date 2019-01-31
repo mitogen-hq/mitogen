@@ -28,6 +28,7 @@
 
 from __future__ import absolute_import
 import os
+import signal
 import threading
 
 import mitogen.core
@@ -102,11 +103,12 @@ def wrap_worker__run(*args, **kwargs):
     While the strategy is active, rewrite connection_loader.get() calls for
     some transports into requests for a compatible Mitogen transport.
     """
+    # Ignore parent's attempts to murder us when we still need to write
+    # profiling output.
     if mitogen.core._profile_hook.__name__ != '_profile_hook':
-        import signal
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
-    ansible_mitogen.affinity.manager.assign()
+    ansible_mitogen.affinity.policy.assign_worker()
     return mitogen.core._profile_hook('WorkerProcess',
         lambda: worker__run(*args, **kwargs)
     )
