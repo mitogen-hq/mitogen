@@ -158,6 +158,16 @@ Enhancements
   ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
   introduced in Ansible 2.7.
 
+* `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
+  supported by the core library and tested automatically, in any parent/child
+  combination of 2.4, 2.6, 2.7 and 3.6 interpreters.
+
+* `#477 <https://github.com/dw/mitogen/issues/477>`_: Ansible 2.3 is fully
+  supported and tested automatically. In combination with the core library
+  Python 2.4 support, this allows Red Hat Enterprise Linux 5 targets to be
+  managed with Mitogen. The ``simplejson`` package need not be installed on
+  such targets, as is usually required by Ansible.
+
 * `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
   connection configuration problems, Mitogen ships a ``mitogen_get_stack``
   action that is automatically added to the action plug-in path. See
@@ -178,6 +188,14 @@ Enhancements
   dependency scanning step was redundantly invoked for every task,
   bottlenecking the connection multiplexer.
 
+* `eaa990a97 <https://github.com/dw/mitogen/commit/eaa990a97>`_: a new
+  ``mitogen_ssh_compression`` variable is supported, allowing Mitogen's default
+  SSH compression to be disabled. SSH compression is a large contributor to CPU
+  usage in many-target runs, and severely limits file transfer. On a `"shell:
+  hostname"` task repeated 500 times, Mitogen requires around 800 bytes per
+  task with compression, rising to 3 KiB without. File transfer throughput
+  rises from ~25MiB/s when enabled to ~200MiB/s when disabled.
+
 * `#260 <https://github.com/dw/mitogen/issues/260>`_,
   `a18a083c <https://github.com/dw/mitogen/commit/a18a083c>`_: brokers no
   longer wait for readiness indication to transmit, and instead assume
@@ -193,16 +211,6 @@ Enhancements
   <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
   <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
   or teardown, yielding a 38% latency reduction for inter-thread communication.
-
-* `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
-  supported by the core library and tested automatically, in any parent/child
-  combination of 2.4, 2.6, 2.7 and 3.6 interpreters.
-
-* `#477 <https://github.com/dw/mitogen/issues/477>`_: Ansible 2.3 is fully
-  supported and tested automatically. In combination with the core library
-  Python 2.4 support, this allows Red Hat Enterprise Linux 5 targets to be
-  managed with Mitogen. The ``simplejson`` package need not be installed on
-  such targets, as is usually required by Ansible.
 
 
 Fixes
@@ -304,6 +312,10 @@ Fixes
 * `599da068 <https://github.com/dw/mitogen/commit/599da068>`_: fix a race
   when starting async tasks, where it was possible for the controller to
   observe no status file on disk before the task had a chance to write one.
+
+* `2c7af9f04 <https://github.com/dw/mitogen/commit/2c7af9f04>`_: Ansible
+  modules were repeatedly re-transferred. The bug was hidden by the previously
+  mandatorily enabled SSH compression.
 
 
 Core Library
