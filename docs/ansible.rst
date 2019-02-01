@@ -702,7 +702,7 @@ Like `docker
 <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_ except
 connection delegation is supported.
 
-* ``ansible_host``: Name of Docker container (default: inventory hostname).
+* ``mitogen_host``: Name of Docker container (default: ansible_host, inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
 
 
@@ -715,7 +715,7 @@ Like `jail
 <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_ except
 connection delegation is supported.
 
-* ``ansible_host``: Name of jail (default: inventory hostname).
+* ``mitogen_host``: Name of jail (default: ansible_host, inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
 
 
@@ -728,7 +728,7 @@ Like `kubectl
 <https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_ except
 connection delegation is supported.
 
-* ``ansible_host``: Name of pod (default: inventory hostname).
+* ``mitogen_host``: Name of pod (default: ansible_host, inventory hostname).
 * ``ansible_user``: Name of user to authenticate to API as.
 
 
@@ -770,7 +770,7 @@ connection delegation is supported, and ``lxc-attach`` is always used rather
 than the LXC Python bindings, as is usual with ``lxc``.
 
 * ``ansible_python_interpreter``
-* ``ansible_host``: Name of LXC container (default: inventory hostname).
+* ``mitogen_host``: Name of LXC container (default: ansible_host, inventory hostname).
 * ``mitogen_lxc_attach_path``: path to ``lxc-attach`` command if not available
     on the system path.
 
@@ -786,7 +786,7 @@ connection delegation is supported. The ``lxc`` command must be available on
 the host machine.
 
 * ``ansible_python_interpreter``
-* ``ansible_host``: Name of LXC container (default: inventory hostname).
+* ``mitogen_host``: Name of LXC container (default: ansible_host, inventory hostname).
 * ``mitogen_lxc_path``: path to ``lxc`` command if not available on the system
   path.
 
@@ -801,7 +801,7 @@ Like the `machinectl third party plugin
 connection delegation is supported. This is a light wrapper around the
 :ref:`setns <setns>` method.
 
-* ``ansible_host``: Name of Docker container (default: inventory hostname).
+* ``mitogen_host``: Name of Docker container (default: ansible_host, inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
@@ -822,8 +822,8 @@ A utility program must be installed to discover the PID of the container's root
 process.
 
 * ``mitogen_kind``: one of ``docker``, ``lxc``, ``lxd`` or ``machinectl``.
-* ``ansible_host``: Name of container as it is known to the corresponding tool
-  (default: inventory hostname).
+* ``mitogen_host``: Name of container as it is known to the corresponding tool
+  (default: ansible_host, inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_docker_path``: path to Docker if not available on the system path.
 * ``mitogen_lxc_path``: path to LXD's ``lxc`` command if not available as
@@ -892,7 +892,7 @@ Like `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
 except connection delegation is supported.
 
 * ``ansible_ssh_timeout``
-* ``ansible_host``, ``ansible_ssh_host``
+* ``mitogen_host``, ``ansible_host``, ``ansible_ssh_host``
 * ``ansible_user``, ``ansible_ssh_user``
 * ``ansible_port``, ``ssh_port``
 * ``ansible_ssh_executable``, ``ssh_executable``
@@ -1146,7 +1146,7 @@ on each process whose name begins with ``mitogen:``::
     [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
     ^C
 
-    $ 
+    $
 
 This shows one thread waiting on IO (``poll``) and two more waiting on the same
 lock. It is taken from a real example of a deadlock due to a forking bug.

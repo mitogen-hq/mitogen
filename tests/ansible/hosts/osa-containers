@@ -4,6 +4,6 @@
 osa-host-machine ansible_host=172.29.236.100
 
 [osa-all-containers]
-osa-container-1 container_tech=lxc
-osa-container-2 container_tech=lxc
-osa-container-3 container_tech=lxc
+osa-container-1 ansible_host=10.0.0.1 mitogen_host=osa-container-1 container_tech=lxc
+osa-container-2 ansible_host=10.0.0.2 mitogen_host=osa-container-2 container_tech=lxc
+osa-container-3 ansible_host=10.0.0.3 mitogen_host=osa-container-3 container_tech=lxc

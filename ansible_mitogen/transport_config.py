@@ -299,7 +299,10 @@ class PlayContextSpec(Spec):
         return self._inventory_name
 
     def remote_addr(self):
-        return self._play_context.remote_addr
+        return (
+            self._connection.get_task_var('mitogen_host') or
+            self._play_context.remote_addr
+        )
 
     def remote_user(self):
         return self._play_context.remote_user
@@ -437,6 +440,7 @@ class MitogenViaSpec(Spec):
 
     def remote_addr(self):
         return (
+            self._host_vars.get('mitogen_host') or
             self._host_vars.get('ansible_host') or
             self._inventory_name
         )
