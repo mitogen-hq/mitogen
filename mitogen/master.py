@@ -774,7 +774,7 @@ class ModuleResponder(object):
     def _make_negative_response(self, fullname):
         return (fullname, None, None, None, ())
 
-    minify_safe_re = re.compile(r'\s+#\s*!mitogen:\s*minify_safe')
+    minify_safe_re = re.compile(b(r'\s+#\s*!mitogen:\s*minify_safe'))
 
     def _build_tuple(self, fullname):
         if fullname in self._cache:
