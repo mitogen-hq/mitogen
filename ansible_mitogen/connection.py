@@ -123,7 +123,10 @@ def _connect_docker(spec):
         'method': 'docker',
         'kwargs': {
             'username': spec.remote_user(),
-            'container': spec.remote_addr(),
+            'container': (
+                spec.mitogen_container_name() or
+                spec.remote_addr()
+            ),
             'python_path': spec.python_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
@@ -137,7 +140,10 @@ def _connect_kubectl(spec):
     return {
         'method': 'kubectl',
         'kwargs': {
-            'pod': spec.remote_addr(),
+            'pod': (
+                spec.mitogen_container_name() or
+                spec.remote_addr()
+            ),
             'python_path': spec.python_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
             'kubectl_path': spec.mitogen_kubectl_path(),
@@ -154,7 +160,10 @@ def _connect_jail(spec):
         'method': 'jail',
         'kwargs': {
             'username': spec.remote_user(),
-            'container': spec.remote_addr(),
+            'container': (
+                spec.mitogen_container_name() or
+                spec.remote_addr()
+            ),
             'python_path': spec.python_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
@@ -168,7 +177,10 @@ def _connect_lxc(spec):
     return {
         'method': 'lxc',
         'kwargs': {
-            'container': spec.remote_addr(),
+            'container': (
+                spec.mitogen_container_name() or
+                spec.remote_addr()
+            ),
             'python_path': spec.python_path(),
             'lxc_attach_path': spec.mitogen_lxc_attach_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
@@ -183,7 +195,10 @@ def _connect_lxd(spec):
     return {
         'method': 'lxd',
         'kwargs': {
-            'container': spec.remote_addr(),
+            'container': (
+                spec.mitogen_container_name() or
+                spec.remote_addr()
+            ),
             'python_path': spec.python_path(),
             'lxc_path': spec.mitogen_lxc_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
@@ -205,7 +220,10 @@ def _connect_setns(spec, kind=None):
     return {
         'method': 'setns',
         'kwargs': {
-            'container': spec.remote_addr(),
+            'container': (
+                spec.mitogen_container_name() or
+                spec.remote_addr()
+            ),
             'username': spec.remote_user(),
             'python_path': spec.python_path(),
             'kind': kind or spec.mitogen_kind(),
