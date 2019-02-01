@@ -82,6 +82,10 @@ def get_or_create_pool(size=None, router=None):
         if _pool_pid != os.getpid():
             _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
                          overwrite=True)
+            # In case of Broker shutdown crash, Pool can cause 'zombie'
+            # processes.
+            mitogen.core.listen(router.broker, 'shutdown',
+                                lambda: _pool.stop(join=False))
             _pool_pid = os.getpid()
         return _pool
     finally:
