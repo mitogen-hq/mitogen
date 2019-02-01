@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 :mod:`mitogen.fakessh` is a stream implementation that starts a subprocess with
 its environment modified such that ``PATH`` searches for `ssh` return a Mitogen

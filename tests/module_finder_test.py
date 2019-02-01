@@ -220,9 +220,6 @@ class FindRelatedTest(testlib.TestCase):
         u'mitogen.parent',
     ])
 
-    if sys.version_info < (3, 2):
-        SIMPLE_EXPECT.add('mitogen.compat')
-        SIMPLE_EXPECT.add('mitogen.compat.functools')
     if sys.version_info < (2, 7):
         SIMPLE_EXPECT.add('mitogen.compat.tokenize')
     if sys.version_info < (2, 6):

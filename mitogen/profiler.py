@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """mitogen.profiler
     Record and report cProfile statistics from a run. Creates one aggregated
     output file, one aggregate containing only workers, and one for the
