@@ -575,6 +575,19 @@ def write_all(fd, s, deadline=None):
 
 
 class PartialZlib(object):
+    """
+    Because the mitogen.core source has a line appended to it during bootstrap,
+    it must be recompressed for each connection. This is not a problem for a
+    small number of connections, but it amounts to 30 seconds CPU time by the
+    time 500 targets are in use.
+
+    For that reason, build a compressor containing mitogen.core and flush as
+    much of it as possible into an initial buffer. Then to append the custom
+    line, clone the compressor and compress just that line.
+
+    A full compression costs ~6ms on a modern machine, this method costs ~35
+    usec.
+    """
     def __init__(self, s):
         self.s = s
         if sys.version_info > (2, 5):
@@ -585,6 +598,10 @@ class PartialZlib(object):
             self._compressor = None
 
     def append(self, s):
+        """
+        Append the bytestring `s` to the compressor state and return the
+        final compressed output.
+        """
         if self._compressor is None:
             return zlib.compress(self.s + s, 9)
         else:
