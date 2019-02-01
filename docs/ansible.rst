@@ -263,20 +263,22 @@ command line, or as host and group variables.
     # Web servers in DC1 are reachable via bastion.dc1
     [dc1]
     web1.dc1
-    web2.dc1
+    web2.dc1 ansible_python_interpreter=/opt/app-venv1/bin/python2
     web3.dc1
 
     [dc1:vars]
     mitogen_via = bastion.dc1
+    mitogen_python_interpreter = /usr/bin/python
 
     # Web servers in DC2 are reachable via bastion.dc2
     [dc2]
-    web1.dc2
+    web1.dc2 ansible_python_interpreter=/opt/app-venv2/bin/python3
     web2.dc2
     web3.dc2
 
     [dc2:vars]
     mitogen_via = bastion.dc2
+    mitogen_python_interpreter = /usr/bin/python
 
     # Prod bastions are reachable via a magic account on a
     # corporate network gateway.
@@ -286,6 +288,10 @@ command line, or as host and group variables.
 
     [corp-gateway]
     corp-gateway.internal
+
+In the even the the python interpreter may change at the task level it may be
+useful to set the option ``mitogen_python_interpreter`` which defaults to
+``ansible_python_interpreter``.
 
 
 File Transfer
@@ -1146,7 +1152,7 @@ on each process whose name begins with ``mitogen:``::
     [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
     ^C
 
-    $ 
+    $
 
 This shows one thread waiting on IO (``poll``) and two more waiting on the same
 lock. It is taken from a real example of a deadlock due to a forking bug.
