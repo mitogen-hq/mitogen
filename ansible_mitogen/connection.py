@@ -76,7 +76,9 @@ def convert_bool(obj):
     if str(obj).lower() in ('no', 'false', '0'):
         return False
     if str(obj).lower() not in ('yes', 'true', '1'):
-        raise ValueError('expected yes/no/true/false/0/1, got %r' % (obj,))
+        raise ansible.errors.AnsibleConnectionFailure(
+            'expected yes/no/true/false/0/1, got %r' % (obj,)
+        )
     return True
 
 
