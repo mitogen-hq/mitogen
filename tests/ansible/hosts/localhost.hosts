@@ -8,3 +8,7 @@ localhost
 # This is only used for manual testing.
 [localhost-x10]
 localhost-[01:10]
+
+# This is only used for manual testing.
+[localhost-x100]
+localhost-[001:100]
