@@ -804,7 +804,7 @@ class ModuleResponder(object):
         if self.minify_safe_re.search(source):
             # If the module contains a magic marker, it's safe to minify.
             t0 = time.time()
-            source = mitogen.minify.minimize_source(source)
+            source = mitogen.minify.minimize_source(source).encode('utf-8')
             self.minify_secs += time.time() - t0
 
         if is_pkg:
