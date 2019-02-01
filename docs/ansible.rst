@@ -179,7 +179,7 @@ Noteworthy Differences
   practice, and light web searches failed to reveal many examples of them.
 
 * Ansible permits up to ``forks`` connections to be setup in parallel, whereas
-  in Mitogen this is handled by a fixed-size thread pool. Up to 16 connections
+  in Mitogen this is handled by a fixed-size thread pool. Up to 32 connections
   may be established in parallel by default, this can be modified by setting
   the ``MITOGEN_POOL_SIZE`` environment variable.
 

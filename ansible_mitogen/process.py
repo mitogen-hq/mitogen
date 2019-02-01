@@ -274,7 +274,7 @@ class MuxProcess(object):
                 ansible_mitogen.services.ContextService(self.router),
                 ansible_mitogen.services.ModuleDepService(self.router),
             ],
-            size=getenv_int('MITOGEN_POOL_SIZE', default=16),
+            size=getenv_int('MITOGEN_POOL_SIZE', default=32),
         )
         LOG.debug('Service pool configured: size=%d', self.pool.size)
 
