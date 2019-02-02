@@ -74,8 +74,8 @@ def _get_python_path(spec, templar, reverse=False):
     Return the python path as a templated `list` when it has a value.
 
     While the `ansible_python_interpreter` variable, can be a list or string,
-    this method will always return the python path as a list which ensures the
-    rendered mitogen value is type safe.
+    this method will always return the python path as a list, when it has any value.
+    This ensures the rendered mitogen value is type safe.
 
     :param object spec:
         Connection specification object.
@@ -98,12 +98,13 @@ def _get_python_path(spec, templar, reverse=False):
             spec.python_path()
         )
 
-    python_path = templar.template(
-        python_path,
-        preserve_trailing_newlines=True,
-        escape_backslashes=False,
-        convert_data=False
-    )
+    if templar:
+        python_path = templar.template(
+            python_path,
+            preserve_trailing_newlines=True,
+            escape_backslashes=False,
+            convert_data=False
+        )
 
     if not python_path:
         return list()
