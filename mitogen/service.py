@@ -715,7 +715,7 @@ class PushFileService(Service):
         if path not in self._cache:
             LOG.error('%r: %r is not in local cache', self, path)
             return
-        self._forward(path, context)
+        self._forward(context, path)
 
 
 class FileService(Service):
