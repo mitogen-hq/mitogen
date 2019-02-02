@@ -69,19 +69,64 @@ def optional_int(value):
         return None
 
 
-def _connect_local(spec):
+def _get_python_path(spec, templar, reverse=False):
+    """
+    Return the python path as a templated `list` when it has a value.
+
+    While the `ansible_python_interpreter` variable, can be a list or string,
+    this method will always return the python path as a list, when it has any value.
+    This ensures the rendered mitogen value is type safe.
+
+    :param object spec:
+        Connection specification object.
+    :param object templar:
+        Ansible template engine opject.
+    :param bool reverse:
+        Reverse the sort order of mitogen python interpreter and python path.
+    :returns:
+        list `[python_path]`.
+
+    """
+    if reverse:
+        python_path =(
+            spec.python_path() or
+            spec.mitogen_python_interpreter()
+        )
+    else:
+        python_path = (
+            spec.mitogen_python_interpreter() or
+            spec.python_path()
+        )
+
+    if templar:
+        python_path = templar.template(
+            python_path,
+            preserve_trailing_newlines=True,
+            escape_backslashes=False,
+            convert_data=False
+        )
+
+    if not python_path:
+        return list()
+    elif isinstance(python_path,  list):
+        return python_path
+    else:
+        return python_path.split()
+
+
+def _connect_local(spec, templar=None):
     """
     Return ContextService arguments for a local connection.
     """
     return {
         'method': 'local',
         'kwargs': {
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar)
         }
     }
 
 
-def _connect_ssh(spec):
+def _connect_ssh(spec, templar=None):
     """
     Return ContextService arguments for an SSH connection.
     """
@@ -104,7 +149,7 @@ def _connect_ssh(spec):
             'username': spec.remote_user(),
             'password': spec.password(),
             'port': spec.port(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'identity_file': private_key_file,
             'identities_only': False,
             'ssh_path': spec.ssh_executable(),
@@ -115,7 +160,7 @@ def _connect_ssh(spec):
     }
 
 
-def _connect_docker(spec):
+def _connect_docker(spec, templar=None):
     """
     Return ContextService arguments for a Docker connection.
     """
@@ -127,13 +172,17 @@ def _connect_docker(spec):
                 spec.mitogen_container_name() or
                 spec.remote_addr()
             ),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(
+                spec=spec,
+                templar=templar,
+                reverse=True
+            ),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
 
-def _connect_kubectl(spec):
+def _connect_kubectl(spec, templar=None):
     """
     Return ContextService arguments for a Kubernetes connection.
     """
@@ -144,7 +193,11 @@ def _connect_kubectl(spec):
                 spec.mitogen_container_name() or
                 spec.remote_addr()
             ),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(
+                spec=spec,
+                templar=templar,
+                reverse=True
+            ),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
             'kubectl_path': spec.mitogen_kubectl_path(),
             'kubectl_args': spec.extra_args(),
@@ -152,7 +205,7 @@ def _connect_kubectl(spec):
     }
 
 
-def _connect_jail(spec):
+def _connect_jail(spec, templar=None):
     """
     Return ContextService arguments for a FreeBSD jail connection.
     """
@@ -164,13 +217,17 @@ def _connect_jail(spec):
                 spec.mitogen_container_name() or
                 spec.remote_addr()
             ),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(
+                spec=spec,
+                templar=templar,
+                reverse=True
+            ),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
 
-def _connect_lxc(spec):
+def _connect_lxc(spec, templar=None):
     """
     Return ContextService arguments for an LXC Classic container connection.
     """
@@ -181,14 +238,18 @@ def _connect_lxc(spec):
                 spec.mitogen_container_name() or
                 spec.remote_addr()
             ),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(
+                spec=spec,
+                templar=templar,
+                reverse=True
+            ),
             'lxc_attach_path': spec.mitogen_lxc_attach_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
 
-def _connect_lxd(spec):
+def _connect_lxd(spec, templar=None):
     """
     Return ContextService arguments for an LXD container connection.
     """
@@ -199,21 +260,25 @@ def _connect_lxd(spec):
                 spec.mitogen_container_name() or
                 spec.remote_addr()
             ),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(
+                spec=spec,
+                templar=templar,
+                reverse=True
+            ),
             'lxc_path': spec.mitogen_lxc_path(),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
         }
     }
 
 
-def _connect_machinectl(spec):
+def _connect_machinectl(spec, templar=None):
     """
     Return ContextService arguments for a machinectl connection.
     """
     return _connect_setns(spec, kind='machinectl')
 
 
-def _connect_setns(spec, kind=None):
+def _connect_setns(spec, kind=None, templar=None):
     """
     Return ContextService arguments for a mitogen_setns connection.
     """
@@ -225,7 +290,11 @@ def _connect_setns(spec, kind=None):
                 spec.remote_addr()
             ),
             'username': spec.remote_user(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(
+                spec=spec,
+                templar=templar,
+                reverse=True
+            ),
             'kind': kind or spec.mitogen_kind(),
             'docker_path': spec.mitogen_docker_path(),
             'lxc_path': spec.mitogen_lxc_path(),
@@ -235,7 +304,7 @@ def _connect_setns(spec, kind=None):
     }
 
 
-def _connect_su(spec):
+def _connect_su(spec, templar=None):
     """
     Return ContextService arguments for su as a become method.
     """
@@ -245,14 +314,14 @@ def _connect_su(spec):
         'kwargs': {
             'username': spec.become_user(),
             'password': spec.become_pass(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'su_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
         }
     }
 
 
-def _connect_sudo(spec):
+def _connect_sudo(spec, templar=None):
     """
     Return ContextService arguments for sudo as a become method.
     """
@@ -262,7 +331,7 @@ def _connect_sudo(spec):
         'kwargs': {
             'username': spec.become_user(),
             'password': spec.become_pass(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'sudo_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
             'sudo_args': spec.sudo_args(),
@@ -270,7 +339,7 @@ def _connect_sudo(spec):
     }
 
 
-def _connect_doas(spec):
+def _connect_doas(spec, templar=None):
     """
     Return ContextService arguments for doas as a become method.
     """
@@ -280,14 +349,14 @@ def _connect_doas(spec):
         'kwargs': {
             'username': spec.become_user(),
             'password': spec.become_pass(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'doas_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
         }
     }
 
 
-def _connect_mitogen_su(spec):
+def _connect_mitogen_su(spec, templar=None):
     """
     Return ContextService arguments for su as a first class connection.
     """
@@ -296,14 +365,14 @@ def _connect_mitogen_su(spec):
         'kwargs': {
             'username': spec.remote_user(),
             'password': spec.password(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'su_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
         }
     }
 
 
-def _connect_mitogen_sudo(spec):
+def _connect_mitogen_sudo(spec, templar=None):
     """
     Return ContextService arguments for sudo as a first class connection.
     """
@@ -312,7 +381,7 @@ def _connect_mitogen_sudo(spec):
         'kwargs': {
             'username': spec.remote_user(),
             'password': spec.password(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'sudo_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
             'sudo_args': spec.sudo_args(),
@@ -320,7 +389,7 @@ def _connect_mitogen_sudo(spec):
     }
 
 
-def _connect_mitogen_doas(spec):
+def _connect_mitogen_doas(spec, templar=None):
     """
     Return ContextService arguments for doas as a first class connection.
     """
@@ -329,7 +398,7 @@ def _connect_mitogen_doas(spec):
         'kwargs': {
             'username': spec.remote_user(),
             'password': spec.password(),
-            'python_path': spec.python_path(),
+            'python_path': _get_python_path(spec=spec, templar=templar),
             'doas_path': spec.become_exe(),
             'connect_timeout': spec.timeout(),
         }
@@ -460,6 +529,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: matching vanilla Ansible behaviour.
     loader_basedir = None
 
+    templar = None
+
     def __init__(self, play_context, new_stdin, **kwargs):
         assert ansible_mitogen.process.MuxProcess.unix_listener_path, (
             'Mitogen connection types may only be instantiated '
@@ -564,7 +635,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         to the connection described by `spec`, and any connection referenced by
         its `mitogen_via` or `become` fields. Each element is a dict of the
         form::
-
             {
                 # Optional. If present and `True`, this hop is elegible for
                 # interpreter recycling.
@@ -576,7 +646,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                     "hostname": "..."
                 }
             }
-
         :param ansible_mitogen.transport_config.Spec spec:
             Connection specification.
         :param tuple stack:
@@ -604,11 +673,21 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 seen_names=seen_names + (spec.inventory_name(),),
             )
 
-        stack += (CONNECTION_METHOD[spec.transport()](spec),)
+        stack += (
+            CONNECTION_METHOD[spec.transport()](
+                spec, templar=self.templar
+            ),
+        )
         if spec.become() and ((spec.become_user() != spec.remote_user()) or
                               C.BECOME_ALLOW_SAME_USER):
-            stack += (CONNECTION_METHOD[spec.become_method()](spec),)
+            stack += (
+                CONNECTION_METHOD[spec.become_method()](
+                    spec,
+                    templar=self.templar
+                ),
+            )
 
+        LOG.warning('BUILT STACK: {}'.format(stack))
         return stack
 
     def _connect_broker(self):
@@ -727,8 +806,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             return
 
         self._connect_broker()
-        stack = self._build_stack()
-        self._connect_stack(stack)
+        self._connect_stack(
+            self._build_stack()
+        )
 
     def _mitogen_reset(self, mode):
         """

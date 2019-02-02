@@ -102,6 +102,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if not isinstance(connection, ansible_mitogen.connection.Connection):
             _, self.__class__ = type(self).__bases__
 
+        connection.templar = self._templar
+
     def run(self, tmp=None, task_vars=None):
         """
         Override run() to notify Connection of task-specific data, so it has a
@@ -110,7 +112,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._connection.on_action_run(
             task_vars=task_vars,
             delegate_to_hostname=self._task.delegate_to,
-            loader_basedir=self._loader.get_basedir(),
+            loader_basedir=self._loader.get_basedir()
         )
         return super(ActionModuleMixin, self).run(tmp, task_vars)
 
