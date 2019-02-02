@@ -1168,35 +1168,96 @@ FreeNode IRC network.
 Sample Profiles
 ---------------
 
-Local VM connection
+The summaries below may be reproduced using data and scripts maintained in the
+`pcaps branch <https://github.com/dw/mitogen/tree/pcaps/>`_. Traces were
+recorded using Ansible 2.5.14.
+
+
+Trivial Loop: Local Host
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This demonstrates Mitogen vs. SSH pipelining to the local machine running
+`bench/loop-100-items.yml
+<https://github.com/dw/mitogen/blob/master/tests/ansible/bench/loop-100-items.yml>`_,
+executing a simple command 100 times. Most Ansible controller overhead is
+isolated, characterizing just module executor and connection layer performance.
+Mitogen requires **63x less bandwidth, 5.9x less time, and 1.5x less CPU**.
+
+.. image:: images/ansible/pcaps/loop-100-items-local.svg
+
+Unlike in SSH pipelining where payloads are sent as a single compressed block,
+by default Mitogen enables SSH compression for its uncompressed RPC data. In
+many-host scenarios it may be desirable to disable compression. This has
+negligible impact on footprint, since program code is separately compressed and
+sent only once. Compression also benefits SSH pipelining, but the presence of
+large precompressed per-task payloads may present a more significant CPU burden
+during many-host runs.
+
+
+File Transfer: UK to France
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`This playbook
+<https://github.com/dw/mitogen/blob/master/tests/ansible/regression/issue_140__thread_pileup.yml>`_
+was used to compare file transfer performance over a ~26 ms link. It uses the
+``with_filetree`` loop syntax to copy a directory of 1,000 0-byte files to the
+target.
+
+.. raw:: html
+
+    <style>
+        .nojunk td,
+        .nojunk th { padding: 4px; font-size: 90%; text-align: right !important; }
+
+        table.docutils col {
+            width: auto !important;
+        }
+    </style>
+
+.. csv-table::
+    :header: , Secs, CPU Secs, Sent, Received, Roundtrips
+    :class: nojunk
+    :align: right
+
+    Mitogen, 98.54, 43.04, "815 KiB", "447 KiB", 3.79
+    SSH Pipelining, "1,483.54", 329.37, "99,539 KiB", "6,870 KiB", 57.01
+
+*Roundtrips* represents the approximate number of network roundtrips required
+to describe the runtime that was consumed. Due to Mitogen's built-in file
+transfer support, continuous reinitialization of an external `scp`/`sftp`
+client is avoided, permitting large ``with_filetree`` copies to become
+practical without any special casing within the playbook or the Ansible
+implementation.
+
+
+DebOps: UK to India
 ~~~~~~~~~~~~~~~~~~~
 
-This demonstrates Mitogen vs. connection pipelining to a local VM executing
-``bench/loop-100-items.yml``, which simply executes ``hostname`` 100 times.
-Mitogen requires **43x less bandwidth and 6.5x less time**.
+This is an all-green run of 246 tasks from the `DebOps
+<https://docs.debops.org/en/master/>`_ 0.7.2 `common.yml
+<https://github.com/debops/debops-playbooks/blob/master/playbooks/common.yml>`_
+playbook over a ~370 ms link between the UK and India. The playbook touches a
+wide variety of modules, many featuring unavoidable waits for slow computation
+on the target.
 
-.. image:: images/ansible/run_hostname_100_times_mito.svg
-.. image:: images/ansible/run_hostname_100_times_plain.svg
+More tasks of a wider variety are featured than previously, placing strain on
+Mitogen's module loading and in-memory caching. By running over a long-distance
+connection, it highlights behaviour of the connection layer in the presence of
+high latency.
 
+Mitogen requires **14.5x less bandwidth, 4x less time, and 2.3x less CPU**.
 
-Kathmandu to Paris
-~~~~~~~~~~~~~~~~~~
-
-This is a full Django application playbook over a ~180ms link between Kathmandu
-and Paris. Aside from large pauses where the host performs useful work, the
-high latency of this link means Mitogen only manages a 1.7x speedup.
-
-Many early roundtrips are due to inefficiencies in Mitogen's importer that will
-be fixed over time, however the majority, comprising at least 10 seconds, are
-due to idling while the host's previous result and next command are in-flight
-on the network.
-
-The initial extension lays groundwork for exciting structural changes to the
-execution model: a future version will tackle latency head-on by delegating
-some control flow to the target host, melding the performance and scalability
-benefits of pull-based operation with the management simplicity of push-based
-operation.
-
-.. image:: images/ansible/costapp.png
+.. image:: images/ansible/pcaps/debops-uk-india.svg
 
 
+Django App: UK to India
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This short playbook features only 23 steps executed over the same ~370 ms link
+as previously, with many steps running unavoidably expensive tasks like
+building C++ code, and compiling static web site assets.
+
+Despite the small margin for optimization, Mitogen still manages **6.2x less
+bandwidth, 1.8x less time, and 2x less CPU**.
+
+.. image:: images/ansible/pcaps/costapp-uk-india.svg
