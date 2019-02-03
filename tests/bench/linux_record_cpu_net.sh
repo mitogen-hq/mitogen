@@ -6,7 +6,19 @@
 #
 
 [ ! "$1" ] && exit 1
-sudo tcpdump -w $1-out.cap -s 0 host k1.botanicus.net &
-date +%s.%N > $1-task-clock.csv
-perf stat -x, -I 25 -e task-clock --append -o $1-task-clock.csv ansible-playbook run_hostname_100_times.yml
+name="$1"; shift
+
+
+sudo tcpdump -i any -w $name-net.pcap -s 66 port 22 or port 9122 &
+sleep 0.5
+
+perf stat -x, -I 100 \
+    -e branches \
+    -e instructions \
+    -e task-clock \
+    -e context-switches \
+    -e page-faults \
+    -e cpu-migrations \
+    -o $name-perf.csv "$@"
+pkill -f ssh:; sleep 0.1
 sudo pkill -f tcpdump

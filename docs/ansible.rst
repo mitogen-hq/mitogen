@@ -1181,7 +1181,7 @@ This demonstrates Mitogen vs. SSH pipelining to the local machine running
 <https://github.com/dw/mitogen/blob/master/tests/ansible/bench/loop-100-items.yml>`_,
 executing a simple command 100 times. Most Ansible controller overhead is
 isolated, characterizing just module executor and connection layer performance.
-Mitogen requires **63x less bandwidth, 5.9x less time, and 1.5x less CPU**.
+Mitogen requires **63x less bandwidth and 5.9x less time**.
 
 .. image:: images/ansible/pcaps/loop-100-items-local.svg
 
@@ -1192,6 +1192,14 @@ negligible impact on footprint, since program code is separately compressed and
 sent only once. Compression also benefits SSH pipelining, but the presence of
 large precompressed per-task payloads may present a more significant CPU burden
 during many-host runs.
+
+.. image:: images/ansible/pcaps/loop-100-items-local-detail.svg
+
+In a detailed trace, improved interaction with the host machine is visible. In
+this playbook because no forks were required to start SSH clients from the
+worker process executing the loop, the worker's memory was never marked
+read-only, thus avoiding a major hidden performance problem - the page fault
+rate is more than halved.
 
 
 File Transfer: UK to France
@@ -1222,12 +1230,11 @@ target.
     Mitogen, 98.54, 43.04, "815 KiB", "447 KiB", 3.79
     SSH Pipelining, "1,483.54", 329.37, "99,539 KiB", "6,870 KiB", 57.01
 
-*Roundtrips* represents the approximate number of network roundtrips required
-to describe the runtime that was consumed. Due to Mitogen's built-in file
-transfer support, continuous reinitialization of an external `scp`/`sftp`
-client is avoided, permitting large ``with_filetree`` copies to become
-practical without any special casing within the playbook or the Ansible
-implementation.
+*Roundtrips* is the approximate number of network roundtrips required to
+describe the runtime that was consumed. Due to Mitogen's built-in file transfer
+support, continuous reinitialization of an external `scp`/`sftp` client is
+avoided, permitting large ``with_filetree`` copies to become practical without
+any special casing within the playbook or the Ansible implementation.
 
 
 DebOps: UK to India
@@ -1245,7 +1252,7 @@ Mitogen's module loading and in-memory caching. By running over a long-distance
 connection, it highlights behaviour of the connection layer in the presence of
 high latency.
 
-Mitogen requires **14.5x less bandwidth, 4x less time, and 2.3x less CPU**.
+Mitogen requires **14.5x less bandwidth and 4x less time**.
 
 .. image:: images/ansible/pcaps/debops-uk-india.svg
 
@@ -1258,6 +1265,6 @@ as previously, with many steps running unavoidably expensive tasks like
 building C++ code, and compiling static web site assets.
 
 Despite the small margin for optimization, Mitogen still manages **6.2x less
-bandwidth, 1.8x less time, and 2x less CPU**.
+bandwidth and 1.8x less time**.
 
 .. image:: images/ansible/pcaps/costapp-uk-india.svg
