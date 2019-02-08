@@ -36,7 +36,6 @@ bootstrap implementation sent to every new slave context.
 
 import binascii
 import collections
-import cProfile
 import encodings.latin_1
 import errno
 import fcntl
@@ -63,6 +62,11 @@ import imp
 
 # Absolute imports for <2.5.
 select = __import__('select')
+
+try:
+    import cProfile
+except ImportError:
+    cProfile = None
 
 try:
     import thread
