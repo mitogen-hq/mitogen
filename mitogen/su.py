@@ -66,6 +66,7 @@ class Stream(mitogen.parent.Stream):
         b('su: sorry'),                    # BSD
         b('su: authentication failure'),   # Linux
         b('su: incorrect password'),       # CentOS 6
+        b('authentication is denied'),     # AIX
     )
 
     def construct(self, username=None, password=None, su_path=None,
