@@ -143,7 +143,7 @@ def log_to_file(path=None, io=False, level='INFO'):
 
 def run_with_router(func, *args, **kwargs):
     """
-    Arrange for `func(router, \*args, \**kwargs)` to run with a temporary
+    Arrange for `func(router, *args, **kwargs)` to run with a temporary
     :class:`mitogen.master.Router`, ensuring the Router and Broker are
     correctly shut down during normal or exceptional return.
 

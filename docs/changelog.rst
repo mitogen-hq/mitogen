@@ -438,6 +438,9 @@ Core Library
 * `#523 <https://github.com/dw/mitogen/issues/523>` : the test suite didn't
   generate a code coverage report if any test failed.
 
+* `#524 <https://github.com/dw/mitogen/issues/524>` : Python 3.6+ emitted a
+  :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
+
 
 Thanks!
 ~~~~~~~
