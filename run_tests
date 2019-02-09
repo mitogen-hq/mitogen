@@ -1,11 +1,27 @@
 #!/usr/bin/env bash
 
+# From https://unix.stackexchange.com/a/432145
+# Return the maximum of one or more integer arguments
+max() {
+    local max number
+
+    max="$1"
+
+    for number in "${@:2}"; do
+        if ((number > max)); then
+        max="$number"
+        fi
+    done
+
+    printf '%d\n' "$max"
+}
+
 echo '----- ulimits -----'
 ulimit -a
 echo '-------------------'
 echo
 
-set -o errexit
+# Don't use errexit, so coverage report is still generated when tests fail
 set -o pipefail
 
 if [ ! "$UNIT2" ]; then
@@ -27,6 +43,7 @@ fi
             --pattern '*_test.py' \
             "$@"
     fi
+    MITOGEN_TEST_STATUS=$?
 }
 
 # Second run appends. This is since 'discover' treats subdirs as packages and
@@ -47,7 +64,11 @@ fi
             --pattern '*_test.py' \
             "$@"
     fi
+    ANSIBLE_TEST_STATUS=$?
 }
 
 [ "$NOCOVERAGE" ] || coverage html
 [ "$NOCOVERAGE" ] || echo coverage report is at "file://$(pwd)/htmlcov/index.html"
+
+# Exit with a non-zero status if any test run did so
+exit "$(max $MITOGEN_TEST_STATUS $ANSIBLE_TEST_STATUS)"

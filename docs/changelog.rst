@@ -435,6 +435,9 @@ Core Library
   meant an extra roundtrip and ~20KiB of data was wasted for any context that
   imported :mod:`mitogen.parent`.
 
+* `#523 <https://github.com/dw/mitogen/issues/523>` : the test suite didn't
+  generate a code coverage report if any test failed.
+
 
 Thanks!
 ~~~~~~~
