@@ -1,6 +1,7 @@
 
-import tempfile
+import multiprocessing
 import os
+import tempfile
 
 import mock
 import unittest2
@@ -11,8 +12,11 @@ import ansible_mitogen.affinity
 
 
 @unittest2.skipIf(
-    reason='Linux only',
-    condition=os.uname()[0] != 'Linux'
+    reason='Linux/SMP only',
+    condition=(not (
+        os.uname()[0] == 'Linux' and
+        multiprocessing.cpu_count() >= 4
+    ))
 )
 class LinuxPolicyTest(testlib.TestCase):
     klass = ansible_mitogen.affinity.LinuxPolicy
