@@ -59,7 +59,7 @@ fi
             --pattern '*_test.py' \
             "$@"
     else
-        coverage run -a "${UNIT2}" discover \
+        "${UNIT2}" discover \
             --start-directory "tests/ansible" \
             --pattern '*_test.py' \
             "$@"
