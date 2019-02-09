@@ -12,3 +12,4 @@ os.environ.update({
 })
 
 ci_lib.run('./run_tests -v')
+ci_lib.run('coveralls')
