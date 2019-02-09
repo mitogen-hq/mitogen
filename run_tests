@@ -24,16 +24,22 @@ echo
 # Don't use errexit, so coverage report is still generated when tests fail
 set -o pipefail
 
+NOCOVERAGE="${NOCOVERAGE:-}"
+NOCOVERAGE_ERASE="${NOCOVERAGE_ERASE:-$NOCOVERAGE}"
+NOCOVERAGE_REPORT="${NOCOVERAGE_REPORT:-$NOCOVERAGE}"
+
 if [ ! "$UNIT2" ]; then
     UNIT2="$(which unit2)"
 fi
 
-[ "$NOCOVERAGE" ] || coverage erase
+if [ ! "$NOCOVERAGE_ERASE" ]; then
+    coverage erase
+fi
 
 # First run overwites coverage output.
 [ "$SKIP_MITOGEN" ] || {
     if [ ! "$NOCOVERAGE" ]; then
-        coverage run "${UNIT2}" discover \
+        coverage run -a "${UNIT2}" discover \
             --start-directory "tests" \
             --pattern '*_test.py' \
             "$@"
@@ -59,7 +65,7 @@ fi
             --pattern '*_test.py' \
             "$@"
     else
-        coverage run -a "${UNIT2}" discover \
+        "${UNIT2}" discover \
             --start-directory "tests/ansible" \
             --pattern '*_test.py' \
             "$@"
@@ -67,8 +73,10 @@ fi
     ANSIBLE_TEST_STATUS=$?
 }
 
-[ "$NOCOVERAGE" ] || coverage html
-[ "$NOCOVERAGE" ] || echo coverage report is at "file://$(pwd)/htmlcov/index.html"
+if [ ! "$NOCOVERAGE_REPORT" ]; then
+    coverage html
+    echo "coverage report is at file://$(pwd)/htmlcov/index.html"
+fi
 
 # Exit with a non-zero status if any test run did so
 exit "$(max $MITOGEN_TEST_STATUS $ANSIBLE_TEST_STATUS)"

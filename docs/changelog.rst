@@ -446,12 +446,16 @@ Core Library
 * `#524 <https://github.com/dw/mitogen/issues/524>` : Python 3.6+ emitted a
   :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
 
+* `#529 <https://github.com/dw/mitogen/issues/529>` : Code coverage of the
+  test suite was not measured across all Python versions.
+
 
 Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Alex Willmer <https://github.com/moreati>`_,
 `Andreas Krüger <https://github.com/woopstar>`_,
 `Anton Stroganov <https://github.com/Aeon>`_,
 `Berend De Schouwer <https://github.com/berenddeschouwer>`_,
