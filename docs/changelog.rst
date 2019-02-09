@@ -266,6 +266,11 @@ Fixes
 * `#499 <https://github.com/dw/mitogen/issues/499>`_: the ``allow_same_user``
   Ansible configuration setting is respected.
 
+* `#527 <https://github.com/dw/mitogen/issues/527>`_: crashes in modules are
+  trapped and reported in a manner that matches Ansible. In particular, a
+  module crash no longer leads to an exception that may crash the corresponding
+  action plug-in.
+
 * `dc1d4251 <https://github.com/dw/mitogen/commit/dc1d4251>`_: the
   ``synchronize`` module could fail with the Docker transport due to a missing
   attribute.
