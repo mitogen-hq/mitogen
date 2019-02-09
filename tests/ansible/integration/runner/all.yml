@@ -1,5 +1,6 @@
 - include: atexit.yml
 - include: builtin_command_module.yml
+- include: crashy_new_style_module.yml
 - include: custom_bash_hashbang_argument.yml
 - include: custom_bash_old_style_module.yml
 - include: custom_bash_want_json_module.yml

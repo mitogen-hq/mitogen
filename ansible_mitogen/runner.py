@@ -42,6 +42,7 @@ import shlex
 import shutil
 import sys
 import tempfile
+import traceback
 import types
 
 import mitogen.core
@@ -871,6 +872,11 @@ class NewStyleRunner(ScriptRunner):
             except SystemExit:
                 exc = sys.exc_info()[1]
                 rc = exc.args[0]
+            except Exception:
+                # This writes to stderr by default.
+                traceback.print_exc()
+                rc = 1
+
         finally:
             self.atexit_wrapper.run_callbacks()
 

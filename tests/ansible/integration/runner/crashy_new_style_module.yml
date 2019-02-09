@@ -1,0 +1,18 @@
+# issue #527: catch exceptions from crashy modules.
+
+- name: integration/runner/crashy_new_style_module.yml
+  hosts: test-targets
+  tasks:
+    - custom_python_run_script:
+        script: kaboom
+      register: out
+      ignore_errors: true
+
+    - assert:
+        that:
+        - not out.changed
+        - out.rc == 1
+        - out.msg == "MODULE FAILURE"
+        - out.module_stdout == ""
+        - "'Traceback (most recent call last)' in out.module_stderr"
+        - "\"NameError: name 'kaboom' is not defined\" in out.module_stderr"
