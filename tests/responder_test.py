@@ -167,6 +167,19 @@ class BrokenModulesTest(testlib.TestCase):
 
 
 class ForwardTest(testlib.RouterMixin, testlib.TestCase):
+    def test_forward_to_nonexistent_context(self):
+        nonexistent = mitogen.core.Context(self.router, 123)
+        capture = testlib.LogCapturer()
+        capture.start()
+        self.broker.defer_sync(lambda:
+            self.router.responder.forward_modules(
+                nonexistent,
+                ['mitogen.core']
+            )
+        )
+        s = capture.stop()
+        self.assertTrue('dropping forward of' in s)
+
     def test_stats(self):
         # Forwarding stats broken because forwarding is broken. See #469.
         c1 = self.router.local()

@@ -922,6 +922,11 @@ class ModuleResponder(object):
             fullname, _, _ = str_rpartition(fullname, u'.')
 
         stream = self._router.stream_by_id(context.context_id)
+        if stream is None:
+            LOG.debug('%r: dropping forward of %s to no longer existent '
+                      '%r', self, path[0], context)
+            return
+
         for fullname in reversed(path):
             self._send_module_and_related(stream, fullname)
             self._send_forward_module(stream, context, fullname)
