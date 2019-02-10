@@ -125,7 +125,7 @@ Core Library
   series.
 
 
-v0.2.4 (2018-??-??)
+v0.2.4 (2019-02-10)
 -------------------
 
 Mitogen for Ansible
