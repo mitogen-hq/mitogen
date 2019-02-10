@@ -3295,6 +3295,18 @@ class ExternalContext(object):
                 os.close(fd)
 
     def _setup_stdio(self):
+        # #481: when stderr is a TTY due to being started via
+        # tty_create_child()/hybrid_tty_create_child(), and some privilege
+        # escalation tool like prehistoric versions of sudo exec this process
+        # over the top of itself, there is nothing left to keep the slave PTY
+        # open after we replace our stdio. Therefore if stderr is a TTY, keep
+        # around a permanent dup() to avoid receiving SIGHUP.
+        try:
+            if os.isatty(2):
+                self.reserve_tty_fd = os.dup(2)
+                set_cloexec(self.reserve_tty_fd)
+        except OSError:
+            pass
         # When sys.stdout was opened by the runtime, overwriting it will not
         # close FD 1. However when forking from a child that previously used
         # fdopen(), overwriting it /will/ close FD 1. So we must swallow the
