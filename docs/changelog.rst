@@ -455,6 +455,15 @@ Core Library
   import :mod:`__main__` on Python 3.4 and newer due to a breaking change in
   the :mod:`pkgutil` API. The program's main script is now handled specially.
 
+* `#523 <https://github.com/dw/mitogen/issues/523>`_: the test suite didn't
+  generate a code coverage report if any test failed.
+
+* `#524 <https://github.com/dw/mitogen/issues/524>`_: Python 3.6+ emitted a
+  :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
+
+* `#529 <https://github.com/dw/mitogen/issues/529>`_: Code coverage of the
+  test suite was not measured across all Python versions.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
@@ -475,17 +484,8 @@ Core Library
   a failure.
 
 * `57b652ed <https://github.com/dw/mitogen/commit/57b652ed>`_: a stray import
-  meant an extra roundtrip and ~20KiB of data was wasted for any context that
+  meant an extra roundtrip and ~4KiB of data was wasted for any context that
   imported :mod:`mitogen.parent`.
-
-* `#523 <https://github.com/dw/mitogen/issues/523>` : the test suite didn't
-  generate a code coverage report if any test failed.
-
-* `#524 <https://github.com/dw/mitogen/issues/524>` : Python 3.6+ emitted a
-  :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
-
-* `#529 <https://github.com/dw/mitogen/issues/529>` : Code coverage of the
-  test suite was not measured across all Python versions.
 
 
 Thanks!
