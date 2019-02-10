@@ -455,6 +455,12 @@ Core Library
   import :mod:`__main__` on Python 3.4 and newer due to a breaking change in
   the :mod:`pkgutil` API. The program's main script is now handled specially.
 
+* `#481 <https://github.com/dw/mitogen/issues/481>`_: the version of `sudo`
+  that shipped with CentOS 5 replaced itself with the program to be executed,
+  and therefore did not hold any child PTY open on our behalf. The child
+  context is updated to preserve any PTY FD in order to avoid the kernel
+  sending `SIGHUP` early during startup.
+
 * `#523 <https://github.com/dw/mitogen/issues/523>`_: the test suite didn't
   generate a code coverage report if any test failed.
 
