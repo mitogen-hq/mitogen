@@ -17,6 +17,15 @@ under test, e.g. `../../.ci/ansible_tests.py -vvv` will run with verbose.
 Hack these scripts until your heart is content. There is no pride to be found
 here, just necessity.
 
+
+### `ci_lib.run_batches()`
+
+There are some weird looking functions to extract more paralellism from the
+build. The above function takes lists of strings, arranging for the strings in
+each list to run in order, but for the lists to run in parallel. That's great
+for doing `setup.py install` while pulling a Docker container, for example.
+
+
 ### Environment Variables
 
 * `VER`: Ansible version the `_install` script should install. Default changes
