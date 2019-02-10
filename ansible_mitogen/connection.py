@@ -44,6 +44,7 @@ import ansible.errors
 import ansible.plugins.connection
 import ansible.utils.shlex
 
+import mitogen.core
 import mitogen.fork
 import mitogen.unix
 import mitogen.utils
@@ -67,6 +68,27 @@ def optional_int(value):
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def convert_bool(obj):
+    if isinstance(obj, bool):
+        return obj
+    if str(obj).lower() in ('no', 'false', '0'):
+        return False
+    if str(obj).lower() not in ('yes', 'true', '1'):
+        raise ansible.errors.AnsibleConnectionFailure(
+            'expected yes/no/true/false/0/1, got %r' % (obj,)
+        )
+    return True
+
+
+def default(value, default):
+    """
+    Return `default` is `value` is :data:`None`, otherwise return `value`.
+    """
+    if value is None:
+        return default
+    return value
 
 
 def _connect_local(spec):
@@ -102,6 +124,9 @@ def _connect_ssh(spec):
             'check_host_keys': check_host_keys,
             'hostname': spec.remote_addr(),
             'username': spec.remote_user(),
+            'compression': convert_bool(
+                default(spec.mitogen_ssh_compression(), True)
+            ),
             'password': spec.password(),
             'port': spec.port(),
             'python_path': spec.python_path(),
@@ -340,12 +365,21 @@ CONNECTION_METHOD = {
 }
 
 
+class Broker(mitogen.master.Broker):
+    """
+    WorkerProcess maintains at most 2 file descriptors, therefore does not need
+    the exuberant syscall expense of EpollPoller, so override it and restore
+    the poll() poller.
+    """
+    poller_class = mitogen.core.Poller
+
+
 class CallChain(mitogen.parent.CallChain):
     """
     Extend :class:`mitogen.parent.CallChain` to additionally cause the
     associated :class:`Connection` to be reset if a ChannelError occurs.
 
-    This only catches failures that occur while a call is pnding, it is a
+    This only catches failures that occur while a call is pending, it is a
     stop-gap until a more general method is available to notice connection in
     every situation.
     """

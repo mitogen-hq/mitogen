@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 This module implements most package functionality, but remains separate from
 non-essential code in order to reduce its size, since it is also serves as the
@@ -40,8 +42,9 @@ import fcntl
 import itertools
 import linecache
 import logging
-import pickle as py_pickle
 import os
+import pickle as py_pickle
+import pstats
 import signal
 import socket
 import struct
@@ -59,6 +62,11 @@ import imp
 
 # Absolute imports for <2.5.
 select = __import__('select')
+
+try:
+    import cProfile
+except ImportError:
+    cProfile = None
 
 try:
     import thread
@@ -528,27 +536,48 @@ def enable_debug_logging():
 
 
 _profile_hook = lambda name, func, *args: func(*args)
+_profile_fmt = os.environ.get(
+    'MITOGEN_PROFILE_FMT',
+    '/tmp/mitogen.stats.%(pid)s.%(identity)s.%(now)s.%(ext)s',
+)
 
 
-def enable_profiling():
-    global _profile_hook
-    import cProfile
-    import pstats
-    def _profile_hook(name, func, *args):
-        profiler = cProfile.Profile()
-        profiler.enable()
+def _profile_hook(name, func, *args):
+    """
+    Call `func(*args)` and return its result. This function is replaced by
+    :func:`_real_profile_hook` when :func:`enable_profiling` is called. This
+    interface is obsolete and will be replaced by a signals-based integration
+    later on.
+    """
+    return func(*args)
+
+
+def _real_profile_hook(name, func, *args):
+    profiler = cProfile.Profile()
+    profiler.enable()
+    try:
+        return func(*args)
+    finally:
+        path = _profile_fmt % {
+            'now': int(1e6 * time.time()),
+            'identity': name,
+            'pid': os.getpid(),
+            'ext': '%s'
+        }
+        profiler.dump_stats(path % ('pstats',))
+        profiler.create_stats()
+        fp = open(path % ('log',), 'w')
         try:
-            return func(*args)
+            stats = pstats.Stats(profiler, stream=fp)
+            stats.sort_stats('cumulative')
+            stats.print_stats()
         finally:
-            profiler.dump_stats('/tmp/mitogen.stats.%d.%s.pstat' % (os.getpid(), name))
-            profiler.create_stats()
-            fp = open('/tmp/mitogen.stats.%d.%s.log' % (os.getpid(), name), 'w')
-            try:
-                stats = pstats.Stats(profiler, stream=fp)
-                stats.sort_stats('cumulative')
-                stats.print_stats()
-            finally:
-                fp.close()
+            fp.close()
+
+
+def enable_profiling(econtext=None):
+    global _profile_hook
+    _profile_hook = _real_profile_hook
 
 
 def import_module(modname):
@@ -1684,11 +1713,9 @@ class Stream(BasicStream):
                           msg.reply_to or 0, len(msg.data)) + msg.data
 
         if not self._output_buf_len:
-            # Modifying epoll/Kqueue state is expensive, as is needless broker
-            # loop iterations. Rather than wait for writeability, simply
-            # attempt to write immediately, and only fall back to
-            # start_transmit()/on_transmit() if an error occurred or the socket
-            # buffer was full.
+            # Modifying epoll/Kqueue state is expensive, as are needless broker
+            # loops. Rather than wait for writeability, just write immediately,
+            # and fall back to the broker loop on error or full buffer.
             try:
                 n = self.transmit_side.write(pkt)
                 if n:
@@ -1698,7 +1725,6 @@ class Stream(BasicStream):
             except OSError:
                 pass
 
-        if not self._output_buf_len:
             self._router.broker._start_transmit(self)
         self._output_buf.append(pkt)
         self._output_buf_len += len(pkt)
@@ -2816,7 +2842,7 @@ class Broker(object):
         )
         self._thread = threading.Thread(
             target=self._broker_main,
-            name='mitogen-broker'
+            name='mitogen.broker'
         )
         self._thread.start()
 
@@ -2968,7 +2994,7 @@ class Broker(object):
         self._broker_exit()
 
     def _broker_main(self):
-        _profile_hook('mitogen-broker', self._do_broker_main)
+        _profile_hook('mitogen.broker', self._do_broker_main)
         fire(self, 'exit')
 
     def shutdown(self):
@@ -3064,7 +3090,7 @@ class Dispatcher(object):
         if self.econtext.config.get('on_start'):
             self.econtext.config['on_start'](self.econtext)
 
-        _profile_hook('main', self._dispatch_calls)
+        _profile_hook('mitogen.child_main', self._dispatch_calls)
 
 
 class ExternalContext(object):

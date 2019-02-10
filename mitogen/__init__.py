@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 On the Mitogen master, this is imported from ``mitogen/__init__.py`` as would
 be expected. On the slave, it is built dynamically during startup.
@@ -57,7 +59,12 @@ parent_id = None
 parent_ids = []
 
 
-def main(log_level='INFO', profiling=False):
+import os
+_default_profiling = os.environ.get('MITOGEN_PROFILING') is not None
+del os
+
+
+def main(log_level='INFO', profiling=_default_profiling):
     """
     Convenience decorator primarily useful for writing discardable test
     scripts.
@@ -106,7 +113,7 @@ def main(log_level='INFO', profiling=False):
             mitogen.master.Router.profiling = profiling
         utils.log_to_file(level=log_level)
         return mitogen.core._profile_hook(
-            'main',
+            'app.main',
             utils.run_with_router,
             func,
         )

@@ -56,6 +56,7 @@ import ansible_mitogen.logging
 import ansible_mitogen.services
 
 from mitogen.core import b
+import ansible_mitogen.affinity
 
 
 LOG = logging.getLogger(__name__)
@@ -91,6 +92,24 @@ def getenv_int(key, default=0):
         return int(os.environ.get(key, str(default)))
     except ValueError:
         return default
+
+
+def save_pid(name):
+    """
+    When debugging and profiling, it is very annoying to poke through the
+    process list to discover the currently running Ansible and MuxProcess IDs,
+    especially when trying to catch an issue during early startup. So here, if
+    a magic environment variable set, stash them in hidden files in the CWD::
+
+        alias muxpid="cat .ansible-mux.pid"
+        alias anspid="cat .ansible-controller.pid"
+
+        gdb -p $(muxpid)
+        perf top -p $(anspid)
+    """
+    if os.environ.get('MITOGEN_SAVE_PIDS'):
+        with open('.ansible-%s.pid' % (name,), 'w') as fp:
+            fp.write(str(os.getpid()))
 
 
 class MuxProcess(object):
@@ -163,7 +182,8 @@ class MuxProcess(object):
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
 
-        if os.environ.get('MITOGEN_PROFILING'):
+        cls.profiling = os.environ.get('MITOGEN_PROFILING') is not None
+        if cls.profiling:
             mitogen.core.enable_profiling()
 
         cls.original_env = dict(os.environ)
@@ -171,10 +191,14 @@ class MuxProcess(object):
         if _init_logging:
             ansible_mitogen.logging.setup()
         if cls.child_pid:
+            save_pid('controller')
+            ansible_mitogen.affinity.policy.assign_controller()
             cls.child_sock.close()
             cls.child_sock = None
             mitogen.core.io_op(cls.worker_sock.recv, 1)
         else:
+            save_pid('mux')
+            ansible_mitogen.affinity.policy.assign_muxprocess()
             cls.worker_sock.close()
             cls.worker_sock = None
             self = cls()
@@ -270,7 +294,7 @@ class MuxProcess(object):
                 ansible_mitogen.services.ContextService(self.router),
                 ansible_mitogen.services.ModuleDepService(self.router),
             ],
-            size=getenv_int('MITOGEN_POOL_SIZE', default=16),
+            size=getenv_int('MITOGEN_POOL_SIZE', default=32),
         )
         LOG.debug('Service pool configured: size=%d', self.pool.size)
 
@@ -281,7 +305,9 @@ class MuxProcess(object):
         then cannot clean up pending handlers, which is required for the
         threads to exit gracefully.
         """
-        self.pool.stop(join=False)
+        # In normal operation we presently kill the process because there is
+        # not yet any way to cancel connect().
+        self.pool.stop(join=self.profiling)
 
     def on_broker_exit(self):
         """
@@ -289,10 +315,9 @@ class MuxProcess(object):
         ourself. In future this should gracefully join the pool, but TERM is
         fine for now.
         """
-        if os.environ.get('MITOGEN_PROFILING'):
-            # TODO: avoid killing pool threads before they have written their
-            # .pstats. Really shouldn't be using kill() here at all, but hard
-            # to guarantee services can always be unblocked during shutdown.
-            time.sleep(1)
-
-        os.kill(os.getpid(), signal.SIGTERM)
+        if not self.profiling:
+            # In normal operation we presently kill the process because there is
+            # not yet any way to cancel connect(). When profiling, threads
+            # including the broker must shut down gracefully, otherwise pstats
+            # won't be written.
+            os.kill(os.getpid(), signal.SIGTERM)

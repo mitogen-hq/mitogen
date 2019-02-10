@@ -65,6 +65,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
@@ -73,6 +74,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',
@@ -102,6 +105,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
@@ -110,6 +114,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',
@@ -149,6 +155,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'cd-normal-normal',
                       'identities_only': False,
@@ -157,6 +164,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',
@@ -186,6 +195,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
@@ -194,6 +204,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',
@@ -210,6 +222,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'cd-normal-alias',
                       'identities_only': False,
@@ -218,6 +231,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',
@@ -257,6 +272,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'cd-newuser-normal-normal',
                       'identities_only': False,
@@ -265,6 +281,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',
@@ -295,6 +313,7 @@
               {
                   'kwargs': {
                       'check_host_keys': 'ignore',
+                      'compression': True,
                       'connect_timeout': 10,
                       'hostname': 'alias-host',
                       'identities_only': False,
@@ -303,6 +322,8 @@
                       'port': null,
                       'python_path': null,
                       'ssh_args': [
+                          '-o',
+                          'UserKnownHostsFile=/dev/null',
                           '-o',
                           'ForwardAgent=yes',
                           '-o',

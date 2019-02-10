@@ -131,6 +131,10 @@ v0.2.4 (2018-??-??)
 Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
+This release includes a huge variety of important fixes and new optimizations.
+It is 35% faster than 0.2.3 on a synthetic 64 target run that places heavy load
+on the connection multiplexer.
+
 Enhancements
 ^^^^^^^^^^^^
 
@@ -138,7 +142,7 @@ Enhancements
   `#351 <https://github.com/dw/mitogen/issues/351>`_,
   `#352 <https://github.com/dw/mitogen/issues/352>`_: disconnect propagation
   has improved, allowing Ansible to cancel waits for responses from abruptly
-  disconnected targets. This ensures a task will gracefully fail rather than
+  disconnected targets. This ensures a task will reliably fail rather than
   hang, for example on network failure or EC2 instance maintenance.
 
 * `#369 <https://github.com/dw/mitogen/issues/369>`_,
@@ -154,20 +158,6 @@ Enhancements
   ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
   introduced in Ansible 2.7.
 
-* `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
-  issues with connection configuration, Mitogen ships with a
-  ``mitogen_get_stack`` action that is automatically added to the action
-  plug-in path. See :ref:`mitogen-get-stack` for more information.
-
-* `#415 <https://github.com/dw/mitogen/issues/415>`_,
-  `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
-  for in-process queues changed from `kqueue
-  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ / `epoll
-  <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
-  <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
-  or teardown, yielding a 38% latency reduction for inter-thread communication.
-  This may manifest as a runtime improvement in many-host runs.
-
 * `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
   supported by the core library and tested automatically, in any parent/child
   combination of 2.4, 2.6, 2.7 and 3.6 interpreters.
@@ -177,6 +167,50 @@ Enhancements
   Python 2.4 support, this allows Red Hat Enterprise Linux 5 targets to be
   managed with Mitogen. The ``simplejson`` package need not be installed on
   such targets, as is usually required by Ansible.
+
+* `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
+  connection configuration problems, Mitogen ships a ``mitogen_get_stack``
+  action that is automatically added to the action plug-in path. See
+  :ref:`mitogen-get-stack` for more information.
+
+* `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_,
+  `bd4b04ae <https://github.com/dw/mitogen/commit/bd4b04ae>`_: a CPU affinity
+  policy was added for Linux controllers, reducing latency and SMP overhead on
+  hot paths exercised for every task. This yielded a 19% speedup in a 64-target
+  job composed of many short tasks, and should easily be visible as a runtime
+  improvement in many-host runs.
+
+* `2b44d598 <https://github.com/dw/mitogen/commit/2b44d598>`_: work around a
+  defective caching mechanism by pre-heating it before spawning workers. This
+  saves 40% runtime on a synthetic repetitive task.
+
+* `0979422a <https://github.com/dw/mitogen/commit/0979422a>`_: an expensive
+  dependency scanning step was redundantly invoked for every task,
+  bottlenecking the connection multiplexer.
+
+* `eaa990a97 <https://github.com/dw/mitogen/commit/eaa990a97>`_: a new
+  ``mitogen_ssh_compression`` variable is supported, allowing Mitogen's default
+  SSH compression to be disabled. SSH compression is a large contributor to CPU
+  usage in many-target runs, and severely limits file transfer. On a `"shell:
+  hostname"` task repeated 500 times, Mitogen requires around 800 bytes per
+  task with compression, rising to 3 KiB without. File transfer throughput
+  rises from ~25MiB/s when enabled to ~200MiB/s when disabled.
+
+* `#260 <https://github.com/dw/mitogen/issues/260>`_,
+  `a18a083c <https://github.com/dw/mitogen/commit/a18a083c>`_: brokers no
+  longer wait for readiness indication to transmit, and instead assume
+  transmission will succeed. As this is usually true, one loop iteration and
+  two poller reconfigurations are avoided, yielding a significant reduction in
+  interprocess round-trip latency.
+
+* `#415 <https://github.com/dw/mitogen/issues/415>`_,
+  `#491 <https://github.com/dw/mitogen/issues/491>`_,
+  `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
+  for in-process queues changed from `kqueue
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ / `epoll
+  <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
+  <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
+  or teardown, yielding a 38% latency reduction for inter-thread communication.
 
 
 Fixes
@@ -278,6 +312,10 @@ Fixes
 * `599da068 <https://github.com/dw/mitogen/commit/599da068>`_: fix a race
   when starting async tasks, where it was possible for the controller to
   observe no status file on disk before the task had a chance to write one.
+
+* `2c7af9f04 <https://github.com/dw/mitogen/commit/2c7af9f04>`_: Ansible
+  modules were repeatedly re-transferred. The bug was hidden by the previously
+  mandatorily enabled SSH compression.
 
 
 Core Library

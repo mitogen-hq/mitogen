@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 This module implements functionality required by master processes, such as
 starting new contexts via SSH. Its size is also restricted, since it must
@@ -140,7 +142,7 @@ def get_child_modules(path):
     return [to_text(name) for _, name, _ in it]
 
 
-def get_core_source():
+def _get_core_source():
     """
     Master version of parent.get_core_source().
     """
@@ -150,7 +152,7 @@ def get_core_source():
 
 if mitogen.is_master:
     # TODO: find a less surprising way of installing this.
-    mitogen.parent.get_core_source = get_core_source
+    mitogen.parent._get_core_source = _get_core_source
 
 
 LOAD_CONST = dis.opname.index('LOAD_CONST')
@@ -707,10 +709,15 @@ class ModuleResponder(object):
         self.blacklist = []
         self.whitelist = ['']
 
+        #: Context -> set([fullname, ..])
+        self._forwarded_by_context = {}
+
         #: Number of GET_MODULE messages received.
         self.get_module_count = 0
         #: Total time spent in uncached GET_MODULE.
         self.get_module_secs = 0.0
+        #: Total time spent minifying modules.
+        self.minify_secs = 0.0
         #: Number of successful LOAD_MODULE messages sent.
         self.good_load_module_count = 0
         #: Total bytes in successful LOAD_MODULE payloads.
@@ -767,6 +774,8 @@ class ModuleResponder(object):
     def _make_negative_response(self, fullname):
         return (fullname, None, None, None, ())
 
+    minify_safe_re = re.compile(b(r'\s+#\s*!mitogen:\s*minify_safe'))
+
     def _build_tuple(self, fullname):
         if fullname in self._cache:
             return self._cache[fullname]
@@ -791,6 +800,12 @@ class ModuleResponder(object):
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
+
+        if self.minify_safe_re.search(source):
+            # If the module contains a magic marker, it's safe to minify.
+            t0 = time.time()
+            source = mitogen.minify.minimize_source(source).encode('utf-8')
+            self.minify_secs += time.time() - t0
 
         if is_pkg:
             pkg_present = get_child_modules(path)
@@ -820,13 +835,14 @@ class ModuleResponder(object):
 
     def _send_load_module(self, stream, fullname):
         if fullname not in stream.sent_modules:
-            LOG.debug('_send_load_module(%r, %r)', stream, fullname)
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
                 tup,
                 dst_id=stream.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
+            LOG.debug('%s: sending module %s (%.2f KiB)',
+                      stream.name, fullname, len(msg.data) / 1024.0)
             self._router._async_route(msg)
             stream.sent_modules.add(fullname)
             if tup[2] is not None:
@@ -846,6 +862,9 @@ class ModuleResponder(object):
         )
 
     def _send_module_and_related(self, stream, fullname):
+        if fullname in stream.sent_modules:
+            return
+
         try:
             tup = self._build_tuple(fullname)
             for name in tup[4]:  # related
@@ -889,6 +908,14 @@ class ModuleResponder(object):
             )
 
     def _forward_one_module(self, context, fullname):
+        forwarded = self._forwarded_by_context.get(context)
+        if forwarded is None:
+            forwarded = set()
+            self._forwarded_by_context[context] = forwarded
+
+        if fullname in forwarded:
+            return
+
         path = []
         while fullname:
             path.append(fullname)
@@ -984,7 +1011,7 @@ class Router(mitogen.parent.Router):
     #: of any :class:`Broker`, e.g. via::
     #:
     #:      mitogen.master.Router.profiling = True
-    profiling = False
+    profiling = os.environ.get('MITOGEN_PROFILING') is not None
 
     def __init__(self, broker=None, max_message_size=None):
         if broker is None:
@@ -1009,6 +1036,7 @@ class Router(mitogen.parent.Router):
         super(Router, self)._on_broker_exit()
         dct = self.get_stats()
         dct['self'] = self
+        dct['minify_ms'] = 1000 * dct['minify_secs']
         dct['get_module_ms'] = 1000 * dct['get_module_secs']
         dct['good_load_module_size_kb'] = dct['good_load_module_size'] / 1024.0
         dct['good_load_module_size_avg'] = (
@@ -1022,7 +1050,8 @@ class Router(mitogen.parent.Router):
             '%(self)r: stats: '
                 '%(get_module_count)d module requests in '
                 '%(get_module_ms)d ms, '
-                '%(good_load_module_count)d sent, '
+                '%(good_load_module_count)d sent '
+                '(%(minify_ms)d ms minify time), '
                 '%(bad_load_module_count)d negative responses. '
                 'Sent %(good_load_module_size_kb).01f kb total, '
                 '%(good_load_module_size_avg).01f kb avg.'
@@ -1047,6 +1076,8 @@ class Router(mitogen.parent.Router):
               :data:`mitogen.core.LOAD_MODULE` message payloads.
             * `bad_load_module_count`: Integer count of negative
               :data:`mitogen.core.LOAD_MODULE` messages sent.
+            * `minify_secs`: CPU seconds spent minifying modules marked
+               minify-safe.
         """
         return {
             'get_module_count': self.responder.get_module_count,
@@ -1054,6 +1085,7 @@ class Router(mitogen.parent.Router):
             'good_load_module_count': self.responder.good_load_module_count,
             'good_load_module_size': self.responder.good_load_module_size,
             'bad_load_module_count': self.responder.bad_load_module_count,
+            'minify_secs': self.responder.minify_secs,
         }
 
     def enable_debug(self):

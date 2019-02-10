@@ -6,8 +6,10 @@ import time
 
 import mitogen
 import mitogen.utils
+import ansible_mitogen.affinity
 
 mitogen.utils.setup_gil()
+ansible_mitogen.affinity.policy.assign_worker()
 
 try:
     xrange

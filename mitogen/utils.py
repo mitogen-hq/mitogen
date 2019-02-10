@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 import datetime
 import logging
 import os
@@ -34,6 +36,7 @@ import sys
 import mitogen
 import mitogen.core
 import mitogen.master
+import mitogen.parent
 
 
 LOG = logging.getLogger('mitogen')

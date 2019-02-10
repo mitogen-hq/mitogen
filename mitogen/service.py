@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 import grp
 import os
 import os.path
@@ -80,6 +82,10 @@ def get_or_create_pool(size=None, router=None):
         if _pool_pid != os.getpid():
             _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
                          overwrite=True)
+            # In case of Broker shutdown crash, Pool can cause 'zombie'
+            # processes.
+            mitogen.core.listen(router.broker, 'shutdown',
+                                lambda: _pool.stop(join=False))
             _pool_pid = os.getpid()
         return _pool
     finally:
@@ -467,7 +473,7 @@ class Pool(object):
             thread = threading.Thread(
                 name=name,
                 target=mitogen.core._profile_hook,
-                args=(name, self._worker_main),
+                args=('mitogen.service.pool', self._worker_main),
             )
             thread.start()
             self._threads.append(thread)
@@ -634,7 +640,7 @@ class PushFileService(Service):
                 path=path,
                 context=context
             ).close()
-        else:
+        elif path not in sent:
             child.call_service_async(
                 service_name=self.name(),
                 method_name='store_and_forward',
@@ -642,6 +648,7 @@ class PushFileService(Service):
                 data=self._cache[path],
                 context=context
             ).close()
+            sent.add(path)
 
     @expose(policy=AllowParents())
     @arg_spec({
@@ -708,7 +715,7 @@ class PushFileService(Service):
         if path not in self._cache:
             LOG.error('%r: %r is not in local cache', self, path)
             return
-        self._forward(path, context)
+        self._forward(context, path)
 
 
 class FileService(Service):

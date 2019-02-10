@@ -28,11 +28,16 @@
 
 from __future__ import absolute_import
 import os
+import signal
 import threading
 
+import mitogen.core
+import ansible_mitogen.affinity
 import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
+
+import ansible.executor.process.worker
 
 
 def _patch_awx_callback():
@@ -91,6 +96,22 @@ def wrap_connection_loader__get(name, *args, **kwargs):
                 'lxd', 'machinectl', 'setns', 'ssh'):
         name = 'mitogen_' + name
     return connection_loader__get(name, *args, **kwargs)
+
+
+def wrap_worker__run(*args, **kwargs):
+    """
+    While the strategy is active, rewrite connection_loader.get() calls for
+    some transports into requests for a compatible Mitogen transport.
+    """
+    # Ignore parent's attempts to murder us when we still need to write
+    # profiling output.
+    if mitogen.core._profile_hook.__name__ != '_profile_hook':
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+
+    ansible_mitogen.affinity.policy.assign_worker()
+    return mitogen.core._profile_hook('WorkerProcess',
+        lambda: worker__run(*args, **kwargs)
+    )
 
 
 class StrategyMixin(object):
@@ -167,12 +188,17 @@ class StrategyMixin(object):
         connection_loader__get = ansible_mitogen.loaders.connection_loader.get
         ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
 
+        global worker__run
+        worker__run = ansible.executor.process.worker.WorkerProcess.run
+        ansible.executor.process.worker.WorkerProcess.run = wrap_worker__run
+
     def _remove_wrappers(self):
         """
         Uninstall the PluginLoader monkey patches.
         """
         ansible_mitogen.loaders.action_loader.get = action_loader__get
         ansible_mitogen.loaders.connection_loader.get = connection_loader__get
+        ansible.executor.process.worker.WorkerProcess.run = worker__run
 
     def _add_plugin_paths(self):
         """
@@ -187,15 +213,44 @@ class StrategyMixin(object):
             os.path.join(base_dir, 'action')
         )
 
+    def _queue_task(self, host, task, task_vars, play_context):
+        """
+        Many PluginLoader caches are defective as they are only populated in
+        the ephemeral WorkerProcess. Touch each plug-in path before forking to
+        ensure all workers receive a hot cache.
+        """
+        ansible_mitogen.loaders.module_loader.find_plugin(
+            name=task.action,
+            mod_type='',
+        )
+        ansible_mitogen.loaders.connection_loader.get(
+            name=play_context.connection,
+            class_only=True,
+        )
+        ansible_mitogen.loaders.action_loader.get(
+            name=task.action,
+            class_only=True,
+        )
+
+        return super(StrategyMixin, self)._queue_task(
+            host=host,
+            task=task,
+            task_vars=task_vars,
+            play_context=play_context,
+        )
+
     def run(self, iterator, play_context, result=0):
         """
         Arrange for a mitogen.master.Router to be available for the duration of
         the strategy's real run() method.
         """
         ansible_mitogen.process.MuxProcess.start()
+        run = super(StrategyMixin, self).run
         self._add_plugin_paths()
         self._install_wrappers()
         try:
-            return super(StrategyMixin, self).run(iterator, play_context)
+            return mitogen.core._profile_hook('Strategy',
+                lambda: run(iterator, play_context)
+            )
         finally:
             self._remove_wrappers()

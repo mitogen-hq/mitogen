@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 This module defines functionality common to master and parent processes. It is
 sent to any child context that is due to become a parent, due to recursive
@@ -115,6 +117,11 @@ def _ioctl_cast(n):
     return n
 
 
+# If not :data:`None`, called prior to exec() of any new child process. Used by
+# :func:`mitogen.utils.reset_affinity` to allow the child to be freely
+# scheduled.
+_preexec_hook = None
+
 # Get PTY number; asm-generic/ioctls.h
 LINUX_TIOCGPTN = _ioctl_cast(2147767344)
 
@@ -150,13 +157,37 @@ def get_sys_executable():
     return '/usr/bin/python'
 
 
-def get_core_source():
+_core_source_lock = threading.Lock()
+_core_source_partial = None
+
+
+def _get_core_source():
     """
     In non-masters, simply fetch the cached mitogen.core source code via the
     import mechanism. In masters, this function is replaced with a version that
     performs minification directly.
     """
     return inspect.getsource(mitogen.core)
+
+
+def get_core_source_partial():
+    """
+    _get_core_source() is expensive, even with @lru_cache in minify.py, threads
+    can enter it simultaneously causing severe slowdowns.
+    """
+    global _core_source_partial
+
+    if _core_source_partial is None:
+        _core_source_lock.acquire()
+        try:
+            if _core_source_partial is None:
+                _core_source_partial = PartialZlib(
+                    _get_core_source().encode('utf-8')
+                )
+        finally:
+            _core_source_lock.release()
+
+    return _core_source_partial
 
 
 def get_default_remote_name():
@@ -262,7 +293,13 @@ def detach_popen(**kwargs):
     # handling, without tying the surrounding code into managing a Popen
     # object, which isn't possible for at least :mod:`mitogen.fork`. This
     # should be replaced by a swappable helper class in a future version.
-    proc = subprocess.Popen(**kwargs)
+    real_preexec_fn = kwargs.pop('preexec_fn', None)
+    def preexec_fn():
+        if _preexec_hook:
+            _preexec_hook()
+        if real_preexec_fn:
+            real_preexec_fn()
+    proc = subprocess.Popen(preexec_fn=preexec_fn, **kwargs)
     proc._child_created = False
     return proc.pid
 
@@ -419,11 +456,11 @@ def tty_create_child(args):
         `(pid, tty_fd, None)`
     """
     master_fd, slave_fd = openpty()
-    mitogen.core.set_block(slave_fd)
-    disable_echo(master_fd)
-    disable_echo(slave_fd)
-
     try:
+        mitogen.core.set_block(slave_fd)
+        disable_echo(master_fd)
+        disable_echo(slave_fd)
+
         pid = detach_popen(
             args=args,
             stdin=slave_fd,
@@ -456,27 +493,30 @@ def hybrid_tty_create_child(args):
         `(pid, socketpair_fd, tty_fd)`
     """
     master_fd, slave_fd = openpty()
-    parentfp, childfp = create_socketpair()
-
-    mitogen.core.set_block(slave_fd)
-    mitogen.core.set_block(childfp)
-    disable_echo(master_fd)
-    disable_echo(slave_fd)
 
     try:
-        pid = detach_popen(
-            args=args,
-            stdin=childfp,
-            stdout=childfp,
-            stderr=slave_fd,
-            preexec_fn=_acquire_controlling_tty,
-            close_fds=True,
-        )
+        disable_echo(master_fd)
+        disable_echo(slave_fd)
+        mitogen.core.set_block(slave_fd)
+
+        parentfp, childfp = create_socketpair()
+        try:
+            mitogen.core.set_block(childfp)
+            pid = detach_popen(
+                args=args,
+                stdin=childfp,
+                stdout=childfp,
+                stderr=slave_fd,
+                preexec_fn=_acquire_controlling_tty,
+                close_fds=True,
+            )
+        except Exception:
+            parentfp.close()
+            childfp.close()
+            raise
     except Exception:
         os.close(master_fd)
         os.close(slave_fd)
-        parentfp.close()
-        childfp.close()
         raise
 
     os.close(slave_fd)
@@ -534,6 +574,43 @@ def write_all(fd, s, deadline=None):
                 written += n
     finally:
         poller.close()
+
+
+class PartialZlib(object):
+    """
+    Because the mitogen.core source has a line appended to it during bootstrap,
+    it must be recompressed for each connection. This is not a problem for a
+    small number of connections, but it amounts to 30 seconds CPU time by the
+    time 500 targets are in use.
+
+    For that reason, build a compressor containing mitogen.core and flush as
+    much of it as possible into an initial buffer. Then to append the custom
+    line, clone the compressor and compress just that line.
+
+    A full compression costs ~6ms on a modern machine, this method costs ~35
+    usec.
+    """
+    def __init__(self, s):
+        self.s = s
+        if sys.version_info > (2, 5):
+            self._compressor = zlib.compressobj(9)
+            self._out = self._compressor.compress(s)
+            self._out += self._compressor.flush(zlib.Z_SYNC_FLUSH)
+        else:
+            self._compressor = None
+
+    def append(self, s):
+        """
+        Append the bytestring `s` to the compressor state and return the
+        final compressed output.
+        """
+        if self._compressor is None:
+            return zlib.compress(self.s + s, 9)
+        else:
+            compressor = self._compressor.copy()
+            out = self._out
+            out += compressor.compress(s)
+            return out + compressor.flush()
 
 
 class IteratingRead(object):
@@ -1147,15 +1224,16 @@ class Stream(mitogen.core.Stream):
             LOG.debug('%r: PID %d %s', self, pid, wstatus_to_str(status))
             return
 
-        # For processes like sudo we cannot actually send sudo a signal,
-        # because it is setuid, so this is best-effort only.
-        LOG.debug('%r: child process still alive, sending SIGTERM', self)
-        try:
-            os.kill(self.pid, signal.SIGTERM)
-        except OSError:
-            e = sys.exc_info()[1]
-            if e.args[0] != errno.EPERM:
-                raise
+        if not self._router.profiling:
+            # For processes like sudo we cannot actually send sudo a signal,
+            # because it is setuid, so this is best-effort only.
+            LOG.debug('%r: child process still alive, sending SIGTERM', self)
+            try:
+                os.kill(self.pid, signal.SIGTERM)
+            except OSError:
+                e = sys.exc_info()[1]
+                if e.args[0] != errno.EPERM:
+                    raise
 
     def on_disconnect(self, broker):
         super(Stream, self).on_disconnect(broker)
@@ -1263,11 +1341,12 @@ class Stream(mitogen.core.Stream):
         }
 
     def get_preamble(self):
-        source = get_core_source()
-        source += '\nExternalContext(%r).main()\n' % (
-            self.get_econtext_config(),
+        suffix = (
+            '\nExternalContext(%r).main()\n' %\
+            (self.get_econtext_config(),)
         )
-        return zlib.compress(source.encode('utf-8'), 9)
+        partial = get_core_source_partial()
+        return partial.append(suffix.encode('utf-8'))
 
     def start_child(self):
         args = self.get_boot_command()

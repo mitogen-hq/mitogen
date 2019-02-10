@@ -1,6 +1,7 @@
 import codecs
 import glob
 import pprint
+import sys
 
 import unittest2
 
@@ -92,8 +93,15 @@ class MitogenCoreTest(testlib.TestCase):
                 'mwords': mwords,
             })
 
+    PY_24_25_SKIP = [
+        # cProfile unsupported on 2.4, 2.6+ syntax is fine here.
+        'mitogen/profiler.py',
+    ]
+
     def test_minify_all(self):
         for name in glob.glob('mitogen/*.py'):
+            if name in self.PY_24_25_SKIP and sys.version_info < (2, 6):
+                continue
             original = self.read_source(name)
             try:
                 minified = self.func(original)

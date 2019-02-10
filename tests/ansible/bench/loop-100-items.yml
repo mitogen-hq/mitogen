@@ -7,4 +7,4 @@
 - hosts: all
   tasks:
     - command: hostname
-      with_sequence: start=1 end=100
+      with_sequence: start=1 end="{{end|default(100)}}"
