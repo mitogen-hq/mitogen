@@ -56,4 +56,8 @@
       that:
         - result1.rc == 0
         - result2.rc == 0
+
+  - assert:
+      that:
         - result2.stdout == 'im_alive'
+    when: ansible_version.full > '2.8'  # ansible#51393

@@ -1,2 +1,3 @@
-- import_playbook: timeouts.yml
-- import_playbook: variables.yml
+- include: config.yml
+- include: timeouts.yml
+- include: variables.yml

@@ -14,7 +14,6 @@ Table Of Contents
    api
    examples
    internals
-   shame
 
 .. toctree::
    :hidden:

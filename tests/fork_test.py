@@ -1,10 +1,24 @@
 
-import ctypes
 import os
 import random
-import ssl
 import struct
 import sys
+
+try:
+    import _ssl
+except ImportError:
+    _ssl = None
+
+try:
+    import ssl
+except ImportError:
+    ssl = None
+
+try:
+    import ctypes
+except ImportError:
+    # Python 2.4
+    ctypes = None
 
 import mitogen
 import unittest2
@@ -13,23 +27,32 @@ import testlib
 import plain_old_module
 
 
-IS_64BIT = struct.calcsize('P') == 8
-PLATFORM_TO_PATH = {
-    ('darwin', False): '/usr/lib/libssl.dylib',
-    ('darwin', True): '/usr/lib/libssl.dylib',
-    ('linux2', False): '/usr/lib/libssl.so',
-    ('linux2', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
-    # Python 2.6
-    ('linux3', False): '/usr/lib/libssl.so',
-    ('linux3', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
-    # Python 3
-    ('linux', False): '/usr/lib/libssl.so',
-    ('linux', True): '/usr/lib/x86_64-linux-gnu/libssl.so',
-}
+def _find_ssl_linux():
+    s = testlib.subprocess__check_output(['ldd', _ssl.__file__])
+    for line in s.decode().splitlines():
+        bits = line.split()
+        if bits[0].startswith('libssl'):
+            return bits[2]
 
-c_ssl = ctypes.CDLL(PLATFORM_TO_PATH[sys.platform, IS_64BIT])
-c_ssl.RAND_pseudo_bytes.argtypes = [ctypes.c_char_p, ctypes.c_int]
-c_ssl.RAND_pseudo_bytes.restype = ctypes.c_int
+def _find_ssl_darwin():
+    s = testlib.subprocess__check_output(['otool', '-l', _ssl.__file__])
+    for line in s.decode().splitlines():
+        bits = line.split()
+        if bits[0] == 'name' and 'libssl' in bits[1]:
+            return bits[1]
+
+
+if ctypes and sys.platform.startswith('linux'):
+    LIBSSL_PATH = _find_ssl_linux()
+elif ctypes and sys.platform == 'darwin':
+    LIBSSL_PATH = _find_ssl_darwin()
+else:
+    LIBSSL_PATH = None
+
+if ctypes and LIBSSL_PATH:
+    c_ssl = ctypes.CDLL(LIBSSL_PATH)
+    c_ssl.RAND_pseudo_bytes.argtypes = [ctypes.c_char_p, ctypes.c_int]
+    c_ssl.RAND_pseudo_bytes.restype = ctypes.c_int
 
 
 def ping():
@@ -55,7 +78,13 @@ def exercise_importer(n):
     return simple_pkg.a.subtract_one_add_two(n)
 
 
-class ForkTest(testlib.RouterMixin, unittest2.TestCase):
+skipIfUnsupported = unittest2.skipIf(
+    condition=(not mitogen.fork.FORK_SUPPORTED),
+    reason="mitogen.fork unsupported on this platform"
+)
+
+
+class ForkTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         context = self.router.fork()
         self.assertNotEqual(context.call(os.getpid), os.getpid())
@@ -65,6 +94,10 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.fork()
         self.assertNotEqual(context.call(random_random), random_random())
 
+    @unittest2.skipIf(
+        condition=LIBSSL_PATH is None or ctypes is None,
+        reason='cant test libssl on this platform',
+    )
     def test_ssl_module_diverges(self):
         # Ensure generator state is initialized.
         RAND_pseudo_bytes()
@@ -84,7 +117,10 @@ class ForkTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.fork(on_start=on_start)
         self.assertEquals(123, recv.get().unpickle())
 
-class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
+ForkTest = skipIfUnsupported(ForkTest)
+
+
+class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
     def test_okay(self):
         # When forking from the master process, Mitogen had nothing to do with
         # setting up stdio -- that was inherited wherever the Master is running
@@ -104,6 +140,8 @@ class DoubleChildTest(testlib.RouterMixin, unittest2.TestCase):
         c1 = self.router.fork(name='c1')
         c2 = self.router.fork(name='c2', via=c1)
         self.assertEqual(2, c2.call(exercise_importer, 1))
+
+DoubleChildTest = skipIfUnsupported(DoubleChildTest)
 
 
 if __name__ == '__main__':

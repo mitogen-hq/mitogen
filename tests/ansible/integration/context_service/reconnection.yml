@@ -5,15 +5,18 @@
   hosts: test-targets
   any_errors_fatal: true
   tasks:
+    - mitogen_shutdown_all:
+
+    - custom_python_detect_environment:
+      register: ssh_account_env
 
     - become: true
       custom_python_detect_environment:
       register: old_become_env
 
     - become: true
-      # This must be >1 for vanilla Ansible.
       shell: |
-        bash -c "( sleep 3; pkill -f sshd:; ) & disown"
+        bash -c "( sleep 3; kill -9 {{ssh_account_env.pid}}; ) & disown"
 
     - connection: local
       shell: sleep 3

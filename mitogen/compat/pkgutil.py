@@ -1,5 +1,7 @@
 """Utilities to support packages."""
 
+# !mitogen: minify_safe
+
 # NOTE: This module must remain compatible with Python 2.3, as it is shared
 # by setuptools for distribution with Python 2.3 and up.
 

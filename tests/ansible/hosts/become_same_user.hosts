@@ -1,0 +1,4 @@
+
+# become_same_user.yml
+bsu-joe ansible_user=joe
+

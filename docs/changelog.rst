@@ -15,6 +15,528 @@ Release Notes
     </style>
 
 
+.. _known_issues:
+
+Known Issues
+------------
+
+Mitogen For Ansible
+~~~~~~~~~~~~~~~~~~~
+
+* The Ansible 2.7 `reboot
+  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_ module
+  may require a ``pre_reboot_delay`` on systemd hosts, as insufficient time
+  exists for the reboot command's exit status to be reported before necessary
+  processes are torn down.
+
+* On OS X when a SSH password is specified and the default connection type of
+  ``smart`` is used, Ansible may select the Paramiko plug-in rather than
+  Mitogen. If you specify a password on OS X, ensure ``connection: ssh``
+  appears in your playbook, ``ansible.cfg``, or as ``-c ssh`` on the
+  command-line.
+
+* The ``raw`` action executes as a regular Mitogen connection, which requires
+  Python on the target, precluding its use for installing Python. This will be
+  addressed in a future 0.2 release. For now, simply mix Mitogen and vanilla
+  Ansible strategies in your playbook:
+
+  .. code-block:: yaml
+
+    - hosts: web-servers
+      strategy: linear
+      tasks:
+      - name: Install Python if necessary.
+        raw: test -e /usr/bin/python || apt install -y python-minimal
+
+    - hosts: web-servers
+      strategy: mitogen_linear
+      roles:
+      - nginx
+      - initech_app
+      - y2k_fix
+
+.. * When running with ``-vvv``, log messages will be printed to the console
+     *after* the Ansible run completes, as connection multiplexer shutdown only
+     begins after Ansible exits. This is due to a lack of suitable shutdown hook
+     in Ansible, and is fairly harmless, albeit cosmetically annoying. A future
+     release may include a solution.
+
+.. * Configurations will break that rely on the `hashbang argument splitting
+     behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
+     ``ansible_python_interpreter`` setting, contrary to the Ansible
+     documentation. This will be addressed in a future 0.2 release.
+
+* Performance does not scale linearly with target count. This requires
+  significant additional work, as major bottlenecks exist in the surrounding
+  Ansible code. Performance-related bug reports for any scenario remain
+  welcome with open arms.
+
+* Performance on Python 3 is significantly worse than on Python 2. While this
+  has not yet been investigated, at least some of the regression appears to be
+  part of the core library, and should therefore be straightforward to fix as
+  part of 0.2.x.
+
+* *Module Replacer* style Ansible modules are not supported.
+
+* Actions are single-threaded for each `(host, user account)` combination,
+  including actions that execute on the local machine. Playbooks may experience
+  slowdown compared to vanilla Ansible if they employ long-running
+  ``local_action`` or ``delegate_to`` tasks delegating many target hosts to a
+  single machine and user account.
+
+* Connection Delegation remains in preview and has bugs around how it infers
+  connections. Connection establishment will remain single-threaded for the 0.2
+  series, however connection inference bugs will be addressed in a future 0.2
+  release.
+
+* Connection Delegation does not support automatic tunnelling of SSH-dependent
+  actions, such as the ``synchronize`` module. This will be addressed in the
+  0.3 series.
+
+
+Core Library
+~~~~~~~~~~~~
+
+* Serialization is still based on :mod:`pickle`. While there is high confidence
+  remote code execution is impossible in Mitogen's configuration, an untrusted
+  context may at least trigger disproportionately high memory usage injecting
+  small messages (*"billion laughs attack"*). Replacement is an important
+  future priority, but not critical for an initial release.
+
+* Child processes are not reliably reaped, leading to a pileup of zombie
+  processes when a program makes many short-lived connections in a single
+  invocation. This does not impact Mitogen for Ansible, however it limits the
+  usefulness of the core library. A future 0.2 release will address it.
+
+* Some races remain around :class:`mitogen.core.Broker <Broker>` destruction,
+  disconnection and corresponding file descriptor closure. These are only
+  problematic in situations where child process reaping is also problematic.
+
+* The `fakessh` component does not shut down correctly and requires flow
+  control added to the design. While minimal fixes are possible, due to the
+  absence of flow control the original design is functionally incomplete.
+
+* The multi-threaded :ref:`service` remains in a state of design flux and
+  should be considered obsolete, despite heavy use in Mitogen for Ansible. A
+  future replacement may be integrated more tightly with, or entirely replace
+  the RPC dispatcher on the main thread.
+
+* Documentation is in a state of disrepair. This will be improved over the 0.2
+  series.
+
+
+v0.2.4 (2018-??-??)
+-------------------
+
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+
+This release includes a huge variety of important fixes and new optimizations.
+It is 35% faster than 0.2.3 on a synthetic 64 target run that places heavy load
+on the connection multiplexer.
+
+Enhancements
+^^^^^^^^^^^^
+
+* `#76 <https://github.com/dw/mitogen/issues/76>`_,
+  `#351 <https://github.com/dw/mitogen/issues/351>`_,
+  `#352 <https://github.com/dw/mitogen/issues/352>`_: disconnect propagation
+  has improved, allowing Ansible to cancel waits for responses from abruptly
+  disconnected targets. This ensures a task will reliably fail rather than
+  hang, for example on network failure or EC2 instance maintenance.
+
+* `#369 <https://github.com/dw/mitogen/issues/369>`_,
+  `#407 <https://github.com/dw/mitogen/issues/407>`_: :meth:`Connection.reset`
+  is implemented, allowing `meta: reset_connection
+  <https://docs.ansible.com/ansible/latest/modules/meta_module.html>`_ to shut
+  down the remote interpreter as documented, and improving support for the
+  `reboot
+  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
+  module.
+
+* `09aa27a6 <https://github.com/dw/mitogen/commit/09aa27a6>`_: the
+  ``mitogen_host_pinned`` strategy wraps the ``host_pinned`` strategy
+  introduced in Ansible 2.7.
+
+* `#477 <https://github.com/dw/mitogen/issues/477>`_: Python 2.4 is fully
+  supported by the core library and tested automatically, in any parent/child
+  combination of 2.4, 2.6, 2.7 and 3.6 interpreters.
+
+* `#477 <https://github.com/dw/mitogen/issues/477>`_: Ansible 2.3 is fully
+  supported and tested automatically. In combination with the core library
+  Python 2.4 support, this allows Red Hat Enterprise Linux 5 targets to be
+  managed with Mitogen. The ``simplejson`` package need not be installed on
+  such targets, as is usually required by Ansible.
+
+* `#412 <https://github.com/dw/mitogen/issues/412>`_: to simplify diagnosing
+  connection configuration problems, Mitogen ships a ``mitogen_get_stack``
+  action that is automatically added to the action plug-in path. See
+  :ref:`mitogen-get-stack` for more information.
+
+* `152effc2 <https://github.com/dw/mitogen/commit/152effc2>`_,
+  `bd4b04ae <https://github.com/dw/mitogen/commit/bd4b04ae>`_: a CPU affinity
+  policy was added for Linux controllers, reducing latency and SMP overhead on
+  hot paths exercised for every task. This yielded a 19% speedup in a 64-target
+  job composed of many short tasks, and should easily be visible as a runtime
+  improvement in many-host runs.
+
+* `2b44d598 <https://github.com/dw/mitogen/commit/2b44d598>`_: work around a
+  defective caching mechanism by pre-heating it before spawning workers. This
+  saves 40% runtime on a synthetic repetitive task.
+
+* `0979422a <https://github.com/dw/mitogen/commit/0979422a>`_: an expensive
+  dependency scanning step was redundantly invoked for every task,
+  bottlenecking the connection multiplexer.
+
+* `eaa990a97 <https://github.com/dw/mitogen/commit/eaa990a97>`_: a new
+  ``mitogen_ssh_compression`` variable is supported, allowing Mitogen's default
+  SSH compression to be disabled. SSH compression is a large contributor to CPU
+  usage in many-target runs, and severely limits file transfer. On a `"shell:
+  hostname"` task repeated 500 times, Mitogen requires around 800 bytes per
+  task with compression, rising to 3 KiB without. File transfer throughput
+  rises from ~25MiB/s when enabled to ~200MiB/s when disabled.
+
+* `#260 <https://github.com/dw/mitogen/issues/260>`_,
+  `a18a083c <https://github.com/dw/mitogen/commit/a18a083c>`_: brokers no
+  longer wait for readiness indication to transmit, and instead assume
+  transmission will succeed. As this is usually true, one loop iteration and
+  two poller reconfigurations are avoided, yielding a significant reduction in
+  interprocess round-trip latency.
+
+* `#415 <https://github.com/dw/mitogen/issues/415>`_,
+  `#491 <https://github.com/dw/mitogen/issues/491>`_,
+  `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
+  for in-process queues changed from `kqueue
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ / `epoll
+  <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
+  <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
+  or teardown, yielding a 38% latency reduction for inter-thread communication.
+
+
+Fixes
+^^^^^
+
+* `#251 <https://github.com/dw/mitogen/issues/251>`_,
+  `#359 <https://github.com/dw/mitogen/issues/359>`_,
+  `#396 <https://github.com/dw/mitogen/issues/396>`_,
+  `#401 <https://github.com/dw/mitogen/issues/401>`_,
+  `#404 <https://github.com/dw/mitogen/issues/404>`_,
+  `#412 <https://github.com/dw/mitogen/issues/412>`_,
+  `#434 <https://github.com/dw/mitogen/issues/434>`_,
+  `#436 <https://github.com/dw/mitogen/issues/436>`_,
+  `#465 <https://github.com/dw/mitogen/issues/465>`_: connection delegation and
+  ``delegate_to:`` handling suffered a major regression in 0.2.3. The 0.2.2
+  behaviour has been restored, and further work has been made to improve the
+  compatibility of connection delegation's configuration building methods.
+
+* `#323 <https://github.com/dw/mitogen/issues/323>`_,
+  `#333 <https://github.com/dw/mitogen/issues/333>`_: work around a Windows
+  Subsystem for Linux bug that caused tracebacks to appear during shutdown.
+
+* `#334 <https://github.com/dw/mitogen/issues/334>`_: the SSH method
+  tilde-expands private key paths using Ansible's logic. Previously the path
+  was passed unmodified to SSH, which expanded it using :func:`pwd.getpwnam`.
+  This differs from :func:`os.path.expanduser`, which uses the ``HOME``
+  environment variable if it is set, causing behaviour to diverge when Ansible
+  was invoked across user accounts via ``sudo``.
+
+* `#364 <https://github.com/dw/mitogen/issues/364>`_: file transfers from
+  controllers running Python 2.7.2 or earlier could be interrupted due to a
+  forking bug in the :mod:`tempfile` module.
+
+* `#370 <https://github.com/dw/mitogen/issues/370>`_: the Ansible
+  `reboot <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_
+  module is supported.
+
+* `#373 <https://github.com/dw/mitogen/issues/373>`_: the LXC and LXD methods
+  print a useful hint on failure, as no useful error is normally logged to the
+  console by these tools.
+
+* `#374 <https://github.com/dw/mitogen/issues/374>`_,
+  `#391 <https://github.com/dw/mitogen/issues/391>`_: file transfer and module
+  execution from 2.x controllers to 3.x targets was broken due to a regression
+  caused by refactoring, and compounded by `#426
+  <https://github.com/dw/mitogen/issues/426>`_.
+
+* `#400 <https://github.com/dw/mitogen/issues/400>`_: work around a threading
+  bug in the AWX display callback when running with high verbosity setting.
+
+* `#409 <https://github.com/dw/mitogen/issues/409>`_: the setns method was
+  silently broken due to missing tests. Basic coverage was added to prevent a
+  recurrence.
+
+* `#409 <https://github.com/dw/mitogen/issues/409>`_: the LXC and LXD methods
+  support ``mitogen_lxc_path`` and ``mitogen_lxc_attach_path`` variables to
+  control the location of third pary utilities.
+
+* `#410 <https://github.com/dw/mitogen/issues/410>`_: the sudo method supports
+  the SELinux ``--type`` and ``--role`` options.
+
+* `#420 <https://github.com/dw/mitogen/issues/420>`_: if a :class:`Connection`
+  was constructed in the Ansible top-level process, for example while executing
+  ``meta: reset_connection``, resources could become undesirably shared in
+  subsequent children.
+
+* `#426 <https://github.com/dw/mitogen/issues/426>`_: an oversight while
+  porting to Python 3 meant no automated 2->3 tests were running. A significant
+  number of 2->3 bugs were fixed, mostly in the form of Unicode/bytes
+  mismatches.
+
+* `#429 <https://github.com/dw/mitogen/issues/429>`_: the ``sudo`` method can
+  now recognize internationalized password prompts.
+
+* `#362 <https://github.com/dw/mitogen/issues/362>`_,
+  `#435 <https://github.com/dw/mitogen/issues/435>`_: the previous fix for slow
+  Python 2.x subprocess creation on Red Hat caused newly spawned children to
+  have a reduced open files limit. A more intrusive fix has been added to
+  directly address the problem without modifying the subprocess environment.
+
+* `#397 <https://github.com/dw/mitogen/issues/397>`_,
+  `#454 <https://github.com/dw/mitogen/issues/454>`_: the previous approach to
+  handling modern Ansible temporary file cleanup was too aggressive, and could
+  trigger early finalization of Cython-based extension modules, leading to
+  segmentation faults.
+
+* `#499 <https://github.com/dw/mitogen/issues/499>`_: the ``allow_same_user``
+  Ansible configuration setting is respected.
+
+* `#527 <https://github.com/dw/mitogen/issues/527>`_: crashes in modules are
+  trapped and reported in a manner that matches Ansible. In particular, a
+  module crash no longer leads to an exception that may crash the corresponding
+  action plug-in.
+
+* `dc1d4251 <https://github.com/dw/mitogen/commit/dc1d4251>`_: the
+  ``synchronize`` module could fail with the Docker transport due to a missing
+  attribute.
+
+* `599da068 <https://github.com/dw/mitogen/commit/599da068>`_: fix a race
+  when starting async tasks, where it was possible for the controller to
+  observe no status file on disk before the task had a chance to write one.
+
+* `2c7af9f04 <https://github.com/dw/mitogen/commit/2c7af9f04>`_: Ansible
+  modules were repeatedly re-transferred. The bug was hidden by the previously
+  mandatorily enabled SSH compression.
+
+
+Core Library
+~~~~~~~~~~~~
+
+* `#76 <https://github.com/dw/mitogen/issues/76>`_: routing records the
+  destination context IDs ever received on each stream, and when disconnection
+  occurs, propagates :data:`mitogen.core.DEL_ROUTE` messages towards every
+  stream that ever communicated with the disappearing peer, rather than simply
+  towards parents. Conversations between nodes anywhere in the tree receive
+  :data:`mitogen.core.DEL_ROUTE` when either participant disconnects, allowing
+  receivers to wake with :class:`mitogen.core.ChannelError`, even when one
+  participant is not a parent of the other.
+
+* `#109 <https://github.com/dw/mitogen/issues/109>`_,
+  `57504ba6 <https://github.com/dw/mitogen/commit/57504ba6>`_: newer Python 3
+  releases explicitly populate :data:`sys.meta_path` with importer internals,
+  causing Mitogen to install itself at the end of the importer chain rather
+  than the front.
+
+* `#310 <https://github.com/dw/mitogen/issues/310>`_: support has returned for
+  trying to figure out the real source of non-module objects installed in
+  :data:`sys.modules`, so they can be imported. This is needed to handle syntax
+  sugar used by packages like :mod:`plumbum`.
+
+* `#349 <https://github.com/dw/mitogen/issues/349>`_: an incorrect format
+  string could cause large stack traces when attempting to import built-in
+  modules on Python 3.
+
+* `#387 <https://github.com/dw/mitogen/issues/387>`_,
+  `#413 <https://github.com/dw/mitogen/issues/413>`_: dead messages include an
+  optional reason in their body. This is used to cause
+  :class:`mitogen.core.ChannelError` to report far more useful diagnostics at
+  the point the error occurs that previously would have been buried in debug
+  log output from an unrelated context.
+
+* `#408 <https://github.com/dw/mitogen/issues/408>`_: a variety of fixes were
+  made to restore Python 2.4 compatibility.
+
+* `#399 <https://github.com/dw/mitogen/issues/399>`_,
+  `#437 <https://github.com/dw/mitogen/issues/437>`_: ignore a
+  :class:`DeprecationWarning` to avoid failure of the ``su`` method on Python
+  3.7.
+
+* `#405 <https://github.com/dw/mitogen/issues/405>`_: if an oversized message
+  is rejected, and it has a ``reply_to`` set, a dead message is returned to the
+  sender. This ensures function calls exceeding the configured maximum size
+  crash rather than hang.
+
+* `#406 <https://github.com/dw/mitogen/issues/406>`_:
+  :class:`mitogen.core.Broker` did not call :meth:`mitogen.core.Poller.close`
+  during shutdown, leaking the underlying poller FD in masters and parents.
+
+* `#406 <https://github.com/dw/mitogen/issues/406>`_: connections could leak
+  FDs when a child process failed to start.
+
+* `#288 <https://github.com/dw/mitogen/issues/288>`_,
+  `#406 <https://github.com/dw/mitogen/issues/406>`_,
+  `#417 <https://github.com/dw/mitogen/issues/417>`_: connections could leave
+  FD wrapper objects that had not been closed lying around to be closed during
+  garbage collection, causing reused FD numbers to be closed at random moments.
+
+* `#411 <https://github.com/dw/mitogen/issues/411>`_: the SSH method typed
+  "``y``" rather than the requisite "``yes``" when `check_host_keys="accept"`
+  was configured. This would lead to connection timeouts due to the hung
+  response.
+
+* `#414 <https://github.com/dw/mitogen/issues/414>`_,
+  `#425 <https://github.com/dw/mitogen/issues/425>`_: avoid deadlock of forked
+  children by reinitializing the :mod:`mitogen.service` pool lock.
+
+* `#416 <https://github.com/dw/mitogen/issues/416>`_: around 1.4KiB of memory
+  was leaked on every RPC, due to a list of strong references keeping alive any
+  handler ever registered for disconnect notification.
+
+* `#418 <https://github.com/dw/mitogen/issues/418>`_: the
+  :func:`mitogen.parent.iter_read` helper would leak poller FDs, because
+  execution of its :keyword:`finally` block was delayed on Python 3. Now
+  callers explicitly close the generator when finished.
+
+* `#422 <https://github.com/dw/mitogen/issues/422>`_: the fork method could
+  fail to start if :data:`sys.stdout` was opened in block buffered mode, and
+  buffered data was pending in the parent prior to fork.
+
+* `#438 <https://github.com/dw/mitogen/issues/438>`_: a descriptive error is
+  logged when stream corruption is detected.
+
+* `#439 <https://github.com/dw/mitogen/issues/439>`_: descriptive errors are
+  raised when attempting to invoke unsupported function types.
+
+* `#444 <https://github.com/dw/mitogen/issues/444>`_: messages regarding
+  unforwardable extension module are no longer logged as errors.
+
+* `#445 <https://github.com/dw/mitogen/issues/445>`_: service pools unregister
+  the :data:`mitogen.core.CALL_SERVICE` handle at shutdown, ensuring any
+  outstanding messages are either processed by the pool as it shuts down, or
+  have dead messages sent in reply to them, preventing peer contexts from
+  hanging due to a forgotten buffered message.
+
+* `#446 <https://github.com/dw/mitogen/issues/446>`_: given thread A calling
+  :meth:`mitogen.core.Receiver.close`, and thread B, C, and D sleeping in
+  :meth:`mitogen.core.Receiver.get`, previously only one sleeping thread would
+  be woken with :class:`mitogen.core.ChannelError` when the receiver was
+  closed. Now all threads are woken per the docstring.
+
+* `#447 <https://github.com/dw/mitogen/issues/447>`_: duplicate attempts to
+  invoke :meth:`mitogen.core.Router.add_handler` cause an error to be raised,
+  ensuring accidental re-registration of service pools are reported correctly.
+
+* `#448 <https://github.com/dw/mitogen/issues/448>`_: the import hook
+  implementation now raises :class:`ModuleNotFoundError` instead of
+  :class:`ImportError` in Python 3.6 and above, to cope with an upcoming
+  version of the :mod:`subprocess` module requiring this new subclass to be
+  raised.
+
+* `#453 <https://github.com/dw/mitogen/issues/453>`_: the loggers used in
+  children for standard IO redirection have propagation disabled, preventing
+  accidental reconfiguration of the :mod:`logging` package in a child from
+  setting up a feedback loop.
+
+* `#456 <https://github.com/dw/mitogen/issues/456>`_: a descriptive error is
+  logged when :meth:`mitogen.core.Broker.defer` is called after the broker has
+  shut down, preventing new messages being enqueued that will never be sent,
+  and subsequently producing a program hang.
+
+* `#459 <https://github.com/dw/mitogen/issues/459>`_: the beginnings of a
+  :meth:`mitogen.master.Router.get_stats` call has been added. The initial
+  statistics cover the module loader only.
+
+* `#462 <https://github.com/dw/mitogen/issues/462>`_: Mitogen could fail to
+  open a PTY on broken Linux systems due to a bad interaction between the glibc
+  :func:`grantpt` function and an incorrectly mounted ``/dev/pts`` filesystem.
+  Since correct group ownership is not required in most scenarios, when this
+  problem is detected, the PTY is allocated and opened directly by the library.
+
+* `#479 <https://github.com/dw/mitogen/issues/479>`_: Mitogen could fail to
+  import :mod:`__main__` on Python 3.4 and newer due to a breaking change in
+  the :mod:`pkgutil` API. The program's main script is now handled specially.
+
+* `#481 <https://github.com/dw/mitogen/issues/481>`_: the version of `sudo`
+  that shipped with CentOS 5 replaced itself with the program to be executed,
+  and therefore did not hold any child PTY open on our behalf. The child
+  context is updated to preserve any PTY FD in order to avoid the kernel
+  sending `SIGHUP` early during startup.
+
+* `#523 <https://github.com/dw/mitogen/issues/523>`_: the test suite didn't
+  generate a code coverage report if any test failed.
+
+* `#524 <https://github.com/dw/mitogen/issues/524>`_: Python 3.6+ emitted a
+  :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
+
+* `#529 <https://github.com/dw/mitogen/issues/529>`_: Code coverage of the
+  test suite was not measured across all Python versions.
+
+* `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
+  7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
+
+* `9ec360c2 <https://github.com/dw/mitogen/commit/9ec360c2>`_: a new
+  :meth:`mitogen.core.Broker.defer_sync` utility function is provided.
+
+* `f20e0bba <https://github.com/dw/mitogen/commit/f20e0bba>`_:
+  :meth:`mitogen.service.FileService.register_prefix` permits granting
+  unprivileged access to whole filesystem subtrees, rather than single files at
+  a time.
+
+* `8f85ee03 <https://github.com/dw/mitogen/commit/8f85ee03>`_:
+  :meth:`mitogen.core.Router.myself` returns a :class:`mitogen.core.Context`
+  referring to the current process.
+
+* `824c7931 <https://github.com/dw/mitogen/commit/824c7931>`_: exceptions
+  raised by the import hook were updated to include probable reasons for
+  a failure.
+
+* `57b652ed <https://github.com/dw/mitogen/commit/57b652ed>`_: a stray import
+  meant an extra roundtrip and ~4KiB of data was wasted for any context that
+  imported :mod:`mitogen.parent`.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Alex Willmer <https://github.com/moreati>`_,
+`Andreas Krüger <https://github.com/woopstar>`_,
+`Anton Stroganov <https://github.com/Aeon>`_,
+`Berend De Schouwer <https://github.com/berenddeschouwer>`_,
+`Brian Candler <https://github.com/candlerb>`_,
+`dsgnr <https://github.com/dsgnr>`_,
+`Duane Zamrok <https://github.com/dewthefifth>`_,
+`Eric Chang <https://github.com/changchichung>`_,
+`Gerben Meijer <https://github.com/infernix>`_,
+`Guy Knights <https://github.com/knightsg>`_,
+`Jesse London <https://github.com/jesteria>`_,
+`Jiří Vávra <https://github.com/Houbovo>`_,
+`Johan Beisser <https://github.com/jbeisser>`_,
+`Jonathan Rosser <https://github.com/jrosser>`_,
+`Josh Smift <https://github.com/jbscare>`_,
+`Kevin Carter <https://github.com/cloudnull>`_,
+`Mehdi <https://github.com/mehdisat7>`_,
+`Michael DeHaan <https://github.com/mpdehaan>`_,
+`Michal Medvecky <https://github.com/michalmedvecky>`_,
+`Mohammed Naser <https://github.com/mnaser/>`_,
+`Peter V. Saveliev <https://github.com/svinota/>`_,
+`Pieter Avonts <https://github.com/pieteravonts/>`_,
+`Ross Williams <https://github.com/overhacked/>`_,
+`Sergey <https://github.com/LuckySB/>`_,
+`Stéphane <https://github.com/sboisson/>`_,
+`Strahinja Kustudic <https://github.com/kustodian>`_,
+`Tom Parker-Shemilt <https://github.com/palfrey/>`_,
+`Younès HAFRI <https://github.com/yhafri>`_,
+`@killua-eu <https://github.com/killua-eu>`_,
+`@myssa91 <https://github.com/myssa91>`_,
+`@ohmer1 <https://github.com/ohmer1>`_,
+`@s3c70r <https://github.com/s3c70r/>`_,
+`@syntonym <https://github.com/syntonym/>`_,
+`@trim777 <https://github.com/trim777/>`_,
+`@whky <https://github.com/whky/>`_, and
+`@yodatak <https://github.com/yodatak/>`_.
+
+
 v0.2.3 (2018-10-23)
 -------------------
 
@@ -217,7 +739,7 @@ Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
-bug reports, features and fixes in this release contributed by
+bug reports, testing, features and fixes in this release contributed by
 `Alex Russu <https://github.com/alexrussu>`_,
 `Alex Willmer <https://github.com/moreati>`_,
 `atoom <https://github.com/atoom>`_,
@@ -398,69 +920,6 @@ Mitogen for Ansible
 * Built-in file transfer compatible with connection delegation.
 
 
-**Known Issues**
-
-* The ``raw`` action executes as a regular Mitogen connection, which requires
-  Python on the target, precluding its use for installing Python. This will be
-  addressed in a future 0.2 release. For now, simply mix Mitogen and vanilla
-  Ansible strategies in your playbook:
-
-  .. code-block:: yaml
-
-    - hosts: web-servers
-      strategy: linear
-      tasks:
-      - name: Install Python if necessary.
-        raw: test -e /usr/bin/python || apt install -y python-minimal
-
-    - hosts: web-servers
-      strategy: mitogen_linear
-      roles:
-      - nginx
-      - initech_app
-      - y2k_fix
-
-.. * When running with ``-vvv``, log messages will be printed to the console
-     *after* the Ansible run completes, as connection multiplexer shutdown only
-     begins after Ansible exits. This is due to a lack of suitable shutdown hook
-     in Ansible, and is fairly harmless, albeit cosmetically annoying. A future
-     release may include a solution.
-
-.. * Configurations will break that rely on the `hashbang argument splitting
-     behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
-     ``ansible_python_interpreter`` setting, contrary to the Ansible
-     documentation. This will be addressed in a future 0.2 release.
-
-* The Ansible 2.7 ``reboot`` module is not yet supported.
-
-* Performance does not scale linearly with target count. This requires
-  significant additional work, as major bottlenecks exist in the surrounding
-  Ansible code. Performance-related bug reports for any scenario remain
-  welcome with open arms.
-
-* Performance on Python 3 is significantly worse than on Python 2. While this
-  has not yet been investigated, at least some of the regression appears to be
-  part of the core library, and should therefore be straightforward to fix as
-  part of 0.2.x.
-
-* *Module Replacer* style Ansible modules are not supported.
-
-* Actions are single-threaded for each `(host, user account)` combination,
-  including actions that execute on the local machine. Playbooks may experience
-  slowdown compared to vanilla Ansible if they employ long-running
-  ``local_action`` or ``delegate_to`` tasks delegating many target hosts to a
-  single machine and user account.
-
-* Connection Delegation remains in preview and has bugs around how it infers
-  connections. Connection establishment will remain single-threaded for the 0.2
-  series, however connection inference bugs will be addressed in a future 0.2
-  release.
-
-* Connection Delegation does not support automatic tunnelling of SSH-dependent
-  actions, such as the ``synchronize`` module. This will be addressed in the
-  0.3 series.
-
-
 Core Library
 ~~~~~~~~~~~~
 
@@ -473,33 +932,3 @@ Core Library
   Windows Subsystem for Linux explicitly supported.
 
 * Automatic tests covering Python 2.6, 2.7 and 3.6 on Linux only.
-
-
-**Known Issues**
-
-* Serialization is still based on :mod:`pickle`. While there is high confidence
-  remote code execution is impossible in Mitogen's configuration, an untrusted
-  context may at least trigger disproportionately high memory usage injecting
-  small messages (*"billion laughs attack"*). Replacement is an important
-  future priority, but not critical for an initial release.
-
-* Child processes are not reliably reaped, leading to a pileup of zombie
-  processes when a program makes many short-lived connections in a single
-  invocation. This does not impact Mitogen for Ansible, however it limits the
-  usefulness of the core library. A future 0.2 release will address it.
-
-* Some races remain around :class:`mitogen.core.Broker <Broker>` destruction,
-  disconnection and corresponding file descriptor closure. These are only
-  problematic in situations where child process reaping is also problematic.
-
-* The `fakessh` component does not shut down correctly and requires flow
-  control added to the design. While minimal fixes are possible, due to the
-  absence of flow control the original design is functionally incomplete.
-
-* The multi-threaded :ref:`service` remains in a state of design flux and
-  should be considered obsolete, despite heavy use in Mitogen for Ansible. A
-  future replacement may be integrated more tightly with, or entirely replace
-  the RPC dispatcher on the main thread.
-
-* Documentation is in a state of disrepair. This will be improved over the 0.2
-  series.

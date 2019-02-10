@@ -13,7 +13,7 @@ demonstrator for what does and doesn't work.
 See `../image_prep/README.md`.
 
 
-## `run_ansible_playbook.sh`
+## `run_ansible_playbook.py`
 
 This is necessary to set some environment variables used by future tests, as
 there appears to be no better way to inject them into the top-level process
@@ -22,7 +22,7 @@ environment before the Mitogen connection process forks.
 
 ## Running Everything
 
-`ANSIBLE_STRATEGY=mitogen_linear ./run_ansible_playbook.sh all.yml`
+`ANSIBLE_STRATEGY=mitogen_linear ./run_ansible_playbook.py all.yml`
 
 
 ## `hosts/` and `common-hosts`

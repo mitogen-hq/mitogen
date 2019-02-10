@@ -12,6 +12,9 @@ from ansible.plugins.action import ActionBase
 
 
 class ActionModule(ActionBase):
+    # Running this for every host is pointless.
+    BYPASS_HOST_LOOP = True
+
     def run(self, tmp=None, task_vars=None):
         if not isinstance(self._connection,
                           ansible_mitogen.connection.Connection):

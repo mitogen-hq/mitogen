@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 import logging
 
 import mitogen.core
@@ -62,9 +64,8 @@ class Stream(mitogen.parent.Stream):
         if username:
             self.username = username
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'docker.' + (self.container or self.image)
+    def _get_name(self):
+        return u'docker.' + (self.container or self.image)
 
     def get_boot_command(self):
         args = ['--interactive']

@@ -1,2 +1,2 @@
 
-- import_playbook: kubectl.yml
+- include: kubectl.yml

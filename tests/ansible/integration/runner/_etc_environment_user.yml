@@ -1,0 +1,32 @@
+# ~/.pam_environment
+
+- file:
+    path: ~/.pam_environment
+    state: absent
+
+- shell: echo $MAGIC_PAM_ENV
+  register: echo
+
+- assert:
+    that: echo.stdout == ""
+
+- copy:
+    dest: ~/.pam_environment
+    content: |
+      MAGIC_PAM_ENV=321
+
+- shell: echo $MAGIC_PAM_ENV
+  register: echo
+
+- assert:
+    that: echo.stdout == "321"
+
+- file:
+    path: ~/.pam_environment
+    state: absent
+
+- shell: echo $MAGIC_PAM_ENV
+  register: echo
+
+- assert:
+    that: echo.stdout == ""

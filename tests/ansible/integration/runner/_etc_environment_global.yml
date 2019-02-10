@@ -1,0 +1,45 @@
+# /etc/environment
+
+- file:
+    path: /etc/environment
+    state: absent
+  become: true
+
+- shell: echo $MAGIC_ETC_ENV
+  register: echo
+
+- assert:
+    that: echo.stdout == ""
+
+- copy:
+    dest: /etc/environment
+    content: |
+      MAGIC_ETC_ENV=555
+  become: true
+
+- meta: reset_connection
+
+#- mitogen_shutdown_all:
+  #when: not is_mitogen
+
+- shell: echo $MAGIC_ETC_ENV
+  register: echo
+
+- assert:
+    that: echo.stdout == "555"
+
+- file:
+    path: /etc/environment
+    state: absent
+  become: true
+
+- meta: reset_connection
+
+- mitogen_shutdown_all:
+  when: not is_mitogen
+
+- shell: echo $MAGIC_ETC_ENV
+  register: echo
+
+- assert:
+    that: echo.stdout == ""

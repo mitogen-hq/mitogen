@@ -26,6 +26,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
 
 """
 These classes implement execution for each style of Ansible module. They are
@@ -35,23 +36,36 @@ Each class in here has a corresponding Planner class in planners.py that knows
 how to build arguments for it, preseed related data, etc.
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import atexit
-import ctypes
-import errno
+import codecs
 import imp
-import json
-import logging
 import os
 import shlex
+import shutil
 import sys
 import tempfile
+import traceback
 import types
 
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
+from mitogen.core import b
+from mitogen.core import bytes_partition
+from mitogen.core import str_partition
+from mitogen.core import str_rpartition
+from mitogen.core import to_text
+
+try:
+    import ctypes
+except ImportError:
+    # Python 2.4
+    ctypes = None
+
+try:
+    import json
+except ImportError:
+    # Python 2.4
+    import simplejson as json
 
 try:
     # Cannot use cStringIO as it does not support Unicode.
@@ -64,6 +78,10 @@ try:
 except ImportError:
     from pipes import quote as shlex_quote
 
+# Absolute imports for <2.5.
+logging = __import__('logging')
+
+
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
@@ -72,16 +90,25 @@ ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 # resolv.conf at startup and never implicitly reload it. Cope with that via an
 # explicit call to res_init() on each task invocation. BSD-alikes export it
 # directly, Linux #defines it as "__res_init".
-libc = ctypes.CDLL(None)
 libc__res_init = None
-for symbol in 'res_init', '__res_init':
-    try:
-        libc__res_init = getattr(libc, symbol)
-    except AttributeError:
-        pass
+if ctypes:
+    libc = ctypes.CDLL(None)
+    for symbol in 'res_init', '__res_init':
+        try:
+            libc__res_init = getattr(libc, symbol)
+        except AttributeError:
+            pass
 
 iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
+
+
+if mitogen.core.PY3:
+    shlex_split = shlex.split
+else:
+    def shlex_split(s, comments=False):
+        return [mitogen.core.to_text(token)
+                for token in shlex.split(str(s), comments=comments)]
 
 
 class EnvironmentFileWatcher(object):
@@ -118,8 +145,11 @@ class EnvironmentFileWatcher(object):
 
     def _load(self):
         try:
-            with open(self.path, 'r') as fp:
+            fp = codecs.open(self.path, 'r', encoding='utf-8')
+            try:
                 return list(self._parse(fp))
+            finally:
+                fp.close()
         except IOError:
             return []
 
@@ -129,14 +159,14 @@ class EnvironmentFileWatcher(object):
         """
         for line in fp:
             # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
-            bits = shlex.split(line, comments=True)
+            bits = shlex_split(line, comments=True)
             if (not bits) or bits[0].startswith('#'):
                 continue
 
-            if bits[0] == 'export':
+            if bits[0] == u'export':
                 bits.pop(0)
 
-            key, sep, value = (' '.join(bits)).partition('=')
+            key, sep, value = str_partition(u' '.join(bits), u'=')
             if key and sep:
                 yield key, value
 
@@ -255,7 +285,7 @@ class Runner(object):
         self.service_context = service_context
         self.econtext = econtext
         self.detach = detach
-        self.args = json.loads(json_args)
+        self.args = json.loads(mitogen.core.to_text(json_args))
         self.good_temp_dir = good_temp_dir
         self.extra_env = extra_env
         self.env = env
@@ -354,6 +384,55 @@ class Runner(object):
             self.revert()
 
 
+class AtExitWrapper(object):
+    """
+    issue #397, #454: Newer Ansibles use :func:`atexit.register` to trigger
+    tmpdir cleanup when AnsibleModule.tmpdir is responsible for creating its
+    own temporary directory, however with Mitogen processes are preserved
+    across tasks, meaning cleanup must happen earlier.
+
+    Patch :func:`atexit.register`, catching :func:`shutil.rmtree` calls so they
+    can be executed on task completion, rather than on process shutdown.
+    """
+    # Wrapped in a dict to avoid instance method decoration.
+    original = {
+        'register': atexit.register
+    }
+
+    def __init__(self):
+        assert atexit.register == self.original['register'], \
+            "AtExitWrapper installed twice."
+        atexit.register = self._atexit__register
+        self.deferred = []
+
+    def revert(self):
+        """
+        Restore the original :func:`atexit.register`.
+        """
+        assert atexit.register == self._atexit__register, \
+            "AtExitWrapper not installed."
+        atexit.register = self.original['register']
+
+    def run_callbacks(self):
+        while self.deferred:
+            func, targs, kwargs = self.deferred.pop()
+            try:
+                func(*targs, **kwargs)
+            except Exception:
+                LOG.exception('While running atexit callbacks')
+
+    def _atexit__register(self, func, *targs, **kwargs):
+        """
+        Intercept :func:`atexit.register` calls, diverting any to
+        :func:`shutil.rmtree` into a private list.
+        """
+        if func == shutil.rmtree:
+            self.deferred.append((func, targs, kwargs))
+            return
+
+        self.original['register'](func, *targs, **kwargs)
+
+
 class ModuleUtilsImporter(object):
     """
     :param list module_utils:
@@ -388,7 +467,7 @@ class ModuleUtilsImporter(object):
             mod.__path__ = []
             mod.__package__ = str(fullname)
         else:
-            mod.__package__ = str(fullname.rpartition('.')[0])
+            mod.__package__ = str(str_rpartition(to_text(fullname), '.')[0])
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
@@ -404,6 +483,8 @@ class TemporaryEnvironment(object):
         self.original = dict(os.environ)
         self.env = env or {}
         for key, value in iteritems(self.env):
+            key = mitogen.core.to_text(key)
+            value = mitogen.core.to_text(value)
             if value is None:
                 os.environ.pop(key, None)
             else:
@@ -530,7 +611,7 @@ class ProgramRunner(Runner):
         Return the final argument vector used to execute the program.
         """
         return [
-            self.args['_ansible_shell_executable'],
+            self.args.get('_ansible_shell_executable', '/bin/sh'),
             '-c',
             self._get_shell_fragment(),
         ]
@@ -547,18 +628,19 @@ class ProgramRunner(Runner):
                 args=self._get_argv(),
                 emulate_tty=self.emulate_tty,
             )
-        except Exception as e:
+        except Exception:
             LOG.exception('While running %s', self._get_argv())
+            e = sys.exc_info()[1]
             return {
-                'rc': 1,
-                'stdout': '',
-                'stderr': '%s: %s' % (type(e), e),
+                u'rc': 1,
+                u'stdout': u'',
+                u'stderr': u'%s: %s' % (type(e), e),
             }
 
         return {
-            'rc': rc,
-            'stdout': mitogen.core.to_text(stdout),
-            'stderr': mitogen.core.to_text(stderr),
+            u'rc': rc,
+            u'stdout': mitogen.core.to_text(stdout),
+            u'stderr': mitogen.core.to_text(stderr),
         }
 
 
@@ -608,7 +690,7 @@ class ScriptRunner(ProgramRunner):
         self.interpreter_fragment = interpreter_fragment
         self.is_python = is_python
 
-    b_ENCODING_STRING = b'# -*- coding: utf-8 -*-'
+    b_ENCODING_STRING = b('# -*- coding: utf-8 -*-')
 
     def _get_program(self):
         return self._rewrite_source(
@@ -617,7 +699,7 @@ class ScriptRunner(ProgramRunner):
 
     def _get_argv(self):
         return [
-            self.args['_ansible_shell_executable'],
+            self.args.get('_ansible_shell_executable', '/bin/sh'),
             '-c',
             self._get_shell_fragment(),
         ]
@@ -641,13 +723,13 @@ class ScriptRunner(ProgramRunner):
         # While Ansible rewrites the #! using ansible_*_interpreter, it is
         # never actually used to execute the script, instead it is a shell
         # fragment consumed by shell/__init__.py::build_module_command().
-        new = [b'#!' + utf8(self.interpreter_fragment)]
+        new = [b('#!') + utf8(self.interpreter_fragment)]
         if self.is_python:
             new.append(self.b_ENCODING_STRING)
 
-        _, _, rest = s.partition(b'\n')
+        _, _, rest = bytes_partition(s, b('\n'))
         new.append(rest)
-        return b'\n'.join(new)
+        return b('\n').join(new)
 
 
 class NewStyleRunner(ScriptRunner):
@@ -701,6 +783,7 @@ class NewStyleRunner(ScriptRunner):
         )
         self._setup_imports()
         self._setup_excepthook()
+        self.atexit_wrapper = AtExitWrapper()
         if libc__res_init:
             libc__res_init()
 
@@ -708,6 +791,7 @@ class NewStyleRunner(ScriptRunner):
         sys.excepthook = self.original_excepthook
 
     def revert(self):
+        self.atexit_wrapper.revert()
         self._argv.revert()
         self._stdio.revert()
         self._revert_excepthook()
@@ -733,16 +817,18 @@ class NewStyleRunner(ScriptRunner):
             return self._code_by_path[self.path]
         except KeyError:
             return self._code_by_path.setdefault(self.path, compile(
-                source=self.source,
-                filename="master:" + self.path,
-                mode='exec',
-                dont_inherit=True,
+                # Py2.4 doesn't support kwargs.
+                self.source,            # source
+                "master:" + self.path,  # filename
+                'exec',                 # mode
+                0,                      # flags
+                True,                   # dont_inherit
             ))
 
     if mitogen.core.PY3:
         main_module_name = '__main__'
     else:
-        main_module_name = b'__main__'
+        main_module_name = b('__main__')
 
     def _handle_magic_exception(self, mod, exc):
         """
@@ -764,17 +850,9 @@ class NewStyleRunner(ScriptRunner):
                 exec(code, vars(mod))
             else:
                 exec('exec code in vars(mod)')
-        except Exception as e:
-            self._handle_magic_exception(mod, e)
+        except Exception:
+            self._handle_magic_exception(mod, sys.exc_info()[1])
             raise
-
-    def _run_atexit_funcs(self):
-        """
-        Newer Ansibles use atexit.register() to trigger tmpdir cleanup, when
-        AnsibleModule.tmpdir is responsible for creating its own temporary
-        directory.
-        """
-        atexit._run_exitfuncs()
 
     def _run(self):
         mod = types.ModuleType(self.main_module_name)
@@ -789,24 +867,30 @@ class NewStyleRunner(ScriptRunner):
         )
 
         code = self._get_code()
-        exc = None
+        rc = 2
         try:
             try:
                 self._run_code(code, mod)
-            finally:
-                self._run_atexit_funcs()
-        except SystemExit as e:
-            exc = e
+            except SystemExit:
+                exc = sys.exc_info()[1]
+                rc = exc.args[0]
+            except Exception:
+                # This writes to stderr by default.
+                traceback.print_exc()
+                rc = 1
+
+        finally:
+            self.atexit_wrapper.run_callbacks()
 
         return {
-            'rc': exc.args[0] if exc else 2,
-            'stdout': mitogen.core.to_text(sys.stdout.getvalue()),
-            'stderr': mitogen.core.to_text(sys.stderr.getvalue()),
+            u'rc': rc,
+            u'stdout': mitogen.core.to_text(sys.stdout.getvalue()),
+            u'stderr': mitogen.core.to_text(sys.stderr.getvalue()),
         }
 
 
 class JsonArgsRunner(ScriptRunner):
-    JSON_ARGS = b'<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
+    JSON_ARGS = b('<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>')
 
     def _get_args_contents(self):
         return json.dumps(self.args).encode()

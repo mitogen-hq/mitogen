@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 Basic signal handler for dumping thread stacks.
 """
@@ -97,10 +99,6 @@ def get_router_info():
             for id_, router in get_routers().items()
         )
     }
-
-
-def get_router_info(router):
-    pass
 
 
 def get_stream_info(router_id):

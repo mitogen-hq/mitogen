@@ -5,11 +5,11 @@
   tasks:
 
   - name: Make 32MiB file
-    connection: local
+    delegate_to: localhost
     shell: openssl rand 33554432 > /tmp/bigfile.in
 
   - name: Make 320MiB file
-    connection: local
+    delegate_to: localhost
     shell: >
       cat
       /tmp/bigfile.in
@@ -47,21 +47,21 @@
     file:
       path: "{{item}}"
       state: absent
-    connection: local
+    delegate_to: localhost
     become: true
     with_items:
     - /tmp/bigfile.out
     - /tmp/bigbigfile.out
 
   - name: Copy 32MiB file via localhost sudo
-    connection: local
+    delegate_to: localhost
     become: true
     copy:
       src: /tmp/bigfile.in
       dest: /tmp/bigfile.out
 
   - name: Copy 320MiB file via localhost sudo
-    connection: local
+    delegate_to: localhost
     become: true
     copy:
       src: /tmp/bigbigfile.in

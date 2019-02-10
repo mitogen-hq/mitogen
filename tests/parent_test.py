@@ -1,4 +1,5 @@
 import errno
+import fcntl
 import os
 import signal
 import subprocess
@@ -9,6 +10,7 @@ import time
 import mock
 import unittest2
 import testlib
+from testlib import Popen__terminate
 
 import mitogen.parent
 
@@ -28,6 +30,28 @@ def wait_for_child(pid, timeout=1.0):
         time.sleep(0.05)
 
     assert False, "wait_for_child() timed out"
+
+
+@mitogen.core.takes_econtext
+def call_func_in_sibling(ctx, econtext, sync_sender):
+    recv = ctx.call_async(time.sleep, 99999)
+    sync_sender.send(None)
+    recv.get().unpickle()
+
+
+def wait_for_empty_output_queue(sync_recv, context):
+    # wait for sender to submit their RPC. Since the RPC is sent first, the
+    # message sent to this sender cannot arrive until we've routed the RPC.
+    sync_recv.get()
+
+    router = context.router
+    broker = router.broker
+    while True:
+        # Now wait for the RPC to exit the output queue.
+        stream = router.stream_by_id(context.context_id)
+        if broker.defer_sync(lambda: stream.pending_bytes()) == 0:
+            return
+        time.sleep(0.1)
 
 
 class GetDefaultRemoteNameTest(testlib.TestCase):
@@ -74,7 +98,7 @@ class WstatusToStrTest(testlib.TestCase):
         (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
         self.assertEquals(
             self.func(status),
-            'exited due to signal %s (SIGKILL)' % (signal.SIGKILL,)
+            'exited due to signal %s (SIGKILL)' % (int(signal.SIGKILL),)
         )
 
     # can't test SIGSTOP without POSIX sessions rabbithole
@@ -88,7 +112,7 @@ class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
             remote_id=1234,
             old_router=self.router,
             max_message_size=self.router.max_message_size,
-            python_path=testlib.data_path('python_never_responds.sh'),
+            python_path=testlib.data_path('python_never_responds.py'),
             connect_timeout=0.5,
         )
         self.assertRaises(mitogen.core.TimeoutError,
@@ -114,7 +138,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_via_eof(self):
         # Verify FD leakage does not keep failed process open.
-        local = self.router.fork()
+        local = self.router.local()
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
                 via=local,
@@ -136,7 +160,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(e.args[0].startswith(prefix))
 
     def test_via_enoent(self):
-        local = self.router.fork()
+        local = self.router.local()
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
                 via=local,
@@ -148,7 +172,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(s in e.args[0])
 
 
-class ContextTest(testlib.RouterMixin, unittest2.TestCase):
+class ContextTest(testlib.RouterMixin, testlib.TestCase):
     def test_context_shutdown(self):
         local = self.router.local()
         pid = local.call(os.getpid)
@@ -175,8 +199,28 @@ class OpenPtyTest(testlib.TestCase):
         msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
         self.assertEquals(e.args[0], msg)
 
+    @unittest2.skipIf(condition=(os.uname()[0] != 'Linux'),
+                      reason='Fallback only supported on Linux')
+    @mock.patch('os.openpty')
+    def test_broken_linux_fallback(self, openpty):
+        openpty.side_effect = OSError(errno.EPERM)
+        master_fd, slave_fd = self.func()
+        try:
+            st = os.fstat(master_fd)
+            self.assertEquals(5, os.major(st.st_rdev))
+            flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+            self.assertTrue(flags & os.O_RDWR)
 
-class TtyCreateChildTest(unittest2.TestCase):
+            st = os.fstat(slave_fd)
+            self.assertEquals(136, os.major(st.st_rdev))
+            flags = fcntl.fcntl(slave_fd, fcntl.F_GETFL)
+            self.assertTrue(flags & os.O_RDWR)
+        finally:
+            os.close(master_fd)
+            os.close(slave_fd)
+
+
+class TtyCreateChildTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.tty_create_child)
 
     def test_dev_tty_open_succeeds(self):
@@ -202,15 +246,17 @@ class TtyCreateChildTest(unittest2.TestCase):
             self.assertEquals(pid, waited_pid)
             self.assertEquals(0, status)
             self.assertEquals(mitogen.core.b(''), tf.read())
+            os.close(fd)
         finally:
             tf.close()
 
 
-class IterReadTest(unittest2.TestCase):
+class IterReadTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.iter_read)
 
     def make_proc(self):
-        args = [testlib.data_path('iter_read_generator.sh')]
+        # I produce text every 100ms.
+        args = [testlib.data_path('iter_read_generator.py')]
         proc = subprocess.Popen(args, stdout=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdout.fileno())
         return proc
@@ -219,12 +265,13 @@ class IterReadTest(unittest2.TestCase):
         proc = self.make_proc()
         try:
             reader = self.func([proc.stdout.fileno()])
-            for i, chunk in enumerate(reader, 1):
-                self.assertEqual(i, int(chunk))
-                if i > 3:
+            for i, chunk in enumerate(reader):
+                self.assertEqual(1+i, int(chunk))
+                if i > 2:
                     break
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
+            proc.stdout.close()
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
@@ -238,31 +285,37 @@ class IterReadTest(unittest2.TestCase):
             except mitogen.core.TimeoutError:
                 self.assertEqual(len(got), 0)
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
+            proc.stdout.close()
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
-        reader = self.func([proc.stdout.fileno()], time.time() + 0.4)
+        deadline = time.time() + 0.4
+
+        reader = self.func([proc.stdout.fileno()], deadline)
         try:
             got = []
             try:
                 for chunk in reader:
+                    if time.time() > (deadline + 1.0):
+                        assert 0, 'TimeoutError not raised'
                     got.append(chunk)
-                assert 0, 'TimeoutError not raised'
             except mitogen.core.TimeoutError:
                 # Give a little wiggle room in case of imperfect scheduling.
                 # Ideal number should be 9.
-                self.assertLess(3, len(got))
-                self.assertLess(len(got), 5)
+                self.assertLess(deadline, time.time())
+                self.assertLess(1, len(got))
+                self.assertLess(len(got), 20)
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
+            proc.stdout.close()
 
 
-class WriteAllTest(unittest2.TestCase):
+class WriteAllTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.write_all)
 
     def make_proc(self):
-        args = [testlib.data_path('write_all_consumer.sh')]
+        args = [testlib.data_path('write_all_consumer.py')]
         proc = subprocess.Popen(args, stdin=subprocess.PIPE)
         mitogen.core.set_nonblock(proc.stdin.fileno())
         return proc
@@ -274,7 +327,8 @@ class WriteAllTest(unittest2.TestCase):
         try:
             self.func(proc.stdin.fileno(), self.ten_ms_chunk)
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
+            proc.stdin.close()
 
     def test_deadline_exceeded_before_call(self):
         proc = self.make_proc()
@@ -283,7 +337,8 @@ class WriteAllTest(unittest2.TestCase):
                 lambda: self.func(proc.stdin.fileno(), self.ten_ms_chunk, 0)
             ))
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
+            proc.stdin.close()
 
     def test_deadline_exceeded_during_call(self):
         proc = self.make_proc()
@@ -295,7 +350,89 @@ class WriteAllTest(unittest2.TestCase):
                                   deadline)
             ))
         finally:
-            proc.terminate()
+            Popen__terminate(proc)
+            proc.stdin.close()
+
+
+class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
+    def test_child_disconnected(self):
+        # Easy mode: process notices its own directly connected child is
+        # disconnected.
+        c1 = self.router.local()
+        recv = c1.call_async(time.sleep, 9999)
+        c1.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
+
+    def test_indirect_child_disconnected(self):
+        # Achievement unlocked: process notices an indirectly connected child
+        # is disconnected.
+        c1 = self.router.local()
+        c2 = self.router.local(via=c1)
+        recv = c2.call_async(time.sleep, 9999)
+        c2.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
+
+    def test_indirect_child_intermediary_disconnected(self):
+        # Battlefield promotion: process notices indirect child disconnected
+        # due to an intermediary child disconnecting.
+        c1 = self.router.local()
+        c2 = self.router.local(via=c1)
+        recv = c2.call_async(time.sleep, 9999)
+        c1.shutdown(wait=True)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get())
+        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
+
+    def test_near_sibling_disconnected(self):
+        # Hard mode: child notices sibling connected to same parent has
+        # disconnected.
+        c1 = self.router.local()
+        c2 = self.router.local()
+
+        # Let c1 call functions in c2.
+        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        c1.call(mitogen.parent.upgrade_router)
+
+        sync_recv = mitogen.core.Receiver(self.router)
+        recv = c1.call_async(call_func_in_sibling, c2,
+            sync_sender=sync_recv.to_sender())
+
+        wait_for_empty_output_queue(sync_recv, c2)
+        c2.shutdown(wait=True)
+
+        e = self.assertRaises(mitogen.core.CallError,
+            lambda: recv.get().unpickle())
+        s = 'mitogen.core.ChannelError: ' + self.router.respondent_disconnect_msg
+        self.assertTrue(e.args[0].startswith(s), str(e))
+
+    def test_far_sibling_disconnected(self):
+        # God mode: child of child notices child of child of parent has
+        # disconnected.
+        c1 = self.router.local()
+        c11 = self.router.local(via=c1)
+
+        c2 = self.router.local()
+        c22 = self.router.local(via=c2)
+
+        # Let c1 call functions in c2.
+        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        c11.call(mitogen.parent.upgrade_router)
+
+        sync_recv = mitogen.core.Receiver(self.router)
+        recv = c11.call_async(call_func_in_sibling, c22,
+            sync_sender=sync_recv.to_sender())
+
+        wait_for_empty_output_queue(sync_recv, c22)
+        c22.shutdown(wait=True)
+
+        e = self.assertRaises(mitogen.core.CallError,
+            lambda: recv.get().unpickle())
+        s = 'mitogen.core.ChannelError: ' + self.router.respondent_disconnect_msg
+        self.assertTrue(e.args[0].startswith(s))
 
 
 if __name__ == '__main__':

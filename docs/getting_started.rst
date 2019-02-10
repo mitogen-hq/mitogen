@@ -248,7 +248,7 @@ Running User Functions
 ----------------------
 
 So far we have used the interactive interpreter to call some standard library
-functions, but if since source code typed at the interpreter cannot be
+functions, but since the source code typed at the interpreter cannot be
 recovered, Mitogen is unable to execute functions defined in this way.
 
 We must therefore continue by writing our code as a script::

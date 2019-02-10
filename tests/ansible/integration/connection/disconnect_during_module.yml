@@ -1,0 +1,27 @@
+# issue 352: test ability to notice disconnection during a module invocation.
+---
+
+- name: integration/connection/disconnect_during_module.yml
+  hosts: test-targets
+  gather_facts: no
+  any_errors_fatal: false
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - delegate_to: localhost
+    command: |
+      ansible-playbook
+      -i "{{MITOGEN_INVENTORY_FILE}}"
+      integration/connection/_disconnect_during_module.yml
+    args:
+      chdir: ../..
+    register: out
+    ignore_errors: true
+
+  - debug: var=out
+
+  - assert:
+      that:
+      - out.rc == 4
+      - "'Mitogen was disconnected from the remote environment while a call was in-progress.' in out.stdout"

@@ -137,6 +137,9 @@ We could instead express the above using Mitogen:
 
 ::
 
+    import shutil, os, subprocess
+    import mitogen
+
     def run(*args):
         return subprocess.check_call(args)
 
@@ -144,22 +147,24 @@ We could instead express the above using Mitogen:
         with open(path, 'rb') as fp:
             return s in fp.read()
 
-    device = '/dev/sdb1'
-    mount_point = '/media/Media Volume'
+    @mitogen.main()
+    def main(router):
+        device = '/dev/sdb1'
+        mount_point = '/media/Media Volume'
 
-    bastion = router.ssh(hostname='bastion')
-    bastion_sudo = router.sudo(via=bastion)
+        bastion = router.ssh(hostname='bastion')
+        bastion_sudo = router.sudo(via=bastion)
 
-    if PROD:
-        fileserver = router.ssh(hostname='fileserver', via=bastion)
-        if fileserver.call(file_contains, device, '/proc/mounts'):
-            print('{} already mounted!'.format(device))
-            fileserver.call(run, 'umount', device)
-        fileserver.call(shutil.rmtree, mount_point)
-        fileserver.call(os.mkdir, mount_point, 0777)
-        fileserver.call(run, 'mount', device, mount_point)
+        if PROD:
+            fileserver = router.ssh(hostname='fileserver', via=bastion)
+            if fileserver.call(file_contains, device, '/proc/mounts'):
+                print('{} already mounted!'.format(device))
+                fileserver.call(run, 'umount', device)
+            fileserver.call(shutil.rmtree, mount_point)
+            fileserver.call(os.mkdir, mount_point, 0777)
+            fileserver.call(run, 'mount', device, mount_point)
 
-    bastion_sudo.call(run, 'touch', '/var/run/start_backup')
+        bastion_sudo.call(run, 'touch', '/var/run/start_backup')
 
 * In which context must the ``PROD`` variable be defined?
 * On which machine is each step executed?
@@ -185,9 +190,9 @@ nested.py:
 .. code-block:: python
 
     import os
-    import mitogen.utils
+    import mitogen
 
-    @mitogen.utils.run_with_router
+    @mitogen.main()
     def main(router):
         mitogen.utils.log_to_file()
 

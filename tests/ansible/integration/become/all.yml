@@ -1,7 +1,7 @@
 
-- import_playbook: su_password.yml
-- import_playbook: sudo_flags_failure.yml
-- import_playbook: sudo_nonexistent.yml
-- import_playbook: sudo_nopassword.yml
-- import_playbook: sudo_password.yml
-- import_playbook: sudo_requiretty.yml
+- include: su_password.yml
+- include: sudo_flags_failure.yml
+- include: sudo_nonexistent.yml
+- include: sudo_nopassword.yml
+- include: sudo_password.yml
+- include: sudo_requiretty.yml

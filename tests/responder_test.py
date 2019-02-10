@@ -13,11 +13,12 @@ import plain_old_module
 import simple_pkg.a
 
 
-class NeutralizeMainTest(testlib.RouterMixin, unittest2.TestCase):
+class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.master.ModuleResponder
 
     def call(self, *args, **kwargs):
-        return self.klass(self.router).neutralize_main(*args, **kwargs)
+        router = mock.Mock()
+        return self.klass(router).neutralize_main(*args, **kwargs)
 
     def test_missing_exec_guard(self):
         path = testlib.data_path('main_with_no_exec_guard.py')
@@ -66,13 +67,16 @@ class NeutralizeMainTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertEquals(bits[-3:], ['def', 'main():', 'pass'])
 
 
-
-class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
+class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
     def test_plain_old_module(self):
         # The simplest case: a top-level module with no interesting imports or
         # package machinery damage.
         context = self.router.local()
+
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
+        self.assertEquals(1, self.router.responder.get_module_count)
+        self.assertEquals(1, self.router.responder.good_load_module_count)
+        self.assertLess(300, self.router.responder.good_load_module_size)
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
@@ -80,6 +84,10 @@ class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
         context = self.router.local()
         self.assertEquals(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
+        self.assertEquals(2, self.router.responder.get_module_count)
+        self.assertEquals(3, self.router.responder.good_load_module_count)
+        self.assertEquals(0, self.router.responder.bad_load_module_count)
+        self.assertLess(450, self.router.responder.good_load_module_size)
 
     def test_self_contained_program(self):
         # Ensure a program composed of a single script can be imported
@@ -89,7 +97,7 @@ class GoodModulesTest(testlib.RouterMixin, unittest2.TestCase):
         self.assertEquals(output, "['__main__', 50]\n")
 
 
-class BrokenModulesTest(unittest2.TestCase):
+class BrokenModulesTest(testlib.TestCase):
     def test_obviously_missing(self):
         # Ensure we don't crash in the case of a module legitimately being
         # unavailable. Should never happen in the real world.
@@ -109,12 +117,21 @@ class BrokenModulesTest(unittest2.TestCase):
         responder._on_get_module(msg)
         self.assertEquals(1, len(router._async_route.mock_calls))
 
+        self.assertEquals(1, responder.get_module_count)
+        self.assertEquals(0, responder.good_load_module_count)
+        self.assertEquals(0, responder.good_load_module_size)
+        self.assertEquals(1, responder.bad_load_module_count)
+
         call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
         self.assertEquals(('non_existent_module', None, None, None, ()),
                           msg.unpickle())
 
+    @unittest2.skipIf(
+        condition=sys.version_info < (2, 6),
+        reason='Ancient Python lacked "from . import foo"',
+    )
     def test_ansible_six_messed_up_path(self):
         # The copy of six.py shipped with Ansible appears in a package whose
         # __path__ subsequently ends up empty, which prevents pkgutil from
@@ -138,13 +155,44 @@ class BrokenModulesTest(unittest2.TestCase):
         responder._on_get_module(msg)
         self.assertEquals(1, len(router._async_route.mock_calls))
 
+        self.assertEquals(1, responder.get_module_count)
+        self.assertEquals(0, responder.good_load_module_count)
+        self.assertEquals(0, responder.good_load_module_size)
+        self.assertEquals(1, responder.bad_load_module_count)
+
         call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
         self.assertIsInstance(msg.unpickle(), tuple)
 
 
-class BlacklistTest(unittest2.TestCase):
+class ForwardTest(testlib.RouterMixin, testlib.TestCase):
+    def test_forward_to_nonexistent_context(self):
+        nonexistent = mitogen.core.Context(self.router, 123)
+        capture = testlib.LogCapturer()
+        capture.start()
+        self.broker.defer_sync(lambda:
+            self.router.responder.forward_modules(
+                nonexistent,
+                ['mitogen.core']
+            )
+        )
+        s = capture.stop()
+        self.assertTrue('dropping forward of' in s)
+
+    def test_stats(self):
+        # Forwarding stats broken because forwarding is broken. See #469.
+        c1 = self.router.local()
+        c2 = self.router.local(via=c1)
+
+        self.assertEquals(256, c2.call(plain_old_module.pow, 2, 8))
+        self.assertEquals(2, self.router.responder.get_module_count)
+        self.assertEquals(2, self.router.responder.good_load_module_count)
+        self.assertLess(10000, self.router.responder.good_load_module_size)
+        self.assertGreater(40000, self.router.responder.good_load_module_size)
+
+
+class BlacklistTest(testlib.TestCase):
     @unittest2.skip('implement me')
     def test_whitelist_no_blacklist(self):
         assert 0

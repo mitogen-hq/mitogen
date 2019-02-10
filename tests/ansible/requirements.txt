@@ -1,0 +1,6 @@
+ansible; python_version >= '2.7'
+ansible<2.7; python_version < '2.7'
+paramiko==2.3.2  # Last 2.6-compat version.
+hdrhistogram==0.6.1
+PyYAML==3.11; python_version < '2.7'
+PyYAML==3.13; python_version >= '2.7'

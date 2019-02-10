@@ -50,6 +50,33 @@ class IsStdlibNameTest(testlib.TestCase):
         self.assertFalse(self.func('mitogen.fakessh'))
 
 
+class GetMainModuleDefectivePython3x(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+
+    def call(self, fullname):
+        return self.klass()._get_main_module_defective_python_3x(fullname)
+
+    def test_builtin(self):
+        self.assertEquals(None, self.call('sys'))
+
+    def test_not_main(self):
+        self.assertEquals(None, self.call('mitogen'))
+
+    def test_main(self):
+        import __main__
+
+        path, source, is_pkg = self.call('__main__')
+        self.assertTrue(path is not None)
+        self.assertTrue(os.path.exists(path))
+        self.assertEquals(path, __main__.__file__)
+        fp = open(path, 'rb')
+        try:
+            self.assertEquals(source, fp.read())
+        finally:
+            fp.close()
+        self.assertFalse(is_pkg)
+
+
 class GetModuleViaPkgutilTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
@@ -105,6 +132,39 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
         self.assertIsNone(tup)
 
 
+class GetModuleViaParentEnumerationTest(testlib.TestCase):
+    klass = mitogen.master.ModuleFinder
+
+    def call(self, fullname):
+        return self.klass()._get_module_via_parent_enumeration(fullname)
+
+    def test_main_fails(self):
+        import __main__
+        self.assertIsNone(self.call('__main__'))
+
+    def test_dylib_fails(self):
+        # _socket comes from a .so
+        import _socket
+        tup = self.call('_socket')
+        self.assertIsNone(tup)
+
+    def test_builtin_fails(self):
+        # sys is built-in
+        tup = self.call('sys')
+        self.assertIsNone(tup)
+
+    def test_plumbum_colors_like_pkg_succeeds(self):
+        # plumbum has been eating too many rainbow-colored pills
+        import pkg_like_plumbum.colors
+        path, src, is_pkg = self.call('pkg_like_plumbum.colors')
+        self.assertEquals(path,
+            testlib.data_path('pkg_like_plumbum/colors.py'))
+
+        s = open(testlib.data_path('pkg_like_plumbum/colors.py'), 'rb').read()
+        self.assertEquals(src, s)
+        self.assertFalse(is_pkg)
+
+
 class ResolveRelPathTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
@@ -129,35 +189,7 @@ class ResolveRelPathTest(testlib.TestCase):
         self.assertEquals('', self.call('email.utils', 3))
 
 
-class DjangoMixin(object):
-    WEBPROJECT_PATH = testlib.data_path('webproject')
-
-    # TODO: rip out Django and replace with a static tree of weird imports that
-    # don't depend on .. Django! The hack below is because the version of
-    # Django we need to test against 2.6 doesn't actually run on 3.6. But we
-    # don't care, we just need to be able to import it.
-    #
-    #   File "django/utils/html_parser.py", line 12, in <module>
-    # AttributeError: module 'html.parser' has no attribute 'HTMLParseError'
-    #
-    import pkg_resources._vendor.six
-    from django.utils.six.moves import html_parser as _html_parser
-    _html_parser.HTMLParseError = Exception
-
-    @classmethod
-    def setUpClass(cls):
-        super(DjangoMixin, cls).setUpClass()
-        sys.path.append(cls.WEBPROJECT_PATH)
-        os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
-
-    @classmethod
-    def tearDownClass(cls):
-        sys.path.remove(cls.WEBPROJECT_PATH)
-        del os.environ['DJANGO_SETTINGS_MODULE']
-        super(DjangoMixin, cls).tearDownClass()
-
-
-class FindRelatedImportsTest(DjangoMixin, testlib.TestCase):
+class FakeSshTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def call(self, fullname):
@@ -173,60 +205,27 @@ class FindRelatedImportsTest(DjangoMixin, testlib.TestCase):
             'mitogen.parent',
         ])
 
-    def test_django_db(self):
-        import django.db
-        related = self.call('django.db')
-        self.assertEquals(related, [
-            'django',
-            'django.core',
-            'django.core.signals',
-            'django.db.utils',
-            'django.utils.functional',
-        ])
 
-    def test_django_db_models(self):
-        import django.db.models
-        related = self.call('django.db.models')
-        self.maxDiff=None
-        self.assertEquals(related, [
-            'django',
-            'django.core.exceptions',
-            'django.db',
-            'django.db.models',
-            'django.db.models.aggregates',
-            'django.db.models.base',
-            'django.db.models.deletion',
-            'django.db.models.expressions',
-            'django.db.models.fields',
-            'django.db.models.fields.files',
-            'django.db.models.fields.related',
-            'django.db.models.fields.subclassing',
-            'django.db.models.loading',
-            'django.db.models.manager',
-            'django.db.models.query',
-            'django.db.models.signals',
-        ])
-
-
-class FindRelatedTest(DjangoMixin, testlib.TestCase):
+class FindRelatedTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def call(self, fullname):
         return self.klass().find_related(fullname)
 
     SIMPLE_EXPECT = set([
-        'mitogen',
-        'mitogen.core',
-        'mitogen.master',
-        'mitogen.minify',
-        'mitogen.parent',
+        u'mitogen',
+        u'mitogen.core',
+        u'mitogen.master',
+        u'mitogen.minify',
+        u'mitogen.parent',
     ])
 
-    if sys.version_info < (3, 2):
-        SIMPLE_EXPECT.add('mitogen.compat')
-        SIMPLE_EXPECT.add('mitogen.compat.functools')
     if sys.version_info < (2, 7):
+        SIMPLE_EXPECT.add('mitogen.compat')
         SIMPLE_EXPECT.add('mitogen.compat.tokenize')
+    if sys.version_info < (2, 6):
+        SIMPLE_EXPECT.add('mitogen.compat')
+        SIMPLE_EXPECT.add('mitogen.compat.pkgutil')
 
     def test_simple(self):
         import mitogen.fakessh
@@ -234,131 +233,203 @@ class FindRelatedTest(DjangoMixin, testlib.TestCase):
         self.assertEquals(set(related), self.SIMPLE_EXPECT)
 
 
-class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
-    maxDiff = None
+if sys.version_info > (2, 6):
+    class DjangoMixin(object):
+        WEBPROJECT_PATH = testlib.data_path('webproject')
 
-    def call(self, fullname):
-        return self.klass().find_related(fullname)
+        # TODO: rip out Django and replace with a static tree of weird imports
+        # that don't depend on .. Django! The hack below is because the version
+        # of Django we need to test against 2.6 doesn't actually run on 3.6.
+        # But we don't care, we just need to be able to import it.
+        #
+        #   File "django/utils/html_parser.py", line 12, in <module>
+        #   AttributeError: module 'html.parser' has no attribute
+        #   'HTMLParseError'
+        #
+        import pkg_resources._vendor.six
+        from django.utils.six.moves import html_parser as _html_parser
+        _html_parser.HTMLParseError = Exception
 
-    def test_django_db(self):
-        import django.db
-        related = self.call('django.db')
-        self.assertEquals(related, [
-            'django',
-            'django.conf',
-            'django.conf.global_settings',
-            'django.core',
-            'django.core.exceptions',
-            'django.core.signals',
-            'django.db.utils',
-            'django.dispatch',
-            'django.dispatch.dispatcher',
-            'django.dispatch.saferef',
-            'django.utils',
-            'django.utils._os',
-            'django.utils.encoding',
-            'django.utils.functional',
-            'django.utils.importlib',
-            'django.utils.module_loading',
-            'django.utils.six',
-        ])
+        @classmethod
+        def setUpClass(cls):
+            super(DjangoMixin, cls).setUpClass()
+            sys.path.append(cls.WEBPROJECT_PATH)
+            os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
 
-    def test_django_db_models(self):
-        if sys.version_info >= (3, 0):
-            raise unittest2.SkipTest('broken due to ancient vendored six.py')
+        @classmethod
+        def tearDownClass(cls):
+            sys.path.remove(cls.WEBPROJECT_PATH)
+            del os.environ['DJANGO_SETTINGS_MODULE']
+            super(DjangoMixin, cls).tearDownClass()
 
-        import django.db.models
-        related = self.call('django.db.models')
-        self.assertEquals(related, [
-            'django',
-            'django.conf',
-            'django.conf.global_settings',
-            'django.core',
-            'django.core.exceptions',
-            'django.core.files',
-            'django.core.files.base',
-            'django.core.files.images',
-            'django.core.files.locks',
-            'django.core.files.move',
-            'django.core.files.storage',
-            'django.core.files.utils',
-            'django.core.signals',
-            'django.core.validators',
-            'django.db',
-            'django.db.backends',
-            'django.db.backends.signals',
-            'django.db.backends.util',
-            'django.db.models.aggregates',
-            'django.db.models.base',
-            'django.db.models.constants',
-            'django.db.models.deletion',
-            'django.db.models.expressions',
-            'django.db.models.fields',
-            'django.db.models.fields.files',
-            'django.db.models.fields.proxy',
-            'django.db.models.fields.related',
-            'django.db.models.fields.subclassing',
-            'django.db.models.loading',
-            'django.db.models.manager',
-            'django.db.models.options',
-            'django.db.models.query',
-            'django.db.models.query_utils',
-            'django.db.models.related',
-            'django.db.models.signals',
-            'django.db.models.sql',
-            'django.db.models.sql.aggregates',
-            'django.db.models.sql.constants',
-            'django.db.models.sql.datastructures',
-            'django.db.models.sql.expressions',
-            'django.db.models.sql.query',
-            'django.db.models.sql.subqueries',
-            'django.db.models.sql.where',
-            'django.db.transaction',
-            'django.db.utils',
-            'django.dispatch',
-            'django.dispatch.dispatcher',
-            'django.dispatch.saferef',
-            'django.forms',
-            'django.forms.fields',
-            'django.forms.forms',
-            'django.forms.formsets',
-            'django.forms.models',
-            'django.forms.util',
-            'django.forms.widgets',
-            'django.utils',
-            'django.utils._os',
-            'django.utils.crypto',
-            'django.utils.datastructures',
-            'django.utils.dateformat',
-            'django.utils.dateparse',
-            'django.utils.dates',
-            'django.utils.datetime_safe',
-            'django.utils.decorators',
-            'django.utils.deprecation',
-            'django.utils.encoding',
-            'django.utils.formats',
-            'django.utils.functional',
-            'django.utils.html',
-            'django.utils.html_parser',
-            'django.utils.importlib',
-            'django.utils.ipv6',
-            'django.utils.itercompat',
-            'django.utils.module_loading',
-            'django.utils.numberformat',
-            'django.utils.safestring',
-            'django.utils.six',
-            'django.utils.text',
-            'django.utils.timezone',
-            'django.utils.translation',
-            'django.utils.tree',
-            'django.utils.tzinfo',
-            'pytz',
-            'pytz.exceptions',
-            'pytz.lazy',
-            'pytz.tzfile',
-            'pytz.tzinfo',
-        ])
+
+    class FindRelatedImportsTest(DjangoMixin, testlib.TestCase):
+        klass = mitogen.master.ModuleFinder
+
+        def call(self, fullname):
+            return self.klass().find_related_imports(fullname)
+
+        def test_django_db(self):
+            import django.db
+            related = self.call('django.db')
+            self.assertEquals(related, [
+                'django',
+                'django.core',
+                'django.core.signals',
+                'django.db.utils',
+                'django.utils.functional',
+            ])
+
+        def test_django_db_models(self):
+            import django.db.models
+            related = self.call('django.db.models')
+            self.maxDiff=None
+            self.assertEquals(related, [
+                u'django',
+                u'django.core.exceptions',
+                u'django.db',
+                u'django.db.models',
+                u'django.db.models.aggregates',
+                u'django.db.models.base',
+                u'django.db.models.deletion',
+                u'django.db.models.expressions',
+                u'django.db.models.fields',
+                u'django.db.models.fields.files',
+                u'django.db.models.fields.related',
+                u'django.db.models.fields.subclassing',
+                u'django.db.models.loading',
+                u'django.db.models.manager',
+                u'django.db.models.query',
+                u'django.db.models.signals',
+            ])
+
+
+    class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
+        klass = mitogen.master.ModuleFinder
+        maxDiff = None
+
+        def call(self, fullname):
+            return self.klass().find_related(fullname)
+
+        def test_django_db(self):
+            import django.db
+            related = self.call('django.db')
+            self.assertEquals(related, [
+                u'django',
+                u'django.conf',
+                u'django.conf.global_settings',
+                u'django.core',
+                u'django.core.exceptions',
+                u'django.core.signals',
+                u'django.db.utils',
+                u'django.dispatch',
+                u'django.dispatch.dispatcher',
+                u'django.dispatch.saferef',
+                u'django.utils',
+                u'django.utils._os',
+                u'django.utils.encoding',
+                u'django.utils.functional',
+                u'django.utils.importlib',
+                u'django.utils.module_loading',
+                u'django.utils.six',
+            ])
+
+        @unittest2.skipIf(
+            condition=(sys.version_info >= (3, 0)),
+            reason='broken due to ancient vendored six.py'
+        )
+        def test_django_db_models(self):
+            import django.db.models
+            related = self.call('django.db.models')
+            self.assertEquals(related, [
+                u'django',
+                u'django.conf',
+                u'django.conf.global_settings',
+                u'django.core',
+                u'django.core.exceptions',
+                u'django.core.files',
+                u'django.core.files.base',
+                u'django.core.files.images',
+                u'django.core.files.locks',
+                u'django.core.files.move',
+                u'django.core.files.storage',
+                u'django.core.files.utils',
+                u'django.core.signals',
+                u'django.core.validators',
+                u'django.db',
+                u'django.db.backends',
+                u'django.db.backends.signals',
+                u'django.db.backends.util',
+                u'django.db.models.aggregates',
+                u'django.db.models.base',
+                u'django.db.models.constants',
+                u'django.db.models.deletion',
+                u'django.db.models.expressions',
+                u'django.db.models.fields',
+                u'django.db.models.fields.files',
+                u'django.db.models.fields.proxy',
+                u'django.db.models.fields.related',
+                u'django.db.models.fields.subclassing',
+                u'django.db.models.loading',
+                u'django.db.models.manager',
+                u'django.db.models.options',
+                u'django.db.models.query',
+                u'django.db.models.query_utils',
+                u'django.db.models.related',
+                u'django.db.models.signals',
+                u'django.db.models.sql',
+                u'django.db.models.sql.aggregates',
+                u'django.db.models.sql.constants',
+                u'django.db.models.sql.datastructures',
+                u'django.db.models.sql.expressions',
+                u'django.db.models.sql.query',
+                u'django.db.models.sql.subqueries',
+                u'django.db.models.sql.where',
+                u'django.db.transaction',
+                u'django.db.utils',
+                u'django.dispatch',
+                u'django.dispatch.dispatcher',
+                u'django.dispatch.saferef',
+                u'django.forms',
+                u'django.forms.fields',
+                u'django.forms.forms',
+                u'django.forms.formsets',
+                u'django.forms.models',
+                u'django.forms.util',
+                u'django.forms.widgets',
+                u'django.utils',
+                u'django.utils._os',
+                u'django.utils.crypto',
+                u'django.utils.datastructures',
+                u'django.utils.dateformat',
+                u'django.utils.dateparse',
+                u'django.utils.dates',
+                u'django.utils.datetime_safe',
+                u'django.utils.decorators',
+                u'django.utils.deprecation',
+                u'django.utils.encoding',
+                u'django.utils.formats',
+                u'django.utils.functional',
+                u'django.utils.html',
+                u'django.utils.html_parser',
+                u'django.utils.importlib',
+                u'django.utils.ipv6',
+                u'django.utils.itercompat',
+                u'django.utils.module_loading',
+                u'django.utils.numberformat',
+                u'django.utils.safestring',
+                u'django.utils.six',
+                u'django.utils.text',
+                u'django.utils.timezone',
+                u'django.utils.translation',
+                u'django.utils.tree',
+                u'django.utils.tzinfo',
+                u'pytz',
+                u'pytz.exceptions',
+                u'pytz.lazy',
+                u'pytz.tzfile',
+                u'pytz.tzinfo',
+            ])
 
 if __name__ == '__main__':
     unittest2.main()

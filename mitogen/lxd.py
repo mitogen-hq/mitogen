@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 import logging
 
 import mitogen.core
@@ -49,15 +51,20 @@ class Stream(mitogen.parent.Stream):
     lxc_path = 'lxc'
     python_path = 'python'
 
+    eof_error_hint = (
+        'Note: many versions of LXC do not report program execution failure '
+        'meaningfully. Please check the host logs (/var/log) for more '
+        'information.'
+    )
+
     def construct(self, container, lxc_path=None, **kwargs):
         super(Stream, self).construct(**kwargs)
         self.container = container
         if lxc_path:
             self.lxc_path = lxc_path
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'lxd.' + self.container
+    def _get_name(self):
+        return u'lxd.' + self.container
 
     def get_boot_command(self):
         bits = [

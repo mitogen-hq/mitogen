@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 This module implements functionality required by master processes, such as
 starting new contexts via SSH. Its size is also restricted, since it must
@@ -43,6 +45,7 @@ import pkgutil
 import re
 import string
 import sys
+import time
 import threading
 import types
 import zlib
@@ -58,12 +61,24 @@ import mitogen.minify
 import mitogen.parent
 
 from mitogen.core import b
-from mitogen.core import to_text
-from mitogen.core import LOG
 from mitogen.core import IOLOG
+from mitogen.core import LOG
+from mitogen.core import str_partition
+from mitogen.core import str_rpartition
+from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
+
+try:
+    next
+except NameError:
+    from mitogen.core import next
 
 
 RLOG = logging.getLogger('mitogen.ctx')
@@ -127,7 +142,7 @@ def get_child_modules(path):
     return [to_text(name) for _, name, _ in it]
 
 
-def get_core_source():
+def _get_core_source():
     """
     Master version of parent.get_core_source().
     """
@@ -137,11 +152,16 @@ def get_core_source():
 
 if mitogen.is_master:
     # TODO: find a less surprising way of installing this.
-    mitogen.parent.get_core_source = get_core_source
+    mitogen.parent._get_core_source = _get_core_source
 
 
 LOAD_CONST = dis.opname.index('LOAD_CONST')
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
+
+
+def _getarg(nextb, c):
+    if c >= dis.HAVE_ARGUMENT:
+        return nextb() | (nextb() << 8)
 
 
 if sys.version_info < (3, 0):
@@ -149,19 +169,13 @@ if sys.version_info < (3, 0):
         # Yield `(op, oparg)` tuples from the code object `co`.
         ordit = imap(ord, co.co_code)
         nextb = ordit.next
-        return ((c, (None
-                     if c < dis.HAVE_ARGUMENT else
-                     (nextb() | (nextb() << 8))))
-                    for c in ordit)
+        return ((c, _getarg(nextb, c)) for c in ordit)
 elif sys.version_info < (3, 6):
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.
         ordit = iter(co.co_code)
         nextb = ordit.__next__
-        return ((c, (None
-                     if c < dis.HAVE_ARGUMENT else
-                     (nextb() | (nextb() << 8))))
-                    for c in ordit)
+        return ((c, _getarg(nextb, c)) for c in ordit)
 else:
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.
@@ -172,9 +186,10 @@ else:
 
 
 def scan_code_imports(co):
-    """Given a code object `co`, scan its bytecode yielding any
-    ``IMPORT_NAME`` and associated prior ``LOAD_CONST`` instructions
-    representing an `Import` statement or `ImportFrom` statement.
+    """
+    Given a code object `co`, scan its bytecode yielding any ``IMPORT_NAME``
+    and associated prior ``LOAD_CONST`` instructions representing an `Import`
+    statement or `ImportFrom` statement.
 
     :return:
         Generator producing `(level, modname, namelist)` tuples, where:
@@ -188,6 +203,7 @@ def scan_code_imports(co):
     """
     opit = iter_opcodes(co)
     opit, opit2, opit3 = itertools.tee(opit, 3)
+
     try:
         next(opit2)
         next(opit3)
@@ -195,14 +211,22 @@ def scan_code_imports(co):
     except StopIteration:
         return
 
-    for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
-        if op3 == IMPORT_NAME:
-            op2, arg2 = oparg2
-            op1, arg1 = oparg1
-            if op1 == op2 == LOAD_CONST:
-                yield (co.co_consts[arg1],
-                       co.co_names[arg3],
-                       co.co_consts[arg2] or ())
+    if sys.version_info >= (2, 5):
+        for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
+            if op3 == IMPORT_NAME:
+                op2, arg2 = oparg2
+                op1, arg1 = oparg1
+                if op1 == op2 == LOAD_CONST:
+                    yield (co.co_consts[arg1],
+                           co.co_names[arg3],
+                           co.co_consts[arg2] or ())
+    else:
+        # Python 2.4 did not yet have 'level', so stack format differs.
+        for oparg1, (op2, arg2) in izip(opit, opit2):
+            if op2 == IMPORT_NAME:
+                op1, arg1 = oparg1
+                if op1 == LOAD_CONST:
+                    yield (-1, co.co_names[arg2], co.co_consts[arg1] or ())
 
 
 class ThreadWatcher(object):
@@ -324,17 +348,32 @@ class LogForwarder(object):
             self._cache[msg.src_id] = logger = logging.getLogger(name)
 
         name, level_s, s = msg.data.decode('latin1').split('\x00', 2)
-        logger.log(int(level_s), '%s: %s', name, s, extra={
-            'mitogen_message': s,
-            'mitogen_context': self._router.context_by_id(msg.src_id),
-            'mitogen_name': name,
-        })
+
+        # See logging.Handler.makeRecord()
+        record = logging.LogRecord(
+            name=logger.name,
+            level=int(level_s),
+            pathname='(unknown file)',
+            lineno=0,
+            msg=('%s: %s' % (name, s)),
+            args=(),
+            exc_info=None,
+        )
+        record.mitogen_message = s
+        record.mitogen_context = self._router.context_by_id(msg.src_id)
+        record.mitogen_name = name
+        logger.handle(record)
 
     def __repr__(self):
         return 'LogForwarder(%r)' % (self._router,)
 
 
 class ModuleFinder(object):
+    """
+    Given the name of a loaded module, make a best-effort attempt at finding
+    related modules likely needed by a child context requesting the original
+    module.
+    """
     def __init__(self):
         #: Import machinery is expensive, keep :py:meth`:get_module_source`
         #: results around.
@@ -372,9 +411,37 @@ class ModuleFinder(object):
         if os.path.exists(path) and self._looks_like_script(path):
             return path
 
+    def _get_main_module_defective_python_3x(self, fullname):
+        """
+        Recent versions of Python 3.x introduced an incomplete notion of
+        importer specs, and in doing so created permanent asymmetry in the
+        :mod:`pkgutil` interface handling for the `__main__` module. Therefore
+        we must handle `__main__` specially.
+        """
+        if fullname != '__main__':
+            return None
+
+        mod = sys.modules.get(fullname)
+        if not mod:
+            return None
+
+        path = getattr(mod, '__file__', None)
+        if not (os.path.exists(path) and self._looks_like_script(path)):
+            return None
+
+        fp = open(path, 'rb')
+        try:
+            source = fp.read()
+        finally:
+            fp.close()
+
+        return path, source, False
+
     def _get_module_via_pkgutil(self, fullname):
-        """Attempt to fetch source code via pkgutil. In an ideal world, this
-        would be the only required implementation of get_module()."""
+        """
+        Attempt to fetch source code via pkgutil. In an ideal world, this would
+        be the only required implementation of get_module().
+        """
         try:
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
@@ -448,8 +515,70 @@ class ModuleFinder(object):
 
         return path, source, is_pkg
 
-    get_module_methods = [_get_module_via_pkgutil,
-                          _get_module_via_sys_modules]
+    def _get_module_via_parent_enumeration(self, fullname):
+        """
+        Attempt to fetch source code by examining the module's (hopefully less
+        insane) parent package. Required for older versions of
+        ansible.compat.six and plumbum.colors.
+        """
+        if fullname not in sys.modules:
+            # Don't attempt this unless a module really exists in sys.modules,
+            # else we could return junk.
+            return
+
+        pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
+        pkg = sys.modules.get(pkgname)
+        if pkg is None or not hasattr(pkg, '__file__'):
+            return
+
+        pkg_path = os.path.dirname(pkg.__file__)
+        try:
+            fp, path, ext = imp.find_module(modname, [pkg_path])
+            try:
+                path = self._py_filename(path)
+                if not path:
+                    fp.close()
+                    return
+
+                source = fp.read()
+            finally:
+                if fp:
+                    fp.close()
+
+            if isinstance(source, mitogen.core.UnicodeType):
+                # get_source() returns "string" according to PEP-302, which was
+                # reinterpreted for Python 3 to mean a Unicode string.
+                source = source.encode('utf-8')
+            return path, source, False
+        except ImportError:
+            e = sys.exc_info()[1]
+            LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
+
+    def add_source_override(self, fullname, path, source, is_pkg):
+        """
+        Explicitly install a source cache entry, preventing usual lookup
+        methods from being used.
+
+        Beware the value of `path` is critical when `is_pkg` is specified,
+        since it directs where submodules are searched for.
+
+        :param str fullname:
+            Name of the module to override.
+        :param str path:
+            Module's path as it will appear in the cache.
+        :param bytes source:
+            Module source code as a bytestring.
+        :param bool is_pkg:
+            :data:`True` if the module is a package.
+        """
+        self._found_cache[fullname] = (path, source, is_pkg)
+
+    get_module_methods = [
+        _get_main_module_defective_python_3x,
+        _get_module_via_pkgutil,
+        _get_module_via_sys_modules,
+        _get_module_via_parent_enumeration,
+    ]
 
     def get_module_source(self, fullname):
         """Given the name of a loaded module `fullname`, attempt to find its
@@ -466,6 +595,7 @@ class ModuleFinder(object):
         for method in self.get_module_methods:
             tup = method(self, fullname)
             if tup:
+                #LOG.debug('%r returned %r', method, tup)
                 break
         else:
             tup = None, None, None
@@ -477,7 +607,8 @@ class ModuleFinder(object):
     def resolve_relpath(self, fullname, level):
         """Given an ImportFrom AST node, guess the prefix that should be tacked
         on to an alias name to produce a canonical name. `fullname` is the name
-        of the module in which the ImportFrom appears."""
+        of the module in which the ImportFrom appears.
+        """
         mod = sys.modules.get(fullname, None)
         if hasattr(mod, '__path__'):
             fullname += '.__init__'
@@ -494,12 +625,12 @@ class ModuleFinder(object):
 
     def generate_parent_names(self, fullname):
         while '.' in fullname:
-            fullname, _, _ = fullname.rpartition('.')
+            fullname, _, _ = str_rpartition(to_text(fullname), u'.')
             yield fullname
 
     def find_related_imports(self, fullname):
         """
-        Return a list of non-stdlb modules that are directly imported by
+        Return a list of non-stdlib modules that are directly imported by
         `fullname`, plus their parents.
 
         The list is determined by retrieving the source code of
@@ -537,7 +668,7 @@ class ModuleFinder(object):
 
         return self._related_cache.setdefault(fullname, sorted(
             set(
-                name
+                mitogen.core.to_text(name)
                 for name in maybe_names
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
@@ -550,8 +681,8 @@ class ModuleFinder(object):
         Return a list of non-stdlib modules that are imported directly or
         indirectly by `fullname`, plus their parents.
 
-        This method is like :py:meth:`on_disconect`, but it also recursively
-        searches any modules which are imported by `fullname`.
+        This method is like :py:meth:`find_related_imports`, but also
+        recursively searches any modules which are imported by `fullname`.
 
         :param fullname: Fully qualified name of an _already imported_ module
             for which source code can be retrieved
@@ -563,7 +694,7 @@ class ModuleFinder(object):
         while stack:
             name = stack.pop(0)
             names = self.find_related_imports(name)
-            stack.extend(set(names).difference(found, stack))
+            stack.extend(set(names).difference(set(found).union(stack)))
             found.update(names)
 
         found.discard(fullname)
@@ -577,6 +708,23 @@ class ModuleResponder(object):
         self._cache = {}  # fullname -> pickled
         self.blacklist = []
         self.whitelist = ['']
+
+        #: Context -> set([fullname, ..])
+        self._forwarded_by_context = {}
+
+        #: Number of GET_MODULE messages received.
+        self.get_module_count = 0
+        #: Total time spent in uncached GET_MODULE.
+        self.get_module_secs = 0.0
+        #: Total time spent minifying modules.
+        self.minify_secs = 0.0
+        #: Number of successful LOAD_MODULE messages sent.
+        self.good_load_module_count = 0
+        #: Total bytes in successful LOAD_MODULE payloads.
+        self.good_load_module_size = 0
+        #: Number of negative LOAD_MODULE messages sent.
+        self.bad_load_module_count = 0
+
         router.add_handler(
             fn=self._on_get_module,
             handle=mitogen.core.GET_MODULE,
@@ -584,6 +732,12 @@ class ModuleResponder(object):
 
     def __repr__(self):
         return 'ModuleResponder(%r)' % (self._router,)
+
+    def add_source_override(self, fullname, path, source, is_pkg):
+        """
+        See :meth:`ModuleFinder.add_source_override.
+        """
+        self._finder.add_source_override(fullname, path, source, is_pkg)
 
     MAIN_RE = re.compile(b(r'^if\s+__name__\s*==\s*.__main__.\s*:'), re.M)
     main_guard_msg = (
@@ -620,19 +774,38 @@ class ModuleResponder(object):
     def _make_negative_response(self, fullname):
         return (fullname, None, None, None, ())
 
-    def _build_tuple(self, fullname):
-        if mitogen.core.is_blacklisted_import(self, fullname):
-            raise ImportError('blacklisted')
+    minify_safe_re = re.compile(b(r'\s+#\s*!mitogen:\s*minify_safe'))
 
+    def _build_tuple(self, fullname):
         if fullname in self._cache:
             return self._cache[fullname]
 
+        if mitogen.core.is_blacklisted_import(self, fullname):
+            raise ImportError('blacklisted')
+
         path, source, is_pkg = self._finder.get_module_source(fullname)
-        if source is None:
-            LOG.error('_build_tuple(%r): could not locate source', fullname)
+        if path and is_stdlib_path(path):
+            # Prevent loading of 2.x<->3.x stdlib modules! This costs one
+            # RTT per hit, so a client-side solution is also required.
+            LOG.debug('%r: refusing to serve stdlib module %r',
+                      self, fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
+
+        if source is None:
+            # TODO: make this .warning() or similar again once importer has its
+            # own logging category.
+            LOG.debug('_build_tuple(%r): could not locate source', fullname)
+            tup = self._make_negative_response(fullname)
+            self._cache[fullname] = tup
+            return tup
+
+        if self.minify_safe_re.search(source):
+            # If the module contains a magic marker, it's safe to minify.
+            t0 = time.time()
+            source = mitogen.minify.minimize_source(source).encode('utf-8')
+            self.minify_secs += time.time() - t0
 
         if is_pkg:
             pkg_present = get_child_modules(path)
@@ -662,38 +835,40 @@ class ModuleResponder(object):
 
     def _send_load_module(self, stream, fullname):
         if fullname not in stream.sent_modules:
-            LOG.debug('_send_load_module(%r, %r)', stream, fullname)
-            self._router._async_route(
-                mitogen.core.Message.pickled(
-                    self._build_tuple(fullname),
-                    dst_id=stream.remote_id,
-                    handle=mitogen.core.LOAD_MODULE,
-                )
+            tup = self._build_tuple(fullname)
+            msg = mitogen.core.Message.pickled(
+                tup,
+                dst_id=stream.remote_id,
+                handle=mitogen.core.LOAD_MODULE,
             )
+            LOG.debug('%s: sending module %s (%.2f KiB)',
+                      stream.name, fullname, len(msg.data) / 1024.0)
+            self._router._async_route(msg)
             stream.sent_modules.add(fullname)
+            if tup[2] is not None:
+                self.good_load_module_count += 1
+                self.good_load_module_size += len(msg.data)
+            else:
+                self.bad_load_module_count += 1
 
     def _send_module_load_failed(self, stream, fullname):
+        self.bad_load_module_count += 1
         stream.send(
             mitogen.core.Message.pickled(
-                (fullname, None, None, None, ()),
+                self._make_negative_response(fullname),
                 dst_id=stream.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
         )
 
     def _send_module_and_related(self, stream, fullname):
+        if fullname in stream.sent_modules:
+            return
+
         try:
             tup = self._build_tuple(fullname)
-            if tup[2] and is_stdlib_path(tup[2]):
-                # Prevent loading of 2.x<->3.x stdlib modules! This costs one
-                # RTT per hit, so a client-side solution is also required.
-                LOG.warning('%r: refusing to serve stdlib module %r',
-                            self, fullname)
-                self._send_module_load_failed(stream, fullname)
-                return
-
             for name in tup[4]:  # related
-                parent, _, _ = name.partition('.')
+                parent, _, _ = str_partition(name, '.')
                 if parent != fullname and parent not in stream.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
@@ -709,13 +884,18 @@ class ModuleResponder(object):
             return
 
         LOG.debug('%r._on_get_module(%r)', self, msg.data)
+        self.get_module_count += 1
         stream = self._router.stream_by_id(msg.src_id)
         fullname = msg.data.decode()
         if fullname in stream.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
 
-        self._send_module_and_related(stream, fullname)
+        t0 = time.time()
+        try:
+            self._send_module_and_related(stream, fullname)
+        finally:
+            self.get_module_secs += time.time() - t0
 
     def _send_forward_module(self, stream, context, fullname):
         if stream.remote_id != context.context_id:
@@ -728,26 +908,59 @@ class ModuleResponder(object):
             )
 
     def _forward_one_module(self, context, fullname):
+        forwarded = self._forwarded_by_context.get(context)
+        if forwarded is None:
+            forwarded = set()
+            self._forwarded_by_context[context] = forwarded
+
+        if fullname in forwarded:
+            return
+
         path = []
         while fullname:
             path.append(fullname)
-            fullname, _, _ = fullname.rpartition('.')
+            fullname, _, _ = str_rpartition(fullname, u'.')
+
+        stream = self._router.stream_by_id(context.context_id)
+        if stream is None:
+            LOG.debug('%r: dropping forward of %s to no longer existent '
+                      '%r', self, path[0], context)
+            return
 
         for fullname in reversed(path):
-            stream = self._router.stream_by_id(context.context_id)
             self._send_module_and_related(stream, fullname)
             self._send_forward_module(stream, context, fullname)
 
     def _forward_modules(self, context, fullnames):
         IOLOG.debug('%r._forward_modules(%r, %r)', self, context, fullnames)
         for fullname in fullnames:
-            self._forward_one_module(context, fullname)
+            self._forward_one_module(context, mitogen.core.to_text(fullname))
 
     def forward_modules(self, context, fullnames):
         self._router.broker.defer(self._forward_modules, context, fullnames)
 
 
 class Broker(mitogen.core.Broker):
+    """
+    .. note::
+
+        You may construct as many brokers as desired, and use the same broker
+        for multiple routers, however usually only one broker need exist.
+        Multiple brokers may be useful when dealing with sets of children with
+        differing lifetimes. For example, a subscription service where
+        non-payment results in termination for one customer.
+
+    :param bool install_watcher:
+        If :data:`True`, an additional thread is started to monitor the
+        lifetime of the main thread, triggering :meth:`shutdown`
+        automatically in case the user forgets to call it, or their code
+        crashed.
+
+        You should not rely on this functionality in your program, it is only
+        intended as a fail-safe and to simplify the API for new users. In
+        particular, alternative Python implementations may not be able to
+        support watching the main thread.
+    """
     shutdown_timeout = 5.0
     _watcher = None
     poller_class = mitogen.parent.PREFERRED_POLLER
@@ -767,8 +980,43 @@ class Broker(mitogen.core.Broker):
 
 
 class Router(mitogen.parent.Router):
+    """
+    Extend :class:`mitogen.core.Router` with functionality useful to masters,
+    and child contexts who later become masters. Currently when this class is
+    required, the target context's router is upgraded at runtime.
+
+    .. note::
+
+        You may construct as many routers as desired, and use the same broker
+        for multiple routers, however usually only one broker and router need
+        exist. Multiple routers may be useful when dealing with separate trust
+        domains, for example, manipulating infrastructure belonging to separate
+        customers or projects.
+
+    :param mitogen.master.Broker broker:
+        Broker to use. If not specified, a private :class:`Broker` is created.
+
+    :param int max_message_size:
+        Override the maximum message size this router is willing to receive or
+        transmit. Any value set here is automatically inherited by any children
+        created by the router.
+
+        This has a liberal default of 128 MiB, but may be set much lower.
+        Beware that setting it below 64KiB may encourage unexpected failures as
+        parents and children can no longer route large Python modules that may
+        be required by your application.
+    """
+
     broker_class = Broker
-    profiling = False
+
+    #: When :data:`True`, cause the broker thread and any subsequent broker and
+    #: main threads existing in any child to write
+    #: ``/tmp/mitogen.stats.<pid>.<thread_name>.log`` containing a
+    #: :mod:`cProfile` dump on graceful exit. Must be set prior to construction
+    #: of any :class:`Broker`, e.g. via::
+    #:
+    #:      mitogen.master.Router.profiling = True
+    profiling = os.environ.get('MITOGEN_PROFILING') is not None
 
     def __init__(self, broker=None, max_message_size=None):
         if broker is None:
@@ -789,7 +1037,67 @@ class Router(mitogen.parent.Router):
             persist=True,
         )
 
+    def _on_broker_exit(self):
+        super(Router, self)._on_broker_exit()
+        dct = self.get_stats()
+        dct['self'] = self
+        dct['minify_ms'] = 1000 * dct['minify_secs']
+        dct['get_module_ms'] = 1000 * dct['get_module_secs']
+        dct['good_load_module_size_kb'] = dct['good_load_module_size'] / 1024.0
+        dct['good_load_module_size_avg'] = (
+            (
+                dct['good_load_module_size'] /
+                (float(dct['good_load_module_count']) or 1.0)
+            ) / 1024.0
+        )
+
+        LOG.debug(
+            '%(self)r: stats: '
+                '%(get_module_count)d module requests in '
+                '%(get_module_ms)d ms, '
+                '%(good_load_module_count)d sent '
+                '(%(minify_ms)d ms minify time), '
+                '%(bad_load_module_count)d negative responses. '
+                'Sent %(good_load_module_size_kb).01f kb total, '
+                '%(good_load_module_size_avg).01f kb avg.'
+            % dct
+        )
+
+    def get_stats(self):
+        """
+        Return performance data for the module responder.
+
+        :returns:
+
+            Dict containing keys:
+
+            * `get_module_count`: Integer count of
+              :data:`mitogen.core.GET_MODULE` messages received.
+            * `get_module_secs`: Floating point total seconds spent servicing
+              :data:`mitogen.core.GET_MODULE` requests.
+            * `good_load_module_count`: Integer count of successful
+              :data:`mitogen.core.LOAD_MODULE` messages sent.
+            * `good_load_module_size`: Integer total bytes sent in
+              :data:`mitogen.core.LOAD_MODULE` message payloads.
+            * `bad_load_module_count`: Integer count of negative
+              :data:`mitogen.core.LOAD_MODULE` messages sent.
+            * `minify_secs`: CPU seconds spent minifying modules marked
+               minify-safe.
+        """
+        return {
+            'get_module_count': self.responder.get_module_count,
+            'get_module_secs': self.responder.get_module_secs,
+            'good_load_module_count': self.responder.good_load_module_count,
+            'good_load_module_size': self.responder.good_load_module_size,
+            'bad_load_module_count': self.responder.bad_load_module_count,
+            'minify_secs': self.responder.minify_secs,
+        }
+
     def enable_debug(self):
+        """
+        Cause this context and any descendant child contexts to write debug
+        logs to ``/tmp/mitogen.<pid>.log``.
+        """
         mitogen.core.enable_debug_logging()
         self.debug = True
 
@@ -824,6 +1132,12 @@ class IdAllocator(object):
     BLOCK_SIZE = 1000
 
     def allocate(self):
+        """
+        Arrange for a unique context ID to be allocated and associated with a
+        route leading to the active context. In masters, the ID is generated
+        directly, in children it is forwarded to the master via a
+        :data:`mitogen.core.ALLOCATE_ID` message.
+        """
         self.lock.acquire()
         try:
             id_ = self.next_id
@@ -849,8 +1163,6 @@ class IdAllocator(object):
 
         id_, last_id = self.allocate_block()
         requestee = self.router.context_by_id(msg.src_id)
-        allocated = self.router.context_by_id(id_, msg.src_id)
-
         LOG.debug('%r: allocating [%r..%r) to %r',
                   self, id_, last_id, requestee)
         msg.reply((id_, last_id))
