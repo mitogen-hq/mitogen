@@ -16,17 +16,17 @@ The UNIX First Stage
 
 To allow delivery of the bootstrap compressed using :py:mod:`zlib`, it is
 necessary for something on the remote to be prepared to decompress the payload
-and feed it to a Python interpreter. Since we would like to avoid writing an
-error-prone shell fragment to implement this, and since we must avoid writing
-to the remote machine's disk in case it is read-only, the Python process
-started on the remote machine by Mitogen immediately forks in order to
+and feed it to a Python interpreter [#f1]_. Since we would like to avoid
+writing an error-prone shell fragment to implement this, and since we must
+avoid writing to the remote machine's disk in case it is read-only, the Python
+process started on the remote machine by Mitogen immediately forks in order to
 implement the decompression.
 
 
 Python Command Line
 ###################
 
-The Python command line sent to the host is a :mod:`zlib`-compressed [#f1]_ and
+The Python command line sent to the host is a :mod:`zlib`-compressed [#f2]_ and
 base64-encoded copy of the :py:meth:`mitogen.master.Stream._first_stage`
 function, which has been carefully optimized to reduce its size. Prior to
 compression and encoding, ``CONTEXT_NAME`` is replaced with the desired context
@@ -65,10 +65,10 @@ allowing reading by the first stage of exactly the required bytes.
 Configuring argv[0]
 ###################
 
-Forking provides us with an excellent opportunity for tidying up the eventual
-Python interpreter, in particular, restarting it using a fresh command-line to
-get rid of the large base64-encoded first stage parameter, and to replace
-**argv[0]** with something descriptive.
+Forking provides an excellent opportunity to tidy up the eventual Python
+interpreter, in particular, restarting it using a fresh command-line to get rid
+of the large base64-encoded first stage parameter, and to replace **argv[0]**
+with something descriptive.
 
 After configuring its ``stdin`` to point to the read end of the pipe, the
 parent half of the fork re-executes Python, with **argv[0]** taken from the
@@ -272,6 +272,10 @@ parent and child. Integers use big endian in their encoded form.
     * - Field
       - Size
       - Description
+
+    * - `magic`
+      - 2
+      - Integer 0x4d49 (``MI``), used to detect stream corruption.
 
     * - `dst_id`
       - 4
@@ -575,6 +579,28 @@ When ``sudo:node22a:webapp`` wants to send a message to
 
 .. image:: images/route.svg
     :class: mitogen-full-width
+
+
+Disconnect Propagation
+######################
+
+To ensure timely shutdown when a failure occurs, where some context is awaiting
+a response from another context that has become disconnected,
+:class:`mitogen.core.Router` additionally records the destination context ID of
+every message received on a particular stream.
+
+When ``DEL_ROUTE`` is generated locally or received on some other stream,
+:class:`mitogen.parent.RouteMonitor` uses this to find every stream that ever
+communicated with the route that is about to go away, and forwards the message
+to each found.
+
+The recipient ``DEL_ROUTE`` handler in turn uses the message to find any
+:class:`mitogen.core.Context` in the local process corresponding to the
+disappearing route, and if found, fires a ``disconnected`` event on it.
+
+Any interested party, such as :class:`mitogen.core.Receiver`, may subscribe to
+the event and use it to abort any threads that were asleep waiting for a reply
+that will never arrive.
 
 
 .. _source-verification:
@@ -998,7 +1024,13 @@ receive items in the order they are requested, as they become available.
 
 .. rubric:: Footnotes
 
-.. [#f1] Compression may seem redundant, however it is basically free and reducing IO
+.. [#f1] Although some connection methods such as SSH support compression, and
+   Mitogen enables SSH compression by default, there are circumstances where
+   disabling SSH compression is desirable, and many scenarios for future
+   connection methods where transport-layer compression is not supported at
+   all. 
+
+.. [#f2] Compression may seem redundant, however it is basically free and reducing IO
    is always a good idea. The 33% / 200 byte saving may mean the presence or
    absence of an additional frame on the network, or in real world terms after
    accounting for SSH overhead, around a 2% reduced chance of a stall during

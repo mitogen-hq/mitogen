@@ -16,15 +16,13 @@
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 
-  #- debug: msg={{async_out}}
-    #vars:
-      #async_out: "{{result.content|b64decode|from_json}}"
+  #- debug: msg="{{result.content|b64decode|from_json}}"
 
   - assert:
       that:
         - async_out.changed == True
         - async_out.cmd == "echo hi"
-        - 'async_out.delta.startswith("0:00:00")'
+        - 'async_out.delta.startswith("0:00:")'
         - async_out.end.startswith("20")
         - async_out.invocation.module_args._raw_params == "echo hi"
         - async_out.invocation.module_args._uses_shell == True
@@ -32,11 +30,17 @@
         - async_out.invocation.module_args.creates == None
         - async_out.invocation.module_args.executable == None
         - async_out.invocation.module_args.removes == None
-        - async_out.invocation.module_args.stdin == None
         - async_out.invocation.module_args.warn == True
         - async_out.rc == 0
         - async_out.start.startswith("20")
         - async_out.stderr == ""
         - async_out.stdout == "hi"
+    vars:
+      async_out: "{{result.content|b64decode|from_json}}"
+
+  - assert:
+      that:
+        - async_out.invocation.module_args.stdin == None
+    when: ansible_version.full > '2.4'
     vars:
       async_out: "{{result.content|b64decode|from_json}}"

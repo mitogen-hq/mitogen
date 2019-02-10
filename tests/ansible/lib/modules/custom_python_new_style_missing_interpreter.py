@@ -1,6 +1,5 @@
 # I am an Ansible new-style Python module, but I lack an interpreter.
 
-import json
 import sys
 
 # This is the magic marker Ansible looks for:

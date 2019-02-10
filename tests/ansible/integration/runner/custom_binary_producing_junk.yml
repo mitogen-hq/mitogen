@@ -25,8 +25,8 @@
   any_errors_fatal: true
   tasks:
     - assert:
-        that: |
-          out.failed and
-          out.results[0].failed and
-          out.results[0].msg == 'MODULE FAILURE' and
-          out.results[0].rc == 0
+        that:
+        - out.failed
+        - out.results[0].failed
+        - out.results[0].msg.startswith('MODULE FAILURE')
+        - out.results[0].rc == 0

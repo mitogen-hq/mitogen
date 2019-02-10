@@ -1,0 +1,28 @@
+# Verify one OSA-style container has the correct config.
+
+- name: integration/connection_delegation/osa_container_standalone.yml
+  hosts: dtc-container-1
+  gather_facts: false
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - mitogen_get_stack:
+    register: out
+
+  - assert_equal:
+      left: out.result
+      right: [
+        {
+          'kwargs': {
+            'container': 'dtc-container-1',
+            'docker_path': null,
+            'kind': 'lxc',
+            'lxc_info_path': null,
+            'machinectl_path': null,
+            'python_path': ['/usr/bin/python'],
+            'username': null,
+          },
+          'method': 'setns',
+        },
+      ]

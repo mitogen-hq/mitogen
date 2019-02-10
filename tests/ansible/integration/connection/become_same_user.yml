@@ -1,0 +1,39 @@
+# issue #499: ensure C.BECOME_ALLOW_SAME_USER is respected.
+---
+
+- name: integration/connection/become_same_user.yml
+  hosts: bsu-joe
+  gather_facts: no
+  any_errors_fatal: true
+  tasks:
+
+  # bsu-joe's login user is joe, so become should be ignored.
+  - mitogen_get_stack:
+    become: true
+    become_user: joe
+    register: out
+    when: is_mitogen
+
+  - assert:
+      that:
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.username == "joe"
+      - out.result|length == 1  # no sudo
+    when: is_mitogen
+
+
+  # Now try with a different account.
+  - mitogen_get_stack:
+    become: true
+    become_user: james
+    register: out
+    when: is_mitogen
+
+  - assert:
+      that:
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.username == "joe"
+      - out.result[1].method == "sudo"
+      - out.result[1].kwargs.username == "james"
+      - out.result|length == 2  # no sudo
+    when: is_mitogen

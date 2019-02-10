@@ -31,7 +31,12 @@ from __future__ import absolute_import
 import os.path
 import sys
 
-import ansible.plugins.connection.kubectl
+try:
+    from ansible.plugins.connection import kubectl
+except ImportError:
+    kubectl = None
+
+from ansible.errors import AnsibleConnectionFailure
 from ansible.module_utils.six import iteritems
 
 try:
@@ -47,9 +52,19 @@ import ansible_mitogen.connection
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'kubectl'
 
+    not_supported_msg = (
+        'The "mitogen_kubectl" plug-in requires a version of Ansible '
+        'that ships with the "kubectl" connection plug-in.'
+    )
+
+    def __init__(self, *args, **kwargs):
+        if kubectl is None:
+            raise AnsibleConnectionFailure(self.not_supported_msg)
+        super(Connection, self).__init__(*args, **kwargs)
+
     def get_extra_args(self):
         parameters = []
-        for key, option in iteritems(ansible.plugins.connection.kubectl.CONNECTION_OPTIONS):
+        for key, option in iteritems(kubectl.CONNECTION_OPTIONS):
             if self.get_task_var('ansible_' + key) is not None:
                 parameters += [ option, self.get_task_var('ansible_' + key) ]
 

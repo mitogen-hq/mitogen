@@ -53,7 +53,7 @@
         state: absent
 
     - name: Create local test file.
-      connection: local
+      delegate_to: localhost
       copy:
         content: "weird mode"
         dest: "/tmp/weird-mode"

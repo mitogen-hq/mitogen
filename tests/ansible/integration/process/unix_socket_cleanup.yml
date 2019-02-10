@@ -1,0 +1,28 @@
+
+- hosts: test-targets[0]
+  tasks:
+  - mitogen_action_script:
+      script: |
+        import glob
+        result['sockets'] = glob.glob('/tmp/mitogen_unix*.sock')
+    register: socks
+
+  - shell: >
+      ANSIBLE_STRATEGY=mitogen_linear
+      ANSIBLE_SSH_ARGS=""
+      ansible -m shell -c local -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+    args:
+      chdir: ../..
+    register: out
+    connection: local
+    when: is_mitogen
+
+  - mitogen_action_script:
+      script: |
+        import glob
+        result['sockets'] = glob.glob('/tmp/mitogen_unix*.sock')
+    register: socks2
+
+  - assert_equal:
+      left: socks
+      right: socks2

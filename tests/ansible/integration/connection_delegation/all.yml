@@ -1,0 +1,5 @@
+- include: delegate_to_template.yml
+- include: local_action.yml
+- include: osa_container_standalone.yml
+- include: osa_delegate_to_self.yml
+- include: stack_construction.yml

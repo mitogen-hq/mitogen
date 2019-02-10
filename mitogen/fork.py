@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 import logging
 import os
 import random
@@ -38,6 +40,18 @@ import mitogen.parent
 
 
 LOG = logging.getLogger('mitogen')
+
+# Python 2.4/2.5 cannot support fork+threads whatsoever, it doesn't even fix up
+# interpreter state. So 2.4/2.5 interpreters start .local() contexts for
+# isolation instead. Since we don't have any crazy memory sharing problems to
+# avoid, there is no virginal fork parent either. The child is started directly
+# from the login/become process. In future this will be default everywhere,
+# fork is brainwrong from the stone age.
+FORK_SUPPORTED = sys.version_info >= (2, 6)
+
+
+class Error(mitogen.core.StreamError):
+    pass
 
 
 def fixup_prngs():
@@ -85,6 +99,10 @@ def on_fork():
     mitogen.core.Latch._on_fork()
     mitogen.core.Side._on_fork()
 
+    mitogen__service = sys.modules.get('mitogen.service')
+    if mitogen__service:
+        mitogen__service._pool_lock = threading.Lock()
+
 
 def handle_child_crash():
     """
@@ -109,9 +127,19 @@ class Stream(mitogen.parent.Stream):
     #: User-supplied function for cleaning up child process state.
     on_fork = None
 
+    python_version_msg = (
+        "The mitogen.fork method is not supported on Python versions "
+        "prior to 2.6, since those versions made no attempt to repair "
+        "critical interpreter state following a fork. Please use the "
+        "local() method instead."
+    )
+
     def construct(self, old_router, max_message_size, on_fork=None,
                   debug=False, profiling=False, unidirectional=False,
                   on_start=None):
+        if not FORK_SUPPORTED:
+            raise Error(self.python_version_msg)
+
         # fork method only supports a tiny subset of options.
         super(Stream, self).construct(max_message_size=max_message_size,
                                       debug=debug, profiling=profiling,
@@ -180,14 +208,15 @@ class Stream(mitogen.parent.Stream):
             config['on_start'] = self.on_start
 
         try:
-            mitogen.core.ExternalContext(config).main()
-        except Exception:
-            # TODO: report exception somehow.
-            os._exit(72)
+            try:
+                mitogen.core.ExternalContext(config).main()
+            except Exception:
+                # TODO: report exception somehow.
+                os._exit(72)
         finally:
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)
 
-    def _connect_bootstrap(self, extra_fd):
+    def _connect_bootstrap(self):
         # None required.
         pass

@@ -1,5 +1,4 @@
-# coding: utf-8
-# Copyright 2018, Yannig Perré
+# Copyright 2018, Yannig Perre
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -26,6 +25,8 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
+
+# !mitogen: minify_safe
 
 import logging
 
@@ -56,9 +57,8 @@ class Stream(mitogen.parent.Stream):
             self.kubectl_path = kubectl_path
         self.kubectl_args = kubectl_args or []
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'kubectl.%s%s' % (self.pod, self.kubectl_args)
+    def _get_name(self):
+        return u'kubectl.%s%s' % (self.pod, self.kubectl_args)
 
     def get_boot_command(self):
         bits = [self.kubectl_path] + self.kubectl_args + ['exec', '-it', self.pod]

@@ -12,6 +12,17 @@ div.body li {
 }
 
 
+/*
+ * Undo the hyphens: auto in Sphinx basic.css.
+ */
+div.body p, div.body dd, div.body li, div.body blockquote {
+    -moz-hyphens: inherit;
+    -ms-hyphens: inherit;
+    -webkit-hyphens: inherit;
+    hyphens: inherit;
+}
+
+
 
 /*
  * Setting :width; on an image causes Sphinx to turn the image into a link, so
@@ -25,6 +36,12 @@ div.body li {
     float: right;
     padding-left: 8px;
     width: 150px;
+}
+
+.mitogen-right-200 {
+    float: right;
+    padding-left: 8px;
+    width: 200px;
 }
 
 .mitogen-right-225 {
@@ -49,4 +66,11 @@ div.body li {
     float: right;
     padding-left: 8px;
     width: 350px;
+}
+
+.mitogen-logo-wrap {
+    shape-margin: 8px;
+    shape-outside: polygon(
+        100% 0, 50% 10%, 24% 24%, 0% 50%, 24% 75%, 50% 90%, 100% 100%
+    );
 }

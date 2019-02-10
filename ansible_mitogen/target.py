@@ -26,24 +26,19 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 Helper functions intended to be executed on the target. These are entrypoints
 for file transfer, module execution and sundry bits like changing file modes.
 """
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import errno
-import functools
 import grp
-import json
-import logging
 import operator
 import os
 import pwd
 import re
-import resource
 import signal
 import stat
 import subprocess
@@ -52,10 +47,32 @@ import tempfile
 import traceback
 import types
 
+# Absolute imports for <2.5.
+logging = __import__('logging')
+
 import mitogen.core
 import mitogen.fork
 import mitogen.parent
 import mitogen.service
+from mitogen.core import b
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
+try:
+    reduce
+except NameError:
+    # Python 3.x.
+    from functools import reduce
+
+try:
+    BaseException
+except NameError:
+    # Python 2.4
+    BaseException = Exception
+
 
 # Ansible since PR #41749 inserts "import __main__" into
 # ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
@@ -71,16 +88,23 @@ import ansible_mitogen.runner
 LOG = logging.getLogger(__name__)
 
 MAKE_TEMP_FAILED_MSG = (
-    "Unable to find a useable temporary directory. This likely means no\n"
-    "system-supplied TMP directory can be written to, or all directories\n"
-    "were mounted on 'noexec' filesystems.\n"
-    "\n"
-    "The following paths were tried:\n"
-    "    %(namelist)s\n"
-    "\n"
-    "Please check '-vvv' output for a log of individual path errors."
+    u"Unable to find a useable temporary directory. This likely means no\n"
+    u"system-supplied TMP directory can be written to, or all directories\n"
+    u"were mounted on 'noexec' filesystems.\n"
+    u"\n"
+    u"The following paths were tried:\n"
+    u"    %(namelist)s\n"
+    u"\n"
+    u"Please check '-vvv' output for a log of individual path errors."
 )
 
+# Python 2.4/2.5 cannot support fork+threads whatsoever, it doesn't even fix up
+# interpreter state. So 2.4/2.5 interpreters start .local() contexts for
+# isolation instead. Since we don't have any crazy memory sharing problems to
+# avoid, there is no virginal fork parent either. The child is started directly
+# from the login/become process. In future this will be default everywhere,
+# fork is brainwrong from the stone age.
+FORK_SUPPORTED = sys.version_info >= (2, 6)
 
 #: Initialized to an econtext.parent.Context pointing at a pristine fork of
 #: the target Python interpreter before it executes any code or imports.
@@ -91,20 +115,46 @@ _fork_parent = None
 good_temp_dir = None
 
 
-# issue #362: subprocess.Popen(close_fds=True) aka. AnsibleModule.run_command()
-# loops the entire SC_OPEN_MAX space. CentOS>5 ships with 1,048,576 FDs by
-# default, resulting in huge (>500ms) runtime waste running many commands.
-# Therefore if we are a child, cap the range to something reasonable.
-rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-if (rlimit[0] > 512 or rlimit[1] > 512) and not mitogen.is_master:
-    resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
-    subprocess.MAXFD = 512  # Python <3.x
-del rlimit
+def subprocess__Popen__close_fds(self, but):
+    """
+    issue #362, #435: subprocess.Popen(close_fds=True) aka.
+    AnsibleModule.run_command() loops the entire FD space on Python<3.2.
+    CentOS>5 ships with 1,048,576 FDs by default, resulting in huge (>500ms)
+    latency starting children. Therefore replace Popen._close_fds on Linux with
+    a version that is O(fds) rather than O(_SC_OPEN_MAX).
+    """
+    try:
+        names = os.listdir(u'/proc/self/fd')
+    except OSError:
+        # May fail if acting on a container that does not have /proc mounted.
+        self._original_close_fds(but)
+        return
+
+    for name in names:
+        if not name.isdigit():
+            continue
+
+        fd = int(name, 10)
+        if fd > 2 and fd != but:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+
+
+if (
+    sys.platform.startswith(u'linux') and
+    sys.version < u'3.0' and
+    hasattr(subprocess.Popen, u'_close_fds') and
+    not mitogen.is_master
+):
+    subprocess.Popen._original_close_fds = subprocess.Popen._close_fds
+    subprocess.Popen._close_fds = subprocess__Popen__close_fds
 
 
 def get_small_file(context, path):
     """
-    Basic in-memory caching module fetcher. This generates an one roundtrip for
+    Basic in-memory caching module fetcher. This generates one roundtrip for
     every previously unseen file, so it is only a temporary solution.
 
     :param context:
@@ -117,7 +167,7 @@ def get_small_file(context, path):
         Bytestring file data.
     """
     pool = mitogen.service.get_or_create_pool(router=context.router)
-    service = pool.get_service('mitogen.service.PushFileService')
+    service = pool.get_service(u'mitogen.service.PushFileService')
     return service.get(path)
 
 
@@ -127,8 +177,8 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
     controller.
 
     :param mitogen.core.Context context:
-        Reference to the context hosting the FileService that will be used to
-        fetch the file.
+        Reference to the context hosting the FileService that will transmit the
+        file.
     :param bytes in_path:
         FileService registered name of the input file.
     :param bytes out_path:
@@ -159,9 +209,10 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
             if not ok:
                 raise IOError('transfer of %r was interrupted.' % (in_path,))
 
-            os.fchmod(fp.fileno(), metadata['mode'])
+            set_file_mode(tmp_path, metadata['mode'], fd=fp.fileno())
             if set_owner:
-                set_fd_owner(fp.fileno(), metadata['owner'], metadata['group'])
+                set_file_owner(tmp_path, metadata['owner'], metadata['group'],
+                               fd=fp.fileno())
         finally:
             fp.close()
 
@@ -184,7 +235,8 @@ def prune_tree(path):
     try:
         os.unlink(path)
         return
-    except OSError as e:
+    except OSError:
+        e = sys.exc_info()[1]
         if not (os.path.isdir(path) and
                 e.args[0] in (errno.EPERM, errno.EISDIR)):
             LOG.error('prune_tree(%r): %s', path, e)
@@ -194,7 +246,8 @@ def prune_tree(path):
         # Ensure write access for readonly directories. Ignore error in case
         # path is on a weird filesystem (e.g. vfat).
         os.chmod(path, int('0700', 8))
-    except OSError as e:
+    except OSError:
+        e = sys.exc_info()[1]
         LOG.warning('prune_tree(%r): %s', path, e)
 
     try:
@@ -202,7 +255,8 @@ def prune_tree(path):
             if name not in ('.', '..'):
                 prune_tree(os.path.join(path, name))
         os.rmdir(path)
-    except OSError as e:
+    except OSError:
+        e = sys.exc_info()[1]
         LOG.error('prune_tree(%r): %s', path, e)
 
 
@@ -223,7 +277,8 @@ def is_good_temp_dir(path):
     if not os.path.exists(path):
         try:
             os.makedirs(path, mode=int('0700', 8))
-        except OSError as e:
+        except OSError:
+            e = sys.exc_info()[1]
             LOG.debug('temp dir %r unusable: did not exist and attempting '
                       'to create it failed: %s', path, e)
             return False
@@ -233,24 +288,26 @@ def is_good_temp_dir(path):
             prefix='ansible_mitogen_is_good_temp_dir',
             dir=path,
         )
-    except (OSError, IOError) as e:
+    except (OSError, IOError):
+        e = sys.exc_info()[1]
         LOG.debug('temp dir %r unusable: %s', path, e)
         return False
 
     try:
         try:
             os.chmod(tmp.name, int('0700', 8))
-        except OSError as e:
-            LOG.debug('temp dir %r unusable: %s: chmod failed: %s',
-                      path, e)
+        except OSError:
+            e = sys.exc_info()[1]
+            LOG.debug('temp dir %r unusable: chmod failed: %s', path, e)
             return False
 
         try:
             # access(.., X_OK) is sufficient to detect noexec.
             if not os.access(tmp.name, os.X_OK):
                 raise OSError('filesystem appears to be mounted noexec')
-        except OSError as e:
-            LOG.debug('temp dir %r unusable: %s: %s', path, e)
+        except OSError:
+            e = sys.exc_info()[1]
+            LOG.debug('temp dir %r unusable: %s', path, e)
             return False
     finally:
         tmp.close()
@@ -305,8 +362,9 @@ def init_child(econtext, log_level, candidate_temp_dirs):
         Dict like::
 
             {
-                'fork_context': mitogen.core.Context.
-                'home_dir': str.
+                'fork_context': mitogen.core.Context or None,
+                'good_temp_dir': ...
+                'home_dir': str
             }
 
         Where `fork_context` refers to the newly forked 'fork parent' context
@@ -320,28 +378,36 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
     global _fork_parent
-    mitogen.parent.upgrade_router(econtext)
-    _fork_parent = econtext.router.fork()
+    if FORK_SUPPORTED:
+        mitogen.parent.upgrade_router(econtext)
+        _fork_parent = econtext.router.fork()
 
     global good_temp_dir
     good_temp_dir = find_good_temp_dir(candidate_temp_dirs)
 
     return {
-        'fork_context': _fork_parent,
-        'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
-        'good_temp_dir': good_temp_dir,
+        u'fork_context': _fork_parent,
+        u'home_dir': mitogen.core.to_text(os.path.expanduser('~')),
+        u'good_temp_dir': good_temp_dir,
     }
 
 
 @mitogen.core.takes_econtext
-def create_fork_child(econtext):
+def spawn_isolated_child(econtext):
     """
     For helper functions executed in the fork parent context, arrange for
     the context's router to be upgraded as necessary and for a new child to be
     prepared.
+
+    The actual fork occurs from the 'virginal fork parent', which does not have
+    any Ansible modules loaded prior to fork, to avoid conflicts resulting from
+    custom module_utils paths.
     """
     mitogen.parent.upgrade_router(econtext)
-    context = econtext.router.fork()
+    if FORK_SUPPORTED:
+        context = econtext.router.fork()
+    else:
+        context = econtext.router.local()
     LOG.debug('create_fork_child() -> %r', context)
     return context
 
@@ -355,7 +421,7 @@ def run_module(kwargs):
     """
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
-    impl = klass(**kwargs)
+    impl = klass(**mitogen.core.Kwargs(kwargs))
     return impl.run()
 
 
@@ -366,9 +432,10 @@ def _get_async_dir():
 
 
 class AsyncRunner(object):
-    def __init__(self, job_id, timeout_secs, econtext, kwargs):
+    def __init__(self, job_id, timeout_secs, started_sender, econtext, kwargs):
         self.job_id = job_id
         self.timeout_secs = timeout_secs
+        self.started_sender = started_sender
         self.econtext = econtext
         self.kwargs = kwargs
         self._timed_out = False
@@ -388,8 +455,11 @@ class AsyncRunner(object):
         dct.setdefault('ansible_job_id', self.job_id)
         dct.setdefault('data', '')
 
-        with open(self.path + '.tmp', 'w') as fp:
+        fp = open(self.path + '.tmp', 'w')
+        try:
             fp.write(json.dumps(dct))
+        finally:
+            fp.close()
         os.rename(self.path + '.tmp', self.path)
 
     def _on_sigalrm(self, signum, frame):
@@ -448,6 +518,7 @@ class AsyncRunner(object):
             'finished': 0,
             'pid': os.getpid()
         })
+        self.started_sender.send(True)
 
         if self.timeout_secs > 0:
             self._install_alarm()
@@ -483,13 +554,26 @@ class AsyncRunner(object):
 
 
 @mitogen.core.takes_econtext
-def run_module_async(kwargs, job_id, timeout_secs, econtext):
+def run_module_async(kwargs, job_id, timeout_secs, started_sender, econtext):
     """
     Execute a module with its run status and result written to a file,
     terminating on the process on completion. This function must run in a child
     forked using :func:`create_fork_child`.
+
+    @param mitogen.core.Sender started_sender:
+        A sender that will receive :data:`True` once the job has reached a
+        point where its initial job file has been written. This is required to
+        avoid a race where an overly eager controller can check for a task
+        before it has reached that point in execution, which is possible at
+        least on Python 2.4, where forking is not available for async tasks.
     """
-    arunner = AsyncRunner(job_id, timeout_secs, econtext, kwargs)
+    arunner = AsyncRunner(
+        job_id,
+        timeout_secs,
+        started_sender,
+        econtext,
+        kwargs
+    )
     arunner.run()
 
 
@@ -541,8 +625,8 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     stdout, stderr = proc.communicate(in_data)
 
     if emulate_tty:
-        stdout = stdout.replace(b'\n', b'\r\n')
-    return proc.returncode, stdout, stderr or ''
+        stdout = stdout.replace(b('\n'), b('\r\n'))
+    return proc.returncode, stdout, stderr or b('')
 
 
 def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
@@ -574,7 +658,7 @@ def read_path(path):
     return open(path, 'rb').read()
 
 
-def set_fd_owner(fd, owner, group=None):
+def set_file_owner(path, owner, group=None, fd=None):
     if owner:
         uid = pwd.getpwnam(owner).pw_uid
     else:
@@ -585,7 +669,11 @@ def set_fd_owner(fd, owner, group=None):
     else:
         gid = os.getegid()
 
-    os.fchown(fd, (uid, gid))
+    if fd is not None and hasattr(os, 'fchown'):
+        os.fchown(fd, (uid, gid))
+    else:
+        # Python<2.6
+        os.chown(path, (uid, gid))
 
 
 def write_path(path, s, owner=None, group=None, mode=None,
@@ -603,9 +691,9 @@ def write_path(path, s, owner=None, group=None, mode=None,
     try:
         try:
             if mode:
-                os.fchmod(fp.fileno(), mode)
+                set_file_mode(tmp_path, mode, fd=fp.fileno())
             if owner or group:
-                set_fd_owner(fp.fileno(), owner, group)
+                set_file_owner(tmp_path, owner, group, fd=fp.fileno())
             fp.write(s)
         finally:
             fp.close()
@@ -645,14 +733,14 @@ def apply_mode_spec(spec, mode):
     Given a symbolic file mode change specification in the style of chmod(1)
     `spec`, apply changes in the specification to the numeric file mode `mode`.
     """
-    for clause in spec.split(','):
+    for clause in mitogen.core.to_text(spec).split(','):
         match = CHMOD_CLAUSE_PAT.match(clause)
         who, op, perms = match.groups()
         for ch in who or 'a':
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = functools.reduce(operator.or_, (bits[p] for p in perms), 0)
+            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
@@ -663,15 +751,30 @@ def apply_mode_spec(spec, mode):
     return mode
 
 
-def set_file_mode(path, spec):
+def set_file_mode(path, spec, fd=None):
     """
     Update the permissions of a file using the same syntax as chmod(1).
     """
-    mode = os.stat(path).st_mode
-
-    if spec.isdigit():
+    if isinstance(spec, int):
+        new_mode = spec
+    elif not mitogen.core.PY3 and isinstance(spec, long):
+        new_mode = spec
+    elif spec.isdigit():
         new_mode = int(spec, 8)
     else:
+        mode = os.stat(path).st_mode
         new_mode = apply_mode_spec(spec, mode)
 
-    os.chmod(path, new_mode)
+    if fd is not None and hasattr(os, 'fchmod'):
+        os.fchmod(fd, new_mode)
+    else:
+        os.chmod(path, new_mode)
+
+
+def file_exists(path):
+    """
+    Return :data:`True` if `path` exists. This is a wrapper function over
+    :func:`os.path.exists`, since its implementation module varies across
+    Python versions.
+    """
+    return os.path.exists(path)

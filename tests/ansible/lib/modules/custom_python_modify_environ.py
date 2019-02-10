@@ -12,8 +12,8 @@ import sys
 
 def main():
     module = AnsibleModule(argument_spec={
-        'key': {'type': str},
-        'val': {'type': str}
+        'key': {'type': 'str'},
+        'val': {'type': 'str'}
     })
     os.environ[module.params['key']] = module.params['val']
     module.exit_json(msg='Muahahaha!')

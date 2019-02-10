@@ -26,12 +26,18 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 import logging
-import os
 
 import mitogen.core
 import mitogen.parent
 from mitogen.core import b
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
 
 
 LOG = logging.getLogger(__name__)
@@ -60,6 +66,7 @@ class Stream(mitogen.parent.Stream):
         b('su: sorry'),                    # BSD
         b('su: authentication failure'),   # Linux
         b('su: incorrect password'),       # CentOS 6
+        b('authentication is denied'),     # AIX
     )
 
     def construct(self, username=None, password=None, su_path=None,
@@ -76,12 +83,8 @@ class Stream(mitogen.parent.Stream):
         if incorrect_prompts is not None:
             self.incorrect_prompts = map(str.lower, incorrect_prompts)
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'su.' + mitogen.core.to_text(self.username)
-
-    def on_disconnect(self, broker):
-        super(Stream, self).on_disconnect(broker)
+    def _get_name(self):
+        return u'su.' + mitogen.core.to_text(self.username)
 
     def get_boot_command(self):
         argv = mitogen.parent.Argv(super(Stream, self).get_boot_command())
@@ -90,12 +93,8 @@ class Stream(mitogen.parent.Stream):
     password_incorrect_msg = 'su password is incorrect'
     password_required_msg = 'su password is required'
 
-    def _connect_bootstrap(self, extra_fd):
+    def _connect_input_loop(self, it):
         password_sent = False
-        it = mitogen.parent.iter_read(
-            fds=[self.receive_side.fd],
-            deadline=self.connect_deadline,
-        )
 
         for buf in it:
             LOG.debug('%r: received %r', self, buf)
@@ -115,4 +114,15 @@ class Stream(mitogen.parent.Stream):
                     mitogen.core.to_text(self.password + '\n').encode('utf-8')
                 )
                 password_sent = True
+
         raise mitogen.core.StreamError('bootstrap failed')
+
+    def _connect_bootstrap(self):
+        it = mitogen.parent.iter_read(
+            fds=[self.receive_side.fd],
+            deadline=self.connect_deadline,
+        )
+        try:
+            self._connect_input_loop(it)
+        finally:
+            it.close()

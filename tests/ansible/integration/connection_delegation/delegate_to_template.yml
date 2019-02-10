@@ -1,0 +1,86 @@
+# issue #340: Ensure templated delegate_to field works.
+#
+# Here we delegate from "test-targets" group to a templated "{{physical_host}}"
+# variable, which contains "cd-normal-alias", which has a
+# "mitogen_via=cd-alias", which in turn has an "ansible_host="alias-host".
+#
+# So the full stack should be:
+#   - First hop: hostname "alias-host", username "alias-user"
+#   - Second hop: hostname "cd-normal-alias"
+
+- name: integration/connection_delegation/delegate_to_template.yml
+  vars:
+    physical_host: "cd-normal-alias"
+    physical_hosts: ["cd-normal-alias", "cd-normal-normal"]
+  hosts: test-targets
+  gather_facts: no
+  any_errors_fatal: true
+  tasks:
+    - meta: end_play
+      when: not is_mitogen
+
+    - meta: end_play
+      when: ansible_version.full < '2.4'
+
+    - mitogen_get_stack:
+      delegate_to: "{{ physical_host }}"
+      register: out
+
+    - assert_equal:
+        left: out.result
+        right: [
+          {
+            'kwargs': {
+              'check_host_keys': 'ignore',
+              'compression': True,
+              'connect_timeout': 10,
+              'hostname': 'alias-host',
+              'identities_only': False,
+              'identity_file': null,
+              'password': null,
+              'port': null,
+              'python_path': null,
+              'ssh_args': [
+                '-o',
+                'UserKnownHostsFile=/dev/null',
+                '-o',
+                'ForwardAgent=yes',
+                '-o',
+                'ControlMaster=auto',
+                '-o',
+                'ControlPersist=60s',
+              ],
+              'ssh_debug_level': null,
+              'ssh_path': 'ssh',
+              'username': 'alias-user',
+            },
+            'method': 'ssh',
+          },
+          {
+            'kwargs': {
+              'check_host_keys': 'ignore',
+              'compression': True,
+              'connect_timeout': 10,
+              'hostname': 'cd-normal-alias',
+              'identities_only': False,
+              'identity_file': null,
+              'password': null,
+              'port': null,
+              'python_path': null,
+              'ssh_args': [
+                '-o',
+                'UserKnownHostsFile=/dev/null',
+                '-o',
+                'ForwardAgent=yes',
+                '-o',
+                'ControlMaster=auto',
+                '-o',
+                'ControlPersist=60s',
+              ],
+              'ssh_debug_level': null,
+              'ssh_path': 'ssh',
+              'username': 'ansible-cfg-remote-user',
+            },
+            'method': 'ssh',
+          }
+        ]

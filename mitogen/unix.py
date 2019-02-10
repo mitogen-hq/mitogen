@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 Permit connection of additional contexts that may act with the authority of
 this context. For now, the UNIX socket is always mode 0600, i.e. can only be
@@ -49,19 +51,29 @@ from mitogen.core import LOG
 def is_path_dead(path):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
-        s.connect(path)
-    except socket.error:
-        e = sys.exc_info()[1]
-        return e[0] in (errno.ECONNREFUSED, errno.ENOENT)
+        try:
+            s.connect(path)
+        except socket.error:
+            e = sys.exc_info()[1]
+            return e.args[0] in (errno.ECONNREFUSED, errno.ENOENT)
+    finally:
+        s.close()
     return False
 
 
 def make_socket_path():
-    return tempfile.mktemp(prefix='mitogen_unix_')
+    return tempfile.mktemp(prefix='mitogen_unix_', suffix='.sock')
 
 
 class Listener(mitogen.core.BasicStream):
     keep_alive = True
+
+    def __repr__(self):
+        return '%s.%s(%r)' % (
+            __name__,
+            self.__class__.__name__,
+            self.path,
+        )
 
     def __init__(self, router, path=None, backlog=100):
         self._router = router
@@ -78,11 +90,26 @@ class Listener(mitogen.core.BasicStream):
         self.receive_side = mitogen.core.Side(self, self._sock.fileno())
         router.broker.start_receive(self)
 
+    def _unlink_socket(self):
+        try:
+            os.unlink(self.path)
+        except OSError:
+            e = sys.exc_info()[1]
+            # Prevent a shutdown race with the parent process.
+            if e.args[0] != errno.ENOENT:
+                raise
+
+    def on_shutdown(self, broker):
+        broker.stop_receive(self)
+        self._unlink_socket()
+        self._sock.close()
+        self.receive_side.closed = True
+
     def _accept_client(self, sock):
         sock.setblocking(True)
         try:
             pid, = struct.unpack('>L', sock.recv(4))
-        except socket.error:
+        except (struct.error, socket.error):
             LOG.error('%r: failed to read remote identity: %s',
                       self, sys.exc_info()[1])
             return
@@ -102,6 +129,7 @@ class Listener(mitogen.core.BasicStream):
                       self, pid, sys.exc_info()[1])
             return
 
+        LOG.debug('%r: accepted %r', self, stream)
         stream.accept(sock.fileno(), sock.fileno())
         self._router.register(context, stream)
 

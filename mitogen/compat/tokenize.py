@@ -22,6 +22,8 @@ are the same, except instead of generating tokens, tokeneater is a callback
 function to which the 5 fields described above are passed as 5 arguments,
 each time a new token is found."""
 
+# !mitogen: minify_safe
+
 __author__ = 'Ka-Ping Yee <ping@lfw.org>'
 __credits__ = ('GvR, ESR, Tim Peters, Thomas Wouters, Fred Drake, '
                'Skip Montanaro, Raymond Hettinger')
@@ -392,8 +394,11 @@ def generate_tokens(readline):
                    (initial == '.' and token != '.'):      # ordinary number
                     yield (NUMBER, token, spos, epos, line)
                 elif initial in '\r\n':
-                    yield (NL if parenlev > 0 else NEWLINE,
-                           token, spos, epos, line)
+                    if parenlev > 0:
+                        n = NL
+                    else:
+                        n = NEWLINE
+                    yield (n, token, spos, epos, line)
                 elif initial == '#':
                     assert not token.endswith("\n")
                     yield (COMMENT, token, spos, epos, line)

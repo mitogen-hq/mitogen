@@ -6,6 +6,22 @@ import mitogen.select
 import testlib
 
 
+class BoolTest(testlib.RouterMixin, testlib.TestCase):
+    klass = mitogen.select.Select
+
+    def test_receiver(self):
+        recv = mitogen.core.Receiver(self.router)  # oneshot
+        select = self.klass()
+        self.assertFalse(select)
+        select.add(recv)
+        self.assertTrue(select)
+
+        recv._on_receive(mitogen.core.Message.pickled('123'))
+        self.assertTrue(select)
+        self.assertEquals('123', select.get().unpickle())
+        self.assertFalse(select)
+
+
 class AddTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.select.Select
 

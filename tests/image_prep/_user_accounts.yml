@@ -67,18 +67,18 @@
           shell: /bin/bash
           groups: "{{user_groups[item]|default(['mitogen__group'])}}"
           password: "{{ (item + '_password') | password_hash('sha256') }}"
-        loop: "{{all_users}}"
+        with_items: "{{all_users}}"
         when: ansible_system != 'Darwin'
       - user:
           name: "mitogen__{{item}}"
           shell: /bin/bash
           groups: "{{user_groups[item]|default(['mitogen__group'])}}"
           password: "{{item}}_password"
-        loop: "{{all_users}}"
+        with_items: "{{all_users}}"
         when: ansible_system == 'Darwin'
 
     - name: Hide users from login window.
-      loop: "{{all_users}}"
+      with_items: "{{all_users}}"
       when: ansible_system == 'Darwin'
       osx_defaults:
         array_add: true
@@ -149,4 +149,4 @@
       lineinfile:
         path: /etc/sudoers
         line: "{{lookup('pipe', 'whoami')}} ALL = (mitogen__{{item}}) NOPASSWD:ALL"
-      loop: "{{normal_users}}"
+      with_items: "{{normal_users}}"

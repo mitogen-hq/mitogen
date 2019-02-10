@@ -6,7 +6,7 @@
     - connection: local
       command: |
         ansible -vvv
-        -i "{{inventory_file}}"
+        -i "{{MITOGEN_INVENTORY_FILE}}"
         test-targets
         -m missing_module
       args:

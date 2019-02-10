@@ -3,16 +3,25 @@ import logging
 import os
 import random
 import re
+import signal
 import socket
 import subprocess
 import sys
+import threading
 import time
+import traceback
 
 import unittest2
 
 import mitogen.core
+import mitogen.fork
 import mitogen.master
 import mitogen.utils
+
+try:
+    import faulthandler
+except ImportError:
+    faulthandler = None
 
 try:
     import urlparse
@@ -24,6 +33,11 @@ try:
 except ImportError:
     from io import StringIO
 
+try:
+    BaseException
+except NameError:
+    BaseException = Exception
+
 
 LOG = logging.getLogger(__name__)
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
@@ -31,6 +45,17 @@ sys.path.append(DATA_DIR)
 
 if mitogen.is_master:
     mitogen.utils.log_to_file()
+
+if faulthandler is not None:
+    faulthandler.enable()
+
+
+def get_fd_count():
+    """
+    Return the number of FDs open by this process.
+    """
+    import psutil
+    return psutil.Process().num_fds()
 
 
 def data_path(suffix):
@@ -53,8 +78,16 @@ def subprocess__check_output(*popenargs, **kwargs):
         raise subprocess.CalledProcessError(retcode, cmd)
     return output
 
+
+def Popen__terminate(proc):
+    os.kill(proc.pid, signal.SIGTERM)
+
+
 if hasattr(subprocess, 'check_output'):
     subprocess__check_output = subprocess.check_output
+
+if hasattr(subprocess.Popen, 'terminate'):
+    Popen__terminate = subprocess.Popen.terminate
 
 
 def wait_for_port(
@@ -158,14 +191,77 @@ def sync_with_broker(broker, timeout=10.0):
     sem.get(timeout=10.0)
 
 
+def log_fd_calls():
+    mypid = os.getpid()
+    l = threading.Lock()
+    real_pipe = os.pipe
+    def pipe():
+        l.acquire()
+        try:
+            rv = real_pipe()
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s\n' % (rv,))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+            return rv
+        finally:
+            l.release()
+
+    os.pipe = pipe
+
+    real_socketpair = socket.socketpair
+    def socketpair(*args):
+        l.acquire()
+        try:
+            rv = real_socketpair(*args)
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s -> %s\n' % (args, rv))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+                return rv
+        finally:
+            l.release()
+
+    socket.socketpair = socketpair
+
+    real_dup2 = os.dup2
+    def dup2(*args):
+        l.acquire()
+        try:
+            real_dup2(*args)
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s\n' % (args,))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+        finally:
+            l.release()
+
+    os.dup2 = dup2
+
+    real_dup = os.dup
+    def dup(*args):
+        l.acquire()
+        try:
+            rv = real_dup(*args)
+            if mypid == os.getpid():
+                sys.stdout.write('\n%s -> %s\n' % (args, rv))
+                traceback.print_stack(limit=3)
+                sys.stdout.write('\n')
+            return rv
+        finally:
+            l.release()
+
+    os.dup = dup
+
+
 class CaptureStreamHandler(logging.StreamHandler):
     def __init__(self, *args, **kwargs):
-        super(CaptureStreamHandler, self).__init__(*args, **kwargs)
+        logging.StreamHandler.__init__(self, *args, **kwargs)
         self.msgs = []
 
     def emit(self, msg):
         self.msgs.append(msg)
-        return super(CaptureStreamHandler, self).emit(msg)
+        logging.StreamHandler.emit(self, msg)
 
 
 class LogCapturer(object):
@@ -203,6 +299,45 @@ class LogCapturer(object):
 
 
 class TestCase(unittest2.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # This is done in setUpClass() so we have a chance to run before any
+        # Broker() instantiations in setUp() etc.
+        mitogen.fork.on_fork()
+        cls._fd_count_before = get_fd_count()
+        super(TestCase, cls).setUpClass()
+
+    ALLOWED_THREADS = set([
+        'MainThread',
+        'mitogen.master.join_thread_async'
+    ])
+
+    def _teardown_check_threads(self):
+        counts = {}
+        for thread in threading.enumerate():
+            name = thread.getName()
+            # Python 2.4: enumerate() may return stopped threads.
+            assert (not thread.isAlive()) or name in self.ALLOWED_THREADS, \
+                'Found thread %r still running after tests.' % (name,)
+            counts[name] = counts.get(name, 0) + 1
+
+        for name in counts:
+            assert counts[name] == 1, \
+                'Found %d copies of thread %r running after tests.' % (name,)
+
+    def _teardown_check_fds(self):
+        mitogen.core.Latch._on_fork()
+        if get_fd_count() != self._fd_count_before:
+            import os; os.system('lsof -p %s' % (os.getpid(),))
+            assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
+                self, self._fd_count_before, get_fd_count(),
+            )
+
+    def tearDown(self):
+        self._teardown_check_threads()
+        self._teardown_check_fds()
+        super(TestCase, self).tearDown()
+
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
         raised. Can't use context manager because tests must run on Python2.4"""
@@ -228,13 +363,19 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    image = None
+    mitogen_test_distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
+    if '-'  in mitogen_test_distro:
+        distro, _py3 = mitogen_test_distro.split('-')
+    else:
+        distro = mitogen_test_distro
+        _py3 = None
 
-    def get_image(self):
-        if not self.image:
-            distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
-            self.image = 'mitogen/%s-test' % (distro,)
-        return self.image
+    if _py3 == 'py3':
+        python_path = '/usr/bin/python3'
+    else:
+        python_path = '/usr/bin/python'
+
+    image = 'mitogen/%s-test' % (distro,)
 
     # 22/tcp -> 0.0.0.0:32771
     PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
@@ -260,7 +401,7 @@ class DockerizedSshDaemon(object):
             '--privileged',
             '--publish-all',
             '--name', self.container_name,
-            self.get_image()
+            self.image,
         ]
         subprocess__check_output(args)
         self._get_container_port()
@@ -281,13 +422,15 @@ class DockerizedSshDaemon(object):
 
 class BrokerMixin(object):
     broker_class = mitogen.master.Broker
+    broker_shutdown = False
 
     def setUp(self):
         super(BrokerMixin, self).setUp()
         self.broker = self.broker_class()
 
     def tearDown(self):
-        self.broker.shutdown()
+        if not self.broker_shutdown:
+            self.broker.shutdown()
         self.broker.join()
         super(BrokerMixin, self).tearDown()
 
@@ -320,6 +463,7 @@ class DockerMixin(RouterMixin):
         kwargs.setdefault('port', self.dockerized_ssh.port)
         kwargs.setdefault('check_host_keys', 'ignore')
         kwargs.setdefault('ssh_debug_level', 3)
+        kwargs.setdefault('python_path', self.dockerized_ssh.python_path)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):

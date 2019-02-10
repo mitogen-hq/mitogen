@@ -1,0 +1,21 @@
+
+- name: integration/stub_connections/mitogen_doas.yml
+  hosts: test-targets
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - custom_python_detect_environment:
+    vars:
+      ansible_connection: mitogen_doas
+      ansible_become_exe: stub-doas.py
+      ansible_user: someuser
+    register: out
+
+  - debug: var=out.env.ORIGINAL_ARGV
+  - assert:
+      that:
+      - out.env.THIS_IS_STUB_DOAS == '1'
+      - (out.env.ORIGINAL_ARGV|from_json)[1:3] == ['-u', 'someuser']

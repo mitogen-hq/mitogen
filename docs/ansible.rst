@@ -1,19 +1,17 @@
 
-.. image:: images/ansible/ansible_mitogen.svg
-    :class: mitogen-right-225
-
-
 Mitogen for Ansible
 ===================
+
+.. image:: images/ansible/ansible_mitogen.svg
+    :class: mitogen-right-200 mitogen-logo-wrap
 
 An extension to `Ansible`_ is included that implements connections over
 Mitogen, replacing embedded shell invocations with pure-Python equivalents
 invoked via highly efficient remote procedure calls to persistent interpreters
 tunnelled over SSH. No changes are required to target hosts.
 
-The extension is approaching stability and real-world usage is encouraged. `Bug
-reports`_ are welcome: Ansible is huge, and only wide testing will ensure
-soundness.
+The extension is stable and real-world use is encouraged. `Bug reports`_ are
+welcome: Ansible is huge, and only wide testing will ensure soundness.
 
 .. _Ansible: https://www.ansible.com/
 
@@ -58,7 +56,7 @@ write files.
 Installation
 ------------
 
-1. Thoroughly review :ref:`noteworthy_differences` and :ref:`changelog`.
+1. Thoroughly review :ref:`noteworthy_differences` and :ref:`known_issues`.
 2. Download and extract |mitogen_url|.
 3. Modify ``ansible.cfg``:
 
@@ -70,8 +68,9 @@ Installation
 
    The ``strategy`` key is optional. If omitted, the
    ``ANSIBLE_STRATEGY=mitogen_linear`` environment variable can be set on a
-   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` strategy exists
-   to mimic the ``free`` strategy.
+   per-run basis. Like ``mitogen_linear``, the ``mitogen_free`` and
+   ``mitogen_host_pinned`` strategies exists to mimic the ``free`` and
+   ``host_pinned`` strategies.
 
 4. If targets have a restrictive ``sudoers`` file, add a rule like:
 
@@ -179,7 +178,7 @@ Noteworthy Differences
   practice, and light web searches failed to reveal many examples of them.
 
 * Ansible permits up to ``forks`` connections to be setup in parallel, whereas
-  in Mitogen this is handled by a fixed-size thread pool. Up to 16 connections
+  in Mitogen this is handled by a fixed-size thread pool. Up to 32 connections
   may be established in parallel by default, this can be modified by setting
   the ``MITOGEN_POOL_SIZE`` environment variable.
 
@@ -430,7 +429,7 @@ Temporary Files
 
 Temporary file handling in Ansible is tricky, and the precise behaviour varies
 across major versions. A variety of temporary files and directories are
-created, depending on the operating mode:
+created, depending on the operating mode.
 
 In the best case when pipelining is enabled and no temporary uploads are
 required, for each task Ansible will create one directory below a
@@ -769,10 +768,10 @@ Connect to classic LXC containers, like `lxc
 connection delegation is supported, and ``lxc-attach`` is always used rather
 than the LXC Python bindings, as is usual with ``lxc``.
 
-The ``lxc-attach`` command must be available on the host machine.
-
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+* ``mitogen_lxc_attach_path``: path to ``lxc-attach`` command if not available
+    on the system path.
 
 
 .. _method-lxd:
@@ -787,6 +786,8 @@ the host machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
+* ``mitogen_lxc_path``: path to ``lxc`` command if not available on the system
+  path.
 
 
 .. _machinectl:
@@ -899,6 +900,10 @@ except connection delegation is supported.
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 * ``mitogen_ssh_debug_level``: integer between `0..3` indicating the SSH client
   debug level. Ansible must also be run with '-vvv' to view the output.
+* ``mitogen_ssh_compression``: :data:`True` to enable SSH compression,
+  otherwise :data:`False`. This will change to off by default in a future
+  release. If you are targetting many hosts on a fast network, please consider
+  disabling SSH compression.
 
 
 Debugging
@@ -918,6 +923,194 @@ logging is necessary. File-based logging can be enabled by setting
 ``MITOGEN_ROUTER_DEBUG=1`` in your environment. When file-based logging is
 enabled, one file per context will be created on the local machine and every
 target machine, as ``/tmp/mitogen.<pid>.log``.
+
+
+Common Problems
+~~~~~~~~~~~~~~~
+
+The most common bug reports fall into the following categories, so it is worth
+checking whether you can categorize a problem using the tools provided before
+reporting it:
+
+**Missed/Incorrect Configuration Variables**
+    In some cases Ansible may support a configuration variable that Mitogen
+    does not yet support, or Mitogen supports, but the support is broken. For
+    example, Mitogen may pick the wrong username or SSH parameters.
+
+    To detect this, use the special ``mitogen_get_stack`` action described
+    below to verify the settings Mitogen has chosen for the connection make
+    sense.
+
+**Process Environment Differences**
+    Mitogen's process model differs significantly to Ansible's in many places.
+    In the past, bugs have been reported because Ansible plug-ins modify an
+    environment variable after Mitogen processes are started.
+
+    If your task's failure may relate to the process environment in some way,
+    for example, ``SSH_AUTH_SOCK``, ``LC_ALL`` or ``PATH``, then an environment
+    difference may explain it. Environment differences are always considered
+    bugs in the extension, and are very easy to repair, so even if you find a
+    workaround, please report them to avoid someone else encountering the same
+    problem.
+
+**Variable Expansion Differences**
+    To avoid many classes of bugs, Mitogen avoids shell wherever possible.
+    Ansible however is traditionally built on shell, and it is often difficult
+    to tell just how many times a configuration parameter will pass through
+    shell expansion and quoting, and in what context before it is used.
+
+    Due to this, in some circumstances Mitogen may parse some expanded
+    variables differently, for example, in the wrong user account. Careful
+    review of ``-vvv`` and ``mitogen_ssh_debug_level`` logs can reveal this.
+    For example in the past, Mitogen used a different method of expanding
+    ``~/.ssh/id_rsa``, causing authentication to fail when ``ansible-playbook``
+    was run via ``sudo -E``.
+
+**External Tool Integration Differences**
+    Mitogen reimplements any aspect of Ansible that involves integrating with
+    SSH, sudo, Docker, or related tools. For this reason, sometimes its support
+    for those tools differs or is less mature than in Ansible.
+
+    In the past Mitogen has had bug reports due to failing to recognize a
+    particular variation of a login or password prompt on an exotic or
+    non-English operating system, or confusing a login banner for a password
+    prompt. Careful review of ``-vvv`` logs help identify these cases, as
+    Mitogen logs all strings it receives during connection, and how it
+    interprets them.
+
+
+.. _mitogen-get-stack:
+
+The `mitogen_get_stack` Action
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a Mitogen strategy is loaded, a special ``mitogen_get_stack`` action is
+available that returns a concise description of the connection configuration as
+extracted from Ansible and passed to the core library. Using it, you can learn
+whether a problem lies in the Ansible extension or deeper in library code.
+
+The action may be used in a playbook as ``mitogen_get_stack:`` just like a
+regular module, or directly from the command-line::
+
+    $ ANSIBLE_STRATEGY=mitogen_linear ansible -m mitogen_get_stack -b -k k3
+    SSH password:
+    k3 | SUCCESS => {
+        "changed": true,
+        "result": [
+            {
+                "kwargs": {
+                    "check_host_keys": "enforce",
+                    "connect_timeout": 10,
+                    "hostname": "k3",
+                    "identities_only": false,
+                    "identity_file": null,
+                    "password": "mysecretpassword",
+                    "port": null,
+                    "python_path": null,
+                    "ssh_args": [
+                        "-C",
+                        "-o",
+                        "ControlMaster=auto",
+                        "-o",
+                        "ControlPersist=60s"
+                    ],
+                    "ssh_debug_level": null,
+                    "ssh_path": "ssh",
+                    "username": null
+                },
+                "method": "ssh"
+            },
+            {
+                "enable_lru": true,
+                "kwargs": {
+                    "connect_timeout": 10,
+                    "password": null,
+                    "python_path": null,
+                    "sudo_args": [
+                        "-H",
+                        "-S",
+                        "-n"
+                    ],
+                    "sudo_path": null,
+                    "username": "root"
+                },
+                "method": "sudo"
+            }
+        ]
+    }
+
+Each object in the list represents a single 'hop' in the connection, from
+nearest to furthest. Unlike in Ansible, the core library treats ``become``
+steps and SSH steps identically, so they are represented distinctly in the
+output.
+
+The presence of ``null`` means no explicit value was extracted from Ansible,
+and either the Mitogen library or SSH will choose a value for the parameter. In
+the example above, Mitogen will choose ``/usr/bin/python`` for ``python_path``,
+and SSH will choose ``22`` for ``port``, or whatever ``Port`` it parses from
+``~/.ssh/config``. Note the presence of ``null`` may indicate the extension
+failed to extract the correct value.
+
+When using ``mitogen_get_stack`` to diagnose a problem, pay special attention
+to ensuring the invocation exactly matches the problematic task. For example,
+if the failing task has ``delegate_to:`` or ``become:`` enabled, the
+``mitogen_get_stack`` invocation must include those statements in order for the
+output to be accurate.
+
+If a playbook cannot start at all, you may need to temporarily use
+``gather_facts: no`` to allow the first task to proceed. This action does not
+create connections, so if it is the first task, it is still possible to review
+its output.
+
+
+The `mitogen_ssh_debug_level` Variable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mitogen has support for capturing SSH diagnostic logs, and integrating them
+into the regular debug log output produced when ``-vvv`` is active. This
+provides a single audit trail of every component active during SSH
+authentication.
+
+Particularly for authentication failures, setting this variable to 3, in
+combination with ``-vvv``, allows review of every parameter passed to SSH, and
+review of every action SSH attempted during authentication.
+
+For example, this method can be used to ascertain whether SSH attempted agent
+authentication, or what private key files it was able to access and which it tried.
+
+
+Post-authentication Bootstrap Failure
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If logging indicates Mitogen was able to authenticate, but some error occurred
+after authentication preventing the Python bootstrap from completing, it can be
+immensely useful to temporarily replace ``ansible_python_interpreter`` with a
+wrapper that runs Python under ``strace``::
+
+    $ ssh badbox
+
+    badbox$ cat > strace-python.sh
+    #!/bin/sh
+    strace -o /tmp/strace-python.$$ -ff -s 100 python "$@"
+    ^D
+
+    badbox$ chmod +x strace-python.sh
+    badbox$ logout
+
+    $ ansible-playbook site.yml \
+        -e ansible_python_interpreter=./strace-python.sh \
+        -l badbox
+
+This will produce a potentially large number of log files under ``/tmp/``. The
+lowest-numbered traced PID is generally the main Python interpreter. The most
+intricate bootstrap steps happen there, any error should be visible near the
+end of the trace.
+
+It is also possible the first stage bootstrap failed. That is usually the next
+lowest-numbered PID and tends to be the smallest file. Even if you can't
+ascertain the problem with your configuration from these logs, including them
+in a bug report can save days of detective effort.
+
 
 .. _diagnosing-hangs:
 
@@ -944,6 +1137,25 @@ cases `faulthandler <https://faulthandler.readthedocs.io/>`_ may be used:
    of the stacks, along with a description of the last task executing prior to
    the hang.
 
+It is possible the hang occurred in a process on a target. If ``strace`` is
+available, look for the host name not listed in Ansible output as reporting a
+result for the most recent task, log into it, and use ``strace -ff -p <pid>``
+on each process whose name begins with ``mitogen:``::
+
+    $ strace -ff -p 29858
+    strace: Process 29858 attached with 3 threads
+    [pid 29864] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff <unfinished ...>
+    [pid 29860] restart_syscall(<... resuming interrupted poll ...> <unfinished ...>
+    [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
+    ^C
+
+    $ 
+
+This shows one thread waiting on IO (``poll``) and two more waiting on the same
+lock. It is taken from a real example of a deadlock due to a forking bug.
+Please include any such information for all processes that you are able to
+collect in any bug report.
+
 
 Getting Help
 ~~~~~~~~~~~~
@@ -955,35 +1167,103 @@ FreeNode IRC network.
 Sample Profiles
 ---------------
 
-Local VM connection
+The summaries below may be reproduced using data and scripts maintained in the
+`pcaps branch <https://github.com/dw/mitogen/tree/pcaps/>`_. Traces were
+recorded using Ansible 2.5.14.
+
+
+Trivial Loop: Local Host
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+This demonstrates Mitogen vs. SSH pipelining to the local machine running
+`bench/loop-100-items.yml
+<https://github.com/dw/mitogen/blob/master/tests/ansible/bench/loop-100-items.yml>`_,
+executing a simple command 100 times. Most Ansible controller overhead is
+isolated, characterizing just module executor and connection layer performance.
+Mitogen requires **63x less bandwidth and 5.9x less time**.
+
+.. image:: images/ansible/pcaps/loop-100-items-local.svg
+
+Unlike in SSH pipelining where payloads are sent as a single compressed block,
+by default Mitogen enables SSH compression for its uncompressed RPC data. In
+many-host scenarios it may be desirable to disable compression. This has
+negligible impact on footprint, since program code is separately compressed and
+sent only once. Compression also benefits SSH pipelining, but the presence of
+large precompressed per-task payloads may present a more significant CPU burden
+during many-host runs.
+
+.. image:: images/ansible/pcaps/loop-100-items-local-detail.svg
+
+In a detailed trace, improved interaction with the host machine is visible. In
+this playbook because no forks were required to start SSH clients from the
+worker process executing the loop, the worker's memory was never marked
+read-only, thus avoiding a major hidden performance problem - the page fault
+rate is more than halved.
+
+
+File Transfer: UK to France
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+`This playbook
+<https://github.com/dw/mitogen/blob/master/tests/ansible/regression/issue_140__thread_pileup.yml>`_
+was used to compare file transfer performance over a ~26 ms link. It uses the
+``with_filetree`` loop syntax to copy a directory of 1,000 0-byte files to the
+target.
+
+.. raw:: html
+
+    <style>
+        .nojunk td,
+        .nojunk th { padding: 4px; font-size: 90%; text-align: right !important; }
+
+        table.docutils col {
+            width: auto !important;
+        }
+    </style>
+
+.. csv-table::
+    :header: , Secs, CPU Secs, Sent, Received, Roundtrips
+    :class: nojunk
+    :align: right
+
+    Mitogen, 98.54, 43.04, "815 KiB", "447 KiB", 3.79
+    SSH Pipelining, "1,483.54", 329.37, "99,539 KiB", "6,870 KiB", 57.01
+
+*Roundtrips* is the approximate number of network roundtrips required to
+describe the runtime that was consumed. Due to Mitogen's built-in file transfer
+support, continuous reinitialization of an external `scp`/`sftp` client is
+avoided, permitting large ``with_filetree`` copies to become practical without
+any special casing within the playbook or the Ansible implementation.
+
+
+DebOps: UK to India
 ~~~~~~~~~~~~~~~~~~~
 
-This demonstrates Mitogen vs. connection pipelining to a local VM executing
-``bench/loop-100-items.yml``, which simply executes ``hostname`` 100 times.
-Mitogen requires **43x less bandwidth and 6.5x less time**.
+This is an all-green run of 246 tasks from the `DebOps
+<https://docs.debops.org/en/master/>`_ 0.7.2 `common.yml
+<https://github.com/debops/debops-playbooks/blob/master/playbooks/common.yml>`_
+playbook over a ~370 ms link between the UK and India. The playbook touches a
+wide variety of modules, many featuring unavoidable waits for slow computation
+on the target.
 
-.. image:: images/ansible/run_hostname_100_times_mito.svg
-.. image:: images/ansible/run_hostname_100_times_plain.svg
+More tasks of a wider variety are featured than previously, placing strain on
+Mitogen's module loading and in-memory caching. By running over a long-distance
+connection, it highlights behaviour of the connection layer in the presence of
+high latency.
 
+Mitogen requires **14.5x less bandwidth and 4x less time**.
 
-Kathmandu to Paris
-~~~~~~~~~~~~~~~~~~
-
-This is a full Django application playbook over a ~180ms link between Kathmandu
-and Paris. Aside from large pauses where the host performs useful work, the
-high latency of this link means Mitogen only manages a 1.7x speedup.
-
-Many early roundtrips are due to inefficiencies in Mitogen's importer that will
-be fixed over time, however the majority, comprising at least 10 seconds, are
-due to idling while the host's previous result and next command are in-flight
-on the network.
-
-The initial extension lays groundwork for exciting structural changes to the
-execution model: a future version will tackle latency head-on by delegating
-some control flow to the target host, melding the performance and scalability
-benefits of pull-based operation with the management simplicity of push-based
-operation.
-
-.. image:: images/ansible/costapp.png
+.. image:: images/ansible/pcaps/debops-uk-india.svg
 
 
+Django App: UK to India
+~~~~~~~~~~~~~~~~~~~~~~~
+
+This short playbook features only 23 steps executed over the same ~370 ms link
+as previously, with many steps running unavoidably expensive tasks like
+building C++ code, and compiling static web site assets.
+
+Despite the small margin for optimization, Mitogen still manages **6.2x less
+bandwidth and 1.8x less time**.
+
+.. image:: images/ansible/pcaps/costapp-uk-india.svg

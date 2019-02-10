@@ -5,7 +5,17 @@
   tasks:
 
   # Verify mitogen_task_isolation=fork forks from "virginal fork parent", not
-  # shared interpreter.
+  # shared interpreter, but only if forking is enabled (e.g. that's never true
+  # on Python 2.4).
+
+  - mitogen_action_script:
+      script: |
+        self._connection._connect()
+        result['uses_fork'] = (
+          self._connection.init_child_result['fork_context'] is not None
+        )
+    register: forkmode
+    when: is_mitogen
 
   - name: get regular process ID.
     custom_python_detect_environment:
@@ -22,5 +32,12 @@
   - assert:
       that:
       - fork_proc.pid != regular_proc.pid
-      - fork_proc.ppid != regular_proc.pid
     when: is_mitogen
+
+  - assert:
+      that: fork_proc.ppid != regular_proc.pid
+    when: is_mitogen and forkmode.uses_fork
+
+  - assert:
+      that: fork_proc.ppid == regular_proc.pid
+    when: is_mitogen and not forkmode.uses_fork

@@ -1,2 +1,3 @@
-- import_playbook: lru_one_target.yml
-- import_playbook: reconnection.yml
+- include: disconnect_cleanup.yml
+- include: lru_one_target.yml
+- include: reconnection.yml

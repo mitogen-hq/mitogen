@@ -2,8 +2,6 @@
 Mitogen
 =======
 
-Mitogen is a Python library for writing distributed self-replicating programs.
-
 .. raw:: html
 
     <style>
@@ -13,7 +11,9 @@ Mitogen is a Python library for writing distributed self-replicating programs.
     </style>
 
 .. image:: images/mitogen.svg
-    :class: mitogen-right-225
+    :class: mitogen-right-200 mitogen-logo-wrap
+
+Mitogen is a Python library for writing distributed self-replicating programs.
 
 There is no requirement for installing packages, copying files around, writing
 shell snippets, upfront configuration, or providing any secondary link to a
@@ -351,6 +351,7 @@ usual into the slave process.
         os.system('tar zxvf my_app.tar.gz')
 
 
+    @mitogen.main()
     def main(broker):
         if len(sys.argv) != 2:
             print(__doc__)
@@ -358,10 +359,6 @@ usual into the slave process.
 
         context = mitogen.ssh.connect(broker, sys.argv[1])
         context.call(install_app)
-
-    if __name__ == '__main__' and mitogen.is_master:
-        import mitogen.utils
-        mitogen.utils.run_with_broker(main)
 
 
 Event-driven IO
@@ -398,12 +395,12 @@ a large fleet of machines, or to alert the parent of unexpected state changes.
 Compatibility
 #############
 
-Mitogen is syntax-compatible with **Python 2.4** released November 2004, making
-it suitable for managing a fleet of potentially ancient corporate hardware,
-such as Red Hat Enterprise Linux 5, released in 2007.
+Mitogen is compatible with **Python 2.4** released November 2004, making it
+suitable for managing a fleet of potentially ancient corporate hardware, such
+as Red Hat Enterprise Linux 5, released in 2007.
 
 Every combination of Python 3.x/2.x parent and child should be possible,
-however at present only Python 2.6, 2.7 and 3.6 are tested automatically.
+however at present only Python 2.4, 2.6, 2.7 and 3.6 are tested automatically.
 
 
 Zero Dependencies

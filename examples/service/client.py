@@ -1,6 +1,4 @@
 
-import socket
-
 import mitogen.master
 import mitogen.unix
 import mitogen.service

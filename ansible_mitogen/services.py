@@ -26,6 +26,8 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 Classes in this file define Mitogen 'services' that run (initially) within the
 connection multiplexer process that is forked off the top-level controller
@@ -79,14 +81,35 @@ else:
 
 
 def _get_candidate_temp_dirs():
-    options = ansible.constants.config.get_plugin_options('shell', 'sh')
+    try:
+        # >=2.5
+        options = ansible.constants.config.get_plugin_options('shell', 'sh')
+        remote_tmp = options.get('remote_tmp') or ansible.constants.DEFAULT_REMOTE_TMP
+        system_tmpdirs = options.get('system_tmpdirs', ('/var/tmp', '/tmp'))
+    except AttributeError:
+        # 2.3
+        remote_tmp = ansible.constants.DEFAULT_REMOTE_TMP
+        system_tmpdirs = ('/var/tmp', '/tmp')
 
-    # Pre 2.5 this came from ansible.constants.
-    remote_tmp = (options.get('remote_tmp') or
-                  ansible.constants.DEFAULT_REMOTE_TMP)
-    dirs = list(options.get('system_tmpdirs', ('/var/tmp', '/tmp')))
-    dirs.insert(0, remote_tmp)
-    return mitogen.utils.cast(dirs)
+    return mitogen.utils.cast([remote_tmp] + list(system_tmpdirs))
+
+
+def key_from_dict(**kwargs):
+    """
+    Return a unique string representation of a dict as quickly as possible.
+    Used to generated deduplication keys from a request.
+    """
+    out = []
+    stack = [kwargs]
+    while stack:
+        obj = stack.pop()
+        if isinstance(obj, dict):
+            stack.extend(sorted(obj.items()))
+        elif isinstance(obj, (list, tuple)):
+            stack.extend(obj)
+        else:
+            out.append(str(obj))
+    return ''.join(out)
 
 
 class Error(Exception):
@@ -113,7 +136,7 @@ class ContextService(mitogen.service.Service):
         super(ContextService, self).__init__(*args, **kwargs)
         self._lock = threading.Lock()
         #: Records the :meth:`get` result dict for successful calls, returned
-        #: for identical subsequent calls. Keyed by :meth:`key_from_kwargs`.
+        #: for identical subsequent calls. Keyed by :meth:`key_from_dict`.
         self._response_by_key = {}
         #: List of :class:`mitogen.core.Latch` awaiting the result for a
         #: particular key.
@@ -126,8 +149,27 @@ class ContextService(mitogen.service.Service):
         #: :attr:`max_interpreters` is reached, the most recently used context
         #: is destroyed to make room for any additional context.
         self._lru_by_via = {}
-        #: :meth:`key_from_kwargs` result by Context.
+        #: :func:`key_from_dict` result by Context.
         self._key_by_context = {}
+        #: Mapping of Context -> parent Context
+        self._via_by_context = {}
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'context': mitogen.core.Context
+    })
+    def reset(self, context):
+        """
+        Return a reference, forcing close and discard of the underlying
+        connection. Used for 'meta: reset_connection' or when some other error
+        is detected.
+        """
+        LOG.debug('%r.reset(%r)', self, context)
+        self._lock.acquire()
+        try:
+            self._shutdown_unlocked(context)
+        finally:
+            self._lock.release()
 
     @mitogen.service.expose(mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
@@ -149,29 +191,13 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
-    def key_from_kwargs(self, **kwargs):
-        """
-        Generate a deduplication key from the request.
-        """
-        out = []
-        stack = [kwargs]
-        while stack:
-            obj = stack.pop()
-            if isinstance(obj, dict):
-                stack.extend(sorted(obj.items()))
-            elif isinstance(obj, (list, tuple)):
-                stack.extend(obj)
-            else:
-                out.append(str(obj))
-        return ''.join(out)
-
     def _produce_response(self, key, response):
         """
         Reply to every waiting request matching a configuration key with a
         response dictionary, deleting the list of waiters when done.
 
         :param str key:
-            Result of :meth:`key_from_kwargs`
+            Result of :meth:`key_from_dict`
         :param dict response:
             Response dictionary
         :returns:
@@ -187,6 +213,19 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
         return count
 
+    def _forget_context_unlocked(self, context):
+        key = self._key_by_context.get(context)
+        if key is None:
+            LOG.debug('%r: attempt to forget unknown %r', self, context)
+            return
+
+        self._response_by_key.pop(key, None)
+        self._latches_by_key.pop(key, None)
+        self._key_by_context.pop(context, None)
+        self._refs_by_context.pop(context, None)
+        self._via_by_context.pop(context, None)
+        self._lru_by_via.pop(context, None)
+
     def _shutdown_unlocked(self, context, lru=None, new_context=None):
         """
         Arrange for `context` to be shut down, and optionally add `new_context`
@@ -194,15 +233,15 @@ class ContextService(mitogen.service.Service):
         """
         LOG.info('%r._shutdown_unlocked(): shutting down %r', self, context)
         context.shutdown()
-
-        key = self._key_by_context[context]
-        del self._response_by_key[key]
-        del self._refs_by_context[context]
-        del self._key_by_context[context]
-        if lru and context in lru:
-            lru.remove(context)
-        if new_context:
-            lru.append(new_context)
+        via = self._via_by_context.get(context)
+        if via:
+            lru = self._lru_by_via.get(via)
+            if lru:
+                if context in lru:
+                    lru.remove(context)
+                if new_context:
+                    lru.append(new_context)
+        self._forget_context_unlocked(context)
 
     def _update_lru_unlocked(self, new_context, spec, via):
         """
@@ -210,6 +249,8 @@ class ContextService(mitogen.service.Service):
         by `kwargs`, destroying the most recently created context if the list
         is full. Finally add `new_context` to the list.
         """
+        self._via_by_context[new_context] = via
+
         lru = self._lru_by_via.setdefault(via, [])
         if len(lru) < self.max_interpreters:
             lru.append(new_context)
@@ -233,6 +274,23 @@ class ContextService(mitogen.service.Service):
             self._lock.release()
 
     @mitogen.service.expose(mitogen.service.AllowParents())
+    def dump(self):
+        """
+        For testing, return a list of dicts describing every currently
+        connected context.
+        """
+        return [
+            {
+                'context_name': context.name,
+                'via': getattr(self._via_by_context.get(context),
+                               'name', None),
+                'refs': self._refs_by_context.get(context),
+            }
+            for context, key in sorted(self._key_by_context.items(),
+                                       key=lambda c_k: c_k[0].context_id)
+        ]
+
+    @mitogen.service.expose(mitogen.service.AllowParents())
     def shutdown_all(self):
         """
         For testing use, arrange for all connections to be shut down.
@@ -241,30 +299,19 @@ class ContextService(mitogen.service.Service):
         try:
             for context in list(self._key_by_context):
                 self._shutdown_unlocked(context)
-            self._lru_by_via = {}
         finally:
             self._lock.release()
 
-    def _on_stream_disconnect(self, stream):
+    def _on_context_disconnect(self, context):
         """
-        Respond to Stream disconnection by deleting any record of contexts
-        reached via that stream. This method runs in the Broker thread and must
-        not to block.
+        Respond to Context disconnect event by deleting any record of the no
+        longer reachable context.  This method runs in the Broker thread and
+        must not to block.
         """
-        # TODO: there is a race between creation of a context and disconnection
-        # of its related stream. An error reply should be sent to any message
-        # in _latches_by_key below.
         self._lock.acquire()
         try:
-            for context, key in list(self._key_by_context.items()):
-                if context.context_id in stream.routes:
-                    LOG.info('Dropping %r due to disconnect of %r',
-                             context, stream)
-                    self._response_by_key.pop(key, None)
-                    self._latches_by_key.pop(key, None)
-                    self._refs_by_context.pop(context, None)
-                    self._lru_by_via.pop(context, None)
-                    self._refs_by_context.pop(context, None)
+            LOG.info('%r: Forgetting %r due to stream disconnect', self, context)
+            self._forget_context_unlocked(context)
         finally:
             self._lock.release()
 
@@ -330,13 +377,10 @@ class ContextService(mitogen.service.Service):
         context = method(via=via, unidirectional=True, **spec['kwargs'])
         if via and spec.get('enable_lru'):
             self._update_lru(context, spec, via)
-        else:
-            # For directly connected contexts, listen to the associated
-            # Stream's disconnect event and use it to invalidate dependent
-            # Contexts.
-            stream = self.router.stream_by_id(context.context_id)
-            mitogen.core.listen(stream, 'disconnect',
-                                lambda: self._on_stream_disconnect(stream))
+
+        # Forget the context when its disconnect event fires.
+        mitogen.core.listen(context, 'disconnect',
+            lambda: self._on_context_disconnect(context))
 
         self._send_module_forwards(context)
         init_child_result = context.call(
@@ -360,7 +404,7 @@ class ContextService(mitogen.service.Service):
 
     def _wait_or_start(self, spec, via=None):
         latch = mitogen.core.Latch()
-        key = self.key_from_kwargs(via=via, **spec)
+        key = key_from_dict(via=via, **spec)
         self._lock.acquire()
         try:
             response = self._response_by_key.get(key)
@@ -453,14 +497,16 @@ class ModuleDepService(mitogen.service.Service):
 
     def _get_builtin_names(self, builtin_path, resolved):
         return [
-            fullname
+            mitogen.core.to_text(fullname)
             for fullname, path, is_pkg in resolved
             if os.path.abspath(path).startswith(builtin_path)
         ]
 
     def _get_custom_tups(self, builtin_path, resolved):
         return [
-            (fullname, path, is_pkg)
+            (mitogen.core.to_text(fullname),
+             mitogen.core.to_text(path),
+             is_pkg)
             for fullname, path, is_pkg in resolved
             if not os.path.abspath(path).startswith(builtin_path)
         ]

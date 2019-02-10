@@ -16,6 +16,9 @@ import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
 
+import ansible_mitogen.runner
+import ansible_mitogen.target
+
 router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
 stream = mitogen.ssh.Stream(router, 0, max_message_size=0, hostname='foo')
@@ -31,7 +34,7 @@ if '--dump' in sys.argv:
 
 
 print(
-    '               '
+    '                           '
     ' '
     '  Original   '
     '  '
@@ -42,6 +45,9 @@ print(
 
 for mod in (
         mitogen.parent,
+        mitogen.fork,
+        ansible_mitogen.target,
+        ansible_mitogen.runner,
         mitogen.ssh,
         mitogen.sudo,
         mitogen.select,
@@ -56,7 +62,7 @@ for mod in (
     compressed = zlib.compress(minimized, 9)
     compressed_size = len(compressed)
     print(
-        '%-15s'
+        '%-25s'
         ' '
         '%5i %4.1fKiB'
         '  '

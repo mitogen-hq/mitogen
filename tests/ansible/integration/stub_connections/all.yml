@@ -1,0 +1,7 @@
+- include: kubectl.yml
+- include: lxc.yml
+- include: lxd.yml
+- include: mitogen_doas.yml
+- include: mitogen_sudo.yml
+- include: setns_lxc.yml
+- include: setns_lxd.yml

@@ -1,8 +1,13 @@
 #!/usr/bin/python
-# I am an Ansible Python WANT_JSON module. I should receive an encoding string.
+# I am an Ansible Python WANT_JSON module. I should receive a JSON-encoded file.
 
-import json
 import sys
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
+
 
 WANT_JSON = 1
 
@@ -16,12 +21,18 @@ if len(sys.argv) < 2:
 
 # Also must slurp in our own source code, to verify the encoding string was
 # added.
-with open(sys.argv[0]) as fp:
+fp = open(sys.argv[0])
+try:
     me = fp.read()
+finally:
+    fp.close()
 
 try:
-    with open(sys.argv[1]) as fp:
+    fp = open(sys.argv[1])
+    try:
         input_json = fp.read()
+    finally:
+        fp.close()
 except IOError:
     usage()
 

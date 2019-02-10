@@ -1,0 +1,49 @@
+# issue #76, #370: ensure context state is forgotten on disconnect, including
+# state of dependent contexts (e.g. sudo, connection delegation, ..).
+
+- name: integration/context_service/disconnect_cleanup.yml
+  hosts: test-targets[0]
+  any_errors_fatal: true
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - meta: end_play
+    when: ansible_version.full < '2.5.6'
+
+  # Start with a clean slate.
+  - mitogen_shutdown_all:
+
+  # Connect a few users.
+  - shell: "true"
+    become: true
+    become_user: "mitogen__user{{item}}"
+    with_items: [1, 2, 3]
+
+  # Verify current state.
+  - mitogen_action_script:
+      script: |
+        self._connection._connect()
+        result['dump'] = self._connection.parent.call_service(
+          service_name='ansible_mitogen.services.ContextService',
+          method_name='dump'
+        )
+    register: out
+
+  - assert:
+      that: out.dump|length == (play_hosts|length) * 4 # ssh account + 3 sudo accounts
+
+  - meta: reset_connection
+
+  # Verify current state.
+  - mitogen_action_script:
+      script: |
+        self._connection._connect()
+        result['dump'] = self._connection.parent.call_service(
+          service_name='ansible_mitogen.services.ContextService',
+          method_name='dump'
+        )
+    register: out
+
+  - assert:
+      that: out.dump|length == play_hosts|length # just the ssh account

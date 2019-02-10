@@ -6,7 +6,7 @@ import testlib
 import mitogen.master
 
 
-class ScanCodeImportsTest(unittest2.TestCase):
+class ScanCodeImportsTest(testlib.TestCase):
     func = staticmethod(mitogen.master.scan_code_imports)
 
     if mitogen.core.PY3:

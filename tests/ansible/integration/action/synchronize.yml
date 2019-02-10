@@ -5,6 +5,7 @@
   any_errors_fatal: true
   vars:
     ansible_user: mitogen__has_sudo_pubkey
+    ansible_become_pass: has_sudo_pubkey_password
     ansible_ssh_private_key_file: /tmp/synchronize-action-key
   tasks:
     # must copy git file to set proper file mode.
@@ -12,22 +13,22 @@
         dest: /tmp/synchronize-action-key
         src: ../../../data/docker/mitogen__has_sudo_pubkey.key
         mode: u=rw,go=
-      connection: local
+      delegate_to: localhost
 
     - file:
         path: /tmp/sync-test
         state: absent
-      connection: local
+      delegate_to: localhost
 
     - file:
         path: /tmp/sync-test
         state: directory
-      connection: local
+      delegate_to: localhost
 
     - copy:
         dest: /tmp/sync-test/item
         content: "item!"
-      connection: local
+      delegate_to: localhost
 
     - file:
         path: /tmp/sync-test.out

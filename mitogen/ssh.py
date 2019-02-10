@@ -26,12 +26,14 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+# !mitogen: minify_safe
+
 """
 Functionality to allow establishing new slave contexts over an SSH connection.
 """
 
 import logging
-import time
+import re
 
 try:
     from shlex import quote as shlex_quote
@@ -40,15 +42,27 @@ except ImportError:
 
 import mitogen.parent
 from mitogen.core import b
+from mitogen.core import bytes_partition
+
+try:
+    any
+except NameError:
+    from mitogen.core import any
 
 
 LOG = logging.getLogger('mitogen')
 
 # sshpass uses 'assword' because it doesn't lowercase the input.
 PASSWORD_PROMPT = b('password')
-PERMDENIED_PROMPT = b('permission denied')
 HOSTKEY_REQ_PROMPT = b('are you sure you want to continue connecting (yes/no)?')
 HOSTKEY_FAIL = b('host key verification failed.')
+
+# [user@host: ] permission denied
+PERMDENIED_RE = re.compile(
+    ('(?:[^@]+@[^:]+: )?'  # Absent in OpenSSH <7.5
+     'Permission denied').encode(),
+    re.I
+)
 
 
 DEBUG_PREFIXES = (b('debug1:'), b('debug2:'), b('debug3:'))
@@ -85,18 +99,19 @@ def filter_debug(stream, it):
                     # interesting token from above or the bootstrap
                     # ('password', 'MITO000\n').
                     break
-                elif buf.startswith(DEBUG_PREFIXES):
+                elif any(buf.startswith(p) for p in DEBUG_PREFIXES):
                     state = 'in_debug'
                 else:
                     state = 'in_plain'
             elif state == 'in_debug':
                 if b('\n') not in buf:
                     break
-                line, _, buf = buf.partition(b('\n'))
-                LOG.debug('%r: %s', stream, line.rstrip())
+                line, _, buf = bytes_partition(buf, b('\n'))
+                LOG.debug('%s: %s', stream.name,
+                          mitogen.core.to_text(line.rstrip()))
                 state = 'start_of_line'
             elif state == 'in_plain':
-                line, nl, buf = buf.partition(b('\n'))
+                line, nl, buf = bytes_partition(buf, b('\n'))
                 yield line + nl, not (nl or buf)
                 if nl:
                     state = 'start_of_line'
@@ -119,10 +134,6 @@ class Stream(mitogen.parent.Stream):
 
     #: Number of -v invocations to pass on command line.
     ssh_debug_level = 0
-
-    #: If batch_mode=False, points to the corresponding DiagLogStream, allowing
-    #: it to be disconnected at the same time this stream is being torn down.
-    tty_stream = None
 
     #: The path to the SSH binary.
     ssh_path = 'ssh'
@@ -188,11 +199,6 @@ class Stream(mitogen.parent.Stream):
                 'stderr_pipe': True,
             }
 
-    def on_disconnect(self, broker):
-        if self.tty_stream is not None:
-            self.tty_stream.on_disconnect(broker)
-        super(Stream, self).on_disconnect(broker)
-
     def get_boot_command(self):
         bits = [self.ssh_path]
         if self.ssh_debug_level:
@@ -235,11 +241,11 @@ class Stream(mitogen.parent.Stream):
         base = super(Stream, self).get_boot_command()
         return bits + [shlex_quote(s).strip() for s in base]
 
-    def connect(self):
-        super(Stream, self).connect()
-        self.name = u'ssh.' + mitogen.core.to_text(self.hostname)
+    def _get_name(self):
+        s = u'ssh.' + mitogen.core.to_text(self.hostname)
         if self.port:
-            self.name += u':%s' % (self.port,)
+            s += u':%s' % (self.port,)
+        return s
 
     auth_incorrect_msg = 'SSH authentication is incorrect'
     password_incorrect_msg = 'SSH password is incorrect'
@@ -257,8 +263,8 @@ class Stream(mitogen.parent.Stream):
 
     def _host_key_prompt(self):
         if self.check_host_keys == 'accept':
-            LOG.debug('%r: accepting host key', self)
-            self.tty_stream.transmit_side.write(b('y\n'))
+            LOG.debug('%s: accepting host key', self.name)
+            self.diag_stream.transmit_side.write(b('yes\n'))
             return
 
         # _host_key_prompt() should never be reached with ignore or enforce
@@ -266,22 +272,10 @@ class Stream(mitogen.parent.Stream):
         # with ours.
         raise HostKeyError(self.hostkey_config_msg)
 
-    def _ec0_received(self):
-        if self.tty_stream is not None:
-            self._router.broker.start_receive(self.tty_stream)
-        return super(Stream, self)._ec0_received()
-
-    def _connect_bootstrap(self, extra_fd):
-        fds = [self.receive_side.fd]
-        if extra_fd is not None:
-            self.tty_stream = mitogen.parent.DiagLogStream(extra_fd, self)
-            fds.append(extra_fd)
-
-        it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
-
+    def _connect_input_loop(self, it):
         password_sent = False
         for buf, partial in filter_debug(self, it):
-            LOG.debug('%r: received %r', self, buf)
+            LOG.debug('%s: stdout: %s', self.name, buf.rstrip())
             if buf.endswith(self.EC0_MARKER):
                 self._ec0_received()
                 return
@@ -289,11 +283,7 @@ class Stream(mitogen.parent.Stream):
                 self._host_key_prompt()
             elif HOSTKEY_FAIL in buf.lower():
                 raise HostKeyError(self.hostkey_failed_msg)
-            elif buf.lower().startswith((
-                    PERMDENIED_PROMPT,
-                    b("%s@%s: " % (self.username, self.hostname))
-                        + PERMDENIED_PROMPT,
-                )):
+            elif PERMDENIED_RE.match(buf):
                 # issue #271: work around conflict with user shell reporting
                 # 'permission denied' e.g. during chdir($HOME) by only matching
                 # it at the start of the line.
@@ -307,10 +297,21 @@ class Stream(mitogen.parent.Stream):
             elif partial and PASSWORD_PROMPT in buf.lower():
                 if self.password is None:
                     raise PasswordError(self.password_required_msg)
-                LOG.debug('%r: sending password', self)
-                self.tty_stream.transmit_side.write(
+                LOG.debug('%s: sending password', self.name)
+                self.diag_stream.transmit_side.write(
                     (self.password + '\n').encode()
                 )
                 password_sent = True
 
         raise mitogen.core.StreamError('bootstrap failed')
+
+    def _connect_bootstrap(self):
+        fds = [self.receive_side.fd]
+        if self.diag_stream is not None:
+            fds.append(self.diag_stream.receive_side.fd)
+
+        it = mitogen.parent.iter_read(fds=fds, deadline=self.connect_deadline)
+        try:
+            self._connect_input_loop(it)
+        finally:
+            it.close()

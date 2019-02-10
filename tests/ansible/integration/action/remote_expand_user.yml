@@ -8,12 +8,12 @@
     - name: "Find out root's homedir."
       # Runs first because it blats regular Ansible facts with junk, so
       # non-become run fixes that up.
-      setup: gather_subset=min
+      setup:
       become: true
       register: root_facts
 
     - name: "Find regular homedir"
-      setup: gather_subset=min
+      setup:
       register: user_facts
 
     # ------------------------
@@ -36,8 +36,9 @@
           sudoable: false
       register: out
       become: true
-    - assert:
-        that: out.result == '{{user_facts.ansible_facts.ansible_user_dir}}/foo'
+    - assert_equal:
+        left: out.result
+        right: user_facts.ansible_facts.ansible_user_dir + '/foo'
 
     - name: "Expand ~user/foo"
       action_passthrough:
@@ -80,8 +81,9 @@
       register: out
       become: true
 
-    - assert:
-        that: out.result == '{{root_facts.ansible_facts.ansible_user_dir}}/foo'
+    - assert_equal:
+        left: out.result
+        right: root_facts.ansible_facts.ansible_user_dir + '/foo'
 
     - name: "sudoable; Expand ~user/foo"
       action_passthrough:

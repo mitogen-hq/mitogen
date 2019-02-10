@@ -1,11 +1,6 @@
 #!/usr/bin/perl
 
-binmode STDOUT, ":utf8";
-use utf8;
-
 my $WANT_JSON = 1;
-
-use JSON;
 
 my $json;
 {
@@ -15,7 +10,7 @@ my $json;
   close $fh;
 }
 
-print encode_json({
-    message => "I am a want JSON perl script! Here is my input.",
-    input => [decode_json($json_args)]
-});
+print "{\n";
+print ' "message": "I am a want JSON perl script! Here is my input.",' . "\n";
+print ' "input": ' . $json_args . "\n";
+print "}\n";

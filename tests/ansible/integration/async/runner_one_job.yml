@@ -40,11 +40,20 @@
       - result1.cmd == "sleep 1;\n echo alldone"
       - result1.delta|length == 14
       - result1.start|length == 26
-      - result1.failed == False
       - result1.finished == 1
       - result1.rc == 0
       - result1.start|length == 26
+
+  - assert:
+      that:
       - result1.stderr == ""
       - result1.stderr_lines == []
       - result1.stdout == "alldone"
       - result1.stdout_lines == ["alldone"]
+    when: ansible_version.full > '2.8'  # ansible#51393
+
+  - assert:
+      that:
+      - result1.failed == False
+    when: ansible_version.full > '2.4'
+

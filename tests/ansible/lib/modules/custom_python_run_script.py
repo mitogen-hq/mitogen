@@ -22,7 +22,7 @@ def execute(s, gbls, lcls):
 def main():
     module = AnsibleModule(argument_spec={
         'script': {
-            'type': str
+            'type': 'str'
         }
     })
 
