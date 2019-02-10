@@ -508,6 +508,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Johan Beisser <https://github.com/jbeisser>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
+`Kevin Carter <https://github.com/cloudnull>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Michal Medvecky <https://github.com/michalmedvecky>`_,
