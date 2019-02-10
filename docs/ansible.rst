@@ -10,9 +10,8 @@ Mitogen, replacing embedded shell invocations with pure-Python equivalents
 invoked via highly efficient remote procedure calls to persistent interpreters
 tunnelled over SSH. No changes are required to target hosts.
 
-The extension is approaching stability and real-world usage is encouraged. `Bug
-reports`_ are welcome: Ansible is huge, and only wide testing will ensure
-soundness.
+The extension is stable and real-world use is encouraged. `Bug reports`_ are
+welcome: Ansible is huge, and only wide testing will ensure soundness.
 
 .. _Ansible: https://www.ansible.com/
 

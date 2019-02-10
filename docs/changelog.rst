@@ -455,6 +455,21 @@ Core Library
   import :mod:`__main__` on Python 3.4 and newer due to a breaking change in
   the :mod:`pkgutil` API. The program's main script is now handled specially.
 
+* `#481 <https://github.com/dw/mitogen/issues/481>`_: the version of `sudo`
+  that shipped with CentOS 5 replaced itself with the program to be executed,
+  and therefore did not hold any child PTY open on our behalf. The child
+  context is updated to preserve any PTY FD in order to avoid the kernel
+  sending `SIGHUP` early during startup.
+
+* `#523 <https://github.com/dw/mitogen/issues/523>`_: the test suite didn't
+  generate a code coverage report if any test failed.
+
+* `#524 <https://github.com/dw/mitogen/issues/524>`_: Python 3.6+ emitted a
+  :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
+
+* `#529 <https://github.com/dw/mitogen/issues/529>`_: Code coverage of the
+  test suite was not measured across all Python versions.
+
 * `16ca111e <https://github.com/dw/mitogen/commit/16ca111e>`_: handle OpenSSH
   7.5 permission denied prompts when ``~/.ssh/config`` rewrites are present.
 
@@ -475,17 +490,8 @@ Core Library
   a failure.
 
 * `57b652ed <https://github.com/dw/mitogen/commit/57b652ed>`_: a stray import
-  meant an extra roundtrip and ~20KiB of data was wasted for any context that
+  meant an extra roundtrip and ~4KiB of data was wasted for any context that
   imported :mod:`mitogen.parent`.
-
-* `#523 <https://github.com/dw/mitogen/issues/523>` : the test suite didn't
-  generate a code coverage report if any test failed.
-
-* `#524 <https://github.com/dw/mitogen/issues/524>` : Python 3.6+ emitted a
-  :class:`DeprecationWarning` for :func:`mitogen.utils.run_with_router`.
-
-* `#529 <https://github.com/dw/mitogen/issues/529>` : Code coverage of the
-  test suite was not measured across all Python versions.
 
 
 Thanks!
@@ -508,6 +514,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Johan Beisser <https://github.com/jbeisser>`_,
 `Jonathan Rosser <https://github.com/jrosser>`_,
 `Josh Smift <https://github.com/jbscare>`_,
+`Kevin Carter <https://github.com/cloudnull>`_,
 `Mehdi <https://github.com/mehdisat7>`_,
 `Michael DeHaan <https://github.com/mpdehaan>`_,
 `Michal Medvecky <https://github.com/michalmedvecky>`_,
