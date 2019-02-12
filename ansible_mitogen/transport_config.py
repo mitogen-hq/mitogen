@@ -447,7 +447,9 @@ class MitogenViaSpec(Spec):
         return self._inventory_name
 
     def remote_addr(self):
+        # play_context.py::MAGIC_VARIABLE_MAPPING
         return (
+            self._host_vars.get('ansible_ssh_host') or
             self._host_vars.get('ansible_host') or
             self._inventory_name
         )

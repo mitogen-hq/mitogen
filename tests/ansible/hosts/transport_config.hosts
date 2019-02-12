@@ -3,7 +3,7 @@
 
 
 # tansport()
-tc-transport-unset 
+tc-transport-unset
 tc-transport-local ansible_connection=local
 
 # python_path()
@@ -11,3 +11,11 @@ tc-python-path-unset
 tc-python-path-hostvar  ansible_python_interpreter=/hostvar/path/to/python
 tc-python-path-local-unset ansible_connection=local
 tc-python-path-local-explicit ansible_connection=local ansible_python_interpreter=/a/b/c
+
+# remote_addr()
+tc-remote-addr-unset  # defaults to inventory_hostname
+tc-remote-addr-explicit-ssh ansible_ssh_host=ansi.ssh.host
+tc-remote-addr-explicit-host ansible_host=ansi.host
+tc-remote-addr-explicit-both ansible_ssh_host=a.b.c ansible_host=b.c.d
+
+
