@@ -24,7 +24,7 @@
             'lxc_info_path': null,
             'lxc_path': null,
             'machinectl_path': null,
-            'python_path': null,
+            'python_path': ["/usr/bin/python"],
             'username': 'ansible-cfg-remote-user',
           },
           'method': 'setns',

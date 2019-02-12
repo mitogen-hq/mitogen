@@ -15,7 +15,7 @@
         right: [
           {
             'kwargs': {
-              'python_path': null
+              'python_path': ["{{ansible_playbook_python}}"],
             },
             'method': 'local',
           },
@@ -23,7 +23,7 @@
             'enable_lru': true,
             'kwargs': {
               'connect_timeout': 10,
-              'python_path': null,
+              'python_path': ["{{ansible_playbook_python}}"],
               'password': null,
               'username': 'root',
               'sudo_path': null,

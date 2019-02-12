@@ -43,7 +43,7 @@
               "connect_timeout": 10,
               "doas_path": null,
               "password": null,
-              "python_path": null,
+              "python_path": ["/usr/bin/python"],
               "username": "normal-user",
             },
             "method": "doas",
@@ -72,7 +72,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -112,7 +112,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -147,7 +147,7 @@
                       'connect_timeout': 10,
                       'doas_path': null,
                       'password': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'username': 'normal-user',
                   },
                   'method': 'doas',
@@ -162,7 +162,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -202,7 +202,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -229,7 +229,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -264,7 +264,7 @@
                       'connect_timeout': 10,
                       'doas_path': null,
                       'password': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'username': 'normal-user',
                   },
                   'method': 'doas',
@@ -279,7 +279,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -320,7 +320,7 @@
                       'identity_file': null,
                       'password': null,
                       'port': null,
-                      'python_path': null,
+                      "python_path": ["/usr/bin/python"],
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -352,7 +352,7 @@
         right: [
           {
             'kwargs': {
-              'python_path': null
+              "python_path": ["{{ansible_playbook_python}}"],
             },
             'method': 'local',
           },
@@ -374,7 +374,7 @@
               'connect_timeout': 10,
               'doas_path': null,
               'password': null,
-              'python_path': null,
+              'python_path': ["/usr/bin/python"],
               'username': 'normal-user',
             },
             'method': 'doas',
@@ -384,7 +384,7 @@
               'connect_timeout': 10,
               'doas_path': null,
               'password': null,
-              'python_path': null,
+              'python_path': ["/usr/bin/python"],
               'username': 'newuser-doas-normal-user',
             },
             'method': 'doas',
