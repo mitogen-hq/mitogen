@@ -11,9 +11,19 @@ body {
     font-size: 130% !important;
 }
 
+img + p,
+h1 + p,
+h2 + p,
+h3 + p,
+h4 + p,
+h5 + p
+{
+    margin-top: 0;
+}
+
 .body h1 { font-size: 200% !important; }
-.body h2 { font-size: 175% !important; }
-.body h3 { font-size: 150% !important; }
+.body h2 { font-size: 165% !important; }
+.body h3 { font-size: 145% !important; }
 .body h4 { font-size: 125% !important; }
 .body h5 { font-size: 125% !important; }
 
@@ -22,7 +32,8 @@ body {
 .body h3,
 .body h4,
 .body h5 {
-    margin-top: 20px !important;
+    margin-top: 25px !important;
+    color: #7f0000;
 }
 
 .body h1 {
