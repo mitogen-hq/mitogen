@@ -137,14 +137,18 @@ Fixes
   handling. Test coverage was added.
 
 * `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
-  distribution now includes a requisite ``LICENSE`` file.
+  distribution includes a requisite ``LICENSE`` file.
 
 * `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_: the
-  ``ansible_ssh_host`` parameter is respected when ``mitogen_via=`` is active.
+  ``ansible_ssh_host`` variable is respected when ``mitogen_via=`` is active.
 
 * `21ad299d <https://github.com/dw/mitogen/commit/21ad299d>`_: the
-  precedence of ``ansible_ssh_user`` and ``ansible_user`` was corrected when
-  when ``mitogen_via=`` is active.
+  precedence of ``ansible_ssh_user`` and ``ansible_user`` variables were
+  corrected when when ``mitogen_via=`` is active.
+
+* `8ae6ca1d <https://github.com/dw/mitogen/commit/8ae6ca1d>`_: the
+  ``ansible_become_method`` variable is respected when ``mitogen_via=`` is
+  active.
 
 
 Thanks!
