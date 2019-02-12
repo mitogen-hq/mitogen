@@ -21,18 +21,22 @@ h5 + p
     margin-top: 0;
 }
 
+.section > h3:first-child {
+    margin-top: 15px !important;
+}
+
 .body h1 { font-size: 200% !important; }
 .body h2 { font-size: 165% !important; }
-.body h3 { font-size: 145% !important; }
-.body h4 { font-size: 125% !important; }
-.body h5 { font-size: 125% !important; }
+.body h3 { font-size: 125% !important; }
+.body h4 { font-size: 110% !important; font-weight: bold; }
+.body h5 { font-size: 100% !important; font-weight: bold; }
 
 .body h1,
 .body h2,
 .body h3,
 .body h4,
 .body h5 {
-    margin-top: 25px !important;
+    margin-top: 30px !important;
     color: #7f0000;
 }
 

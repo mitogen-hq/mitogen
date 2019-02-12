@@ -10,7 +10,7 @@ Release Notes
     <style>
         div#release-notes h2 {
             border-bottom: 1px dotted #c0c0c0;
-            margin-top: 40px;
+            margin-top: 50px !important;
         }
     </style>
 
