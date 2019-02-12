@@ -18,6 +18,7 @@ html_theme_options = {
     'font_family': "Georgia, serif",
     'head_font_family': "Georgia, serif",
     'fixed_sidebar': True,
+    'show_powered_by': False,
 }
 htmlhelp_basename = 'mitogendoc'
 intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
