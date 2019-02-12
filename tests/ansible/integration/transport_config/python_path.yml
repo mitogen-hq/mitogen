@@ -1,11 +1,13 @@
 # related: issue #511, #536
 
+
+# When no ansible_python_interpreter is set, executor/module_common.py chooses
+# "/usr/bin/python".
 - name: integration/transport_config/python_path.yml
   hosts: tc-python-path-unset
-
-  # When no ansible_python_interpreter is set, executor/module_common.py
-  # chooses "/usr/bin/python".
   tasks:
+  - meta: end_play
+    when: not is_mitogen
   - mitogen_get_stack:
     register: out
   - assert_equal:
@@ -13,8 +15,11 @@
       right: ["/usr/bin/python"]
 
 
+# Non-localhost with explicit ansible_python_interpreter
 - hosts: tc-python-path-hostvar
   tasks:
+  - meta: end_play
+    when: not is_mitogen
   - mitogen_get_stack:
     register: out
   - assert_equal:
@@ -25,6 +30,8 @@
 # Implicit localhost gets ansible_python_interpreter=virtualenv interpreter
 - hosts: localhost
   tasks:
+  - meta: end_play
+    when: not is_mitogen
   - mitogen_get_stack:
     register: out
   - assert_equal:
@@ -35,6 +42,8 @@
 # explicit local connections get the same treatment as everything else.
 - hosts: tc-python-path-local-unset
   tasks:
+  - meta: end_play
+    when: not is_mitogen
   - mitogen_get_stack:
     register: out
   - assert_equal:
@@ -44,6 +53,8 @@
 
 - hosts: tc-python-path-local-explicit
   tasks:
+  - meta: end_play
+    when: not is_mitogen
   - mitogen_get_stack:
     register: out
   - assert_equal:
