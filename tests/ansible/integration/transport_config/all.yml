@@ -1,4 +1,5 @@
 - include: become.yml
+- include: become_method.yml
 - include: password.yml
 - include: python_path.yml
 - include: remote_addr.yml

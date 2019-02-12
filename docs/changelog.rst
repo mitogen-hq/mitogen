@@ -143,8 +143,8 @@ Fixes
   ``ansible_ssh_host`` parameter is respected when ``mitogen_via=`` is active.
 
 * `21ad299d <https://github.com/dw/mitogen/commit/21ad299d>`_: the
-   precedence of ``ansible_ssh_user`` and ``ansible_user`` was corrected when
-   when ``mitogen_via=`` is active.
+  precedence of ``ansible_ssh_user`` and ``ansible_user`` was corrected when
+  when ``mitogen_via=`` is active.
 
 
 Thanks!

@@ -486,7 +486,11 @@ class MitogenViaSpec(Spec):
         return bool(self._become_user)
 
     def become_method(self):
-        return self._become_method or C.DEFAULT_BECOME_METHOD
+        return (
+            self._become_method or
+            self._host_vars.get('ansible_become_method') or
+            C.DEFAULT_BECOME_METHOD
+        )
 
     def become_user(self):
         return self._become_user
