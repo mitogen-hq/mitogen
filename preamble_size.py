@@ -8,6 +8,7 @@ import sys
 import zlib
 
 import mitogen.fakessh
+import mitogen.fork
 import mitogen.master
 import mitogen.minify
 import mitogen.parent
@@ -15,9 +16,6 @@ import mitogen.select
 import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
-
-import ansible_mitogen.runner
-import ansible_mitogen.target
 
 router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
@@ -46,8 +44,6 @@ print(
 for mod in (
         mitogen.parent,
         mitogen.fork,
-        ansible_mitogen.target,
-        ansible_mitogen.runner,
         mitogen.ssh,
         mitogen.sudo,
         mitogen.select,
