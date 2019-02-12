@@ -136,6 +136,9 @@ Fixes
   repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
   handling. Test coverage was added.
 
+* `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
+  distribution now includes a requisite ``LICENSE`` file.
+
 * `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_: the
   ``ansible_ssh_host`` parameter is respected when ``mitogen_via=`` is active.
 
@@ -149,6 +152,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Carl George <https://github.com/carlwgeorge>`_,
 `Guy Knights <https://github.com/knightsg>`_, and
 `Josh Smift <https://github.com/jbscare>`_,
 
