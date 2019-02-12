@@ -1,10 +1,13 @@
 # integration/transport_config
 # Hosts with twiddled configs that need to be checked somehow.
 
+
+# tansport()
+tc-transport-unset 
+tc-transport-local ansible_connection=local
+
+# python_path()
 tc-python-path-unset
 tc-python-path-hostvar  ansible_python_interpreter=/hostvar/path/to/python
-
-# local connections get virtualenv python path
 tc-python-path-local-unset ansible_connection=local
 tc-python-path-local-explicit ansible_connection=local ansible_python_interpreter=/a/b/c
-

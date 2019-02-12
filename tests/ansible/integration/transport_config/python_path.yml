@@ -8,8 +8,7 @@
   hosts: tc-python-path-unset
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/usr/bin/python"]
@@ -18,8 +17,7 @@
   vars: {mitogen_via: tc-python-path-unset}
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/usr/bin/python"]
@@ -32,8 +30,7 @@
 - hosts: tc-python-path-hostvar
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: [/hostvar/path/to/python]
@@ -42,8 +39,7 @@
   vars: {mitogen_via: tc-python-path-hostvar}
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/hostvar/path/to/python"]
@@ -56,8 +52,7 @@
 - hosts: localhost
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["{{ansible_playbook_python}}"]
@@ -66,8 +61,7 @@
   vars: {mitogen_via: localhost}
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["{{ansible_playbook_python}}"]
@@ -80,8 +74,7 @@
 - hosts: tc-python-path-local-unset
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/usr/bin/python"]
@@ -90,8 +83,7 @@
   vars: {mitogen_via: tc-python-path-local-unset}
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/usr/bin/python"]
@@ -104,8 +96,7 @@
 - hosts: tc-python-path-local-explicit
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/a/b/c"]
@@ -114,8 +105,7 @@
   vars: {mitogen_via: tc-python-path-local-explicit}
   tasks:
   - include: ../_mitogen_only.yml
-  - mitogen_get_stack:
-    register: out
+  - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
       right: ["/a/b/c"]
