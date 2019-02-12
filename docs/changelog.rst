@@ -128,6 +128,9 @@ Core Library
 v0.2.5 (2019-02-1?)
 -------------------
 
+Fixes
+~~~~~
+
 * `#511 <https://github.com/dw/mitogen/issues/511>`_,
   `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
   repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
