@@ -18,9 +18,8 @@ tc-remote-addr-explicit-ssh ansible_ssh_host=ansi.ssh.host
 tc-remote-addr-explicit-host ansible_host=ansi.host
 tc-remote-addr-explicit-both ansible_ssh_host=a.b.c ansible_host=b.c.d
 
-# remote_addr()
-tc-remote-user-unset  # defaults to C.DEFAULT_REMOTE_USER
-tc-remote-user-explicit-ssh  ansible_ssh_user=ansi-ssh-user
-tc-remote-user-explicit-user ansible_user=ansi-user
-tc-remote-user-explicit-both ansible_user=a.b.c ansible_ssh_user=c.b.a
-
+# password()
+tc-password-unset
+tc-password-explicit-ssh  ansible_ssh_pass=ansi-ssh-pass
+tc-password-explicit-user ansible_password=ansi-pass
+tc-password-explicit-both ansible_password=a.b.c ansible_ssh_pass=c.b.a

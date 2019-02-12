@@ -430,12 +430,33 @@ class MitogenViaSpec(Spec):
     having a configruation problem with connection delegation, the answer to
     your problem lies in the method implementations below!
     """
-    def __init__(self, inventory_name, host_vars,
-                 become_method, become_user):
+    def __init__(self, inventory_name, host_vars, become_method, become_user,
+                 play_context):
+        """
+        :param str inventory_name:
+            The inventory name of the intermediary machine, i.e. not the target
+            machine.
+        :param dict host_vars:
+            The HostVars magic dictionary provided by Ansible in task_vars.
+        :param str become_method:
+            If the mitogen_via= spec included a become method, the method it
+            specifies.
+        :param str become_user:
+            If the mitogen_via= spec included a become user, the user it
+            specifies.
+        :param PlayContext play_context:
+            For some global values **only**, the PlayContext used to describe
+            the real target machine. Values from this object are **strictly
+            restricted** to values that are Ansible-global, e.g. the passwords
+            specified interactively.
+        """
         self._inventory_name = inventory_name
         self._host_vars = host_vars
         self._become_method = become_method
         self._become_user = become_user
+        # Dangerous! You may find a variable you want in this object, but it's
+        # almost certainly for the wrong machine!
+        self._dangerous_play_context = play_context
 
     def transport(self):
         return (
@@ -479,7 +500,6 @@ class MitogenViaSpec(Spec):
 
     def password(self):
         return optional_secret(
-            # TODO: Might have to come from PlayContext.
             self._host_vars.get('ansible_ssh_pass') or
             self._host_vars.get('ansible_password')
         )

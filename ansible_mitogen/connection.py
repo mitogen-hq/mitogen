@@ -568,6 +568,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         via_vars = self.host_vars[inventory_name]
         return ansible_mitogen.transport_config.MitogenViaSpec(
             inventory_name=inventory_name,
+            play_context=self._play_context,
             host_vars=dict(via_vars),  # TODO: make it lazy
             become_method=become_method or None,
             become_user=become_user or None,
