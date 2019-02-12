@@ -144,7 +144,7 @@ Fixes
 
 * `21ad299d <https://github.com/dw/mitogen/commit/21ad299d>`_: the
   precedence of ``ansible_ssh_user`` and ``ansible_user`` variables were
-  corrected when when ``mitogen_via=`` is active.
+  corrected when ``mitogen_via=`` is active.
 
 * `8ae6ca1d <https://github.com/dw/mitogen/commit/8ae6ca1d>`_: the
   ``ansible_become_method`` variable is respected when ``mitogen_via=`` is
