@@ -3,7 +3,7 @@ Mitogen for Ansible
 ===================
 
 .. image:: images/ansible/ansible_mitogen.svg
-    :class: mitogen-right-200 mitogen-logo-wrap
+    :class: mitogen-right-180 mitogen-logo-wrap
 
 An extension to `Ansible`_ is included that implements connections over
 Mitogen, replacing embedded shell invocations with pure-Python equivalents
