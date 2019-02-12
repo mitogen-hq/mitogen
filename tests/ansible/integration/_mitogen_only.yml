@@ -1,0 +1,4 @@
+# Include me for plays that can't run on vanilla.
+#
+- meta: end_play
+  when: not is_mitogen

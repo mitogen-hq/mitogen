@@ -495,7 +495,6 @@ class MitogenViaSpec(Spec):
         # interpreter is specified.
         return parse_python_path(s or '/usr/bin/python')
 
-
     def private_key_file(self):
         # TODO: must come from PlayContext too.
         return (
