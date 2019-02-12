@@ -456,8 +456,8 @@ class MitogenViaSpec(Spec):
 
     def remote_user(self):
         return (
-            self._host_vars.get('ansible_user') or
             self._host_vars.get('ansible_ssh_user') or
+            self._host_vars.get('ansible_user') or
             C.DEFAULT_REMOTE_USER
         )
 

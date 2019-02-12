@@ -1,0 +1,96 @@
+
+# Each case is followed by mitogen_via= case to test hostvars method.
+
+
+# When no ansible_user/ansible_ssh_user= is set, username is
+# C.DEFAULT_REMOTE_USER.
+- name: integration/transport_config/remote_user.yml
+  hosts: tc-remote-user-unset
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      # We set DEFAULT_REMOTE_USER in our ansible.cfg
+      right: "ansible-cfg-remote-user"
+
+- hosts: tc-remote-user-unset
+  vars: {mitogen_via: tc-remote-user-explicit-ssh}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "ansi-ssh-user"
+  - assert_equal:
+      left: out.result[1].kwargs.username
+      right: "ansible-cfg-remote-user"
+
+
+# ansible_ssh_user=
+
+- hosts: tc-remote-user-explicit-ssh
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "ansi-ssh-user"
+
+- hosts: tc-remote-user-explicit-ssh
+  vars: {mitogen_via: tc-remote-user-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "ansible-cfg-remote-user"
+  - assert_equal:
+      left: out.result[1].kwargs.username
+      right: "ansi-ssh-user"
+
+
+# ansible_user=
+
+- hosts: tc-remote-user-explicit-user
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "ansi-user"
+
+- hosts: tc-remote-user-explicit-host
+  vars: {mitogen_via: tc-remote-user-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "ansible-cfg-remote-user"
+  - assert_equal:
+      left: out.result[1].kwargs.username
+      right: "ansi-user"
+
+
+# both; ansible_ssh_user= takes precedence according to play_context.py.
+
+- hosts: tc-remote-user-explicit-both
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "c.b.a"
+
+- hosts: tc-remote-user-explicit-both
+  vars: {mitogen_via: tc-remote-user-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.username
+      right: "ansible-cfg-remote-user"
+  - assert_equal:
+      left: out.result[1].kwargs.username
+      right: "c.b.a"
