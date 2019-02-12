@@ -329,9 +329,11 @@ class PlayContextSpec(Spec):
         return self._play_context.port
 
     def python_path(self):
-        return parse_python_path(
-            self._connection.get_task_var('ansible_python_interpreter')
-        )
+        s = self._connection.get_task_var('ansible_python_interpreter')
+        # #511, #536: executor/module_common.py::_get_shebang() hard-wires
+        # "/usr/bin/python" as the default interpreter path if no other
+        # interpreter is specified.
+        return parse_python_path(s or '/usr/bin/python')
 
     def private_key_file(self):
         return self._play_context.private_key_file
@@ -487,11 +489,12 @@ class MitogenViaSpec(Spec):
         )
 
     def python_path(self):
-        return parse_python_path(
-            self._host_vars.get('ansible_python_interpreter')
-            # This variable has no default for remote hosts. For local hosts it
-            # is sys.executable.
-        )
+        s = self._host_vars.get('ansible_python_interpreter')
+        # #511, #536: executor/module_common.py::_get_shebang() hard-wires
+        # "/usr/bin/python" as the default interpreter path if no other
+        # interpreter is specified.
+        return parse_python_path(s or '/usr/bin/python')
+
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.
