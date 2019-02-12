@@ -125,6 +125,23 @@ Core Library
   series.
 
 
+v0.2.5 (2019-02-1?)
+-------------------
+
+* `#511 <https://github.com/dw/mitogen/issues/511>`_,
+  `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
+  repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
+  handling. Test coverage was added.
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Guy Knights <https://github.com/knightsg>`_, and
+`Josh Smift <https://github.com/jbscare>`_,
+
+
 v0.2.4 (2019-02-10)
 -------------------
 
