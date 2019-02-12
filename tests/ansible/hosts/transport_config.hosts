@@ -23,3 +23,7 @@ tc-password-unset
 tc-password-explicit-ssh  ansible_ssh_pass=ansi-ssh-pass
 tc-password-explicit-user ansible_password=ansi-pass
 tc-password-explicit-both ansible_password=a.b.c ansible_ssh_pass=c.b.a
+
+# become()
+tc-become-unset
+tc-become-set
