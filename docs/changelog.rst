@@ -144,6 +144,9 @@ Fixes
 * `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
   distribution includes a requisite ``LICENSE`` file.
 
+* `#539 <https://github.com/dw/mitogen/issues/539>`_: log output is no longer
+  duplicated when the Ansible ``log_path`` setting is enabled.
+
 * `#540 <https://github.com/dw/mitogen/issues/540>`_: the ``stderr`` stream of
   async module invocations was previously discarded.
 
@@ -157,6 +160,9 @@ Fixes
 * `8ae6ca1d <https://github.com/dw/mitogen/commit/8ae6ca1d>`_: the
   ``ansible_become_method`` variable is respected when ``mitogen_via=`` is
   active.
+
+* `7fd0d349 <https://github.com/dw/mitogen/commit/7fd0d349>`_: the
+  ``ansible_ssh_port`` variable is respected when ``mitogen_via=`` is active.
 
 
 Thanks!

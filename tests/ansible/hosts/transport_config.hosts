@@ -31,3 +31,19 @@ tc-become-set
 # become_method()
 tc-become-method-unset
 tc-become-method-su ansible_become_method=su
+
+# become_user()
+tc-become-user-unset
+tc-become-user-set ansible_become_user=ansi-become-user
+
+# become_pass()
+tc-become-pass-unset
+tc-become-pass-password ansible_become_password=apassword
+tc-become-pass-pass ansible_become_pass=apass
+tc-become-pass-both ansible_become_password=a.b.c ansible_become_pass=c.b.a
+
+# port()
+tc-port-unset
+tc-port-explicit-port ansible_port=1234
+tc-port-explicit-ssh ansible_ssh_port=4321
+tc-port-both ansible_port=1717 ansible_ssh_port=1532

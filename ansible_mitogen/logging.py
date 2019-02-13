@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -75,25 +75,28 @@ class Handler(logging.Handler):
 
 def setup():
     """
-    Install a handler for Mitogen's logger to redirect it into the Ansible
-    display framework, and prevent propagation to the root logger.
+    Install handlers for Mitogen loggers to redirect them into the Ansible
+    display framework. Ansible installs its own logging framework handlers when
+    C.DEFAULT_LOG_PATH is set, therefore disable propagation for our handlers.
     """
-    logging.getLogger('ansible_mitogen').handlers = [Handler(display.vvv)]
-    mitogen.core.LOG.handlers = [Handler(display.vvv)]
-    mitogen.core.IOLOG.handlers = [Handler(display.vvvv)]
-    mitogen.core.IOLOG.propagate = False
+    l_mitogen = logging.getLogger('mitogen')
+    l_mitogen_io = logging.getLogger('mitogen.io')
+    l_ansible_mitogen = logging.getLogger('ansible_mitogen')
+
+    for logger in l_mitogen, l_mitogen_io, l_ansible_mitogen:
+        logger.handlers = [Handler(display.vvv)]
+        logger.propagate = False
 
     if display.verbosity > 2:
-        mitogen.core.LOG.setLevel(logging.DEBUG)
-        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
+        l_ansible_mitogen.setLevel(logging.DEBUG)
+        l_mitogen.setLevel(logging.DEBUG)
     else:
         # Mitogen copies the active log level into new children, allowing them
         # to filter tiny messages before they hit the network, and therefore
         # before they wake the IO loop. Explicitly setting INFO saves ~4%
         # running against just the local machine.
-        mitogen.core.LOG.setLevel(logging.ERROR)
-        logging.getLogger('ansible_mitogen').setLevel(logging.ERROR)
+        l_mitogen.setLevel(logging.ERROR)
+        l_ansible_mitogen.setLevel(logging.ERROR)
 
     if display.verbosity > 3:
-        mitogen.core.IOLOG.setLevel(logging.DEBUG)
-        logging.getLogger('ansible_mitogen').setLevel(logging.DEBUG)
+        l_mitogen_io.setLevel(logging.DEBUG)

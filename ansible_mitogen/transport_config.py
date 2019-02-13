@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -497,7 +497,6 @@ class MitogenViaSpec(Spec):
 
     def become_pass(self):
         return optional_secret(
-            # TODO: Might have to come from PlayContext.
             self._host_vars.get('ansible_become_password') or
             self._host_vars.get('ansible_become_pass')
         )
@@ -510,6 +509,7 @@ class MitogenViaSpec(Spec):
 
     def port(self):
         return (
+            self._host_vars.get('ansible_ssh_port') or
             self._host_vars.get('ansible_port') or
             C.DEFAULT_REMOTE_PORT
         )
