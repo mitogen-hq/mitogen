@@ -136,13 +136,17 @@ Fixes
   repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
   handling. Test coverage was added.
 
+* `#532 <https://github.com/dw/mitogen/issues/532>`_: fix a race in the service
+  used to propagate Ansible modules, that could easily manifest when starting
+  asynchronous tasks in a loop.
+
 * `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
   support Python 2.4 interacted poorly with modules that imported
   ``simplejson`` from a controller that also loaded an incompatible newer
   version of ``simplejson``.
 
-* `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
-  distribution includes a requisite ``LICENSE`` file.
+* `#538 <https://github.com/dw/mitogen/issues/538>`_: the source distribution
+  includes a ``LICENSE`` file.
 
 * `#539 <https://github.com/dw/mitogen/issues/539>`_: log output is no longer
   duplicated when the Ansible ``log_path`` setting is enabled.
@@ -151,7 +155,7 @@ Fixes
   async module invocations was previously discarded.
 
 * `#541 <https://github.com/dw/mitogen/issues/541>`_: Python error logs
-  originating from the ``boto`` package are quiesced, and appear only in
+  originating from the ``boto`` package are quiesced, and only appear in
   ``-vvv`` output. This is since EC2 modules may trigger errors during normal
   operation, when retrying transiently failing requests.
 
