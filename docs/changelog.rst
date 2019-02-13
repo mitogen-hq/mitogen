@@ -125,7 +125,7 @@ Core Library
   series.
 
 
-v0.2.5 (2019-02-1?)
+v0.2.5 (2019-02-13)
 -------------------
 
 Fixes
@@ -179,7 +179,7 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Carl George <https://github.com/carlwgeorge>`_,
 `Guy Knights <https://github.com/knightsg>`_, and
-`Josh Smift <https://github.com/jbscare>`_,
+`Josh Smift <https://github.com/jbscare>`_.
 
 
 v0.2.4 (2019-02-10)
