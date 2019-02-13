@@ -1125,6 +1125,11 @@ class Importer(object):
         self.whitelist = list(whitelist) or ['']
         self.blacklist = list(blacklist) + self.ALWAYS_BLACKLIST
 
+        # Preserve copies of the original server-supplied whitelist/blacklist
+        # for later use by children.
+        self.master_whitelist = self.whitelist[:]
+        self.master_blacklist = self.blacklist[:]
+
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
         self._cache = {}

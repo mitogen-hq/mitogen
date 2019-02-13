@@ -377,6 +377,11 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     LOG.setLevel(log_level)
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
+    # issue #536: if the json module is available, remove simplejson from the
+    # importer whitelist to avoid confusing certain Ansible modules.
+    if json.__name__ == 'json':
+        econtext.importer.whitelist.remove('simplejson')
+
     global _fork_parent
     if FORK_SUPPORTED:
         mitogen.parent.upgrade_router(econtext)

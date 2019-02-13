@@ -10,7 +10,7 @@ Release Notes
     <style>
         div#release-notes h2 {
             border-bottom: 1px dotted #c0c0c0;
-            margin-top: 40px;
+            margin-top: 50px !important;
         }
     </style>
 
@@ -128,16 +128,40 @@ Core Library
 v0.2.5 (2019-02-1?)
 -------------------
 
+Fixes
+~~~~~
+
 * `#511 <https://github.com/dw/mitogen/issues/511>`_,
   `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
   repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
   handling. Test coverage was added.
+
+* `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
+  support Python 2.4 interacted poorly with modules that imported
+  ``simplejson`` from a controller that also loaded an incompatible newer
+  version of ``simplejson``.
+
+* `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
+  distribution includes a requisite ``LICENSE`` file.
+
+* `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_: the
+  ``ansible_ssh_host`` variable is respected when ``mitogen_via=`` is active.
+
+* `21ad299d <https://github.com/dw/mitogen/commit/21ad299d>`_: the
+  precedence of ``ansible_ssh_user`` and ``ansible_user`` variables were
+  corrected when ``mitogen_via=`` is active.
+
+* `8ae6ca1d <https://github.com/dw/mitogen/commit/8ae6ca1d>`_: the
+  ``ansible_become_method`` variable is respected when ``mitogen_via=`` is
+  active.
+
 
 Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Carl George <https://github.com/carlwgeorge>`_,
 `Guy Knights <https://github.com/knightsg>`_, and
 `Josh Smift <https://github.com/jbscare>`_,
 

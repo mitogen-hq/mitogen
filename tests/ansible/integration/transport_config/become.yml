@@ -1,0 +1,68 @@
+# Each case is followed by mitogen_via= case to test hostvars method.
+
+
+# No become set.
+- name: integration/transport_config/become.yml
+  hosts: tc-become-unset
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 1
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.username == "ansible-cfg-remote-user"
+
+- hosts: tc-become-unset
+  vars: {mitogen_via: becomeuser@tc-become-set}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 3
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.username == "ansible-cfg-remote-user"
+
+      - out.result[1].method == "sudo"
+      - out.result[1].kwargs.username == "becomeuser"
+
+      - out.result[2].method == "ssh"
+      - out.result[2].kwargs.hostname == "tc-become-unset"
+
+
+# Become set.
+- name: integration/transport_config/become.yml
+  hosts: tc-become-set
+  become: true
+  become_user: becomeuser
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 2
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.username == "ansible-cfg-remote-user"
+      - out.result[1].method == "sudo"
+      - out.result[1].kwargs.username == "becomeuser"
+
+- hosts: tc-become-set
+  vars: {mitogen_via: tc-become-unset}
+  become: true
+  become_user: becomeuser
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 3
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.hostname == "tc-become-unset"
+      - out.result[0].kwargs.username == "ansible-cfg-remote-user"
+
+      - out.result[1].method == "ssh"
+      - out.result[1].kwargs.hostname == "tc-become-set"
+
+      - out.result[2].method == "sudo"
+      - out.result[2].kwargs.username == "becomeuser"

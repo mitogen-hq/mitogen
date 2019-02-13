@@ -2054,12 +2054,12 @@ class Router(mitogen.core.Router):
     def get_module_blacklist(self):
         if mitogen.context_id == 0:
             return self.responder.blacklist
-        return self.importer.blacklist
+        return self.importer.master_blacklist
 
     def get_module_whitelist(self):
         if mitogen.context_id == 0:
             return self.responder.whitelist
-        return self.importer.whitelist
+        return self.importer.master_whitelist
 
     def allocate_id(self):
         return self.id_allocator.allocate()

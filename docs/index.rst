@@ -11,7 +11,7 @@ Mitogen
     </style>
 
 .. image:: images/mitogen.svg
-    :class: mitogen-right-200 mitogen-logo-wrap
+    :class: mitogen-right-180 mitogen-logo-wrap
 
 Mitogen is a Python library for writing distributed self-replicating programs.
 

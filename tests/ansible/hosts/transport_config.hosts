@@ -1,10 +1,33 @@
 # integration/transport_config
 # Hosts with twiddled configs that need to be checked somehow.
 
+
+# tansport()
+tc-transport-unset
+tc-transport-local ansible_connection=local
+
+# python_path()
 tc-python-path-unset
 tc-python-path-hostvar  ansible_python_interpreter=/hostvar/path/to/python
-
-# local connections get virtualenv python path
 tc-python-path-local-unset ansible_connection=local
 tc-python-path-local-explicit ansible_connection=local ansible_python_interpreter=/a/b/c
 
+# remote_addr()
+tc-remote-addr-unset  # defaults to inventory_hostname
+tc-remote-addr-explicit-ssh ansible_ssh_host=ansi.ssh.host
+tc-remote-addr-explicit-host ansible_host=ansi.host
+tc-remote-addr-explicit-both ansible_ssh_host=a.b.c ansible_host=b.c.d
+
+# password()
+tc-password-unset
+tc-password-explicit-ssh  ansible_ssh_pass=ansi-ssh-pass
+tc-password-explicit-user ansible_password=ansi-pass
+tc-password-explicit-both ansible_password=a.b.c ansible_ssh_pass=c.b.a
+
+# become()
+tc-become-unset
+tc-become-set
+
+# become_method()
+tc-become-method-unset
+tc-become-method-su ansible_become_method=su

@@ -4,6 +4,10 @@ Please drag-drop large logs as text file attachments.
 Feel free to write an issue in your preferred format, however if in doubt, use
 the following checklist as a guide for what to include.
 
+* Which version of Ansible are you running?
+* Is your version of Ansible patched in any way?
+* Are you running with any custom modules, or `module_utils` loaded?
+
 * Have you tried the latest master version from Git?
 * Do you have some idea of what the underlying problem may be?
   https://mitogen.rtfd.io/en/stable/ansible.html#common-problems has
