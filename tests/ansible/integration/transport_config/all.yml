@@ -1,6 +1,7 @@
-- include: become.yml
 - include: become_method.yml
+- include: become_pass.yml
 - include: become_user.yml
+- include: become.yml
 - include: password.yml
 - include: python_path.yml
 - include: remote_addr.yml

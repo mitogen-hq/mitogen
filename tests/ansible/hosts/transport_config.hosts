@@ -35,3 +35,9 @@ tc-become-method-su ansible_become_method=su
 # become_user()
 tc-become-user-unset
 tc-become-user-set ansible_become_user=ansi-become-user
+
+# become_pass()
+tc-become-pass-unset
+tc-become-pass-password ansible_become_password=apassword
+tc-become-pass-pass ansible_become_pass=apass
+tc-become-pass-both ansible_become_password=a.b.c ansible_become_pass=c.b.a

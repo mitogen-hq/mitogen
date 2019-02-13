@@ -497,7 +497,6 @@ class MitogenViaSpec(Spec):
 
     def become_pass(self):
         return optional_secret(
-            # TODO: Might have to come from PlayContext.
             self._host_vars.get('ansible_become_password') or
             self._host_vars.get('ansible_become_pass')
         )
