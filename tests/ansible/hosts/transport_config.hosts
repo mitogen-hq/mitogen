@@ -31,3 +31,7 @@ tc-become-set
 # become_method()
 tc-become-method-unset
 tc-become-method-su ansible_become_method=su
+
+# become_user()
+tc-become-user-unset
+tc-become-user-set ansible_become_user=ansi-become-user
