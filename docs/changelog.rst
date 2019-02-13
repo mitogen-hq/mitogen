@@ -161,6 +161,9 @@ Fixes
   ``ansible_become_method`` variable is respected when ``mitogen_via=`` is
   active.
 
+* `7fd0d349 <https://github.com/dw/mitogen/commit/7fd0d349>`_: the
+  ``ansible_ssh_port`` variable is respected when ``mitogen_via=`` is active.
+
 
 Thanks!
 ~~~~~~~
