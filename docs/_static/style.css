@@ -3,6 +3,10 @@ body {
     font-size: 100%;
 }
 
+.sphinxsidebarwrapper {
+    padding-top: 0 !important;
+}
+
 .sphinxsidebar {
     font-size: 80% !important;
 }
