@@ -144,6 +144,9 @@ Fixes
 * `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
   distribution includes a requisite ``LICENSE`` file.
 
+* `#540 <https://github.com/dw/mitogen/issues/540>`_: the ``stderr`` stream of
+  async module invocations was previously discarded.
+
 * `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_: the
   ``ansible_ssh_host`` variable is respected when ``mitogen_via=`` is active.
 

@@ -5,7 +5,7 @@
   any_errors_fatal: true
   tasks:
 
-  - shell: echo hi
+  - shell: echo hi; echo there >&2
     async: 100
     poll: 0
     register: job
@@ -21,10 +21,10 @@
   - assert:
       that:
         - async_out.changed == True
-        - async_out.cmd == "echo hi"
+        - async_out.cmd == "echo hi; echo there >&2"
         - 'async_out.delta.startswith("0:00:")'
         - async_out.end.startswith("20")
-        - async_out.invocation.module_args._raw_params == "echo hi"
+        - async_out.invocation.module_args._raw_params == "echo hi; echo there >&2"
         - async_out.invocation.module_args._uses_shell == True
         - async_out.invocation.module_args.chdir == None
         - async_out.invocation.module_args.creates == None
@@ -33,7 +33,7 @@
         - async_out.invocation.module_args.warn == True
         - async_out.rc == 0
         - async_out.start.startswith("20")
-        - async_out.stderr == ""
+        - async_out.stderr == "there"
         - async_out.stdout == "hi"
     vars:
       async_out: "{{result.content|b64decode|from_json}}"
