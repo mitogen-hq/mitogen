@@ -136,6 +136,11 @@ Fixes
   repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
   handling. Test coverage was added.
 
+* `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
+  support Python 2.4 interacted poorly with modules that imported
+  ``simplejson`` from a controller that also loaded an incompatible newer
+  version of ``simplejson``.
+
 * `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
   distribution includes a requisite ``LICENSE`` file.
 
