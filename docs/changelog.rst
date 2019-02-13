@@ -144,6 +144,9 @@ Fixes
 * `#538 <https://github.com/dw/mitogen/issues/538>`_: the Mitogen source
   distribution includes a requisite ``LICENSE`` file.
 
+* `#539 <https://github.com/dw/mitogen/issues/539>`_: log output is no longer
+  duplicated when the Ansible ``log_path`` setting is enabled.
+
 * `#540 <https://github.com/dw/mitogen/issues/540>`_: the ``stderr`` stream of
   async module invocations was previously discarded.
 
