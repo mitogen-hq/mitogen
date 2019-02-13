@@ -502,7 +502,7 @@ class AsyncRunner(object):
         )
         result = json.loads(filtered)
         result.setdefault('warnings', []).extend(warnings)
-        result['stderr'] = dct['stderr']
+        result['stderr'] = dct['stderr'] or result.get('stderr', '')
         self._update(result)
 
     def _run(self):
