@@ -54,7 +54,8 @@ class Handler(logging.Handler):
     #: may simply be to bury all target logs in DEBUG output, but not by
     #: overriding their log level as done here.
     NOISY_LOGGERS = frozenset([
-        'dnf',  # issue #272; warns when a package is already installed.
+        'dnf',   # issue #272; warns when a package is already installed.
+        'boto',  # issue #541; normal boto retry logic can cause ERROR logs.
     ])
 
     def emit(self, record):

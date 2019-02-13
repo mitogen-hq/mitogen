@@ -150,6 +150,11 @@ Fixes
 * `#540 <https://github.com/dw/mitogen/issues/540>`_: the ``stderr`` stream of
   async module invocations was previously discarded.
 
+* `#541 <https://github.com/dw/mitogen/issues/541>`_: Python error logs
+  originating from the ``boto`` package are quiesced, and appear only in
+  ``-vvv`` output. This is since many EC2 modules triggers errors during normal
+  operation, in the process of retrying transiently failing requests.
+
 * `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_: the
   ``ansible_ssh_host`` variable is respected when ``mitogen_via=`` is active.
 
