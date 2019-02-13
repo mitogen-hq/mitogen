@@ -509,6 +509,7 @@ class MitogenViaSpec(Spec):
 
     def port(self):
         return (
+            self._host_vars.get('ansible_ssh_port') or
             self._host_vars.get('ansible_port') or
             C.DEFAULT_REMOTE_PORT
         )
