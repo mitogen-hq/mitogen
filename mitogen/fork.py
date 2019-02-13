@@ -98,6 +98,7 @@ def on_fork():
     fixup_prngs()
     mitogen.core.Latch._on_fork()
     mitogen.core.Side._on_fork()
+    mitogen.core.ExternalContext.service_stub_lock = threading.Lock()
 
     mitogen__service = sys.modules.get('mitogen.service')
     if mitogen__service:
