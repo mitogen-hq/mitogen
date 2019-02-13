@@ -152,8 +152,8 @@ Fixes
 
 * `#541 <https://github.com/dw/mitogen/issues/541>`_: Python error logs
   originating from the ``boto`` package are quiesced, and appear only in
-  ``-vvv`` output. This is since many EC2 modules triggers errors during normal
-  operation, in the process of retrying transiently failing requests.
+  ``-vvv`` output. This is since EC2 modules may trigger errors during normal
+  operation, when retrying transiently failing requests.
 
 * `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_: the
   ``ansible_ssh_host`` variable is respected when ``mitogen_via=`` is active.
