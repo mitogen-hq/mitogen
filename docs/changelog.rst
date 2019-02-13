@@ -167,6 +167,10 @@ Fixes
   ``ansible_become_method``, and ``ansible_ssh_port`` variables more correctly
   match typical behaviour when ``mitogen_via=`` is active.
 
+* `2a8567b4 <https://github.com/dw/mitogen/commit/2a8567b4>`_: fix a race
+  initializing a child's service thread pool on Python 3.4+, due to a change in
+  locking scheme used by the Python import mechanism.
+
 
 Thanks!
 ~~~~~~~
