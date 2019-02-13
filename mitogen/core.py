@@ -3136,10 +3136,21 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
+    #: On Python >3.4, the global importer lock has been sharded into a
+    #: per-module lock, meaning there is no guarantee the import statement in
+    #: service_stub_main will be truly complete before a second thread
+    #: attempting the same import will see a partially initialized module.
+    #: Sigh. Therefore serialize execution of the stub itself.
+    service_stub_lock = threading.Lock()
+
     def _service_stub_main(self, msg):
-        import mitogen.service
-        pool = mitogen.service.get_or_create_pool(router=self.router)
-        pool._receiver._on_receive(msg)
+        self.service_stub_lock.acquire()
+        try:
+            import mitogen.service
+            pool = mitogen.service.get_or_create_pool(router=self.router)
+            pool._receiver._on_receive(msg)
+        finally:
+            self.service_stub_lock.release()
 
     def _on_call_service_msg(self, msg):
         """
