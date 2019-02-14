@@ -160,7 +160,7 @@ class FixedPolicyTest(testlib.TestCase):
     reason='Linux/SMP only',
     condition=(not (
         os.uname()[0] == 'Linux' and
-        multiprocessing.cpu_count() > 1
+        multiprocessing.cpu_count() > 2
     ))
 )
 class LinuxPolicyTest(testlib.TestCase):
@@ -187,13 +187,6 @@ class LinuxPolicyTest(testlib.TestCase):
 
         self.policy._set_cpu_mask(0x3)
         self.assertEquals(0x3, self._get_cpus())
-
-    def test_set_clear(self):
-        before = self._get_cpus()
-        self.policy._set_cpu(3)
-        self.assertEquals(self._get_cpus(), 1 << 3)
-        self.policy._clear()
-        self.assertEquals(self._get_cpus(), before)
 
     def test_clear_on_popen(self):
         tf = tempfile.NamedTemporaryFile()
