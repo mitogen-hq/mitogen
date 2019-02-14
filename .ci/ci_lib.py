@@ -43,6 +43,18 @@ if not hasattr(subprocess, 'check_output'):
     subprocess.check_output = subprocess__check_output
 
 
+# ------------------
+
+def have_apt():
+    proc = subprocess.Popen('apt --help >/dev/null 2>/dev/null', shell=True)
+    return proc.wait() == 0
+
+
+def have_docker():
+    proc = subprocess.Popen('docker info >/dev/null 2>/dev/null', shell=True)
+    return proc.wait() == 0
+
+
 # -----------------
 
 # Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.

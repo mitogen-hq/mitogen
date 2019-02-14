@@ -1,4 +1,6 @@
 
+import sys
+
 import unittest2
 
 import mitogen.service
@@ -32,10 +34,15 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
         expect = service.unregistered_msg % ('/etc/shadow',)
         self.assertTrue(expect in e.args[0])
 
+    if sys.platform == 'darwin':
+        ROOT_GROUP = 'wheel'
+    else:
+        ROOT_GROUP = 'root'
+
     def _validate_response(self, resp):
         self.assertTrue(isinstance(resp, dict))
         self.assertEquals('root', resp['owner'])
-        self.assertEquals('root', resp['group'])
+        self.assertEquals(self.ROOT_GROUP, resp['group'])
         self.assertTrue(isinstance(resp['mode'], int))
         self.assertTrue(isinstance(resp['mtime'], float))
         self.assertTrue(isinstance(resp['atime'], float))

@@ -17,6 +17,10 @@ class NullFixedPolicy(ansible_mitogen.affinity.FixedPolicy):
         self.mask = mask
 
 
+@unittest2.skipIf(
+    reason='Linux only',
+    condition=(not os.uname()[0] == 'Linux')
+)
 class FixedPolicyTest(testlib.TestCase):
     klass = NullFixedPolicy
 

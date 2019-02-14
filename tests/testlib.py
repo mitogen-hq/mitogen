@@ -450,6 +450,8 @@ class DockerMixin(RouterMixin):
     @classmethod
     def setUpClass(cls):
         super(DockerMixin, cls).setUpClass()
+        if os.environ.get('SKIP_DOCKER_TESTS'):
+            raise unittest2.SkipTest('SKIP_DOCKER_TESTS is set')
         cls.dockerized_ssh = DockerizedSshDaemon()
         cls.dockerized_ssh.wait_for_sshd()
 
