@@ -125,7 +125,7 @@ Core Library
   series.
 
 
-v0.2.5 (2019-02-13)
+v0.2.5 (2019-02-14)
 -------------------
 
 Fixes
@@ -144,6 +144,10 @@ Fixes
   support Python 2.4 interacted poorly with modules that imported
   ``simplejson`` from a controller that also loaded an incompatible newer
   version of ``simplejson``.
+
+* `#537 <https://github.com/dw/mitogen/issues/537>`_: a swapped operator in the
+  CPU affinity logic meant 2 cores were reserved on 1<n<4 core machines, rather
+  than 1 core as desired. Test coverage was added.
 
 * `#538 <https://github.com/dw/mitogen/issues/538>`_: the source distribution
   includes a ``LICENSE`` file.
