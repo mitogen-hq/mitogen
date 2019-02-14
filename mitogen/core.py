@@ -1912,6 +1912,8 @@ class Poller(object):
 
     Pollers may only be used by one thread at a time.
     """
+    SUPPORTED = True
+
     # This changed from select() to poll() in Mitogen 0.2.4. Since poll() has
     # no upper FD limit, it is suitable for use with Latch, which must handle
     # FDs larger than select's limit during many-host runs. We want this
@@ -1928,10 +1930,15 @@ class Poller(object):
     def __init__(self):
         self._rfds = {}
         self._wfds = {}
-        self._pollobj = select.poll()
 
     def __repr__(self):
         return '%s(%#x)' % (type(self).__name__, id(self))
+
+    def _update(self, fd):
+        """
+        Required by PollPoller subclass.
+        """
+        pass
 
     @property
     def readers(self):
@@ -1954,20 +1961,6 @@ class Poller(object):
         Close any underlying OS resource used by the poller.
         """
         pass
-
-    _readmask = select.POLLIN | select.POLLHUP
-    # TODO: no proof we dont need writemask too
-
-    def _update(self, fd):
-        mask = (((fd in self._rfds) and self._readmask) |
-                ((fd in self._wfds) and select.POLLOUT))
-        if mask:
-            self._pollobj.register(fd, mask)
-        else:
-            try:
-                self._pollobj.unregister(fd)
-            except KeyError:
-                pass
 
     def start_receive(self, fd, data=None):
         """
@@ -2004,21 +1997,26 @@ class Poller(object):
         self._update(fd)
 
     def _poll(self, timeout):
+        (rfds, wfds, _), _ = io_op(select.select,
+            self._rfds,
+            self._wfds,
+            (), timeout
+        )
+
+        for fd in rfds:
+            _vv and IOLOG.debug('%r: POLLIN for %r', self, fd)
+            data, gen = self._rfds.get(fd, (None, None))
+            if gen and gen < self._generation:
+                yield data
+
+        for fd in wfds:
+            _vv and IOLOG.debug('%r: POLLOUT for %r', self, fd)
+            data, gen = self._wfds.get(fd, (None, None))
+            if gen and gen < self._generation:
+                yield data
+
         if timeout:
             timeout *= 1000
-
-        events, _ = io_op(self._pollobj.poll, timeout)
-        for fd, event in events:
-            if event & self._readmask:
-                _vv and IOLOG.debug('%r: POLLIN|POLLHUP for %r', self, fd)
-                data, gen = self._rfds.get(fd, (None, None))
-                if gen and gen < self._generation:
-                    yield data
-            if event & select.POLLOUT:
-                _vv and IOLOG.debug('%r: POLLOUT for %r', self, fd)
-                data, gen = self._wfds.get(fd, (None, None))
-                if gen and gen < self._generation:
-                    yield data
 
     def poll(self, timeout=None):
         """
