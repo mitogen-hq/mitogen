@@ -1,0 +1,114 @@
+# related: issue #511, #536
+# Each case is followed by mitogen_via= case to test hostvars method.
+
+
+# When no ansible_python_interpreter is set, executor/module_common.py chooses
+# "/usr/bin/python".
+- name: integration/transport_config/python_path.yml
+  hosts: tc-python-path-unset
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/usr/bin/python"]
+
+- hosts: tc-python-path-hostvar
+  vars: {mitogen_via: tc-python-path-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/usr/bin/python"]
+  - assert_equal:
+      left: out.result[1].kwargs.python_path
+      right: ["/hostvar/path/to/python"]
+
+
+# Non-localhost with explicit ansible_python_interpreter
+- hosts: tc-python-path-hostvar
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: [/hostvar/path/to/python]
+
+- hosts: tc-python-path-unset
+  vars: {mitogen_via: tc-python-path-hostvar}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/hostvar/path/to/python"]
+  - assert_equal:
+      left: out.result[1].kwargs.python_path
+      right: ["/usr/bin/python"]
+
+
+# Implicit localhost gets ansible_python_interpreter=virtualenv interpreter
+- hosts: localhost
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["{{ansible_playbook_python}}"]
+
+- hosts: tc-python-path-unset
+  vars: {mitogen_via: localhost}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["{{ansible_playbook_python}}"]
+  - assert_equal:
+      left: out.result[1].kwargs.python_path
+      right: ["/usr/bin/python"]
+
+
+# explicit local connections get the same treatment as everything else.
+- hosts: tc-python-path-local-unset
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/usr/bin/python"]
+
+- hosts: localhost
+  vars: {mitogen_via: tc-python-path-local-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/usr/bin/python"]
+  - assert_equal:
+      left: out.result[1].kwargs.python_path
+      right: ["{{ansible_playbook_python}}"]
+
+
+# explicit local connection with explicit interpreter
+- hosts: tc-python-path-local-explicit
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/a/b/c"]
+
+- hosts: localhost
+  vars: {mitogen_via: tc-python-path-local-explicit}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.python_path
+      right: ["/a/b/c"]
+  - assert_equal:
+      left: out.result[1].kwargs.python_path
+      right: ["{{ansible_playbook_python}}"]

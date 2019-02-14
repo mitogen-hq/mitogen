@@ -55,6 +55,15 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             '--'
         ])
 
+    def test_tty_preserved(self):
+        # issue #481
+        os.environ['PREHISTORIC_SUDO'] = '1'
+        try:
+            context, argv = self.run_sudo()
+            self.assertEquals('1', context.call(os.getenv, 'PREHISTORIC_SUDO'))
+        finally:
+            del os.environ['PREHISTORIC_SUDO']
+
 
 class NonEnglishPromptTest(testlib.DockerMixin, testlib.TestCase):
     # Only mitogen/debian-test has a properly configured sudo.

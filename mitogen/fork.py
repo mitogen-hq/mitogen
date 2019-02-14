@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -98,6 +98,7 @@ def on_fork():
     fixup_prngs()
     mitogen.core.Latch._on_fork()
     mitogen.core.Side._on_fork()
+    mitogen.core.ExternalContext.service_stub_lock = threading.Lock()
 
     mitogen__service = sys.modules.get('mitogen.service')
     if mitogen__service:

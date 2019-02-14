@@ -1,0 +1,95 @@
+
+# Each case is followed by mitogen_via= case to test hostvars method.
+
+
+# When no ansible_host/ansible_ssh_host= is set, hostname is same as inventory
+# name.
+- name: integration/transport_config/remote_addr.yml
+  hosts: tc-remote-addr-unset
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "tc-remote-addr-unset"
+
+- hosts: tc-remote-addr-unset
+  vars: {mitogen_via: tc-remote-addr-explicit-ssh}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "ansi.ssh.host"
+  - assert_equal:
+      left: out.result[1].kwargs.hostname
+      right: "tc-remote-addr-unset"
+
+
+# ansible_ssh_host=
+
+- hosts: tc-remote-addr-explicit-ssh
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "ansi.ssh.host"
+
+- hosts: tc-remote-addr-explicit-ssh
+  vars: {mitogen_via: tc-remote-addr-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "tc-remote-addr-unset"
+  - assert_equal:
+      left: out.result[1].kwargs.hostname
+      right: "ansi.ssh.host"
+
+
+# ansible_host=
+
+- hosts: tc-remote-addr-explicit-host
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "ansi.host"
+
+- hosts: tc-remote-addr-explicit-host
+  vars: {mitogen_via: tc-remote-addr-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "tc-remote-addr-unset"
+  - assert_equal:
+      left: out.result[1].kwargs.hostname
+      right: "ansi.host"
+
+
+# both; ansible_ssh_host= takes precedence according to play_context.py.
+
+- hosts: tc-remote-addr-explicit-both
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "a.b.c"
+
+- hosts: tc-remote-addr-explicit-both
+  vars: {mitogen_via: tc-remote-addr-unset}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].kwargs.hostname
+      right: "tc-remote-addr-unset"
+  - assert_equal:
+      left: out.result[1].kwargs.hostname
+      right: "a.b.c"

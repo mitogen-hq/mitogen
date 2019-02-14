@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,7 @@ be expected. On the slave, it is built dynamically during startup.
 
 
 #: Library version as a tuple.
-__version__ = (0, 2, 4)
+__version__ = (0, 2, 5)
 
 
 #: This is :data:`False` in slave contexts. Previously it was used to prevent

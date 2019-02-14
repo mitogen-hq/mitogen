@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -485,8 +485,10 @@ class ModuleFinder(object):
         return path, source, is_pkg
 
     def _get_module_via_sys_modules(self, fullname):
-        """Attempt to fetch source code via sys.modules. This is specifically
-        to support __main__, but it may catch a few more cases."""
+        """
+        Attempt to fetch source code via sys.modules. This is specifically to
+        support __main__, but it may catch a few more cases.
+        """
         module = sys.modules.get(fullname)
         LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
         if not isinstance(module, types.ModuleType):
@@ -883,10 +885,13 @@ class ModuleResponder(object):
         if msg.is_dead:
             return
 
-        LOG.debug('%r._on_get_module(%r)', self, msg.data)
-        self.get_module_count += 1
         stream = self._router.stream_by_id(msg.src_id)
+        if stream is None:
+            return
+
         fullname = msg.data.decode()
+        LOG.debug('%s requested module %s', stream.name, fullname)
+        self.get_module_count += 1
         if fullname in stream.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)

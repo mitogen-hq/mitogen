@@ -19,3 +19,4 @@
 - include: ssh/all.yml
 - include: strategy/all.yml
 - include: stub_connections/all.yml
+- include: transport_config/all.yml

@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -1124,6 +1124,11 @@ class Importer(object):
         self._lock = threading.Lock()
         self.whitelist = list(whitelist) or ['']
         self.blacklist = list(blacklist) + self.ALWAYS_BLACKLIST
+
+        # Preserve copies of the original server-supplied whitelist/blacklist
+        # for later use by children.
+        self.master_whitelist = self.whitelist[:]
+        self.master_blacklist = self.blacklist[:]
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
@@ -3131,10 +3136,21 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
+    #: On Python >3.4, the global importer lock has been sharded into a
+    #: per-module lock, meaning there is no guarantee the import statement in
+    #: service_stub_main will be truly complete before a second thread
+    #: attempting the same import will see a partially initialized module.
+    #: Sigh. Therefore serialize execution of the stub itself.
+    service_stub_lock = threading.Lock()
+
     def _service_stub_main(self, msg):
-        import mitogen.service
-        pool = mitogen.service.get_or_create_pool(router=self.router)
-        pool._receiver._on_receive(msg)
+        self.service_stub_lock.acquire()
+        try:
+            import mitogen.service
+            pool = mitogen.service.get_or_create_pool(router=self.router)
+            pool._receiver._on_receive(msg)
+        finally:
+            self.service_stub_lock.release()
 
     def _on_call_service_msg(self, msg):
         """

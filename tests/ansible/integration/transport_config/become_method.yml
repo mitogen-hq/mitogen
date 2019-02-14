@@ -1,0 +1,83 @@
+# Each case is followed by mitogen_via= case to test hostvars method.
+
+
+# No become-method set.
+- name: integration/transport_config/become-method.yml
+  hosts: tc-become-method-unset
+  become: true
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 2
+      - out.result[0].method == "ssh"
+      - out.result[1].method == "sudo"
+
+- hosts: tc-become-method-unset
+  vars: {mitogen_via: becomeuser@tc-become-method-su}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 3
+      - out.result[0].method == "ssh"
+      - out.result[1].method == "su"
+      - out.result[1].kwargs.username == "becomeuser"
+      - out.result[2].method == "ssh"
+      - out.result[2].kwargs.hostname == "tc-become-method-unset"
+
+
+# ansible_become_method=su
+- hosts: tc-become-method-su
+  become: true
+  become_user: becomeuser
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 2
+      - out.result[0].method == "ssh"
+      - out.result[1].method == "su"
+      - out.result[1].kwargs.username == "becomeuser"
+
+- hosts: tc-become-method-su
+  vars: {mitogen_via: tc-become-method-unset}
+  become: true
+  become_user: becomeuser
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 3
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.hostname == "tc-become-method-unset"
+
+      - out.result[1].method == "ssh"
+      - out.result[1].kwargs.hostname == "tc-become-method-su"
+
+      - out.result[2].method == "su"
+      - out.result[2].kwargs.username == "becomeuser"
+
+
+
+# mitogen_via used to specify explicit become method
+- hosts: tc-become-method-unset
+  vars: {mitogen_via: "doas:doasuser@tc-become-method-su"}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert:
+      that:
+      - out.result|length == 3
+      - out.result[0].method == "ssh"
+      - out.result[0].kwargs.hostname == "tc-become-method-su"
+
+      - out.result[1].method == "doas"
+      - out.result[1].kwargs.username == "doasuser"
+
+      - out.result[2].method == "ssh"
+      - out.result[2].kwargs.hostname == "tc-become-method-unset"

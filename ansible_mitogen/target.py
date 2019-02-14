@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -377,6 +377,11 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     LOG.setLevel(log_level)
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
+    # issue #536: if the json module is available, remove simplejson from the
+    # importer whitelist to avoid confusing certain Ansible modules.
+    if json.__name__ == 'json':
+        econtext.importer.whitelist.remove('simplejson')
+
     global _fork_parent
     if FORK_SUPPORTED:
         mitogen.parent.upgrade_router(econtext)
@@ -497,7 +502,7 @@ class AsyncRunner(object):
         )
         result = json.loads(filtered)
         result.setdefault('warnings', []).extend(warnings)
-        result['stderr'] = dct['stderr']
+        result['stderr'] = dct['stderr'] or result.get('stderr', '')
         self._update(result)
 
     def _run(self):

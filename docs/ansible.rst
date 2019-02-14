@@ -3,7 +3,7 @@ Mitogen for Ansible
 ===================
 
 .. image:: images/ansible/ansible_mitogen.svg
-    :class: mitogen-right-200 mitogen-logo-wrap
+    :class: mitogen-right-180 mitogen-logo-wrap
 
 An extension to `Ansible`_ is included that implements connections over
 Mitogen, replacing embedded shell invocations with pure-Python equivalents
@@ -245,6 +245,11 @@ container.
     * Inferring the configuration of intermediaries may be buggy, manifesting
       as duplicate connections between hops, due to not perfectly replicating
       the configuration Ansible would normally use for the intermediary.
+
+    * Intermediary machines cannot use login and become passwords that were
+      supplied to Ansible interactively. If an intermediary requires a
+      password, it must be supplied via ``ansible_ssh_pass``,
+      ``ansible_password``, or ``ansible_become_pass`` inventory variables.
 
     * Automatic tunnelling of SSH-dependent actions, such as the
       ``synchronize`` module, is not yet supported. This will be added in the

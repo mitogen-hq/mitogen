@@ -10,7 +10,7 @@ Release Notes
     <style>
         div#release-notes h2 {
             border-bottom: 1px dotted #c0c0c0;
-            margin-top: 40px;
+            margin-top: 50px !important;
         }
     </style>
 
@@ -123,6 +123,67 @@ Core Library
 
 * Documentation is in a state of disrepair. This will be improved over the 0.2
   series.
+
+
+v0.2.5 (2019-02-14)
+-------------------
+
+Fixes
+~~~~~
+
+* `#511 <https://github.com/dw/mitogen/issues/511>`_,
+  `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
+  repair ``delegate_to`` handling broke default ``ansible_python_interpreter``
+  handling. Test coverage was added.
+
+* `#532 <https://github.com/dw/mitogen/issues/532>`_: fix a race in the service
+  used to propagate Ansible modules, that could easily manifest when starting
+  asynchronous tasks in a loop.
+
+* `#536 <https://github.com/dw/mitogen/issues/536>`_: changes in 0.2.4 to
+  support Python 2.4 interacted poorly with modules that imported
+  ``simplejson`` from a controller that also loaded an incompatible newer
+  version of ``simplejson``.
+
+* `#537 <https://github.com/dw/mitogen/issues/537>`_: a swapped operator in the
+  CPU affinity logic meant 2 cores were reserved on 1<n<4 core machines, rather
+  than 1 core as desired. Test coverage was added.
+
+* `#538 <https://github.com/dw/mitogen/issues/538>`_: the source distribution
+  includes a ``LICENSE`` file.
+
+* `#539 <https://github.com/dw/mitogen/issues/539>`_: log output is no longer
+  duplicated when the Ansible ``log_path`` setting is enabled.
+
+* `#540 <https://github.com/dw/mitogen/issues/540>`_: the ``stderr`` stream of
+  async module invocations was previously discarded.
+
+* `#541 <https://github.com/dw/mitogen/issues/541>`_: Python error logs
+  originating from the ``boto`` package are quiesced, and only appear in
+  ``-vvv`` output. This is since EC2 modules may trigger errors during normal
+  operation, when retrying transiently failing requests.
+
+* `748f5f67 <https://github.com/dw/mitogen/commit/748f5f67>`_,
+  `21ad299d <https://github.com/dw/mitogen/commit/21ad299d>`_,
+  `8ae6ca1d <https://github.com/dw/mitogen/commit/8ae6ca1d>`_,
+  `7fd0d349 <https://github.com/dw/mitogen/commit/7fd0d349>`_:
+  the ``ansible_ssh_host``, ``ansible_ssh_user``, ``ansible_user``,
+  ``ansible_become_method``, and ``ansible_ssh_port`` variables more correctly
+  match typical behaviour when ``mitogen_via=`` is active.
+
+* `2a8567b4 <https://github.com/dw/mitogen/commit/2a8567b4>`_: fix a race
+  initializing a child's service thread pool on Python 3.4+, due to a change in
+  locking scheme used by the Python import mechanism.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Carl George <https://github.com/carlwgeorge>`_,
+`Guy Knights <https://github.com/knightsg>`_, and
+`Josh Smift <https://github.com/jbscare>`_.
 
 
 v0.2.4 (2019-02-10)

@@ -1,4 +1,4 @@
-# Copyright 2017, David Wilson
+# Copyright 2019, David Wilson
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -547,7 +547,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     def connected(self):
         return self.context is not None
 
-    def _spec_from_via(self, via_spec):
+    def _spec_from_via(self, proxied_inventory_name, via_spec):
         """
         Produce a dict connection specifiction given a string `via_spec`, of
         the form `[[become_method:]become_user@]inventory_hostname`.
@@ -555,17 +555,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         become_user, _, inventory_name = via_spec.rpartition('@')
         become_method, _, become_user = become_user.rpartition(':')
 
-        via_vars = self.host_vars[inventory_name]
-        if isinstance(via_vars, jinja2.runtime.Undefined):
+        # must use __contains__ to avoid a TypeError for a missing host on
+        # Ansible 2.3.
+        if self.host_vars is None or inventory_name not in self.host_vars:
             raise ansible.errors.AnsibleConnectionFailure(
                 self.unknown_via_msg % (
                     via_spec,
-                    inventory_name,
+                    proxied_inventory_name,
                 )
             )
 
+        via_vars = self.host_vars[inventory_name]
         return ansible_mitogen.transport_config.MitogenViaSpec(
             inventory_name=inventory_name,
+            play_context=self._play_context,
             host_vars=dict(via_vars),  # TODO: make it lazy
             become_method=become_method or None,
             become_user=become_user or None,
@@ -615,7 +618,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         if spec.mitogen_via():
             stack = self._stack_from_spec(
-                self._spec_from_via(spec.mitogen_via()),
+                self._spec_from_via(spec.inventory_name(), spec.mitogen_via()),
                 stack=stack,
                 seen_names=seen_names + (spec.inventory_name(),),
             )
