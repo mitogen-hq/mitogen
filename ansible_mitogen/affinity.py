@@ -156,11 +156,11 @@ class Policy(object):
         Assign the helper subprocess policy to this process.
         """
 
-
-class LinuxPolicy(Policy):
+class FixedPolicy(Policy):
     """
-    :class:`Policy` for Linux machines. The scheme here was tested on an
-    otherwise idle 16 thread machine.
+    :class:`Policy` for machines where the only control method available is
+    fixed CPU placement. The scheme here was tested on an otherwise idle 16
+    thread machine.
 
     - The connection multiplexer is pinned to CPU 0.
     - The Ansible top-level (strategy) is pinned to CPU 1.
@@ -180,26 +180,35 @@ class LinuxPolicy(Policy):
     CPU-intensive children like SSH are not forced to share the same core as
     the (otherwise potentially very busy) parent.
     """
-    def __init__(self):
+    def __init__(self, cpu_count=None):
+        #: For tests.
+        self.cpu_count = cpu_count or multiprocessing.cpu_count()
         self.mem = mmap.mmap(-1, 4096)
         self.state = State.from_buffer(self.mem)
         self.state.lock.init()
-        if self._cpu_count() < 4:
-            self._reserve_mask = 3
-            self._reserve_shift = 2
-            self._reserve_controller = True
-        else:
+
+        if self.cpu_count < 2:
+            # uniprocessor
+            self._reserve_mux = False
+            self._reserve_controller = False
+            self._reserve_mask = 0
+            self._reserve_shift = 0
+        elif self.cpu_count < 4:
+            # small SMP
+            self._reserve_mux = True
+            self._reserve_controller = False
             self._reserve_mask = 1
             self._reserve_shift = 1
-            self._reserve_controller = False
+        else:
+            # big SMP
+            self._reserve_mux = True
+            self._reserve_controller = True
+            self._reserve_mask = 3
+            self._reserve_shift = 2
 
     def _set_affinity(self, mask):
         mitogen.parent._preexec_hook = self._clear
-        s = struct.pack('L', mask)
-        _sched_setaffinity(os.getpid(), len(s), s)
-
-    def _cpu_count(self):
-        return multiprocessing.cpu_count()
+        self._set_cpu_mask(mask)
 
     def _balance(self):
         self.state.lock.acquire()
@@ -210,14 +219,15 @@ class LinuxPolicy(Policy):
             self.state.lock.release()
 
         self._set_cpu(self._reserve_shift + (
-            (n % max(1, (self._cpu_count() - self._reserve_shift)))
+            (n % (self.cpu_count - self._reserve_shift))
         ))
 
     def _set_cpu(self, cpu):
         self._set_affinity(1 << cpu)
 
     def _clear(self):
-        self._set_affinity(0xffffffff & ~self._reserve_mask)
+        all_cpus = (1 << self.cpu_count) - 1
+        self._set_affinity(all_cpus & ~self._reserve_mask)
 
     def assign_controller(self):
         if self._reserve_controller:
@@ -233,6 +243,12 @@ class LinuxPolicy(Policy):
 
     def assign_subprocess(self):
         self._clear()
+
+
+class LinuxPolicy(FixedPolicy):
+    def _set_cpu_mask(self, mask):
+        s = struct.pack('L', mask)
+        _sched_setaffinity(os.getpid(), len(s), s)
 
 
 if _sched_setaffinity is not None:
