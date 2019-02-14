@@ -139,6 +139,12 @@ Fixes
   0.2.3 behaviour of defaulting to Kqueue in this case, but still prefer
   :func:`select.poll` if it is available.
 
+Core Library
+~~~~~~~~~~~~
+
+* `ca63c26e <https://github.com/dw/mitogen/commit/ca63c26e>`_:
+  :meth:`mitogen.core.Latch.put`'s `obj` argument was made optional.
+
 
 Thanks!
 ~~~~~~~
