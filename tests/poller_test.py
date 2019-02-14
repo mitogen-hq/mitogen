@@ -401,16 +401,25 @@ class SelectTest(AllMixin, testlib.TestCase):
     klass = mitogen.core.Poller
 
 SelectTest = unittest2.skipIf(
-    condition=not hasattr(select, 'select'),
+    condition=(not SelectTest.klass.SUPPORTED),
     reason='select.select() not supported'
 )(SelectTest)
+
+
+class PollTest(AllMixin, testlib.TestCase):
+    klass = mitogen.parent.PollPoller
+
+PollTest = unittest2.skipIf(
+    condition=(not PollTest.klass.SUPPORTED),
+    reason='select.poll() not supported'
+)(PollTest)
 
 
 class KqueueTest(AllMixin, testlib.TestCase):
     klass = mitogen.parent.KqueuePoller
 
 KqueueTest = unittest2.skipIf(
-    condition=not hasattr(select, 'kqueue'),
+    condition=(not KqueueTest.klass.SUPPORTED),
     reason='select.kqueue() not supported'
 )(KqueueTest)
 
@@ -419,7 +428,7 @@ class EpollTest(AllMixin, testlib.TestCase):
     klass = mitogen.parent.EpollPoller
 
 EpollTest = unittest2.skipIf(
-    condition=not hasattr(select, 'epoll'),
+    condition=(not EpollTest.klass.SUPPORTED),
     reason='select.epoll() not supported'
 )(EpollTest)
 
