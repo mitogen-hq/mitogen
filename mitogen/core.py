@@ -2240,11 +2240,14 @@ class Latch(object):
         finally:
             self._lock.release()
 
-    def put(self, obj):
+    def put(self, obj=None):
         """
         Enqueue an object, waking the first thread waiting for a result, if one
         exists.
 
+        :param obj:
+            Object to enqueue. Defaults to :data:`None` as a convenience when
+            using :class:`Latch` only for synchronization.
         :raises mitogen.core.LatchError:
             :meth:`close` has been called, and the object is no longer valid.
         """
