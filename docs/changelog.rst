@@ -125,8 +125,11 @@ Core Library
   series.
 
 
-v0.2.6 (2019-02-??)
+v0.2.6 (unreleased)
 -------------------
+
+To avail of fixes in an unreleased version, please download a ZIP file
+`directly from GitHub <https://github.com/dw/mitogen/>`_.
 
 Fixes
 ~~~~~
