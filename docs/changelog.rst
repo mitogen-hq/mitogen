@@ -125,6 +125,26 @@ Core Library
   series.
 
 
+v0.2.6 (2019-02-??)
+-------------------
+
+Fixes
+~~~~~
+
+* `#542 <https://github.com/dw/mitogen/issues/542>`_: some versions of OS X
+  ship a default Python that does not support :func:`select.poll`. Restore the
+  0.2.3 behaviour of defaulting to Kqueue in this case, but still prefer
+  :func:`select.poll` if it is available.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Petr Enkov <https://github.com/enkov>`_.
+
+
 v0.2.5 (2019-02-14)
 -------------------
 
