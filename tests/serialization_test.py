@@ -8,9 +8,21 @@ from mitogen.core import b
 import testlib
 
 
+class EvilObject(object):
+    pass
+
+
 def roundtrip(v):
     msg = mitogen.core.Message.pickled(v)
     return mitogen.core.Message(data=msg.data).unpickle()
+
+
+class EvilObjectTest(testlib.TestCase):
+    def test_deserialization_fails(self):
+        msg = mitogen.core.Message.pickled(EvilObject())
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: msg.unpickle()
+        )
 
 
 class BlobTest(testlib.TestCase):
