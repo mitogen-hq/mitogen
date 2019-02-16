@@ -2140,7 +2140,7 @@ class Latch(object):
             return rsock, wsock
 
     COOKIE_MAGIC, = struct.unpack('L', b('LTCH') * (struct.calcsize('L')//4))
-    COOKIE_FMT = 'Llll'
+    COOKIE_FMT = '>Qqqq'  # #545: id() and get_ident() may exceed long on armhfp.
     COOKIE_SIZE = struct.calcsize(COOKIE_FMT)
 
     def _make_cookie(self):
@@ -2240,11 +2240,14 @@ class Latch(object):
         finally:
             self._lock.release()
 
-    def put(self, obj):
+    def put(self, obj=None):
         """
         Enqueue an object, waking the first thread waiting for a result, if one
         exists.
 
+        :param obj:
+            Object to enqueue. Defaults to :data:`None` as a convenience when
+            using :class:`Latch` only for synchronization.
         :raises mitogen.core.LatchError:
             :meth:`close` has been called, and the object is no longer valid.
         """

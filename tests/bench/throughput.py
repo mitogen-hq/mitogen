@@ -9,6 +9,7 @@ import time
 
 import mitogen
 import mitogen.service
+import ansible_mitogen.affinity
 
 
 def prepare():
@@ -45,6 +46,8 @@ def run_test(router, fp, s, context):
 
 @mitogen.main()
 def main(router):
+    ansible_mitogen.affinity.policy.assign_muxprocess()
+
     bigfile = tempfile.NamedTemporaryFile()
     fill_with_random(bigfile, 1048576*512)
 

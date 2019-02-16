@@ -139,12 +139,25 @@ Fixes
   0.2.3 behaviour of defaulting to Kqueue in this case, but still prefer
   :func:`select.poll` if it is available.
 
+* `#545 <https://github.com/dw/mitogen/issues/545>`_: an optimization
+  introduced in `#493 <https://github.com/dw/mitogen/issues/493>`_ caused a
+  64-bit integer to be assigned to a 32-bit field on ARM 32-bit targets,
+  causing runs to fail.
+
+
+Core Library
+~~~~~~~~~~~~
+
+* `ca63c26e <https://github.com/dw/mitogen/commit/ca63c26e>`_:
+  :meth:`mitogen.core.Latch.put`'s `obj` argument was made optional.
+
 
 Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Fabian Arrotin <https://github.com/arrfab>`_, and
 `Petr Enkov <https://github.com/enkov>`_.
 
 
