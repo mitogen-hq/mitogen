@@ -432,6 +432,7 @@ class BrokerMixin(object):
         if not self.broker_shutdown:
             self.broker.shutdown()
         self.broker.join()
+        del self.broker
         super(BrokerMixin, self).tearDown()
 
     def sync_with_broker(self):
@@ -444,6 +445,10 @@ class RouterMixin(BrokerMixin):
     def setUp(self):
         super(RouterMixin, self).setUp()
         self.router = self.router_class(self.broker)
+
+    def tearDown(self):
+        del self.router
+        super(RouterMixin, self).tearDown()
 
 
 class DockerMixin(RouterMixin):

@@ -48,21 +48,21 @@ import mitogen.core
 
 # List of weakrefs. On Python 2.4, mitogen.core registers its Broker on this
 # list and mitogen.service registers its Pool too.
-_brokers = weakref.WeakValueDictionary()
-_pools = weakref.WeakValueDictionary()
+_brokers = weakref.WeakKeyDictionary()
+_pools = weakref.WeakKeyDictionary()
 
 
 def _notice_broker_or_pool(obj):
     if isinstance(obj, mitogen.core.Broker):
-        _brokers[id(obj)] = obj
+        _brokers[obj] = True
     else:
-        _pools[id(obj)] = obj
+        _pools[obj] = True
 
 
 def wrap_os__fork():
     corker = Corker(
-        brokers=list(_brokers.values()),
-        pools=list(_pools.values()),
+        brokers=list(_brokers),
+        pools=list(_pools),
     )
     try:
         corker.cork()
