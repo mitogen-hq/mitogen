@@ -2051,6 +2051,8 @@ class Latch(object):
     """
     poller_class = Poller
 
+    notify = None
+
     # The _cls_ prefixes here are to make it crystal clear in the code which
     # state mutation isn't covered by :attr:`_lock`.
 
@@ -2264,6 +2266,8 @@ class Latch(object):
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, wsock.fileno())
                 self._wake(wsock, cookie)
+            elif self.notify:
+                self.notify(self)
         finally:
             self._lock.release()
 

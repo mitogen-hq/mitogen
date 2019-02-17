@@ -35,12 +35,25 @@ class Error(mitogen.core.Error):
     pass
 
 
+class Event(object):
+    """
+    Represents one selected event.
+    """
+    #: The first Receiver or Latch the event traversed.
+    source = None
+
+    #: The :class:`mitogen.core.Message` delivered to a receiver, or the object
+    #: posted to a latch.
+    data = None
+
+
 class Select(object):
     """
     Support scatter/gather asynchronous calls and waiting on multiple
-    receivers, channels, and sub-Selects. Accepts a sequence of
-    :class:`mitogen.core.Receiver` or :class:`mitogen.select.Select` instances
-    and returns the first value posted to any receiver or select.
+    receivers, channels, latches, and sub-Selects. Accepts a sequence of
+    :class:`mitogen.core.Receiver`, :class:`mitogen.select.Select` or
+    :class:`mitogen.core.Latch` instances and returns the first value posted to
+    any receiver or select.
 
     If `oneshot` is :data:`True`, then remove each receiver as it yields a
     result; since :meth:`__iter__` terminates once the final receiver is
@@ -84,6 +97,19 @@ class Select(object):
 
         for msg in mitogen.select.Select(selects):
             print(msg.unpickle())
+
+    :class:`Select` may be used to mix inter-thread and inter-process IO:
+
+        latch = mitogen.core.Latch()
+        start_thread(latch)
+        recv = remote_host.call_async(os.getuid)
+
+        sel = Select([latch, recv])
+        event = sel.get_event()
+        if event.source is latch:
+            # woken by a local thread
+        else:
+            # woken by function call result
     """
 
     notify = None
@@ -145,14 +171,29 @@ class Select(object):
     def __exit__(self, e_type, e_val, e_tb):
         self.close()
 
-    def __iter__(self):
+    def iter_data(self):
         """
-        Yield the result of :meth:`get` until no receivers remain in the
-        select, either because `oneshot` is :data:`True`, or each receiver was
+        Yield :attr:`Event.data` until no receivers remain in the select,
+        either because `oneshot` is :data:`True`, or each receiver was
         explicitly removed via :meth:`remove`.
+
+        :meth:`__iter__` is an alias for :meth:`iter_data`, allowing loops
+        like::
+
+            for msg in Select([recv1, recv2]):
+                print msg.unpickle()
         """
         while self._receivers:
-            yield self.get()
+            yield self.get_event().data
+
+    __iter__ = iter_data
+
+    def iter_events(self):
+        """
+        Yield :class:`Event` instances until no receivers remain in the select.
+        """
+        while self._receivers:
+            yield self.get_event()
 
     loop_msg = 'Adding this Select instance would create a Select cycle'
 
@@ -170,8 +211,8 @@ class Select(object):
 
     def add(self, recv):
         """
-        Add the :class:`mitogen.core.Receiver` or :class:`Select` `recv` to the
-        select.
+        Add a :class:`mitogen.core.Receiver`, :class:`Select` or
+        :class:`mitogen.core.Latch` to the select.
 
         :raises mitogen.select.Error:
             An attempt was made to add a :class:`Select` to which this select
@@ -193,10 +234,9 @@ class Select(object):
 
     def remove(self, recv):
         """
-        Remove the :class:`mitogen.core.Receiver` or :class:`Select` `recv`
-        from the select. Note that if the receiver has notified prior to
-        :meth:`remove`, it will still be returned by a subsequent :meth:`get`.
-        This may change in a future version.
+        Remove an object from from the select. Note that if the receiver has
+        notified prior to :meth:`remove`, it will still be returned by a
+        subsequent :meth:`get`. This may change in a future version.
         """
         try:
             if recv.notify != self._put:
@@ -240,6 +280,13 @@ class Select(object):
 
     def get(self, timeout=None, block=True):
         """
+        Call `get_event(timeout, block)` returning :attr:`Event.data` of the
+        first available event.
+        """
+        return self.get_event(timeout, block).data
+
+    def get_event(self, timeout=None, block=True):
+        """
         Fetch the next available value from any receiver, or raise
         :class:`mitogen.core.TimeoutError` if no value is available within
         `timeout` seconds.
@@ -263,14 +310,21 @@ class Select(object):
         if not self._receivers:
             raise Error(self.empty_msg)
 
+        event = Event()
         while True:
             recv = self._latch.get(timeout=timeout, block=block)
             try:
-                msg = recv.get(block=False)
+                if isinstance(recv, Select):
+                    event = recv.get_event(block=False)
+                else:
+                    event.source = recv
+                    event.data = recv.get(block=False)
                 if self._oneshot:
                     self.remove(recv)
-                msg.receiver = recv
-                return msg
+                if isinstance(recv, mitogen.core.Receiver):
+                    # Remove in 0.3.x.
+                    event.data.receiver = recv
+                return event
             except mitogen.core.TimeoutError:
                 # A receiver may have been queued with no result if another
                 # thread drained it before we woke up, or because another
