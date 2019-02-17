@@ -474,6 +474,7 @@ class Pool(object):
 
         for service in services:
             self.add(service)
+        self._py_24_25_compat()
         self._threads = []
         for x in range(size):
             name = 'mitogen.service.Pool.%x.worker-%d' % (id(self), x,)
@@ -486,6 +487,13 @@ class Pool(object):
             self._threads.append(thread)
 
         LOG.debug('%r: initialized', self)
+
+    def _py_24_25_compat(self):
+        if sys.version_info < (2, 6):
+            # import_module() is used to avoid dep scanner sending mitogen.fork
+            # to all mitogen.service importers.
+            os_fork = mitogen.core.import_module('mitogen.os_fork')
+            os_fork._notice_broker_or_pool(self)
 
     @property
     def size(self):
