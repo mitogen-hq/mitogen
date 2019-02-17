@@ -579,6 +579,10 @@ Select Class
 
 .. module:: mitogen.select
 .. currentmodule:: mitogen.select
+
+.. autoclass:: Event
+    :members:
+
 .. autoclass:: Select
     :members:
 

@@ -50,10 +50,10 @@ class Event(object):
 class Select(object):
     """
     Support scatter/gather asynchronous calls and waiting on multiple
-    receivers, channels, latches, and sub-Selects. Accepts a sequence of
-    :class:`mitogen.core.Receiver`, :class:`mitogen.select.Select` or
-    :class:`mitogen.core.Latch` instances and returns the first value posted to
-    any receiver or select.
+    :class:`receivers <mitogen.core.Receiver>`,
+    :class:`channels <mitogen.core.Channel>`,
+    :class:`latches <mitogen.core.Latch>`, and
+    :class:`sub-selects <Select>`.
 
     If `oneshot` is :data:`True`, then remove each receiver as it yields a
     result; since :meth:`__iter__` terminates once the final receiver is
@@ -287,7 +287,7 @@ class Select(object):
 
     def get_event(self, timeout=None, block=True):
         """
-        Fetch the next available value from any receiver, or raise
+        Fetch the next available :class:`Event` from any source, or raise
         :class:`mitogen.core.TimeoutError` if no value is available within
         `timeout` seconds.
 
@@ -300,7 +300,7 @@ class Select(object):
             If :data:`False`, immediately raise
             :class:`mitogen.core.TimeoutError` if the select is empty.
         :return:
-            :class:`mitogen.core.Message`
+            :class:`Event`.
         :raises mitogen.core.TimeoutError:
             Timeout was reached.
         :raises mitogen.core.LatchError:
