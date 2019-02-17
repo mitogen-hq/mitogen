@@ -103,6 +103,9 @@ IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
 LATIN1_CODEC = encodings.latin_1.Codec()
+# str.encode() may take import lock. Deadlock possible if broker calls
+# .encode() on behalf of thread currently waiting for module.
+UTF8_CODEC = encodings.latin_1.Codec()
 
 _v = False
 _vv = False
@@ -271,9 +274,8 @@ class Kwargs(dict):
         def __init__(self, dct):
             for k, v in dct.iteritems():
                 if type(k) is unicode:
-                    self[k.encode()] = v
-                else:
-                    self[k] = v
+                    k, _ = UTF8_CODEC.encode(k)
+                self[k] = v
 
     def __repr__(self):
         return 'Kwargs(%s)' % (dict.__repr__(self),)
@@ -735,7 +737,7 @@ class Message(object):
         """
         Syntax helper to construct a dead message.
         """
-        kwargs['data'] = (reason or u'').encode()
+        kwargs['data'], _ = UTF8_CODEC.encode(reason or u'')
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
@@ -1332,7 +1334,7 @@ class Importer(object):
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
-            mod.__package__ = mod.__package__.encode()
+            mod.__package__, _ = UTF8_CODEC.encode(mod.__package__)
 
         source = self.get_source(fullname)
         try:
