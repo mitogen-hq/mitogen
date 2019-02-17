@@ -148,13 +148,17 @@ Fixes
 Core Library
 ~~~~~~~~~~~~
 
+* `#535 <https://github.com/dw/mitogen/issues/535>`_: to support function calls
+  on a service pool from another thread, :class:`mitogen.select.Select`
+  additionally permits waiting on :class:`mitogen.core.Latch`.
+
+* `#535 <https://github.com/dw/mitogen/issues/535>`_:
+  :class:`mitogen.service.Pool.defer` allows any function to be enqueued for
+  the thread pool from another thread.
+
 * `ca63c26e <https://github.com/dw/mitogen/commit/ca63c26e>`_:
   :meth:`mitogen.core.Latch.put`'s `obj` argument was made optional.
 
-* `2c921fea <https://github.com/dw/mitogen/commit/2c921fea>`_: to support
-  function calls on a service pool from another thread,
-  :class:`mitogen.select.Select` additionally permits waiting on
-  :class:`mitogen.core.Latch`.
 
 
 Thanks!
