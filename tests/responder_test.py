@@ -74,8 +74,9 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.local()
 
         self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
-        self.assertEquals(1, self.router.responder.get_module_count)
-        self.assertEquals(1, self.router.responder.good_load_module_count)
+        os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
+        self.assertEquals(1+os_fork, self.router.responder.get_module_count)
+        self.assertEquals(1+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(300, self.router.responder.good_load_module_size)
 
     def test_simple_pkg(self):
@@ -84,8 +85,9 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.local()
         self.assertEquals(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
-        self.assertEquals(2, self.router.responder.get_module_count)
-        self.assertEquals(3, self.router.responder.good_load_module_count)
+        os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
+        self.assertEquals(2+os_fork, self.router.responder.get_module_count)
+        self.assertEquals(3+os_fork, self.router.responder.good_load_module_count)
         self.assertEquals(0, self.router.responder.bad_load_module_count)
         self.assertLess(450, self.router.responder.good_load_module_size)
 
@@ -185,9 +187,10 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         c1 = self.router.local()
         c2 = self.router.local(via=c1)
 
+        os_fork = int(sys.version_info < (2, 6))
         self.assertEquals(256, c2.call(plain_old_module.pow, 2, 8))
-        self.assertEquals(2, self.router.responder.get_module_count)
-        self.assertEquals(2, self.router.responder.good_load_module_count)
+        self.assertEquals(2+os_fork, self.router.responder.get_module_count)
+        self.assertEquals(2+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(10000, self.router.responder.good_load_module_size)
         self.assertGreater(40000, self.router.responder.good_load_module_size)
 

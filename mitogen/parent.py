@@ -253,7 +253,7 @@ def close_nonstandard_fds():
             pass
 
 
-def create_socketpair():
+def create_socketpair(size=None):
     """
     Create a :func:`socket.socketpair` to use for use as a child process's UNIX
     stdio channels. As socket pairs are bidirectional, they are economical on
@@ -265,10 +265,10 @@ def create_socketpair():
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
                         socket.SO_SNDBUF,
-                        mitogen.core.CHUNK_SIZE)
+                        size or mitogen.core.CHUNK_SIZE)
     childfp.setsockopt(socket.SOL_SOCKET,
                        socket.SO_RCVBUF,
-                       mitogen.core.CHUNK_SIZE)
+                       size or mitogen.core.CHUNK_SIZE)
     return parentfp, childfp
 
 

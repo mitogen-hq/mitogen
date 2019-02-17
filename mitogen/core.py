@@ -103,6 +103,9 @@ IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
 LATIN1_CODEC = encodings.latin_1.Codec()
+# str.encode() may take import lock. Deadlock possible if broker calls
+# .encode() on behalf of thread currently waiting for module.
+UTF8_CODEC = encodings.latin_1.Codec()
 
 _v = False
 _vv = False
@@ -271,9 +274,8 @@ class Kwargs(dict):
         def __init__(self, dct):
             for k, v in dct.iteritems():
                 if type(k) is unicode:
-                    self[k.encode()] = v
-                else:
-                    self[k] = v
+                    k, _ = UTF8_CODEC.encode(k)
+                self[k] = v
 
     def __repr__(self):
         return 'Kwargs(%s)' % (dict.__repr__(self),)
@@ -735,7 +737,7 @@ class Message(object):
         """
         Syntax helper to construct a dead message.
         """
-        kwargs['data'] = (reason or u'').encode()
+        kwargs['data'], _ = UTF8_CODEC.encode(reason or u'')
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
@@ -1092,6 +1094,7 @@ class Importer(object):
         'lxd',
         'master',
         'minify',
+        'os_fork',
         'parent',
         'select',
         'service',
@@ -1332,7 +1335,7 @@ class Importer(object):
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
-            mod.__package__ = mod.__package__.encode()
+            mod.__package__, _ = UTF8_CODEC.encode(mod.__package__)
 
         source = self.get_source(fullname)
         try:
@@ -2051,6 +2054,8 @@ class Latch(object):
     """
     poller_class = Poller
 
+    notify = None
+
     # The _cls_ prefixes here are to make it crystal clear in the code which
     # state mutation isn't covered by :attr:`_lock`.
 
@@ -2264,6 +2269,8 @@ class Latch(object):
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, wsock.fileno())
                 self._wake(wsock, cookie)
+            elif self.notify:
+                self.notify(self)
         finally:
             self._lock.release()
 
@@ -3341,6 +3348,17 @@ class ExternalContext(object):
         # Reopen with line buffering.
         sys.stdout = os.fdopen(1, 'w', 1)
 
+    def _py24_25_compat(self):
+        """
+        Python 2.4/2.5 have grave difficulties with threads/fork. We
+        mandatorily quiesce all running threads during fork using a
+        monkey-patch there.
+        """
+        if sys.version_info < (2, 6):
+            # import_module() is used to avoid dep scanner.
+            os_fork = import_module('mitogen.os_fork')
+            mitogen.os_fork._notice_broker_or_pool(self.broker)
+
     def main(self):
         self._setup_master()
         try:
@@ -3368,6 +3386,7 @@ class ExternalContext(object):
                                  socket.gethostname())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
+                self._py24_25_compat()
                 self.dispatcher.run()
                 _v and LOG.debug('ExternalContext.main() normal exit')
             except KeyboardInterrupt:
