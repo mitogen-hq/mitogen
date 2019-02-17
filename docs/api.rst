@@ -609,6 +609,14 @@ Broker Class
    :members:
 
 
+Corker Class
+============
+
+.. currentmodule:: mitogen.os_fork
+.. autoclass:: Corker
+   :members:
+
+
 Utility Functions
 =================
 

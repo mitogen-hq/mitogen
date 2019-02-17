@@ -1094,6 +1094,7 @@ class Importer(object):
         'lxd',
         'master',
         'minify',
+        'os_fork',
         'parent',
         'select',
         'service',
