@@ -165,7 +165,7 @@ def image_for_distro(distro):
     return 'mitogen/%s-test' % (distro.partition('-')[0],)
 
 
-def make_containers():
+def make_containers(name_prefix='', port_offset=0):
     docker_hostname = get_docker_hostname()
     firstbit = lambda s: (s+'-').split('-')[0]
     secondbit = lambda s: (s+'-').split('-')[1]
@@ -183,9 +183,9 @@ def make_containers():
         for x in range(count):
             lst.append({
                 "distro": firstbit(distro),
-                "name": "target-%s-%s" % (distro, i),
+                "name": name_prefix + ("target-%s-%s" % (distro, i)),
                 "hostname": docker_hostname,
-                "port": BASE_PORT + i,
+                "port": BASE_PORT + i + port_offset,
                 "python_path": (
                     '/usr/bin/python3'
                     if secondbit(distro) == 'py3'
@@ -207,6 +207,8 @@ def start_containers(containers):
             "docker run "
                 "--rm "
                 "--detach "
+                "--privileged "
+                "--cap-add=SYS_PTRACE "
                 "--publish 0.0.0.0:%(port)s:22/tcp "
                 "--hostname=%(name)s "
                 "--name=%(name)s "

@@ -20,7 +20,7 @@ docker_hostname = ci_lib.get_docker_hostname()
 
 
 with ci_lib.Fold('docker_setup'):
-    containers = ci_lib.make_containers()
+    containers = ci_lib.make_containers(port_offset=500, name_prefix='debops-')
     ci_lib.start_containers(containers)
 
 
