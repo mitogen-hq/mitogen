@@ -153,7 +153,7 @@ class Corker(object):
 
     def cork(self):
         """
-        Arrange for the broker and optional pool to be paused with no locks
+        Arrange for any associated brokers and pools to be paused with no locks
         held. This will not return until each thread acknowledges it has ceased
         execution.
         """
