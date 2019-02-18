@@ -86,7 +86,7 @@ class Corker(object):
     In a mixed threading/forking environment, it is critical no threads are
     active at the moment of fork, as they could hold mutexes whose state is
     unrecoverably snapshotted in the locked state in the fork child, causing
-    random deadlocks at random future moments.
+    deadlocks at random future moments.
 
     To ensure a target thread has all locks dropped, we ask it to write a large
     string to a socket with a small buffer that has :data:`os.O_NONBLOCK`
