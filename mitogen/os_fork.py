@@ -88,8 +88,8 @@ class Corker(object):
     unrecoverably snapshotted in the locked state in the fork child, causing
     deadlocks at random future moments.
 
-    To ensure a target thread has all locks dropped, we ask it to write a large
-    string to a socket with a small buffer that has :data:`os.O_NONBLOCK`
+    To ensure a target thread has all locks dropped, it is made to write a
+    large string to a socket with a small buffer that has :data:`os.O_NONBLOCK`
     disabled. CPython will drop the GIL and enter the ``write()`` system call,
     where it will block until the socket buffer is drained, or the write side
     is closed.
