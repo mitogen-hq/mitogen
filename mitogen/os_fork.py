@@ -135,7 +135,7 @@ class Corker(object):
         held. This will not return until each thread acknowledges it has ceased
         execution.
         """
-        s = 'CORK' * ((128 / 4) * 1024)
+        s = mitogen.core.b('CORK') * ((128 // 4) * 1024)
         self._rsocks = []
         for pool in self.pools:
             if not pool.closed:
