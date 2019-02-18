@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 import os
+import shutil
 
 import ci_lib
 
@@ -10,10 +11,6 @@ import ci_lib
 ci_lib.DISTROS = ['debian'] * ci_lib.TARGET_COUNT
 
 project_dir = os.path.join(ci_lib.TMP, 'project')
-key_file = os.path.join(
-    ci_lib.GIT_ROOT,
-    'tests/data/docker/mitogen__has_sudo_pubkey.key',
-)
 vars_path = 'ansible/inventory/group_vars/debops_all_hosts.yml'
 inventory_path = 'ansible/inventory/hosts'
 docker_hostname = ci_lib.get_docker_hostname()
@@ -36,7 +33,6 @@ with ci_lib.Fold('job_setup'):
             % (ci_lib.GIT_ROOT,)
         )
 
-    ci_lib.run('chmod go= %s', key_file)
     with open(vars_path, 'w') as fp:
         fp.write(
             "ansible_python_interpreter: /usr/bin/python2.7\n"
@@ -47,7 +43,7 @@ with ci_lib.Fold('job_setup'):
             "\n"
             # Speed up slow DH generation.
             "dhparam__bits: ['128', '64']\n"
-            % (key_file,)
+            % (ci_lib.key_file,)
         )
 
     with open(inventory_path, 'a') as fp:

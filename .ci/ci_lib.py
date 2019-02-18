@@ -146,6 +146,17 @@ TARGET_COUNT = int(os.environ.get('TARGET_COUNT', '2'))
 BASE_PORT = 2200
 TMP = TempDir().path
 
+
+# We copy this out of the way to avoid random stuff modifying perms in the Git
+# tree (like git pull).
+src_key_file = os.path.join(GIT_ROOT,
+    'tests/data/docker/mitogen__has_sudo_pubkey.key')
+key_file = os.path.join(TMP,
+    'mitogen__has_sudo_pubkey.key')
+shutil.copyfile(src_key_file, key_file)
+os.chmod(key_file, int('0600', 8))
+
+
 os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
 os.environ['PYTHONPATH'] = '%s:%s' % (
     os.environ.get('PYTHONPATH', ''),
