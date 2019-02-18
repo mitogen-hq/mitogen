@@ -94,9 +94,9 @@ class Corker(object):
     where it will block until the socket buffer is drained, or the write side
     is closed.
 
-    We can ensure the thread really has blocked outside of any Python locks by
-    checking if the socket buffer has started to fill using a
-    :class:`mitogen.core.Poller`.
+    :class:`mitogen.core.Poller` is used to ensure the thread really has
+    blocked outside any Python locks, by checking if the socket buffer has
+    started to fill.
 
     Since this necessarily involves posting a message to every existent thread
     and verifying acknowledgement, it will never be a fast operation.
