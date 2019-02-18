@@ -158,10 +158,10 @@ Core Library
 
 * `#535 <https://github.com/dw/mitogen/issues/535>`_: a new
   :mod:`mitogen.os_fork` module provides a :func:`os.fork` wrapper that pauses
-  all thread activity during a fork. :class:`mitogen.core.Broker` and
-  :class:`mitogen.service.Pool` automatically record their existence so that an
-  :func:`os.fork` monkey-patch activated for Python 2.4 and 2.5 can
-  automatically pause them for any attempt to start a subprocess.
+  thread activity during fork. On Python<2.6, :class:`mitogen.core.Broker` and
+  :class:`mitogen.service.Pool` automatically record their existence so that a
+  :func:`os.fork` monkey-patch can automatically pause them for any attempt to
+  start a subprocess.
 
 * `ca63c26e <https://github.com/dw/mitogen/commit/ca63c26e>`_:
   :meth:`mitogen.core.Latch.put`'s `obj` argument was made optional.
