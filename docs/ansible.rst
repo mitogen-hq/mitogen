@@ -5,13 +5,14 @@ Mitogen for Ansible
 .. image:: images/ansible/ansible_mitogen.svg
     :class: mitogen-right-180 mitogen-logo-wrap
 
-An extension to `Ansible`_ is included that implements connections over
-Mitogen, replacing embedded shell invocations with pure-Python equivalents
-invoked via highly efficient remote procedure calls to persistent interpreters
-tunnelled over SSH. No changes are required to target hosts.
+**Mitogen for Ansible** is a completely redesigned UNIX connection layer and
+module runtime for `Ansible`_. Requiring minimal configuration changes, it
+updates Ansible's slow and wasteful shell-centic implementation with
+pure-Python equivalents, invoked via highly efficient remote procedure calls to
+persistent interpreters tunnelled over SSH. No changes are required to target
+hosts.
 
-The extension is stable and real-world use is encouraged. `Bug reports`_ are
-welcome: Ansible is huge, and only wide testing will ensure soundness.
+The extension is considered stable and real-world use is encouraged.
 
 .. _Ansible: https://www.ansible.com/
 

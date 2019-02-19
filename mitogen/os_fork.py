@@ -29,13 +29,7 @@
 # !mitogen: minify_safe
 
 """
-When operating in a mixed threading/forking environment, it is critical no
-threads are active at the moment of fork, as they could be within critical
-sections whose mutexes are snapshotted in the locked state in the fork child.
-
-To permit unbridled Mitogen use in a forking program, a mechanism must exist to
-temporarily halt any threads in operation -- namely the broker and any pool
-threads.
+Support for operating in a mixed threading/forking environment.
 """
 
 import os
@@ -53,6 +47,10 @@ _pools = weakref.WeakKeyDictionary()
 
 
 def _notice_broker_or_pool(obj):
+    """
+    Used by :mod:`mitogen.core` and :mod:`mitogen.service` to automatically
+    register every broker and pool on Python 2.4/2.5.
+    """
     if isinstance(obj, mitogen.core.Broker):
         _brokers[obj] = True
     else:
@@ -85,8 +83,31 @@ class Corker(object):
     :class:`mitogen.service.Pool` to be temporarily "corked" while fork
     operations may occur.
 
+    In a mixed threading/forking environment, it is critical no threads are
+    active at the moment of fork, as they could hold mutexes whose state is
+    unrecoverably snapshotted in the locked state in the fork child, causing
+    deadlocks at random future moments.
+
+    To ensure a target thread has all locks dropped, it is made to write a
+    large string to a socket with a small buffer that has :data:`os.O_NONBLOCK`
+    disabled. CPython will drop the GIL and enter the ``write()`` system call,
+    where it will block until the socket buffer is drained, or the write side
+    is closed.
+
+    :class:`mitogen.core.Poller` is used to ensure the thread really has
+    blocked outside any Python locks, by checking if the socket buffer has
+    started to fill.
+
     Since this necessarily involves posting a message to every existent thread
     and verifying acknowledgement, it will never be a fast operation.
+
+    This does not yet handle the case of corking being initiated from within a
+    thread that is also a cork target.
+
+    :param brokers:
+        Sequence of :class:`mitogen.core.Broker` instances to cork.
+    :param pools:
+        Sequence of :class:`mitogen.core.Pool` instances to cork.
     """
     def __init__(self, brokers=(), pools=()):
         self.brokers = brokers
@@ -106,13 +127,8 @@ class Corker(object):
 
     def _cork_one(self, s, obj):
         """
-        To ensure the target thread has all locks dropped, we ask it to write a
-        large string to a socket with a small buffer that has O_NONBLOCK
-        disabled. CPython will drop the GIL and enter the write() system call,
-        where it will block until the socket buffer is drained, or the write
-        side is closed. We can detect the thread has blocked outside of Python
-        code by checking if the socket buffer has started to fill using a
-        poller.
+        Construct a socketpair, saving one side of it, and passing the other to
+        `obj` to be written to by one of its threads.
         """
         rsock, wsock = mitogen.parent.create_socketpair(size=4096)
         mitogen.core.set_cloexec(rsock.fileno())
@@ -120,6 +136,12 @@ class Corker(object):
         mitogen.core.set_block(wsock)  # gevent
         self._rsocks.append(rsock)
         obj.defer(self._do_cork, s, wsock)
+
+    def _verify_one(self, rsock):
+        """
+        Pause until the socket `rsock` indicates readability, due to
+        :meth:`_do_cork` triggering a blocking write on another thread.
+        """
         poller = mitogen.core.Poller()
         poller.start_receive(rsock.fileno())
         try:
@@ -131,19 +153,27 @@ class Corker(object):
 
     def cork(self):
         """
-        Arrange for the broker and optional pool to be paused with no locks
+        Arrange for any associated brokers and pools to be paused with no locks
         held. This will not return until each thread acknowledges it has ceased
         execution.
         """
-        s = 'CORK' * ((128 / 4) * 1024)
+        s = mitogen.core.b('CORK') * ((128 // 4) * 1024)
         self._rsocks = []
+
+        # Pools must be paused first, as existing work may require the
+        # participation of a broker in order to complete.
         for pool in self.pools:
             if not pool.closed:
                 for x in range(pool.size):
                     self._cork_one(s, pool)
+
         for broker in self.brokers:
             if broker._alive:
                 self._cork_one(s, broker)
+
+        # Pause until we can detect every thread has entered write().
+        for rsock in self._rsocks:
+            self._verify_one(rsock)
 
     def uncork(self):
         """

@@ -609,8 +609,8 @@ Broker Class
    :members:
 
 
-Corker Class
-============
+Fork Safety
+===========
 
 .. currentmodule:: mitogen.os_fork
 .. autoclass:: Corker

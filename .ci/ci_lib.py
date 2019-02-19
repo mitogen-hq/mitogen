@@ -146,6 +146,17 @@ TARGET_COUNT = int(os.environ.get('TARGET_COUNT', '2'))
 BASE_PORT = 2200
 TMP = TempDir().path
 
+
+# We copy this out of the way to avoid random stuff modifying perms in the Git
+# tree (like git pull).
+src_key_file = os.path.join(GIT_ROOT,
+    'tests/data/docker/mitogen__has_sudo_pubkey.key')
+key_file = os.path.join(TMP,
+    'mitogen__has_sudo_pubkey.key')
+shutil.copyfile(src_key_file, key_file)
+os.chmod(key_file, int('0600', 8))
+
+
 os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
 os.environ['PYTHONPATH'] = '%s:%s' % (
     os.environ.get('PYTHONPATH', ''),
@@ -165,7 +176,7 @@ def image_for_distro(distro):
     return 'mitogen/%s-test' % (distro.partition('-')[0],)
 
 
-def make_containers():
+def make_containers(name_prefix='', port_offset=0):
     docker_hostname = get_docker_hostname()
     firstbit = lambda s: (s+'-').split('-')[0]
     secondbit = lambda s: (s+'-').split('-')[1]
@@ -183,9 +194,9 @@ def make_containers():
         for x in range(count):
             lst.append({
                 "distro": firstbit(distro),
-                "name": "target-%s-%s" % (distro, i),
+                "name": name_prefix + ("target-%s-%s" % (distro, i)),
                 "hostname": docker_hostname,
-                "port": BASE_PORT + i,
+                "port": BASE_PORT + i + port_offset,
                 "python_path": (
                     '/usr/bin/python3'
                     if secondbit(distro) == 'py3'
@@ -207,6 +218,8 @@ def start_containers(containers):
             "docker run "
                 "--rm "
                 "--detach "
+                "--privileged "
+                "--cap-add=SYS_PTRACE "
                 "--publish 0.0.0.0:%(port)s:22/tcp "
                 "--hostname=%(name)s "
                 "--name=%(name)s "
