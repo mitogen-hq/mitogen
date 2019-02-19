@@ -144,6 +144,9 @@ Fixes
   64-bit integer to be assigned to a 32-bit field on ARM 32-bit targets,
   causing runs to fail.
 
+* `#548 <https://github.com/dw/mitogen/issues/548>`_: `mitogen_via=` could fail
+  when the selected transport was set to ``smart``.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -174,7 +177,9 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Fabian Arrotin <https://github.com/arrfab>`_, and
-`Petr Enkov <https://github.com/enkov>`_.
+`Petr Enkov <https://github.com/enkov>`_, and
+`@elbunda <https://github.com/elbunda>`_.
+
 
 
 v0.2.5 (2019-02-14)
