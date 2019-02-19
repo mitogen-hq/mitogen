@@ -1,0 +1,49 @@
+# issue #548
+# Each case is followed by mitogen_via= case to test hostvars method.
+
+
+# When no ansible_connection= is set, transport comes via ansible.cfg ("smart"
+# is parsed away to either paramiko or ssh).
+- name: integration/transport_config/transport.yml
+  hosts: tc-transport-smart
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].method
+      right: "ssh"
+
+- hosts: tc-transport-local
+  vars: {mitogen_via: tc-transport-smart}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].method
+      right: "ssh"
+  - assert_equal:
+      left: out.result[1].method
+      right: "local"
+
+
+# ansible_connection=local
+
+- hosts: tc-transport-local
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].method
+      right: "local"
+
+- hosts: tc-transport-smart
+  vars: {mitogen_via: tc-transport-local}
+  tasks:
+  - include: ../_mitogen_only.yml
+  - {mitogen_get_stack: {}, register: out}
+  - assert_equal:
+      left: out.result[0].method
+      right: "local"
+  - assert_equal:
+      left: out.result[1].method
+      right: "ssh"

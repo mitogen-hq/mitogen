@@ -356,6 +356,7 @@ CONNECTION_METHOD = {
     'machinectl': _connect_machinectl,
     'setns': _connect_setns,
     'ssh': _connect_ssh,
+    'smart': _connect_ssh,  # issue #548.
     'su': _connect_su,
     'sudo': _connect_sudo,
     'doas': _connect_doas,

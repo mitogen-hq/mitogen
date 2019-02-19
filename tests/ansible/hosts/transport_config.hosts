@@ -5,6 +5,7 @@
 # tansport()
 tc-transport-unset
 tc-transport-local ansible_connection=local
+tc-transport-smart ansible_connection=smart
 
 # python_path()
 tc-python-path-unset
