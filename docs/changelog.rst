@@ -176,7 +176,8 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Fabian Arrotin <https://github.com/arrfab>`_, and
+`Fabian Arrotin <https://github.com/arrfab>`_,
+`Percy Grunwald <https://github.com/percygrunwald>`_,
 `Petr Enkov <https://github.com/enkov>`_, and
 `@elbunda <https://github.com/elbunda>`_.
 
