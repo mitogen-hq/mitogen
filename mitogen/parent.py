@@ -376,6 +376,7 @@ def _acquire_controlling_tty():
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
     if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL:
+        # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
         fcntl.ioctl(2, termios.TIOCSCTTY)
