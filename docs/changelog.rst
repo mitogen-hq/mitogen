@@ -147,6 +147,10 @@ Fixes
 * `#548 <https://github.com/dw/mitogen/issues/548>`_: `mitogen_via=` could fail
   when the selected transport was set to ``smart``.
 
+* `#550 <https://github.com/dw/mitogen/issues/550>`_: avoid some broken
+  TTY-related `ioctl()` calls on Windows Subsystem for Linux 2016 Anniversary
+  Update.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -178,8 +182,9 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Fabian Arrotin <https://github.com/arrfab>`_,
 `Percy Grunwald <https://github.com/percygrunwald>`_,
-`Petr Enkov <https://github.com/enkov>`_, and
-`@elbunda <https://github.com/elbunda>`_.
+`Petr Enkov <https://github.com/enkov>`_,
+`@elbunda <https://github.com/elbunda>`_, and
+`@zyphermonkey <https://github.com/zyphermonkey>`_.
 
 
 
