@@ -451,7 +451,7 @@ class Pool(object):
     """
     activator_class = Activator
 
-    def __init__(self, router, services, size=1, overwrite=False):
+    def __init__(self, router, services=(), size=1, overwrite=False):
         self.router = router
         self._activator = self.activator_class()
         self._ipc_latch = mitogen.core.Latch()

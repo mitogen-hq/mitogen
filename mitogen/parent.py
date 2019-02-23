@@ -371,11 +371,12 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
 
 def _acquire_controlling_tty():
     os.setsid()
-    if sys.platform == 'linux2':
+    if sys.platform in ('linux', 'linux2'):
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if hasattr(termios, 'TIOCSCTTY'):
+    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL:
+        # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
         fcntl.ioctl(2, termios.TIOCSCTTY)

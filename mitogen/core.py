@@ -140,7 +140,6 @@ try:
 except NameError:
     BaseException = Exception
 
-IS_WSL = 'Microsoft' in os.uname()[2]
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if PY3:
@@ -163,6 +162,14 @@ try:
     next
 except NameError:
     next = lambda it: it.next()
+
+# #550: prehistoric WSL did not advertise itself in uname output.
+try:
+    fp = open('/proc/sys/kernel/osrelease')
+    IS_WSL = 'Microsoft' in fp.read()
+    fp.close()
+except IOError:
+    IS_WSL = False
 
 
 #: Default size for calls to :meth:`Side.read` or :meth:`Side.write`, and the
