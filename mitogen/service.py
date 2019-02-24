@@ -77,19 +77,24 @@ else:
 def get_or_create_pool(size=None, router=None):
     global _pool
     global _pool_pid
-    _pool_lock.acquire()
-    try:
-        if _pool_pid != os.getpid():
-            _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
-                         overwrite=True)
-            # In case of Broker shutdown crash, Pool can cause 'zombie'
-            # processes.
-            mitogen.core.listen(router.broker, 'shutdown',
-                                lambda: _pool.stop(join=False))
-            _pool_pid = os.getpid()
-        return _pool
-    finally:
-        _pool_lock.release()
+
+    my_pid = os.getpid()
+    if _pool is None or my_pid != _pool_pid:
+        # Avoid acquiring heavily contended lock if possible.
+        _pool_lock.acquire()
+        try:
+            if _pool_pid != my_pid:
+                _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
+                             overwrite=True)
+                # In case of Broker shutdown crash, Pool can cause 'zombie'
+                # processes.
+                mitogen.core.listen(router.broker, 'shutdown',
+                                    lambda: _pool.stop(join=True))
+                _pool_pid = os.getpid()
+        finally:
+            _pool_lock.release()
+
+    return _pool
 
 
 def call(service_name, method_name, call_context=None, **kwargs):
