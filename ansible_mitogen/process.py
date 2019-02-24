@@ -226,10 +226,11 @@ def _setup_responder(responder):
     )
 
 
-def common_setup(_init_logging=True):
+def common_setup(enable_affinity=True, _init_logging=True):
     save_pid('controller')
     ansible_mitogen.logging.set_process_name('top')
-    ansible_mitogen.affinity.policy.assign_controller()
+    if enable_affinity:
+        ansible_mitogen.affinity.policy.assign_controller()
 
     mitogen.utils.setup_gil()
     if _init_logging:
