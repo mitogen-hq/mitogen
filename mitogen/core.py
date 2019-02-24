@@ -2613,11 +2613,13 @@ class Waker(Protocol):
                             self.stream.transmit_side.fd)
         self._lock.acquire()
         try:
-            if not self._deferred:
-                self._wake()
+            should_wake = not self._deferred
             self._deferred.append((func, args, kwargs))
         finally:
             self._lock.release()
+
+        if should_wake:
+            self._wake()
 
 
 class IoLoggerProtocol(DelimitedProtocol):
