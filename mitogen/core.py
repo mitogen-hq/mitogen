@@ -2489,16 +2489,19 @@ class Latch(object):
                 raise LatchError()
             self._queue.append(obj)
 
+            wsock = None
             if self._waking < len(self._sleeping):
                 wsock, cookie = self._sleeping[self._waking]
                 self._waking += 1
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, wsock.fileno())
-                self._wake(wsock, cookie)
             elif self.notify:
                 self.notify(self)
         finally:
             self._lock.release()
+
+        if wsock:
+            self._wake(wsock, cookie)
 
     def _wake(self, wsock, cookie):
         written, disconnected = io_op(os.write, wsock.fileno(), cookie)
