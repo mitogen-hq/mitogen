@@ -3272,8 +3272,11 @@ class Broker(object):
         self._broker_exit()
 
     def _broker_main(self):
-        _profile_hook('mitogen.broker', self._do_broker_main)
-        fire(self, 'exit')
+        try:
+            _profile_hook('mitogen.broker', self._do_broker_main)
+        finally:
+            # 'finally' to ensure _on_broker_exit() can always SIGTERM.
+            fire(self, 'exit')
 
     def shutdown(self):
         """
