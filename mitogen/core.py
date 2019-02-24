@@ -2046,9 +2046,6 @@ class Context(object):
             :class:`Receiver` configured to receive any replies sent to the
             message's `reply_to` handle.
         """
-        if self.router.broker._thread == threading.currentThread():  # TODO
-            raise SystemError('Cannot making blocking call on broker thread')
-
         receiver = Receiver(self.router, persist=persist, respondent=self)
         msg.dst_id = self.context_id
         msg.reply_to = receiver.handle
