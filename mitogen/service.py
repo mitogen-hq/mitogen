@@ -547,15 +547,18 @@ class Pool(object):
             invoker.service.on_shutdown()
 
     def get_invoker(self, name, msg):
-        self._lock.acquire()
-        try:
-            invoker = self._invoker_by_name.get(name)
-            if not invoker:
-                service = self._activator.activate(self, name, msg)
-                invoker = service.invoker_class(service=service)
-                self._invoker_by_name[name] = invoker
-        finally:
-            self._lock.release()
+        invoker = self._invoker_by_name.get(name)
+        if invoker is None:
+            # Avoid acquiring lock if possible.
+            self._lock.acquire()
+            try:
+                invoker = self._invoker_by_name.get(name)
+                if not invoker:
+                    service = self._activator.activate(self, name, msg)
+                    invoker = service.invoker_class(service=service)
+                    self._invoker_by_name[name] = invoker
+            finally:
+                self._lock.release()
 
         return invoker
 
