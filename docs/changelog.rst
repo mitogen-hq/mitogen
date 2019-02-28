@@ -41,6 +41,9 @@ Fixes
   TTY-related `ioctl()` calls on Windows Subsystem for Linux 2016 Anniversary
   Update.
 
+* `ffae0355 <https://github.com/dw/mitogen/commit/ffae0355>`_: needless
+  information was removed from the documentation and installation procedure.
+
 
 Core Library
 ~~~~~~~~~~~~
@@ -71,6 +74,7 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Fabian Arrotin <https://github.com/arrfab>`_,
+`Matt Layman <https://github.com/mblayman>`_,
 `Percy Grunwald <https://github.com/percygrunwald>`_,
 `Petr Enkov <https://github.com/enkov>`_,
 `@elbunda <https://github.com/elbunda>`_, and
