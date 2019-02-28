@@ -57,7 +57,7 @@ write files.
 Installation
 ------------
 
-1. Thoroughly review :ref:`noteworthy_differences` and :ref:`known_issues`.
+1. Review :ref:`noteworthy_differences`.
 2. Download and extract |mitogen_url|.
 3. Modify ``ansible.cfg``:
 
@@ -143,13 +143,29 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.7 are supported along with Python 2.6, 2.7 or 3.6. Verify your
-  installation is running one of these versions by checking ``ansible
+* Ansible 2.3-2.7 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
+  your installation is running one of these versions by checking ``ansible
   --version`` output.
 
-* The Ansible ``raw`` action executes as a regular Mitogen connection,
-  precluding its use for installing Python on a target. This will be addressed
-  soon.
+* The ``raw`` action executes as a regular Mitogen connection, which requires
+  Python on the target, precluding its use for installing Python. This will be
+  addressed in a future release. For now, simply mix Mitogen and vanilla
+  Ansible strategies:
+
+  .. code-block:: yaml
+
+    - hosts: web-servers
+      strategy: linear
+      tasks:
+      - name: Install Python if necessary.
+        raw: test -e /usr/bin/python || apt install -y python-minimal
+
+    - hosts: web-servers
+      strategy: mitogen_linear
+      roles:
+      - nginx
+      - initech_app
+      - y2k_fix
 
 * The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
   register interest in more.
@@ -166,43 +182,70 @@ Noteworthy Differences
   :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
   types. File bugs to register interest in others.
 
-* Local commands execute in a reuseable interpreter created identically to
-  interpreters on targets. Presently one interpreter per ``become_user``
-  exists, and so only one local action may execute simultaneously.
+* Actions are single-threaded for each `(host, user account)` combination,
+  including actions that execute on the local machine. Playbooks may experience
+  slowdown compared to vanilla Ansible if they employ long-running
+  ``local_action`` or ``delegate_to`` tasks delegating many target hosts to a
+  single machine and user account.
 
   Ansible usually permits up to ``forks`` simultaneous local actions. Any
   long-running local actions that execute for every target will experience
   artificial serialization, causing slowdown equivalent to `task_duration *
-  num_targets`. This will be fixed soon.
+  num_targets`. This will be addressed soon.
 
-* "Module Replacer" style modules are not supported. These rarely appear in
-  practice, and light web searches failed to reveal many examples of them.
+* The Ansible 2.7 `reboot
+  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_ module
+  may require a ``pre_reboot_delay`` on systemd hosts, as insufficient time
+  exists for the reboot command's exit status to be reported before necessary
+  processes are torn down.
+
+* On OS X when a SSH password is specified and the default connection type of
+  ``smart`` is used, Ansible may select the Paramiko plug-in rather than
+  Mitogen. If you specify a password on OS X, ensure ``connection: ssh``
+  appears in your playbook, ``ansible.cfg``, or as ``-c ssh`` on the
+  command-line.
 
 * Ansible permits up to ``forks`` connections to be setup in parallel, whereas
   in Mitogen this is handled by a fixed-size thread pool. Up to 32 connections
   may be established in parallel by default, this can be modified by setting
   the ``MITOGEN_POOL_SIZE`` environment variable.
 
-* The ``ansible_python_interpreter`` variable is parsed using a restrictive
-  :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
-  FOO=bar python``, which occur in practice. Ansible `documents this
-  <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
-  as an absolute path, however the implementation passes it unquoted through
-  the shell, permitting arbitrary code to be injected.
-
-* Performance does not scale linearly with target count. This will improve over
+* Performance does not scale cleanly with target count. This will improve over
   time.
 
-* SSH and ``become`` are treated distinctly when applying timeouts, and
-  timeouts apply up to the point when the new interpreter is ready to accept
-  messages. Ansible has two timeouts: ``ConnectTimeout`` for SSH, applying up
-  to when authentication completes, and a separate parallel timeout up to when
-  ``become`` authentication completes.
+* Performance on Python 3 is significantly worse than on Python 2. While this
+  has not yet been investigated, at least some of the regression appears to be
+  part of the core library, and should therefore be straightforward to fix as
+  part of 0.2.x.
 
-  For busy targets, Ansible may successfully execute a module where Mitogen
-  would fail without increasing the timeout. For sick targets, Ansible may hang
-  indefinitely after authentication without executing a command, for example
-  due to a stuck filesystem IO appearing in ``$HOME/.profile``.
+..
+    * SSH and ``become`` are treated distinctly when applying timeouts, and
+    timeouts apply up to the point when the new interpreter is ready to accept
+    messages. Ansible has two timeouts: ``ConnectTimeout`` for SSH, applying up
+    to when authentication completes, and a separate parallel timeout up to
+    when ``become`` authentication completes.
+    For busy targets, Ansible may successfully execute a module where Mitogen
+    would fail without increasing the timeout. For sick targets, Ansible may
+    hang indefinitely after authentication without executing a command, for
+    example due to a stuck filesystem IO appearing in ``$HOME/.profile``.
+
+..
+    * "Module Replacer" style modules are not supported. These rarely appear in
+    practice, and light web searches failed to reveal many examples of them.
+
+..
+    * The ``ansible_python_interpreter`` variable is parsed using a restrictive
+      :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
+      FOO=bar python``, which occur in practice. Ansible `documents this
+      <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
+      as an absolute path, however the implementation passes it unquoted through
+      the shell, permitting arbitrary code to be injected.
+
+..
+    * Configurations will break that rely on the `hashbang argument splitting
+      behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
+      ``ansible_python_interpreter`` setting, contrary to the Ansible
+      documentation. This will be addressed in a future 0.2 release.
 
 
 New Features & Notes
@@ -253,8 +296,8 @@ container.
       ``ansible_password``, or ``ansible_become_pass`` inventory variables.
 
     * Automatic tunnelling of SSH-dependent actions, such as the
-      ``synchronize`` module, is not yet supported. This will be added in the
-      0.3 series.
+      ``synchronize`` module, is not yet supported. This will be addressed in a
+      future release.
 
 To enable connection delegation, set ``mitogen_via=<inventory name>`` on the
 command line, or as host and group variables.
