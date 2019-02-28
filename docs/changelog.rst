@@ -41,6 +41,10 @@ Fixes
   TTY-related `ioctl()` calls on Windows Subsystem for Linux 2016 Anniversary
   Update.
 
+* `#554 <https://github.com/dw/mitogen/issues/554>`_: third party Ansible
+  action plug-ins that invoked :func:`_make_tmp_path` repeatedly could trigger
+  an assertion failure.
+
 * `ffae0355 <https://github.com/dw/mitogen/commit/ffae0355>`_: needless
   information was removed from the documentation and installation procedure.
 
@@ -77,6 +81,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Matt Layman <https://github.com/mblayman>`_,
 `Percy Grunwald <https://github.com/percygrunwald>`_,
 `Petr Enkov <https://github.com/enkov>`_,
+`Tony Finch <https://github.com/fanf2>`_,
 `@elbunda <https://github.com/elbunda>`_, and
 `@zyphermonkey <https://github.com/zyphermonkey>`_.
 
