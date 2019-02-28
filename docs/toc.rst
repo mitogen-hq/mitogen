@@ -6,7 +6,7 @@ Table Of Contents
    :maxdepth: 2
 
    index
-   ansible
+   Mitogen for Ansible <ansible_detailed>
    contributors
    changelog
    howitworks
