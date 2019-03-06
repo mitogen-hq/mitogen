@@ -15,11 +15,20 @@ Release Notes
     </style>
 
 
-v0.2.6 (unreleased)
+v0.2.7 (unreleased)
 -------------------
 
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
+
+Fixes
+~~~~~
+
+*(none yet)*
+
+
+v0.2.6 (2019-03-06)
+-------------------
 
 Fixes
 ~~~~~
@@ -74,7 +83,6 @@ Core Library
   :meth:`mitogen.core.Latch.put`'s `obj` argument was made optional.
 
 
-
 Thanks!
 ~~~~~~~
 
@@ -88,7 +96,6 @@ bug reports, testing, features and fixes in this release contributed by
 `Tony Finch <https://github.com/fanf2>`_,
 `@elbunda <https://github.com/elbunda>`_, and
 `@zyphermonkey <https://github.com/zyphermonkey>`_.
-
 
 
 v0.2.5 (2019-02-14)
