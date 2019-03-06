@@ -5,6 +5,21 @@ import sys
 
 from ansible.plugins.action import ActionBase
 
+try:
+    long
+except NameError:
+    long = int
+
+try:
+    unicode
+except NameError:
+    unicode = str
+
+try:
+    bytes
+except NameError:
+    bytes = str
+
 
 def execute(s, gbls, lcls):
     if sys.version_info > (3,):
@@ -29,6 +44,11 @@ class ActionModule(ActionBase):
 
         for key in pre_keys:
             del lcls[key]
+        for key in list(lcls):
+            if not isinstance(lcls[key],
+                              (unicode, bytes, int, long, dict, list, tuple,
+                              bool)):
+                del lcls[key]
         return lcls
 
 
