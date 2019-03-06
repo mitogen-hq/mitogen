@@ -24,7 +24,16 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Fixes
 ~~~~~
 
-*(none yet)*
+* `#557 <https://github.com/dw/mitogen/issues/557>`_: fix a crash when running
+  on machines with high CPU counts.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Orion Poplawski <https://github.com/opoplawski>`_.
 
 
 v0.2.6 (2019-03-06)

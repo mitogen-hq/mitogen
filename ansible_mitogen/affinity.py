@@ -79,6 +79,7 @@ import multiprocessing
 import os
 import struct
 
+import mitogen.core
 import mitogen.parent
 
 
@@ -246,8 +247,19 @@ class FixedPolicy(Policy):
 
 
 class LinuxPolicy(FixedPolicy):
+    def _mask_to_bytes(self, mask):
+        """
+        Convert the (type long) mask to a cpu_set_t.
+        """
+        chunks = []
+        shiftmask = (2 ** 64) - 1
+        for x in range(16):
+            chunks.append(struct.pack('<Q', mask & shiftmask))
+            mask >>= 64
+        return mitogen.core.b('').join(chunks)
+
     def _set_cpu_mask(self, mask):
-        s = struct.pack('L', mask)
+        s = self._mask_to_bytes(mask)
         _sched_setaffinity(os.getpid(), len(s), s)
 
 
