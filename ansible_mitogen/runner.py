@@ -40,6 +40,7 @@ import atexit
 import codecs
 import imp
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -806,11 +807,20 @@ class NewStyleRunner(ScriptRunner):
     def _setup_args(self):
         pass
 
+    # issue #555: in old times it was considered good form to reload sys and
+    # change the default encoding. This hack was removed from Ansible long ago,
+    # but not before permeating into many third party modules.
+    PREHISTORIC_HACK_RE = re.compile(
+        b(r'reload\s*\(\s*sys\s*\)\s*'
+          r'sys\s*\.\s*setdefaultencoding\([^)]+\)')
+    )
+
     def _setup_program(self):
-        self.source = ansible_mitogen.target.get_small_file(
+        source = ansible_mitogen.target.get_small_file(
             context=self.service_context,
             path=self.path,
         )
+        self.source = self.PREHISTORIC_HACK_RE.sub(b(''), source)
 
     def _get_code(self):
         try:
