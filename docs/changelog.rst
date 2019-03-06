@@ -15,114 +15,87 @@ Release Notes
     </style>
 
 
-.. _known_issues:
+v0.2.7 (unreleased)
+-------------------
 
-Known Issues
-------------
+To avail of fixes in an unreleased version, please download a ZIP file
+`directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-Mitogen For Ansible
-~~~~~~~~~~~~~~~~~~~
+Fixes
+~~~~~
 
-* The Ansible 2.7 `reboot
-  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_ module
-  may require a ``pre_reboot_delay`` on systemd hosts, as insufficient time
-  exists for the reboot command's exit status to be reported before necessary
-  processes are torn down.
+*(none yet)*
 
-* On OS X when a SSH password is specified and the default connection type of
-  ``smart`` is used, Ansible may select the Paramiko plug-in rather than
-  Mitogen. If you specify a password on OS X, ensure ``connection: ssh``
-  appears in your playbook, ``ansible.cfg``, or as ``-c ssh`` on the
-  command-line.
 
-* The ``raw`` action executes as a regular Mitogen connection, which requires
-  Python on the target, precluding its use for installing Python. This will be
-  addressed in a future 0.2 release. For now, simply mix Mitogen and vanilla
-  Ansible strategies in your playbook:
+v0.2.6 (2019-03-06)
+-------------------
 
-  .. code-block:: yaml
+Fixes
+~~~~~
 
-    - hosts: web-servers
-      strategy: linear
-      tasks:
-      - name: Install Python if necessary.
-        raw: test -e /usr/bin/python || apt install -y python-minimal
+* `#542 <https://github.com/dw/mitogen/issues/542>`_: some versions of OS X
+  ship a default Python that does not support :func:`select.poll`. Restore the
+  0.2.3 behaviour of defaulting to Kqueue in this case, but still prefer
+  :func:`select.poll` if it is available.
 
-    - hosts: web-servers
-      strategy: mitogen_linear
-      roles:
-      - nginx
-      - initech_app
-      - y2k_fix
+* `#545 <https://github.com/dw/mitogen/issues/545>`_: an optimization
+  introduced in `#493 <https://github.com/dw/mitogen/issues/493>`_ caused a
+  64-bit integer to be assigned to a 32-bit field on ARM 32-bit targets,
+  causing runs to fail.
 
-.. * When running with ``-vvv``, log messages will be printed to the console
-     *after* the Ansible run completes, as connection multiplexer shutdown only
-     begins after Ansible exits. This is due to a lack of suitable shutdown hook
-     in Ansible, and is fairly harmless, albeit cosmetically annoying. A future
-     release may include a solution.
+* `#548 <https://github.com/dw/mitogen/issues/548>`_: `mitogen_via=` could fail
+  when the selected transport was set to ``smart``.
 
-.. * Configurations will break that rely on the `hashbang argument splitting
-     behaviour <https://github.com/ansible/ansible/issues/15635>`_ of the
-     ``ansible_python_interpreter`` setting, contrary to the Ansible
-     documentation. This will be addressed in a future 0.2 release.
+* `#550 <https://github.com/dw/mitogen/issues/550>`_: avoid some broken
+  TTY-related `ioctl()` calls on Windows Subsystem for Linux 2016 Anniversary
+  Update.
 
-* Performance does not scale linearly with target count. This requires
-  significant additional work, as major bottlenecks exist in the surrounding
-  Ansible code. Performance-related bug reports for any scenario remain
-  welcome with open arms.
+* `#554 <https://github.com/dw/mitogen/issues/554>`_: third party Ansible
+  action plug-ins that invoked :func:`_make_tmp_path` repeatedly could trigger
+  an assertion failure.
 
-* Performance on Python 3 is significantly worse than on Python 2. While this
-  has not yet been investigated, at least some of the regression appears to be
-  part of the core library, and should therefore be straightforward to fix as
-  part of 0.2.x.
+* `#555 <https://github.com/dw/mitogen/issues/555>`_: work around an old idiom
+  that reloaded :mod:`sys` in order to change the interpreter's default encoding.
 
-* *Module Replacer* style Ansible modules are not supported.
-
-* Actions are single-threaded for each `(host, user account)` combination,
-  including actions that execute on the local machine. Playbooks may experience
-  slowdown compared to vanilla Ansible if they employ long-running
-  ``local_action`` or ``delegate_to`` tasks delegating many target hosts to a
-  single machine and user account.
-
-* Connection Delegation remains in preview and has bugs around how it infers
-  connections. Connection establishment will remain single-threaded for the 0.2
-  series, however connection inference bugs will be addressed in a future 0.2
-  release.
-
-* Connection Delegation does not support automatic tunnelling of SSH-dependent
-  actions, such as the ``synchronize`` module. This will be addressed in the
-  0.3 series.
+* `ffae0355 <https://github.com/dw/mitogen/commit/ffae0355>`_: needless
+  information was removed from the documentation and installation procedure.
 
 
 Core Library
 ~~~~~~~~~~~~
 
-* Serialization is still based on :mod:`pickle`. While there is high confidence
-  remote code execution is impossible in Mitogen's configuration, an untrusted
-  context may at least trigger disproportionately high memory usage injecting
-  small messages (*"billion laughs attack"*). Replacement is an important
-  future priority, but not critical for an initial release.
+* `#535 <https://github.com/dw/mitogen/issues/535>`_: to support function calls
+  on a service pool from another thread, :class:`mitogen.select.Select`
+  additionally permits waiting on :class:`mitogen.core.Latch`.
 
-* Child processes are not reliably reaped, leading to a pileup of zombie
-  processes when a program makes many short-lived connections in a single
-  invocation. This does not impact Mitogen for Ansible, however it limits the
-  usefulness of the core library. A future 0.2 release will address it.
+* `#535 <https://github.com/dw/mitogen/issues/535>`_:
+  :class:`mitogen.service.Pool.defer` allows any function to be enqueued for
+  the thread pool from another thread.
 
-* Some races remain around :class:`mitogen.core.Broker <Broker>` destruction,
-  disconnection and corresponding file descriptor closure. These are only
-  problematic in situations where child process reaping is also problematic.
+* `#535 <https://github.com/dw/mitogen/issues/535>`_: a new
+  :mod:`mitogen.os_fork` module provides a :func:`os.fork` wrapper that pauses
+  thread activity during fork. On Python<2.6, :class:`mitogen.core.Broker` and
+  :class:`mitogen.service.Pool` automatically record their existence so that a
+  :func:`os.fork` monkey-patch can automatically pause them for any attempt to
+  start a subprocess.
 
-* The `fakessh` component does not shut down correctly and requires flow
-  control added to the design. While minimal fixes are possible, due to the
-  absence of flow control the original design is functionally incomplete.
+* `ca63c26e <https://github.com/dw/mitogen/commit/ca63c26e>`_:
+  :meth:`mitogen.core.Latch.put`'s `obj` argument was made optional.
 
-* The multi-threaded :ref:`service` remains in a state of design flux and
-  should be considered obsolete, despite heavy use in Mitogen for Ansible. A
-  future replacement may be integrated more tightly with, or entirely replace
-  the RPC dispatcher on the main thread.
 
-* Documentation is in a state of disrepair. This will be improved over the 0.2
-  series.
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Fabian Arrotin <https://github.com/arrfab>`_,
+`Giles Westwood <https://github.com/gilesw>`_,
+`Matt Layman <https://github.com/mblayman>`_,
+`Percy Grunwald <https://github.com/percygrunwald>`_,
+`Petr Enkov <https://github.com/enkov>`_,
+`Tony Finch <https://github.com/fanf2>`_,
+`@elbunda <https://github.com/elbunda>`_, and
+`@zyphermonkey <https://github.com/zyphermonkey>`_.
 
 
 v0.2.5 (2019-02-14)

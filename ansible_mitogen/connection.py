@@ -33,7 +33,6 @@ import errno
 import logging
 import os
 import pprint
-import random
 import stat
 import sys
 import time
@@ -356,6 +355,7 @@ CONNECTION_METHOD = {
     'machinectl': _connect_machinectl,
     'setns': _connect_setns,
     'ssh': _connect_ssh,
+    'smart': _connect_ssh,  # issue #548.
     'su': _connect_su,
     'sudo': _connect_sudo,
     'doas': _connect_doas,
@@ -702,35 +702,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect()
         return self.init_child_result['good_temp_dir']
 
-    def _generate_tmp_path(self):
-        return os.path.join(
-            self.get_good_temp_dir(),
-            'ansible_mitogen_action_%016x' % (
-                random.getrandbits(8*8),
-            )
-        )
-
-    def _make_tmp_path(self):
-        assert getattr(self._shell, 'tmpdir', None) is None
-        self._shell.tmpdir = self._generate_tmp_path()
-        LOG.debug('Temporary directory: %r', self._shell.tmpdir)
-        self.get_chain().call_no_reply(os.mkdir, self._shell.tmpdir)
-        return self._shell.tmpdir
-
-    def _reset_tmp_path(self):
-        """
-        Called by _mitogen_reset(); ask the remote context to delete any
-        temporary directory created for the action. CallChain is not used here
-        to ensure exception is logged by the context on failure, since the
-        CallChain itself is about to be destructed.
-        """
-        if getattr(self._shell, 'tmpdir', None) is not None:
-            self.context.call_no_reply(
-                ansible_mitogen.target.prune_tree,
-                self._shell.tmpdir,
-            )
-            self._shell.tmpdir = None
-
     def _connect(self):
         """
         Establish a connection to the master process's UNIX listener socket,
@@ -762,7 +733,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         if not self.context:
             return
 
-        self._reset_tmp_path()
         self.chain.reset()
         self.parent.call_service(
             service_name='ansible_mitogen.services.ContextService',

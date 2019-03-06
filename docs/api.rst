@@ -579,6 +579,10 @@ Select Class
 
 .. module:: mitogen.select
 .. currentmodule:: mitogen.select
+
+.. autoclass:: Event
+    :members:
+
 .. autoclass:: Select
     :members:
 
@@ -602,6 +606,14 @@ Broker Class
 
 .. currentmodule:: mitogen.master
 .. autoclass:: Broker
+   :members:
+
+
+Fork Safety
+===========
+
+.. currentmodule:: mitogen.os_fork
+.. autoclass:: Corker
    :members:
 
 

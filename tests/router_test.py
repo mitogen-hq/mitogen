@@ -174,6 +174,8 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
         expect = '_broker_main() crashed'
         self.assertTrue(expect in log.stop())
 
+        self.broker.join()
+
 
 class AddHandlerTest(testlib.TestCase):
     klass = mitogen.master.Router

@@ -19,22 +19,26 @@
     #
 
     - name: "Find regular temp path"
-      action_passthrough:
-        method: _make_tmp_path
+      mitogen_action_script:
+        script: |
+          path = self._make_tmp_path()
+          self._remove_tmp_path(path)
       register: tmp_path
 
     - name: "Find regular temp path (new task)"
-      action_passthrough:
-        method: _make_tmp_path
+      mitogen_action_script:
+        script: |
+          path = self._make_tmp_path()
+          self._remove_tmp_path(path)
       register: tmp_path2
 
     - name: "Find good temp path"
       set_fact:
-        good_temp_path: "{{tmp_path.result|dirname}}"
+        good_temp_path: "{{tmp_path.path|dirname}}"
 
     - name: "Find good temp path (new task)"
       set_fact:
-        good_temp_path2: "{{tmp_path2.result|dirname}}"
+        good_temp_path2: "{{tmp_path2.path|dirname}}"
 
     - name: "Verify common base path for both tasks"
       assert:
@@ -44,7 +48,7 @@
     - name: "Verify different subdir for both tasks"
       assert:
         that:
-        - tmp_path.result != tmp_path2.result
+        - tmp_path.path != tmp_path2.path
 
     #
     # Verify subdirectory removal.
@@ -52,12 +56,12 @@
 
     - name: Stat temp path
       stat:
-        path: "{{tmp_path.result}}"
+        path: "{{tmp_path.path}}"
       register: stat1
 
     - name: Stat temp path (new task)
       stat:
-        path: "{{tmp_path2.result}}"
+        path: "{{tmp_path2.path}}"
       register: stat2
 
     - name: "Verify neither subdir exists any more"
@@ -108,14 +112,17 @@
 
     - name: "Find root temp path"
       become: true
-      action_passthrough:
-        method: _make_tmp_path
+      mitogen_action_script:
+        script: |
+          path = self._make_tmp_path()
+          self._remove_tmp_path(path)
       register: tmp_path_root
 
     - name: "Verify root temp path differs from regular path"
       assert:
         that:
-        - tmp_path2.result != tmp_path_root.result
+        - tmp_path2.path != tmp_path_root.path
+        - tmp_path2.path|dirname != tmp_path_root.path|dirname
 
     #
     # readonly homedir

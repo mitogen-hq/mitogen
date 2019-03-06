@@ -2,6 +2,7 @@
 - include: fixup_perms2__copy.yml
 - include: low_level_execute_command.yml
 - include: make_tmp_path.yml
+- include: make_tmp_path__double.yml
 - include: remote_expand_user.yml
 - include: remote_file_exists.yml
 - include: remove_tmp_path.yml

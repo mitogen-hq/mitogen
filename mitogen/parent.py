@@ -253,7 +253,7 @@ def close_nonstandard_fds():
             pass
 
 
-def create_socketpair():
+def create_socketpair(size=None):
     """
     Create a :func:`socket.socketpair` to use for use as a child process's UNIX
     stdio channels. As socket pairs are bidirectional, they are economical on
@@ -265,10 +265,10 @@ def create_socketpair():
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
                         socket.SO_SNDBUF,
-                        mitogen.core.CHUNK_SIZE)
+                        size or mitogen.core.CHUNK_SIZE)
     childfp.setsockopt(socket.SOL_SOCKET,
                        socket.SO_RCVBUF,
-                       mitogen.core.CHUNK_SIZE)
+                       size or mitogen.core.CHUNK_SIZE)
     return parentfp, childfp
 
 
@@ -371,11 +371,12 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
 
 def _acquire_controlling_tty():
     os.setsid()
-    if sys.platform == 'linux2':
+    if sys.platform in ('linux', 'linux2'):
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if hasattr(termios, 'TIOCSCTTY'):
+    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL:
+        # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
         fcntl.ioctl(2, termios.TIOCSCTTY)
@@ -890,10 +891,58 @@ class CallSpec(object):
         )
 
 
+class PollPoller(mitogen.core.Poller):
+    """
+    Poller based on the POSIX poll(2) interface. Not available on some versions
+    of OS X, otherwise it is the preferred poller for small FD counts.
+    """
+    SUPPORTED = hasattr(select, 'poll')
+    _repr = 'PollPoller()'
+
+    def __init__(self):
+        super(PollPoller, self).__init__()
+        self._pollobj = select.poll()
+
+    # TODO: no proof we dont need writemask too
+    _readmask = (
+        getattr(select, 'POLLIN', 0) |
+        getattr(select, 'POLLHUP', 0)
+    )
+
+    def _update(self, fd):
+        mask = (((fd in self._rfds) and self._readmask) |
+                ((fd in self._wfds) and select.POLLOUT))
+        if mask:
+            self._pollobj.register(fd, mask)
+        else:
+            try:
+                self._pollobj.unregister(fd)
+            except KeyError:
+                pass
+
+    def _poll(self, timeout):
+        if timeout:
+            timeout *= 1000
+
+        events, _ = mitogen.core.io_op(self._pollobj.poll, timeout)
+        for fd, event in events:
+            if event & self._readmask:
+                IOLOG.debug('%r: POLLIN|POLLHUP for %r', self, fd)
+                data, gen = self._rfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    yield data
+            if event & select.POLLOUT:
+                IOLOG.debug('%r: POLLOUT for %r', self, fd)
+                data, gen = self._wfds.get(fd, (None, None))
+                if gen and gen < self._generation:
+                    yield data
+
+
 class KqueuePoller(mitogen.core.Poller):
     """
     Poller based on the FreeBSD/Darwin kqueue(2) interface.
     """
+    SUPPORTED = hasattr(select, 'kqueue')
     _repr = 'KqueuePoller()'
 
     def __init__(self):
@@ -971,6 +1020,7 @@ class EpollPoller(mitogen.core.Poller):
     """
     Poller based on the Linux epoll(2) interface.
     """
+    SUPPORTED = hasattr(select, 'epoll')
     _repr = 'EpollPoller()'
 
     def __init__(self):
@@ -1041,20 +1091,18 @@ class EpollPoller(mitogen.core.Poller):
                     yield data
 
 
-if sys.version_info < (2, 6):
-    # 2.4 and 2.5 only had select.select() and select.poll().
-    POLLER_BY_SYSNAME = {}
-else:
-    POLLER_BY_SYSNAME = {
-        'Darwin': KqueuePoller,
-        'FreeBSD': KqueuePoller,
-        'Linux': EpollPoller,
-    }
+# 2.4 and 2.5 only had select.select() and select.poll().
+for _klass in mitogen.core.Poller, PollPoller, KqueuePoller, EpollPoller:
+    if _klass.SUPPORTED:
+        PREFERRED_POLLER = _klass
 
-PREFERRED_POLLER = POLLER_BY_SYSNAME.get(
-    os.uname()[0],
-    mitogen.core.Poller,
-)
+# For apps that start threads dynamically, it's possible Latch will also get
+# very high-numbered wait fds when there are many connections, and so select()
+# becomes useless there too. So swap in our favourite poller.
+if PollPoller.SUPPORTED:
+    mitogen.core.Latch.poller_class = PollPoller
+else:
+    mitogen.core.Latch.poller_class = PREFERRED_POLLER
 
 
 class DiagLogStream(mitogen.core.BasicStream):

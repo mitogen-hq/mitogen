@@ -432,6 +432,7 @@ class BrokerMixin(object):
         if not self.broker_shutdown:
             self.broker.shutdown()
         self.broker.join()
+        del self.broker
         super(BrokerMixin, self).tearDown()
 
     def sync_with_broker(self):
@@ -445,11 +446,17 @@ class RouterMixin(BrokerMixin):
         super(RouterMixin, self).setUp()
         self.router = self.router_class(self.broker)
 
+    def tearDown(self):
+        del self.router
+        super(RouterMixin, self).tearDown()
+
 
 class DockerMixin(RouterMixin):
     @classmethod
     def setUpClass(cls):
         super(DockerMixin, cls).setUpClass()
+        if os.environ.get('SKIP_DOCKER_TESTS'):
+            raise unittest2.SkipTest('SKIP_DOCKER_TESTS is set')
         cls.dockerized_ssh = DockerizedSshDaemon()
         cls.dockerized_ssh.wait_for_sshd()
 

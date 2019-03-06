@@ -411,10 +411,12 @@ class Service(object):
     def __repr__(self):
         return '%s()' % (self.__class__.__name__,)
 
-    def on_message(self, recv, msg):
+    def on_message(self, event):
         """
         Called when a message arrives on any of :attr:`select`'s registered
         receivers.
+
+        :param mitogen.select.Event event:
         """
         pass
 
@@ -449,9 +451,10 @@ class Pool(object):
     """
     activator_class = Activator
 
-    def __init__(self, router, services, size=1, overwrite=False):
+    def __init__(self, router, services=(), size=1, overwrite=False):
         self.router = router
         self._activator = self.activator_class()
+        self._ipc_latch = mitogen.core.Latch()
         self._receiver = mitogen.core.Receiver(
             router=router,
             handle=mitogen.core.CALL_SERVICE,
@@ -460,13 +463,18 @@ class Pool(object):
 
         self._select = mitogen.select.Select(oneshot=False)
         self._select.add(self._receiver)
+        self._select.add(self._ipc_latch)
         #: Serialize service construction.
         self._lock = threading.Lock()
-        self._func_by_recv = {self._receiver: self._on_service_call}
+        self._func_by_source = {
+            self._receiver: self._on_service_call,
+            self._ipc_latch: self._on_ipc_latch,
+        }
         self._invoker_by_name = {}
 
         for service in services:
             self.add(service)
+        self._py_24_25_compat()
         self._threads = []
         for x in range(size):
             name = 'mitogen.service.Pool.%x.worker-%d' % (id(self), x,)
@@ -480,6 +488,13 @@ class Pool(object):
 
         LOG.debug('%r: initialized', self)
 
+    def _py_24_25_compat(self):
+        if sys.version_info < (2, 6):
+            # import_module() is used to avoid dep scanner sending mitogen.fork
+            # to all mitogen.service importers.
+            os_fork = mitogen.core.import_module('mitogen.os_fork')
+            os_fork._notice_broker_or_pool(self)
+
     @property
     def size(self):
         return len(self._threads)
@@ -488,10 +503,10 @@ class Pool(object):
         name = service.name()
         if name in self._invoker_by_name:
             raise Error('service named %r already registered' % (name,))
-        assert service.select not in self._func_by_recv
+        assert service.select not in self._func_by_source
         invoker = service.invoker_class(service=service)
         self._invoker_by_name[name] = invoker
-        self._func_by_recv[service.select] = service.on_message
+        self._func_by_source[service.select] = service.on_message
 
     closed = False
 
@@ -534,7 +549,18 @@ class Pool(object):
                 isinstance(tup[2], dict)):
             raise mitogen.core.CallError('Invalid message format.')
 
-    def _on_service_call(self, recv, msg):
+    def defer(self, func, *args, **kwargs):
+        """
+        Arrange for `func(*args, **kwargs)` to be invoked in the context of a
+        service pool thread.
+        """
+        self._ipc_latch.put(lambda: func(*args, **kwargs))
+
+    def _on_ipc_latch(self, event):
+        event.data()
+
+    def _on_service_call(self, event):
+        msg = event.data
         service_name = None
         method_name = None
         try:
@@ -555,17 +581,17 @@ class Pool(object):
     def _worker_run(self):
         while not self.closed:
             try:
-                msg = self._select.get()
+                event = self._select.get_event()
             except (mitogen.core.ChannelError, mitogen.core.LatchError):
                 e = sys.exc_info()[1]
                 LOG.debug('%r: channel or latch closed, exitting: %s', self, e)
                 return
 
-            func = self._func_by_recv[msg.receiver]
+            func = self._func_by_source[event.source]
             try:
-                func(msg.receiver, msg)
+                func(event)
             except Exception:
-                LOG.exception('While handling %r using %r', msg, func)
+                LOG.exception('While handling %r using %r', event.data, func)
 
     def _worker_main(self):
         try:

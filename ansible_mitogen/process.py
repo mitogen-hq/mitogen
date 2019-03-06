@@ -185,19 +185,21 @@ class MuxProcess(object):
         cls.profiling = os.environ.get('MITOGEN_PROFILING') is not None
         if cls.profiling:
             mitogen.core.enable_profiling()
+        if _init_logging:
+            ansible_mitogen.logging.setup()
 
         cls.original_env = dict(os.environ)
         cls.child_pid = os.fork()
-        if _init_logging:
-            ansible_mitogen.logging.setup()
         if cls.child_pid:
             save_pid('controller')
+            ansible_mitogen.logging.set_process_name('top')
             ansible_mitogen.affinity.policy.assign_controller()
             cls.child_sock.close()
             cls.child_sock = None
             mitogen.core.io_op(cls.worker_sock.recv, 1)
         else:
             save_pid('mux')
+            ansible_mitogen.logging.set_process_name('mux')
             ansible_mitogen.affinity.policy.assign_muxprocess()
             cls.worker_sock.close()
             cls.worker_sock = None

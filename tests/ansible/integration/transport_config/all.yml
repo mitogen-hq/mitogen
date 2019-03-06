@@ -8,3 +8,4 @@
 - include: remote_addr.yml
 - include: remote_user.yml
 - include: transport.yml
+- include: transport__smart.yml
