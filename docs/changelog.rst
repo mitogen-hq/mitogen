@@ -45,6 +45,9 @@ Fixes
   action plug-ins that invoked :func:`_make_tmp_path` repeatedly could trigger
   an assertion failure.
 
+* `#555 <https://github.com/dw/mitogen/issues/555>`_: work around an old idiom
+  that reloaded :mod:`sys` in order to change the interpreter's default encoding.
+
 * `ffae0355 <https://github.com/dw/mitogen/commit/ffae0355>`_: needless
   information was removed from the documentation and installation procedure.
 
@@ -78,6 +81,7 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Fabian Arrotin <https://github.com/arrfab>`_,
+`Giles Westwood <https://github.com/gilesw>`_,
 `Matt Layman <https://github.com/mblayman>`_,
 `Percy Grunwald <https://github.com/percygrunwald>`_,
 `Petr Enkov <https://github.com/enkov>`_,
