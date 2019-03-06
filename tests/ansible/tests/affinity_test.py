@@ -211,5 +211,16 @@ class LinuxPolicyTest(testlib.TestCase):
             tf.close()
 
 
+class MockLinuxPolicyTest(testlib.TestCase):
+    klass = ansible_mitogen.affinity.LinuxPolicy
+
+    # Test struct.pack() in _set_cpu_mask().
+
+    def test_high_cpus(self):
+        policy = self.klass(cpu_count=4096)
+        for x in range(1, 4096, 32):
+            policy.assign_subprocess()
+
+
 if __name__ == '__main__':
     unittest2.main()
