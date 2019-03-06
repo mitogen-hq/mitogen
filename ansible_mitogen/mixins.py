@@ -354,7 +354,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._temp_file_gibberish(module_args, wrap_async)
 
         self._connection._connect()
-        return ansible_mitogen.planner.invoke(
+        result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
                 action=self,
                 connection=self._connection,
@@ -367,6 +367,14 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 timeout_secs=self.get_task_timeout_secs(),
             )
         )
+
+        if ansible.__version__ < '2.5' and delete_remote_tmp and \
+                getattr(self._connection._shell, 'tmpdir', None) is not None:
+            # Built-in actions expected tmpdir to be cleaned up automatically
+            # on _execute_module().
+            self._remove_tmp_path(self._connection._shell.tmpdir)
+
+        return result
 
     def _postprocess_response(self, result):
         """
