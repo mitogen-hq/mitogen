@@ -1,0 +1,20 @@
+# issue #554: double calls to make_tmp_path() fail with assertion error. Ensure
+# they succeed and are cleaned up correctly.
+
+- hosts: target
+  tasks:
+  - mitogen_action_script:
+      script: |
+        result['t1'] = self._make_tmp_path()
+        result['t2'] = self._make_tmp_path()
+        assert result['t1'] != result['t2']
+        assert self._remote_file_exists(result['t1'])
+        assert self._remote_file_exists(result['t2'])
+        self._remove_tmp_path(result['t1'])
+        self._remove_tmp_path(result['t2'])
+    register: out
+
+  - mitogen_action_script:
+      script: |
+        assert not self._remote_file_exists("{{ out.t1 }}")
+        assert not self._remote_file_exists("{{ out.t2 }}")

@@ -30,6 +30,7 @@ from __future__ import absolute_import
 import logging
 import os
 import pwd
+import random
 import traceback
 
 try:
@@ -173,26 +174,48 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         assert False, "_is_pipelining_enabled() should never be called."
 
+    def _generate_tmp_path(self):
+        return os.path.join(
+            self._connection.get_good_temp_dir(),
+            'ansible_mitogen_action_%016x' % (
+                random.getrandbits(8*8),
+            )
+        )
+
+    def _generate_tmp_path(self):
+        return os.path.join(
+            self._connection.get_good_temp_dir(),
+            'ansible_mitogen_action_%016x' % (
+                random.getrandbits(8*8),
+            )
+        )
+
     def _make_tmp_path(self, remote_user=None):
         """
-        Return the directory created by the Connection instance during
-        connection.
+        Create a temporary subdirectory as a child of the temporary directory
+        managed by the remote interpreter.
         """
         LOG.debug('_make_tmp_path(remote_user=%r)', remote_user)
-        return self._connection._make_tmp_path()
+        path = self._generate_tmp_path()
+        LOG.debug('Temporary directory: %r', path)
+        self._connection.get_chain().call_no_reply(os.mkdir, path)
+        self._connection._shell.tmpdir = path
+        return path
 
     def _remove_tmp_path(self, tmp_path):
         """
-        Stub out the base implementation's invocation of rm -rf, replacing it
-        with nothing, as the persistent interpreter automatically cleans up
-        after itself without introducing roundtrips.
+        Replace the base implementation's invocation of rm -rf, replacing it
+        with a pipelined call to :func:`ansible_mitogen.target.prune_tree`.
         """
-        # The actual removal is pipelined by Connection.close().
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
-        # Upstream _remove_tmp_path resets shell.tmpdir here, however
-        # connection.py uses that as the sole location of the temporary
-        # directory, if one exists.
-        # self._connection._shell.tmpdir = None
+        if tmp_path is None and ansible.__version__ > '2.6':
+            tmp_path = self._connection._shell.tmpdir  # 06f73ad578d
+        if tmp_path is not None:
+            self._connection.get_chain().call_no_reply(
+                ansible_mitogen.target.prune_tree,
+                tmp_path,
+            )
+        self._connection._shell.tmpdir = None
 
     def _transfer_data(self, remote_path, data):
         """
@@ -331,7 +354,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._temp_file_gibberish(module_args, wrap_async)
 
         self._connection._connect()
-        return ansible_mitogen.planner.invoke(
+        result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
                 action=self,
                 connection=self._connection,
@@ -344,6 +367,14 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 timeout_secs=self.get_task_timeout_secs(),
             )
         )
+
+        if ansible.__version__ < '2.5' and delete_remote_tmp and \
+                getattr(self._connection._shell, 'tmpdir', None) is not None:
+            # Built-in actions expected tmpdir to be cleaned up automatically
+            # on _execute_module().
+            self._remove_tmp_path(self._connection._shell.tmpdir)
+
+        return result
 
     def _postprocess_response(self, result):
         """

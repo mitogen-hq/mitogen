@@ -40,6 +40,25 @@ except ImportError:
     display = Display()
 
 
+#: The process name set via :func:`set_process_name`.
+_process_name = None
+
+#: The PID of the process that last called :func:`set_process_name`, so its
+#: value can be ignored in unknown fork children.
+_process_pid = None
+
+
+def set_process_name(name):
+    """
+    Set a name to adorn log messages with.
+    """
+    global _process_name
+    _process_name = name
+
+    global _process_pid
+    _process_pid = os.getpid()
+
+
 class Handler(logging.Handler):
     """
     Use Mitogen's log format, but send the result to a Display method.
@@ -65,7 +84,12 @@ class Handler(logging.Handler):
         if mitogen_name in self.NOISY_LOGGERS and record.levelno >= logging.WARNING:
             record.levelno = logging.DEBUG
 
-        s = '[pid %d] %s' % (os.getpid(), self.format(record))
+        if _process_pid == os.getpid():
+            process_name = _process_name
+        else:
+            process_name = '?'
+
+        s = '[%-4s %d] %s' % (process_name, os.getpid(), self.format(record))
         if record.levelno >= logging.ERROR:
             display.error(s, wrap_text=False)
         elif record.levelno >= logging.WARNING:

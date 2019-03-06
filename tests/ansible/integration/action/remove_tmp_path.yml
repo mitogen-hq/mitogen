@@ -6,9 +6,6 @@
   hosts: test-targets
   any_errors_fatal: true
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
     #
     # Use the copy module to cause a temporary directory to be created, and
     # return a result with a 'src' attribute pointing into that directory.

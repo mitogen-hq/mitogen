@@ -260,14 +260,6 @@ def prune_tree(path):
         LOG.error('prune_tree(%r): %s', path, e)
 
 
-def _on_broker_shutdown():
-    """
-    Respond to broker shutdown (graceful termination by parent, or loss of
-    connection to parent) by deleting our sole temporary directory.
-    """
-    prune_tree(temp_dir)
-
-
 def is_good_temp_dir(path):
     """
     Return :data:`True` if `path` can be used as a temporary directory, logging

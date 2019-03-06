@@ -108,6 +108,7 @@ def wrap_worker__run(*args, **kwargs):
     if mitogen.core._profile_hook.__name__ != '_profile_hook':
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
+    ansible_mitogen.logging.set_process_name('task')
     ansible_mitogen.affinity.policy.assign_worker()
     return mitogen.core._profile_hook('WorkerProcess',
         lambda: worker__run(*args, **kwargs)
