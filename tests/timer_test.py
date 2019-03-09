@@ -56,6 +56,21 @@ class GetTimeoutTest(TimerListMixin, testlib.TestCase):
         self.list._now = lambda: 30
         self.assertEquals(0, self.list.get_timeout())
 
+    def test_one_cancelled(self):
+        t1 = self.list.schedule(2, lambda: None)
+        t2 = self.list.schedule(3, lambda: None)
+        self.list._now = lambda: 0
+        t1.cancel()
+        self.assertEquals(3, self.list.get_timeout())
+
+    def test_two_cancelled(self):
+        t1 = self.list.schedule(2, lambda: None)
+        t2 = self.list.schedule(3, lambda: None)
+        self.list._now = lambda: 0
+        t1.cancel()
+        t2.cancel()
+        self.assertEquals(None, self.list.get_timeout())
+
 
 class ScheduleTest(TimerListMixin, testlib.TestCase):
     def test_in_past(self):
@@ -105,7 +120,7 @@ class ExpireTest(TimerListMixin, testlib.TestCase):
         self.list._now = lambda: 29
         timer = self.list.schedule(29, mock.Mock())
         timer.cancel()
-        self.assertEquals(0, self.list.get_timeout())
+        self.assertEquals(None, self.list.get_timeout())
         self.list._now = lambda: 29
         self.list.expire()
         self.assertEquals(0, len(timer.func.mock_calls))

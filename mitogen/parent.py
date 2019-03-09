@@ -628,6 +628,8 @@ class TimerList(object):
             Floating point delay, or 0.0, or :data:`None` if no events are
             scheduled.
         """
+        while self._lst and self._lst[0].cancelled:
+            heapq.heappop(self._lst)
         if self._lst:
             return max(0, self._lst[0].when - self._now())
 
