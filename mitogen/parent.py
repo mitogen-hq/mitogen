@@ -137,6 +137,9 @@ SIGNAL_BY_NUM = dict(
     if name.startswith('SIG') and not name.startswith('SIG_')
 )
 
+_core_source_lock = threading.Lock()
+_core_source_partial = None
+
 
 def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
@@ -156,10 +159,6 @@ def get_sys_executable():
         _sys_executable_warning_logged = True
 
     return '/usr/bin/python'
-
-
-_core_source_lock = threading.Lock()
-_core_source_partial = None
 
 
 def _get_core_source():
@@ -213,8 +212,10 @@ def is_immediate_child(msg, stream):
 
 
 def flags(names):
-    """Return the result of ORing a set of (space separated) :py:mod:`termios`
-    module constants together."""
+    """
+    Return the result of ORing a set of (space separated) :py:mod:`termios`
+    module constants together.
+    """
     return sum(getattr(termios, name, 0)
                for name in names.split())
 
@@ -223,13 +224,15 @@ def cfmakeraw(tflags):
     """Given a list returned by :py:func:`termios.tcgetattr`, return a list
     modified in a manner similar to the `cfmakeraw()` C library function, but
     additionally disabling local echo."""
-    # BSD: https://github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
-    # Linux: https://github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
+    # BSD: github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
+    # Linux: github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
-    iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK ISTRIP INLCR ICRNL IXON IGNPAR')
+    iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK '
+                    'ISTRIP INLCR ICRNL IXON IGNPAR')
     iflag &= ~flags('IGNBRK BRKINT PARMRK')
     oflag &= ~flags('OPOST')
-    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG IEXTEN NOFLSH TOSTOP PENDIN')
+    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG'
+                    'IEXTEN NOFLSH TOSTOP PENDIN')
     cflag &= ~flags('CSIZE PARENB')
     cflag |= flags('CS8 CREAD')
     return [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
@@ -244,14 +247,6 @@ def disable_echo(fd):
         # if TCSAFLUSH is specified.
         flags |= termios.TCSAFLUSH
     termios.tcsetattr(fd, flags, new)
-
-
-def close_nonstandard_fds():
-    for fd in xrange(3, SC_OPEN_MAX):
-        try:
-            os.close(fd)
-        except OSError:
-            pass
 
 
 def create_socketpair(size=None):
@@ -309,8 +304,8 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
     """
     Create a child process whose stdin/stdout is connected to a socket.
 
-    :param args:
-        Argument vector for execv() call.
+    :param list args:
+        Program argument vector.
     :param bool merge_stdio:
         If :data:`True`, arrange for `stderr` to be connected to the `stdout`
         socketpair, rather than inherited from the parent process. This may be
@@ -326,9 +321,9 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
     """
     parentfp, childfp = create_socketpair()
     # When running under a monkey patches-enabled gevent, the socket module
-    # yields file descriptors who already have O_NONBLOCK, which is
-    # persisted across fork, totally breaking Python. Therefore, drop
-    # O_NONBLOCK from Python's future stdin fd.
+    # yields descriptors who already have O_NONBLOCK, which is persisted across
+    # fork, totally breaking Python. Therefore, drop O_NONBLOCK from Python's
+    # future stdin fd.
     mitogen.core.set_block(childfp.fileno())
 
     stderr_r = None
@@ -452,8 +447,7 @@ def tty_create_child(args):
     slave end.
 
     :param list args:
-        :py:func:`os.execl` argument list.
-
+        Program argument vector.
     :returns:
         `(pid, tty_fd, None)`
     """
@@ -489,8 +483,7 @@ def hybrid_tty_create_child(args):
     attached to a TTY.
 
     :param list args:
-        :py:func:`os.execl` argument list.
-
+        Program argument vector.
     :returns:
         `(pid, socketpair_fd, tty_fd)`
     """
@@ -1187,9 +1180,9 @@ for _klass in mitogen.core.Poller, PollPoller, KqueuePoller, EpollPoller:
     if _klass.SUPPORTED:
         PREFERRED_POLLER = _klass
 
-# For apps that start threads dynamically, it's possible Latch will also get
-# very high-numbered wait fds when there are many connections, and so select()
-# becomes useless there too. So swap in our favourite poller.
+# For processes that start many threads or connections, it's possible Latch
+# will also get high-numbered FDs, and so select() becomes useless there too.
+# So swap in our favourite poller.
 if PollPoller.SUPPORTED:
     mitogen.core.Latch.poller_class = PollPoller
 else:
@@ -1198,16 +1191,14 @@ else:
 
 class DiagLogStream(mitogen.core.BasicStream):
     """
-    For "hybrid TTY/socketpair" mode, after a connection has been setup, a
-    spare TTY file descriptor will exist that cannot be closed, and to which
-    SSH or sudo may continue writing log messages.
+    For "hybrid TTY/socketpair" mode, after connection setup a spare TTY master
+    FD exists that cannot be closed, and to which SSH or sudo may continue
+    writing log messages.
 
-    The descriptor cannot be closed since the UNIX TTY layer will send a
-    termination signal to any processes whose controlling TTY is the TTY that
-    has been closed.
-
-    DiagLogStream takes over this descriptor and creates corresponding log
-    messages for anything written to it.
+    The descriptor cannot be closed since the UNIX TTY layer sends SIGHUP to
+    processes whose controlling TTY is the slave TTY whose master side has been
+    closed. LogProtocol takes over this FD and creates log messages for
+    anything written to it.
     """
 
     def __init__(self, fd, stream):
@@ -1573,7 +1564,7 @@ class ChildIdAllocator(object):
             for id_ in self.it:
                 return id_
 
-            master = mitogen.core.Context(self.router, 0)
+            master = self.router.context_by_id(0)
             start, end = master.send_await(
                 mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
             )
@@ -1830,9 +1821,11 @@ class Context(mitogen.core.Context):
         return not (self == other)
 
     def __eq__(self, other):
-        return (isinstance(other, mitogen.core.Context) and
-                (other.context_id == self.context_id) and
-                (other.router == self.router))
+        return (
+            isinstance(other, mitogen.core.Context) and
+            (other.context_id == self.context_id) and
+            (other.router == self.router)
+        )
 
     def __hash__(self):
         return hash((self.router, self.context_id))
@@ -2227,13 +2220,13 @@ class Router(mitogen.core.Router):
         kwargs.setdefault(u'debug', self.debug)
         kwargs.setdefault(u'profiling', self.profiling)
         kwargs.setdefault(u'unidirectional', self.unidirectional)
+        kwargs.setdefault(u'name', name)
 
         via = kwargs.pop(u'via', None)
         if via is not None:
-            return self.proxy_connect(via, method_name, name=name,
-                                      **mitogen.core.Kwargs(kwargs))
-        return self._connect(klass, name=name,
-                             **mitogen.core.Kwargs(kwargs))
+            return self.proxy_connect(via, method_name,
+                **mitogen.core.Kwargs(kwargs))
+        return self._connect(klass, **mitogen.core.Kwargs(kwargs))
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
         resp = via_context.call(_proxy_connect,
