@@ -2405,7 +2405,7 @@ class IoLogger(BasicStream):
     :class:`BasicStream` subclass that sets up redirection of a standard
     UNIX file descriptor back into the Python :mod:`logging` package.
     """
-    _buf = ''
+    _trailer = u''
 
     def __init__(self, broker, name, dest_fd):
         self._broker = broker
@@ -2427,10 +2427,17 @@ class IoLogger(BasicStream):
     def __repr__(self):
         return '<IoLogger %s>' % (self._name,)
 
-    def _log_lines(self):
-        while self._buf.find('\n') != -1:
-            line, _, self._buf = str_partition(self._buf, '\n')
-            self._log.info('%s', line.rstrip('\n'))
+    def _log_lines(self, buf):
+        start = 0
+        while True:
+            nl = min(buf.find('\n', start), start+1024)
+            if nl == -1:
+                break
+            self._log.info('%s', buf[start:nl])
+            start = nl + 1
+
+        if start:
+            self._trailer = buf[start:]
 
     def on_shutdown(self, broker):
         """Shut down the write end of the logging socket."""
@@ -2447,8 +2454,7 @@ class IoLogger(BasicStream):
         if not buf:
             return self.on_disconnect(broker)
 
-        self._buf += buf.decode('latin1')
-        self._log_lines()
+        self._log_lines(self._trailer + buf.decode('latin1'))
 
 
 class Router(object):
