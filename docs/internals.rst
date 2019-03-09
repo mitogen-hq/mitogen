@@ -15,46 +15,49 @@ Constants
 .. autodata:: CHUNK_SIZE
 
 
-Poller Classes
-==============
+Pollers
+=======
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Poller
-   :members:
+    :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: KqueuePoller
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: EpollPoller
 
 .. currentmodule:: mitogen.parent
-.. autoclass:: KqueuePoller
+.. autoclass:: PollPoller
 
 
-Latch Class
-===========
+Latch
+=====
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Latch
    :members:
 
 
-PidfulStreamHandler Class
-=========================
+PidfulStreamHandler
+===================
 
 .. currentmodule:: mitogen.core
 .. autoclass:: PidfulStreamHandler
    :members:
 
 
-Side Class
-==========
+Side
+====
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Side
    :members:
 
 
-Stream Classes
-==============
+Stream
+======
 
 .. currentmodule:: mitogen.core
 .. autoclass:: BasicStream
@@ -79,42 +82,24 @@ Stream Classes
 .. autoclass:: Stream
    :members:
 
-
-Other Stream Subclasses
-=======================
-
 .. currentmodule:: mitogen.core
-
 .. autoclass:: IoLogger
    :members:
 
+.. currentmodule:: mitogen.core
 .. autoclass:: Waker
    :members:
 
 
-Poller Class
-============
-
-.. currentmodule:: mitogen.core
-.. autoclass:: Poller
-    :members:
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: KqueuePoller
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: EpollPoller
-
-
-Importer Class
-==============
+Importer
+========
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Importer
    :members:
 
 
-Responder Class
+ModuleResponder
 ===============
 
 .. currentmodule:: mitogen.master
@@ -122,40 +107,59 @@ Responder Class
    :members:
 
 
-RouteMonitor Class
-==================
+RouteMonitor
+============
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: RouteMonitor
    :members:
 
 
-Forwarder Class
-===============
+TimerList
+=========
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: TimerList
+   :members:
+
+
+Timer
+=====
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: Timer
+   :members:
+
+
+Forwarder
+=========
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: ModuleForwarder
    :members:
 
 
-ExternalContext Class
-=====================
+ExternalContext
+===============
 
 .. currentmodule:: mitogen.core
 .. autoclass:: ExternalContext
     :members:
 
 
-mitogen.master
-==============
+Process
+=======
 
 .. currentmodule:: mitogen.parent
-.. autoclass:: ProcessMonitor
+.. autoclass:: Process
     :members:
 
 
-Blocking I/O Functions
-======================
+Helpers
+=======
+
+Blocking I/O
+------------
 
 These functions exist to support the blocking phase of setting up a new
 context. They will eventually be replaced with asynchronous equivalents.
@@ -167,8 +171,8 @@ context. They will eventually be replaced with asynchronous equivalents.
 .. autofunction:: write_all
 
 
-Subprocess Creation Functions
-=============================
+Subprocess Functions
+------------
 
 .. currentmodule:: mitogen.parent
 .. autofunction:: create_child
@@ -176,8 +180,8 @@ Subprocess Creation Functions
 .. autofunction:: tty_create_child
 
 
-Helper Functions
-================
+Helpers
+-------
 
 .. currentmodule:: mitogen.core
 .. autofunction:: to_text
