@@ -38,6 +38,7 @@ import codecs
 import errno
 import fcntl
 import getpass
+import heapq
 import inspect
 import logging
 import os
@@ -577,6 +578,52 @@ def write_all(fd, s, deadline=None):
         poller.close()
 
 
+class Timer(object):
+    """
+    Represents an unexpired timed callback.
+    """
+    def __init__(self, timer_list, when, func):
+        self.timer_list = timer_list
+        self.when = when
+        self.func = func
+        self.cancelled = False
+
+    def __eq__(self, other):
+        return self.when == other.when
+
+    def __lt__(self, other):
+        return self.when < other.when
+
+    def cancel(self):
+        self.cancelled = True
+
+
+class TimerList(object):
+    """
+    Represent a series of future events.
+    """
+    _now = time.time
+
+    def __init__(self):
+        self._lst = []
+
+    def get_timeout(self):
+        if self._lst:
+            return max(0, self._lst[0].when - self._now())
+
+    def schedule(self, when, func):
+        timer = Timer(self, when, func)
+        heapq.heappush(self._lst, timer)
+        return timer
+
+    def expire(self):
+        now = self._now()
+        while self._lst and self._lst[0].when <= now:
+            timer = heapq.heappop(self._lst)
+            if not timer.cancelled:
+                timer.func()
+
+
 class PartialZlib(object):
     """
     Because the mitogen.core source has a line appended to it during bootstrap,
@@ -726,17 +773,20 @@ def _upgrade_broker(broker):
     root = logging.getLogger()
     old_level = root.level
     root.setLevel(logging.CRITICAL)
+    try:
+        old = broker.poller
+        new = PREFERRED_POLLER()
+        for fd, data in old.readers:
+            new.start_receive(fd, data)
+        for fd, data in old.writers:
+            new.start_transmit(fd, data)
 
-    old = broker.poller
-    new = PREFERRED_POLLER()
-    for fd, data in old.readers:
-        new.start_receive(fd, data)
-    for fd, data in old.writers:
-        new.start_transmit(fd, data)
+        old.close()
+        broker.poller = new
+    finally:
+        root.setLevel(old_level)
 
-    old.close()
-    broker.poller = new
-    root.setLevel(old_level)
+    broker.timer_list = TimerList()
     LOG.debug('replaced %r with %r (new: %d readers, %d writers; '
               'old: %d readers, %d writers)', old, new,
               len(new.readers), len(new.writers),

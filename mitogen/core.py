@@ -2836,6 +2836,11 @@ class Router(object):
         self.broker.defer(self._async_route, msg)
 
 
+class NullTimerList(object):
+    def get_timeout(self):
+        return None
+
+
 class Broker(object):
     """
     Responsible for handling I/O multiplexing in a private thread.
@@ -2846,6 +2851,10 @@ class Broker(object):
     poller_class = Poller
     _waker = None
     _thread = None
+
+    # :func:`mitogen.parent._upgrade_broker` replaces this with
+    # :class:`mitogen.parent.TimerList` during upgrade.
+    timers = NullTimerList()
 
     #: Seconds grace to allow :class:`streams <Stream>` to shutdown gracefully
     #: before force-disconnecting them during :meth:`shutdown`.
@@ -2975,10 +2984,19 @@ class Broker(object):
         """
         _vv and IOLOG.debug('%r._loop_once(%r, %r)',
                             self, timeout, self.poller)
+
+        timer_to = self.timers.get_timeout()
+        if timeout is None:
+            timeout = timer_to
+        elif timer_to is not None and timer_to < timeout:
+            timeout = timer_to
+
         #IOLOG.debug('readers =\n%s', pformat(self.poller.readers))
         #IOLOG.debug('writers =\n%s', pformat(self.poller.writers))
         for side, func in self.poller.poll(timeout):
             self._call(side.stream, func)
+        if timer_to is not None:
+            self.timers.expire()
 
     def _broker_exit(self):
         """
