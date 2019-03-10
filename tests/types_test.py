@@ -16,6 +16,11 @@ from mitogen.core import b
 import testlib
 
 
+####
+#### see also message_test.py / PickledTest
+####
+
+
 class BlobTest(testlib.TestCase):
     klass = mitogen.core.Blob
 
