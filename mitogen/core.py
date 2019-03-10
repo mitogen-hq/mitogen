@@ -621,15 +621,14 @@ def iter_split(buf, delim, func):
     `buf`, avoiding intermediate lists and quadratic string operations. Return
     the trailing undelimited portion of `buf`.
     """
+    dlen = len(delim)
     start = 0
     while True:
         nl = buf.find(delim, start)
         if nl == -1:
-            break
+            return buf[start:]
         func(buf[start:nl])
-        start = nl + 1
-
-    return buf[start:]
+        start = nl + dlen
 
 
 class Py24Pickler(py_pickle.Pickler):
