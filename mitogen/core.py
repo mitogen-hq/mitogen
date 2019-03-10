@@ -2973,7 +2973,7 @@ class Broker(object):
         progress (e.g. log draining).
         """
         it = (side.keep_alive for (_, (side, _)) in self.poller.readers)
-        return sum(it, 0)
+        return sum(it, 0) > 0 or self.timers.get_timeout() is not None
 
     def defer_sync(self, func):
         """
