@@ -332,7 +332,7 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
         if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof -p %s' % (os.getpid(),))
+            import os; os.system('lsof -w -p %s' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 self, self._fd_count_before, get_fd_count(),
             )
