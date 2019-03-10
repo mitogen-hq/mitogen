@@ -394,7 +394,7 @@ class LogForwarder(object):
             name = '%s.%s' % (RLOG.name, context.name)
             self._cache[msg.src_id] = logger = logging.getLogger(name)
 
-        name, level_s, s = msg.data.decode('latin1').split('\x00', 2)
+        name, level_s, s = msg.data.decode('utf-8', 'replace').split('\x00', 2)
 
         # See logging.Handler.makeRecord()
         record = logging.LogRecord(
