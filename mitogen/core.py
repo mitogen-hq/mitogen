@@ -615,6 +615,20 @@ def import_module(modname):
     return __import__(modname, None, None, [''])
 
 
+def pipe():
+    """
+    Create a UNIX pipe pair using :func:`os.pipe`, wrapping the returned
+    descriptors in Python file objects in order to manage their lifetime and
+    ensure they are closed when their last reference is discarded and they have
+    not been closed explicitly.
+    """
+    rfd, wfd = os.pipe()
+    return (
+        os.fdopen(rfd, 'rb', 0),
+        os.fdopen(wfd, 'wb', 0)
+    )
+
+
 def iter_split(buf, delim, func):
     """
     Invoke `func(s)` for each `delim`-delimited chunk in the potentially large
