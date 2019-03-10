@@ -79,6 +79,25 @@
     - shell: locale-gen
       when: distro == "Debian"
 
+    - unarchive:
+        dest: /
+        src: ../data/docker/doas-debian.tar.gz
+      when: distro == "Debian"
+
+    - file:
+        path: /usr/local/bin/doas
+        mode: 'u=rwxs,go=rx'
+        owner: root
+        group: root
+      when: distro == "Debian"
+
+    - copy:
+        dest: /etc/doas.conf
+        content: |
+          permit :mitogen__group
+          permit :root
+      when: distro == "Debian"
+
     # Vanilla Ansible needs simplejson on CentOS 5.
     - shell: mkdir -p /usr/lib/python2.4/site-packages/simplejson/
       when: distro == "CentOS" and ver == "5"
