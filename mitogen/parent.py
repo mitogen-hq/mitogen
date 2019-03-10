@@ -221,9 +221,11 @@ def flags(names):
 
 
 def cfmakeraw(tflags):
-    """Given a list returned by :py:func:`termios.tcgetattr`, return a list
+    """
+    Given a list returned by :py:func:`termios.tcgetattr`, return a list
     modified in a manner similar to the `cfmakeraw()` C library function, but
-    additionally disabling local echo."""
+    additionally disabling local echo.
+    """
     # BSD: github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
     # Linux: github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
@@ -231,7 +233,7 @@ def cfmakeraw(tflags):
                     'ISTRIP INLCR ICRNL IXON IGNPAR')
     iflag &= ~flags('IGNBRK BRKINT PARMRK')
     oflag &= ~flags('OPOST')
-    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG'
+    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG '
                     'IEXTEN NOFLSH TOSTOP PENDIN')
     cflag &= ~flags('CSIZE PARENB')
     cflag |= flags('CS8 CREAD')
@@ -251,12 +253,11 @@ def disable_echo(fd):
 
 def create_socketpair(size=None):
     """
-    Create a :func:`socket.socketpair` to use for use as a child process's UNIX
-    stdio channels. As socket pairs are bidirectional, they are economical on
-    file descriptor usage as the same descriptor can be used for ``stdin`` and
+    Create a :func:`socket.socketpair` for use as a child's UNIX stdio
+    channels. As socketpairs are bidirectional, they are economical on file
+    descriptor usage as one descriptor can be used for ``stdin`` and
     ``stdout``. As they are sockets their buffers are tunable, allowing large
-    buffers to be configured in order to improve throughput for file transfers
-    and reduce :class:`mitogen.core.Broker` IO loop iterations.
+    buffers to improve file transfer throughput and reduce IO loop iterations.
     """
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
@@ -599,8 +600,8 @@ class TimerList(object):
     """
     Efficiently manage a list of cancellable future events relative to wall
     clock time. An instance of this class is installed as
-    :attr:`mitogen.master.Broker.timers` by default, and installed as
-    :attr:`mitogen.core.Broker.timers` in a child context after a call to
+    :attr:`mitogen.master.Broker.timers` by default, and as
+    :attr:`mitogen.core.Broker.timers` in children after a call to
     :func:`mitogen.parent.upgrade_router`.
 
     You can use :class:`TimerList` to cause the broker to wake at arbitrary
