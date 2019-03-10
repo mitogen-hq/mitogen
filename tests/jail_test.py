@@ -17,14 +17,16 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             jexec_path=self.jexec_path,
             container='somejail',
         )
+        stream = self.router.stream_by_id(context.context_id)
+
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
         self.assertEquals(argv[:4], [
             self.jexec_path,
-            '-u',
-            'someuser',
-            '--',
+            'somejail',
+            stream.conn.options.python_path,
+            '-c',
         ])
-        self.assertEquals('1', context.call(os.getenv, 'THIS_IS_STUB_jail'))
+        self.assertEquals('1', context.call(os.getenv, 'THIS_IS_STUB_JEXEC'))
 
 
 if __name__ == '__main__':
