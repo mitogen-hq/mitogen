@@ -214,7 +214,8 @@ else:
 
 
 class Error(Exception):
-    """Base for all exceptions raised by Mitogen.
+    """
+    Base for all exceptions raised by Mitogen.
 
     :param str fmt:
         Exception text, or format string if `args` is non-empty.
@@ -230,14 +231,18 @@ class Error(Exception):
 
 
 class LatchError(Error):
-    """Raised when an attempt is made to use a :class:`mitogen.core.Latch`
-    that has been marked closed."""
+    """
+    Raised when an attempt is made to use a :class:`mitogen.core.Latch` that
+    has been marked closed.
+    """
     pass
 
 
 class Blob(BytesType):
-    """A serializable bytes subclass whose content is summarized in repr()
-    output, making it suitable for logging binary data."""
+    """
+    A serializable bytes subclass whose content is summarized in repr() output,
+    making it suitable for logging binary data.
+    """
     def __repr__(self):
         return '[blob: %d bytes]' % len(self)
 
@@ -246,8 +251,10 @@ class Blob(BytesType):
 
 
 class Secret(UnicodeType):
-    """A serializable unicode subclass whose content is masked in repr()
-    output, making it suitable for logging passwords."""
+    """
+    A serializable unicode subclass whose content is masked in repr() output,
+    making it suitable for logging passwords.
+    """
     def __repr__(self):
         return '[secret]'
 
@@ -321,7 +328,9 @@ def _unpickle_call_error(s):
 
 
 class ChannelError(Error):
-    """Raised when a channel dies or has been closed."""
+    """
+    Raised when a channel dies or has been closed.
+    """
     remote_msg = 'Channel closed by remote end.'
     local_msg = 'Channel closed by local end.'
 
@@ -379,11 +388,13 @@ else:
 
 
 def has_parent_authority(msg, _stream=None):
-    """Policy function for use with :class:`Receiver` and
+    """
+    Policy function for use with :class:`Receiver` and
     :meth:`Router.add_handler` that requires incoming messages to originate
     from a parent context, or on a :class:`Stream` whose :attr:`auth_id
     <Stream.auth_id>` has been set to that of a parent context or the current
-    context."""
+    context.
+    """
     return (msg.auth_id == mitogen.context_id or
             msg.auth_id in mitogen.parent_ids)
 
@@ -432,35 +443,42 @@ def is_blacklisted_import(importer, fullname):
 
 
 def set_cloexec(fd):
-    """Set the file descriptor `fd` to automatically close on
-    :func:`os.execve`. This has no effect on file descriptors inherited across
-    :func:`os.fork`, they must be explicitly closed through some other means,
-    such as :func:`mitogen.fork.on_fork`."""
+    """
+    Set the file descriptor `fd` to automatically close on :func:`os.execve`.
+    This has no effect on file descriptors inherited across :func:`os.fork`,
+    they must be explicitly closed through some other means, such as
+    :func:`mitogen.fork.on_fork`.
+    """
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     assert fd > 2
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
 def set_nonblock(fd):
-    """Set the file descriptor `fd` to non-blocking mode. For most underlying
-    file types, this causes :func:`os.read` or :func:`os.write` to raise
+    """
+    Set the file descriptor `fd` to non-blocking mode. For most underlying file
+    types, this causes :func:`os.read` or :func:`os.write` to raise
     :class:`OSError` with :data:`errno.EAGAIN` rather than block the thread
-    when the underlying kernel buffer is exhausted."""
+    when the underlying kernel buffer is exhausted.
+    """
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
 def set_block(fd):
-    """Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread
-    when the underlying kernel buffer is exhausted."""
+    """
+    Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread when
+    the underlying kernel buffer is exhausted.
+    """
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
 
 
 def io_op(func, *args):
-    """Wrap `func(*args)` that may raise :class:`select.error`,
-    :class:`IOError`, or :class:`OSError`, trapping UNIX error codes relating
-    to disconnection and retry events in various subsystems:
+    """
+    Wrap `func(*args)` that may raise :class:`select.error`, :class:`IOError`,
+    or :class:`OSError`, trapping UNIX error codes relating to disconnection
+    and retry events in various subsystems:
 
     * When a signal is delivered to the process on Python 2, system call retry
       is signalled through :data:`errno.EINTR`. The invocation is automatically
@@ -491,7 +509,8 @@ def io_op(func, *args):
 
 
 class PidfulStreamHandler(logging.StreamHandler):
-    """A :class:`logging.StreamHandler` subclass used when
+    """
+    A :class:`logging.StreamHandler` subclass used when
     :meth:`Router.enable_debug() <mitogen.master.Router.enable_debug>` has been
     called, or the `debug` parameter was specified during context construction.
     Verifies the process ID has not changed on each call to :meth:`emit`,
@@ -599,8 +618,8 @@ def import_module(modname):
 def iter_split(buf, delim, func):
     """
     Invoke `func(s)` for each `delim`-delimited chunk in the potentially large
-    `buf`, avoiding intermediate lists and quadratic copies. Return the
-    trailing undelimited portion of `buf`.
+    `buf`, avoiding intermediate lists and quadratic string operations. Return
+    the trailing undelimited portion of `buf`.
     """
     start = 0
     while True:
@@ -725,8 +744,10 @@ class Message(object):
         return s
 
     def _find_global(self, module, func):
-        """Return the class implementing `module_name.class_name` or raise
-        `StreamError` if the module is not whitelisted."""
+        """
+        Return the class implementing `module_name.class_name` or raise
+        `StreamError` if the module is not whitelisted.
+        """
         if module == __name__:
             if func == '_unpickle_call_error' or func == 'CallError':
                 return _unpickle_call_error
@@ -2046,9 +2067,6 @@ class Poller(object):
             if gen and gen < self._generation:
                 yield data
 
-        if timeout:
-            timeout *= 1000
-
     def poll(self, timeout=None):
         """
         Block the calling thread until one or more FDs are ready for IO.
@@ -2715,7 +2733,7 @@ class Router(object):
 
         return handle
 
-    duplicate_handle_msg = 'cannot register a handle that is already exists'
+    duplicate_handle_msg = 'cannot register a handle that already exists'
     refused_msg = 'refused by policy'
     invalid_handle_msg = 'invalid handle'
     too_large_msg = 'message too large (max %d bytes)'
@@ -2860,8 +2878,8 @@ class Broker(object):
     """
     Responsible for handling I/O multiplexing in a private thread.
 
-    **Note:** This is the somewhat limited core version of the Broker class
-    used by child contexts. The master subclass is documented below.
+    **Note:** This somewhat limited core version is used by children. The
+    master subclass is documented below.
     """
     poller_class = Poller
     _waker = None
