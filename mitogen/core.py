@@ -3381,16 +3381,13 @@ class ExternalContext(object):
 
     def _nullify_stdio(self):
         """
-        Open /dev/null to replace stdin, and stdout/stderr temporarily. In case
-        of odd startup, assume we may be allocated a standard handle.
+        Open /dev/null to replace stdio temporarily. In case of odd startup,
+        assume we may be allocated a standard handle.
         """
-        fd = os.open('/dev/null', os.O_RDWR)
-        try:
-            for stdfd in (0, 1, 2):
-                if fd != stdfd:
-                    os.dup2(fd, stdfd)
-        finally:
-            if fd not in (0, 1, 2):
+        for stdfd, mode in ((0, os.O_RDONLY), (1, os.O_RDWR), (2, os.O_RDWR)):
+            fd = os.open('/dev/null', mode)
+            if fd != stdfd:
+                os.dup2(fd, stdfd)
                 os.close(fd)
 
     def _setup_stdio(self):
@@ -3402,10 +3399,11 @@ class ExternalContext(object):
         # around a permanent dup() to avoid receiving SIGHUP.
         try:
             if os.isatty(2):
-                self.reserve_tty_fd = os.dup(2)
-                set_cloexec(self.reserve_tty_fd)
+                self.reserve_tty_fp = os.fdopen(os.dup(2), 'r+b', 0)
+                set_cloexec(self.reserve_tty_fp)
         except OSError:
             pass
+
         # When sys.stdout was opened by the runtime, overwriting it will not
         # close FD 1. However when forking from a child that previously used
         # fdopen(), overwriting it /will/ close FD 1. So we must swallow the
