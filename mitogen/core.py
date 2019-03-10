@@ -722,6 +722,10 @@ class Message(object):
     #: the :class:`mitogen.select.Select` interface. Defaults to :data:`None`.
     receiver = None
 
+    HEADER_FMT = '>hLLLLLL'
+    HEADER_LEN = struct.calcsize(HEADER_FMT)
+    HEADER_MAGIC = 0x4d49  # 'MI'
+
     def __init__(self, **kwargs):
         """
         Construct a message from from the supplied `kwargs`. :attr:`src_id` and
@@ -731,6 +735,14 @@ class Message(object):
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
         assert isinstance(self.data, BytesType)
+
+    def pack(self):
+        return (
+            struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, self.dst_id,
+                        self.src_id, self.auth_id, self.handle,
+                        self.reply_to or 0, len(self.data))
+            + self.data
+        )
 
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(context_id, name, router=self.router)
@@ -930,7 +942,7 @@ def _unpickle_sender(router, context_id, dst_handle):
     if not (isinstance(router, Router) and
             isinstance(context_id, (int, long)) and context_id >= 0 and
             isinstance(dst_handle, (int, long)) and dst_handle > 0):
-        raise TypeError('cannot unpickle Sender: bad input')
+        raise TypeError('cannot unpickle Sender: bad input or missing router')
     return Sender(Context(router, context_id), dst_handle)
 
 
