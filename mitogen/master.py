@@ -817,7 +817,7 @@ class ModuleResponder(object):
         )
 
     def __repr__(self):
-        return 'ModuleResponder(%r)' % (self._router,)
+        return 'ModuleResponder'
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
@@ -927,8 +927,8 @@ class ModuleResponder(object):
                 dst_id=stream.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            LOG.debug('%s: sending module %s (%.2f KiB)',
-                      stream.name, fullname, len(msg.data) / 1024.0)
+            LOG.debug('%s: sending %s (%.2f KiB) to %s',
+                      self, fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
             stream.sent_modules.add(fullname)
             if tup[2] is not None:
