@@ -576,11 +576,11 @@ class Timer(object):
     """
     Represents a future event.
     """
-    def __init__(self, timer_list, when, func):
-        self.timer_list = timer_list
+    cancelled = False
+
+    def __init__(self, when, func):
         self.when = when
         self.func = func
-        self.cancelled = False
 
     def __eq__(self, other):
         return self.when == other.when
@@ -636,7 +636,7 @@ class TimerList(object):
 
     def schedule(self, when, func):
         """
-        Schedule a new future event.
+        Schedule a future event.
 
         :param float when:
             UNIX time in seconds when event should occur.
@@ -646,7 +646,7 @@ class TimerList(object):
             A :class:`Timer` instance, exposing :meth:`Timer.cancel`, which may
             be used to cancel the future invocation.
         """
-        timer = Timer(self, when, func)
+        timer = Timer(when, func)
         heapq.heappush(self._lst, timer)
         return timer
 
