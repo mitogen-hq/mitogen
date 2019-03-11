@@ -283,7 +283,11 @@ class LogCapturer(object):
         self.logger.level = logging.DEBUG
 
     def raw(self):
-        return self.sio.getvalue()
+        s = self.sio.getvalue()
+        # Python 2.x logging package hard-wires UTF-8 output.
+        if isinstance(s, mitogen.core.BytesType):
+            s = s.decode('utf-8')
+        return s
 
     def msgs(self):
         return self.handler.msgs
