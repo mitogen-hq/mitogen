@@ -83,8 +83,11 @@ HOSTKEY_FAIL_PATTERN = re.compile(
 )
 
 # [user@host: ] permission denied
+# issue #271: work around conflict with user shell reporting 'permission
+# denied' e.g. during chdir($HOME) by only matching it at the start of the
+# line.
 PERMDENIED_PATTERN = re.compile(
-    b('(?:[^@]+@[^:]+: )?'  # Absent in OpenSSH <7.5
+    b('^(?:[^@]+@[^:]+: )?'  # Absent in OpenSSH <7.5
       'Permission denied'),
     re.I
 )
@@ -122,9 +125,6 @@ class SetupProtocol(mitogen.parent.RegexProtocol):
         self.stream.conn._fail_connection(HostKeyError(hostkey_failed_msg))
 
     def _on_permission_denied(self, line, match):
-        # issue #271: work around conflict with user shell reporting
-        # 'permission denied' e.g. during chdir($HOME) by only matching it at
-        # the start of the line.
         if self.stream.conn.options.password is not None and \
                 self.password_sent:
             self.stream.conn._fail_connection(

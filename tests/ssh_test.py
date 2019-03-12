@@ -58,6 +58,14 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         expect = "%s: debug1: Reading configuration data" % (context.name,)
         self.assertTrue(expect in s)
 
+    def test_bash_permission_denied(self):
+        # issue #271: only match Permission Denied at start of line.
+        context = self.docker_ssh(
+            username='mitogen__permdenied',
+            password='permdenied_password',
+            ssh_debug_level=3,
+        )
+
     def test_stream_name(self):
         context = self.docker_ssh(
             username='mitogen__has_sudo',
