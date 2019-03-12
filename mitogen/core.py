@@ -50,6 +50,7 @@ import signal
 import socket
 import struct
 import sys
+import syslog
 import threading
 import time
 import traceback
@@ -3245,8 +3246,10 @@ class Broker(object):
 
             fire(self, 'shutdown')
             self._broker_shutdown()
-        except Exception:
-            LOG.exception('_broker_main() crashed')
+        except Exception as e:
+            LOG.exception('broker crashed')
+            syslog.syslog(syslog.LOG_ERR, 'broker crashed: %s' % (e,))
+            syslog.closelog()  # prevent test 'fd leak'.
 
         self._alive = False  # Ensure _alive is consistent on crash.
         self._exitted = True
