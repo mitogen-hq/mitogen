@@ -91,26 +91,20 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         self.assertEquals(name, sudo.name)
 
     def test_password_required(self):
-        try:
-            context = self.docker_ssh(
+        e = self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.docker_ssh(
                 username='mitogen__has_sudo',
             )
-            assert 0, 'exception not thrown'
-        except mitogen.ssh.PasswordError:
-            e = sys.exc_info()[1]
-
+        )
         self.assertEqual(e.args[0], mitogen.ssh.password_required_msg)
 
     def test_password_incorrect(self):
-        try:
-            context = self.docker_ssh(
+        e = self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='badpw',
             )
-            assert 0, 'exception not thrown'
-        except mitogen.ssh.PasswordError:
-            e = sys.exc_info()[1]
-
+        )
         self.assertEqual(e.args[0], mitogen.ssh.password_incorrect_msg)
 
     def test_password_specified(self):
@@ -125,14 +119,11 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         )
 
     def test_pubkey_required(self):
-        try:
-            context = self.docker_ssh(
+        e = self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.docker_ssh(
                 username='mitogen__has_sudo_pubkey',
             )
-            assert 0, 'exception not thrown'
-        except mitogen.ssh.PasswordError:
-            e = sys.exc_info()[1]
-
+        )
         self.assertEqual(e.args[0], mitogen.ssh.password_required_msg)
 
     def test_pubkey_specified(self):
