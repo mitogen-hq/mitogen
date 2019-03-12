@@ -634,16 +634,23 @@ def iter_split(buf, delim, func):
     """
     Invoke `func(s)` for each `delim`-delimited chunk in the potentially large
     `buf`, avoiding intermediate lists and quadratic string operations. Return
-    the trailing undelimited portion of `buf`.
+    the trailing undelimited portion of `buf`, or any unprocessed portion of
+    `buf` after `func(s)` returned :data:`False`.
+
+    :returns:
+        `(trailer, cont)`, where `cont` is :data:`False` if the last call to
+        `func(s)` returned :data:`False`.
     """
     dlen = len(delim)
     start = 0
-    while True:
+    cont = True
+    while cont:
         nl = buf.find(delim, start)
         if nl == -1:
-            return buf[start:]
-        func(buf[start:nl])
+            break
+        cont = not func(buf[start:nl]) is False
         start = nl + dlen
+    return buf[start:], cont
 
 
 class Py24Pickler(py_pickle.Pickler):
