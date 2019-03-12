@@ -67,12 +67,12 @@ class ListenerTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.unix.Listener
 
     def test_constructor_basic(self):
-        listener = self.klass(router=self.router)
+        listener = self.klass.build_stream(router=self.router)
         capture = testlib.LogCapturer()
         capture.start()
         try:
-            self.assertFalse(mitogen.unix.is_path_dead(listener.path))
-            os.unlink(listener.path)
+            self.assertFalse(mitogen.unix.is_path_dead(listener.protocol.path))
+            os.unlink(listener.protocol.path)
             # ensure we catch 0 byte read error log message
             self.broker.shutdown()
             self.broker.join()
@@ -96,15 +96,17 @@ class ClientTest(testlib.TestCase):
 
     def _test_simple_client(self, path):
         router, context = self._try_connect(path)
-        self.assertEquals(0, context.context_id)
-        self.assertEquals(1, mitogen.context_id)
-        self.assertEquals(0, mitogen.parent_id)
-        resp = context.call_service(service_name=MyService, method_name='ping')
-        self.assertEquals(mitogen.context_id, resp['src_id'])
-        self.assertEquals(0, resp['auth_id'])
-        router.broker.shutdown()
-        router.broker.join()
-        os.unlink(path)
+        try:
+            self.assertEquals(0, context.context_id)
+            self.assertEquals(1, mitogen.context_id)
+            self.assertEquals(0, mitogen.parent_id)
+            resp = context.call_service(service_name=MyService, method_name='ping')
+            self.assertEquals(mitogen.context_id, resp['src_id'])
+            self.assertEquals(0, resp['auth_id'])
+        finally:
+            router.broker.shutdown()
+            router.broker.join()
+            os.unlink(path)
 
     @classmethod
     def _test_simple_server(cls, path):
@@ -112,7 +114,7 @@ class ClientTest(testlib.TestCase):
         latch = mitogen.core.Latch()
         try:
             try:
-                listener = cls.klass(path=path, router=router)
+                listener = cls.klass.build_stream(path=path, router=router)
                 pool = mitogen.service.Pool(router=router, services=[
                     MyService(latch=latch, router=router),
                 ])

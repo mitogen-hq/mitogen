@@ -116,9 +116,15 @@ def get_machinectl_pid(path, name):
     raise Error("could not find PID from machinectl output.\n%s", output)
 
 
-class Stream(mitogen.parent.Stream):
-    child_is_immediate_subprocess = False
+GET_LEADER_BY_KIND = {
+    'docker': ('docker_path', get_docker_pid),
+    'lxc': ('lxc_info_path', get_lxc_pid),
+    'lxd': ('lxc_path', get_lxd_pid),
+    'machinectl': ('machinectl_path', get_machinectl_pid),
+}
 
+
+class Options(mitogen.parent.Options):
     container = None
     username = 'root'
     kind = None
@@ -128,24 +134,17 @@ class Stream(mitogen.parent.Stream):
     lxc_info_path = 'lxc-info'
     machinectl_path = 'machinectl'
 
-    GET_LEADER_BY_KIND = {
-        'docker': ('docker_path', get_docker_pid),
-        'lxc': ('lxc_info_path', get_lxc_pid),
-        'lxd': ('lxc_path', get_lxd_pid),
-        'machinectl': ('machinectl_path', get_machinectl_pid),
-    }
-
-    def construct(self, container, kind, username=None, docker_path=None,
-                  lxc_path=None, lxc_info_path=None, machinectl_path=None,
-                  **kwargs):
-        super(Stream, self).construct(**kwargs)
-        if kind not in self.GET_LEADER_BY_KIND:
+    def __init__(self, container, kind, username=None, docker_path=None,
+                 lxc_path=None, lxc_info_path=None, machinectl_path=None,
+                 **kwargs):
+        super(Options, self).__init__(**kwargs)
+        if kind not in GET_LEADER_BY_KIND:
             raise Error('unsupported container kind: %r', kind)
 
-        self.container = container
+        self.container = mitogen.core.to_text(container)
         self.kind = kind
         if username:
-            self.username = username
+            self.username = mitogen.core.to_text(username)
         if docker_path:
             self.docker_path = docker_path
         if lxc_path:
@@ -154,6 +153,11 @@ class Stream(mitogen.parent.Stream):
             self.lxc_info_path = lxc_info_path
         if machinectl_path:
             self.machinectl_path = machinectl_path
+
+
+class Connection(mitogen.parent.Connection):
+    options_class = Options
+    child_is_immediate_subprocess = False
 
     # Order matters. https://github.com/karelzak/util-linux/commit/854d0fe/
     NS_ORDER = ('ipc', 'uts', 'net', 'pid', 'mnt', 'user')
@@ -189,15 +193,15 @@ class Stream(mitogen.parent.Stream):
         try:
             os.setgroups([grent.gr_gid
                           for grent in grp.getgrall()
-                          if self.username in grent.gr_mem])
-            pwent = pwd.getpwnam(self.username)
+                          if self.options.username in grent.gr_mem])
+            pwent = pwd.getpwnam(self.options.username)
             os.setreuid(pwent.pw_uid, pwent.pw_uid)
             # shadow-4.4/libmisc/setupenv.c. Not done: MAIL, PATH
             os.environ.update({
                 'HOME': pwent.pw_dir,
                 'SHELL': pwent.pw_shell or '/bin/sh',
-                'LOGNAME': self.username,
-                'USER': self.username,
+                'LOGNAME': self.options.username,
+                'USER': self.options.username,
             })
             if ((os.path.exists(pwent.pw_dir) and
                  os.access(pwent.pw_dir, os.X_OK))):
@@ -217,7 +221,7 @@ class Stream(mitogen.parent.Stream):
         # namespaces, meaning starting new threads in the exec'd program will
         # fail. The solution is forking, so inject a /bin/sh call to achieve
         # this.
-        argv = super(Stream, self).get_boot_command()
+        argv = super(Connection, self).get_boot_command()
         # bash will exec() if a single command was specified and the shell has
         # nothing left to do, so "; exit $?" gives bash a reason to live.
         return ['/bin/sh', '-c', '%s; exit $?' % (mitogen.parent.Argv(argv),)]
@@ -226,13 +230,12 @@ class Stream(mitogen.parent.Stream):
         return mitogen.parent.create_child(args, preexec_fn=self.preexec_fn)
 
     def _get_name(self):
-        return u'setns.' + self.container
+        return u'setns.' + self.options.container
 
-    def connect(self):
-        self.name = self._get_name()
-        attr, func = self.GET_LEADER_BY_KIND[self.kind]
-        tool_path = getattr(self, attr)
-        self.leader_pid = func(tool_path, self.container)
+    def connect(self, **kwargs):
+        attr, func = GET_LEADER_BY_KIND[self.options.kind]
+        tool_path = getattr(self.options, attr)
+        self.leader_pid = func(tool_path, self.options.container)
         LOG.debug('Leader PID for %s container %r: %d',
-                  self.kind, self.container, self.leader_pid)
-        super(Stream, self).connect()
+                  self.options.kind, self.options.container, self.leader_pid)
+        return super(Connection, self).connect(**kwargs)

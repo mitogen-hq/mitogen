@@ -29,6 +29,7 @@
 # !mitogen: minify_safe
 
 import logging
+import re
 
 import mitogen.core
 import mitogen.parent
@@ -42,12 +43,105 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 
+password_incorrect_msg = 'su password is incorrect'
+password_required_msg = 'su password is required'
+
 
 class PasswordError(mitogen.core.StreamError):
     pass
 
 
-class Stream(mitogen.parent.Stream):
+class SetupBootstrapProtocol(mitogen.parent.BootstrapProtocol):
+    password_sent = False
+
+    def setup_patterns(self, conn):
+        """
+        su options cause the regexes used to vary. This is a mess, requires
+        reworking.
+        """
+        incorrect_pattern = re.compile(
+            mitogen.core.b('|').join(
+                re.escape(s.encode('utf-8'))
+                for s in conn.options.incorrect_prompts
+            ),
+            re.I
+        )
+        prompt_pattern = re.compile(
+            re.escape(
+                conn.options.password_prompt.encode('utf-8')
+            ),
+            re.I
+        )
+
+        self.PATTERNS = mitogen.parent.BootstrapProtocol.PATTERNS + [
+            (incorrect_pattern, type(self)._on_password_incorrect),
+        ]
+        self.PARTIAL_PATTERNS = mitogen.parent.BootstrapProtocol.PARTIAL_PATTERNS + [
+            (prompt_pattern, type(self)._on_password_prompt),
+        ]
+
+    def _on_password_prompt(self, line, match):
+        LOG.debug('%r: (password prompt): %r',
+            self.stream.name, line.decode('utf-8', 'replace'))
+
+        if self.stream.conn.options.password is None:
+            self.stream.conn._fail_connection(
+                PasswordError(password_required_msg)
+            )
+            return
+
+        if self.password_sent:
+            self.stream.conn._fail_connection(
+                PasswordError(password_incorrect_msg)
+            )
+            return
+
+        self.stream.transmit_side.write(
+            (self.stream.conn.options.password + '\n').encode('utf-8')
+        )
+        self.password_sent = True
+
+    def _on_password_incorrect(self, line, match):
+        if self.password_sent:
+            self.stream.conn._fail_connection(
+                PasswordError(password_incorrect_msg)
+            )
+
+
+class Options(mitogen.parent.Options):
+    username = u'root'
+    password = None
+    su_path = 'su'
+    password_prompt = u'password:'
+    incorrect_prompts = (
+        u'su: sorry',                   # BSD
+        u'su: authentication failure',  # Linux
+        u'su: incorrect password',      # CentOS 6
+        u'authentication is denied',    # AIX
+    )
+
+    def __init__(self, username=None, password=None, su_path=None,
+                 password_prompt=None, incorrect_prompts=None, **kwargs):
+        super(Options, self).__init__(**kwargs)
+        if username is not None:
+            self.username = mitogen.core.to_text(username)
+        if password is not None:
+            self.password = mitogen.core.to_text(password)
+        if su_path is not None:
+            self.su_path = su_path
+        if password_prompt is not None:
+            self.password_prompt = password_prompt
+        if incorrect_prompts is not None:
+            self.incorrect_prompts = [
+                mitogen.core.to_text(p)
+                for p in incorrect_prompts
+            ]
+
+
+class Connection(mitogen.parent.Connection):
+    options_class = Options
+    stream_protocol_class = SetupBootstrapProtocol
+
     # TODO: BSD su cannot handle stdin being a socketpair, but it does let the
     # child inherit fds from the parent. So we can still pass a socketpair in
     # for hybrid_tty_create_child(), there just needs to be either a shell
@@ -55,74 +149,14 @@ class Stream(mitogen.parent.Stream):
     create_child = staticmethod(mitogen.parent.tty_create_child)
     child_is_immediate_subprocess = False
 
-    #: Once connected, points to the corresponding DiagLogStream, allowing it to
-    #: be disconnected at the same time this stream is being torn down.
-
-    username = 'root'
-    password = None
-    su_path = 'su'
-    password_prompt = b('password:')
-    incorrect_prompts = (
-        b('su: sorry'),                    # BSD
-        b('su: authentication failure'),   # Linux
-        b('su: incorrect password'),       # CentOS 6
-        b('authentication is denied'),     # AIX
-    )
-
-    def construct(self, username=None, password=None, su_path=None,
-                  password_prompt=None, incorrect_prompts=None, **kwargs):
-        super(Stream, self).construct(**kwargs)
-        if username is not None:
-            self.username = username
-        if password is not None:
-            self.password = password
-        if su_path is not None:
-            self.su_path = su_path
-        if password_prompt is not None:
-            self.password_prompt = password_prompt.lower()
-        if incorrect_prompts is not None:
-            self.incorrect_prompts = map(str.lower, incorrect_prompts)
-
     def _get_name(self):
-        return u'su.' + mitogen.core.to_text(self.username)
+        return u'su.' + self.options.username
+
+    def stream_factory(self):
+        stream = super(Connection, self).stream_factory()
+        stream.protocol.setup_patterns(self)
+        return stream
 
     def get_boot_command(self):
-        argv = mitogen.parent.Argv(super(Stream, self).get_boot_command())
-        return [self.su_path, self.username, '-c', str(argv)]
-
-    password_incorrect_msg = 'su password is incorrect'
-    password_required_msg = 'su password is required'
-
-    def _connect_input_loop(self, it):
-        password_sent = False
-
-        for buf in it:
-            LOG.debug('%r: received %r', self, buf)
-            if buf.endswith(self.EC0_MARKER):
-                self._ec0_received()
-                return
-            if any(s in buf.lower() for s in self.incorrect_prompts):
-                if password_sent:
-                    raise PasswordError(self.password_incorrect_msg)
-            elif self.password_prompt in buf.lower():
-                if self.password is None:
-                    raise PasswordError(self.password_required_msg)
-                if password_sent:
-                    raise PasswordError(self.password_incorrect_msg)
-                LOG.debug('sending password')
-                self.transmit_side.write(
-                    mitogen.core.to_text(self.password + '\n').encode('utf-8')
-                )
-                password_sent = True
-
-        raise mitogen.core.StreamError('bootstrap failed')
-
-    def _connect_bootstrap(self):
-        it = mitogen.parent.iter_read(
-            fds=[self.receive_side.fd],
-            deadline=self.connect_deadline,
-        )
-        try:
-            self._connect_input_loop(it)
-        finally:
-            it.close()
+        argv = mitogen.parent.Argv(super(Connection, self).get_boot_command())
+        return [self.options.su_path, self.options.username, '-c', str(argv)]

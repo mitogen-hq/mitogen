@@ -117,14 +117,12 @@ SSH_GETOPTS = (
 _mitogen = None
 
 
-class IoPump(mitogen.core.BasicStream):
+class IoPump(mitogen.core.Protocol):
     _output_buf = ''
     _closed = False
 
-    def __init__(self, broker, stdin_fd, stdout_fd):
+    def __init__(self, broker):
         self._broker = broker
-        self.receive_side = mitogen.core.Side(self, stdout_fd)
-        self.transmit_side = mitogen.core.Side(self, stdin_fd)
 
     def write(self, s):
         self._output_buf += s
@@ -134,13 +132,13 @@ class IoPump(mitogen.core.BasicStream):
         self._closed = True
         # If local process hasn't exitted yet, ensure its write buffer is
         # drained before lazily triggering disconnect in on_transmit.
-        if self.transmit_side.fd is not None:
+        if self.transmit_side.fp.fileno() is not None:
             self._broker._start_transmit(self)
 
-    def on_shutdown(self, broker):
+    def on_shutdown(self, stream, broker):
         self.close()
 
-    def on_transmit(self, broker):
+    def on_transmit(self, stream, broker):
         written = self.transmit_side.write(self._output_buf)
         IOLOG.debug('%r.on_transmit() -> len %r', self, written)
         if written is None:
@@ -153,8 +151,8 @@ class IoPump(mitogen.core.BasicStream):
             if self._closed:
                 self.on_disconnect(broker)
 
-    def on_receive(self, broker):
-        s = self.receive_side.read()
+    def on_receive(self, stream, broker):
+        s = stream.receive_side.read()
         IOLOG.debug('%r.on_receive() -> len %r', self, len(s))
         if s:
             mitogen.core.fire(self, 'receive', s)
@@ -163,8 +161,8 @@ class IoPump(mitogen.core.BasicStream):
 
     def __repr__(self):
         return 'IoPump(%r, %r)' % (
-            self.receive_side.fd,
-            self.transmit_side.fd,
+            self.receive_side.fp.fileno(),
+            self.transmit_side.fp.fileno(),
         )
 
 
@@ -173,14 +171,15 @@ class Process(object):
     Manages the lifetime and pipe connections of the SSH command running in the
     slave.
     """
-    def __init__(self, router, stdin_fd, stdout_fd, proc=None):
+    def __init__(self, router, stdin_fp, stdout_fp, proc=None):
         self.router = router
-        self.stdin_fd = stdin_fd
-        self.stdout_fd = stdout_fd
+        self.stdin_fp = stdin_fp
+        self.stdout_fp = stdout_fp
         self.proc = proc
         self.control_handle = router.add_handler(self._on_control)
         self.stdin_handle = router.add_handler(self._on_stdin)
-        self.pump = IoPump(router.broker, stdin_fd, stdout_fd)
+        self.pump = IoPump.build_stream(router.broker)
+        self.pump.accept(stdin_fp, stdout_fp)
         self.stdin = None
         self.control = None
         self.wake_event = threading.Event()
@@ -193,7 +192,7 @@ class Process(object):
             pmon.add(proc.pid, self._on_proc_exit)
 
     def __repr__(self):
-        return 'Process(%r, %r)' % (self.stdin_fd, self.stdout_fd)
+        return 'Process(%r, %r)' % (self.stdin_fp, self.stdout_fp)
 
     def _on_proc_exit(self, status):
         LOG.debug('%r._on_proc_exit(%r)', self, status)
@@ -202,12 +201,12 @@ class Process(object):
     def _on_stdin(self, msg):
         if msg.is_dead:
             IOLOG.debug('%r._on_stdin() -> %r', self, data)
-            self.pump.close()
+            self.pump.protocol.close()
             return
 
         data = msg.unpickle()
         IOLOG.debug('%r._on_stdin() -> len %d', self, len(data))
-        self.pump.write(data)
+        self.pump.protocol.write(data)
 
     def _on_control(self, msg):
         if not msg.is_dead:
@@ -279,13 +278,7 @@ def _start_slave(src_id, cmdline, router):
         stdout=subprocess.PIPE,
     )
 
-    process = Process(
-        router,
-        proc.stdin.fileno(),
-        proc.stdout.fileno(),
-        proc,
-    )
-
+    process = Process(router, proc.stdin, proc.stdout, proc)
     return process.control_handle, process.stdin_handle
 
 
@@ -361,7 +354,9 @@ def _fakessh_main(dest_context_id, econtext):
     LOG.debug('_fakessh_main: received control_handle=%r, stdin_handle=%r',
               control_handle, stdin_handle)
 
-    process = Process(econtext.router, 1, 0)
+    process = Process(econtext.router,
+                      stdin_fp=os.fdopen(1, 'w+b', 0),
+                      stdout_fp=os.fdopen(0, 'r+b', 0))
     process.start_master(
         stdin=mitogen.core.Sender(dest, stdin_handle),
         control=mitogen.core.Sender(dest, control_handle),
@@ -427,7 +422,7 @@ def run(dest, router, args, deadline=None, econtext=None):
 
     stream = mitogen.core.Stream(router, context_id)
     stream.name = u'fakessh'
-    stream.accept(sock1.fileno(), sock1.fileno())
+    stream.accept(sock1, sock1)
     router.register(fakessh, stream)
 
     # Held in socket buffer until process is booted.

@@ -531,14 +531,15 @@ class SysModulesMethod(FinderMethod):
             return
 
         if not isinstance(module, types.ModuleType):
-            LOG.debug('sys.modules[%r] absent or not a regular module',
-                      fullname)
+            LOG.debug('%r: sys.modules[%r] absent or not a regular module',
+                      self, fullname)
             return
 
         path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
 
+        LOG.debug('%r: sys.modules[%r]: found %s', self, fullname, path)
         is_pkg = hasattr(module, '__path__')
         try:
             source = inspect.getsource(module)
@@ -920,17 +921,17 @@ class ModuleResponder(object):
         return tup
 
     def _send_load_module(self, stream, fullname):
-        if fullname not in stream.sent_modules:
+        if fullname not in stream.protocol.sent_modules:
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
                 tup,
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
             LOG.debug('%s: sending %s (%.2f KiB) to %s',
                       self, fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
-            stream.sent_modules.add(fullname)
+            stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
                 self.good_load_module_count += 1
                 self.good_load_module_size += len(msg.data)
@@ -939,23 +940,23 @@ class ModuleResponder(object):
 
     def _send_module_load_failed(self, stream, fullname):
         self.bad_load_module_count += 1
-        stream.send(
+        stream.protocol.send(
             mitogen.core.Message.pickled(
                 self._make_negative_response(fullname),
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
         )
 
     def _send_module_and_related(self, stream, fullname):
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             return
 
         try:
             tup = self._build_tuple(fullname)
             for name in tup[4]:  # related
                 parent, _, _ = str_partition(name, '.')
-                if parent != fullname and parent not in stream.sent_modules:
+                if parent != fullname and parent not in stream.protocol.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
@@ -976,7 +977,7 @@ class ModuleResponder(object):
         fullname = msg.data.decode()
         LOG.debug('%s requested module %s', stream.name, fullname)
         self.get_module_count += 1
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
 
@@ -987,12 +988,12 @@ class ModuleResponder(object):
             self.get_module_secs += time.time() - t0
 
     def _send_forward_module(self, stream, context, fullname):
-        if stream.remote_id != context.context_id:
+        if stream.protocol.remote_id != context.context_id:
             stream.send(
                 mitogen.core.Message(
                     data=b('%s\x00%s' % (context.context_id, fullname)),
                     handle=mitogen.core.FORWARD_MODULE,
-                    dst_id=stream.remote_id,
+                    dst_id=stream.protocol.remote_id,
                 )
             )
 

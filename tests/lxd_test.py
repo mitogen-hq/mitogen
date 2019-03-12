@@ -30,7 +30,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
                 lxc_path='true',
             )
         )
-        self.assertTrue(str(e).endswith(mitogen.lxd.Stream.eof_error_hint))
+        self.assertTrue(str(e).endswith(mitogen.lxd.Connection.eof_error_hint))
 
 
 if __name__ == '__main__':

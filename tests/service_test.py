@@ -44,8 +44,8 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(isinstance(id_, int))
 
     def test_sibling_cannot_activate_framework(self):
-        l1 = self.router.local()
-        l2 = self.router.local()
+        l1 = self.router.local(name='l1')
+        l2 = self.router.local(name='l2')
         exc = self.assertRaises(mitogen.core.CallError,
             lambda: l2.call(call_service_in, l1, MyService2.name(), 'get_id'))
         self.assertTrue(mitogen.core.Router.refused_msg in exc.args[0])

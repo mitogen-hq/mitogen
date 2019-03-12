@@ -171,7 +171,7 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
         self.assertTrue(sem.get().is_dead)
 
         # Ensure it was logged.
-        expect = '_broker_main() crashed'
+        expect = 'broker crashed'
         self.assertTrue(expect in log.stop())
 
         self.broker.join()
@@ -364,8 +364,8 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         # treated like a parent.
         l1 = self.router.local()
         l1s = self.router.stream_by_id(l1.context_id)
-        l1s.auth_id = mitogen.context_id
-        l1s.is_privileged = True
+        l1s.protocol.auth_id = mitogen.context_id
+        l1s.protocol.is_privileged = True
 
         l2 = self.router.local()
         e = self.assertRaises(mitogen.core.CallError,
@@ -378,12 +378,21 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
 class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
     def test_egress_ids_populated(self):
         # Ensure Stream.egress_ids is populated on message reception.
-        c1 = self.router.local()
-        stream = self.router.stream_by_id(c1.context_id)
-        self.assertEquals(set(), stream.egress_ids)
+        c1 = self.router.local(name='c1')
+        c2 = self.router.local(name='c2')
 
-        c1.call(time.sleep, 0)
-        self.assertEquals(set([mitogen.context_id]), stream.egress_ids)
+        c1s = self.router.stream_by_id(c1.context_id)
+        try:
+            c1.call(ping_context, c2)
+        except mitogen.core.CallError:
+            # Fails because siblings cant call funcs in each other, but this
+            # causes messages to be sent.
+            pass
+
+        self.assertEquals(c1s.protocol.egress_ids, set([
+            mitogen.context_id,
+            c2.context_id,
+        ]))
 
 
 if __name__ == '__main__':
