@@ -341,7 +341,20 @@ class TestCase(unittest2.TestCase):
                 self, self._fd_count_before, get_fd_count(),
             )
 
+    def _teardown_check_zombies(self):
+        try:
+            pid, status, ru = os.wait3(os.WNOHANG)
+        except OSError:
+            return  # ECHILD
+
+        if pid:
+            assert 0, "%s failed to reap subprocess %d (status %d)." % (
+                self, pid, status
+            )
+        assert 0, "%s leaked still-running subprocesses." % (self,)
+
     def tearDown(self):
+        self._teardown_check_zombies()
         self._teardown_check_threads()
         self._teardown_check_fds()
         super(TestCase, self).tearDown()
