@@ -4,6 +4,16 @@ import json
 import os
 import subprocess
 import sys
+import time
+
+# #363: old input loop would fail to spot auth failure because of scheduling
+# vs. su calling write() twice.
+if 'DO_SLOW_AUTH_FAILURE' in os.environ:
+    os.write(2, 'su: ')
+    time.sleep(0.5)
+    os.write(2, 'incorrect password\n')
+    os._exit(1)
+
 
 os.environ['ORIGINAL_ARGV'] = json.dumps(sys.argv)
 os.environ['THIS_IS_STUB_SU'] = '1'

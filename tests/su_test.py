@@ -11,11 +11,11 @@ import testlib
 
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
-    su_path = testlib.data_path('stubs/stub-su.py')
+    stub_su_path = testlib.data_path('stubs/stub-su.py')
 
     def run_su(self, **kwargs):
         context = self.router.su(
-            su_path=self.su_path,
+            su_path=self.stub_su_path,
             **kwargs
         )
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
@@ -28,6 +28,19 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class SuTest(testlib.DockerMixin, testlib.TestCase):
+    stub_su_path = testlib.data_path('stubs/stub-su.py')
+
+    def test_slow_auth_failure(self):
+        # #363: old input loop would fail to spot auth failure because of
+        # scheduling vs. su calling write() twice.
+        os.environ['DO_SLOW_AUTH_FAILURE'] = '1'
+        try:
+            self.assertRaises(mitogen.su.PasswordError,
+                lambda: self.router.su(su_path=self.stub_su_path)
+            )
+        finally:
+            del os.environ['DO_SLOW_AUTH_FAILURE']
+
     def test_password_required(self):
         ssh = self.docker_ssh(
             username='mitogen__has_sudo',
