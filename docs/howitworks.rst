@@ -572,10 +572,10 @@ to receive a message from a newly constructed child before receiving a
 corresponding ``ADD_ROUTE`` sent by the child's parent, describing how to reply
 to it.
 
-When ``sudo:node22a:webapp`` wants to send a message to
-``sudo:node12b:webapp``, the message will be routed as follows:
+When ``sudo:node12b:webapp`` wants to send a message to
+``sudo:node22a:webapp``, the message will be routed as follows:
 
-``sudo:node22a:webapp -> node22a -> rack22 -> dc2 -> bastion -> dc1 -> rack12 -> node12b -> sudo:node12b:webapp``
+``sudo:node12b:webapp -> node12b -> rack12 -> dc1 -> bastion -> dc2 -> rack22 -> node22a -> sudo:node22a:webapp``
 
 .. image:: images/route.svg
     :class: mitogen-full-width
