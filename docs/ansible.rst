@@ -569,7 +569,7 @@ in regular Ansible:
 
 * During task shutdown, it is not necessary to wait to learn if the target has
   succeeded in deleting a temporary directory, since any error that may occur
-  can is logged asynchronously via the logging framework, and the persistent
+  is logged asynchronously via the logging framework, and the persistent
   remote interpreter arranges for all subdirectories to be destroyed during
   interpreter shutdown.
 
