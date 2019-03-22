@@ -296,6 +296,7 @@ class NewStylePlanner(ScriptPlanner):
     #: manner.
     ALWAYS_FORK_MODULES = frozenset([
         'dnf',  # issue #280; py-dnf/hawkey need therapy
+        'firewalld',  # issue #570: ansible module_utils caches dbus conn
     ])
 
     def should_fork(self):
