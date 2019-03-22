@@ -27,13 +27,18 @@ Fixes
 * `#557 <https://github.com/dw/mitogen/issues/557>`_: fix a crash when running
   on machines with high CPU counts.
 
+* `#570 <https://github.com/dw/mitogen/issues/570>`_: the ``firewalld`` module
+  internally caches a dbus name that changes across ``firewalld`` restarts,
+  causing a failure if the service is restarted between ``firewalld`` module invocations.
+
 
 Thanks!
 ~~~~~~~
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Orion Poplawski <https://github.com/opoplawski>`_.
+`Orion Poplawski <https://github.com/opoplawski>`_, and
+`@Moumoutaru <https://github.com/Moumoutaru>`_.
 
 
 v0.2.6 (2019-03-06)
