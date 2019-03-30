@@ -5,14 +5,10 @@
     {{ super() }}
 
     <script>
-      var _paq = _paq || [];
-      _paq.push(['trackPageView']);
-      _paq.push(['enableLinkTracking']);
       (function() {
+        {% include "piwik-config.js" %}
         var u="https://k1.botanicus.net/tr/";
-        _paq.push(['enableHeartBeatTimer', 30]);
         _paq.push(['setTrackerUrl', u+'ep']);
-        _paq.push(['setSiteId', 6]);
         var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript';
         g.defer=true; g.async=true; g.src=u+'js'; s.parentNode.insertBefore(g,s);
       })();

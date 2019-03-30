@@ -12,6 +12,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.pro
 html_show_sourcelink = False
 html_show_sphinx = False
 html_sidebars = {'**': ['globaltoc.html', 'github.html']}
+html_additional_pages = {'ansible': 'ansible.html'}
 html_static_path = ['_static']
 html_theme = 'alabaster'
 html_theme_options = {

@@ -1,10 +1,4 @@
 
-.. toctree::
-    :hidden:
-
-    ansible
-
-
 .. _ansible_detailed:
 
 Mitogen for Ansible
