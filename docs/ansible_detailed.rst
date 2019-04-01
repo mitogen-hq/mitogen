@@ -4,7 +4,7 @@
 Mitogen for Ansible
 ===================
 
-.. image:: images/ansible/ansible_mitogen.svg
+.. image:: images/mitogen.svg
     :class: mitogen-right-180 mitogen-logo-wrap
 
 **Mitogen for Ansible** is a completely redesigned UNIX connection layer and
