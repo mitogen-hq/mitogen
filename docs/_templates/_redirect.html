@@ -18,6 +18,9 @@
     p += '?_pk_id=' + encodeURIComponent(cookies._pk_id || '');
     p += '&_pk_ses=' + encodeURIComponent(cookies._pk_ses || '');
     p += '&u=' + encodeURIComponent('{{url}}');
-    window.location = 'http://networkgenomics.com/docs/mitogen/' + p;
+    var url = 'http://networkgenomics.com/docs/mitogen/' + p;
+
+    document.write('<meta http-equiv="Refresh" '+
+                   'content="0; url=' + url + '">');
 </script>
 <noscript><meta http-equiv="Refresh" content="0; url={{url}}"></noscript>
