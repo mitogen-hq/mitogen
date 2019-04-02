@@ -75,13 +75,7 @@ Installation
    ``mitogen_host_pinned`` strategies exists to mimic the ``free`` and
    ``host_pinned`` strategies.
 
-4. If targets have a restrictive ``sudoers`` file, add a rule like:
-
-   ::
-
-       deploy = (ALL) NOPASSWD:/usr/bin/python -c*
-
-5.
+4.
 
    .. raw:: html
 
@@ -101,7 +95,6 @@ Installation
         </button>
         </p>
     </form>
-
 
 
 Demo
@@ -171,6 +164,14 @@ Noteworthy Differences
 
 * The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
   register interest in more.
+
+* The ``sudo`` comands executed differ slightly compared to Ansible. In some
+  cases where the target has a ``sudo`` configuration that restricts the exact
+  commands allowed to run, it may be necessary to add a ``sudoers`` rule like:
+
+  ::
+
+       your_ssh_username = (ALL) NOPASSWD:/usr/bin/python -c*
 
 * The `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
   `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,

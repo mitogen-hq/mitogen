@@ -5,8 +5,8 @@ sys.path.append('..')
 import mitogen
 VERSION = '%s.%s.%s' % mitogen.__version__
 
-author = u'David Wilson'
-copyright = u'2019, David Wilson'
+author = u'Network Genomics'
+copyright = u'2019, Network Genomics'
 exclude_patterns = ['_build']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.programoutput']
 html_show_sourcelink = False
