@@ -10,7 +10,7 @@ the following checklist as a guide for what to include.
 
 * Have you tried the latest master version from Git?
 * Do you have some idea of what the underlying problem may be?
-  https://mitogen.rtfd.io/en/stable/ansible.html#common-problems has
+  https://mitogen.networkgenomics.com/ansible_detailed.html#common-problems has
   instructions to help figure out the likely cause and how to gather relevant
   logs.
 * Mention your host and target OS and versions

@@ -93,7 +93,7 @@ MAKE_TEMP_FAILED_MSG = (
     u"were mounted on 'noexec' filesystems.\n"
     u"\n"
     u"The following paths were tried:\n"
-    u"    %(namelist)s\n"
+    u"    %(paths)s\n"
     u"\n"
     u"Please check '-vvv' output for a log of individual path errors."
 )
