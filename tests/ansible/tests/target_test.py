@@ -15,12 +15,45 @@ LOGGER_NAME = ansible_mitogen.target.LOG.name
 
 
 class NamedTemporaryDirectory(object):
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+
     def __enter__(self):
-        self.path = tempfile.mkdtemp()
+        self.path = tempfile.mkdtemp(**self.kwargs)
         return self.path
 
     def __exit__(self, _1, _2, _3):
         subprocess.check_call(['rm', '-rf', self.path])
+
+
+class FindGoodTempDirTest(testlib.TestCase):
+    func = staticmethod(ansible_mitogen.target.find_good_temp_dir)
+
+    def test_expands_usernames(self):
+        with NamedTemporaryDirectory(
+            prefix='.ansible_mitogen_test',
+            dir=os.environ['HOME']
+        ) as tmpdir:
+            path = self.func(['~'])
+            self.assertTrue(path.startswith(os.environ['HOME']))
+
+    def test_expands_vars(self):
+        with NamedTemporaryDirectory(
+            prefix='.ansible_mitogen_test',
+            dir=os.environ['HOME']
+        ) as tmpdir:
+            os.environ['somevar'] = 'xyz'
+            path = self.func([tmpdir + '/$somevar'])
+            self.assertTrue(path.startswith('%s/%s' % (tmpdir, 'xyz')))
+
+    @mock.patch('ansible_mitogen.target.is_good_temp_dir')
+    def test_no_good_candidate(self, is_good_temp_dir):
+        is_good_temp_dir.return_value = False
+        e = self.assertRaises(IOError,
+            lambda: self.func([])
+        )
+        self.assertTrue(str(e).startswith('Unable to find a useable'))
+
 
 
 class ApplyModeSpecTest(unittest2.TestCase):
