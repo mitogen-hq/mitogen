@@ -277,7 +277,7 @@ class Kwargs(dict):
                     self[k.decode()] = v
                 else:
                     self[k] = v
-    elif sys.version_info < (2, 6):
+    elif sys.version_info < (2, 6, 5):
         def __init__(self, dct):
             for k, v in dct.iteritems():
                 if type(k) is unicode:

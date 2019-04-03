@@ -27,13 +27,17 @@ Fixes
 * `#557 <https://github.com/dw/mitogen/issues/557>`_: fix a crash when running
   on machines with high CPU counts.
 
+* `#570 <https://github.com/dw/mitogen/issues/570>`_: the ``firewalld`` module
+  internally caches a dbus name that changes across ``firewalld`` restarts,
+  causing a failure if the service is restarted between ``firewalld`` module invocations.
+
 * `#575 <https://github.com/dw/mitogen/issues/575>`_: fix a crash when
   rendering an error message to indicate no usable temporary directories could
   be found.
 
-* `#570 <https://github.com/dw/mitogen/issues/570>`_: the ``firewalld`` module
-  internally caches a dbus name that changes across ``firewalld`` restarts,
-  causing a failure if the service is restarted between ``firewalld`` module invocations.
+* `#576 <https://github.com/dw/mitogen/issues/576>`_: fix a crash during
+  startup on SuSE Linux 11, due to an incorrect version compatibility check in
+  the Mitogen code.
 
 
 Thanks!
