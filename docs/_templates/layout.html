@@ -1,6 +1,11 @@
 {% extends "!layout.html" %}
 {% set css_files = css_files + ['_static/style.css'] %}
 
+{% block extrahead %}
+    <meta name="google-site-verification" content="oq5hNxRYo25tcfjfs3l6pPxfNgY3JzDYSpskc9q4TYI" />
+    {{ super() }}
+{% endblock %}
+
 {% block footer %}
     {{ super() }}
 
