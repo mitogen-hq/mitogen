@@ -39,6 +39,11 @@ Fixes
   startup on SuSE Linux 11, due to an incorrect version compatibility check in
   the Mitogen code.
 
+* `#581 <https://github.com/dw/mitogen/issues/58>`_: a
+  ``mitogen_mask_remote_name`` Ansible variable is exposed, to allow masking
+  the username, hostname and process ID of ``ansible-playbook`` running on the
+  controller machine.
+
 
 Thanks!
 ~~~~~~~
@@ -46,8 +51,9 @@ Thanks!
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Orion Poplawski <https://github.com/opoplawski>`_,
-`Thibaut Barrère <https://github.com/thbar>`_, and
-`@Moumoutaru <https://github.com/Moumoutaru>`_.
+`Thibaut Barrère <https://github.com/thbar>`_,
+`@Moumoutaru <https://github.com/Moumoutaru>`_, and
+`@polski-g <https://github.com/polski-g>`_.
 
 
 v0.2.6 (2019-03-06)
