@@ -44,6 +44,7 @@
               "doas_path": null,
               "password": null,
               "python_path": ["/usr/bin/python"],
+              'remote_name': null,
               "username": "normal-user",
             },
             "method": "doas",
@@ -73,6 +74,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -113,6 +115,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -148,6 +151,7 @@
                       'doas_path': null,
                       'password': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'username': 'normal-user',
                   },
                   'method': 'doas',
@@ -163,6 +167,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -203,6 +208,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -230,6 +236,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -265,6 +272,7 @@
                       'doas_path': null,
                       'password': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'username': 'normal-user',
                   },
                   'method': 'doas',
@@ -280,6 +288,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -321,6 +330,7 @@
                       'password': null,
                       'port': null,
                       "python_path": ["/usr/bin/python"],
+                      'remote_name': null,
                       'ssh_args': [
                           '-o',
                           'UserKnownHostsFile=/dev/null',
@@ -375,6 +385,7 @@
               'doas_path': null,
               'password': null,
               'python_path': ["/usr/bin/python"],
+              'remote_name': null,
               'username': 'normal-user',
             },
             'method': 'doas',
@@ -385,6 +396,7 @@
               'doas_path': null,
               'password': null,
               'python_path': ["/usr/bin/python"],
+              'remote_name': null,
               'username': 'newuser-doas-normal-user',
             },
             'method': 'doas',

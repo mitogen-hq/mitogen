@@ -21,6 +21,7 @@
             'lxc_info_path': null,
             'machinectl_path': null,
             'python_path': ['/usr/bin/python'],
+            'remote_name': null,
             'username': null,
           },
           'method': 'setns',
