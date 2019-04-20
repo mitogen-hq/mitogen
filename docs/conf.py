@@ -39,6 +39,6 @@ rst_epilog = """
 
 .. |mitogen_version| replace:: %(VERSION)s
 
-.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://files.pythonhosted.org/packages/source/m/mitogen/mitogen-%(VERSION)s.tar.gz>`__
+.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://networkgenomics.com/try/mitogen-%(VERSION)s.tar.gz>`__
 
 """ % locals()
