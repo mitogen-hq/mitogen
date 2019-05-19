@@ -5,8 +5,8 @@ sys.path.append('..')
 import mitogen
 VERSION = '%s.%s.%s' % mitogen.__version__
 
-author = u'David Wilson'
-copyright = u'2019, David Wilson'
+author = u'Network Genomics'
+copyright = u'2019, Network Genomics'
 exclude_patterns = ['_build']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.programoutput']
 html_show_sourcelink = False
@@ -39,6 +39,6 @@ rst_epilog = """
 
 .. |mitogen_version| replace:: %(VERSION)s
 
-.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://files.pythonhosted.org/packages/source/m/mitogen/mitogen-%(VERSION)s.tar.gz>`__
+.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://networkgenomics.com/try/mitogen-%(VERSION)s.tar.gz>`__
 
 """ % locals()

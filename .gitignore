@@ -13,3 +13,4 @@ docs/_build/
 htmlcov/
 *.egg-info
 __pycache__/
+extra
