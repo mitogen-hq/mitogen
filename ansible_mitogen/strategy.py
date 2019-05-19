@@ -37,7 +37,44 @@ import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 
+import ansible
 import ansible.executor.process.worker
+
+
+ANSIBLE_VERSION_MIN = '2.3'
+ANSIBLE_VERSION_MAX = '2.7'
+NEW_VERSION_MSG = (
+    "Your Ansible version (%s) is too recent. The most recent version\n"
+    "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
+    "release notes to see if a new version is available, otherwise\n"
+    "subscribe to the corresponding GitHub issue to be notified when\n"
+    "support becomes available.\n"
+    "\n"
+    "    https://mitogen.rtfd.io/en/latest/changelog.html\n"
+    "    https://github.com/dw/mitogen/issues/\n"
+)
+OLD_VERSION_MSG = (
+    "Your version of Ansible (%s) is too old. The oldest version supported by "
+    "Mitogen for Ansible is %s."
+)
+
+
+def _assert_supported_release():
+    """
+    Throw AnsibleError with a descriptive message in case of being loaded into
+    an unsupported Ansible release.
+    """
+    v = ansible.__version__
+
+    if v[:len(ANSIBLE_VERSION_MIN)] < ANSIBLE_VERSION_MIN:
+        raise ansible.errors.AnsibleError(
+            OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
+        )
+
+    if v[:len(ANSIBLE_VERSION_MAX)] > ANSIBLE_VERSION_MAX:
+        raise ansible.errors.AnsibleError(
+            NEW_VERSION_MSG % (ansible.__version__, ANSIBLE_VERSION_MAX)
+        )
 
 
 def _patch_awx_callback():
@@ -245,6 +282,8 @@ class StrategyMixin(object):
         Arrange for a mitogen.master.Router to be available for the duration of
         the strategy's real run() method.
         """
+        _assert_supported_release()
+
         ansible_mitogen.process.MuxProcess.start()
         run = super(StrategyMixin, self).run
         self._add_plugin_paths()

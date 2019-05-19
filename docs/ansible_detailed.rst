@@ -1,8 +1,10 @@
 
+.. _ansible_detailed:
+
 Mitogen for Ansible
 ===================
 
-.. image:: images/ansible/ansible_mitogen.svg
+.. image:: images/mitogen.svg
     :class: mitogen-right-180 mitogen-logo-wrap
 
 **Mitogen for Ansible** is a completely redesigned UNIX connection layer and
@@ -569,7 +571,7 @@ in regular Ansible:
 
 * During task shutdown, it is not necessary to wait to learn if the target has
   succeeded in deleting a temporary directory, since any error that may occur
-  can is logged asynchronously via the logging framework, and the persistent
+  is logged asynchronously via the logging framework, and the persistent
   remote interpreter arranges for all subdirectories to be destroyed during
   interpreter shutdown.
 
@@ -731,6 +733,11 @@ When used as a become method:
 * ``ansible_become_exe``: path to ``doas`` binary.
 * ``ansible_become_user`` (default: ``root``)
 * ``ansible_become_pass`` (default: assume passwordless)
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 * ansible.cfg: ``timeout``
 
 When used as the ``mitogen_doas`` connection method:
@@ -752,6 +759,11 @@ connection delegation is supported.
 
 * ``ansible_host``: Name of Docker container (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 .. _method-jail:
@@ -765,6 +777,11 @@ connection delegation is supported.
 
 * ``ansible_host``: Name of jail (default: inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 .. _method-kubectl:
@@ -778,6 +795,11 @@ connection delegation is supported.
 
 * ``ansible_host``: Name of pod (default: inventory hostname).
 * ``ansible_user``: Name of user to authenticate to API as.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 Local
@@ -821,6 +843,11 @@ than the LXC Python bindings, as is usual with ``lxc``.
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
 * ``mitogen_lxc_attach_path``: path to ``lxc-attach`` command if not available
     on the system path.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 .. _method-lxd:
@@ -837,6 +864,11 @@ the host machine.
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
 * ``mitogen_lxc_path``: path to ``lxc`` command if not available on the system
   path.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 .. _machinectl:
@@ -853,6 +885,11 @@ connection delegation is supported. This is a light wrapper around the
 * ``ansible_user``: Name of user within the container to execute as.
 * ``mitogen_machinectl_path``: path to ``machinectl`` command if not available
   as ``/bin/machinectl``.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 .. _setns:
@@ -897,6 +934,11 @@ When used as a become method:
 * ``ansible_su_user``, ``ansible_become_user`` (default: ``root``)
 * ``ansible_su_pass``, ``ansible_become_pass`` (default: assume passwordless)
 * ``su_flags``, ``become_flags``
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 * ansible.cfg: ``timeout``
 
 When used as the ``mitogen_su`` connection method:
@@ -922,6 +964,11 @@ When used as a become method:
 * ``ansible_sudo_user``, ``ansible_become_user`` (default: ``root``)
 * ``ansible_sudo_pass``, ``ansible_become_pass`` (default: assume passwordless)
 * ``sudo_flags``, ``become_flags``
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 * ansible.cfg: ``timeout``
 
 When used as the ``mitogen_sudo`` connection method:
@@ -947,6 +994,11 @@ except connection delegation is supported.
 * ``ansible_ssh_private_key_file``
 * ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 * ``mitogen_ssh_debug_level``: integer between `0..3` indicating the SSH client
   debug level. Ansible must also be run with '-vvv' to view the output.
 * ``mitogen_ssh_compression``: :data:`True` to enable SSH compression,

@@ -15,16 +15,56 @@ Release Notes
     </style>
 
 
-v0.2.7 (unreleased)
+v0.2.8 (unreleased)
 -------------------
 
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
+
+v0.2.7 (2019-05-19)
+-------------------
+
+This release primarily exists to add a descriptive error message when running
+on Ansible 2.8, which is not yet supported.
+
 Fixes
 ~~~~~
 
-*(none yet)*
+* `#557 <https://github.com/dw/mitogen/issues/557>`_: fix a crash when running
+  on machines with high CPU counts.
+
+* `#570 <https://github.com/dw/mitogen/issues/570>`_: the ``firewalld`` module
+  internally caches a dbus name that changes across ``firewalld`` restarts,
+  causing a failure if the service is restarted between ``firewalld`` module invocations.
+
+* `#575 <https://github.com/dw/mitogen/issues/575>`_: fix a crash when
+  rendering an error message to indicate no usable temporary directories could
+  be found.
+
+* `#576 <https://github.com/dw/mitogen/issues/576>`_: fix a crash during
+  startup on SuSE Linux 11, due to an incorrect version compatibility check in
+  the Mitogen code.
+
+* `#581 <https://github.com/dw/mitogen/issues/58>`_: a
+  ``mitogen_mask_remote_name`` Ansible variable is exposed, to allow masking
+  the username, hostname and process ID of ``ansible-playbook`` running on the
+  controller machine.
+
+* `#587 <https://github.com/dw/mitogen/issues/587>`_: display a friendly
+  message when running on an unsupported version of Ansible, to cope with
+  potential influx of 2.8-related bug reports.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Orion Poplawski <https://github.com/opoplawski>`_,
+`Thibaut Barrère <https://github.com/thbar>`_,
+`@Moumoutaru <https://github.com/Moumoutaru>`_, and
+`@polski-g <https://github.com/polski-g>`_.
 
 
 v0.2.6 (2019-03-06)

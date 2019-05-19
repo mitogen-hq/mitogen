@@ -232,6 +232,15 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_mask_remote_name(self):
+        """
+        Specifies whether to set a fixed "remote_name" field. The remote_name
+        is the suffix of `argv[0]` for remote interpreters. By default it
+        includes identifying information from the local process, which may be
+        undesirable in some circumstances.
+        """
+
+    @abc.abstractmethod
     def mitogen_docker_path(self):
         """
         The path to the "docker" program for the 'docker' transport.
@@ -384,6 +393,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_kind(self):
         return self._connection.get_task_var('mitogen_kind')
+
+    def mitogen_mask_remote_name(self):
+        return self._connection.get_task_var('mitogen_mask_remote_name')
 
     def mitogen_docker_path(self):
         return self._connection.get_task_var('mitogen_docker_path')
@@ -592,6 +604,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_kind(self):
         return self._host_vars.get('mitogen_kind')
+
+    def mitogen_mask_remote_name(self):
+        return self._host_vars.get('mitogen_mask_remote_name')
 
     def mitogen_docker_path(self):
         return self._host_vars.get('mitogen_docker_path')
