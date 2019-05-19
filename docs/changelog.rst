@@ -15,11 +15,18 @@ Release Notes
     </style>
 
 
-v0.2.7 (unreleased)
+v0.2.8 (unreleased)
 -------------------
 
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
+
+
+v0.2.7 (2019-05-19)
+-------------------
+
+This release primarily exists to add a descriptive error message when running
+on Ansible 2.8, which is not yet supported.
 
 Fixes
 ~~~~~
