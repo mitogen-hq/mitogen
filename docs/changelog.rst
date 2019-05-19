@@ -44,6 +44,10 @@ Fixes
   the username, hostname and process ID of ``ansible-playbook`` running on the
   controller machine.
 
+* `#587 <https://github.com/dw/mitogen/issues/587>`_: display a friendly
+  message when running on an unsupported version of Ansible, to cope with
+  potential influx of 2.8-related bug reports.
+
 
 Thanks!
 ~~~~~~~
