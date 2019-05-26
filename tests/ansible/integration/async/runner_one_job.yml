@@ -37,7 +37,12 @@
       - result1.ansible_job_id == job1.ansible_job_id
       - result1.attempts <= 100000
       - result1.changed == True
-      - result1.cmd == "sleep 1;\n echo alldone"
+      - |
+        # ansible/b72e989e1837ccad8dcdc926c43ccbc4d8cdfe44
+        (ansible_version.full >= '2.8' and
+         result1.cmd == "sleep 1;\necho alldone\n") or
+        (ansible_version.full < '2.8' and
+         result1.cmd == "sleep 1;\n echo alldone")
       - result1.delta|length == 14
       - result1.start|length == 26
       - result1.finished == 1
