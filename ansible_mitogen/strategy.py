@@ -276,8 +276,8 @@ class StrategyMixin(object):
             class_only=True,
         )
         if play_context.connection is not Sentinel:
-            # 2.8 appears to defer computing this value until it's inside the
-            # worker. TODO: figure out where this value has moved.
+            # 2.8 appears to defer computing this until inside the worker.
+            # TODO: figure out where it has moved.
             ansible_mitogen.loaders.connection_loader.get(
                 name=play_context.connection,
                 class_only=True,

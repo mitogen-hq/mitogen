@@ -380,8 +380,9 @@ class PlayContextSpec(Spec):
             for term in ansible.utils.shlex.shlex_split(
                 first_true((
                     self._play_context.become_flags,
-                    self._play_context.sudo_flags,
-                    # Ansible 2.3.
+                    # Ansible <=2.7.
+                    getattr(self._play_context, 'sudo_flags', ''),
+                    # Ansible <=2.3.
                     getattr(C, 'DEFAULT_BECOME_FLAGS', ''),
                     getattr(C, 'DEFAULT_SUDO_FLAGS', '')
                 ), default='')
