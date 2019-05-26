@@ -121,7 +121,11 @@ def wrap_action_loader__get(name, *args, **kwargs):
     This is used instead of static subclassing as it generalizes to third party
     action modules outside the Ansible tree.
     """
-    klass = action_loader__get(name, class_only=True)
+    get_kwargs = {'class_only': True}
+    if ansible.__version__ >= '2.8':
+        get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
+
+    klass = action_loader__get(name, **get_kwargs)
     if klass:
         bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
