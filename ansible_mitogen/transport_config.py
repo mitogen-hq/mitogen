@@ -294,6 +294,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         Connection-specific arguments.
         """
 
+    @abc.abstractmethod
+    def ansible_doas_exe(self):
+        """
+        Value of "ansible_doas_exe" variable.
+        """
+
 
 class PlayContextSpec(Spec):
     """
@@ -424,6 +430,12 @@ class PlayContextSpec(Spec):
 
     def extra_args(self):
         return self._connection.get_extra_args()
+
+    def ansible_doas_exe(self):
+        return (
+            self._connection.get_task_var('ansible_doas_exe') or
+            os.environ.get('ANSIBLE_DOAS_EXE')
+        )
 
 
 class MitogenViaSpec(Spec):
@@ -635,3 +647,9 @@ class MitogenViaSpec(Spec):
 
     def extra_args(self):
         return []  # TODO
+
+    def ansible_doas_exe(self):
+        return (
+            self._host_vars.get('ansible_doas_exe') or
+            os.environ.get('ANSIBLE_DOAS_EXE')
+        )
