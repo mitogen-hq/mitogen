@@ -34,13 +34,14 @@ if ci_lib.have_apt():
         'echo force-unsafe-io | sudo tee /etc/dpkg/dpkg.cfg.d/nosync',
         'sudo add-apt-repository ppa:deadsnakes/ppa',
         'sudo apt-get update',
-        'sudo apt-get -y install python2.6 python2.6-dev libsasl2-dev libldap2-dev',
+        'sudo apt-get -y install '
+            'python{pv} '
+            'python{pv}-dev '
+            'libsasl2-dev '
+            'libldap2-dev '
+            .format(pv=os.environ['PYTHONVERSION'])
     ])
 
-
-#batches.append([
-    #'pip install -r dev_requirements.txt',
-#])
 
 if ci_lib.have_docker():
     batches.extend(
