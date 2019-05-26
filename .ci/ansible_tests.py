@@ -3,6 +3,7 @@
 
 import glob
 import os
+import signal
 import sys
 
 import ci_lib
@@ -11,6 +12,12 @@ from ci_lib import run
 
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
 HOSTS_DIR = os.path.join(ci_lib.TMP, 'hosts')
+
+
+def pause_if_interactive():
+    if os.path.exists('/tmp/interactive'):
+        while True:
+            signal.pause()
 
 
 with ci_lib.Fold('unit_tests'):
@@ -59,5 +66,11 @@ with ci_lib.Fold('job_setup'):
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
-    run('./run_ansible_playbook.py %s -i "%s" %s',
-        playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
+    try:
+        run('./run_ansible_playbook.py %s -i "%s" %s',
+            playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
+    except:
+        pause_if_interactive()
+        raise
+
+pause_if_interactive()
