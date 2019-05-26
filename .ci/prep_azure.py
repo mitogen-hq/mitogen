@@ -7,6 +7,28 @@ import ci_lib
 
 batches = []
 
+batches += [
+    [
+        "sudo chown `whoami`: ~",
+        "chmod u=rwx,g=rx,o= ~",
+
+        "sudo mkdir /var/run/sshd",
+        "sudo /etc/init.d/ssh start",
+
+        "mkdir -p ~/.ssh",
+        "chmod u=rwx,go= ~/.ssh",
+
+        "ssh-keyscan -H localhost >> ~/.ssh/known_hosts",
+        "chmod u=rw,go= ~/.ssh/known_hosts",
+
+        "cat tests/data/docker/mitogen__has_sudo_pubkey.key > ~/.ssh/id_rsa",
+        "chmod u=rw,go= ~/.ssh/id_rsa",
+
+        "cat tests/data/docker/mitogen__has_sudo_pubkey.key.pub > ~/.ssh/authorized_keys",
+        "chmod u=rw,go=r ~/.ssh/authorized_keys",
+    ]
+]
+
 if ci_lib.have_apt():
     batches.append([
         'echo force-unsafe-io | sudo tee /etc/dpkg/dpkg.cfg.d/nosync',
