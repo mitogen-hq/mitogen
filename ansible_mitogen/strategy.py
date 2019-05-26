@@ -42,7 +42,7 @@ import ansible.executor.process.worker
 
 
 ANSIBLE_VERSION_MIN = '2.3'
-ANSIBLE_VERSION_MAX = '2.7'
+ANSIBLE_VERSION_MAX = '2.8'
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
     "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
