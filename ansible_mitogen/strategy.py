@@ -40,6 +40,12 @@ import ansible_mitogen.process
 import ansible
 import ansible.executor.process.worker
 
+try:
+    # 2.8+ has a standardized "unset" object.
+    from ansible.utils.sentinel import Sentinel
+except ImportError:
+    Sentinel = None
+
 
 ANSIBLE_VERSION_MIN = '2.3'
 ANSIBLE_VERSION_MAX = '2.8'
@@ -261,14 +267,17 @@ class StrategyMixin(object):
             name=task.action,
             mod_type='',
         )
-        ansible_mitogen.loaders.connection_loader.get(
-            name=play_context.connection,
-            class_only=True,
-        )
         ansible_mitogen.loaders.action_loader.get(
             name=task.action,
             class_only=True,
         )
+        if play_context.connection is not Sentinel:
+            # 2.8 appears to defer computing this value until it's inside the
+            # worker. TODO: figure out where this value has moved.
+            ansible_mitogen.loaders.connection_loader.get(
+                name=play_context.connection,
+                class_only=True,
+            )
 
         return super(StrategyMixin, self)._queue_task(
             host=host,
