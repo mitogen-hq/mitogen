@@ -27,7 +27,7 @@
               'remote_name': null,
               'password': null,
               'username': 'root',
-              'sudo_path': null,
+              'sudo_path': 'sudo',
               'sudo_args': ['-H', '-S', '-n'],
             },
             'method': 'sudo',

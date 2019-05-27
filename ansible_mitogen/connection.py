@@ -356,7 +356,7 @@ def _connect_mitogen_doas(spec):
             'username': spec.remote_user(),
             'password': spec.password(),
             'python_path': spec.python_path(),
-            'doas_path': spec.become_exe(),
+            'doas_path': spec.ansible_doas_exe(),
             'connect_timeout': spec.timeout(),
             'remote_name': get_remote_name(spec),
         }

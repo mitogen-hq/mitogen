@@ -40,9 +40,15 @@ import ansible_mitogen.process
 import ansible
 import ansible.executor.process.worker
 
+try:
+    # 2.8+ has a standardized "unset" object.
+    from ansible.utils.sentinel import Sentinel
+except ImportError:
+    Sentinel = None
+
 
 ANSIBLE_VERSION_MIN = '2.3'
-ANSIBLE_VERSION_MAX = '2.7'
+ANSIBLE_VERSION_MAX = '2.8'
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
     "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
@@ -115,7 +121,11 @@ def wrap_action_loader__get(name, *args, **kwargs):
     This is used instead of static subclassing as it generalizes to third party
     action modules outside the Ansible tree.
     """
-    klass = action_loader__get(name, class_only=True)
+    get_kwargs = {'class_only': True}
+    if ansible.__version__ >= '2.8':
+        get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
+
+    klass = action_loader__get(name, **get_kwargs)
     if klass:
         bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
@@ -261,14 +271,17 @@ class StrategyMixin(object):
             name=task.action,
             mod_type='',
         )
-        ansible_mitogen.loaders.connection_loader.get(
-            name=play_context.connection,
-            class_only=True,
-        )
         ansible_mitogen.loaders.action_loader.get(
             name=task.action,
             class_only=True,
         )
+        if play_context.connection is not Sentinel:
+            # 2.8 appears to defer computing this until inside the worker.
+            # TODO: figure out where it has moved.
+            ansible_mitogen.loaders.connection_loader.get(
+                name=play_context.connection,
+                class_only=True,
+            )
 
         return super(StrategyMixin, self)._queue_task(
             host=host,

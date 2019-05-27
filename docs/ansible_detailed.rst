@@ -731,7 +731,7 @@ as a become method.
 When used as a become method:
 
 * ``ansible_python_interpreter``
-* ``ansible_become_exe``: path to ``doas`` binary.
+* ``ansible_become_exe`` / ``ansible_doas_exe``: path to ``doas`` binary.
 * ``ansible_become_user`` (default: ``root``)
 * ``ansible_become_pass`` (default: assume passwordless)
 * ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
@@ -746,6 +746,7 @@ When used as the ``mitogen_doas`` connection method:
 * The inventory hostname has no special meaning.
 * ``ansible_user``: username to use.
 * ``ansible_password``: password to use.
+* ``ansible_doas_exe``: path to ``doas`` binary.
 * ``ansible_python_interpreter``
 
 
