@@ -7,7 +7,7 @@ import ci_lib
 
 batches = []
 
-if os.uname()[0] == 'Linux':
+if 0 and os.uname()[0] == 'Linux':
     batches += [
         [
             "sudo chown `whoami`: ~",
