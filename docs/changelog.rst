@@ -21,6 +21,24 @@ v0.2.8 (unreleased)
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
+Enhancements
+^^^^^^^^^^^^
+
+* `#587 <https://github.com/dw/mitogen/issues/587>`_: partial support for
+  Ansible 2.8 is now available. This implementation does not yet support the
+  new `become plugins
+  <https://docs.ansible.com/ansible/latest/plugins/become.html>`_
+  functionality, which will be addressed in a future release.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Orion Poplawski <https://github.com/opoplawski>`_, and
+`Ulrich Schreiner <https://github.com/ulrichSchreiner>`_.
+
 
 v0.2.7 (2019-05-19)
 -------------------
