@@ -88,6 +88,9 @@ sponsorship and outstanding future-thinking of its early adopters.
     <h3>Private Sponsors</h3>
 
     <ul style="line-height: 120% !important;">
+    <li><a href="https://skunkwerks.at/">SkunkWerks</a> &mdash;
+        <em>Mitogen on FreeBSD runs like a kid in a candy store: fast &amp;
+        sweet.</em></li>
     <li>Donald Clark Jackson &mdash;
         <em>Mitogen is an exciting project, and I am happy to support its
         development.</em></li>
