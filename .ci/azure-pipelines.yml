@@ -88,8 +88,14 @@ jobs:
         #DISTROS: debian
         #STRATEGY: linear
 
-      Vanilla_280_27:
+      Ansible_280_27:
         python.version: '2.7'
+        MODE: ansible
+        VER: 2.8.0
+        DISTROS: debian
+
+      Ansible_280_35:
+        python.version: '3.5'
         MODE: ansible
         VER: 2.8.0
         DISTROS: debian
