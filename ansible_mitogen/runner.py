@@ -760,7 +760,12 @@ class NewStyleRunner(ScriptRunner):
         for fullname, _, _ in self.module_map['custom']:
             mitogen.core.import_module(fullname)
         for fullname in self.module_map['builtin']:
-            mitogen.core.import_module(fullname)
+            try:
+                mitogen.core.import_module(fullname)
+            except ImportError:
+                # TODO: this is a huge hack to work around issue #590.
+                if fullname != 'ansible.module_utils.distro._distro':
+                    raise
 
     def _setup_excepthook(self):
         """
