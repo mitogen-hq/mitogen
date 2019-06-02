@@ -405,11 +405,26 @@ class LogForwarder(object):
 
 
 class FinderMethod(object):
+    """
+    Interface to a method for locating a Python module or package given its
+    name according to the running Python interpreter. You'd think this was a
+    simple task, right? Naive young fellow, welcome to the real world.
+    """
     def __repr__(self):
         return '%s()' % (type(self).__name__,)
 
     def find(self, fullname):
-        pass
+        """
+        Accept a canonical module name and return `(path, source, is_pkg)`
+        tuples, where:
+
+        * `path`: Unicode string containing path to source file.
+        * `source`: Bytestring containing source file's content.
+        * `is_pkg`: :data:`True` if `fullname` is a package.
+
+        :returns:
+            :data:`None` if not found, or tuple as described above.
+        """
 
 
 class DefectivePython3xMainMethod(FinderMethod):
