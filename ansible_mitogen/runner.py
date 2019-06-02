@@ -763,7 +763,16 @@ class NewStyleRunner(ScriptRunner):
             try:
                 mitogen.core.import_module(fullname)
             except ImportError:
-                # TODO: this is a huge hack to work around issue #590.
+                # #590: Ansible 2.8 module_utils.distro is a package that
+                # replaces itself in sys.modules with a non-package during
+                # import. Prior to replacement, it is a real package containing
+                # a '_distro' submodule which is used on 2.x. Given a 2.x
+                # controller and 3.x target, the import hook never needs to run
+                # again before this replacement occurs, and 'distro' is
+                # replaced with a module from the stdlib. In this case as this
+                # loop progresses to the next entry and attempts to preload
+                # 'distro._distro', the import mechanism will fail. So here we
+                # silently ignore any failure for it.
                 if fullname != 'ansible.module_utils.distro._distro':
                     raise
 
