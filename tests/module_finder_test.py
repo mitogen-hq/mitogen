@@ -120,7 +120,13 @@ class SysModulesMethodTest(testlib.TestCase):
         import __main__
         path, src, is_pkg = self.call('__main__')
         self.assertEquals(path, __main__.__file__)
-        self.assertEquals(src, open(path, 'rb').read())
+
+        # linecache adds a line ending to the final line if one is missing.
+        actual_src = open(path, 'rb').read()
+        if actual_src[-1] != '\n':
+            actual_src += '\n'
+
+        self.assertEquals(src, actual_src)
         self.assertFalse(is_pkg)
 
     def test_dylib_fails(self):
