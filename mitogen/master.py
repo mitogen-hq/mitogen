@@ -46,11 +46,15 @@ import pkgutil
 import re
 import string
 import sys
-import sysconfig
 import threading
 import time
 import types
 import zlib
+
+try:
+    import sysconfig
+except ImportError:
+    sysconfig = None
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
@@ -101,7 +105,8 @@ def _stdlib_paths():
 
     # When running 'unit2 tests/module_finder_test.py' in a Py2 venv on Ubuntu
     # 18.10, above is insufficient to catch the real directory.
-    s.add(sysconfig.get_config_var('DESTLIB'))
+    if sysconfig is not None:
+        s.add(sysconfig.get_config_var('DESTLIB'))
     return s
 
 
