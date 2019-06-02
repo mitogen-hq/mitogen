@@ -122,7 +122,7 @@ class SysModulesMethodTest(testlib.TestCase):
 
         # linecache adds a line ending to the final line if one is missing.
         actual_src = open(path, 'rb').read()
-        if actual_src[-1] != '\n':
+        if actual_src[-1] != b('\n'):
             actual_src += b('\n')
 
         self.assertEquals(src, actual_src)
