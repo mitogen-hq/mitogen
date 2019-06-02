@@ -36,6 +36,7 @@ contexts.
 """
 
 import dis
+import errno
 import imp
 import inspect
 import itertools
@@ -45,10 +46,15 @@ import pkgutil
 import re
 import string
 import sys
-import time
 import threading
+import time
 import types
 import zlib
+
+try:
+    import sysconfig
+except ImportError:
+    sysconfig = None
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
@@ -92,10 +98,16 @@ def _stdlib_paths():
         'real_prefix',  # virtualenv: only set inside a virtual environment.
         'base_prefix',  # venv: always set, equal to prefix if outside.
     ]
-    prefixes = (getattr(sys, a) for a in attr_candidates if hasattr(sys, a))
+    prefixes = (getattr(sys, a, None) for a in attr_candidates)
     version = 'python%s.%s' % sys.version_info[0:2]
-    return set(os.path.abspath(os.path.join(p, 'lib', version))
-               for p in prefixes)
+    s = set(os.path.abspath(os.path.join(p, 'lib', version))
+            for p in prefixes if p is not None)
+
+    # When running 'unit2 tests/module_finder_test.py' in a Py2 venv on Ubuntu
+    # 18.10, above is insufficient to catch the real directory.
+    if sysconfig is not None:
+        s.add(sysconfig.get_config_var('DESTLIB'))
+    return s
 
 
 def is_stdlib_name(modname):
@@ -140,6 +152,41 @@ def get_child_modules(path):
     """
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return [to_text(name) for _, name, _ in it]
+
+
+def _looks_like_script(path):
+    """
+    Return :data:`True` if the (possibly extensionless) file at `path`
+    resembles a Python script. For now we simply verify the file contains
+    ASCII text.
+    """
+    try:
+        fp = open(path, 'rb')
+    except IOError:
+        e = sys.exc_info()[1]
+        if e.args[0] == errno.EISDIR:
+            return False
+        raise
+
+    try:
+        sample = fp.read(512).decode('latin-1')
+        return not set(sample).difference(string.printable)
+    finally:
+        fp.close()
+
+
+def _py_filename(path):
+    if not path:
+        return None
+
+    if path[-4:] in ('.pyc', '.pyo'):
+        path = path.rstrip('co')
+
+    if path.endswith('.py'):
+        return path
+
+    if os.path.exists(path) and _looks_like_script(path):
+        return path
 
 
 def _get_core_source():
@@ -368,56 +415,38 @@ class LogForwarder(object):
         return 'LogForwarder(%r)' % (self._router,)
 
 
-class ModuleFinder(object):
+class FinderMethod(object):
     """
-    Given the name of a loaded module, make a best-effort attempt at finding
-    related modules likely needed by a child context requesting the original
-    module.
+    Interface to a method for locating a Python module or package given its
+    name according to the running Python interpreter. You'd think this was a
+    simple task, right? Naive young fellow, welcome to the real world.
     """
-    def __init__(self):
-        #: Import machinery is expensive, keep :py:meth`:get_module_source`
-        #: results around.
-        self._found_cache = {}
-
-        #: Avoid repeated dependency scanning, which is expensive.
-        self._related_cache = {}
-
     def __repr__(self):
-        return 'ModuleFinder()'
+        return '%s()' % (type(self).__name__,)
 
-    def _looks_like_script(self, path):
+    def find(self, fullname):
         """
-        Return :data:`True` if the (possibly extensionless) file at `path`
-        resembles a Python script. For now we simply verify the file contains
-        ASCII text.
+        Accept a canonical module name and return `(path, source, is_pkg)`
+        tuples, where:
+
+        * `path`: Unicode string containing path to source file.
+        * `source`: Bytestring containing source file's content.
+        * `is_pkg`: :data:`True` if `fullname` is a package.
+
+        :returns:
+            :data:`None` if not found, or tuple as described above.
         """
-        fp = open(path, 'rb')
-        try:
-            sample = fp.read(512).decode('latin-1')
-            return not set(sample).difference(string.printable)
-        finally:
-            fp.close()
+        raise NotImplementedError()
 
-    def _py_filename(self, path):
-        if not path:
-            return None
 
-        if path[-4:] in ('.pyc', '.pyo'):
-            path = path.rstrip('co')
-
-        if path.endswith('.py'):
-            return path
-
-        if os.path.exists(path) and self._looks_like_script(path):
-            return path
-
-    def _get_main_module_defective_python_3x(self, fullname):
-        """
-        Recent versions of Python 3.x introduced an incomplete notion of
-        importer specs, and in doing so created permanent asymmetry in the
-        :mod:`pkgutil` interface handling for the `__main__` module. Therefore
-        we must handle `__main__` specially.
-        """
+class DefectivePython3xMainMethod(FinderMethod):
+    """
+    Recent versions of Python 3.x introduced an incomplete notion of
+    importer specs, and in doing so created permanent asymmetry in the
+    :mod:`pkgutil` interface handling for the `__main__` module. Therefore
+    we must handle `__main__` specially.
+    """
+    def find(self, fullname):
         if fullname != '__main__':
             return None
 
@@ -426,7 +455,7 @@ class ModuleFinder(object):
             return None
 
         path = getattr(mod, '__file__', None)
-        if not (os.path.exists(path) and self._looks_like_script(path)):
+        if not (os.path.exists(path) and _looks_like_script(path)):
             return None
 
         fp = open(path, 'rb')
@@ -437,11 +466,13 @@ class ModuleFinder(object):
 
         return path, source, False
 
-    def _get_module_via_pkgutil(self, fullname):
-        """
-        Attempt to fetch source code via pkgutil. In an ideal world, this would
-        be the only required implementation of get_module().
-        """
+
+class PkgutilMethod(FinderMethod):
+    """
+    Attempt to fetch source code via pkgutil. In an ideal world, this would
+    be the only required implementation of get_module().
+    """
+    def find(self, fullname):
         try:
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
@@ -458,7 +489,7 @@ class ModuleFinder(object):
             return
 
         try:
-            path = self._py_filename(loader.get_filename(fullname))
+            path = _py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
             is_pkg = loader.is_package(fullname)
         except (AttributeError, ImportError):
@@ -484,19 +515,27 @@ class ModuleFinder(object):
 
         return path, source, is_pkg
 
-    def _get_module_via_sys_modules(self, fullname):
-        """
-        Attempt to fetch source code via sys.modules. This is specifically to
-        support __main__, but it may catch a few more cases.
-        """
+
+class SysModulesMethod(FinderMethod):
+    """
+    Attempt to fetch source code via sys.modules. This is specifically to
+    support __main__, but it may catch a few more cases.
+    """
+    def find(self, fullname):
         module = sys.modules.get(fullname)
         LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
+        if getattr(module, '__name__', None) != fullname:
+            LOG.debug('sys.modules[%r].__name__ does not match %r, assuming '
+                      'this is a hacky module alias and ignoring it',
+                      fullname, fullname)
+            return
+
         if not isinstance(module, types.ModuleType):
             LOG.debug('sys.modules[%r] absent or not a regular module',
                       fullname)
             return
 
-        path = self._py_filename(getattr(module, '__file__', ''))
+        path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
 
@@ -517,12 +556,19 @@ class ModuleFinder(object):
 
         return path, source, is_pkg
 
-    def _get_module_via_parent_enumeration(self, fullname):
-        """
-        Attempt to fetch source code by examining the module's (hopefully less
-        insane) parent package. Required for older versions of
-        ansible.compat.six and plumbum.colors.
-        """
+
+class ParentEnumerationMethod(FinderMethod):
+    """
+    Attempt to fetch source code by examining the module's (hopefully less
+    insane) parent package. Required for older versions of
+    ansible.compat.six and plumbum.colors, and Ansible 2.8
+    ansible.module_utils.distro.
+
+    For cases like module_utils.distro, this must handle cases where a package
+    transmuted itself into a totally unrelated module during import and vice
+    versa.
+    """
+    def find(self, fullname):
         if fullname not in sys.modules:
             # Don't attempt this unless a module really exists in sys.modules,
             # else we could return junk.
@@ -531,30 +577,68 @@ class ModuleFinder(object):
         pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
         pkg = sys.modules.get(pkgname)
         if pkg is None or not hasattr(pkg, '__file__'):
+            LOG.debug('%r: %r is not a package or lacks __file__ attribute',
+                      self, pkgname)
             return
 
-        pkg_path = os.path.dirname(pkg.__file__)
+        pkg_path = [os.path.dirname(pkg.__file__)]
         try:
-            fp, path, ext = imp.find_module(modname, [pkg_path])
-            try:
-                path = self._py_filename(path)
-                if not path:
-                    fp.close()
-                    return
-
-                source = fp.read()
-            finally:
-                if fp:
-                    fp.close()
-
-            if isinstance(source, mitogen.core.UnicodeType):
-                # get_source() returns "string" according to PEP-302, which was
-                # reinterpreted for Python 3 to mean a Unicode string.
-                source = source.encode('utf-8')
-            return path, source, False
+            fp, path, (suffix, _, kind) = imp.find_module(modname, pkg_path)
         except ImportError:
             e = sys.exc_info()[1]
-            LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
+            LOG.debug('%r: imp.find_module(%r, %r) -> %s',
+                      self, modname, [pkg_path], e)
+            return None
+
+        if kind == imp.PKG_DIRECTORY:
+            return self._found_package(fullname, path)
+        else:
+            return self._found_module(fullname, path, fp)
+
+    def _found_package(self, fullname, path):
+        path = os.path.join(path, '__init__.py')
+        LOG.debug('%r: %r is PKG_DIRECTORY: %r', self, fullname, path)
+        return self._found_module(
+            fullname=fullname,
+            path=path,
+            fp=open(path, 'rb'),
+            is_pkg=True,
+        )
+
+    def _found_module(self, fullname, path, fp, is_pkg=False):
+        try:
+            path = _py_filename(path)
+            if not path:
+                return
+
+            source = fp.read()
+        finally:
+            if fp:
+                fp.close()
+
+        if isinstance(source, mitogen.core.UnicodeType):
+            # get_source() returns "string" according to PEP-302, which was
+            # reinterpreted for Python 3 to mean a Unicode string.
+            source = source.encode('utf-8')
+        return path, source, is_pkg
+
+
+class ModuleFinder(object):
+    """
+    Given the name of a loaded module, make a best-effort attempt at finding
+    related modules likely needed by a child context requesting the original
+    module.
+    """
+    def __init__(self):
+        #: Import machinery is expensive, keep :py:meth`:get_module_source`
+        #: results around.
+        self._found_cache = {}
+
+        #: Avoid repeated dependency scanning, which is expensive.
+        self._related_cache = {}
+
+    def __repr__(self):
+        return 'ModuleFinder()'
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
@@ -576,10 +660,10 @@ class ModuleFinder(object):
         self._found_cache[fullname] = (path, source, is_pkg)
 
     get_module_methods = [
-        _get_main_module_defective_python_3x,
-        _get_module_via_pkgutil,
-        _get_module_via_sys_modules,
-        _get_module_via_parent_enumeration,
+        DefectivePython3xMainMethod(),
+        PkgutilMethod(),
+        SysModulesMethod(),
+        ParentEnumerationMethod(),
     ]
 
     def get_module_source(self, fullname):
@@ -595,7 +679,7 @@ class ModuleFinder(object):
             return tup
 
         for method in self.get_module_methods:
-            tup = method(self, fullname)
+            tup = method.find(fullname)
             if tup:
                 #LOG.debug('%r returned %r', method, tup)
                 break

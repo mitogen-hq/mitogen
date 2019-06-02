@@ -1355,7 +1355,10 @@ class Importer(object):
             exec(code, vars(mod))
         else:
             exec('exec code in vars(mod)')
-        return mod
+
+        # #590: if a module replaces itself in sys.modules during import, below
+        # is necessary. This matches PyImport_ExecCodeModuleEx()
+        return sys.modules.get(fullname, mod)
 
     def get_filename(self, fullname):
         if fullname in self._cache:

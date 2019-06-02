@@ -41,7 +41,11 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+MODS_DIR = os.path.join(DATA_DIR, 'importer')
+
 sys.path.append(DATA_DIR)
+sys.path.append(MODS_DIR)
+
 
 if mitogen.is_master:
     mitogen.utils.log_to_file()
