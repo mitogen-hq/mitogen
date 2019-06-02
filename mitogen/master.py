@@ -46,8 +46,9 @@ import pkgutil
 import re
 import string
 import sys
-import time
+import sysconfig
 import threading
+import time
 import types
 import zlib
 
@@ -93,10 +94,15 @@ def _stdlib_paths():
         'real_prefix',  # virtualenv: only set inside a virtual environment.
         'base_prefix',  # venv: always set, equal to prefix if outside.
     ]
-    prefixes = (getattr(sys, a) for a in attr_candidates if hasattr(sys, a))
+    prefixes = (getattr(sys, a, None) for a in attr_candidates)
     version = 'python%s.%s' % sys.version_info[0:2]
-    return set(os.path.abspath(os.path.join(p, 'lib', version))
-               for p in prefixes)
+    s = set(os.path.abspath(os.path.join(p, 'lib', version))
+            for p in prefixes if p is not None)
+
+    # When running 'unit2 tests/module_finder_test.py' in a Py2 venv on Ubuntu
+    # 18.10, above is insufficient to catch the real directory.
+    s.add(sysconfig.get_config_var('DESTLIB'))
+    return s
 
 
 def is_stdlib_name(modname):
@@ -425,6 +431,7 @@ class FinderMethod(object):
         :returns:
             :data:`None` if not found, or tuple as described above.
         """
+        raise NotImplementedError()
 
 
 class DefectivePython3xMainMethod(FinderMethod):
