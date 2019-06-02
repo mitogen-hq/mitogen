@@ -1,0 +1,9 @@
+
+- hosts: test-targets
+  tasks:
+  - custom_python_uses_distro:
+    register: out
+
+  - assert:
+      that:
+      - "'id' in out.info"
