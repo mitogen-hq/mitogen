@@ -8,6 +8,9 @@ import mitogen.master
 
 import testlib
 
+MODS_PATH = testlib.data_path('module_finder')
+sys.path.append(MODS_PATH)
+
 
 class ConstructorTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
@@ -51,10 +54,10 @@ class IsStdlibNameTest(testlib.TestCase):
 
 
 class GetMainModuleDefectivePython3x(testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
+    klass = mitogen.master.DefectivePython3xMainMethod
 
     def call(self, fullname):
-        return self.klass()._get_main_module_defective_python_3x(fullname)
+        return self.klass().find(fullname)
 
     def test_builtin(self):
         self.assertEquals(None, self.call('sys'))
@@ -77,23 +80,23 @@ class GetMainModuleDefectivePython3x(testlib.TestCase):
         self.assertFalse(is_pkg)
 
 
-class GetModuleViaPkgutilTest(testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
+class PkgutilMethodTest(testlib.TestCase):
+    klass = mitogen.master.PkgutilMethod
 
     def call(self, fullname):
-        return self.klass()._get_module_via_pkgutil(fullname)
+        return self.klass().find(fullname)
 
     def test_empty_source_pkg(self):
         path, src, is_pkg = self.call('module_finder_testmod')
         self.assertEquals(path,
-            testlib.data_path('module_finder_testmod/__init__.py'))
+            os.path.join(MODS_PATH, 'module_finder_testmod/__init__.py'))
         self.assertEquals(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
         path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
         self.assertEquals(path,
-            testlib.data_path('module_finder_testmod/empty_mod.py'))
+            os.path.join(MODS_PATH, 'module_finder_testmod/empty_mod.py'))
         self.assertEquals(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
@@ -101,17 +104,17 @@ class GetModuleViaPkgutilTest(testlib.TestCase):
         from module_finder_testmod import regular_mod
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
         self.assertEquals(path,
-            testlib.data_path('module_finder_testmod/regular_mod.py'))
+            os.path.join(MODS_PATH, 'module_finder_testmod/regular_mod.py'))
         self.assertEquals(mitogen.core.to_text(src),
                           inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
 
 
-class GetModuleViaSysModulesTest(testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
+class SysModulesMethodTest(testlib.TestCase):
+    klass = mitogen.master.SysModulesMethod
 
     def call(self, fullname):
-        return self.klass()._get_module_via_sys_modules(fullname)
+        return self.klass().find(fullname)
 
     def test_main(self):
         import __main__
@@ -133,10 +136,10 @@ class GetModuleViaSysModulesTest(testlib.TestCase):
 
 
 class GetModuleViaParentEnumerationTest(testlib.TestCase):
-    klass = mitogen.master.ModuleFinder
+    klass = mitogen.master.ParentEnumerationMethod
 
     def call(self, fullname):
-        return self.klass()._get_module_via_parent_enumeration(fullname)
+        return self.klass().find(fullname)
 
     def test_main_fails(self):
         import __main__
@@ -157,12 +160,27 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         # plumbum has been eating too many rainbow-colored pills
         import pkg_like_plumbum.colors
         path, src, is_pkg = self.call('pkg_like_plumbum.colors')
-        self.assertEquals(path,
-            testlib.data_path('pkg_like_plumbum/colors.py'))
+        modpath = os.path.join(MODS_PATH, 'pkg_like_plumbum/colors.py')
+        self.assertEquals(path, modpath)
 
-        s = open(testlib.data_path('pkg_like_plumbum/colors.py'), 'rb').read()
-        self.assertEquals(src, s)
+        self.assertEquals(src, open(modpath, 'rb').read())
         self.assertFalse(is_pkg)
+
+    def test_ansible_module_utils_distro_succeeds(self):
+        # #590: a package that turns itself into a module.
+        import pkg_like_ansible.module_utils.distro as d
+        self.assertEquals(d.I_AM, "the module that replaced the package")
+        self.assertEquals(
+            sys.modules['pkg_like_ansible.module_utils.distro'].__name__,
+            'pkg_like_ansible.module_utils.distro._distro'
+        )
+
+        path, src, is_pkg = self.call('pkg_like_ansible.module_utils.distro')
+        modpath = os.path.join(MODS_PATH,
+            'pkg_like_ansible/module_utils/distro/__init__.py')
+        self.assertEquals(path, modpath)
+        self.assertEquals(src, open(modpath, 'rb').read())
+        self.assertEquals(is_pkg, True)
 
 
 class ResolveRelPathTest(testlib.TestCase):
@@ -235,7 +253,7 @@ class FindRelatedTest(testlib.TestCase):
 
 if sys.version_info > (2, 6):
     class DjangoMixin(object):
-        WEBPROJECT_PATH = testlib.data_path('webproject')
+        WEBPROJECT_PATH = os.path.join(MODS_PATH, 'webproject')
 
         # TODO: rip out Django and replace with a static tree of weird imports
         # that don't depend on .. Django! The hack below is because the version
