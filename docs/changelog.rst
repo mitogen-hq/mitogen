@@ -30,6 +30,12 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_
   functionality, which will be addressed in a future release.
 
+Fixes
+^^^^^
+
+* `#590 <https://github.com/dw/mitogen/issues/590>`_: the importer can handle
+  modules that replace themselves in :mod:`sys.modules` during import.
+
 
 Thanks!
 ~~~~~~~
