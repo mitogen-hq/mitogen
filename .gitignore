@@ -14,4 +14,4 @@ htmlcov/
 *.egg-info
 __pycache__/
 extra
-tests/ansible/.*.pid
+**/.*.pid
