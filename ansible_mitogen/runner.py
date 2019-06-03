@@ -344,11 +344,22 @@ class Runner(object):
             env.update(self.env)
         self._env = TemporaryEnvironment(env)
 
+    def _revert_cwd(self):
+        """
+        #591: make a best-effort attempt to return to :attr:`good_temp_dir`.
+        """
+        try:
+            os.chdir(self.good_temp_dir)
+        except OSError:
+            LOG.debug('%r: could not restore CWD to %r',
+                      self, self.good_temp_dir)
+
     def revert(self):
         """
         Revert any changes made to the process after running a module. The base
         implementation simply restores the original environment.
         """
+        self._revert_cwd()
         self._env.revert()
         self.revert_temp_dir()
 

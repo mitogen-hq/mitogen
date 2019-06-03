@@ -9,3 +9,4 @@
 - include: issue_177__copy_module_failing.yml
 - include: issue_332_ansiblemoduleerror_first_occurrence.yml
 - include: issue_590__sys_modules_crap.yml
+- include: issue_591__setuptools_cwd_crash.yml

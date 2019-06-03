@@ -30,11 +30,20 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_
   functionality, which will be addressed in a future release.
 
+
 Fixes
 ^^^^^
 
 * `#590 <https://github.com/dw/mitogen/issues/590>`_: the importer can handle
   modules that replace themselves in :mod:`sys.modules` during import.
+
+* `#591 <https://github.com/dw/mitogen/issues/591>`_: the target's current
+  working directory is restored to a known-existent directory between tasks to
+  ensure :func:`os.getcwd` will not fail when called, in the same way that
+  :class:`AnsibleModule` restores it during initialization. However this
+  restore happens before the module ever executes, ensuring any code that calls
+  :func:`os.getcwd` prior to :class:`AnsibleModule` initialization, such as the
+  Ansible 2.7 ``pip`` module, cannot fail due to the behavior of a prior task.
 
 
 Thanks!
@@ -42,6 +51,8 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Anton Markelov <https://github.com/strangeman>`_,
+`Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_, and
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_.
 
