@@ -6,6 +6,10 @@ notifications:
 
 language: python
 
+branches:
+  except:
+  - docs-master
+
 cache:
 - pip
 - directories:
