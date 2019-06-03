@@ -11,7 +11,11 @@
   - custom_python_run_script:
       script: |
         import os
-        os.chdir(module.tmpdir)
+        try:
+          os.chdir(module.tmpdir)
+        except:
+          # Ansible 2.3.
+          os.chdir(os.path.dirname(__file__))
 
   # Will crash if process has a nonexistent CWD.
   - custom_python_os_getcwd:
