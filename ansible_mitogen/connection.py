@@ -145,6 +145,12 @@ def _connect_ssh(spec):
             'ssh_args': spec.ssh_args(),
             'ssh_debug_level': spec.mitogen_ssh_debug_level(),
             'remote_name': get_remote_name(spec),
+            'keepalive_count': (
+                spec.mitogen_ssh_keepalive_count() or 10
+            ),
+            'keepalive_interval': (
+                spec.mitogen_ssh_keepalive_interval() or 30
+            ),
         }
     }
 
