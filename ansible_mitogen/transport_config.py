@@ -277,6 +277,18 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_ssh_keepalive_interval(self):
+        """
+        The SSH ServerAliveInterval.
+        """
+
+    @abc.abstractmethod
+    def mitogen_ssh_keepalive_count(self):
+        """
+        The SSH ServerAliveCount.
+        """
+
+    @abc.abstractmethod
     def mitogen_ssh_debug_level(self):
         """
         The SSH debug level.
@@ -426,6 +438,12 @@ class PlayContextSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._connection.get_task_var('mitogen_lxc_info_path')
+
+    def mitogen_ssh_keepalive_interval(self):
+        return self._connection.get_task_var('mitogen_ssh_keepalive_interval')
+
+    def mitogen_ssh_keepalive_count(self):
+        return self._connection.get_task_var('mitogen_ssh_keepalive_count')
 
     def mitogen_machinectl_path(self):
         return self._connection.get_task_var('mitogen_machinectl_path')
@@ -643,6 +661,12 @@ class MitogenViaSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._host_vars.get('mitogen_lxc_info_path')
+
+    def mitogen_ssh_keepalive_interval(self):
+        return self._host_vars.get('mitogen_ssh_keepalive_interval')
+
+    def mitogen_ssh_keepalive_count(self):
+        return self._host_vars.get('mitogen_ssh_keepalive_count')
 
     def mitogen_machinectl_path(self):
         return self._host_vars.get('mitogen_machinectl_path')

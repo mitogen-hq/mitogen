@@ -45,6 +45,11 @@ Fixes
   :func:`os.getcwd` prior to :class:`AnsibleModule` initialization, such as the
   Ansible 2.7 ``pip`` module, cannot fail due to the behavior of a prior task.
 
+* `#593 <https://github.com/dw/mitogen/issues/593>`_: the SSH connection method
+  exposes ``mitogen_ssh_keepalive_interval`` and
+  ``mitogen_ssh_keepalive_count`` variables, and the default timeout for an SSH
+  server has been increased from `15*3` seconds to `30*10` seconds.
+
 
 Thanks!
 ~~~~~~~
@@ -53,8 +58,9 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
-`Orion Poplawski <https://github.com/opoplawski>`_, and
-`Ulrich Schreiner <https://github.com/ulrichSchreiner>`_.
+`Orion Poplawski <https://github.com/opoplawski>`_,
+`Ulrich Schreiner <https://github.com/ulrichSchreiner>`_, and
+`Yuki Nishida <https://github.com/yuki-nishida-exa>`_.
 
 
 v0.2.7 (2019-05-19)

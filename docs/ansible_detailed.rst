@@ -1007,6 +1007,11 @@ except connection delegation is supported.
   otherwise :data:`False`. This will change to off by default in a future
   release. If you are targetting many hosts on a fast network, please consider
   disabling SSH compression.
+* ``mitogen_ssh_keepalive_count``: integer count of server keepalive messages to
+  which no reply is received before considering the SSH server dead. Defaults
+  to 10.
+* ``mitogen_ssh_keepalive_count``: integer seconds delay between keepalive
+  messages. Defaults to 30.
 
 
 Debugging
