@@ -34,6 +34,9 @@ Enhancements
 Fixes
 ^^^^^
 
+* `#578 <https://github.com/dw/mitogen/issues/578>`_: the extension could crash
+  while rendering an error message, due to an incorrect format string.
+
 * `#590 <https://github.com/dw/mitogen/issues/590>`_: the importer can handle
   modules that replace themselves in :mod:`sys.modules` during import.
 
@@ -59,6 +62,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
+`Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_, and
 `@ghp-rr <https://github.com/ghp-rr>`_.
