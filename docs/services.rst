@@ -83,6 +83,11 @@ Reference
 .. autoclass:: mitogen.service.Service
     :members:
 
+.. autoclass:: mitogen.service.FileService
+    :members:
+.. autoclass:: mitogen.service.PushFileService
+    :members:
+
 .. autoclass:: mitogen.service.Pool
     :members:
 
