@@ -59,8 +59,9 @@ bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
-`Ulrich Schreiner <https://github.com/ulrichSchreiner>`_, and
-`Yuki Nishida <https://github.com/yuki-nishida-exa>`_.
+`Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
+`Yuki Nishida <https://github.com/yuki-nishida-exa>`_, and
+`@ghp-rr <https://github.com/ghp-rr>`_.
 
 
 v0.2.7 (2019-05-19)
