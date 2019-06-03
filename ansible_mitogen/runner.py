@@ -112,6 +112,45 @@ else:
                 for token in shlex.split(str(s), comments=comments)]
 
 
+class TempFileWatcher(object):
+    """
+    Since Ansible 2.7.0, lineinfile leaks file descriptors returned by
+    :func:`tempfile.mkstemp` (ansible/ansible#57327). Handle this and all
+    similar cases by recording descriptors produced by mkstemp during module
+    execution, and cleaning up any leaked descriptors on completion.
+    """
+    def __init__(self):
+        self._real_mkstemp = tempfile.mkstemp
+        # (fd, st.st_dev, st.st_ino)
+        self._fd_dev_inode = []
+        tempfile.mkstemp = self._wrap_mkstemp
+
+    def _wrap_mkstemp(self, *args, **kwargs):
+        fd, path = self._real_mkstemp(*args, **kwargs)
+        st = os.fstat(fd)
+        self._fd_dev_inode.append((fd, st.st_dev, st.st_ino))
+        return fd, path
+
+    def revert(self):
+        tempfile.mkstemp = self._real_mkstemp
+        for tup in self._fd_dev_inode:
+            self._revert_one(*tup)
+
+    def _revert_one(self, fd, st_dev, st_ino):
+        try:
+            st = os.fstat(fd)
+        except OSError:
+            # FD no longer exists.
+            return
+
+        if not (st.st_dev == st_dev and st.st_ino == st_ino):
+            # FD reused.
+            return
+
+        LOG.info("a tempfile.mkstemp() FD was leaked during the last task")
+        os.close(fd)
+
+
 class EnvironmentFileWatcher(object):
     """
     Usually Ansible edits to /etc/environment and ~/.pam_environment are
@@ -803,6 +842,7 @@ class NewStyleRunner(ScriptRunner):
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
         self._argv = TemporaryArgv([''])
+        self._temp_watcher = TempFileWatcher()
         self._importer = ModuleUtilsImporter(
             context=self.service_context,
             module_utils=self.module_map['custom'],
@@ -818,6 +858,7 @@ class NewStyleRunner(ScriptRunner):
 
     def revert(self):
         self.atexit_wrapper.revert()
+        self._temp_watcher.revert()
         self._argv.revert()
         self._stdio.revert()
         self._revert_excepthook()
