@@ -16,6 +16,7 @@ cache:
   - /home/travis/virtualenv
 
 install:
+- grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
 - .ci/${MODE}_install.py
 
 script:
