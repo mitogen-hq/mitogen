@@ -23,3 +23,7 @@ print("  \"__package__\": \"%s\"," % (__package__,))
 print("  \"msg\": \"Here is my input\",")
 print("  \"input\": [%s]" % (input_json,))
 print("}")
+
+# Ansible since 2.7.0/52449cc01a7 broke __file__ and *requires* the module
+# process to exit itself. So needless.
+sys.exit(0)

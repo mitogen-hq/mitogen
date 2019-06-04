@@ -14,3 +14,4 @@ htmlcov/
 *.egg-info
 __pycache__/
 extra
+**/.*.pid

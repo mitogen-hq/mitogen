@@ -625,7 +625,7 @@ class PushFileService(Service):
     """
     Push-based file service. Files are delivered and cached in RAM, sent
     recursively from parent to child. A child that requests a file via
-    :meth:`get` will block until it has ben delivered by a parent.
+    :meth:`get` will block until it has been delivered by a parent.
 
     This service will eventually be merged into FileService.
     """

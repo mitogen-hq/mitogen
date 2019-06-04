@@ -10,7 +10,11 @@ import sys
 import time
 
 import ansible.plugins.callback
-import hdrh.histogram
+
+try:
+    import hdrh.histogram
+except ImportError:
+    hdrh = None
 
 
 def get_fault_count(who=resource.RUSAGE_CHILDREN):
@@ -25,9 +29,9 @@ class CallbackModule(ansible.plugins.callback.CallbackBase):
         if self.hist is not None:
             return
 
-        self.hist = hdrh.histogram.HdrHistogram(1, int(1e6*60), 3)
-        self.fork_latency_sum_usec = 0.0
-        if 'FORK_HISTOGRAM' in os.environ:
+        if hdrh and 'FORK_HISTOGRAM' in os.environ:
+            self.hist = hdrh.histogram.HdrHistogram(1, int(1e6*60), 3)
+            self.fork_latency_sum_usec = 0.0
             self.install()
 
     def install(self):
@@ -54,7 +58,7 @@ class CallbackModule(ansible.plugins.callback.CallbackBase):
             self.hist.record_value(latency_usec)
 
     def playbook_on_stats(self, stats):
-        if 'FORK_HISTOGRAM' not in os.environ:
+        if hdrh is None or 'FORK_HISTOGRAM' not in os.environ:
             return
 
         self_faults = get_fault_count(resource.RUSAGE_SELF) - self.faults_at_start

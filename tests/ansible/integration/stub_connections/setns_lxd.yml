@@ -18,6 +18,7 @@
         -i localhost,
         -c setns
         -e mitogen_kind=lxd
+        -e ansible_python_interpreter=python
         -e mitogen_lxc_path={{git_basedir}}/tests/data/stubs/stub-lxc.py
         -m shell
         -a "echo hi"

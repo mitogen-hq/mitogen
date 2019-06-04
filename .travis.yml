@@ -6,12 +6,17 @@ notifications:
 
 language: python
 
+branches:
+  except:
+  - docs-master
+
 cache:
 - pip
 - directories:
   - /home/travis/virtualenv
 
 install:
+- grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
 - .ci/${MODE}_install.py
 
 script:
@@ -43,9 +48,9 @@ matrix:
     # 2.4.6.0; 2.7 -> 2.7
     - python: "2.7"
       env: MODE=debops_common VER=2.4.6.0
-    # 2.5.7; 3.6 -> 2.7
+    # 2.8.0; 3.6 -> 2.7
     - python: "3.6"
-      env: MODE=debops_common VER=2.6.2
+      env: MODE=debops_common VER=2.8.0
 
     # ansible_mitogen tests.
 
@@ -56,15 +61,16 @@ matrix:
     # 2.6 -> {debian, centos6, centos7}
     - python: "2.6"
       env: MODE=ansible VER=2.4.6.0
-    - python: "2.6"
-      env: MODE=ansible VER=2.6.2
+    # 2.7 -> {debian, centos6, centos7}
+    - python: "2.7"
+      env: MODE=ansible VER=2.8.0
 
     # 3.6 -> {debian, centos6, centos7}
     - python: "3.6"
       env: MODE=ansible VER=2.4.6.0
     - python: "3.6"
-      env: MODE=ansible VER=2.6.2
+      env: MODE=ansible VER=2.8.0
 
     # Sanity check against vanilla Ansible. One job suffices.
     - python: "2.7"
-      env: MODE=ansible VER=2.6.2 DISTROS=debian STRATEGY=linear
+      env: MODE=ansible VER=2.8.0 DISTROS=debian STRATEGY=linear
