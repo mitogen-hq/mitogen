@@ -1089,6 +1089,7 @@ class Importer(object):
     # The Mitogen package is handled specially, since the child context must
     # construct it manually during startup.
     MITOGEN_PKG_CONTENT = [
+        'buildah',
         'compat',
         'debug',
         'doas',
