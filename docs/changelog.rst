@@ -53,6 +53,13 @@ Fixes
   ``mitogen_ssh_keepalive_count`` variables, and the default timeout for an SSH
   server has been increased from `15*3` seconds to `30*10` seconds.
 
+* `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
+  ``lineinfile`` module began leaking writable temporary file descriptors since
+  Ansible 2.7.0. When ``lineinfile`` was used to create or modify a script, and
+  that script was later executed, the execution could fail with "*text file
+  busy*" due to the open descriptor. Temporary descriptors are now tracked and
+  cleaned up on module exit.
+
 
 Thanks!
 ~~~~~~~
