@@ -241,6 +241,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_buildah_path(self):
+        """
+        The path to the "buildah" program for the 'buildah' transport.
+        """
+
+    @abc.abstractmethod
     def mitogen_docker_path(self):
         """
         The path to the "docker" program for the 'docker' transport.
@@ -423,6 +429,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_mask_remote_name(self):
         return self._connection.get_task_var('mitogen_mask_remote_name')
+
+    def mitogen_buildah_path(self):
+        return self._connection.get_task_var('mitogen_buildah_path')
 
     def mitogen_docker_path(self):
         return self._connection.get_task_var('mitogen_docker_path')
@@ -646,6 +655,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_mask_remote_name(self):
         return self._host_vars.get('mitogen_mask_remote_name')
+
+    def mitogen_buildah_path(self):
+        return self._host_vars.get('mitogen_buildah_path')
 
     def mitogen_docker_path(self):
         return self._host_vars.get('mitogen_docker_path')

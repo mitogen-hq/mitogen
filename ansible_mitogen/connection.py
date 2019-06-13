@@ -154,6 +154,20 @@ def _connect_ssh(spec):
         }
     }
 
+def _connect_buildah(spec):
+    """
+    Return ContextService arguments for a Buildah connection.
+    """
+    return {
+        'method': 'buildah',
+        'kwargs': {
+            'username': spec.remote_user(),
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
+            'remote_name': get_remote_name(spec),
+        }
+    }
 
 def _connect_docker(spec):
     """
@@ -373,6 +387,7 @@ def _connect_mitogen_doas(spec):
 #: generating ContextService keyword arguments matching a connection
 #: specification.
 CONNECTION_METHOD = {
+    'buildah': _connect_buildah,
     'docker': _connect_docker,
     'kubectl': _connect_kubectl,
     'jail': _connect_jail,

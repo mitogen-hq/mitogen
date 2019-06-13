@@ -2163,6 +2163,9 @@ class Router(mitogen.core.Router):
             self._write_lock.release()
         return context
 
+    def buildah(self, **kwargs):
+        return self.connect(u'buildah', **kwargs)
+
     def doas(self, **kwargs):
         return self.connect(u'doas', **kwargs)
 
