@@ -341,7 +341,7 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
 
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
               proc.pid, parentfp.fileno(), os.getpid(), Argv(args))
-    return PopenProcess(proc, stdio_fp=parentfp, stderr_fp=stderr_r)
+    return PopenProcess(proc, stdin=parentfp, stdout=parentfp, stderr=stderr_r)
 
 
 def _acquire_controlling_tty():
@@ -455,7 +455,7 @@ def tty_create_child(args):
     slave_fp.close()
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
               proc.pid, master_fp.fileno(), os.getpid(), Argv(args))
-    return PopenProcess(proc, stdio_fp=master_fp)
+    return PopenProcess(proc, stdin=master_fp, stdout=master_fp)
 
 
 def hybrid_tty_create_child(args):
@@ -495,7 +495,7 @@ def hybrid_tty_create_child(args):
     childfp.close()
     LOG.debug('hybrid_tty_create_child() pid=%d stdio=%d, tty=%d, cmd: %s',
               proc.pid, parentfp.fileno(), master_fp.fileno(), Argv(args))
-    return PopenProcess(proc, stdio_fp=parentfp, stderr_fp=master_fp)
+    return PopenProcess(proc, stdin=parentfp, stdout=parentfp, stderr=master_fp)
 
 
 class Timer(object):
@@ -1207,11 +1207,11 @@ class Connection(object):
     #: :class:`mitogen.core.Stream`
     stream = None
 
-    #: If :attr:`create_child` provides a stderr_fp, referencing either a plain
-    #: pipe or the controlling TTY, this references the corresponding
+    #: If `proc.stderr` is set, referencing either a plain pipe or the
+    #: controlling TTY, this references the corresponding
     #: :class:`LogProtocol`'s stream, allowing it to be disconnected when this
     #: stream is disconnected.
-    diag_stream = None
+    stderr_stream = None
 
     #: Function with the semantics of :func:`create_child` used to create the
     #: child process.
@@ -1400,7 +1400,7 @@ class Connection(object):
         if self.exception is None:
             self._adorn_eof_error(exc)
             self.exception = exc
-        for stream in self.stream, self.diag_stream:
+        for stream in self.stream, self.stderr_stream:
             if stream and not stream.receive_side.closed:
                 stream.on_disconnect(self._router.broker)
         self._complete_connection()
@@ -1419,8 +1419,8 @@ class Connection(object):
     eof_error_msg = 'EOF on stream; last 100 lines received:\n'
 
     def on_stream_disconnect(self):
-        if self.diag_stream is not None:
-            self.diag_stream.on_disconnect(self._router.broker)
+        if self.stderr_stream is not None:
+            self.stderr_stream.on_disconnect(self._router.broker)
         if not self.timer.cancelled:
             self.timer.cancel()
             self._fail_connection(EofError(
@@ -1447,14 +1447,14 @@ class Connection(object):
             broker=self._router.broker,
         )
 
-    def diag_stream_factory(self):
+    def stderr_stream_factory(self):
         return self.diag_protocol_class.build_stream()
 
     def _setup_stream(self):
         self.stream = self.stream_factory()
         self.stream.conn = self
         self.stream.name = self.options.name or self._get_name()
-        self.stream.accept(self.proc.stdio_fp, self.proc.stdio_fp)
+        self.stream.accept(self.proc.stdout, self.proc.stdin)
 
         mitogen.core.listen(self.stream, 'shutdown',
                             self.on_stream_shutdown)
@@ -1462,12 +1462,12 @@ class Connection(object):
                             self.on_stream_disconnect)
         self._router.broker.start_receive(self.stream)
 
-    def _setup_diag_stream(self):
-        self.diag_stream = self.diag_stream_factory()
-        self.diag_stream.conn = self
-        self.diag_stream.name = self.options.name or self._get_name()
-        self.diag_stream.accept(self.proc.stderr_fp, self.proc.stderr_fp)
-        self._router.broker.start_receive(self.diag_stream)
+    def _setup_stderr_stream(self):
+        self.stderr_stream = self.stderr_stream_factory()
+        self.stderr_stream.conn = self
+        self.stderr_stream.name = self.options.name or self._get_name()
+        self.stderr_stream.accept(self.proc.stderr, self.proc.stderr)
+        self._router.broker.start_receive(self.stderr_stream)
 
     def _async_connect(self):
         self._start_timer()
@@ -1475,16 +1475,18 @@ class Connection(object):
         if self.context.name is None:
             self.context.name = self.stream.name
         self.proc.name = self.stream.name
-        if self.proc.stderr_fp:
-            self._setup_diag_stream()
+        if self.proc.stderr:
+            self._setup_stderr_stream()
 
     def connect(self, context):
         LOG.debug('%r.connect()', self)
         self.context = context
         self.proc = self.start_child()
-        LOG.debug('%r.connect(): pid:%r stdio:%r diag:%r',
-                  self, self.proc.pid, self.proc.stdio_fp.fileno(),
-                  self.proc.stderr_fp and self.proc.stderr_fp.fileno())
+        LOG.debug('%r.connect(): pid:%r stdin:%r stdout:%r diag:%r',
+                  self, self.proc.pid,
+                  self.proc.stdin.fileno(),
+                  self.proc.stdout.fileno(),
+                  self.proc.stderr.fileno())
 
         self.latch = mitogen.core.Latch()
         self._router.broker.defer(self._async_connect)
@@ -2231,17 +2233,14 @@ class Router(mitogen.core.Router):
 
 
 class Process(object):
-    """
-    Install a :data:`signal.SIGCHLD` handler that generates callbacks when a
-    specific child process has exitted. This class is obsolete, do not use.
-    """
     _delays = [0.05, 0.15, 0.3, 1.0, 5.0, 10.0]
     name = None
 
-    def __init__(self, pid, stdio_fp, stderr_fp=None):
+    def __init__(self, pid, stdin, stdout, stderr=None):
         self.pid = pid
-        self.stdio_fp = stdio_fp
-        self.stderr_fp = stderr_fp
+        self.stdin = stdin
+        self.stdout = stdout
+        self.stderr = stderr
         self._returncode = None
         self._reap_count = 0
 
@@ -2307,8 +2306,8 @@ class Process(object):
 
 
 class PopenProcess(Process):
-    def __init__(self, proc, stdio_fp, stderr_fp=None):
-        super(PopenProcess, self).__init__(proc.pid, stdio_fp, stderr_fp)
+    def __init__(self, proc, stdin, stdout, stderr=None):
+        super(PopenProcess, self).__init__(proc.pid, stdin, stdout, stderr)
         self.proc = proc
 
     def poll(self):

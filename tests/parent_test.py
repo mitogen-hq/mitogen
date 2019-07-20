@@ -225,13 +225,13 @@ class TtyCreateChildTest(testlib.TestCase):
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
             ])
             deadline = time.time() + 5.0
-            mitogen.core.set_block(proc.stdio_fp.fileno())
-            self.assertEquals(mitogen.core.b('hi\n'), proc.stdio_fp.read())
+            mitogen.core.set_block(proc.stdin.fileno())
+            self.assertEquals(mitogen.core.b('hi\n'), proc.stdin.read())
             waited_pid, status = os.waitpid(proc.pid, 0)
             self.assertEquals(proc.pid, waited_pid)
             self.assertEquals(0, status)
             self.assertEquals(mitogen.core.b(''), tf.read())
-            proc.stdio_fp.close()
+            proc.stdout.close()
         finally:
             tf.close()
 

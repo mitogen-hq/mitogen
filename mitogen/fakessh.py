@@ -171,15 +171,15 @@ class Process(object):
     Manages the lifetime and pipe connections of the SSH command running in the
     slave.
     """
-    def __init__(self, router, stdin_fp, stdout_fp, proc=None):
+    def __init__(self, router, stdin, stdout, proc=None):
         self.router = router
-        self.stdin_fp = stdin_fp
-        self.stdout_fp = stdout_fp
+        self.stdin = stdin
+        self.stdout = stdout
         self.proc = proc
         self.control_handle = router.add_handler(self._on_control)
         self.stdin_handle = router.add_handler(self._on_stdin)
         self.pump = IoPump.build_stream(router.broker)
-        self.pump.accept(stdin_fp, stdout_fp)
+        self.pump.accept(stdin, stdout)
         self.stdin = None
         self.control = None
         self.wake_event = threading.Event()
@@ -192,7 +192,7 @@ class Process(object):
             pmon.add(proc.pid, self._on_proc_exit)
 
     def __repr__(self):
-        return 'Process(%r, %r)' % (self.stdin_fp, self.stdout_fp)
+        return 'Process(%r, %r)' % (self.stdin, self.stdout)
 
     def _on_proc_exit(self, status):
         LOG.debug('%r._on_proc_exit(%r)', self, status)
@@ -355,8 +355,8 @@ def _fakessh_main(dest_context_id, econtext):
               control_handle, stdin_handle)
 
     process = Process(econtext.router,
-                      stdin_fp=os.fdopen(1, 'w+b', 0),
-                      stdout_fp=os.fdopen(0, 'r+b', 0))
+                      stdin=os.fdopen(1, 'w+b', 0),
+                      stdout=os.fdopen(0, 'r+b', 0))
     process.start_master(
         stdin=mitogen.core.Sender(dest, stdin_handle),
         control=mitogen.core.Sender(dest, control_handle),

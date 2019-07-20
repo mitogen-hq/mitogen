@@ -133,8 +133,8 @@ class Connection(mitogen.parent.Connection):
     def _get_name(self):
         return u'doas.' + self.options.username
 
-    def diag_stream_factory(self):
-        stream = super(Connection, self).diag_stream_factory()
+    def stderr_stream_factory(self):
+        stream = super(Connection, self).stderr_stream_factory()
         stream.protocol.setup_patterns(self)
         return stream
 
