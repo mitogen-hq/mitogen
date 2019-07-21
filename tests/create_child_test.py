@@ -222,35 +222,36 @@ class TtyCreateChildTest(testlib.TestCase):
             tf.close()
 
 
+class StderrDiagTtyMixin(object):
+    def test_stderr(self):
+        proc, info, buf = run_fd_check(self.func, 2, 'write',
+            lambda proc: wait_read(proc.stderr, 4))
+
+        st = os.fstat(proc.stderr.fileno())
+        self.assertTrue(stat.S_ISCHR(st.st_mode))
+        self.assertTrue(stat.S_ISCHR(info['st_mode']))
+
+        self.assertTrue(isinstance(info['ttyname'],
+                        mitogen.core.UnicodeType))
+        os.ttyname(proc.stderr.fileno())  # crashes if wrong
+
+        flags = fcntl.fcntl(proc.stderr.fileno(), fcntl.F_GETFL)
+        self.assertTrue(flags & os.O_RDWR)
+        self.assertTrue(info['flags'] & os.O_RDWR)
+
+        self.assertNotEquals(st.st_dev, info['st_dev'])
+        self.assertTrue(flags & os.O_RDWR)
+        self.assertTrue(buf, 'TEST')
+
+
+class HybridTtyCreateChildTest(StdinSockMixin, StdoutSockMixin,
+                               StderrDiagTtyMixin, testlib.TestCase):
+    func = staticmethod(mitogen.parent.hybrid_tty_create_child)
+
+
+
 if 0:
-
-    class StderrDiagTtyMixin(object):
-        def test_stderr(self):
-            proc, info, buf = run_fd_check(self.func, 2, 'write',
-                lambda proc: wait_read(proc.diag_receive_side, 4))
-
-            st = os.fstat(proc.diag_receive_side.fd)
-            self.assertTrue(stat.S_ISCHR(st.st_mode))
-            self.assertTrue(stat.S_ISCHR(info['st_mode']))
-
-            self.assertTrue(isinstance(info['ttyname'],
-                            mitogen.core.UnicodeType))
-            os.ttyname(proc.diag_transmit_side.fd) # crashes if wrong
-
-            flags = fcntl.fcntl(proc.diag_receive_side.fd, fcntl.F_GETFL)
-            self.assertTrue(flags & os.O_RDWR)
-            self.assertTrue(info['flags'] & os.O_RDWR)
-
-            self.assertNotEquals(st.st_dev, info['st_dev'])
-            self.assertTrue(flags & os.O_RDWR)
-            self.assertTrue(buf, 'TEST')
-
-
-    class HybridTtyCreateChildTest(StdinSockMixin, StdoutSockMixin,
-                                   StderrDiagTtyMixin, testlib.TestCase):
-        func = staticmethod(mitogen.parent.hybrid_tty_create_child)
-
-
+    # issue #410
     class SelinuxHybridTtyCreateChildTest(StderrDiagTtyMixin, testlib.TestCase):
         func = staticmethod(mitogen.parent.selinux_hybrid_tty_create_child)
 
