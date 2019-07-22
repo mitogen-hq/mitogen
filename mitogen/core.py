@@ -3217,7 +3217,8 @@ class Broker(object):
 
             fire(self, 'shutdown')
             self._broker_shutdown()
-        except Exception as e:
+        except Exception:
+            e = sys.exc_info()[1]
             LOG.exception('broker crashed')
             syslog.syslog(syslog.LOG_ERR, 'broker crashed: %s' % (e,))
             syslog.closelog()  # prevent test 'fd leak'.
