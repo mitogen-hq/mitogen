@@ -102,10 +102,9 @@ class SetupBootstrapProtocol(mitogen.parent.BootstrapProtocol):
         self.password_sent = True
 
     def _on_password_incorrect(self, line, match):
-        if self.password_sent:
-            self.stream.conn._fail_connection(
-                PasswordError(password_incorrect_msg)
-            )
+        self.stream.conn._fail_connection(
+            PasswordError(password_incorrect_msg)
+        )
 
 
 class Options(mitogen.parent.Options):
