@@ -9,6 +9,7 @@ venvs/**
 MANIFEST
 build/
 dist/
+extra/
 docs/_build/
 htmlcov/
 *.egg-info
