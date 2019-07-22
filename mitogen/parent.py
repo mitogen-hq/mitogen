@@ -1483,7 +1483,7 @@ class Connection(object):
         LOG.debug('%r.connect()', self)
         self.context = context
         self.proc = self.start_child()
-        LOG.debug('%r.connect(): pid:%r stdin:%r stdout:%r diag:%r',
+        LOG.debug('%r.connect(): pid:%r stdin:%r stdout:%r stderr:%r',
                   self, self.proc.pid,
                   self.proc.stdin.fileno(),
                   self.proc.stdout.fileno(),
