@@ -1026,6 +1026,7 @@ class LineLoggingProtocolMixin(object):
         return mitogen.core.to_text(s)
 
     def on_line_received(self, line):
+        self.logged_partial = None
         self.logged_lines.append(line)
         self.logged_lines[:] = self.logged_lines[-100:]
         return super(LineLoggingProtocolMixin, self).on_line_received(line)
