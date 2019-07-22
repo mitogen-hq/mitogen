@@ -37,37 +37,37 @@ import mitogen.parent
 LOG = logging.getLogger(__name__)
 
 
-class Stream(mitogen.parent.Stream):
-    child_is_immediate_subprocess = False
-
+class Options(mitogen.parent.Options):
     container = None
     username = None
     buildah_path = 'buildah'
+
+    def __init__(self, container=None, buildah_path=None, username=None,
+                 **kwargs):
+        super(Options, self).__init__(**kwargs)
+        assert container is not None
+        self.container = container
+        if buildah_path:
+            self.buildah_path = buildah_path
+        if username:
+            self.username = username
+
+
+class Connection(mitogen.parent.Connection):
+    options_class = Options
+    child_is_immediate_subprocess = False
 
     # TODO: better way of capturing errors such as "No such container."
     create_child_args = {
         'merge_stdio': True
     }
 
-    def construct(self, container=None,
-                  buildah_path=None, username=None,
-                  **kwargs):
-        assert container or image
-        super(Stream, self).construct(**kwargs)
-        if container:
-            self.container = container
-        if buildah_path:
-            self.buildah_path = buildah_path
-        if username:
-            self.username = username
-
     def _get_name(self):
-        return u'buildah.' + self.container
+        return u'buildah.' + self.options.container
 
     def get_boot_command(self):
-        args = []
-        if self.username:
-            args += ['--user=' + self.username]
-        bits = [self.buildah_path, 'run'] + args + ['--', self.container]
-
-        return bits + super(Stream, self).get_boot_command()
+        args = [self.options.buildah_path, 'run']
+        if self.options.username:
+            args += ['--user=' + self.options.username]
+        args += ['--', self.options.container]
+        return args + super(Connection, self).get_boot_command()
