@@ -1486,7 +1486,7 @@ class Connection(object):
                   self, self.proc.pid,
                   self.proc.stdin.fileno(),
                   self.proc.stdout.fileno(),
-                  self.proc.stderr.fileno())
+                  self.proc.stderr and self.proc.stderr.fileno())
 
         self.latch = mitogen.core.Latch()
         self._router.broker.defer(self._async_connect)
