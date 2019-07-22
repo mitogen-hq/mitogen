@@ -308,7 +308,7 @@ class MuxProcess(object):
         self._setup_responder(self.router.responder)
         mitogen.core.listen(self.broker, 'shutdown', self.on_broker_shutdown)
         mitogen.core.listen(self.broker, 'exit', self.on_broker_exit)
-        self.listener = mitogen.unix.Listener(
+        self.listener = mitogen.unix.Listener.build_stream(
             router=self.router,
             path=self.unix_listener_path,
             backlog=C.DEFAULT_FORKS,

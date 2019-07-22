@@ -118,9 +118,9 @@ class Listener(mitogen.core.Protocol):
                 raise
 
     def on_shutdown(self, broker):
-        broker.stop_receive(self)
+        broker.stop_receive(self.stream)
         self._unlink_socket()
-        self.receive_side.close()
+        self.stream.receive_side.close()
 
     def on_accept_client(self, sock):
         sock.setblocking(True)
