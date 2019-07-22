@@ -185,7 +185,7 @@ class Connection(mitogen.parent.Connection):
         pid = os.fork()
         if pid:
             childfp.close()
-            return Process(pid, parentfp)
+            return Process(pid, stdin=parentfp, stdout=parentfp)
         else:
             parentfp.close()
             self._wrap_child_main(childfp)
