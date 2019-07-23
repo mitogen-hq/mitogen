@@ -38,6 +38,7 @@ import traceback
 
 import mitogen.core
 import mitogen.parent
+from mitogen.core import b
 
 
 LOG = logging.getLogger('mitogen')
@@ -212,7 +213,7 @@ class Connection(mitogen.parent.Connection):
             self.options.on_fork()
         mitogen.core.set_block(childfp.fileno())
 
-        childfp.send('MITO002\n')
+        childfp.send(b('MITO002\n'))
 
         # Expected by the ExternalContext.main().
         os.dup2(childfp.fileno(), 1)
