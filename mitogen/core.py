@@ -3599,9 +3599,9 @@ class ExternalContext(object):
                                  socket.gethostname())
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
-                self.broker._py24_25_compat()
                 if self.config.get('send_ec2', True):
                     self.stream.transmit_side.write(b('MITO002\n'))
+                self.broker._py24_25_compat()
                 self.log_handler.uncork()
                 self.dispatcher.run()
                 _v and LOG.debug('ExternalContext.main() normal exit')
