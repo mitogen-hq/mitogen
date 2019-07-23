@@ -343,7 +343,7 @@ class TestCase(unittest2.TestCase):
 
     def _teardown_check_zombies(self):
         try:
-            pid, status, ru = os.wait3(os.WNOHANG)
+            pid, status = os.waitpid(0, os.WNOHANG)
         except OSError:
             return  # ECHILD
 
