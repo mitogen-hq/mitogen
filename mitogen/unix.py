@@ -172,12 +172,14 @@ def _connect(path, broker, sock):
     stream.receive_side = side
     stream.name = u'unix_listener.%d' % (pid,)
 
+    mitogen.core.listen(stream, 'disconnect', _cleanup)
     mitogen.core.listen(router.broker, 'shutdown',
         lambda: router.disconnect_stream(stream))
 
     context = mitogen.parent.Context(router, remote_id)
     router.register(context, stream)
     return router, context
+
 
 def connect(path, broker=None):
     LOG.debug('unix.connect(path=%r)', path)
@@ -187,3 +189,14 @@ def connect(path, broker=None):
     except:
         sock.close()
         raise
+
+
+def _cleanup():
+    """
+    Reset mitogen.context_id and friends when our connection to the parent is
+    lost. Per comments on #91, these globals need to move to the Router so
+    fix-ups like this become unnecessary.
+    """
+    mitogen.context_id = 0
+    mitogen.parent_id = None
+    mitogen.parent_ids = []
