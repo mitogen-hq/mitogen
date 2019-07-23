@@ -92,7 +92,7 @@ PERMDENIED_PATTERN = re.compile(
     re.I
 )
 
-DEBUG_PATTERN = re.compile(b'^debug[123]:')
+DEBUG_PATTERN = re.compile(b('^debug[123]:'))
 
 
 class PasswordError(mitogen.core.StreamError):
