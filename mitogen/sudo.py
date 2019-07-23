@@ -266,6 +266,4 @@ class Connection(mitogen.parent.Connection):
         if self.options.selinux_type:
             bits += ['-t', self.options.selinux_type]
 
-        bits = bits + ['--'] + super(Connection, self).get_boot_command()
-        LOG.debug('sudo command line: %r', bits)
-        return bits
+        return bits + ['--'] + super(Connection, self).get_boot_command()
