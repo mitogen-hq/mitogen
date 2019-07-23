@@ -989,7 +989,7 @@ class ModuleResponder(object):
 
     def _send_forward_module(self, stream, context, fullname):
         if stream.protocol.remote_id != context.context_id:
-            stream.send(
+            stream.protocol._send(
                 mitogen.core.Message(
                     data=b('%s\x00%s' % (context.context_id, fullname)),
                     handle=mitogen.core.FORWARD_MODULE,

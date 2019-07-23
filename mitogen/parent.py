@@ -2360,7 +2360,7 @@ class ModuleForwarder(object):
                   self, fullname, context_id, stream.protocol.remote_id)
         self._send_module_and_related(stream, fullname)
         if stream.protocol.remote_id != context_id:
-            stream._send(
+            stream.protocol._send(
                 mitogen.core.Message(
                     data=msg.data,
                     handle=mitogen.core.FORWARD_MODULE,
