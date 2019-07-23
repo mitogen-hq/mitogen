@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import shutil
+import sys
 
 import ci_lib
 
@@ -68,8 +69,8 @@ with ci_lib.Fold('job_setup'):
 
 
 with ci_lib.Fold('first_run'):
-    ci_lib.run('debops common')
+    ci_lib.run('debops common %s', ' '.join(sys.argv[1:]))
 
 
 with ci_lib.Fold('second_run'):
-    ci_lib.run('debops common')
+    ci_lib.run('debops common %s', ' '.join(sys.argv[1:]))
