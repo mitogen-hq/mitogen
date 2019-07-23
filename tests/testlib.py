@@ -351,6 +351,10 @@ class TestCase(unittest2.TestCase):
             assert 0, "%s failed to reap subprocess %d (status %d)." % (
                 self, pid, status
             )
+
+        print()
+        print('Children of unit test process:')
+        os.system('ps uww --ppid ' + str(os.getpid()))
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):

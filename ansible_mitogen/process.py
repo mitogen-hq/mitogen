@@ -79,8 +79,15 @@ def clean_shutdown(sock):
     MuxProcess, debug logs may appear on the user's terminal *after* the prompt
     has been printed.
     """
-    sock.shutdown(socket.SHUT_WR)
+    try:
+        sock.shutdown(socket.SHUT_WR)
+    except socket.error:
+        # Already closed. This is possible when tests are running.
+        LOG.debug('clean_shutdown: ignoring duplicate call')
+        return
+
     sock.recv(1)
+    sock.close()
 
 
 def getenv_int(key, default=0):
@@ -154,8 +161,15 @@ class MuxProcess(object):
     #: forked WorkerProcesses to contact the MuxProcess
     unix_listener_path = None
 
-    #: Singleton.
-    _instance = None
+    @classmethod
+    def _reset(cls):
+        """
+        Used to clean up in unit tests.
+        """
+        assert cls.worker_sock is not None
+        cls.worker_sock.close()
+        cls.worker_sock = None
+        os.waitpid(cls.worker_pid, 0)
 
     @classmethod
     def start(cls, _init_logging=True):
@@ -178,7 +192,7 @@ class MuxProcess(object):
         mitogen.utils.setup_gil()
         cls.unix_listener_path = mitogen.unix.make_socket_path()
         cls.worker_sock, cls.child_sock = socket.socketpair()
-        atexit.register(lambda: clean_shutdown(cls.worker_sock))
+        atexit.register(clean_shutdown, cls.worker_sock)
         mitogen.core.set_cloexec(cls.worker_sock.fileno())
         mitogen.core.set_cloexec(cls.child_sock.fileno())
 
@@ -189,8 +203,8 @@ class MuxProcess(object):
             ansible_mitogen.logging.setup()
 
         cls.original_env = dict(os.environ)
-        cls.child_pid = os.fork()
-        if cls.child_pid:
+        cls.worker_pid = os.fork()
+        if cls.worker_pid:
             save_pid('controller')
             ansible_mitogen.logging.set_process_name('top')
             ansible_mitogen.affinity.policy.assign_controller()

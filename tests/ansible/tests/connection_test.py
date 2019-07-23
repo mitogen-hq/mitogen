@@ -13,19 +13,48 @@ import ansible.errors
 import ansible.playbook.play_context
 
 import mitogen.core
+import mitogen.utils
+
 import ansible_mitogen.connection
 import ansible_mitogen.plugins.connection.mitogen_local
 import ansible_mitogen.process
+
 import testlib
 
 
-LOGGER_NAME = ansible_mitogen.target.LOG.name
+class MuxProcessMixin(object):
+    @classmethod
+    def setUpClass(cls):
+        #mitogen.utils.log_to_file()
+        ansible_mitogen.process.MuxProcess.start(_init_logging=False)
+        super(MuxProcessMixin, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        super(MuxProcessMixin, cls).tearDownClass()
+        ansible_mitogen.process.MuxProcess._reset()
 
 
-# TODO: fixtureize
-import mitogen.utils
-mitogen.utils.log_to_file()
-ansible_mitogen.process.MuxProcess.start(_init_logging=False)
+class ConnectionMixin(MuxProcessMixin):
+    klass = ansible_mitogen.plugins.connection.mitogen_local.Connection
+
+    def make_connection(self):
+        play_context = ansible.playbook.play_context.PlayContext()
+        return self.klass(play_context, new_stdin=False)
+
+    def wait_for_completion(self):
+        # put_data() is asynchronous, must wait for operation to happen. Do
+        # that by making RPC for some junk that must run on the thread once op
+        # completes.
+        self.conn.get_chain().call(os.getpid)
+
+    def setUp(self):
+        super(ConnectionMixin, self).setUp()
+        self.conn = self.make_connection()
+
+    def tearDown(self):
+        self.conn.close()
+        super(ConnectionMixin, self).tearDown()
 
 
 class OptionalIntTest(unittest2.TestCase):
@@ -46,28 +75,6 @@ class OptionalIntTest(unittest2.TestCase):
 
     def test_is_junk(self):
         self.assertEquals(None, self.func({1:2}))
-
-
-class ConnectionMixin(object):
-    klass = ansible_mitogen.plugins.connection.mitogen_local.Connection
-
-    def make_connection(self):
-        play_context = ansible.playbook.play_context.PlayContext()
-        return self.klass(play_context, new_stdin=False)
-
-    def wait_for_completion(self):
-        # put_data() is asynchronous, must wait for operation to happen. Do
-        # that by making RPC for some junk that must run on the thread once op
-        # completes.
-        self.conn.get_chain().call(os.getpid)
-
-    def setUp(self):
-        super(ConnectionMixin, self).setUp()
-        self.conn = self.make_connection()
-
-    def tearDown(self):
-        self.conn.close()
-        super(ConnectionMixin, self).tearDown()
 
 
 class PutDataTest(ConnectionMixin, unittest2.TestCase):
