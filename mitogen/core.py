@@ -3418,7 +3418,7 @@ class ExternalContext(object):
             self.parent.send_await(Message(handle=DETACHING))
             LOG.info('Detaching from %r; parent is %s', stream, self.parent)
             for x in range(20):
-                pending = self.broker.defer_sync(lambda: stream.pending_bytes())
+                pending = self.broker.defer_sync(stream.protocol.pending_bytes)
                 if not pending:
                     break
                 time.sleep(0.05)
