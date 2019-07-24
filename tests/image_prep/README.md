@@ -11,9 +11,12 @@ code, the OS X config just has the user accounts.
 See ../README.md for a (mostly) description of the accounts created.
 
 
+
 ## Building the containers
 
 ``./build_docker_images.sh``
+
+Requires Ansible 2.3.x.x in order to target CentOS 5
 
 
 ## Preparing an OS X box

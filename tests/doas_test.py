@@ -1,5 +1,4 @@
 
-import getpass
 import os
 
 import mitogen
@@ -59,7 +58,7 @@ class DoasTest(testlib.DockerMixin, testlib.TestCase):
             password='has_sudo_password',
         )
         context = self.router.su(via=ssh, password='rootpassword')
-        self.assertEquals('root', context.call(getpass.getuser))
+        self.assertEquals(0, context.call(os.getuid))
 
 
 if __name__ == '__main__':
