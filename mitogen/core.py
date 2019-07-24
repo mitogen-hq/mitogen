@@ -1745,9 +1745,13 @@ class Side(object):
     def __init__(self, stream, fp, cloexec=True, keep_alive=True, blocking=False):
         #: The :class:`Stream` for which this is a read or write side.
         self.stream = stream
-        #: Integer file descriptor to perform IO on, or :data:`None` if
-        #: :meth:`close` has been called.
+        # File or socket object responsible for the lifetime of its underlying
+        # file descriptor.
         self.fp = fp
+        #: Integer file descriptor to perform IO on, or :data:`None` if
+        #: :meth:`close` has been called. This is saved separately from the
+        #: file object, since fileno() cannot be called on it after it has been
+        #: closed.
         self.fd = fp.fileno()
         #: If :data:`True`, causes presence of this side in
         #: :class:`Broker`'s active reader set to defer shutdown until the
