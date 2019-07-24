@@ -6,6 +6,12 @@ import mitogen.core
 
 import testlib
 
+try:
+    next
+except NameError:
+    def next(it):
+        return it.next()
+
 
 class IterSplitTest(unittest2.TestCase):
     func = staticmethod(mitogen.core.iter_split)
