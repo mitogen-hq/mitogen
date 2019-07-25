@@ -1,6 +1,7 @@
 
 import os
 import socket
+import sys
 
 import mitogen
 import mitogen.parent
@@ -33,6 +34,13 @@ class DockerTest(testlib.DockerMixin, testlib.TestCase):
             via_ssh.call(socket.gethostname),
             via_setns.call(socket.gethostname),
         )
+
+
+DockerTest = unittest2.skipIf(
+    condition=sys.version_info < (2, 5),
+    reason="mitogen.setns unsupported on Python <2.4"
+)(DockerTest)
+
 
 if __name__ == '__main__':
     unittest2.main()
