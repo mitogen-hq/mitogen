@@ -508,11 +508,17 @@ class Timer(object):
         self.when = when
         self.func = func
 
+    def __repr__(self):
+        return 'Timer(%r, %r)' % (self.when, self.func)
+
     def __eq__(self, other):
         return self.when == other.when
 
     def __lt__(self, other):
         return self.when < other.when
+
+    def __le__(self, other):
+        return self.when <= other.when
 
     def cancel(self):
         """
