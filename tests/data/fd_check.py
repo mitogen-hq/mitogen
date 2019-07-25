@@ -44,13 +44,3 @@ open(sys.argv[1], 'w').write(repr({
     'ttyname': ttyname(fd),
     'controlling_tty': controlling_tty(),
 }))
-
-open('/tmp/foo', 'w').write(repr({
-    'buf': buf,
-    'flags': fcntl.fcntl(fd, fcntl.F_GETFL),
-    'st_mode': st.st_mode,
-    'st_dev': st.st_dev,
-    'st_ino': st.st_ino,
-    'ttyname': ttyname(fd),
-    'controlling_tty': controlling_tty(),
-}))
