@@ -116,9 +116,8 @@ class CreateChildMergedTest(StdinSockMixin, StdoutSockMixin,
 class CreateChildStderrPipeTest(StdinSockMixin, StdoutSockMixin,
                                 testlib.TestCase):
     def func(self, *args, **kwargs):
-        return mitogen.parent.create_child(
-            *args, stderr_pipe=True, **kwargs
-        )
+        kwargs['stderr_pipe'] = True
+        return mitogen.parent.create_child(*args, **kwargs)
 
     def test_stderr(self):
         proc, info, buf = run_fd_check(self.func, 2, 'write',
