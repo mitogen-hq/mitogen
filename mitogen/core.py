@@ -1463,6 +1463,9 @@ class LogHandler(logging.Handler):
         self.context = context
         self.local = threading.local()
         self._buffer = []
+        # Private synchronization is needed while corked, to ensure no
+        # concurrent call to _send() exists during uncork().
+        self._buffer_lock = threading.Lock()
 
     def uncork(self):
         """
@@ -1470,13 +1473,25 @@ class LogHandler(logging.Handler):
         possible to route messages, therefore messages are buffered until
         :meth:`uncork` is called by :class:`ExternalContext`.
         """
-        self._send = self.context.send
-        for msg in self._buffer:
-            self._send(msg)
-        self._buffer = None
+        self._buffer_lock.acquire()
+        try:
+            self._send = self.context.send
+            for msg in self._buffer:
+                self._send(msg)
+            self._buffer = None
+        finally:
+            self._buffer_lock.release()
 
     def _send(self, msg):
-        self._buffer.append(msg)
+        self._buffer_lock.acquire()
+        try:
+            if self._buffer is None:
+                # uncork() may run concurrent to _send()
+                self._send(msg)
+            else:
+                self._buffer.append(msg)
+        finally:
+            self._buffer_lock.release()
 
     def emit(self, rec):
         if rec.name == 'mitogen.io' or \
