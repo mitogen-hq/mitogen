@@ -1701,7 +1701,7 @@ class BufferedWriter(object):
             written = self._protocol.stream.transmit_side.write(buf)
             if not written:
                 _v and LOG.debug('%r.on_transmit(): disconnection detected', self)
-                self._protocol.on_disconnect(broker)
+                self._protocol.stream.on_disconnect(broker)
                 return
             elif written != len(buf):
                 self._buf.appendleft(BufferType(buf, written))
