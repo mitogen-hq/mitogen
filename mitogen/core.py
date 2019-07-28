@@ -1785,7 +1785,10 @@ class Side(object):
             set_nonblock(self.fd)
 
     def __repr__(self):
-        return '<Side of %r fd %s>' % (self.stream, self.fd)
+        return '<Side of %s fd %s>' % (
+            self.stream.name or repr(self.stream),
+            self.fd
+        )
 
     @classmethod
     def _on_fork(cls):
