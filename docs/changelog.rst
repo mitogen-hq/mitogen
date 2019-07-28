@@ -61,6 +61,44 @@ Fixes
   cleaned up on module exit.
 
 
+Core Library
+~~~~~~~~~~~~
+
+* Logs are more readable, and many :func:`repr` strings are more descriptive.
+  The old pseudo-function-call format is slowly being migrated to
+  human-readable output where appropriate. For example,
+  *"Stream(ssh:123).connect()"* could become *"connecting to ssh:123"*.
+
+* :func:`bytearray` was removed from the list of supported serialization types.
+   It has never been portable, and does not appear to have been used.
+
+* `#170 <https://github.com/dw/mitogen/issues/170>`_: to better support child
+  process management and a future asynchronous connect implementation, a
+  :class:`mitogen.parent.TimerList` API is available.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: the internal
+  :class:`mitogen.core.Stream` has been refactored into 7 new classes,
+  separating out protocol behaviour logic, output buffering, line-oriented
+  input parsing, options handling, and connection management. The new
+  connection management implementation is internally asynchronous, laying
+  almost all the groundwork needed for fully asynchronous connect.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: zombie process reaping
+  has vastly improved, by using the timer API to efficiently poll for a slow
+  child to finish exiting. Polling avoids the need to install a process-global
+  `SIGCHLD` handler, or rely on the process-global 'signal file descriptor'
+  functionality only available in newer Python releases.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: almost all uses of
+  :func:`os.dup` have been removed, along with almost all cases of manual file
+  descriptor management. Descriptors are trapped in :func:`os.fdopen` objects
+  as soon as they are opened, ensuring a leaked object will close itself, and
+  ensuring every descriptor is fused to a `closed` flag, preventing historical
+  bugs where a double close could destroy descriptors belonging to an unrelated
+  stream.
+
+
+
 Thanks!
 ~~~~~~~
 
@@ -107,14 +145,6 @@ Fixes
 * `#587 <https://github.com/dw/mitogen/issues/587>`_: display a friendly
   message when running on an unsupported version of Ansible, to cope with
   potential influx of 2.8-related bug reports.
-
-
-Core Library
-~~~~~~~~~~~~
-
-* `#170 <https://github.com/dw/mitogen/issues/170>`_: to better support child
-  process management and a future asynchronous connect implementation, a
-  :class:`mitogen.parent.TimerList` API is available.
 
 
 Thanks!
