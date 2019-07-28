@@ -21,7 +21,7 @@ router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
 options = mitogen.ssh.Options(max_message_size=0, hostname='foo')
 conn = mitogen.ssh.Connection(options, router)
-conn.context_id = 123
+conn.context = context
 
 print('SSH command size: %s' % (len(' '.join(conn.get_boot_command())),))
 print('Preamble size: %s (%.2fKiB)' % (
