@@ -383,6 +383,9 @@ Connection Methods
     the root PID of a running Docker, LXC, LXD, or systemd-nspawn
     container.
 
+    The setns method depends on the built-in :mod:`ctypes` module, and thus
+    does not support Python 2.4.
+
     A program is required only to find the root PID, after which management
     of the child Python interpreter is handled directly.
 

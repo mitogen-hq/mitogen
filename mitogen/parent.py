@@ -38,9 +38,11 @@ import codecs
 import errno
 import fcntl
 import getpass
+import heapq
 import inspect
 import logging
 import os
+import re
 import signal
 import socket
 import struct
@@ -136,6 +138,9 @@ SIGNAL_BY_NUM = dict(
     if name.startswith('SIG') and not name.startswith('SIG_')
 )
 
+_core_source_lock = threading.Lock()
+_core_source_partial = None
+
 
 def get_log_level():
     return (LOG.level or logging.getLogger().level or logging.INFO)
@@ -155,10 +160,6 @@ def get_sys_executable():
         _sys_executable_warning_logged = True
 
     return '/usr/bin/python'
-
-
-_core_source_lock = threading.Lock()
-_core_source_partial = None
 
 
 def _get_core_source():
@@ -208,27 +209,33 @@ def is_immediate_child(msg, stream):
     Handler policy that requires messages to arrive only from immediately
     connected children.
     """
-    return msg.src_id == stream.remote_id
+    return msg.src_id == stream.protocol.remote_id
 
 
 def flags(names):
-    """Return the result of ORing a set of (space separated) :py:mod:`termios`
-    module constants together."""
+    """
+    Return the result of ORing a set of (space separated) :py:mod:`termios`
+    module constants together.
+    """
     return sum(getattr(termios, name, 0)
                for name in names.split())
 
 
 def cfmakeraw(tflags):
-    """Given a list returned by :py:func:`termios.tcgetattr`, return a list
+    """
+    Given a list returned by :py:func:`termios.tcgetattr`, return a list
     modified in a manner similar to the `cfmakeraw()` C library function, but
-    additionally disabling local echo."""
-    # BSD: https://github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
-    # Linux: https://github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
+    additionally disabling local echo.
+    """
+    # BSD: github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
+    # Linux: github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
-    iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK ISTRIP INLCR ICRNL IXON IGNPAR')
+    iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK '
+                    'ISTRIP INLCR ICRNL IXON IGNPAR')
     iflag &= ~flags('IGNBRK BRKINT PARMRK')
     oflag &= ~flags('OPOST')
-    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG IEXTEN NOFLSH TOSTOP PENDIN')
+    lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG '
+                    'IEXTEN NOFLSH TOSTOP PENDIN')
     cflag &= ~flags('CSIZE PARENB')
     cflag |= flags('CS8 CREAD')
     return [iflag, oflag, cflag, lflag, ispeed, ospeed, cc]
@@ -245,22 +252,13 @@ def disable_echo(fd):
     termios.tcsetattr(fd, flags, new)
 
 
-def close_nonstandard_fds():
-    for fd in xrange(3, SC_OPEN_MAX):
-        try:
-            os.close(fd)
-        except OSError:
-            pass
-
-
 def create_socketpair(size=None):
     """
-    Create a :func:`socket.socketpair` to use for use as a child process's UNIX
-    stdio channels. As socket pairs are bidirectional, they are economical on
-    file descriptor usage as the same descriptor can be used for ``stdin`` and
+    Create a :func:`socket.socketpair` for use as a child's UNIX stdio
+    channels. As socketpairs are bidirectional, they are economical on file
+    descriptor usage as one descriptor can be used for ``stdin`` and
     ``stdout``. As they are sockets their buffers are tunable, allowing large
-    buffers to be configured in order to improve throughput for file transfers
-    and reduce :class:`mitogen.core.Broker` IO loop iterations.
+    buffers to improve file transfer throughput and reduce IO loop iterations.
     """
     parentfp, childfp = socket.socketpair()
     parentfp.setsockopt(socket.SOL_SOCKET,
@@ -272,44 +270,26 @@ def create_socketpair(size=None):
     return parentfp, childfp
 
 
-def detach_popen(**kwargs):
+def popen(**kwargs):
     """
-    Use :class:`subprocess.Popen` to construct a child process, then hack the
-    Popen so that it forgets the child it created, allowing it to survive a
-    call to Popen.__del__.
-
-    If the child process is not detached, there is a race between it exitting
-    and __del__ being called. If it exits before __del__ runs, then __del__'s
-    call to :func:`os.waitpid` will capture the one and only exit event
-    delivered to this process, causing later 'legitimate' calls to fail with
-    ECHILD.
-
-    :param list close_on_error:
-        Array of integer file descriptors to close on exception.
-    :returns:
-        Process ID of the new child.
+    Wrap :class:`subprocess.Popen` to ensure any global :data:`_preexec_hook`
+    is invoked in the child.
     """
-    # This allows Popen() to be used for e.g. graceful post-fork error
-    # handling, without tying the surrounding code into managing a Popen
-    # object, which isn't possible for at least :mod:`mitogen.fork`. This
-    # should be replaced by a swappable helper class in a future version.
     real_preexec_fn = kwargs.pop('preexec_fn', None)
     def preexec_fn():
         if _preexec_hook:
             _preexec_hook()
         if real_preexec_fn:
             real_preexec_fn()
-    proc = subprocess.Popen(preexec_fn=preexec_fn, **kwargs)
-    proc._child_created = False
-    return proc.pid
+    return subprocess.Popen(preexec_fn=preexec_fn, **kwargs)
 
 
 def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
     """
     Create a child process whose stdin/stdout is connected to a socket.
 
-    :param args:
-        Argument vector for execv() call.
+    :param list args:
+        Program argument vector.
     :param bool merge_stdio:
         If :data:`True`, arrange for `stderr` to be connected to the `stdout`
         socketpair, rather than inherited from the parent process. This may be
@@ -321,52 +301,47 @@ def create_child(args, merge_stdio=False, stderr_pipe=False, preexec_fn=None):
         logs generated by e.g. SSH to be outpu as the session progresses,
         without interfering with `stdout`.
     :returns:
-        `(pid, socket_obj, :data:`None` or pipe_fd)`
+        :class:`Process` instance.
     """
     parentfp, childfp = create_socketpair()
     # When running under a monkey patches-enabled gevent, the socket module
-    # yields file descriptors who already have O_NONBLOCK, which is
-    # persisted across fork, totally breaking Python. Therefore, drop
-    # O_NONBLOCK from Python's future stdin fd.
+    # yields descriptors who already have O_NONBLOCK, which is persisted across
+    # fork, totally breaking Python. Therefore, drop O_NONBLOCK from Python's
+    # future stdin fd.
     mitogen.core.set_block(childfp.fileno())
 
+    stderr = None
     stderr_r = None
-    extra = {}
     if merge_stdio:
-        extra = {'stderr': childfp}
+        stderr = childfp
     elif stderr_pipe:
-        stderr_r, stderr_w = os.pipe()
-        mitogen.core.set_cloexec(stderr_r)
-        mitogen.core.set_cloexec(stderr_w)
-        extra = {'stderr': stderr_w}
+        stderr_r, stderr = mitogen.core.pipe()
+        mitogen.core.set_cloexec(stderr_r.fileno())
 
     try:
-        pid = detach_popen(
+        proc = popen(
             args=args,
             stdin=childfp,
             stdout=childfp,
+            stderr=stderr,
             close_fds=True,
             preexec_fn=preexec_fn,
-            **extra
         )
-    except Exception:
+    except:
         childfp.close()
         parentfp.close()
         if stderr_pipe:
-            os.close(stderr_r)
-            os.close(stderr_w)
+            stderr.close()
+            stderr_r.close()
         raise
 
-    if stderr_pipe:
-        os.close(stderr_w)
     childfp.close()
-    # Decouple the socket from the lifetime of the Python socket object.
-    fd = os.dup(parentfp.fileno())
-    parentfp.close()
+    if stderr_pipe:
+        stderr.close()
 
     LOG.debug('create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, fd, os.getpid(), Argv(args))
-    return pid, fd, stderr_r
+              proc.pid, parentfp.fileno(), os.getpid(), Argv(args))
+    return PopenProcess(proc, stdin=parentfp, stdout=parentfp, stderr=stderr_r)
 
 
 def _acquire_controlling_tty():
@@ -431,15 +406,22 @@ def openpty():
     :raises mitogen.core.StreamError:
         Creating a PTY failed.
     :returns:
-        See :func`os.openpty`.
+        `(master_fp, slave_fp)` file-like objects.
     """
     try:
-        return os.openpty()
+        master_fd, slave_fd = os.openpty()
     except OSError:
         e = sys.exc_info()[1]
-        if IS_LINUX and e.args[0] == errno.EPERM:
-            return _linux_broken_devpts_openpty()
-        raise mitogen.core.StreamError(OPENPTY_MSG, e)
+        if not (IS_LINUX and e.args[0] == errno.EPERM):
+            raise mitogen.core.StreamError(OPENPTY_MSG, e)
+        master_fd, slave_fd = _linux_broken_devpts_openpty()
+
+    master_fp = os.fdopen(master_fd, 'r+b', 0)
+    slave_fp = os.fdopen(slave_fd, 'r+b', 0)
+    disable_echo(master_fd)
+    disable_echo(slave_fd)
+    mitogen.core.set_block(slave_fd)
+    return master_fp, slave_fp
 
 
 def tty_create_child(args):
@@ -451,34 +433,29 @@ def tty_create_child(args):
     slave end.
 
     :param list args:
-        :py:func:`os.execl` argument list.
-
+        Program argument vector.
     :returns:
-        `(pid, tty_fd, None)`
+        :class:`Process` instance.
     """
-    master_fd, slave_fd = openpty()
+    master_fp, slave_fp = openpty()
     try:
-        mitogen.core.set_block(slave_fd)
-        disable_echo(master_fd)
-        disable_echo(slave_fd)
-
-        pid = detach_popen(
+        proc = popen(
             args=args,
-            stdin=slave_fd,
-            stdout=slave_fd,
-            stderr=slave_fd,
+            stdin=slave_fp,
+            stdout=slave_fp,
+            stderr=slave_fp,
             preexec_fn=_acquire_controlling_tty,
             close_fds=True,
         )
-    except Exception:
-        os.close(master_fd)
-        os.close(slave_fd)
+    except:
+        master_fp.close()
+        slave_fp.close()
         raise
 
-    os.close(slave_fd)
+    slave_fp.close()
     LOG.debug('tty_create_child() child %d fd %d, parent %d, cmd: %s',
-              pid, master_fd, os.getpid(), Argv(args))
-    return pid, master_fd, None
+              proc.pid, master_fp.fileno(), os.getpid(), Argv(args))
+    return PopenProcess(proc, stdin=master_fp, stdout=master_fp)
 
 
 def hybrid_tty_create_child(args):
@@ -488,93 +465,132 @@ def hybrid_tty_create_child(args):
     attached to a TTY.
 
     :param list args:
-        :py:func:`os.execl` argument list.
-
+        Program argument vector.
     :returns:
-        `(pid, socketpair_fd, tty_fd)`
+        :class:`Process` instance.
     """
-    master_fd, slave_fd = openpty()
-
+    master_fp, slave_fp = openpty()
     try:
-        disable_echo(master_fd)
-        disable_echo(slave_fd)
-        mitogen.core.set_block(slave_fd)
-
         parentfp, childfp = create_socketpair()
         try:
             mitogen.core.set_block(childfp)
-            pid = detach_popen(
+            proc = popen(
                 args=args,
                 stdin=childfp,
                 stdout=childfp,
-                stderr=slave_fd,
+                stderr=slave_fp,
                 preexec_fn=_acquire_controlling_tty,
                 close_fds=True,
             )
-        except Exception:
+        except:
             parentfp.close()
             childfp.close()
             raise
-    except Exception:
-        os.close(master_fd)
-        os.close(slave_fd)
+    except:
+        master_fp.close()
+        slave_fp.close()
         raise
 
-    os.close(slave_fd)
+    slave_fp.close()
     childfp.close()
-    # Decouple the socket from the lifetime of the Python socket object.
-    stdio_fd = os.dup(parentfp.fileno())
-    parentfp.close()
-
     LOG.debug('hybrid_tty_create_child() pid=%d stdio=%d, tty=%d, cmd: %s',
-              pid, stdio_fd, master_fd, Argv(args))
-    return pid, stdio_fd, master_fd
+              proc.pid, parentfp.fileno(), master_fp.fileno(), Argv(args))
+    return PopenProcess(proc, stdin=parentfp, stdout=parentfp, stderr=master_fp)
 
 
-def write_all(fd, s, deadline=None):
-    """Arrange for all of bytestring `s` to be written to the file descriptor
-    `fd`.
-
-    :param int fd:
-        File descriptor to write to.
-    :param bytes s:
-        Bytestring to write to file descriptor.
-    :param float deadline:
-        If not :data:`None`, absolute UNIX timestamp after which timeout should
-        occur.
-
-    :raises mitogen.core.TimeoutError:
-        Bytestring could not be written entirely before deadline was exceeded.
-    :raises mitogen.parent.EofError:
-        Stream indicated EOF, suggesting the child process has exitted.
-    :raises mitogen.core.StreamError:
-        File descriptor was disconnected before write could complete.
+class Timer(object):
     """
-    timeout = None
-    written = 0
-    poller = PREFERRED_POLLER()
-    poller.start_transmit(fd)
+    Represents a future event.
+    """
+    cancelled = False
 
-    try:
-        while written < len(s):
-            if deadline is not None:
-                timeout = max(0, deadline - time.time())
-            if timeout == 0:
-                raise mitogen.core.TimeoutError('write timed out')
+    def __init__(self, when, func):
+        self.when = when
+        self.func = func
 
-            if mitogen.core.PY3:
-                window = memoryview(s)[written:]
-            else:
-                window = buffer(s, written)
+    def __repr__(self):
+        return 'Timer(%r, %r)' % (self.when, self.func)
 
-            for fd in poller.poll(timeout):
-                n, disconnected = mitogen.core.io_op(os.write, fd, window)
-                if disconnected:
-                    raise EofError('EOF on stream during write')
+    def __eq__(self, other):
+        return self.when == other.when
 
-                written += n
-    finally:
-        poller.close()
+    def __lt__(self, other):
+        return self.when < other.when
+
+    def __le__(self, other):
+        return self.when <= other.when
+
+    def cancel(self):
+        """
+        Cancel this event. If it has not yet executed, it will not execute
+        during any subsequent :meth:`TimerList.expire` call.
+        """
+        self.cancelled = True
+
+
+class TimerList(object):
+    """
+    Efficiently manage a list of cancellable future events relative to wall
+    clock time. An instance of this class is installed as
+    :attr:`mitogen.master.Broker.timers` by default, and as
+    :attr:`mitogen.core.Broker.timers` in children after a call to
+    :func:`mitogen.parent.upgrade_router`.
+
+    You can use :class:`TimerList` to cause the broker to wake at arbitrary
+    future moments, useful for implementing timeouts and polling in an
+    asynchronous context.
+
+    :class:`TimerList` methods can only be called from asynchronous context,
+    for example via :meth:`mitogen.core.Broker.defer`.
+
+    The broker automatically adjusts its sleep delay according to the installed
+    timer list, and arranges for timers to expire via automatic calls to
+    :meth:`expire`. The main user interface to :class:`TimerList` is
+    :meth:`schedule`.
+    """
+    _now = time.time
+
+    def __init__(self):
+        self._lst = []
+
+    def get_timeout(self):
+        """
+        Return the floating point seconds until the next event is due.
+        
+        :returns:
+            Floating point delay, or 0.0, or :data:`None` if no events are
+            scheduled.
+        """
+        while self._lst and self._lst[0].cancelled:
+            heapq.heappop(self._lst)
+        if self._lst:
+            return max(0, self._lst[0].when - self._now())
+
+    def schedule(self, when, func):
+        """
+        Schedule a future event.
+
+        :param float when:
+            UNIX time in seconds when event should occur.
+        :param callable func:
+            Callable to invoke on expiry.
+        :returns:
+            A :class:`Timer` instance, exposing :meth:`Timer.cancel`, which may
+            be used to cancel the future invocation.
+        """
+        timer = Timer(when, func)
+        heapq.heappush(self._lst, timer)
+        return timer
+
+    def expire(self):
+        """
+        Invoke callbacks for any events in the past.
+        """
+        now = self._now()
+        while self._lst and self._lst[0].when <= now:
+            timer = heapq.heappop(self._lst)
+            if not timer.cancelled:
+                timer.func()
 
 
 class PartialZlib(object):
@@ -614,103 +630,6 @@ class PartialZlib(object):
             return out + compressor.flush()
 
 
-class IteratingRead(object):
-    def __init__(self, fds, deadline=None):
-        self.deadline = deadline
-        self.timeout = None
-        self.poller = PREFERRED_POLLER()
-        for fd in fds:
-            self.poller.start_receive(fd)
-
-        self.bits = []
-        self.timeout = None
-
-    def close(self):
-        self.poller.close()
-
-    def __iter__(self):
-        return self
-
-    def next(self):
-        while self.poller.readers:
-            if self.deadline is not None:
-                self.timeout = max(0, self.deadline - time.time())
-                if self.timeout == 0:
-                    break
-
-            for fd in self.poller.poll(self.timeout):
-                s, disconnected = mitogen.core.io_op(os.read, fd, 4096)
-                if disconnected or not s:
-                    LOG.debug('iter_read(%r) -> disconnected: %s',
-                              fd, disconnected)
-                    self.poller.stop_receive(fd)
-                else:
-                    IOLOG.debug('iter_read(%r) -> %r', fd, s)
-                    self.bits.append(s)
-                    return s
-
-        if not self.poller.readers:
-            raise EofError(u'EOF on stream; last 300 bytes received: %r' %
-                           (b('').join(self.bits)[-300:].decode('latin1'),))
-
-        raise mitogen.core.TimeoutError('read timed out')
-
-    __next__ = next
-
-
-def iter_read(fds, deadline=None):
-    """Return a generator that arranges for up to 4096-byte chunks to be read
-    at a time from the file descriptor `fd` until the generator is destroyed.
-
-    :param int fd:
-        File descriptor to read from.
-    :param float deadline:
-        If not :data:`None`, an absolute UNIX timestamp after which timeout
-        should occur.
-
-    :raises mitogen.core.TimeoutError:
-        Attempt to read beyond deadline.
-    :raises mitogen.parent.EofError:
-        All streams indicated EOF, suggesting the child process has exitted.
-    :raises mitogen.core.StreamError:
-        Attempt to read past end of file.
-    """
-    return IteratingRead(fds=fds, deadline=deadline)
-
-
-def discard_until(fd, s, deadline):
-    """Read chunks from `fd` until one is encountered that ends with `s`. This
-    is used to skip output produced by ``/etc/profile``, ``/etc/motd`` and
-    mandatory SSH banners while waiting for :attr:`Stream.EC0_MARKER` to
-    appear, indicating the first stage is ready to receive the compressed
-    :mod:`mitogen.core` source.
-
-    :param int fd:
-        File descriptor to read from.
-    :param bytes s:
-        Marker string to discard until encountered.
-    :param float deadline:
-        Absolute UNIX timestamp after which timeout should occur.
-
-    :raises mitogen.core.TimeoutError:
-        Attempt to read beyond deadline.
-    :raises mitogen.parent.EofError:
-        All streams indicated EOF, suggesting the child process has exitted.
-    :raises mitogen.core.StreamError:
-        Attempt to read past end of file.
-    """
-    it = iter_read([fd], deadline)
-    try:
-        for buf in it:
-            if IOLOG.level == logging.DEBUG:
-                for line in buf.splitlines():
-                    IOLOG.debug('discard_until: discarding %r', line)
-            if buf.endswith(s):
-                return
-    finally:
-        it.close()  # ensure Poller.close() is called.
-
-
 def _upgrade_broker(broker):
     """
     Extract the poller state from Broker and replace it with the industrial
@@ -726,17 +645,20 @@ def _upgrade_broker(broker):
     root = logging.getLogger()
     old_level = root.level
     root.setLevel(logging.CRITICAL)
+    try:
+        old = broker.poller
+        new = PREFERRED_POLLER()
+        for fd, data in old.readers:
+            new.start_receive(fd, data)
+        for fd, data in old.writers:
+            new.start_transmit(fd, data)
 
-    old = broker.poller
-    new = PREFERRED_POLLER()
-    for fd, data in old.readers:
-        new.start_receive(fd, data)
-    for fd, data in old.writers:
-        new.start_transmit(fd, data)
+        old.close()
+        broker.poller = new
+    finally:
+        root.setLevel(old_level)
 
-    old.close()
-    broker.poller = new
-    root.setLevel(old_level)
+    broker.timers = TimerList()
     LOG.debug('replaced %r with %r (new: %d readers, %d writers; '
               'old: %d readers, %d writers)', old, new,
               len(new.readers), len(new.writers),
@@ -754,7 +676,7 @@ def upgrade_router(econtext):
         )
 
 
-def stream_by_method_name(name):
+def get_connection_class(name):
     """
     Given the name of a Mitogen connection method, import its implementation
     module and return its Stream subclass.
@@ -762,7 +684,7 @@ def stream_by_method_name(name):
     if name == u'local':
         name = u'parent'
     module = mitogen.core.import_module(u'mitogen.' + name)
-    return module.Stream
+    return module.Connection
 
 
 @mitogen.core.takes_econtext
@@ -783,7 +705,7 @@ def _proxy_connect(name, method_name, kwargs, econtext):
 
     try:
         context = econtext.router._connect(
-            klass=stream_by_method_name(method_name),
+            klass=get_connection_class(method_name),
             name=name,
             **kwargs
         )
@@ -804,19 +726,13 @@ def _proxy_connect(name, method_name, kwargs, econtext):
     }
 
 
-def wstatus_to_str(status):
+def returncode_to_str(n):
     """
     Parse and format a :func:`os.waitpid` exit status.
     """
-    if os.WIFEXITED(status):
-        return 'exited with return code %d' % (os.WEXITSTATUS(status),)
-    if os.WIFSIGNALED(status):
-        n = os.WTERMSIG(status)
-        return 'exited due to signal %d (%s)' % (n, SIGNAL_BY_NUM.get(n))
-    if os.WIFSTOPPED(status):
-        n = os.WSTOPSIG(status)
-        return 'stopped due to signal %d (%s)' % (n, SIGNAL_BY_NUM.get(n))
-    return 'unknown wait status (%d)' % (status,)
+    if n < 0:
+        return 'exited due to signal %d (%s)' % (-n, SIGNAL_BY_NUM.get(-n))
+    return 'exited with return code %d' % (n,)
 
 
 class EofError(mitogen.core.StreamError):
@@ -1096,72 +1012,163 @@ for _klass in mitogen.core.Poller, PollPoller, KqueuePoller, EpollPoller:
     if _klass.SUPPORTED:
         PREFERRED_POLLER = _klass
 
-# For apps that start threads dynamically, it's possible Latch will also get
-# very high-numbered wait fds when there are many connections, and so select()
-# becomes useless there too. So swap in our favourite poller.
+# For processes that start many threads or connections, it's possible Latch
+# will also get high-numbered FDs, and so select() becomes useless there too.
+# So swap in our favourite poller.
 if PollPoller.SUPPORTED:
     mitogen.core.Latch.poller_class = PollPoller
 else:
     mitogen.core.Latch.poller_class = PREFERRED_POLLER
 
 
-class DiagLogStream(mitogen.core.BasicStream):
+class LineLoggingProtocolMixin(object):
+    def __init__(self, **kwargs):
+        super(LineLoggingProtocolMixin, self).__init__(**kwargs)
+        self.logged_lines = []
+        self.logged_partial = None
+
+    def on_line_received(self, line):
+        self.logged_partial = None
+        self.logged_lines.append((time.time(), line))
+        self.logged_lines[:] = self.logged_lines[-100:]
+        return super(LineLoggingProtocolMixin, self).on_line_received(line)
+
+    def on_partial_line_received(self, line):
+        self.logged_partial = line
+        return super(LineLoggingProtocolMixin, self).on_partial_line_received(line)
+
+    def on_disconnect(self, broker):
+        if self.logged_partial:
+            self.logged_lines.append((time.time(), self.logged_partial))
+            self.logged_partial = None
+        super(LineLoggingProtocolMixin, self).on_disconnect(broker)
+
+
+def get_history(streams):
+    history = []
+    for stream in streams:
+        if stream:
+            history.extend(getattr(stream.protocol, 'logged_lines', []))
+    history.sort()
+
+    s = b('\n').join(h[1] for h in history)
+    return mitogen.core.to_text(s)
+
+
+class RegexProtocol(LineLoggingProtocolMixin, mitogen.core.DelimitedProtocol):
     """
-    For "hybrid TTY/socketpair" mode, after a connection has been setup, a
-    spare TTY file descriptor will exist that cannot be closed, and to which
-    SSH or sudo may continue writing log messages.
-
-    The descriptor cannot be closed since the UNIX TTY layer will send a
-    termination signal to any processes whose controlling TTY is the TTY that
-    has been closed.
-
-    DiagLogStream takes over this descriptor and creates corresponding log
-    messages for anything written to it.
+    Implement a delimited protocol where messages matching a set of regular
+    expressions are dispatched to individual handler methods. Input is
+    dispatches using :attr:`PATTERNS` and :attr:`PARTIAL_PATTERNS`, before
+    falling back to :meth:`on_unrecognized_line_received` and
+    :meth:`on_unrecognized_partial_line_received`.
     """
 
-    def __init__(self, fd, stream):
-        self.receive_side = mitogen.core.Side(self, fd)
-        self.transmit_side = self.receive_side
-        self.stream = stream
-        self.buf = ''
+    #: A sequence of 2-tuples of the form `(compiled pattern, method)` for
+    #: patterns that should be matched against complete (delimited) messages,
+    #: i.e. full lines.
+    PATTERNS = []
 
-    def __repr__(self):
-        return "mitogen.parent.DiagLogStream(fd=%r, '%s')" % (
-            self.receive_side.fd,
-            self.stream.name,
-        )
+    #: Like :attr:`PATTERNS`, but patterns that are matched against incomplete
+    #: lines.
+    PARTIAL_PATTERNS = []
 
-    def on_receive(self, broker):
-        """
-        This handler is only called after the stream is registered with the IO
-        loop, the descriptor is manually read/written by _connect_bootstrap()
-        prior to that.
-        """
-        buf = self.receive_side.read()
-        if not buf:
-            return self.on_disconnect(broker)
+    def on_line_received(self, line):
+        super(RegexProtocol, self).on_line_received(line)
+        for pattern, func in self.PATTERNS:
+            match = pattern.search(line)
+            if match is not None:
+                return func(self, line, match)
 
-        self.buf += buf.decode('utf-8', 'replace')
-        while u'\n' in self.buf:
-            lines = self.buf.split('\n')
-            self.buf = lines[-1]
-            for line in lines[:-1]:
-                LOG.debug('%s: %s', self.stream.name, line.rstrip())
+        return self.on_unrecognized_line_received(line)
+
+    def on_unrecognized_line_received(self, line):
+        LOG.debug('%s: (unrecognized): %s',
+            self.stream.name, line.decode('utf-8', 'replace'))
+
+    def on_partial_line_received(self, line):
+        super(RegexProtocol, self).on_partial_line_received(line)
+        LOG.debug('%s: (partial): %s',
+            self.stream.name, line.decode('utf-8', 'replace'))
+        for pattern, func in self.PARTIAL_PATTERNS:
+            match = pattern.search(line)
+            if match is not None:
+                return func(self, line, match)
+
+        return self.on_unrecognized_partial_line_received(line)
+
+    def on_unrecognized_partial_line_received(self, line):
+        LOG.debug('%s: (unrecognized partial): %s',
+            self.stream.name, line.decode('utf-8', 'replace'))
 
 
-class Stream(mitogen.core.Stream):
+class BootstrapProtocol(RegexProtocol):
     """
-    Base for streams capable of starting new slaves.
+    Respond to stdout of a child during bootstrap. Wait for EC0_MARKER to be
+    written by the first stage to indicate it can receive the bootstrap, then
+    await EC1_MARKER to indicate success, and
+    :class:`mitogen.core.MitogenProtocol` can be enabled.
     """
+    #: Sentinel value emitted by the first stage to indicate it is ready to
+    #: receive the compressed bootstrap. For :mod:`mitogen.ssh` this must have
+    #: length of at least `max(len('password'), len('debug1:'))`
+    EC0_MARKER = b('MITO000')
+    EC1_MARKER = b('MITO001')
+    EC2_MARKER = b('MITO002')
+
+    def __init__(self, broker):
+        super(BootstrapProtocol, self).__init__()
+        self._writer = mitogen.core.BufferedWriter(broker, self)
+
+    def on_transmit(self, broker):
+        self._writer.on_transmit(broker)
+
+    def _on_ec0_received(self, line, match):
+        LOG.debug('%r: first stage started succcessfully', self)
+        self._writer.write(self.stream.conn.get_preamble())
+
+    def _on_ec1_received(self, line, match):
+        LOG.debug('%r: first stage received bootstrap', self)
+
+    def _on_ec2_received(self, line, match):
+        LOG.debug('%r: new child booted successfully', self)
+        self.stream.conn._complete_connection()
+        return False
+
+    def on_unrecognized_line_received(self, line):
+        LOG.debug('%s: stdout: %s', self.stream.name, line)
+
+    PATTERNS = [
+        (re.compile(EC0_MARKER), _on_ec0_received),
+        (re.compile(EC1_MARKER), _on_ec1_received),
+        (re.compile(EC2_MARKER), _on_ec2_received),
+    ]
+
+
+class LogProtocol(LineLoggingProtocolMixin, mitogen.core.DelimitedProtocol):
+    """
+    For "hybrid TTY/socketpair" mode, after connection setup a spare TTY master
+    FD exists that cannot be closed, and to which SSH or sudo may continue
+    writing log messages.
+
+    The descriptor cannot be closed since the UNIX TTY layer sends SIGHUP to
+    processes whose controlling TTY is the slave whose master side was closed.
+    LogProtocol takes over this FD and creates log messages for anything
+    written to it.
+    """
+    def on_line_received(self, line):
+        super(LogProtocol, self).on_line_received(line)
+        LOG.info(u'%s: %s', self.stream.name, line.decode('utf-8', 'replace'))
+
+
+class Options(object):
+    name = None
+
     #: The path to the remote Python interpreter.
     python_path = get_sys_executable()
 
     #: Maximum time to wait for a connection attempt.
     connect_timeout = 30.0
-
-    #: Derived from :py:attr:`connect_timeout`; absolute floating point
-    #: UNIX timestamp after which the connection attempt should be abandoned.
-    connect_deadline = None
 
     #: True to cause context to write verbose /tmp/mitogen.<pid>.log.
     debug = False
@@ -1169,17 +1176,65 @@ class Stream(mitogen.core.Stream):
     #: True to cause context to write /tmp/mitogen.stats.<pid>.<thread>.log.
     profiling = False
 
-    #: Set to the child's PID by connect().
-    pid = None
+    #: True if unidirectional routing is enabled in the new child.
+    unidirectional = False
 
     #: Passed via Router wrapper methods, must eventually be passed to
     #: ExternalContext.main().
     max_message_size = None
 
-    #: If :attr:`create_child` supplied a diag_fd, references the corresponding
-    #: :class:`DiagLogStream`, allowing it to be disconnected when this stream
-    #: is disconnected. Set to :data:`None` if no `diag_fd` was present.
-    diag_stream = None
+    #: Remote name.
+    remote_name = None
+
+    #: Derived from :py:attr:`connect_timeout`; absolute floating point
+    #: UNIX timestamp after which the connection attempt should be abandoned.
+    connect_deadline = None
+
+    def __init__(self, max_message_size, name=None, remote_name=None,
+                 python_path=None, debug=False, connect_timeout=None,
+                 profiling=False, unidirectional=False, old_router=None):
+        self.name = name
+        self.max_message_size = max_message_size
+        if python_path:
+            self.python_path = python_path
+        if connect_timeout:
+            self.connect_timeout = connect_timeout
+        if remote_name is None:
+            remote_name = get_default_remote_name()
+        if '/' in remote_name or '\\' in remote_name:
+            raise ValueError('remote_name= cannot contain slashes')
+        if remote_name:
+            self.remote_name = mitogen.core.to_text(remote_name)
+        self.debug = debug
+        self.profiling = profiling
+        self.unidirectional = unidirectional
+        self.max_message_size = max_message_size
+        self.connect_deadline = time.time() + self.connect_timeout
+
+
+class Connection(object):
+    """
+    Base for streams capable of starting children.
+    """
+    options_class = Options
+
+    #: The protocol attached to stdio of the child.
+    stream_protocol_class = BootstrapProtocol
+
+    #: The protocol attached to stderr of the child.
+    diag_protocol_class = LogProtocol
+
+    #: :class:`Process`
+    proc = None
+
+    #: :class:`mitogen.core.Stream` with sides connected to stdin/stdout.
+    stdio_stream = None
+
+    #: If `proc.stderr` is set, referencing either a plain pipe or the
+    #: controlling TTY, this references the corresponding
+    #: :class:`LogProtocol`'s stream, allowing it to be disconnected when this
+    #: stream is disconnected.
+    stderr_stream = None
 
     #: Function with the semantics of :func:`create_child` used to create the
     #: child process.
@@ -1201,93 +1256,15 @@ class Stream(mitogen.core.Stream):
     #: Prefix given to default names generated by :meth:`connect`.
     name_prefix = u'local'
 
-    _reaped = False
+    timer = None
 
-    def __init__(self, *args, **kwargs):
-        super(Stream, self).__init__(*args, **kwargs)
-        self.sent_modules = set(['mitogen', 'mitogen.core'])
+    def __init__(self, options, router):
+        #: :class:`Options`
+        self.options = options
+        self._router = router
 
-    def construct(self, max_message_size, remote_name=None, python_path=None,
-                  debug=False, connect_timeout=None, profiling=False,
-                  unidirectional=False, old_router=None, **kwargs):
-        """Get the named context running on the local machine, creating it if
-        it does not exist."""
-        super(Stream, self).construct(**kwargs)
-        self.max_message_size = max_message_size
-        if python_path:
-            self.python_path = python_path
-        if connect_timeout:
-            self.connect_timeout = connect_timeout
-        if remote_name is None:
-            remote_name = get_default_remote_name()
-        if '/' in remote_name or '\\' in remote_name:
-            raise ValueError('remote_name= cannot contain slashes')
-        self.remote_name = remote_name
-        self.debug = debug
-        self.profiling = profiling
-        self.unidirectional = unidirectional
-        self.max_message_size = max_message_size
-        self.connect_deadline = time.time() + self.connect_timeout
-
-    def on_shutdown(self, broker):
-        """Request the slave gracefully shut itself down."""
-        LOG.debug('%r closing CALL_FUNCTION channel', self)
-        self._send(
-            mitogen.core.Message(
-                src_id=mitogen.context_id,
-                dst_id=self.remote_id,
-                handle=mitogen.core.SHUTDOWN,
-            )
-        )
-
-    def _reap_child(self):
-        """
-        Reap the child process during disconnection.
-        """
-        if self.detached and self.child_is_immediate_subprocess:
-            LOG.debug('%r: immediate child is detached, won\'t reap it', self)
-            return
-
-        if self.profiling:
-            LOG.info('%r: wont kill child because profiling=True', self)
-            return
-
-        if self._reaped:
-            # on_disconnect() may be invoked more than once, for example, if
-            # there is still a pending message to be sent after the first
-            # on_disconnect() call.
-            return
-
-        try:
-            pid, status = os.waitpid(self.pid, os.WNOHANG)
-        except OSError:
-            e = sys.exc_info()[1]
-            if e.args[0] == errno.ECHILD:
-                LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
-                return
-            raise
-
-        self._reaped = True
-        if pid:
-            LOG.debug('%r: PID %d %s', self, pid, wstatus_to_str(status))
-            return
-
-        if not self._router.profiling:
-            # For processes like sudo we cannot actually send sudo a signal,
-            # because it is setuid, so this is best-effort only.
-            LOG.debug('%r: child process still alive, sending SIGTERM', self)
-            try:
-                os.kill(self.pid, signal.SIGTERM)
-            except OSError:
-                e = sys.exc_info()[1]
-                if e.args[0] != errno.EPERM:
-                    raise
-
-    def on_disconnect(self, broker):
-        super(Stream, self).on_disconnect(broker)
-        if self.diag_stream is not None:
-            self.diag_stream.on_disconnect(broker)
-        self._reap_child()
+    def __repr__(self):
+        return 'Connection(%r)' % (self.stdio_stream,)
 
     # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
@@ -1346,15 +1323,15 @@ class Stream(mitogen.core.Stream):
         This allows emulation of existing tools where the Python invocation may
         be set to e.g. `['/usr/bin/env', 'python']`.
         """
-        if isinstance(self.python_path, list):
-            return self.python_path
-        return [self.python_path]
+        if isinstance(self.options.python_path, list):
+            return self.options.python_path
+        return [self.options.python_path]
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', '\t')
-        source = source.replace('CONTEXT_NAME', self.remote_name)
+        source = source.replace('CONTEXT_NAME', self.options.remote_name)
         preamble_compressed = self.get_preamble()
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
                                 str(len(preamble_compressed)))
@@ -1372,19 +1349,19 @@ class Stream(mitogen.core.Stream):
         ]
 
     def get_econtext_config(self):
-        assert self.max_message_size is not None
+        assert self.options.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
         return {
             'parent_ids': parent_ids,
-            'context_id': self.remote_id,
-            'debug': self.debug,
-            'profiling': self.profiling,
-            'unidirectional': self.unidirectional,
+            'context_id': self.context.context_id,
+            'debug': self.options.debug,
+            'profiling': self.options.profiling,
+            'unidirectional': self.options.unidirectional,
             'log_level': get_log_level(),
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
-            'max_message_size': self.max_message_size,
+            'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
         }
 
@@ -1396,10 +1373,18 @@ class Stream(mitogen.core.Stream):
         partial = get_core_source_partial()
         return partial.append(suffix.encode('utf-8'))
 
+    def _get_name(self):
+        """
+        Called by :meth:`connect` after :attr:`pid` is known. Subclasses can
+        override it to specify a default stream name, or set
+        :attr:`name_prefix` to generate a default format.
+        """
+        return u'%s.%s' % (self.name_prefix, self.proc.pid)
+
     def start_child(self):
         args = self.get_boot_command()
         try:
-            return self.create_child(args, **self.create_child_args)
+            return self.create_child(args=args, **self.create_child_args)
         except OSError:
             e = sys.exc_info()[1]
             msg = 'Child start failed: %s. Command was: %s' % (e, Argv(args))
@@ -1409,65 +1394,162 @@ class Stream(mitogen.core.Stream):
 
     def _adorn_eof_error(self, e):
         """
-        Used by subclasses to provide additional information in the case of a
-        failed connection.
+        Subclasses may provide additional information in the case of a failed
+        connection.
         """
         if self.eof_error_hint:
             e.args = ('%s\n\n%s' % (e.args[0], self.eof_error_hint),)
 
-    def _get_name(self):
-        """
-        Called by :meth:`connect` after :attr:`pid` is known. Subclasses can
-        override it to specify a default stream name, or set
-        :attr:`name_prefix` to generate a default format.
-        """
-        return u'%s.%s' % (self.name_prefix, self.pid)
+    exception = None
 
-    def connect(self):
+    def _complete_connection(self):
+        self.timer.cancel()
+        if not self.exception:
+            self._router.register(self.context, self.stdio_stream)
+            self.stdio_stream.set_protocol(
+                mitogen.core.MitogenProtocol(
+                    router=self._router,
+                    remote_id=self.context.context_id,
+                )
+            )
+        self.latch.put()
+
+    def _fail_connection(self, exc):
+        """
+        Fail the connection attempt.
+        """
+        LOG.debug('%s: failing connection due to %r',
+                  self.stdio_stream.name, exc)
+        if self.exception is None:
+            self._adorn_eof_error(exc)
+            self.exception = exc
+        for stream in self.stdio_stream, self.stderr_stream:
+            if stream and not stream.receive_side.closed:
+                stream.on_disconnect(self._router.broker)
+        self._complete_connection()
+
+    def on_stream_shutdown(self):
+        """
+        Request the slave gracefully shut itself down.
+        """
+        LOG.debug('%r: requesting child shutdown', self)
+        self.stdio_stream.protocol._send(
+            mitogen.core.Message(
+                src_id=mitogen.context_id,
+                dst_id=self.stdio_stream.protocol.remote_id,
+                handle=mitogen.core.SHUTDOWN,
+            )
+        )
+
+    eof_error_msg = 'EOF on stream; last 100 lines received:\n'
+
+    def on_stdio_disconnect(self):
+        """
+        Handle stdio stream disconnection by failing the Connection if the
+        stderr stream has already been closed. Otherwise, wait for it to close
+        (or timeout), to allow buffered diagnostic logs to be consumed.
+
+        It is normal that when a subprocess aborts, stdio has nothing buffered
+        when it is closed, thus signalling readability, causing an empty read
+        (interpreted as indicating disconnection) on the next loop iteration,
+        even if its stderr pipe has lots of diagnostic logs still buffered in
+        the kernel. Therefore we must wait for both pipes to indicate they are
+        empty before triggering connection failure.
+        """
+        stderr = self.stderr_stream
+        if stderr is None or stderr.receive_side.closed:
+            self._on_streams_disconnected()
+
+    def on_stderr_disconnect(self):
+        """
+        Inverse of :func:`on_stdio_disconnect`.
+        """
+        if self.stdio_stream.receive_side.closed:
+            self._on_streams_disconnected()
+
+    def _on_streams_disconnected(self):
+        """
+        When disconnection has been detected for both our streams, cancel the
+        connection timer, mark the connection failed, and reap the child
+        process. Do nothing if the timer has already been cancelled, indicating
+        some existing failure has already been noticed.
+        """
+        if not self.timer.cancelled:
+            self.timer.cancel()
+            self._fail_connection(EofError(
+                self.eof_error_msg + get_history(
+                    [self.stdio_stream, self.stderr_stream]
+                )
+            ))
+        self.proc._async_reap(self, self._router)
+
+    def _start_timer(self):
+        self.timer = self._router.broker.timers.schedule(
+            when=self.options.connect_deadline,
+            func=self._on_timer_expired,
+        )
+
+    def _on_timer_expired(self):
+        self._fail_connection(
+            mitogen.core.TimeoutError(
+                'Failed to setup connection after %.2f seconds',
+                self.options.connect_timeout,
+            )
+        )
+
+    def stream_factory(self):
+        return self.stream_protocol_class.build_stream(
+            broker=self._router.broker,
+        )
+
+    def stderr_stream_factory(self):
+        return self.diag_protocol_class.build_stream()
+
+    def _setup_stdio_stream(self):
+        stream = self.stream_factory()
+        stream.conn = self
+        stream.name = self.options.name or self._get_name()
+        stream.accept(self.proc.stdout, self.proc.stdin)
+
+        mitogen.core.listen(stream, 'shutdown', self.on_stream_shutdown)
+        mitogen.core.listen(stream, 'disconnect', self.on_stdio_disconnect)
+        self._router.broker.start_receive(stream)
+        return stream
+
+    def _setup_stderr_stream(self):
+        stream = self.stderr_stream_factory()
+        stream.conn = self
+        stream.name = self.options.name or self._get_name()
+        stream.accept(self.proc.stderr, self.proc.stderr)
+
+        mitogen.core.listen(stream, 'disconnect', self.on_stderr_disconnect)
+        self._router.broker.start_receive(stream)
+        return stream
+
+    def _async_connect(self):
+        self._start_timer()
+        self.stdio_stream = self._setup_stdio_stream()
+        if self.context.name is None:
+            self.context.name = self.stdio_stream.name
+        self.proc.name = self.stdio_stream.name
+        if self.proc.stderr:
+            self.stderr_stream = self._setup_stderr_stream()
+
+    def connect(self, context):
         LOG.debug('%r.connect()', self)
-        self.pid, fd, diag_fd = self.start_child()
-        self.name = self._get_name()
-        self.receive_side = mitogen.core.Side(self, fd)
-        self.transmit_side = mitogen.core.Side(self, os.dup(fd))
-        if diag_fd is not None:
-            self.diag_stream = DiagLogStream(diag_fd, self)
-        else:
-            self.diag_stream = None
+        self.context = context
+        self.proc = self.start_child()
+        LOG.debug('%r.connect(): pid:%r stdin:%r stdout:%r stderr:%r',
+                  self, self.proc.pid,
+                  self.proc.stdin.fileno(),
+                  self.proc.stdout.fileno(),
+                  self.proc.stderr and self.proc.stderr.fileno())
 
-        LOG.debug('%r.connect(): pid:%r stdin:%r, stdout:%r, diag:%r',
-                  self, self.pid, self.receive_side.fd, self.transmit_side.fd,
-                  self.diag_stream and self.diag_stream.receive_side.fd)
-
-        try:
-            self._connect_bootstrap()
-        except EofError:
-            self.on_disconnect(self._router.broker)
-            e = sys.exc_info()[1]
-            self._adorn_eof_error(e)
-            raise
-        except Exception:
-            self.on_disconnect(self._router.broker)
-            self._reap_child()
-            raise
-
-    #: Sentinel value emitted by the first stage to indicate it is ready to
-    #: receive the compressed bootstrap. For :mod:`mitogen.ssh` this must have
-    #: length of at least `max(len('password'), len('debug1:'))`
-    EC0_MARKER = mitogen.core.b('MITO000\n')
-    EC1_MARKER = mitogen.core.b('MITO001\n')
-
-    def _ec0_received(self):
-        LOG.debug('%r._ec0_received()', self)
-        write_all(self.transmit_side.fd, self.get_preamble())
-        discard_until(self.receive_side.fd, self.EC1_MARKER,
-                      self.connect_deadline)
-        if self.diag_stream:
-            self._router.broker.start_receive(self.diag_stream)
-
-    def _connect_bootstrap(self):
-        discard_until(self.receive_side.fd, self.EC0_MARKER,
-                      self.connect_deadline)
-        self._ec0_received()
+        self.latch = mitogen.core.Latch()
+        self._router.broker.defer(self._async_connect)
+        self.latch.get()
+        if self.exception:
+            raise self.exception
 
 
 class ChildIdAllocator(object):
@@ -1482,7 +1564,7 @@ class ChildIdAllocator(object):
             for id_ in self.it:
                 return id_
 
-            master = mitogen.core.Context(self.router, 0)
+            master = self.router.context_by_id(0)
             start, end = master.send_await(
                 mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
             )
@@ -1739,9 +1821,11 @@ class Context(mitogen.core.Context):
         return not (self == other)
 
     def __eq__(self, other):
-        return (isinstance(other, mitogen.core.Context) and
-                (other.context_id == self.context_id) and
-                (other.router == self.router))
+        return (
+            isinstance(other, mitogen.core.Context) and
+            (other.context_id == self.context_id) and
+            (other.router == self.router)
+        )
 
     def __hash__(self):
         return hash((self.router, self.context_id))
@@ -1869,11 +1953,11 @@ class RouteMonitor(object):
         data = str(target_id)
         if name:
             data = '%s:%s' % (target_id, name)
-        stream.send(
+        stream.protocol.send(
             mitogen.core.Message(
                 handle=handle,
                 data=data.encode('utf-8'),
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
             )
         )
 
@@ -1907,9 +1991,9 @@ class RouteMonitor(object):
             ID of the connecting or disconnecting context.
         """
         for stream in self.router.get_streams():
-            if target_id in stream.egress_ids and (
+            if target_id in stream.protocol.egress_ids and (
                     (self.parent is None) or
-                    (self.parent.context_id != stream.remote_id)
+                    (self.parent.context_id != stream.protocol.remote_id)
                 ):
                 self._send_one(stream, mitogen.core.DEL_ROUTE, target_id, None)
 
@@ -1919,8 +2003,8 @@ class RouteMonitor(object):
         stream, we're also responsible for broadcasting DEL_ROUTE upstream
         if/when that child disconnects.
         """
-        self._routes_by_stream[stream] = set([stream.remote_id])
-        self._propagate_up(mitogen.core.ADD_ROUTE, stream.remote_id,
+        self._routes_by_stream[stream] = set([stream.protocol.remote_id])
+        self._propagate_up(mitogen.core.ADD_ROUTE, stream.protocol.remote_id,
                         stream.name)
         mitogen.core.listen(
             obj=stream,
@@ -1974,7 +2058,7 @@ class RouteMonitor(object):
         self.router.context_by_id(target_id).name = target_name
         stream = self.router.stream_by_id(msg.auth_id)
         current = self.router.stream_by_id(target_id)
-        if current and current.remote_id != mitogen.parent_id:
+        if current and current.protocol.remote_id != mitogen.parent_id:
             LOG.error('Cannot add duplicate route to %r via %r, '
                       'already have existing route via %r',
                       target_id, stream, current)
@@ -2017,7 +2101,7 @@ class RouteMonitor(object):
             routes.discard(target_id)
 
         self.router.del_route(target_id)
-        if stream.remote_id != mitogen.parent_id:
+        if stream.protocol.remote_id != mitogen.parent_id:
             self._propagate_up(mitogen.core.DEL_ROUTE, target_id)
         self._propagate_down(mitogen.core.DEL_ROUTE, target_id)
 
@@ -2051,11 +2135,11 @@ class Router(mitogen.core.Router):
         if msg.is_dead:
             return
         stream = self.stream_by_id(msg.src_id)
-        if stream.remote_id != msg.src_id or stream.detached:
+        if stream.protocol.remote_id != msg.src_id or stream.conn.detached:
             LOG.warning('bad DETACHING received on %r: %r', stream, msg)
             return
         LOG.debug('%r: marking as detached', stream)
-        stream.detached = True
+        stream.conn.detached = True
         msg.reply(None)
 
     def get_streams(self):
@@ -2078,7 +2162,7 @@ class Router(mitogen.core.Router):
         """
         LOG.debug('%r.add_route(%r, %r)', self, target_id, stream)
         assert isinstance(target_id, int)
-        assert isinstance(stream, Stream)
+        assert isinstance(stream, mitogen.core.Stream)
 
         self._write_lock.acquire()
         try:
@@ -2087,7 +2171,7 @@ class Router(mitogen.core.Router):
             self._write_lock.release()
 
     def del_route(self, target_id):
-        LOG.debug('%r.del_route(%r)', self, target_id)
+        LOG.debug('%r: deleting route to %r', self, target_id)
         # DEL_ROUTE may be sent by a parent if it knows this context sent
         # messages to a peer that has now disconnected, to let us raise
         # 'disconnect' event on the appropriate Context instance. In that case,
@@ -2114,35 +2198,37 @@ class Router(mitogen.core.Router):
 
     connection_timeout_msg = u"Connection timed out."
 
-    def _connect(self, klass, name=None, **kwargs):
+    def _connect(self, klass, **kwargs):
         context_id = self.allocate_id()
         context = self.context_class(self, context_id)
+        context.name = kwargs.get('name')
+
         kwargs['old_router'] = self
         kwargs['max_message_size'] = self.max_message_size
-        stream = klass(self, context_id, **kwargs)
-        if name is not None:
-            stream.name = name
+        conn = klass(klass.options_class(**kwargs), self)
         try:
-            stream.connect()
+            conn.connect(context=context)
         except mitogen.core.TimeoutError:
             raise mitogen.core.StreamError(self.connection_timeout_msg)
-        context.name = stream.name
-        self.route_monitor.notice_stream(stream)
-        self.register(context, stream)
+
+        self.route_monitor.notice_stream(conn.stdio_stream)
         return context
 
     def connect(self, method_name, name=None, **kwargs):
-        klass = stream_by_method_name(method_name)
+        if name:
+            name = mitogen.core.to_text(name)
+
+        klass = get_connection_class(method_name)
         kwargs.setdefault(u'debug', self.debug)
         kwargs.setdefault(u'profiling', self.profiling)
         kwargs.setdefault(u'unidirectional', self.unidirectional)
+        kwargs.setdefault(u'name', name)
 
         via = kwargs.pop(u'via', None)
         if via is not None:
-            return self.proxy_connect(via, method_name, name=name,
-                                      **mitogen.core.Kwargs(kwargs))
-        return self._connect(klass, name=name,
-                             **mitogen.core.Kwargs(kwargs))
+            return self.proxy_connect(via, method_name,
+                **mitogen.core.Kwargs(kwargs))
+        return self._connect(klass, **mitogen.core.Kwargs(kwargs))
 
     def proxy_connect(self, via_context, method_name, name=None, **kwargs):
         resp = via_context.call(_proxy_connect,
@@ -2203,43 +2289,86 @@ class Router(mitogen.core.Router):
         return self.connect(u'ssh', **kwargs)
 
 
-class ProcessMonitor(object):
-    """
-    Install a :data:`signal.SIGCHLD` handler that generates callbacks when a
-    specific child process has exitted. This class is obsolete, do not use.
-    """
-    def __init__(self):
-        # pid -> callback()
-        self.callback_by_pid = {}
-        signal.signal(signal.SIGCHLD, self._on_sigchld)
+class Process(object):
+    _delays = [0.05, 0.15, 0.3, 1.0, 5.0, 10.0]
+    name = None
 
-    def _on_sigchld(self, _signum, _frame):
-        for pid, callback in self.callback_by_pid.items():
-            pid, status = os.waitpid(pid, os.WNOHANG)
-            if pid:
-                callback(status)
-                del self.callback_by_pid[pid]
+    def __init__(self, pid, stdin, stdout, stderr=None):
+        self.pid = pid
+        self.stdin = stdin
+        self.stdout = stdout
+        self.stderr = stderr
+        self._returncode = None
+        self._reap_count = 0
 
-    def add(self, pid, callback):
+    def __repr__(self):
+        return '%s %s pid %d' % (
+            type(self).__name__,
+            self.name,
+            self.pid,
+        )
+
+    def poll(self):
+        raise NotImplementedError()
+
+    def _signal_child(self, signum):
+        # For processes like sudo we cannot actually send sudo a signal,
+        # because it is setuid, so this is best-effort only.
+        LOG.debug('%r: child process still alive, sending %s',
+                  self, SIGNAL_BY_NUM[signum])
+        try:
+            os.kill(self.pid, signum)
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] != errno.EPERM:
+                raise
+
+    def _async_reap(self, conn, router):
         """
-        Add a callback function to be notified of the exit status of a process.
-
-        :param int pid:
-            Process ID to be notified of.
-
-        :param callback:
-            Function invoked as `callback(status)`, where `status` is the raw
-            exit status of the child process.
+        Reap the child process during disconnection.
         """
-        self.callback_by_pid[pid] = callback
+        if self._returncode is not None:
+            # on_disconnect() may be invoked more than once, for example, if
+            # there is still a pending message to be sent after the first
+            # on_disconnect() call.
+            return
 
-    _instance = None
+        if conn.detached and conn.child_is_immediate_subprocess:
+            LOG.debug('%r: immediate child is detached, won\'t reap it', self)
+            return
 
-    @classmethod
-    def instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        if router.profiling:
+            LOG.info('%r: wont kill child because profiling=True', self)
+            return
+
+        self._reap_count += 1
+        status = self.poll()
+        if status is not None:
+            LOG.debug('%r: %s', self, returncode_to_str(status))
+            return
+
+        i = self._reap_count - 1
+        if i >= len(self._delays):
+            LOG.warning('%r: child will not die, abandoning it', self)
+            return
+        elif i == 0:
+            self._signal_child(signal.SIGTERM)
+        elif i == 1:
+            self._signal_child(signal.SIGKILL)
+
+        router.broker.timers.schedule(
+            when=time.time() + self._delays[i],
+            func=lambda: self._async_reap(conn, router),
+        )
+
+
+class PopenProcess(Process):
+    def __init__(self, proc, stdin, stdout, stderr=None):
+        super(PopenProcess, self).__init__(proc.pid, stdin, stdout, stderr)
+        self.proc = proc
+
+    def poll(self):
+        return self.proc.poll()
 
 
 class ModuleForwarder(object):
@@ -2265,7 +2394,7 @@ class ModuleForwarder(object):
         )
 
     def __repr__(self):
-        return 'ModuleForwarder(%r)' % (self.router,)
+        return 'ModuleForwarder'
 
     def _on_forward_module(self, msg):
         if msg.is_dead:
@@ -2275,38 +2404,38 @@ class ModuleForwarder(object):
         fullname = mitogen.core.to_text(fullname)
         context_id = int(context_id_s)
         stream = self.router.stream_by_id(context_id)
-        if stream.remote_id == mitogen.parent_id:
+        if stream.protocol.remote_id == mitogen.parent_id:
             LOG.error('%r: dropping FORWARD_MODULE(%d, %r): no route to child',
                       self, context_id, fullname)
             return
 
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             return
 
         LOG.debug('%r._on_forward_module() sending %r to %r via %r',
-                  self, fullname, context_id, stream.remote_id)
+                  self, fullname, context_id, stream.protocol.remote_id)
         self._send_module_and_related(stream, fullname)
-        if stream.remote_id != context_id:
-            stream._send(
+        if stream.protocol.remote_id != context_id:
+            stream.protocol._send(
                 mitogen.core.Message(
                     data=msg.data,
                     handle=mitogen.core.FORWARD_MODULE,
-                    dst_id=stream.remote_id,
+                    dst_id=stream.protocol.remote_id,
                 )
             )
 
     def _on_get_module(self, msg):
-        LOG.debug('%r._on_get_module(%r)', self, msg)
         if msg.is_dead:
             return
 
         fullname = msg.data.decode('utf-8')
+        LOG.debug('%r: %s requested by %d', self, fullname, msg.src_id)
         callback = lambda: self._on_cache_callback(msg, fullname)
         self.importer._request_module(fullname, callback)
 
     def _on_cache_callback(self, msg, fullname):
-        LOG.debug('%r._on_get_module(): sending %r', self, fullname)
         stream = self.router.stream_by_id(msg.src_id)
+        LOG.debug('%r: sending %s to %r', self, fullname, stream)
         self._send_module_and_related(stream, fullname)
 
     def _send_module_and_related(self, stream, fullname):
@@ -2316,18 +2445,18 @@ class ModuleForwarder(object):
             if rtup:
                 self._send_one_module(stream, rtup)
             else:
-                LOG.debug('%r._send_module_and_related(%r): absent: %r',
-                           self, fullname, related)
+                LOG.debug('%r: %s not in cache (for %s)',
+                          self, related, fullname)
 
         self._send_one_module(stream, tup)
 
     def _send_one_module(self, stream, tup):
-        if tup[0] not in stream.sent_modules:
-            stream.sent_modules.add(tup[0])
+        if tup[0] not in stream.protocol.sent_modules:
+            stream.protocol.sent_modules.add(tup[0])
             self.router._async_route(
                 mitogen.core.Message.pickled(
                     tup,
-                    dst_id=stream.remote_id,
+                    dst_id=stream.protocol.remote_id,
                     handle=mitogen.core.LOAD_MODULE,
                 )
             )

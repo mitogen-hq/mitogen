@@ -485,7 +485,6 @@ class Pool(object):
             )
             thread.start()
             self._threads.append(thread)
-
         LOG.debug('%r: initialized', self)
 
     def _py_24_25_compat(self):
@@ -658,7 +657,7 @@ class PushFileService(Service):
 
     def _forward(self, context, path):
         stream = self.router.stream_by_id(context.context_id)
-        child = mitogen.core.Context(self.router, stream.remote_id)
+        child = mitogen.core.Context(self.router, stream.protocol.remote_id)
         sent = self._sent_by_stream.setdefault(stream, set())
         if path in sent:
             if child.context_id != context.context_id:
@@ -891,7 +890,7 @@ class FileService(Service):
     # The IO loop pumps 128KiB chunks. An ideal message is a multiple of this,
     # odd-sized messages waste one tiny write() per message on the trailer.
     # Therefore subtract 10 bytes pickle overhead + 24 bytes header.
-    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Stream.HEADER_LEN + (
+    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Message.HEADER_LEN + (
         len(
             mitogen.core.Message.pickled(
                 mitogen.core.Blob(b(' ') * mitogen.core.CHUNK_SIZE)

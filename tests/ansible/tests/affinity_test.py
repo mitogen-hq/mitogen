@@ -199,10 +199,10 @@ class LinuxPolicyTest(testlib.TestCase):
             self.policy._set_cpu(3)
             my_cpu = self._get_cpus()
 
-            pid = mitogen.parent.detach_popen(
+            proc = mitogen.parent.popen(
                 args=['cp', '/proc/self/status', tf.name]
             )
-            os.waitpid(pid, 0)
+            proc.wait()
 
             his_cpu = self._get_cpus(tf.name)
             self.assertNotEquals(my_cpu, his_cpu)

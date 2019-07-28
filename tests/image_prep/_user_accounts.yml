@@ -20,6 +20,7 @@
       - readonly_homedir
       - require_tty
       - require_tty_pw_required
+      - permdenied
       - slow_user
       - webapp
       - sudo1
@@ -94,6 +95,14 @@
       copy:
         dest: ~mitogen__slow_user/.{{item}}
         src: ../data/docker/mitogen__slow_user.profile
+      with_items:
+      - bashrc
+      - profile
+
+    - name: "Login throws permission denied errors (issue #271)"
+      copy:
+        dest: ~mitogen__permdenied/.{{item}}
+        src: ../data/docker/mitogen__permdenied.profile
       with_items:
       - bashrc
       - profile

@@ -105,7 +105,7 @@ class BrokenModulesTest(testlib.TestCase):
         # unavailable. Should never happen in the real world.
 
         stream = mock.Mock()
-        stream.sent_modules = set()
+        stream.protocol.sent_modules = set()
         router = mock.Mock()
         router.stream_by_id = lambda n: stream
 
@@ -143,7 +143,7 @@ class BrokenModulesTest(testlib.TestCase):
         import six_brokenpkg
 
         stream = mock.Mock()
-        stream.sent_modules = set()
+        stream.protocol.sent_modules = set()
         router = mock.Mock()
         router.stream_by_id = lambda n: stream
 

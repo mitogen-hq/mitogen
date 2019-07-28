@@ -91,7 +91,8 @@ RLOG = logging.getLogger('mitogen.ctx')
 
 
 def _stdlib_paths():
-    """Return a set of paths from which Python imports the standard library.
+    """
+    Return a set of paths from which Python imports the standard library.
     """
     attr_candidates = [
         'prefix',
@@ -111,8 +112,8 @@ def _stdlib_paths():
 
 
 def is_stdlib_name(modname):
-    """Return :data:`True` if `modname` appears to come from the standard
-    library.
+    """
+    Return :data:`True` if `modname` appears to come from the standard library.
     """
     if imp.is_builtin(modname) != 0:
         return True
@@ -139,7 +140,8 @@ def is_stdlib_path(path):
 
 
 def get_child_modules(path):
-    """Return the suffixes of submodules directly neated beneath of the package
+    """
+    Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
 
     :param str path:
@@ -301,8 +303,10 @@ class ThreadWatcher(object):
 
     @classmethod
     def _reset(cls):
-        """If we have forked since the watch dictionaries were initialized, all
-        that has is garbage, so clear it."""
+        """
+        If we have forked since the watch dictionaries were initialized, all
+        that has is garbage, so clear it.
+        """
         if os.getpid() != cls._cls_pid:
             cls._cls_pid = os.getpid()
             cls._cls_instances_by_target.clear()
@@ -394,7 +398,7 @@ class LogForwarder(object):
             name = '%s.%s' % (RLOG.name, context.name)
             self._cache[msg.src_id] = logger = logging.getLogger(name)
 
-        name, level_s, s = msg.data.decode('latin1').split('\x00', 2)
+        name, level_s, s = msg.data.decode('utf-8', 'replace').split('\x00', 2)
 
         # See logging.Handler.makeRecord()
         record = logging.LogRecord(
@@ -531,14 +535,15 @@ class SysModulesMethod(FinderMethod):
             return
 
         if not isinstance(module, types.ModuleType):
-            LOG.debug('sys.modules[%r] absent or not a regular module',
-                      fullname)
+            LOG.debug('%r: sys.modules[%r] absent or not a regular module',
+                      self, fullname)
             return
 
         path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
 
+        LOG.debug('%r: sys.modules[%r]: found %s', self, fullname, path)
         is_pkg = hasattr(module, '__path__')
         try:
             source = inspect.getsource(module)
@@ -667,7 +672,8 @@ class ModuleFinder(object):
     ]
 
     def get_module_source(self, fullname):
-        """Given the name of a loaded module `fullname`, attempt to find its
+        """
+        Given the name of a loaded module `fullname`, attempt to find its
         source code.
 
         :returns:
@@ -691,9 +697,10 @@ class ModuleFinder(object):
         return tup
 
     def resolve_relpath(self, fullname, level):
-        """Given an ImportFrom AST node, guess the prefix that should be tacked
-        on to an alias name to produce a canonical name. `fullname` is the name
-        of the module in which the ImportFrom appears.
+        """
+        Given an ImportFrom AST node, guess the prefix that should be tacked on
+        to an alias name to produce a canonical name. `fullname` is the name of
+        the module in which the ImportFrom appears.
         """
         mod = sys.modules.get(fullname, None)
         if hasattr(mod, '__path__'):
@@ -817,7 +824,7 @@ class ModuleResponder(object):
         )
 
     def __repr__(self):
-        return 'ModuleResponder(%r)' % (self._router,)
+        return 'ModuleResponder'
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
@@ -844,9 +851,11 @@ class ModuleResponder(object):
         self.blacklist.append(fullname)
 
     def neutralize_main(self, path, src):
-        """Given the source for the __main__ module, try to find where it
-        begins conditional execution based on a "if __name__ == '__main__'"
-        guard, and remove any code after that point."""
+        """
+        Given the source for the __main__ module, try to find where it begins
+        conditional execution based on a "if __name__ == '__main__'" guard, and
+        remove any code after that point.
+        """
         match = self.MAIN_RE.search(src)
         if match:
             return src[:match.start()]
@@ -920,17 +929,17 @@ class ModuleResponder(object):
         return tup
 
     def _send_load_module(self, stream, fullname):
-        if fullname not in stream.sent_modules:
+        if fullname not in stream.protocol.sent_modules:
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
                 tup,
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            LOG.debug('%s: sending module %s (%.2f KiB)',
-                      stream.name, fullname, len(msg.data) / 1024.0)
+            LOG.debug('%s: sending %s (%.2f KiB) to %s',
+                      self, fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
-            stream.sent_modules.add(fullname)
+            stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
                 self.good_load_module_count += 1
                 self.good_load_module_size += len(msg.data)
@@ -939,23 +948,23 @@ class ModuleResponder(object):
 
     def _send_module_load_failed(self, stream, fullname):
         self.bad_load_module_count += 1
-        stream.send(
+        stream.protocol.send(
             mitogen.core.Message.pickled(
                 self._make_negative_response(fullname),
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
         )
 
     def _send_module_and_related(self, stream, fullname):
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             return
 
         try:
             tup = self._build_tuple(fullname)
             for name in tup[4]:  # related
                 parent, _, _ = str_partition(name, '.')
-                if parent != fullname and parent not in stream.sent_modules:
+                if parent != fullname and parent not in stream.protocol.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
@@ -976,7 +985,7 @@ class ModuleResponder(object):
         fullname = msg.data.decode()
         LOG.debug('%s requested module %s', stream.name, fullname)
         self.get_module_count += 1
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
 
@@ -987,12 +996,12 @@ class ModuleResponder(object):
             self.get_module_secs += time.time() - t0
 
     def _send_forward_module(self, stream, context, fullname):
-        if stream.remote_id != context.context_id:
-            stream.send(
+        if stream.protocol.remote_id != context.context_id:
+            stream.protocol._send(
                 mitogen.core.Message(
                     data=b('%s\x00%s' % (context.context_id, fullname)),
                     handle=mitogen.core.FORWARD_MODULE,
-                    dst_id=stream.remote_id,
+                    dst_id=stream.protocol.remote_id,
                 )
             )
 
@@ -1061,6 +1070,7 @@ class Broker(mitogen.core.Broker):
                 on_join=self.shutdown,
             )
         super(Broker, self).__init__()
+        self.timers = mitogen.parent.TimerList()
 
     def shutdown(self):
         super(Broker, self).shutdown()

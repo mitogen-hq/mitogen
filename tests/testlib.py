@@ -283,7 +283,11 @@ class LogCapturer(object):
         self.logger.level = logging.DEBUG
 
     def raw(self):
-        return self.sio.getvalue()
+        s = self.sio.getvalue()
+        # Python 2.x logging package hard-wires UTF-8 output.
+        if isinstance(s, mitogen.core.BytesType):
+            s = s.decode('utf-8')
+        return s
 
     def msgs(self):
         return self.handler.msgs
@@ -327,17 +331,36 @@ class TestCase(unittest2.TestCase):
 
         for name in counts:
             assert counts[name] == 1, \
-                'Found %d copies of thread %r running after tests.' % (name,)
+                'Found %d copies of thread %r running after tests.' % (
+                    counts[name], name
+                )
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
         if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof -p %s' % (os.getpid(),))
+            import os; os.system('lsof -w -p %s' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 self, self._fd_count_before, get_fd_count(),
             )
 
+    def _teardown_check_zombies(self):
+        try:
+            pid, status = os.waitpid(0, os.WNOHANG)
+        except OSError:
+            return  # ECHILD
+
+        if pid:
+            assert 0, "%s failed to reap subprocess %d (status %d)." % (
+                self, pid, status
+            )
+
+        print()
+        print('Children of unit test process:')
+        os.system('ps uww --ppid ' + str(os.getpid()))
+        assert 0, "%s leaked still-running subprocesses." % (self,)
+
     def tearDown(self):
+        self._teardown_check_zombies()
         self._teardown_check_threads()
         self._teardown_check_fds()
         super(TestCase, self).tearDown()

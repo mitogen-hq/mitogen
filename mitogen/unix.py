@@ -65,8 +65,37 @@ def make_socket_path():
     return tempfile.mktemp(prefix='mitogen_unix_', suffix='.sock')
 
 
-class Listener(mitogen.core.BasicStream):
+class ListenerStream(mitogen.core.Stream):
+    def on_receive(self, broker):
+        sock, _ = self.receive_side.fp.accept()
+        try:
+            self.protocol.on_accept_client(sock)
+        except:
+            sock.close()
+            raise
+
+
+class Listener(mitogen.core.Protocol):
+    stream_class = ListenerStream
     keep_alive = True
+
+    @classmethod
+    def build_stream(cls, router, path=None, backlog=100):
+        if not path:
+            path = make_socket_path()
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        if os.path.exists(path) and is_path_dead(path):
+            LOG.debug('%r: deleting stale %r', cls.__name__, path)
+            os.unlink(path)
+
+        sock.bind(path)
+        os.chmod(path, int('0600', 8))
+        sock.listen(backlog)
+
+        stream = super(Listener, cls).build_stream(router, path)
+        stream.accept(sock, sock)
+        router.broker.start_receive(stream)
+        return stream
 
     def __repr__(self):
         return '%s.%s(%r)' % (
@@ -75,20 +104,9 @@ class Listener(mitogen.core.BasicStream):
             self.path,
         )
 
-    def __init__(self, router, path=None, backlog=100):
+    def __init__(self, router, path):
         self._router = router
-        self.path = path or make_socket_path()
-        self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-
-        if os.path.exists(self.path) and is_path_dead(self.path):
-            LOG.debug('%r: deleting stale %r', self, self.path)
-            os.unlink(self.path)
-
-        self._sock.bind(self.path)
-        os.chmod(self.path, int('0600', 8))
-        self._sock.listen(backlog)
-        self.receive_side = mitogen.core.Side(self, self._sock.fileno())
-        router.broker.start_receive(self)
+        self.path = path
 
     def _unlink_socket(self):
         try:
@@ -100,12 +118,11 @@ class Listener(mitogen.core.BasicStream):
                 raise
 
     def on_shutdown(self, broker):
-        broker.stop_receive(self)
+        broker.stop_receive(self.stream)
         self._unlink_socket()
-        self._sock.close()
-        self.receive_side.closed = True
+        self.stream.receive_side.close()
 
-    def _accept_client(self, sock):
+    def on_accept_client(self, sock):
         sock.setblocking(True)
         try:
             pid, = struct.unpack('>L', sock.recv(4))
@@ -115,12 +132,6 @@ class Listener(mitogen.core.BasicStream):
             return
 
         context_id = self._router.id_allocator.allocate()
-        context = mitogen.parent.Context(self._router, context_id)
-        stream = mitogen.core.Stream(self._router, context_id)
-        stream.name = u'unix_client.%d' % (pid,)
-        stream.auth_id = mitogen.context_id
-        stream.is_privileged = True
-
         try:
             sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
                                   os.getpid()))
@@ -129,21 +140,20 @@ class Listener(mitogen.core.BasicStream):
                       self, pid, sys.exc_info()[1])
             return
 
+        context = mitogen.parent.Context(self._router, context_id)
+        stream = mitogen.core.MitogenProtocol.build_stream(
+            router=self._router,
+            remote_id=context_id,
+        )
+        stream.name = u'unix_client.%d' % (pid,)
+        stream.protocol.auth_id = mitogen.context_id
+        stream.protocol.is_privileged = True
+        stream.accept(sock, sock)
         LOG.debug('%r: accepted %r', self, stream)
-        stream.accept(sock.fileno(), sock.fileno())
         self._router.register(context, stream)
 
-    def on_receive(self, broker):
-        sock, _ = self._sock.accept()
-        try:
-            self._accept_client(sock)
-        finally:
-            sock.close()
 
-
-def connect(path, broker=None):
-    LOG.debug('unix.connect(path=%r)', path)
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+def _connect(path, broker, sock):
     sock.connect(path)
     sock.send(struct.pack('>L', os.getpid()))
     mitogen.context_id, remote_id, pid = struct.unpack('>LLL', sock.recv(12))
@@ -154,15 +164,35 @@ def connect(path, broker=None):
               mitogen.context_id, remote_id)
 
     router = mitogen.master.Router(broker=broker)
-    stream = mitogen.core.Stream(router, remote_id)
-    stream.accept(sock.fileno(), sock.fileno())
+    stream = mitogen.core.MitogenProtocol.build_stream(router, remote_id)
+    stream.accept(sock, sock)
     stream.name = u'unix_listener.%d' % (pid,)
+
+    mitogen.core.listen(stream, 'disconnect', _cleanup)
+    mitogen.core.listen(router.broker, 'shutdown',
+        lambda: router.disconnect_stream(stream))
 
     context = mitogen.parent.Context(router, remote_id)
     router.register(context, stream)
-
-    mitogen.core.listen(router.broker, 'shutdown',
-                        lambda: router.disconnect_stream(stream))
-
-    sock.close()
     return router, context
+
+
+def connect(path, broker=None):
+    LOG.debug('unix.connect(path=%r)', path)
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        return _connect(path, broker, sock)
+    except:
+        sock.close()
+        raise
+
+
+def _cleanup():
+    """
+    Reset mitogen.context_id and friends when our connection to the parent is
+    lost. Per comments on #91, these globals need to move to the Router so
+    fix-ups like this become unnecessary.
+    """
+    mitogen.context_id = 0
+    mitogen.parent_id = None
+    mitogen.parent_ids = []

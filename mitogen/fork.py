@@ -28,6 +28,7 @@
 
 # !mitogen: minify_safe
 
+import errno
 import logging
 import os
 import random
@@ -37,6 +38,7 @@ import traceback
 
 import mitogen.core
 import mitogen.parent
+from mitogen.core import b
 
 
 LOG = logging.getLogger('mitogen')
@@ -119,14 +121,56 @@ def handle_child_crash():
     os._exit(1)
 
 
-class Stream(mitogen.parent.Stream):
-    child_is_immediate_subprocess = True
+class Process(mitogen.parent.Process):
+    def poll(self):
+        try:
+            pid, status = os.waitpid(self.pid, os.WNOHANG)
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] == errno.ECHILD:
+                LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
+                return
+            raise
 
+        if not pid:
+            return
+        if os.WIFEXITED(status):
+            return os.WEXITSTATUS(status)
+        elif os.WIFSIGNALED(status):
+            return -os.WTERMSIG(status)
+        elif os.WIFSTOPPED(status):
+            return -os.WSTOPSIG(status)
+
+
+class Options(mitogen.parent.Options):
     #: Reference to the importer, if any, recovered from the parent.
     importer = None
 
     #: User-supplied function for cleaning up child process state.
     on_fork = None
+
+    def __init__(self, old_router, max_message_size, on_fork=None, debug=False,
+                 profiling=False, unidirectional=False, on_start=None,
+                 name=None):
+        if not FORK_SUPPORTED:
+            raise Error(self.python_version_msg)
+
+        # fork method only supports a tiny subset of options.
+        super(Options, self).__init__(
+            max_message_size=max_message_size, debug=debug,
+            profiling=profiling, unidirectional=unidirectional, name=name,
+        )
+        self.on_fork = on_fork
+        self.on_start = on_start
+
+        responder = getattr(old_router, 'responder', None)
+        if isinstance(responder, mitogen.parent.ModuleForwarder):
+            self.importer = responder.importer
+
+
+class Connection(mitogen.parent.Connection):
+    options_class = Options
+    child_is_immediate_subprocess = True
 
     python_version_msg = (
         "The mitogen.fork method is not supported on Python versions "
@@ -135,34 +179,14 @@ class Stream(mitogen.parent.Stream):
         "local() method instead."
     )
 
-    def construct(self, old_router, max_message_size, on_fork=None,
-                  debug=False, profiling=False, unidirectional=False,
-                  on_start=None):
-        if not FORK_SUPPORTED:
-            raise Error(self.python_version_msg)
-
-        # fork method only supports a tiny subset of options.
-        super(Stream, self).construct(max_message_size=max_message_size,
-                                      debug=debug, profiling=profiling,
-                                      unidirectional=False)
-        self.on_fork = on_fork
-        self.on_start = on_start
-
-        responder = getattr(old_router, 'responder', None)
-        if isinstance(responder, mitogen.parent.ModuleForwarder):
-            self.importer = responder.importer
-
     name_prefix = u'fork'
 
     def start_child(self):
         parentfp, childfp = mitogen.parent.create_socketpair()
-        self.pid = os.fork()
-        if self.pid:
+        pid = os.fork()
+        if pid:
             childfp.close()
-            # Decouple the socket from the lifetime of the Python socket object.
-            fd = os.dup(parentfp.fileno())
-            parentfp.close()
-            return self.pid, fd, None
+            return Process(pid, stdin=parentfp, stdout=parentfp)
         else:
             parentfp.close()
             self._wrap_child_main(childfp)
@@ -173,11 +197,23 @@ class Stream(mitogen.parent.Stream):
         except BaseException:
             handle_child_crash()
 
+    def get_econtext_config(self):
+        config = super(Connection, self).get_econtext_config()
+        config['core_src_fd'] = None
+        config['importer'] = self.options.importer
+        config['send_ec2'] = False
+        config['setup_package'] = False
+        if self.options.on_start:
+            config['on_start'] = self.options.on_start
+        return config
+
     def _child_main(self, childfp):
         on_fork()
-        if self.on_fork:
-            self.on_fork()
+        if self.options.on_fork:
+            self.options.on_fork()
         mitogen.core.set_block(childfp.fileno())
+
+        childfp.send(b('MITO002\n'))
 
         # Expected by the ExternalContext.main().
         os.dup2(childfp.fileno(), 1)
@@ -201,23 +237,12 @@ class Stream(mitogen.parent.Stream):
         if childfp.fileno() not in (0, 1, 100):
             childfp.close()
 
-        config = self.get_econtext_config()
-        config['core_src_fd'] = None
-        config['importer'] = self.importer
-        config['setup_package'] = False
-        if self.on_start:
-            config['on_start'] = self.on_start
-
         try:
             try:
-                mitogen.core.ExternalContext(config).main()
+                mitogen.core.ExternalContext(self.get_econtext_config()).main()
             except Exception:
                 # TODO: report exception somehow.
                 os._exit(72)
         finally:
             # Don't trigger atexit handlers, they were copied from the parent.
             os._exit(0)
-
-    def _connect_bootstrap(self):
-        # None required.
-        pass

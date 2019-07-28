@@ -21,7 +21,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(argv[1], 'exec')
         self.assertEquals(argv[2], '--interactive')
         self.assertEquals(argv[3], 'container_name')
-        self.assertEquals(argv[4], stream.python_path)
+        self.assertEquals(argv[4], stream.conn.options.python_path)
 
 
 if __name__ == '__main__':

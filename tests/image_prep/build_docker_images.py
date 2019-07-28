@@ -26,7 +26,13 @@ label_by_id = {}
 
 for base_image, label in [
         ('astj/centos5-vault', 'centos5'),  # Python 2.4.3
-        ('debian:stretch', 'debian'),       # Python 2.7.13, 3.5.3
+        # Debian containers later than debuerreotype/debuerreotype#48 no longer
+        # ship a stub 'initctl', causing (apparently) the Ansible service
+        # module run at the end of DebOps to trigger a full stop/start of SSHd.
+        # When SSHd is killed, Docker responds by destroying the container.
+        # Proper solution is to include a full /bin/init; Docker --init doesn't
+        # help. In the meantime, just use a fixed older version.
+        ('debian:stretch-20181112', 'debian'),       # Python 2.7.13, 3.5.3
         ('centos:6', 'centos6'),            # Python 2.6.6
         ('centos:7', 'centos7')             # Python 2.7.5
     ]:

@@ -14,6 +14,11 @@ from testlib import Popen__terminate
 
 import mitogen.parent
 
+try:
+    file
+except NameError:
+    from io import FileIO as file
+
 
 def wait_for_child(pid, timeout=1.0):
     deadline = time.time() + timeout
@@ -49,7 +54,7 @@ def wait_for_empty_output_queue(sync_recv, context):
     while True:
         # Now wait for the RPC to exit the output queue.
         stream = router.stream_by_id(context.context_id)
-        if broker.defer_sync(lambda: stream.pending_bytes()) == 0:
+        if broker.defer_sync(lambda: stream.protocol.pending_bytes()) == 0:
             return
         time.sleep(0.1)
 
@@ -69,35 +74,17 @@ class GetDefaultRemoteNameTest(testlib.TestCase):
         self.assertEquals("ECORP_Administrator@box:123", self.func())
 
 
-class WstatusToStrTest(testlib.TestCase):
-    func = staticmethod(mitogen.parent.wstatus_to_str)
+class ReturncodeToStrTest(testlib.TestCase):
+    func = staticmethod(mitogen.parent.returncode_to_str)
 
     def test_return_zero(self):
-        pid = os.fork()
-        if not pid:
-            os._exit(0)
-        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
-        self.assertEquals(self.func(status),
-                          'exited with return code 0')
+        self.assertEquals(self.func(0), 'exited with return code 0')
 
     def test_return_one(self):
-        pid = os.fork()
-        if not pid:
-            os._exit(1)
-        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
-        self.assertEquals(
-            self.func(status),
-            'exited with return code 1'
-        )
+        self.assertEquals(self.func(1), 'exited with return code 1')
 
     def test_sigkill(self):
-        pid = os.fork()
-        if not pid:
-            time.sleep(600)
-        os.kill(pid, signal.SIGKILL)
-        (pid, status), _ = mitogen.core.io_op(os.waitpid, pid, 0)
-        self.assertEquals(
-            self.func(status),
+        self.assertEquals(self.func(-signal.SIGKILL),
             'exited due to signal %s (SIGKILL)' % (int(signal.SIGKILL),)
         )
 
@@ -107,20 +94,20 @@ class WstatusToStrTest(testlib.TestCase):
 class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
     def test_connect_timeout(self):
         # Ensure the child process is reaped if the connection times out.
-        stream = mitogen.parent.Stream(
-            router=self.router,
-            remote_id=1234,
+        options = mitogen.parent.Options(
             old_router=self.router,
             max_message_size=self.router.max_message_size,
             python_path=testlib.data_path('python_never_responds.py'),
             connect_timeout=0.5,
         )
+
+        conn = mitogen.parent.Connection(options, router=self.router)
         self.assertRaises(mitogen.core.TimeoutError,
-            lambda: stream.connect()
+            lambda: conn.connect(context=mitogen.core.Context(None, 1234))
         )
-        wait_for_child(stream.pid)
+        wait_for_child(conn.proc.pid)
         e = self.assertRaises(OSError,
-            lambda: os.kill(stream.pid, 0)
+            lambda: os.kill(conn.proc.pid, 0)
         )
         self.assertEquals(e.args[0], errno.ESRCH)
 
@@ -133,7 +120,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
                 connect_timeout=3,
             )
         )
-        prefix = "EOF on stream; last 300 bytes received: "
+        prefix = mitogen.parent.Connection.eof_error_msg
         self.assertTrue(e.args[0].startswith(prefix))
 
     def test_via_eof(self):
@@ -142,12 +129,12 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.local(
                 via=local,
-                python_path='true',
+                python_path='echo',
                 connect_timeout=3,
             )
         )
-        s = "EOF on stream; last 300 bytes received: "
-        self.assertTrue(s in e.args[0])
+        expect = mitogen.parent.Connection.eof_error_msg
+        self.assertTrue(expect in e.args[0])
 
     def test_direct_enoent(self):
         e = self.assertRaises(mitogen.core.StreamError,
@@ -185,11 +172,15 @@ class OpenPtyTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.openpty)
 
     def test_pty_returned(self):
-        master_fd, slave_fd = self.func()
-        self.assertTrue(isinstance(master_fd, int))
-        self.assertTrue(isinstance(slave_fd, int))
-        os.close(master_fd)
-        os.close(slave_fd)
+        master_fp, slave_fp = self.func()
+        try:
+            self.assertTrue(master_fp.isatty())
+            self.assertTrue(isinstance(master_fp, file))
+            self.assertTrue(slave_fp.isatty())
+            self.assertTrue(isinstance(slave_fp, file))
+        finally:
+            master_fp.close()
+            slave_fp.close()
 
     @mock.patch('os.openpty')
     def test_max_reached(self, openpty):
@@ -204,20 +195,20 @@ class OpenPtyTest(testlib.TestCase):
     @mock.patch('os.openpty')
     def test_broken_linux_fallback(self, openpty):
         openpty.side_effect = OSError(errno.EPERM)
-        master_fd, slave_fd = self.func()
+        master_fp, slave_fp = self.func()
         try:
-            st = os.fstat(master_fd)
+            st = os.fstat(master_fp.fileno())
             self.assertEquals(5, os.major(st.st_rdev))
-            flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+            flags = fcntl.fcntl(master_fp.fileno(), fcntl.F_GETFL)
             self.assertTrue(flags & os.O_RDWR)
 
-            st = os.fstat(slave_fd)
+            st = os.fstat(slave_fp.fileno())
             self.assertEquals(136, os.major(st.st_rdev))
-            flags = fcntl.fcntl(slave_fd, fcntl.F_GETFL)
+            flags = fcntl.fcntl(slave_fp.fileno(), fcntl.F_GETFL)
             self.assertTrue(flags & os.O_RDWR)
         finally:
-            os.close(master_fd)
-            os.close(slave_fd)
+            master_fp.close()
+            slave_fp.close()
 
 
 class TtyCreateChildTest(testlib.TestCase):
@@ -235,123 +226,20 @@ class TtyCreateChildTest(testlib.TestCase):
         # read a password.
         tf = tempfile.NamedTemporaryFile()
         try:
-            pid, fd, _ = self.func([
+            proc = self.func([
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
             ])
             deadline = time.time() + 5.0
-            for line in mitogen.parent.iter_read([fd], deadline):
-                self.assertEquals(mitogen.core.b('hi\n'), line)
-                break
-            waited_pid, status = os.waitpid(pid, 0)
-            self.assertEquals(pid, waited_pid)
+            mitogen.core.set_block(proc.stdin.fileno())
+            # read(3) below due to https://bugs.python.org/issue37696
+            self.assertEquals(mitogen.core.b('hi\n'), proc.stdin.read(3))
+            waited_pid, status = os.waitpid(proc.pid, 0)
+            self.assertEquals(proc.pid, waited_pid)
             self.assertEquals(0, status)
             self.assertEquals(mitogen.core.b(''), tf.read())
-            os.close(fd)
+            proc.stdout.close()
         finally:
             tf.close()
-
-
-class IterReadTest(testlib.TestCase):
-    func = staticmethod(mitogen.parent.iter_read)
-
-    def make_proc(self):
-        # I produce text every 100ms.
-        args = [testlib.data_path('iter_read_generator.py')]
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        mitogen.core.set_nonblock(proc.stdout.fileno())
-        return proc
-
-    def test_no_deadline(self):
-        proc = self.make_proc()
-        try:
-            reader = self.func([proc.stdout.fileno()])
-            for i, chunk in enumerate(reader):
-                self.assertEqual(1+i, int(chunk))
-                if i > 2:
-                    break
-        finally:
-            Popen__terminate(proc)
-            proc.stdout.close()
-
-    def test_deadline_exceeded_before_call(self):
-        proc = self.make_proc()
-        reader = self.func([proc.stdout.fileno()], 0)
-        try:
-            got = []
-            try:
-                for chunk in reader:
-                    got.append(chunk)
-                assert 0, 'TimeoutError not raised'
-            except mitogen.core.TimeoutError:
-                self.assertEqual(len(got), 0)
-        finally:
-            Popen__terminate(proc)
-            proc.stdout.close()
-
-    def test_deadline_exceeded_during_call(self):
-        proc = self.make_proc()
-        deadline = time.time() + 0.4
-
-        reader = self.func([proc.stdout.fileno()], deadline)
-        try:
-            got = []
-            try:
-                for chunk in reader:
-                    if time.time() > (deadline + 1.0):
-                        assert 0, 'TimeoutError not raised'
-                    got.append(chunk)
-            except mitogen.core.TimeoutError:
-                # Give a little wiggle room in case of imperfect scheduling.
-                # Ideal number should be 9.
-                self.assertLess(deadline, time.time())
-                self.assertLess(1, len(got))
-                self.assertLess(len(got), 20)
-        finally:
-            Popen__terminate(proc)
-            proc.stdout.close()
-
-
-class WriteAllTest(testlib.TestCase):
-    func = staticmethod(mitogen.parent.write_all)
-
-    def make_proc(self):
-        args = [testlib.data_path('write_all_consumer.py')]
-        proc = subprocess.Popen(args, stdin=subprocess.PIPE)
-        mitogen.core.set_nonblock(proc.stdin.fileno())
-        return proc
-
-    ten_ms_chunk = (mitogen.core.b('x') * 65535)
-
-    def test_no_deadline(self):
-        proc = self.make_proc()
-        try:
-            self.func(proc.stdin.fileno(), self.ten_ms_chunk)
-        finally:
-            Popen__terminate(proc)
-            proc.stdin.close()
-
-    def test_deadline_exceeded_before_call(self):
-        proc = self.make_proc()
-        try:
-            self.assertRaises(mitogen.core.TimeoutError, (
-                lambda: self.func(proc.stdin.fileno(), self.ten_ms_chunk, 0)
-            ))
-        finally:
-            Popen__terminate(proc)
-            proc.stdin.close()
-
-    def test_deadline_exceeded_during_call(self):
-        proc = self.make_proc()
-        try:
-            deadline = time.time() + 0.1   # 100ms deadline
-            self.assertRaises(mitogen.core.TimeoutError, (
-                lambda: self.func(proc.stdin.fileno(),
-                                  self.ten_ms_chunk * 100,  # 1s of data
-                                  deadline)
-            ))
-        finally:
-            Popen__terminate(proc)
-            proc.stdin.close()
 
 
 class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
@@ -394,7 +282,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c2 = self.router.local()
 
         # Let c1 call functions in c2.
-        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        self.router.stream_by_id(c1.context_id).protocol.auth_id = mitogen.context_id
         c1.call(mitogen.parent.upgrade_router)
 
         sync_recv = mitogen.core.Receiver(self.router)
@@ -412,14 +300,14 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
     def test_far_sibling_disconnected(self):
         # God mode: child of child notices child of child of parent has
         # disconnected.
-        c1 = self.router.local()
-        c11 = self.router.local(via=c1)
+        c1 = self.router.local(name='c1')
+        c11 = self.router.local(name='c11', via=c1)
 
-        c2 = self.router.local()
-        c22 = self.router.local(via=c2)
+        c2 = self.router.local(name='c2')
+        c22 = self.router.local(name='c22', via=c2)
 
         # Let c1 call functions in c2.
-        self.router.stream_by_id(c1.context_id).auth_id = mitogen.context_id
+        self.router.stream_by_id(c1.context_id).protocol.auth_id = mitogen.context_id
         c11.call(mitogen.parent.upgrade_router)
 
         sync_recv = mitogen.core.Receiver(self.router)

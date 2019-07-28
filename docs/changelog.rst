@@ -102,6 +102,14 @@ Fixes
   potential influx of 2.8-related bug reports.
 
 
+Core Library
+~~~~~~~~~~~~
+
+* `#170 <https://github.com/dw/mitogen/issues/170>`_: to better support child
+  process management and a future asynchronous connect implementation, a
+  :class:`mitogen.parent.TimerList` API is available.
+
+
 Thanks!
 ~~~~~~~
 

@@ -2,8 +2,7 @@
 import os
 
 import mitogen
-import mitogen.lxd
-import mitogen.parent
+import mitogen.sudo
 
 import unittest2
 
@@ -79,7 +78,7 @@ class NonEnglishPromptTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.sudo(via=ssh)
         )
-        self.assertTrue(mitogen.sudo.Stream.password_required_msg in str(e))
+        self.assertTrue(mitogen.sudo.password_required_msg in str(e))
 
     def test_password_incorrect(self):
         ssh = self.docker_ssh(
@@ -91,7 +90,7 @@ class NonEnglishPromptTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.sudo(via=ssh, password='x')
         )
-        self.assertTrue(mitogen.sudo.Stream.password_incorrect_msg in str(e))
+        self.assertTrue(mitogen.sudo.password_incorrect_msg in str(e))
 
     def test_password_okay(self):
         ssh = self.docker_ssh(
@@ -103,7 +102,7 @@ class NonEnglishPromptTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.sudo(via=ssh, password='rootpassword')
         )
-        self.assertTrue(mitogen.sudo.Stream.password_incorrect_msg in str(e))
+        self.assertTrue(mitogen.sudo.password_incorrect_msg in str(e))
 
 
 if __name__ == '__main__':

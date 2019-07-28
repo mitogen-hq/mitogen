@@ -46,65 +46,98 @@
     - when: ansible_virtualization_type != "docker"
       meta: end_play
 
-    - apt:
+    - name: Ensure requisite Debian packages are installed
+      apt:
         name: "{{packages.common + packages[distro][ver]}}"
         state: installed
         update_cache: true
       when: distro == "Debian"
 
-    - yum:
+    - name: Ensure requisite Red Hat packaed are installed
+      yum:
         name: "{{packages.common + packages[distro][ver]}}"
         state: installed
         update_cache: true
       when: distro == "CentOS"
 
-    - command: apt-get clean
+    - name: Clean up apt cache
+      command: apt-get clean
       when: distro == "Debian"
 
-    - command: yum clean all
-      when: distro == "CentOS"
-
-    - shell: rm -rf {{item}}/*
+    - name: Clean up apt package lists
+      shell: rm -rf {{item}}/*
       with_items:
       - /var/cache/apt
       - /var/lib/apt/lists
+      when: distro == "Debian"
 
-    - copy:
+    - name: Clean up yum cache
+      command: yum clean all
+      when: distro == "CentOS"
+
+    - name: Enable UTF-8 locale on Debian
+      copy:
         dest: /etc/locale.gen
         content: |
           en_US.UTF-8 UTF-8
           fr_FR.UTF-8 UTF-8
       when: distro == "Debian"
 
-    - shell: locale-gen
+    - name: Generate UTF-8 locale on Debian
+      shell: locale-gen
       when: distro == "Debian"
 
-    # Vanilla Ansible needs simplejson on CentOS 5.
-    - shell: mkdir -p /usr/lib/python2.4/site-packages/simplejson/
+    - name: Install prebuilt 'doas' binary
+      unarchive:
+        dest: /
+        src: ../data/docker/doas-debian.tar.gz
+
+    - name: Make prebuilt 'doas' binary executable
+      file:
+        path: /usr/local/bin/doas
+        mode: 'u=rwxs,go=rx'
+        owner: root
+        group: root
+
+    - name: Install doas.conf
+      copy:
+        dest: /etc/doas.conf
+        content: |
+          permit :mitogen__group
+          permit :root
+
+    - name: Vanilla Ansible needs simplejson on CentOS 5.
+      shell: mkdir -p /usr/lib/python2.4/site-packages/simplejson/
       when: distro == "CentOS" and ver == "5"
 
-    - synchronize:
+    - name: Vanilla Ansible needs simplejson on CentOS 5.
+      synchronize:
         dest: /usr/lib/python2.4/site-packages/simplejson/
         src: ../../ansible_mitogen/compat/simplejson/
       when: distro == "CentOS" and ver == "5"
 
-    - user:
+    - name: Set root user password and shell
+      user:
         name: root
         password: "{{ 'rootpassword' | password_hash('sha256') }}"
         shell: /bin/bash
 
-    - file:
+    - name: Ensure /var/run/sshd exists
+      file:
         path: /var/run/sshd
         state: directory
 
-    - command: ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
+    - name: Generate SSH host key
+      command: ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
       args:
         creates: /etc/ssh/ssh_host_rsa_key
 
-    - group:
+    - name: Ensure correct sudo group exists
+      group:
         name: "{{sudo_group[distro]}}"
 
-    - copy:
+    - name: Ensure /etc/sentinel exists
+      copy:
         dest: /etc/sentinel
         content: |
           i-am-mitogen-test-docker-image
@@ -119,7 +152,8 @@
         path: /etc/sudoers.d
         mode: 'u=rwx,go='
 
-    - blockinfile:
+    - name: Install test-related sudo rules
+      blockinfile:
         path: /etc/sudoers
         block: |
           # https://www.toofishes.net/blog/trouble-sudoers-or-last-entry-wins/
@@ -131,31 +165,36 @@
           Defaults>mitogen__require_tty requiretty
           Defaults>mitogen__require_tty_pw_required requiretty,targetpw
 
-    # Prevent permission denied errors.
-    - file:
+    - name: Prevent permission denied errors.
+      file:
         path: /etc/sudoers.d/README
         state: absent
 
-    - lineinfile:
+    - name: Install CentOS wheel sudo rule
+      lineinfile:
         path: /etc/sudoers
         line: "%wheel ALL=(ALL) ALL"
       when: distro == "CentOS"
 
-    - lineinfile:
+    - name: Enable SSH banner
+      lineinfile:
         path: /etc/ssh/sshd_config
         line: Banner /etc/ssh/banner.txt
 
-    - lineinfile:
+    - name: Allow remote SSH root login
+      lineinfile:
         path: /etc/ssh/sshd_config
         line: PermitRootLogin yes
         regexp: '.*PermitRootLogin.*'
 
-    - lineinfile:
+    - name: Allow remote SSH root login
+      lineinfile:
         path: /etc/pam.d/sshd
         regexp: '.*session.*required.*pam_loginuid.so'
         line: session optional pam_loginuid.so
 
-    - copy:
+    - name: Install convenience script for running an straced Python
+      copy:
         mode: 'u+rwx,go=rx'
         dest: /usr/local/bin/pywrap
         content: |

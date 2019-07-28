@@ -8,40 +8,7 @@ from mitogen.core import b
 import testlib
 
 
-class EvilObject(object):
-    pass
-
-
-def roundtrip(v):
-    msg = mitogen.core.Message.pickled(v)
-    return mitogen.core.Message(data=msg.data).unpickle()
-
-
-class EvilObjectTest(testlib.TestCase):
-    def test_deserialization_fails(self):
-        msg = mitogen.core.Message.pickled(EvilObject())
-        e = self.assertRaises(mitogen.core.StreamError,
-            lambda: msg.unpickle()
-        )
-
-
-class BlobTest(testlib.TestCase):
-    klass = mitogen.core.Blob
-
-    # Python 3 pickle protocol 2 does weird stuff depending on whether an empty
-    # or nonempty bytes is being serialized. For non-empty, it yields a
-    # _codecs.encode() call. For empty, it yields a bytes() call.
-
-    def test_nonempty_bytes(self):
-        v = mitogen.core.Blob(b('dave'))
-        self.assertEquals(b('dave'), roundtrip(v))
-
-    def test_empty_bytes(self):
-        v = mitogen.core.Blob(b(''))
-        self.assertEquals(b(''), roundtrip(v))
-
-
-class ContextTest(testlib.RouterMixin, testlib.TestCase):
+class PickleTest(testlib.RouterMixin, testlib.TestCase):
     klass = mitogen.core.Context
 
     # Ensure Context can be round-tripped by regular pickle in addition to

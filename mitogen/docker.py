@@ -37,45 +37,47 @@ import mitogen.parent
 LOG = logging.getLogger(__name__)
 
 
-class Stream(mitogen.parent.Stream):
-    child_is_immediate_subprocess = False
-
+class Options(mitogen.parent.Options):
     container = None
     image = None
     username = None
-    docker_path = 'docker'
+    docker_path = u'docker'
+
+    def __init__(self, container=None, image=None, docker_path=None,
+                 username=None, **kwargs):
+        super(Options, self).__init__(**kwargs)
+        assert container or image
+        if container:
+            self.container = mitogen.core.to_text(container)
+        if image:
+            self.image = mitogen.core.to_text(image)
+        if docker_path:
+            self.docker_path = mitogen.core.to_text(docker_path)
+        if username:
+            self.username = mitogen.core.to_text(username)
+
+
+class Connection(mitogen.parent.Connection):
+    options_class = Options
+    child_is_immediate_subprocess = False
 
     # TODO: better way of capturing errors such as "No such container."
     create_child_args = {
         'merge_stdio': True
     }
 
-    def construct(self, container=None, image=None,
-                  docker_path=None, username=None,
-                  **kwargs):
-        assert container or image
-        super(Stream, self).construct(**kwargs)
-        if container:
-            self.container = container
-        if image:
-            self.image = image
-        if docker_path:
-            self.docker_path = docker_path
-        if username:
-            self.username = username
-
     def _get_name(self):
-        return u'docker.' + (self.container or self.image)
+        return u'docker.' + (self.options.container or self.options.image)
 
     def get_boot_command(self):
         args = ['--interactive']
-        if self.username:
-            args += ['--user=' + self.username]
+        if self.options.username:
+            args += ['--user=' + self.options.username]
 
-        bits = [self.docker_path]
-        if self.container:
-            bits += ['exec'] + args + [self.container]
-        elif self.image:
-            bits += ['run'] + args + ['--rm', self.image]
+        bits = [self.options.docker_path]
+        if self.options.container:
+            bits += ['exec'] + args + [self.options.container]
+        elif self.options.image:
+            bits += ['run'] + args + ['--rm', self.options.image]
 
-        return bits + super(Stream, self).get_boot_command()
+        return bits + super(Connection, self).get_boot_command()

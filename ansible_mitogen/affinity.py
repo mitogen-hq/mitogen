@@ -177,9 +177,9 @@ class FixedPolicy(Policy):
     cores, before reusing the second hyperthread of an existing core.
 
     A hook is installed that causes :meth:`reset` to run in the child of any
-    process created with :func:`mitogen.parent.detach_popen`, ensuring
-    CPU-intensive children like SSH are not forced to share the same core as
-    the (otherwise potentially very busy) parent.
+    process created with :func:`mitogen.parent.popen`, ensuring CPU-intensive
+    children like SSH are not forced to share the same core as the (otherwise
+    potentially very busy) parent.
     """
     def __init__(self, cpu_count=None):
         #: For tests.
