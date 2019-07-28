@@ -122,8 +122,10 @@ bug reports, testing, features and fixes in this release contributed by
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
-`Yuki Nishida <https://github.com/yuki-nishida-exa>`_, and
-`@ghp-rr <https://github.com/ghp-rr>`_.
+`Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
+`@ghp-rr <https://github.com/ghp-rr>`_,
+`Pieter Voet <https://github.com/pietervoet/>`_, and
+`@rizzly <https://github.com/rizzly>`_.
 
 
 v0.2.7 (2019-05-19)
