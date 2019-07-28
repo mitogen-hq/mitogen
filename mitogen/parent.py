@@ -260,13 +260,13 @@ def create_socketpair(size=None):
     ``stdout``. As they are sockets their buffers are tunable, allowing large
     buffers to improve file transfer throughput and reduce IO loop iterations.
     """
+    if size is None:
+        size = mitogen.core.CHUNK_SIZE
+
     parentfp, childfp = socket.socketpair()
-    parentfp.setsockopt(socket.SOL_SOCKET,
-                        socket.SO_SNDBUF,
-                        size or mitogen.core.CHUNK_SIZE)
-    childfp.setsockopt(socket.SOL_SOCKET,
-                       socket.SO_RCVBUF,
-                       size or mitogen.core.CHUNK_SIZE)
+    for fp in parentfp, childfp:
+        fp.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, size)
+
     return parentfp, childfp
 
 
