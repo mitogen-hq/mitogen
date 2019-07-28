@@ -331,7 +331,9 @@ class TestCase(unittest2.TestCase):
 
         for name in counts:
             assert counts[name] == 1, \
-                'Found %d copies of thread %r running after tests.' % (name,)
+                'Found %d copies of thread %r running after tests.' % (
+                    counts[name], name
+                )
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
