@@ -29,6 +29,11 @@ script:
 # newest->oldest in various configuartions.
 
 matrix:
+  allow_failures:
+    # Python 2.4 tests are still unreliable
+    - language: c
+      env: MODE=mitogen_py24 DISTRO=centos5
+
   include:
     # Mitogen tests.
     # 2.4 -> 2.4
