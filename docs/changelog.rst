@@ -98,6 +98,13 @@ Core Library
   bugs where a double close could destroy descriptors belonging to an unrelated
   stream.
 
+* `#419 <https://github.com/dw/mitogen/issues/419>`_,
+  `#549 <https://github.com/dw/mitogen/issues/549>`_, file descriptor usage
+  during large runs has approximately halved, as it is no longer necessary to
+  manage every read and write side distinctly, in order to avoid double-close
+  bugs. Avoiding double-close is instead handled by Python's built-in file
+  object.
+
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
