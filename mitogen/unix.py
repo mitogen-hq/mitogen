@@ -85,7 +85,7 @@ class Listener(mitogen.core.Protocol):
             path = make_socket_path()
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         if os.path.exists(path) and is_path_dead(path):
-            LOG.debug('%r: deleting stale %r', self, path)
+            LOG.debug('%r: deleting stale %r', cls.__name__, path)
             os.unlink(path)
 
         sock.bind(path)

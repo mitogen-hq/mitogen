@@ -230,7 +230,7 @@ class ContextDebugger(object):
     def _handle_debug_msg(self, msg):
         try:
             method, args, kwargs = msg.unpickle()
-            msg.reply(getattr(cls, method)(*args, **kwargs))
+            msg.reply(getattr(self, method)(*args, **kwargs))
         except Exception:
             e = sys.exc_info()[1]
             msg.reply(mitogen.core.CallError(e))
