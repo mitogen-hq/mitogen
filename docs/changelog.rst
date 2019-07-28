@@ -25,8 +25,8 @@ Enhancements
 ^^^^^^^^^^^^
 
 * `#587 <https://github.com/dw/mitogen/issues/587>`_: partial support for
-  Ansible 2.8 is now available. This implementation does not yet support the
-  new `become plugins
+  Ansible 2.8 is available. This implementation does not yet support the new
+  `become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_
   functionality, which will be addressed in a future release.
 
@@ -70,7 +70,7 @@ Core Library
   *"Stream(ssh:123).connect()"* could become *"connecting to ssh:123"*.
 
 * :func:`bytearray` was removed from the list of supported serialization types.
-   It has never been portable, and does not appear to have been used.
+  It has never been portable, and does not appear to have been used.
 
 * `#170 <https://github.com/dw/mitogen/issues/170>`_: to better support child
   process management and a future asynchronous connect implementation, a
@@ -78,10 +78,11 @@ Core Library
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: the internal
   :class:`mitogen.core.Stream` has been refactored into 7 new classes,
-  separating out protocol behaviour logic, output buffering, line-oriented
-  input parsing, options handling, and connection management. The new
-  connection management implementation is internally asynchronous, laying
-  almost all the groundwork needed for fully asynchronous connect.
+  modularizing protocol behaviour, output buffering, line-oriented input
+  parsing, options handling and connection management. Connection setup is
+  internally asynchronous, laying almost all the groundwork needed for fully
+  asynchronous connect, proxied Ansible become plug-ins, and integrating
+  `libssh <https://www.libssh.org/>`_.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: zombie process reaping
   has vastly improved, by using the timer API to efficiently poll for a slow
@@ -89,13 +90,18 @@ Core Library
   `SIGCHLD` handler, or rely on the process-global 'signal file descriptor'
   functionality only available in newer Python releases.
 
-* `#419 <https://github.com/dw/mitogen/issues/419>`_: almost all uses of
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: most uses of
   :func:`os.dup` have been removed, along with almost all cases of manual file
   descriptor management. Descriptors are trapped in :func:`os.fdopen` objects
   as soon as they are opened, ensuring a leaked object will close itself, and
   ensuring every descriptor is fused to a `closed` flag, preventing historical
   bugs where a double close could destroy descriptors belonging to an unrelated
   stream.
+
+* `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
+  buffer management when logging lines received from a child's redirected
+  standard IO.
+
 
 
 
