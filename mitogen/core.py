@@ -1554,7 +1554,7 @@ class Stream(object):
         """
         buf = self.receive_side.read(self.protocol.read_size)
         if not buf:
-            LOG.debug('%r: empty read, disconnecting', self)
+            LOG.debug('%r: empty read, disconnecting', self.receive_side)
             return self.on_disconnect(broker)
 
         self.protocol.on_receive(broker, buf)
