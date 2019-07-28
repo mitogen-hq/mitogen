@@ -148,9 +148,7 @@ class Listener(mitogen.core.Protocol):
         stream.name = u'unix_client.%d' % (pid,)
         stream.protocol.auth_id = mitogen.context_id
         stream.protocol.is_privileged = True
-        side = mitogen.core.Side(stream, sock)
-        stream.receive_side = side
-        stream.transmit_side = side
+        stream.accept(sock, sock)
         LOG.debug('%r: accepted %r', self, stream)
         self._router.register(context, stream)
 
@@ -167,9 +165,7 @@ def _connect(path, broker, sock):
 
     router = mitogen.master.Router(broker=broker)
     stream = mitogen.core.MitogenProtocol.build_stream(router, remote_id)
-    side = mitogen.core.Side(stream, sock)
-    stream.transmit_side = side
-    stream.receive_side = side
+    stream.accept(sock, sock)
     stream.name = u'unix_listener.%d' % (pid,)
 
     mitogen.core.listen(stream, 'disconnect', _cleanup)
