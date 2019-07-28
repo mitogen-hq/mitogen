@@ -41,7 +41,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             stdout, stderr = proc.communicate()
             self.assertEquals(0, proc.returncode)
             self.assertEquals(stdout,
-                mitogen.parent.BootstrapProtocol.EC0_MARKER+'\n')
+                mitogen.parent.BootstrapProtocol.EC0_MARKER+b('\n'))
             self.assertIn(b("Error -5 while decompressing data"), stderr)
         finally:
             fp.close()

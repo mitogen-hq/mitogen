@@ -14,6 +14,11 @@ from testlib import Popen__terminate
 
 import mitogen.parent
 
+try:
+    file
+except NameError:
+    from io import FileIO as file
+
 
 def wait_for_child(pid, timeout=1.0):
     deadline = time.time() + timeout
@@ -226,7 +231,8 @@ class TtyCreateChildTest(testlib.TestCase):
             ])
             deadline = time.time() + 5.0
             mitogen.core.set_block(proc.stdin.fileno())
-            self.assertEquals(mitogen.core.b('hi\n'), proc.stdin.read())
+            # read(3) below due to https://bugs.python.org/issue37696
+            self.assertEquals(mitogen.core.b('hi\n'), proc.stdin.read(3))
             waited_pid, status = os.waitpid(proc.pid, 0)
             self.assertEquals(proc.pid, waited_pid)
             self.assertEquals(0, status)

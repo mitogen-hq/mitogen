@@ -9,9 +9,9 @@ import time
 # #363: old input loop would fail to spot auth failure because of scheduling
 # vs. su calling write() twice.
 if 'DO_SLOW_AUTH_FAILURE' in os.environ:
-    os.write(2, 'su: ')
+    os.write(2, u'su: '.encode())
     time.sleep(0.5)
-    os.write(2, 'incorrect password\n')
+    os.write(2, u'incorrect password\n'.encode())
     os._exit(1)
 
 
