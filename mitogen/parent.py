@@ -1429,7 +1429,9 @@ class Connection(object):
         self._complete_connection()
 
     def on_stream_shutdown(self):
-        """Request the slave gracefully shut itself down."""
+        """
+        Request the slave gracefully shut itself down.
+        """
         LOG.debug('%r: requesting child shutdown', self)
         self.stream.protocol._send(
             mitogen.core.Message(

@@ -28,7 +28,8 @@
 
 # !mitogen: minify_safe
 
-"""mitogen.profiler
+"""
+mitogen.profiler
     Record and report cProfile statistics from a run. Creates one aggregated
     output file, one aggregate containing only workers, and one for the
     top-level process.
@@ -152,7 +153,7 @@ def do_stat(tmpdir, sort, *args):
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] not in ('record', 'report', 'stat'):
-        sys.stderr.write(__doc__)
+        sys.stderr.write(__doc__.lstrip())
         sys.exit(1)
 
     func = globals()['do_' + sys.argv[1]]

@@ -337,19 +337,25 @@ class ChannelError(Error):
 
 
 class StreamError(Error):
-    """Raised when a stream cannot be established."""
+    """
+    Raised when a stream cannot be established.
+    """
     pass
 
 
 class TimeoutError(Error):
-    """Raised when a timeout occurs on a stream."""
+    """
+    Raised when a timeout occurs on a stream.
+    """
     pass
 
 
 def to_text(o):
-    """Coerce `o` to Unicode by decoding it from UTF-8 if it is an instance of
+    """
+    Coerce `o` to Unicode by decoding it from UTF-8 if it is an instance of
     :class:`bytes`, otherwise pass it to the :class:`str` constructor. The
-    returned object is always a plain :class:`str`, any subclass is removed."""
+    returned object is always a plain :class:`str`, any subclass is removed.
+    """
     if isinstance(o, BytesType):
         return o.decode('utf-8')
     return UnicodeType(o)
@@ -1952,7 +1958,9 @@ class MitogenProtocol(Protocol):
         return self._writer._len
 
     def on_transmit(self, broker):
-        """Transmit buffered messages."""
+        """
+        Transmit buffered messages.
+        """
         _vv and IOLOG.debug('%r.on_transmit()', self)
         self._writer.on_transmit(broker)
 
@@ -1961,12 +1969,16 @@ class MitogenProtocol(Protocol):
         self._writer.write(msg.pack())
 
     def send(self, msg):
-        """Send `data` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
+        """
+        Send `data` to `handle`, and tell the broker we have output. May be
+        called from any thread.
+        """
         self._router.broker.defer(self._send, msg)
 
     def on_shutdown(self, broker):
-        """Disable :class:`Protocol` immediate disconnect behaviour."""
+        """
+        Disable :class:`Protocol` immediate disconnect behaviour.
+        """
         _v and LOG.debug('%r: shutting down', self)
 
 
@@ -2628,7 +2640,9 @@ class IoLoggerProtocol(DelimitedProtocol):
         self._log.handlers = logging.getLogger().handlers[:]
 
     def on_shutdown(self, broker):
-        """Shut down the write end of the logging socket."""
+        """
+        Shut down the write end of the logging socket.
+        """
         _v and LOG.debug('%r: shutting down', self)
         if not IS_WSL:
             # #333: WSL generates invalid readiness indication on shutdown().
@@ -2912,8 +2926,10 @@ class Router(object):
             del self._handle_map[handle]
 
     def on_shutdown(self, broker):
-        """Called during :meth:`Broker.shutdown`, informs callbacks registered
-        with :meth:`add_handle_cb` the connection is dead."""
+        """
+        Called during :meth:`Broker.shutdown`, informs callbacks registered
+        with :meth:`add_handle_cb` the connection is dead.
+        """
         _v and LOG.debug('%r: shutting down', self, broker)
         fire(self, 'shutdown')
         for handle, (persist, fn) in self._handle_map.iteritems():

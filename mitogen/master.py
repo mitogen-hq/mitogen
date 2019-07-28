@@ -91,7 +91,8 @@ RLOG = logging.getLogger('mitogen.ctx')
 
 
 def _stdlib_paths():
-    """Return a set of paths from which Python imports the standard library.
+    """
+    Return a set of paths from which Python imports the standard library.
     """
     attr_candidates = [
         'prefix',
@@ -111,8 +112,8 @@ def _stdlib_paths():
 
 
 def is_stdlib_name(modname):
-    """Return :data:`True` if `modname` appears to come from the standard
-    library.
+    """
+    Return :data:`True` if `modname` appears to come from the standard library.
     """
     if imp.is_builtin(modname) != 0:
         return True
@@ -139,7 +140,8 @@ def is_stdlib_path(path):
 
 
 def get_child_modules(path):
-    """Return the suffixes of submodules directly neated beneath of the package
+    """
+    Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
 
     :param str path:
@@ -301,8 +303,10 @@ class ThreadWatcher(object):
 
     @classmethod
     def _reset(cls):
-        """If we have forked since the watch dictionaries were initialized, all
-        that has is garbage, so clear it."""
+        """
+        If we have forked since the watch dictionaries were initialized, all
+        that has is garbage, so clear it.
+        """
         if os.getpid() != cls._cls_pid:
             cls._cls_pid = os.getpid()
             cls._cls_instances_by_target.clear()
@@ -668,7 +672,8 @@ class ModuleFinder(object):
     ]
 
     def get_module_source(self, fullname):
-        """Given the name of a loaded module `fullname`, attempt to find its
+        """
+        Given the name of a loaded module `fullname`, attempt to find its
         source code.
 
         :returns:
@@ -692,9 +697,10 @@ class ModuleFinder(object):
         return tup
 
     def resolve_relpath(self, fullname, level):
-        """Given an ImportFrom AST node, guess the prefix that should be tacked
-        on to an alias name to produce a canonical name. `fullname` is the name
-        of the module in which the ImportFrom appears.
+        """
+        Given an ImportFrom AST node, guess the prefix that should be tacked on
+        to an alias name to produce a canonical name. `fullname` is the name of
+        the module in which the ImportFrom appears.
         """
         mod = sys.modules.get(fullname, None)
         if hasattr(mod, '__path__'):
@@ -845,9 +851,11 @@ class ModuleResponder(object):
         self.blacklist.append(fullname)
 
     def neutralize_main(self, path, src):
-        """Given the source for the __main__ module, try to find where it
-        begins conditional execution based on a "if __name__ == '__main__'"
-        guard, and remove any code after that point."""
+        """
+        Given the source for the __main__ module, try to find where it begins
+        conditional execution based on a "if __name__ == '__main__'" guard, and
+        remove any code after that point.
+        """
         match = self.MAIN_RE.search(src)
         if match:
             return src[:match.start()]
