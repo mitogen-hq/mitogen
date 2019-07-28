@@ -34,6 +34,10 @@ Enhancements
 Fixes
 ^^^^^
 
+* `#363 <https://github.com/dw/mitogen/issues/363>`_: fix a rare race matching
+  *Permission denied* errors from some versions of ``su`` running on heavily
+  loaded machines.
+
 * `#578 <https://github.com/dw/mitogen/issues/578>`_: the extension could crash
   while rendering an error message, due to an incorrect format string.
 
