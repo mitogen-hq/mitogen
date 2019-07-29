@@ -407,6 +407,12 @@ class ClassicWorkerModel(WorkerModel):
         mitogen.core.io_op(sock.recv, 1)
         sock.close()
 
+        for mux in self._muxes:
+            _, status = os.waitpid(mux.pid, 0)
+            status = mitogen.fork._convert_exit_status(status)
+            LOG.debug('mux %d PID %d %s', mux.index, mux.pid,
+                      mitogen.parent.returncode_to_str(status))
+
     def _initialize(self):
         """
         Arrange for classic process model connection multiplexer child
@@ -555,7 +561,6 @@ class MuxProcess(object):
             mitogen.core.io_op(MuxProcess.cls_parent_sock.recv, 1)
             return
 
-        save_pid('mux')
         ansible_mitogen.logging.set_process_name('mux:' + str(self.index))
         if setproctitle:
             setproctitle.setproctitle('mitogen mux:%s (%s)' % (
