@@ -586,7 +586,7 @@ class MuxProcess(object):
         """
         save_pid('mux')
         ansible_mitogen.logging.set_process_name('mux')
-        ansible_mitogen.affinity.policy.assign_muxprocess()
+        ansible_mitogen.affinity.policy.assign_muxprocess(self.index)
 
         self._setup_master()
         self._setup_services()

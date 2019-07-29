@@ -142,7 +142,7 @@ class Policy(object):
         Assign the Ansible top-level policy to this process.
         """
 
-    def assign_muxprocess(self):
+    def assign_muxprocess(self, index):
         """
         Assign the MuxProcess policy to this process.
         """
@@ -224,7 +224,7 @@ class FixedPolicy(Policy):
         ))
 
     def _set_cpu(self, cpu):
-        self._set_affinity(1 << cpu)
+        self._set_affinity(1 << (cpu % self.cpu_count))
 
     def _clear(self):
         all_cpus = (1 << self.cpu_count) - 1
@@ -236,8 +236,8 @@ class FixedPolicy(Policy):
         else:
             self._balance()
 
-    def assign_muxprocess(self):
-        self._set_cpu(0)
+    def assign_muxprocess(self, index):
+        self._set_cpu(index)
 
     def assign_worker(self):
         self._balance()
