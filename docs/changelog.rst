@@ -32,10 +32,10 @@ Enhancements
   are not yet handled.
 
 * The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
-  multiplexer into per-CPU worker processes. This improves throughput for large
-  runs especially involving file transfer, and is a prerequisite to future
-  in-process SSH support. To match the behaviour of older releases, only one
-  multiplexer is started by default.
+  multiplexer into per-CPU workers. This improves throughput for large runs
+  especially involving file transfer, and is a prerequisite for future
+  in-process SSH support. One multiplexer starts by default, to match existing
+  behaviour.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_,
   `#470 <https://github.com/dw/mitogen/issues/470>`_, file descriptor usage
@@ -56,8 +56,8 @@ Enhancements
   some hot paths, and locks that must be taken are held for less time.
 
 
-Fixes
-^^^^^
+Mitogen for Ansible
+^^^^^^^^^^^^^^^^^^^
 
 * `#363 <https://github.com/dw/mitogen/issues/363>`_: fix an obscure race
   matching *Permission denied* errors from some versions of ``su`` running on
@@ -93,14 +93,14 @@ Fixes
 Core Library
 ~~~~~~~~~~~~
 
-* Logs are more readable, and many :func:`repr` strings are more descriptive.
-  The old pseudo-function-call format is slowly migrating to human-readable
-  output where possible. For example, *"Stream(ssh:123).connect()"* might
-  be written *"connecting to ssh:123"*.
+* Log readability is improving, and many :func:`repr` strings are more
+  descriptive. The old pseudo-function-call format is slowly migrating to
+  human-readable output where possible. For example,
+  *"Stream(ssh:123).connect()"* might be written *"connecting to ssh:123"*.
 
 * :func:`bytearray` was removed from the list of supported serialization types.
   It was never portable between Python versions, unused, and never made much
-  sense to support as a wire type.
+  sense to support.
 
 * `#170 <https://github.com/dw/mitogen/issues/170>`_: to improve subprocess
   management and asynchronous connect, a :class:`mitogen.parent.TimerList`
@@ -123,13 +123,12 @@ Core Library
   Python.
 
 * `#256 <https://github.com/dw/mitogen/issues/256>`_,
-
-`#419 <https://github.com/dw/mitogen/issues/419>`_: most :func:`os.dup` was
-  eliminated, along with almost all manual file descriptor management.
-  Descriptors are trapped in :func:`os.fdopen` objects when they are created,
-  ensuring a leaked object will close itself, and ensuring every descriptor is
-  fused to a `closed` flag, preventing historical bugs where a double close
-  could destroy descriptors belonging to unrelated streams.
+  `#419 <https://github.com/dw/mitogen/issues/419>`_: most :func:`os.dup` use
+  was eliminated, along with almost all manual file descriptor management.
+  Descriptors are trapped in :func:`os.fdopen` objects at creation, ensuring a
+  leaked object will close itself, and ensuring every descriptor is fused to a
+  `closed` flag, preventing historical bugs where a double close could destroy
+  descriptors belonging to unrelated streams.
 
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
