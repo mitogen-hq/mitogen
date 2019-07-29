@@ -767,7 +767,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         mitogen.service.call(
             call_context=self.binding.get_service_context(),
             service_name='ansible_mitogen.services.ContextService',
-            method_name='put',
+            method_name=mode,
             context=self.context
         )
 
