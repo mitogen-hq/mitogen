@@ -77,19 +77,42 @@ else:
 def get_or_create_pool(size=None, router=None):
     global _pool
     global _pool_pid
-    _pool_lock.acquire()
-    try:
-        if _pool_pid != os.getpid():
-            _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
-                         overwrite=True)
-            # In case of Broker shutdown crash, Pool can cause 'zombie'
-            # processes.
-            mitogen.core.listen(router.broker, 'shutdown',
-                                lambda: _pool.stop(join=False))
-            _pool_pid = os.getpid()
-        return _pool
-    finally:
-        _pool_lock.release()
+
+    my_pid = os.getpid()
+    if _pool is None or my_pid != _pool_pid:
+        # Avoid acquiring heavily contended lock if possible.
+        _pool_lock.acquire()
+        try:
+            if _pool_pid != my_pid:
+                _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
+                             overwrite=True)
+                # In case of Broker shutdown crash, Pool can cause 'zombie'
+                # processes.
+                mitogen.core.listen(router.broker, 'shutdown',
+                                    lambda: _pool.stop(join=True))
+                _pool_pid = os.getpid()
+        finally:
+            _pool_lock.release()
+
+    return _pool
+
+
+def call(service_name, method_name, call_context=None, **kwargs):
+    """
+    Call a service registered with this pool, using the calling thread as a
+    host.
+    """
+    if isinstance(service_name, mitogen.core.BytesType):
+        service_name = service_name.encode('utf-8')
+    elif not isinstance(service_name, mitogen.core.UnicodeType):
+        service_name = service_name.name()  # Service.name()
+
+    if call_context:
+        return call_context.call_service(service_name, method_name, **kwargs)
+    else:
+        pool = get_or_create_pool()
+        invoker = pool.get_invoker(service_name, msg=None)
+        return getattr(invoker.service, method_name)(**kwargs)
 
 
 def validate_arg_spec(spec, args):
@@ -239,12 +262,13 @@ class Invoker(object):
         if not policies:
             raise mitogen.core.CallError('Method has no policies set.')
 
-        if not all(p.is_authorized(self.service, msg) for p in policies):
-            raise mitogen.core.CallError(
-                self.unauthorized_msg,
-                method_name,
-                self.service.name()
-            )
+        if msg is not None:
+            if not all(p.is_authorized(self.service, msg) for p in policies):
+                raise mitogen.core.CallError(
+                    self.unauthorized_msg,
+                    method_name,
+                    self.service.name()
+                )
 
         required = getattr(method, 'mitogen_service__arg_spec', {})
         validate_arg_spec(required, kwargs)
@@ -264,7 +288,7 @@ class Invoker(object):
         except Exception:
             if no_reply:
                 LOG.exception('While calling no-reply method %s.%s',
-                              type(self.service).__name__,
+                              self.service.name(),
                               func_name(method))
             else:
                 raise
@@ -523,15 +547,18 @@ class Pool(object):
             invoker.service.on_shutdown()
 
     def get_invoker(self, name, msg):
-        self._lock.acquire()
-        try:
-            invoker = self._invoker_by_name.get(name)
-            if not invoker:
-                service = self._activator.activate(self, name, msg)
-                invoker = service.invoker_class(service=service)
-                self._invoker_by_name[name] = invoker
-        finally:
-            self._lock.release()
+        invoker = self._invoker_by_name.get(name)
+        if invoker is None:
+            # Avoid acquiring lock if possible.
+            self._lock.acquire()
+            try:
+                invoker = self._invoker_by_name.get(name)
+                if not invoker:
+                    service = self._activator.activate(self, name, msg)
+                    invoker = service.invoker_class(service=service)
+                    self._invoker_by_name[name] = invoker
+            finally:
+                self._lock.release()
 
         return invoker
 
@@ -690,7 +717,7 @@ class PushFileService(Service):
         """
         for path in paths:
             self.propagate_to(context, mitogen.core.to_text(path))
-        self.router.responder.forward_modules(context, modules)
+        #self.router.responder.forward_modules(context, modules) TODO
 
     @expose(policy=AllowParents())
     @arg_spec({

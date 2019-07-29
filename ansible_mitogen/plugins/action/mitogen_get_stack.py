@@ -47,8 +47,9 @@ class ActionModule(ActionBase):
                 'skipped': True,
             }
 
+        _, stack = self._connection._build_stack()
         return {
             'changed': True,
-            'result': self._connection._build_stack(),
+            'result': stack,
             '_ansible_verbose_always': True,
         }

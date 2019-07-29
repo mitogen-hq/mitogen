@@ -30,6 +30,7 @@ from __future__ import absolute_import
 import atexit
 import errno
 import logging
+import multiprocessing
 import os
 import signal
 import socket
@@ -41,9 +42,15 @@ try:
 except ImportError:
     faulthandler = None
 
+try:
+    import setproctitle
+except ImportError:
+    setproctitle = None
+
 import mitogen
 import mitogen.core
 import mitogen.debug
+import mitogen.fork
 import mitogen.master
 import mitogen.parent
 import mitogen.service
@@ -52,6 +59,7 @@ import mitogen.utils
 
 import ansible
 import ansible.constants as C
+import ansible.errors
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
@@ -66,28 +74,58 @@ ANSIBLE_PKG_OVERRIDE = (
     u"__author__ = %r\n"
 )
 
+worker_model_msg = (
+    'Mitogen connection types may only be instantiated when one of the '
+    '"mitogen_*" or "operon_*" strategies are active.'
+)
 
-def clean_shutdown(sock):
+#: The worker model as configured by the currently running strategy. This is
+#: managed via :func:`get_worker_model` / :func:`set_worker_model` functions by
+#: :class:`StrategyMixin`.
+_worker_model = None
+
+
+#: A copy of the sole :class:`ClassicWorkerModel` that ever exists during a
+#: classic run, as return by :func:`get_classic_worker_model`.
+_classic_worker_model = None
+
+
+def set_worker_model(model):
     """
-    Shut the write end of `sock`, causing `recv` in the worker process to wake
-    up with a 0-byte read and initiate mux process exit, then wait for a 0-byte
-    read from the read end, which will occur after the the child closes the
-    descriptor on exit.
+    To remove process model-wiring from
+    :class:`ansible_mitogen.connection.Connection`, it is necessary to track
+    some idea of the configured execution environment outside the connection
+    plug-in.
 
-    This is done using :mod:`atexit` since Ansible lacks any more sensible hook
-    to run code during exit, and unless some synchronization exists with
-    MuxProcess, debug logs may appear on the user's terminal *after* the prompt
-    has been printed.
+    That is what :func:`set_worker_model` and :func:`get_worker_model` are for.
     """
-    try:
-        sock.shutdown(socket.SHUT_WR)
-    except socket.error:
-        # Already closed. This is possible when tests are running.
-        LOG.debug('clean_shutdown: ignoring duplicate call')
-        return
+    global _worker_model
+    assert model is None or _worker_model is None
+    _worker_model = model
 
-    sock.recv(1)
-    sock.close()
+
+def get_worker_model():
+    """
+    Return the :class:`WorkerModel` currently configured by the running
+    strategy.
+    """
+    if _worker_model is None:
+        raise ansible.errors.AnsibleConnectionFailure(worker_model_msg)
+    return _worker_model
+
+
+def get_classic_worker_model(**kwargs):
+    """
+    Return the single :class:`ClassicWorkerModel` instance, constructing it if
+    necessary.
+    """
+    global _classic_worker_model
+    assert _classic_worker_model is None or (not kwargs), \
+        "ClassicWorkerModel kwargs supplied but model already constructed"
+
+    if _classic_worker_model is None:
+        _classic_worker_model = ClassicWorkerModel(**kwargs)
+    return _classic_worker_model
 
 
 def getenv_int(key, default=0):
@@ -119,6 +157,357 @@ def save_pid(name):
             fp.write(str(os.getpid()))
 
 
+def setup_pool(pool):
+    """
+    Configure a connection multiplexer's :class:`mitogen.service.Pool` with
+    services accessed by clients and WorkerProcesses.
+    """
+    pool.add(mitogen.service.FileService(router=pool.router))
+    pool.add(mitogen.service.PushFileService(router=pool.router))
+    pool.add(ansible_mitogen.services.ContextService(router=pool.router))
+    pool.add(ansible_mitogen.services.ModuleDepService(pool.router))
+    LOG.debug('Service pool configured: size=%d', pool.size)
+
+
+def _setup_simplejson(responder):
+    """
+    We support serving simplejson for Python 2.4 targets on Ansible 2.3, at
+    least so the package's own CI Docker scripts can run without external
+    help, however newer versions of simplejson no longer support Python
+    2.4. Therefore override any installed/loaded version with a
+    2.4-compatible version we ship in the compat/ directory.
+    """
+    responder.whitelist_prefix('simplejson')
+
+    # issue #536: must be at end of sys.path, in case existing newer
+    # version is already loaded.
+    compat_path = os.path.join(os.path.dirname(__file__), 'compat')
+    sys.path.append(compat_path)
+
+    for fullname, is_pkg, suffix in (
+        (u'simplejson', True, '__init__.py'),
+        (u'simplejson.decoder', False, 'decoder.py'),
+        (u'simplejson.encoder', False, 'encoder.py'),
+        (u'simplejson.scanner', False, 'scanner.py'),
+    ):
+        path = os.path.join(compat_path, 'simplejson', suffix)
+        fp = open(path, 'rb')
+        try:
+            source = fp.read()
+        finally:
+            fp.close()
+
+        responder.add_source_override(
+            fullname=fullname,
+            path=path,
+            source=source,
+            is_pkg=is_pkg,
+        )
+
+
+def _setup_responder(responder):
+    """
+    Configure :class:`mitogen.master.ModuleResponder` to only permit
+    certain packages, and to generate custom responses for certain modules.
+    """
+    responder.whitelist_prefix('ansible')
+    responder.whitelist_prefix('ansible_mitogen')
+    _setup_simplejson(responder)
+
+    # Ansible 2.3 is compatible with Python 2.4 targets, however
+    # ansible/__init__.py is not. Instead, executor/module_common.py writes
+    # out a 2.4-compatible namespace package for unknown reasons. So we
+    # copy it here.
+    responder.add_source_override(
+        fullname='ansible',
+        path=ansible.__file__,
+        source=(ANSIBLE_PKG_OVERRIDE % (
+            ansible.__version__,
+            ansible.__author__,
+        )).encode(),
+        is_pkg=True,
+    )
+
+
+def common_setup(enable_affinity=True, _init_logging=True):
+    save_pid('controller')
+    ansible_mitogen.logging.set_process_name('top')
+    if enable_affinity:
+        ansible_mitogen.affinity.policy.assign_controller()
+
+    mitogen.utils.setup_gil()
+    if _init_logging:
+        ansible_mitogen.logging.setup()
+
+    if faulthandler is not None:
+        faulthandler.enable()
+
+    MuxProcess.profiling = getenv_int('MITOGEN_PROFILING') > 0
+    if MuxProcess.profiling:
+        mitogen.core.enable_profiling()
+
+    MuxProcess.cls_original_env = dict(os.environ)
+
+
+def get_cpu_count(default=None):
+    """
+    Get the multiplexer CPU count from the MITOGEN_CPU_COUNT environment
+    variable, returning `default` if one isn't set, or is out of range.
+
+    :param int default:
+        Default CPU, or :data:`None` to use all available CPUs.
+    """
+    max_cpus = multiprocessing.cpu_count()
+    if default is None:
+        default = max_cpus
+
+    cpu_count = getenv_int('MITOGEN_CPU_COUNT', default=default)
+    if cpu_count < 1 or cpu_count > max_cpus:
+        cpu_count = default
+
+    return cpu_count
+
+
+class Binding(object):
+    def get_child_service_context(self):
+        """
+        Return the :class:`mitogen.core.Context` to which children should
+        direct ContextService requests, or :data:`None` for the local process.
+        """
+        raise NotImplementedError()
+
+    def get_service_context(self):
+        """
+        Return the :class:`mitogen.core.Context` to which this process should
+        direct ContextService requests, or :data:`None` for the local process.
+        """
+        raise NotImplementedError()
+
+    def close(self):
+        """
+        Finalize any associated resources.
+        """
+        raise NotImplementedError()
+
+
+class WorkerModel(object):
+    def on_strategy_start(self):
+        """
+        Called prior to strategy start in the top-level process. Responsible
+        for preparing any worker/connection multiplexer state.
+        """
+        raise NotImplementedError()
+
+    def on_strategy_complete(self):
+        """
+        Called after strategy completion in the top-level process. Must place
+        Ansible back in a "compatible" state where any other strategy plug-in
+        may execute.
+        """
+        raise NotImplementedError()
+
+    def get_binding(self, inventory_name):
+        raise NotImplementedError()
+
+
+class ClassicBinding(Binding):
+    """
+    Only one connection may be active at a time in a classic worker, so its
+    binding just provides forwarders back to :class:`ClassicWorkerModel`.
+    """
+    def __init__(self, model):
+        self.model = model
+
+    def get_service_context(self):
+        """
+        See Binding.get_service_context().
+        """
+        return self.model.parent
+
+    def get_child_service_context(self):
+        """
+        See Binding.get_child_service_context().
+        """
+        return self.model.parent
+
+    def close(self):
+        """
+        See Binding.close().
+        """
+        self.model.on_binding_close()
+
+
+class ClassicWorkerModel(WorkerModel):
+    #: mitogen.master.Router for this worker.
+    router = None
+
+    #: mitogen.master.Broker for this worker.
+    broker = None
+
+    #: Name of multiplexer process socket we are currently connected to.
+    listener_path = None
+
+    #: mitogen.parent.Context representing the parent Context, which is the
+    #: connection multiplexer process when running in classic mode, or the
+    #: top-level process when running a new-style mode.
+    parent = None
+
+    def __init__(self, _init_logging=True):
+        self._init_logging = _init_logging
+        self.initialized = False
+
+    def _listener_for_name(self, name):
+        """
+        Given a connection stack, return the UNIX listener that should be used
+        to communicate with it. This is a simple hash of the inventory name.
+        """
+        if len(self._muxes) == 1:
+            return self._muxes[0].path
+
+        idx = abs(hash(name)) % len(self._muxes)
+        LOG.debug('Picked worker %d: %s', idx, self._muxes[idx].path)
+        return self._muxes[idx].path
+
+    def _reconnect(self, path):
+        if self.router is not None:
+            # Router can just be overwritten, but the previous parent
+            # connection must explicitly be removed from the broker first.
+            self.router.disconnect(self.parent)
+            self.parent = None
+            self.router = None
+
+        self.router, self.parent = mitogen.unix.connect(
+            path=path,
+            broker=self.broker,
+        )
+        self.listener_path = path
+
+    def on_process_exit(self, sock):
+        """
+        This is an :mod:`atexit` handler installed in the top-level process.
+
+        Shut the write end of `sock`, causing the receive side of the socket in
+        every worker process to wake up with a 0-byte reads, and causing their
+        main threads to wake up and initiate shutdown. After shutting the
+        socket down, wait for a 0-byte read from the read end, which will occur
+        after the last child closes the descriptor on exit.
+
+        This is done using :mod:`atexit` since Ansible lacks any better hook to
+        run code during exit, and unless some synchronization exists with
+        MuxProcess, debug logs may appear on the user's terminal *after* the
+        prompt has been printed.
+        """
+        try:
+            sock.shutdown(socket.SHUT_WR)
+        except socket.error:
+            # Already closed. This is possible when tests are running.
+            LOG.debug('on_process_exit: ignoring duplicate call')
+            return
+
+        mitogen.core.io_op(sock.recv, 1)
+        sock.close()
+
+    def _initialize(self):
+        """
+        Arrange for classic process model connection multiplexer child
+        processes to be started, if they are not already running.
+
+        The parent process picks a UNIX socket path the child will use prior to
+        fork, creates a socketpair used essentially as a semaphore, then blocks
+        waiting for the child to indicate the UNIX socket is ready for use.
+
+        :param bool _init_logging:
+            For testing, if :data:`False`, don't initialize logging.
+        """
+        common_setup(_init_logging=self._init_logging)
+
+        MuxProcess.cls_parent_sock, \
+        MuxProcess.cls_child_sock = socket.socketpair()
+        mitogen.core.set_cloexec(MuxProcess.cls_parent_sock.fileno())
+        mitogen.core.set_cloexec(MuxProcess.cls_child_sock.fileno())
+
+        self._muxes = [
+            MuxProcess(index)
+            for index in range(get_cpu_count(default=1))
+        ]
+        for mux in self._muxes:
+            mux.start()
+
+        atexit.register(self.on_process_exit, MuxProcess.cls_parent_sock)
+        MuxProcess.cls_child_sock.close()
+        MuxProcess.cls_child_sock = None
+
+    def _test_reset(self):
+        """
+        Used to clean up in unit tests.
+        """
+        # TODO: split this up a bit.
+        global _classic_worker_model
+        assert MuxProcess.cls_parent_sock is not None
+        MuxProcess.cls_parent_sock.close()
+        MuxProcess.cls_parent_sock = None
+        self.listener_path = None
+        self.router = None
+        self.parent = None
+
+        for mux in self._muxes:
+            pid, status = os.waitpid(mux.pid, 0)
+            status = mitogen.fork._convert_exit_status(status)
+            LOG.debug('mux PID %d %s', pid,
+                mitogen.parent.returncode_to_str(status))
+
+        _classic_worker_model = None
+        set_worker_model(None)
+
+    def on_strategy_start(self):
+        """
+        See WorkerModel.on_strategy_start().
+        """
+        if not self.initialized:
+            self._initialize()
+            self.initialized = True
+
+    def on_strategy_complete(self):
+        """
+        See WorkerModel.on_strategy_complete().
+        """
+
+    def get_binding(self, inventory_name):
+        """
+        See WorkerModel.get_binding().
+        """
+        if self.broker is None:
+            self.broker = mitogen.master.Broker()
+
+        path = self._listener_for_name(inventory_name)
+        if path != self.listener_path:
+            self._reconnect(path)
+
+        return ClassicBinding(self)
+
+    def on_binding_close(self):
+        if not self.broker:
+            return
+
+        self.broker.shutdown()
+        self.broker.join()
+        self.router = None
+        self.broker = None
+        self.listener_path = None
+        self.initialized = False
+
+        # #420: Ansible executes "meta" actions in the top-level process,
+        # meaning "reset_connection" will cause :class:`mitogen.core.Latch` FDs
+        # to be cached and erroneously shared by children on subsequent
+        # WorkerProcess forks. To handle that, call on_fork() to ensure any
+        # shared state is discarded.
+        # #490: only attempt to clean up when it's known that some resources
+        # exist to cleanup, otherwise later __del__ double-call to close() due
+        # to GC at random moment may obliterate an unrelated Connection's
+        # related resources.
+        mitogen.fork.on_fork()
+
+
 class MuxProcess(object):
     """
     Implement a subprocess forked from the Ansible top-level, as a safe place
@@ -136,104 +525,72 @@ class MuxProcess(object):
     See https://bugs.python.org/issue6721 for a thorough description of the
     class of problems this worker is intended to avoid.
     """
-
     #: In the top-level process, this references one end of a socketpair(),
-    #: which the MuxProcess blocks reading from in order to determine when
-    #: the master process dies. Once the read returns, the MuxProcess will
-    #: begin shutting itself down.
-    worker_sock = None
+    #: whose other end child MuxProcesses block reading from to determine when
+    #: the master process dies. When the top-level exits abnormally, or
+    #: normally but where :func:`on_process_exit` has been called, this socket
+    #: will be closed, causing all the children to wake.
+    cls_parent_sock = None
 
-    #: In the worker process, this references the other end of
-    #: :py:attr:`worker_sock`.
-    child_sock = None
-
-    #: In the top-level process, this is the PID of the single MuxProcess
-    #: that was spawned.
-    worker_pid = None
+    #: In the mux process, this is the other end of :attr:`cls_parent_sock`.
+    #: The main thread blocks on a read from it until :attr:`cls_parent_sock`
+    #: is closed.
+    cls_child_sock = None
 
     #: A copy of :data:`os.environ` at the time the multiplexer process was
     #: started. It's used by mitogen_local.py to find changes made to the
     #: top-level environment (e.g. vars plugins -- issue #297) that must be
     #: applied to locally executed commands and modules.
-    original_env = None
+    cls_original_env = None
 
-    #: In both processes, this is the temporary UNIX socket used for
-    #: forked WorkerProcesses to contact the MuxProcess
-    unix_listener_path = None
+    def __init__(self, index):
+        self.index = index
+        #: Individual path of this process.
+        self.path = mitogen.unix.make_socket_path()
 
-    @classmethod
-    def _reset(cls):
-        """
-        Used to clean up in unit tests.
-        """
-        assert cls.worker_sock is not None
-        cls.worker_sock.close()
-        cls.worker_sock = None
-        os.waitpid(cls.worker_pid, 0)
-
-    @classmethod
-    def start(cls, _init_logging=True):
-        """
-        Arrange for the subprocess to be started, if it is not already running.
-
-        The parent process picks a UNIX socket path the child will use prior to
-        fork, creates a socketpair used essentially as a semaphore, then blocks
-        waiting for the child to indicate the UNIX socket is ready for use.
-
-        :param bool _init_logging:
-            For testing, if :data:`False`, don't initialize logging.
-        """
-        if cls.worker_sock is not None:
+    def start(self):
+        self.pid = os.fork()
+        if self.pid:
+            # Wait for child to boot before continuing.
+            mitogen.core.io_op(MuxProcess.cls_parent_sock.recv, 1)
             return
 
-        if faulthandler is not None:
-            faulthandler.enable()
+        save_pid('mux')
+        ansible_mitogen.logging.set_process_name('mux:' + str(self.index))
+        if setproctitle:
+            setproctitle.setproctitle('mitogen mux:%s (%s)' % (
+                self.index,
+                os.path.basename(self.path),
+            ))
 
-        mitogen.utils.setup_gil()
-        cls.unix_listener_path = mitogen.unix.make_socket_path()
-        cls.worker_sock, cls.child_sock = socket.socketpair()
-        atexit.register(clean_shutdown, cls.worker_sock)
-        mitogen.core.set_cloexec(cls.worker_sock.fileno())
-        mitogen.core.set_cloexec(cls.child_sock.fileno())
-
-        cls.profiling = os.environ.get('MITOGEN_PROFILING') is not None
-        if cls.profiling:
-            mitogen.core.enable_profiling()
-        if _init_logging:
-            ansible_mitogen.logging.setup()
-
-        cls.original_env = dict(os.environ)
-        cls.worker_pid = os.fork()
-        if cls.worker_pid:
-            save_pid('controller')
-            ansible_mitogen.logging.set_process_name('top')
-            ansible_mitogen.affinity.policy.assign_controller()
-            cls.child_sock.close()
-            cls.child_sock = None
-            mitogen.core.io_op(cls.worker_sock.recv, 1)
-        else:
-            save_pid('mux')
-            ansible_mitogen.logging.set_process_name('mux')
-            ansible_mitogen.affinity.policy.assign_muxprocess()
-            cls.worker_sock.close()
-            cls.worker_sock = None
-            self = cls()
-            self.worker_main()
+        MuxProcess.cls_parent_sock.close()
+        MuxProcess.cls_parent_sock = None
+        try:
+            try:
+                self.worker_main()
+            except Exception:
+                LOG.exception('worker_main() crashed')
+        finally:
+            sys.exit()
 
     def worker_main(self):
         """
-        The main function of for the mux process: setup the Mitogen broker
-        thread and ansible_mitogen services, then sleep waiting for the socket
+        The main function of the mux process: setup the Mitogen broker thread
+        and ansible_mitogen services, then sleep waiting for the socket
         connected to the parent to be closed (indicating the parent has died).
         """
+        save_pid('mux')
+        ansible_mitogen.logging.set_process_name('mux')
+        ansible_mitogen.affinity.policy.assign_muxprocess()
+
         self._setup_master()
         self._setup_services()
 
         try:
             # Let the parent know our listening socket is ready.
-            mitogen.core.io_op(self.child_sock.send, b('1'))
+            mitogen.core.io_op(self.cls_child_sock.send, b('1'))
             # Block until the socket is closed, which happens on parent exit.
-            mitogen.core.io_op(self.child_sock.recv, 1)
+            mitogen.core.io_op(self.cls_child_sock.recv, 1)
         finally:
             self.broker.shutdown()
             self.broker.join()
@@ -252,64 +609,6 @@ class MuxProcess(object):
         if secs:
             mitogen.debug.dump_to_logger(secs=secs)
 
-    def _setup_simplejson(self, responder):
-        """
-        We support serving simplejson for Python 2.4 targets on Ansible 2.3, at
-        least so the package's own CI Docker scripts can run without external
-        help, however newer versions of simplejson no longer support Python
-        2.4. Therefore override any installed/loaded version with a
-        2.4-compatible version we ship in the compat/ directory.
-        """
-        responder.whitelist_prefix('simplejson')
-
-        # issue #536: must be at end of sys.path, in case existing newer
-        # version is already loaded.
-        compat_path = os.path.join(os.path.dirname(__file__), 'compat')
-        sys.path.append(compat_path)
-
-        for fullname, is_pkg, suffix in (
-            (u'simplejson', True, '__init__.py'),
-            (u'simplejson.decoder', False, 'decoder.py'),
-            (u'simplejson.encoder', False, 'encoder.py'),
-            (u'simplejson.scanner', False, 'scanner.py'),
-        ):
-            path = os.path.join(compat_path, 'simplejson', suffix)
-            fp = open(path, 'rb')
-            try:
-                source = fp.read()
-            finally:
-                fp.close()
-
-            responder.add_source_override(
-                fullname=fullname,
-                path=path,
-                source=source,
-                is_pkg=is_pkg,
-            )
-
-    def _setup_responder(self, responder):
-        """
-        Configure :class:`mitogen.master.ModuleResponder` to only permit
-        certain packages, and to generate custom responses for certain modules.
-        """
-        responder.whitelist_prefix('ansible')
-        responder.whitelist_prefix('ansible_mitogen')
-        self._setup_simplejson(responder)
-
-        # Ansible 2.3 is compatible with Python 2.4 targets, however
-        # ansible/__init__.py is not. Instead, executor/module_common.py writes
-        # out a 2.4-compatible namespace package for unknown reasons. So we
-        # copy it here.
-        responder.add_source_override(
-            fullname='ansible',
-            path=ansible.__file__,
-            source=(ANSIBLE_PKG_OVERRIDE % (
-                ansible.__version__,
-                ansible.__author__,
-            )).encode(),
-            is_pkg=True,
-        )
-
     def _setup_master(self):
         """
         Construct a Router, Broker, and mitogen.unix listener
@@ -319,12 +618,12 @@ class MuxProcess(object):
             broker=self.broker,
             max_message_size=4096 * 1048576,
         )
-        self._setup_responder(self.router.responder)
+        _setup_responder(self.router.responder)
         mitogen.core.listen(self.broker, 'shutdown', self.on_broker_shutdown)
         mitogen.core.listen(self.broker, 'exit', self.on_broker_exit)
         self.listener = mitogen.unix.Listener.build_stream(
             router=self.router,
-            path=self.unix_listener_path,
+            path=self.path,
             backlog=C.DEFAULT_FORKS,
         )
         self._enable_router_debug()
@@ -337,15 +636,9 @@ class MuxProcess(object):
         """
         self.pool = mitogen.service.Pool(
             router=self.router,
-            services=[
-                mitogen.service.FileService(router=self.router),
-                mitogen.service.PushFileService(router=self.router),
-                ansible_mitogen.services.ContextService(self.router),
-                ansible_mitogen.services.ModuleDepService(self.router),
-            ],
             size=getenv_int('MITOGEN_POOL_SIZE', default=32),
         )
-        LOG.debug('Service pool configured: size=%d', self.pool.size)
+        setup_pool(self.pool)
 
     def on_broker_shutdown(self):
         """
@@ -364,7 +657,7 @@ class MuxProcess(object):
         ourself. In future this should gracefully join the pool, but TERM is
         fine for now.
         """
-        if not self.profiling:
+        if not os.environ.get('MITOGEN_PROFILING'):
             # In normal operation we presently kill the process because there is
             # not yet any way to cancel connect(). When profiling, threads
             # including the broker must shut down gracefully, otherwise pstats

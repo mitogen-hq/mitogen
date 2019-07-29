@@ -901,7 +901,11 @@ class Message(object):
             unpickler.find_global = self._find_global
             try:
                 # Must occur off the broker thread.
-                obj = unpickler.load()
+                try:
+                    obj = unpickler.load()
+                except:
+                    LOG.error('raw pickle was: %r', self.data)
+                    raise
                 self._unpickled = obj
             except (TypeError, ValueError):
                 e = sys.exc_info()[1]
@@ -1785,7 +1789,10 @@ class Side(object):
             set_nonblock(self.fd)
 
     def __repr__(self):
-        return '<Side of %r fd %s>' % (self.stream, self.fd)
+        return '<Side of %s fd %s>' % (
+            self.stream.name or repr(self.stream),
+            self.fd
+        )
 
     @classmethod
     def _on_fork(cls):
@@ -2039,9 +2046,6 @@ class Context(object):
             :class:`Receiver` configured to receive any replies sent to the
             message's `reply_to` handle.
         """
-        if self.router.broker._thread == threading.currentThread():  # TODO
-            raise SystemError('Cannot making blocking call on broker thread')
-
         receiver = Receiver(self.router, persist=persist, respondent=self)
         msg.dst_id = self.context_id
         msg.reply_to = receiver.handle
@@ -2485,16 +2489,19 @@ class Latch(object):
                 raise LatchError()
             self._queue.append(obj)
 
+            wsock = None
             if self._waking < len(self._sleeping):
                 wsock, cookie = self._sleeping[self._waking]
                 self._waking += 1
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, wsock.fileno())
-                self._wake(wsock, cookie)
             elif self.notify:
                 self.notify(self)
         finally:
             self._lock.release()
+
+        if wsock:
+            self._wake(wsock, cookie)
 
     def _wake(self, wsock, cookie):
         written, disconnected = io_op(os.write, wsock.fileno(), cookie)
@@ -2606,11 +2613,13 @@ class Waker(Protocol):
                             self.stream.transmit_side.fd)
         self._lock.acquire()
         try:
-            if not self._deferred:
-                self._wake()
+            should_wake = not self._deferred
             self._deferred.append((func, args, kwargs))
         finally:
             self._lock.release()
+
+        if should_wake:
+            self._wake()
 
 
 class IoLoggerProtocol(DelimitedProtocol):
@@ -3263,8 +3272,11 @@ class Broker(object):
         self._broker_exit()
 
     def _broker_main(self):
-        _profile_hook('mitogen.broker', self._do_broker_main)
-        fire(self, 'exit')
+        try:
+            _profile_hook('mitogen.broker', self._do_broker_main)
+        finally:
+            # 'finally' to ensure _on_broker_exit() can always SIGTERM.
+            fire(self, 'exit')
 
     def shutdown(self):
         """

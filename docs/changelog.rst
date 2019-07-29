@@ -24,15 +24,44 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Enhancements
 ^^^^^^^^^^^^
 
-* `#587 <https://github.com/dw/mitogen/issues/587>`_: partial support for
-  Ansible 2.8 is now available. This implementation does not yet support the
-  new `become plugins
-  <https://docs.ansible.com/ansible/latest/plugins/become.html>`_
-  functionality, which will be addressed in a future release.
+* `#587 <https://github.com/dw/mitogen/issues/587>`_: Ansible 2.8 is partially
+  supported. `Become plugins
+  <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ and
+  `interpreter discovery
+  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
+  are not yet handled.
+
+* The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
+  multiplexer into per-CPU worker processes. This improves throughput for large
+  runs especially involving file transfer, and is a prerequisite to future
+  in-process SSH support. To match the behaviour of older releases, only one
+  multiplexer is started by default.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_,
+  `#470 <https://github.com/dw/mitogen/issues/470>`_, file descriptor usage
+  during large runs is halved, as it is no longer necessary to manage read and
+  write sides distinctly in order to work around a design limitation.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: almost all connection
+  setup happens on one thread, reducing GIL contention and context switching
+  early in a run.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: 2 network round-trips
+  were removed from early connection setup.
+
+* `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
+  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
+  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
+  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_: locking is avoided in
+  some hot paths, and locks that must be taken are held for less time.
 
 
 Fixes
 ^^^^^
+
+* `#363 <https://github.com/dw/mitogen/issues/363>`_: fix an obscure race
+  matching *Permission denied* errors from some versions of ``su`` running on
+  heavily loaded machines.
 
 * `#578 <https://github.com/dw/mitogen/issues/578>`_: the extension could crash
   while rendering an error message, due to an incorrect format string.
@@ -53,6 +82,59 @@ Fixes
   ``mitogen_ssh_keepalive_count`` variables, and the default timeout for an SSH
   server has been increased from `15*3` seconds to `30*10` seconds.
 
+* `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
+  ``lineinfile`` module began leaking writable temporary file descriptors since
+  Ansible 2.7.0. When ``lineinfile`` was used to create or modify a script, and
+  that script was later executed, the execution could fail with "*text file
+  busy*" due to the leaked descriptor. Temporary descriptors are now tracked
+  and cleaned up on exit for all modules.
+
+
+Core Library
+~~~~~~~~~~~~
+
+* Logs are more readable, and many :func:`repr` strings are more descriptive.
+  The old pseudo-function-call format is slowly migrating to human-readable
+  output where possible. For example, *"Stream(ssh:123).connect()"* might
+  be written *"connecting to ssh:123"*.
+
+* :func:`bytearray` was removed from the list of supported serialization types.
+  It was never portable between Python versions, unused, and never made much
+  sense to support as a wire type.
+
+* `#170 <https://github.com/dw/mitogen/issues/170>`_: to improve subprocess
+  management and asynchronous connect, a :class:`mitogen.parent.TimerList`
+  interface is available, accessible as :attr:`Broker.timers` in an
+  asynchronous context.
+
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: the internal
+  :class:`mitogen.core.Stream` has been refactored into 7 new classes,
+  modularizing protocol behaviour, output buffering, line-oriented input
+  parsing, option handling and connection management. Connection setup is
+  internally asynchronous, laying almost all the groundwork needed for fully
+  asynchronous connect, proxied Ansible become plug-ins, and integrating
+  `libssh <https://www.libssh.org/>`_.
+
+* `#169 <https://github.com/dw/mitogen/issues/169>`_,
+  `#419 <https://github.com/dw/mitogen/issues/419>`_: zombie child reaping has
+  vastly improved, by using timers to efficiently poll for a slow child to
+  finish exiting. Polling avoids relying on process-global configuration such
+  as a `SIGCHLD` handler, or :func:`signal.set_wakeup_fd` available in modern
+  Python.
+
+* `#256 <https://github.com/dw/mitogen/issues/256>`_,
+
+`#419 <https://github.com/dw/mitogen/issues/419>`_: most :func:`os.dup` was
+  eliminated, along with almost all manual file descriptor management.
+  Descriptors are trapped in :func:`os.fdopen` objects when they are created,
+  ensuring a leaked object will close itself, and ensuring every descriptor is
+  fused to a `closed` flag, preventing historical bugs where a double close
+  could destroy descriptors belonging to unrelated streams.
+
+* `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
+  buffer management when logging lines received from a child's redirected
+  standard IO.
+
 
 Thanks!
 ~~~~~~~
@@ -64,8 +146,10 @@ bug reports, testing, features and fixes in this release contributed by
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
-`Yuki Nishida <https://github.com/yuki-nishida-exa>`_, and
-`@ghp-rr <https://github.com/ghp-rr>`_.
+`Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
+`@ghp-rr <https://github.com/ghp-rr>`_,
+`Pieter Voet <https://github.com/pietervoet/>`_, and
+`@rizzly <https://github.com/rizzly>`_.
 
 
 v0.2.7 (2019-05-19)
@@ -100,14 +184,6 @@ Fixes
 * `#587 <https://github.com/dw/mitogen/issues/587>`_: display a friendly
   message when running on an unsupported version of Ansible, to cope with
   potential influx of 2.8-related bug reports.
-
-
-Core Library
-~~~~~~~~~~~~
-
-* `#170 <https://github.com/dw/mitogen/issues/170>`_: to better support child
-  process management and a future asynchronous connect implementation, a
-  :class:`mitogen.parent.TimerList` API is available.
 
 
 Thanks!

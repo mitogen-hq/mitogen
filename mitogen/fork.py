@@ -121,6 +121,19 @@ def handle_child_crash():
     os._exit(1)
 
 
+def _convert_exit_status(status):
+    """
+    Convert a :func:`os.waitpid`-style exit status to a :mod:`subprocess` style
+    exit status.
+    """
+    if os.WIFEXITED(status):
+        return os.WEXITSTATUS(status)
+    elif os.WIFSIGNALED(status):
+        return -os.WTERMSIG(status)
+    elif os.WIFSTOPPED(status):
+        return -os.WSTOPSIG(status)
+
+
 class Process(mitogen.parent.Process):
     def poll(self):
         try:
@@ -134,12 +147,7 @@ class Process(mitogen.parent.Process):
 
         if not pid:
             return
-        if os.WIFEXITED(status):
-            return os.WEXITSTATUS(status)
-        elif os.WIFSIGNALED(status):
-            return -os.WTERMSIG(status)
-        elif os.WIFSTOPPED(status):
-            return -os.WSTOPSIG(status)
+        return _convert_exit_status(status)
 
 
 class Options(mitogen.parent.Options):

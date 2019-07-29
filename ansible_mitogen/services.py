@@ -326,6 +326,7 @@ class ContextService(mitogen.service.Service):
     )
 
     def _send_module_forwards(self, context):
+        return
         self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
 
     _candidate_temp_dirs = None
@@ -372,7 +373,7 @@ class ContextService(mitogen.service.Service):
         try:
             method = getattr(self.router, spec['method'])
         except AttributeError:
-            raise Error('unsupported method: %(transport)s' % spec)
+            raise Error('unsupported method: %(method)s' % spec)
 
         context = method(via=via, unidirectional=True, **spec['kwargs'])
         if via and spec.get('enable_lru'):
@@ -382,6 +383,7 @@ class ContextService(mitogen.service.Service):
         mitogen.core.listen(context, 'disconnect',
             lambda: self._on_context_disconnect(context))
 
+        #self._send_module_forwards(context) TODO
         self._send_module_forwards(context)
         init_child_result = context.call(
             ansible_mitogen.target.init_child,
@@ -443,7 +445,7 @@ class ContextService(mitogen.service.Service):
     @mitogen.service.arg_spec({
         'stack': list
     })
-    def get(self, msg, stack):
+    def get(self, stack):
         """
         Return a Context referring to an established connection with the given
         configuration, establishing new connections as necessary.

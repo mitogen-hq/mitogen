@@ -72,13 +72,13 @@ def try_merge(stats, path):
         stats.add(path)
         return True
     except Exception as e:
-        print('Failed. Race? Will retry. %s' % (e,))
+        print('%s failed. Will retry. %s' % (path, e))
         return False
 
 
 def merge_stats(outpath, inpaths):
     first, rest = inpaths[0], inpaths[1:]
-    for x in range(5):
+    for x in range(1):
         try:
             stats = pstats.Stats(first)
         except EOFError:

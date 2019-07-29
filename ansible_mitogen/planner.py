@@ -148,6 +148,8 @@ class Planner(object):
                 # named by `runner_name`.
             }
         """
+        binding = self._inv.connection.get_binding()
+
         new = dict((mitogen.core.UnicodeType(k), kwargs[k])
                    for k in kwargs)
         new.setdefault('good_temp_dir',
@@ -155,7 +157,7 @@ class Planner(object):
         new.setdefault('cwd', self._inv.connection.get_default_cwd())
         new.setdefault('extra_env', self._inv.connection.get_default_env())
         new.setdefault('emulate_tty', True)
-        new.setdefault('service_context', self._inv.connection.parent)
+        new.setdefault('service_context', binding.get_child_service_context())
         return new
 
     def __repr__(self):
@@ -328,7 +330,9 @@ class NewStylePlanner(ScriptPlanner):
 
     def get_module_map(self):
         if self._module_map is None:
-            self._module_map = self._inv.connection.parent.call_service(
+            binding = self._inv.connection.get_binding()
+            self._module_map = mitogen.service.call(
+                call_context=binding.get_service_context(),
                 service_name='ansible_mitogen.services.ModuleDepService',
                 method_name='scan',
 
@@ -405,9 +409,12 @@ def get_module_data(name):
 
 
 def _propagate_deps(invocation, planner, context):
-    invocation.connection.parent.call_service(
+    binding = invocation.connection.get_binding()
+    mitogen.service.call(
+        call_context=binding.get_service_context(),
         service_name='mitogen.service.PushFileService',
         method_name='propagate_paths_and_modules',
+
         context=context,
         paths=planner.get_push_files(),
         modules=planner.get_module_deps(),

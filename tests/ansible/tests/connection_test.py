@@ -26,13 +26,17 @@ class MuxProcessMixin(object):
     @classmethod
     def setUpClass(cls):
         #mitogen.utils.log_to_file()
-        ansible_mitogen.process.MuxProcess.start(_init_logging=False)
+        cls.model = ansible_mitogen.process.get_classic_worker_model(
+            _init_logging=False
+        )
+        ansible_mitogen.process.set_worker_model(cls.model)
+        cls.model.on_strategy_start()
         super(MuxProcessMixin, cls).setUpClass()
 
     @classmethod
     def tearDownClass(cls):
+        cls.model._test_reset()
         super(MuxProcessMixin, cls).tearDownClass()
-        ansible_mitogen.process.MuxProcess._reset()
 
 
 class ConnectionMixin(MuxProcessMixin):

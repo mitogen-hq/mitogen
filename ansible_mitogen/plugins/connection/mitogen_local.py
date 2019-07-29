@@ -81,6 +81,6 @@ class Connection(ansible_mitogen.connection.Connection):
         from WorkerProcess, we must emulate that.
         """
         return dict_diff(
-            old=ansible_mitogen.process.MuxProcess.original_env,
+            old=ansible_mitogen.process.MuxProcess.cls_original_env,
             new=os.environ,
         )
