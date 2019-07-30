@@ -83,9 +83,7 @@ Installation
         <input type=hidden name="list_name" value="mitogen-announce">
 
         Releases occur frequently and often include important fixes. Subscribe
-        to the <a
-        href="https://www.freelists.org/list/mitogen-announce">mitogen-announce
-        mailing list</a> be notified of new releases.
+        to the mitogen-announce list to stay updated.
 
         <p>
         <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;">
@@ -97,6 +95,8 @@ Installation
         <div id="emailthanks" style="display:none">
             Thanks!
         </div>
+
+        <p>
     </form>
 
 
