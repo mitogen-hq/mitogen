@@ -171,15 +171,18 @@ class Listener(mitogen.core.Protocol):
 
 def _connect(path, broker, sock):
     try:
+        # ENOENT, ECONNREFUSED
         sock.connect(path)
+
+        # ECONNRESET
+        sock.send(struct.pack('>L', os.getpid()))
+        mitogen.context_id, remote_id, pid = struct.unpack('>LLL', sock.recv(12))
     except socket.error:
         e = sys.exc_info()[1]
         ce = ConnectError('could not connect to %s: %s', path, e.args[1])
         ce.errno = e.args[0]
         raise ce
 
-    sock.send(struct.pack('>L', os.getpid()))
-    mitogen.context_id, remote_id, pid = struct.unpack('>LLL', sock.recv(12))
     mitogen.parent_id = remote_id
     mitogen.parent_ids = [remote_id]
 
