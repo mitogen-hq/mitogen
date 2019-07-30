@@ -14,14 +14,14 @@ import googleapiclient.discovery
 def main():
     project = 'mitogen-load-testing'
     zone = 'europe-west1-d'
-    group_name = 'micro-debian9'
+    prefix = 'node-'
 
     client = googleapiclient.discovery.build('compute', 'v1')
     resp = client.instances().list(project=project, zone=zone).execute()
 
     ips = []
     for inst in resp['items']:
-        if inst['status'] == 'RUNNING' and inst['name'].startswith(group_name):
+        if inst['status'] == 'RUNNING' and inst['name'].startswith(prefix):
             ips.extend(
                 #bytes(config['natIP'])
                 bytes(interface['networkIP'])
