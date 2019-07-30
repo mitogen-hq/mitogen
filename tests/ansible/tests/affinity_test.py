@@ -1,6 +1,7 @@
 
 import multiprocessing
 import os
+import sys
 import tempfile
 
 import mock
@@ -220,6 +221,11 @@ class MockLinuxPolicyTest(testlib.TestCase):
         policy = self.klass(cpu_count=4096)
         for x in range(1, 4096, 32):
             policy.assign_subprocess()
+
+MockLinuxPolicyTest = unittest2.skipIf(
+    condition=(not sys.platform.startswith('linuxPolicy')),
+    reason='select.select() not supported'
+)(MockLinuxPolicyTest)
 
 
 if __name__ == '__main__':

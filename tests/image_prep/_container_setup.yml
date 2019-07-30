@@ -1,5 +1,7 @@
 
 - hosts: all
+  vars_files:
+  - shared_vars.yml
   strategy: linear
   gather_facts: false
   tasks:
@@ -13,6 +15,8 @@
         fi
 
 - hosts: all
+  vars_files:
+  - shared_vars.yml
   strategy: mitogen_free
   # Can't gather facts before here.
   gather_facts: true
