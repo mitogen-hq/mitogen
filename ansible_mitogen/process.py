@@ -473,7 +473,7 @@ class ClassicWorkerModel(WorkerModel):
         for mux in self._muxes:
             pid, status = os.waitpid(mux.pid, 0)
             status = mitogen.fork._convert_exit_status(status)
-            LOG.error('mux PID %d %s', pid,
+            LOG.debug('mux PID %d %s', pid,
                 mitogen.parent.returncode_to_str(status))
 
         _classic_worker_model = None
