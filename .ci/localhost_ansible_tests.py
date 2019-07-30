@@ -31,6 +31,10 @@ with ci_lib.Fold('job_setup'):
 
 
 with ci_lib.Fold('machine_prep'):
+    ssh_dir = os.path.expanduser('~/.ssh')
+    if not os.path.exists(ssh_dir):
+        os.makedirs(ssh_dir, int('0700', 8))
+
     key_path = os.path.expanduser('~/.ssh/id_rsa')
     shutil.copy(KEY_PATH, key_path)
 
