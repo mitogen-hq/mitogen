@@ -84,15 +84,35 @@
         with_items: "{{all_users}}"
         when: ansible_system == 'Darwin'
 
-    - name: Hide users from login window.
-      with_items: "{{all_users}}"
+    - name: Hide users from login window (Darwin).
       when: ansible_system == 'Darwin'
+      with_items: "{{all_users}}"
       osx_defaults:
         array_add: true
         domain: /Library/Preferences/com.apple.loginwindow
         type: array
         key: HiddenUsersList
         value: ['mitogen_{{item}}']
+
+    - name: Check if AccountsService is used
+      file:
+        path: /var/lib/AccountsService/users
+      register: out
+
+    - name: Hide users from login window (Linux).
+      when: ansible_system == 'Linux' and out.stat.exists
+      with_items: "{{all_users}}"
+      copy:
+        dest: /var/lib/AccountsService/users/mitogen__{{item}}
+        content: |
+          [User]
+          SystemAccount=true
+
+    - name: Restart AccountsService (Linux).
+      when: ansible_system == 'Linux' and out.stat.exists
+      service:
+        name: accounts-daemon
+        restarted: true
 
     - name: Readonly homedir for one account
       shell: "chown -R root: ~mitogen__readonly_homedir"
