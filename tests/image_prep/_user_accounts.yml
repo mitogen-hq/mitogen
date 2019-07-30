@@ -95,7 +95,7 @@
         value: ['mitogen_{{item}}']
 
     - name: Check if AccountsService is used
-      file:
+      stat:
         path: /var/lib/AccountsService/users
       register: out
 
