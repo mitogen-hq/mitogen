@@ -2,6 +2,10 @@ variable "node-count" {
   default = 0
 }
 
+variable "big" {
+    default = false
+}
+
 provider "google" {
   project = "mitogen-load-testing"
   region  = "europe-west1"
@@ -10,11 +14,7 @@ provider "google" {
 
 resource "google_compute_instance" "controller" {
   name = "ansible-controller"
-
-  # machine_type = "n1-highcpu-32"
-  #machine_type = "f1-micro"
-  #machine_type = "custom-4-8192"
-  machine_type = "custom-1-1024"
+  machine_type = "${var.big ? "n1-highcpu-32" : "custom-1-1024"}"
 
   allow_stopping_for_update = true
   can_ip_forward            = true
@@ -36,11 +36,13 @@ resource "google_compute_instance" "controller" {
   }
 
   provisioner "local-exec" {
-    command = "ssh-keygen -R ${google_compute_instance.controller.network_interface.0.access_config.0.nat_ip}"
-  }
-
-  provisioner "local-exec" {
-    command = "ansible-playbook -i ${google_compute_instance.controller.network_interface.0.access_config.0.nat_ip}, controller.yml"
+    command = <<-EOF
+        ip=${google_compute_instance.controller.network_interface.0.access_config.0.nat_ip};
+        ssh-keygen -R $ip;
+        ssh-keyscan $ip >> ~/.ssh/known_hosts;
+        sed -ri -e "s/.*CONTROLLER_IP_HERE.*/    Hostname $ip/" ~/.ssh/config;
+        ansible-playbook -i $ip, controller.yml
+    EOF
   }
 }
 
