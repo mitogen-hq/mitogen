@@ -75,7 +75,11 @@
       - user:
           name: "mitogen__{{item}}"
           shell: /bin/bash
-          groups: "{{user_groups[item]|default(['mitogen__group'])}}"
+          groups: |
+            {{
+                ['com.apple.access_ssh'] +
+                (user_groups[item] | default(['mitogen__group']))
+            }}
           password: "{{item}}_password"
         with_items: "{{all_users}}"
         when: ansible_system == 'Darwin'
