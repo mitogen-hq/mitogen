@@ -79,6 +79,14 @@ worker_model_msg = (
     '"mitogen_*" or "operon_*" strategies are active.'
 )
 
+shutting_down_msg = (
+    'The task worker cannot connect. Ansible may be shutting down, or '
+    'the maximum open files limit may have been exceeded. If this occurs '
+    'midway through a run, please retry after increasing the open file '
+    'limit (ulimit -n). Original error: %s'
+)
+
+
 #: The worker model as configured by the currently running strategy. This is
 #: managed via :func:`get_worker_model` / :func:`set_worker_model` functions by
 #: :class:`StrategyMixin`.
@@ -376,10 +384,16 @@ class ClassicWorkerModel(WorkerModel):
             self.parent = None
             self.router = None
 
-        self.router, self.parent = mitogen.unix.connect(
-            path=path,
-            broker=self.broker,
-        )
+        try:
+            self.router, self.parent = mitogen.unix.connect(
+                path=path,
+                broker=self.broker,
+            )
+        except mitogen.unix.ConnectError as e:
+            # This is not AnsibleConnectionFailure since we want to break
+            # with_items loops.
+            raise ansible.errors.AnsibleError(shutting_down_msg % (e,))
+
         self.listener_path = path
 
     def on_process_exit(self, sock):
@@ -459,7 +473,7 @@ class ClassicWorkerModel(WorkerModel):
         for mux in self._muxes:
             pid, status = os.waitpid(mux.pid, 0)
             status = mitogen.fork._convert_exit_status(status)
-            LOG.debug('mux PID %d %s', pid,
+            LOG.error('mux PID %d %s', pid,
                 mitogen.parent.returncode_to_str(status))
 
         _classic_worker_model = None

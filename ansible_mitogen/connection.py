@@ -46,7 +46,6 @@ import ansible.utils.shlex
 
 import mitogen.core
 import mitogen.fork
-import mitogen.unix
 import mitogen.utils
 
 import ansible_mitogen.parsing
