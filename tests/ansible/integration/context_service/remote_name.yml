@@ -7,6 +7,10 @@
   - meta: end_play
     when: not is_mitogen
 
+  # Too much hassle to make this work for OSX
+  - meta: end_play
+    when: ansible_system != 'Linux'
+
   - shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
     register: out
   - debug: var=out
