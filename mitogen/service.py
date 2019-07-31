@@ -29,6 +29,7 @@
 # !mitogen: minify_safe
 
 import grp
+import logging
 import os
 import os.path
 import pprint
@@ -41,7 +42,6 @@ import time
 import mitogen.core
 import mitogen.select
 from mitogen.core import b
-from mitogen.core import LOG
 from mitogen.core import str_rpartition
 
 try:
@@ -53,6 +53,8 @@ except NameError:
                 return False
         return True
 
+
+LOG = logging.getLogger(__name__)
 
 DEFAULT_POOL_SIZE = 16
 _pool = None
@@ -501,7 +503,7 @@ class Pool(object):
         self._py_24_25_compat()
         self._threads = []
         for x in range(size):
-            name = 'mitogen.service.Pool.%x.worker-%d' % (id(self), x,)
+            name = 'mitogen.Pool.%04x.%d' % (id(self) & 0xffff, x,)
             thread = threading.Thread(
                 name=name,
                 target=mitogen.core._profile_hook,
@@ -608,9 +610,11 @@ class Pool(object):
         while not self.closed:
             try:
                 event = self._select.get_event()
-            except (mitogen.core.ChannelError, mitogen.core.LatchError):
-                e = sys.exc_info()[1]
-                LOG.debug('%r: channel or latch closed, exitting: %s', self, e)
+            except mitogen.core.LatchError:
+                LOG.debug('%r: graceful exit', self)
+                return
+            except mitogen.core.ChannelError:
+                LOG.debug('%r: exitting: %s', self, sys.exc_info()[1])
                 return
 
             func = self._func_by_source[event.source]
@@ -629,8 +633,8 @@ class Pool(object):
 
     def __repr__(self):
         th = threading.currentThread()
-        return 'mitogen.service.Pool(%#x, size=%d, th=%r)' % (
-            id(self),
+        return 'Pool(%04x, size=%d, th=%r)' % (
+            id(self) & 0xffff,
             len(self._threads),
             th.getName(),
         )

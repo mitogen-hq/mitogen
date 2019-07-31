@@ -90,7 +90,7 @@ class ClientTest(testlib.TestCase):
         while True:
             try:
                 return mitogen.unix.connect(path)
-            except socket.error:
+            except mitogen.unix.ConnectError:
                 if time.time() > timeout:
                     raise
                 time.sleep(0.1)

@@ -33,7 +33,6 @@ import re
 
 import mitogen.core
 import mitogen.parent
-from mitogen.core import b
 
 try:
     any

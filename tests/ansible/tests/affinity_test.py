@@ -64,32 +64,32 @@ class FixedPolicyTest(testlib.TestCase):
     def test_assign_muxprocess_1core(self):
         # Uniprocessor .
         policy = self.klass(cpu_count=1)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
 
     def test_assign_muxprocess_2core(self):
         # Small SMP gets dedicated core.
         policy = self.klass(cpu_count=2)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
 
     def test_assign_muxprocess_3core(self):
         # Small SMP gets a dedicated core.
         policy = self.klass(cpu_count=3)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
 
     def test_assign_muxprocess_4core(self):
         # Big SMP gets a dedicated core.
         policy = self.klass(cpu_count=4)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
 
     def test_assign_worker_1core(self):

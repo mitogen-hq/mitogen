@@ -79,21 +79,24 @@ Installation
 
    .. raw:: html
 
-    <form action="https://www.freelists.org/cgi-bin/subscription.cgi" method="post">
+    <form action="https://networkgenomics.com/save-email/" method="post" id="emailform">
+        <input type=hidden name="list_name" value="mitogen-announce">
+
         Releases occur frequently and often include important fixes. Subscribe
-        to the <a
-        href="https://www.freelists.org/list/mitogen-announce">mitogen-announce
-        mailing list</a> be notified of new releases.
+        to the mitogen-announce list to stay updated.
 
         <p>
         <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;">
-        <input type=hidden name="list" value="mitogen-announce">
-        <!-- <input type=hidden name="url_or_message" value="https://mitogen.readthedocs.io/en/stable/ansible.html#installation">-->
-        <input type="hidden" name="action" value="subscribe">
         <button type="submit" style="font-size: 105%;">
             Subscribe
         </button>
         </p>
+
+        <div id="emailthanks" style="display:none">
+            Thanks!
+        </div>
+
+        <p>
     </form>
 
 
@@ -1375,3 +1378,19 @@ Despite the small margin for optimization, Mitogen still manages **6.2x less
 bandwidth and 1.8x less time**.
 
 .. image:: images/ansible/pcaps/costapp-uk-india.svg
+
+
+.. raw:: html
+
+    <script src="https://networkgenomics.com/static/js/public_all.js?92d49a3a"></script>
+    <script>
+        NetGen = {
+            public: {
+                page_id: "operon",
+                urls: {
+                    save_email: "https://networkgenomics.com/save-email/",
+                }
+            }
+        };
+        setupEmailForm();
+    </script>

@@ -48,6 +48,22 @@ import mitogen.master
 from mitogen.core import LOG
 
 
+class Error(mitogen.core.Error):
+    """
+    Base for errors raised by :mod:`mitogen.unix`.
+    """
+    pass
+
+
+class ConnectError(Error):
+    """
+    Raised when :func:`mitogen.unix.connect` fails to connect to the listening
+    socket.
+    """
+    #: UNIX error number reported by underlying exception.
+    errno = None
+
+
 def is_path_dead(path):
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
@@ -154,9 +170,19 @@ class Listener(mitogen.core.Protocol):
 
 
 def _connect(path, broker, sock):
-    sock.connect(path)
-    sock.send(struct.pack('>L', os.getpid()))
-    mitogen.context_id, remote_id, pid = struct.unpack('>LLL', sock.recv(12))
+    try:
+        # ENOENT, ECONNREFUSED
+        sock.connect(path)
+
+        # ECONNRESET
+        sock.send(struct.pack('>L', os.getpid()))
+        mitogen.context_id, remote_id, pid = struct.unpack('>LLL', sock.recv(12))
+    except socket.error:
+        e = sys.exc_info()[1]
+        ce = ConnectError('could not connect to %s: %s', path, e.args[1])
+        ce.errno = e.args[0]
+        raise ce
+
     mitogen.parent_id = remote_id
     mitogen.parent_ids = [remote_id]
 

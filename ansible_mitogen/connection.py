@@ -37,8 +37,6 @@ import stat
 import sys
 import time
 
-import jinja2.runtime
-from ansible.module_utils import six
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
@@ -46,7 +44,6 @@ import ansible.utils.shlex
 
 import mitogen.core
 import mitogen.fork
-import mitogen.unix
 import mitogen.utils
 
 import ansible_mitogen.parsing

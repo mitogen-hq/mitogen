@@ -343,7 +343,14 @@ class TestCase(unittest2.TestCase):
                 self, self._fd_count_before, get_fd_count(),
             )
 
+    # Some class fixtures (like Ansible MuxProcess) start persistent children
+    # for the duration of the class.
+    no_zombie_check = False
+
     def _teardown_check_zombies(self):
+        if self.no_zombie_check:
+            return
+
         try:
             pid, status = os.waitpid(0, os.WNOHANG)
         except OSError:
@@ -354,7 +361,7 @@ class TestCase(unittest2.TestCase):
                 self, pid, status
             )
 
-        print()
+        print('')
         print('Children of unit test process:')
         os.system('ps uww --ppid ' + str(os.getpid()))
         assert 0, "%s leaked still-running subprocesses." % (self,)

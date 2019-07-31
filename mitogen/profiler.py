@@ -57,14 +57,11 @@ Example:
 from __future__ import print_function
 import os
 import pstats
-import cProfile
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
-
-import mitogen.core
 
 
 def try_merge(stats, path):

@@ -182,14 +182,6 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             )
         )
 
-    def _generate_tmp_path(self):
-        return os.path.join(
-            self._connection.get_good_temp_dir(),
-            'ansible_mitogen_action_%016x' % (
-                random.getrandbits(8*8),
-            )
-        )
-
     def _make_tmp_path(self, remote_user=None):
         """
         Create a temporary subdirectory as a child of the temporary directory

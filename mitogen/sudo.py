@@ -35,7 +35,6 @@ import re
 
 import mitogen.core
 import mitogen.parent
-from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)

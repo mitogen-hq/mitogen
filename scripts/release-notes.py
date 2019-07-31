@@ -3,7 +3,6 @@
 # Generate the fragment used to make email release announcements
 # usage: release-notes.py 0.2.6
 
-import os
 import sys
 import urllib
 import lxml.html

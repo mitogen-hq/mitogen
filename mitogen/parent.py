@@ -1137,7 +1137,8 @@ class BootstrapProtocol(RegexProtocol):
         return False
 
     def on_unrecognized_line_received(self, line):
-        LOG.debug('%s: stdout: %s', self.stream.name, line)
+        LOG.debug('%s: stdout: %s', self.stream.name,
+            line.decode('utf-8', 'replace'))
 
     PATTERNS = [
         (re.compile(EC0_MARKER), _on_ec0_received),

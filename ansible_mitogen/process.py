@@ -28,14 +28,13 @@
 
 from __future__ import absolute_import
 import atexit
-import errno
 import logging
 import multiprocessing
 import os
+import resource
 import signal
 import socket
 import sys
-import time
 
 try:
     import faulthandler
@@ -78,6 +77,14 @@ worker_model_msg = (
     'Mitogen connection types may only be instantiated when one of the '
     '"mitogen_*" or "operon_*" strategies are active.'
 )
+
+shutting_down_msg = (
+    'The task worker cannot connect. Ansible may be shutting down, or '
+    'the maximum open files limit may have been exceeded. If this occurs '
+    'midway through a run, please retry after increasing the open file '
+    'limit (ulimit -n). Original error: %s'
+)
+
 
 #: The worker model as configured by the currently running strategy. This is
 #: managed via :func:`get_worker_model` / :func:`set_worker_model` functions by
@@ -229,9 +236,27 @@ def _setup_responder(responder):
     )
 
 
+def increase_open_file_limit():
+    """
+    #549: in order to reduce the possibility of hitting an open files limit,
+    increase :data:`resource.RLIMIT_NOFILE` from its soft limit to its hard
+    limit, if they differ.
+
+    It is common that a low soft limit is configured by default, where the hard
+    limit is much higher.
+    """
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft < hard:
+        LOG.debug('raising soft open file limit from %d to %d', soft, hard)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
+    else:
+        LOG.debug('cannot increase open file limit; existing limit is %d', hard)
+
+
 def common_setup(enable_affinity=True, _init_logging=True):
     save_pid('controller')
     ansible_mitogen.logging.set_process_name('top')
+
     if enable_affinity:
         ansible_mitogen.affinity.policy.assign_controller()
 
@@ -247,6 +272,7 @@ def common_setup(enable_affinity=True, _init_logging=True):
         mitogen.core.enable_profiling()
 
     MuxProcess.cls_original_env = dict(os.environ)
+    increase_open_file_limit()
 
 
 def get_cpu_count(default=None):
@@ -269,10 +295,25 @@ def get_cpu_count(default=None):
 
 
 class Binding(object):
+    """
+    Represent a bound connection for a particular inventory hostname. When
+    operating in sharded mode, the actual MuxProcess implementing a connection
+    varies according to the target machine. Depending on the particular
+    implementation, this class represents a binding to the correct MuxProcess.
+    """
     def get_child_service_context(self):
         """
         Return the :class:`mitogen.core.Context` to which children should
-        direct ContextService requests, or :data:`None` for the local process.
+        direct requests for services such as FileService, or :data:`None` for
+        the local process.
+
+        This can be different from :meth:`get_service_context` where MuxProcess
+        and WorkerProcess are combined, and it is discovered a task is
+        delegated after being assigned to its initial worker for the original
+        un-delegated hostname. In that case, connection management and
+        expensive services like file transfer must be implemented by the
+        MuxProcess connected to the target, rather than routed to the
+        MuxProcess responsible for executing the task.
         """
         raise NotImplementedError()
 
@@ -358,8 +399,8 @@ class ClassicWorkerModel(WorkerModel):
 
     def _listener_for_name(self, name):
         """
-        Given a connection stack, return the UNIX listener that should be used
-        to communicate with it. This is a simple hash of the inventory name.
+        Given an inventory hostname, return the UNIX listener that should
+        communicate with it. This is a simple hash of the inventory name.
         """
         if len(self._muxes) == 1:
             return self._muxes[0].path
@@ -376,10 +417,16 @@ class ClassicWorkerModel(WorkerModel):
             self.parent = None
             self.router = None
 
-        self.router, self.parent = mitogen.unix.connect(
-            path=path,
-            broker=self.broker,
-        )
+        try:
+            self.router, self.parent = mitogen.unix.connect(
+                path=path,
+                broker=self.broker,
+            )
+        except mitogen.unix.ConnectError as e:
+            # This is not AnsibleConnectionFailure since we want to break
+            # with_items loops.
+            raise ansible.errors.AnsibleError(shutting_down_msg % (e,))
+
         self.listener_path = path
 
     def on_process_exit(self, sock):
@@ -387,10 +434,9 @@ class ClassicWorkerModel(WorkerModel):
         This is an :mod:`atexit` handler installed in the top-level process.
 
         Shut the write end of `sock`, causing the receive side of the socket in
-        every worker process to wake up with a 0-byte reads, and causing their
-        main threads to wake up and initiate shutdown. After shutting the
-        socket down, wait for a 0-byte read from the read end, which will occur
-        after the last child closes the descriptor on exit.
+        every worker process to return 0-byte reads, and causing their main
+        threads to wake and initiate shutdown. After shutting the socket down,
+        wait on each child to finish exiting.
 
         This is done using :mod:`atexit` since Ansible lacks any better hook to
         run code during exit, and unless some synchronization exists with
@@ -407,14 +453,21 @@ class ClassicWorkerModel(WorkerModel):
         mitogen.core.io_op(sock.recv, 1)
         sock.close()
 
+        for mux in self._muxes:
+            _, status = os.waitpid(mux.pid, 0)
+            status = mitogen.fork._convert_exit_status(status)
+            LOG.debug('mux %d PID %d %s', mux.index, mux.pid,
+                      mitogen.parent.returncode_to_str(status))
+
     def _initialize(self):
         """
-        Arrange for classic process model connection multiplexer child
-        processes to be started, if they are not already running.
+        Arrange for classic model multiplexers to be started, if they are not
+        already running.
 
-        The parent process picks a UNIX socket path the child will use prior to
-        fork, creates a socketpair used essentially as a semaphore, then blocks
-        waiting for the child to indicate the UNIX socket is ready for use.
+        The parent process picks a UNIX socket path each child will use prior
+        to fork, creates a socketpair used essentially as a semaphore, then
+        blocks waiting for the child to indicate the UNIX socket is ready for
+        use.
 
         :param bool _init_logging:
             For testing, if :data:`False`, don't initialize logging.
@@ -513,8 +566,8 @@ class MuxProcess(object):
     Implement a subprocess forked from the Ansible top-level, as a safe place
     to contain the Mitogen IO multiplexer thread, keeping its use of the
     logging package (and the logging package's heavy use of locks) far away
-    from the clutches of os.fork(), which is used continuously by the
-    multiprocessing package in the top-level process.
+    from os.fork(), which is used continuously by the multiprocessing package
+    in the top-level process.
 
     The problem with running the multiplexer in that process is that should the
     multiplexer thread be in the process of emitting a log entry (and holding
@@ -555,7 +608,6 @@ class MuxProcess(object):
             mitogen.core.io_op(MuxProcess.cls_parent_sock.recv, 1)
             return
 
-        save_pid('mux')
         ansible_mitogen.logging.set_process_name('mux:' + str(self.index))
         if setproctitle:
             setproctitle.setproctitle('mitogen mux:%s (%s)' % (
@@ -581,7 +633,7 @@ class MuxProcess(object):
         """
         save_pid('mux')
         ansible_mitogen.logging.set_process_name('mux')
-        ansible_mitogen.affinity.policy.assign_muxprocess()
+        ansible_mitogen.affinity.policy.assign_muxprocess(self.index)
 
         self._setup_master()
         self._setup_services()
