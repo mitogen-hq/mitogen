@@ -32,6 +32,7 @@ import errno
 import logging
 import multiprocessing
 import os
+import resource
 import signal
 import socket
 import sys
@@ -237,9 +238,27 @@ def _setup_responder(responder):
     )
 
 
+def increase_open_file_limit():
+    """
+    #549: in order to reduce the possibility of hitting an open files limit,
+    increase :data:`resource.RLIMIT_NOFILE` from its soft limit to its hard
+    limit, if they differ.
+
+    It is common that a low soft limit is configured by default, where the hard
+    limit is much higher.
+    """
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    if soft < hard:
+        LOG.debug('raising soft open file limit from %d to %d', soft, hard)
+        resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
+    else:
+        LOG.debug('cannot increase open file limit; existing limit is %d', hard)
+
+
 def common_setup(enable_affinity=True, _init_logging=True):
     save_pid('controller')
     ansible_mitogen.logging.set_process_name('top')
+
     if enable_affinity:
         ansible_mitogen.affinity.policy.assign_controller()
 
@@ -255,6 +274,7 @@ def common_setup(enable_affinity=True, _init_logging=True):
         mitogen.core.enable_profiling()
 
     MuxProcess.cls_original_env = dict(os.environ)
+    increase_open_file_limit()
 
 
 def get_cpu_count(default=None):
