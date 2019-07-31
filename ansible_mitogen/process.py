@@ -28,7 +28,6 @@
 
 from __future__ import absolute_import
 import atexit
-import errno
 import logging
 import multiprocessing
 import os
@@ -36,7 +35,6 @@ import resource
 import signal
 import socket
 import sys
-import time
 
 try:
     import faulthandler

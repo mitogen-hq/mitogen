@@ -42,7 +42,6 @@ except ImportError:
 
 import mitogen.parent
 from mitogen.core import b
-from mitogen.core import bytes_partition
 
 try:
     any

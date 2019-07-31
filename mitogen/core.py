@@ -3109,7 +3109,7 @@ class Broker(object):
         if sys.version_info < (2, 6):
             # import_module() is used to avoid dep scanner.
             os_fork = import_module('mitogen.os_fork')
-            mitogen.os_fork._notice_broker_or_pool(self)
+            os_fork._notice_broker_or_pool(self)
 
     def start_receive(self, stream):
         """

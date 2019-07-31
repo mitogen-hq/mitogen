@@ -37,8 +37,6 @@ import stat
 import sys
 import time
 
-import jinja2.runtime
-from ansible.module_utils import six
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
