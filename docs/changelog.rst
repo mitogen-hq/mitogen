@@ -136,6 +136,9 @@ Core Library
   `closed` flag, preventing historical bugs where a double close could destroy
   descriptors belonging to unrelated streams.
 
+* `#606 <https://github.com/dw/mitogen/issues/606>`_: fix example code on the
+  documentation front page.
+
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
@@ -150,11 +153,12 @@ bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
+`Pieter Voet <https://github.com/pietervoet/>`_,
+`Stefane Fermigier <https://github.com/sfermigier>`_,
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
-`@ghp-rr <https://github.com/ghp-rr>`_,
-`Pieter Voet <https://github.com/pietervoet/>`_, and
+`@ghp-rr <https://github.com/ghp-rr>`_, and
 `@rizzly <https://github.com/rizzly>`_.
 
 
