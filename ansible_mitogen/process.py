@@ -277,10 +277,25 @@ def get_cpu_count(default=None):
 
 
 class Binding(object):
+    """
+    Represent a bound connection for a particular inventory hostname. When
+    operating in sharded mode, the actual MuxProcess implementing a connection
+    varies according to the target machine. Depending on the particular
+    implementation, this class represents a binding to the correct MuxProcess.
+    """
     def get_child_service_context(self):
         """
         Return the :class:`mitogen.core.Context` to which children should
-        direct ContextService requests, or :data:`None` for the local process.
+        direct requests for services such as FileService, or :data:`None` for
+        the local process.
+
+        This can be different from :meth:`get_service_context` where MuxProcess
+        and WorkerProcess are combined, and it is discovered a task is
+        delegated after being assigned to its initial worker for the original
+        un-delegated hostname. In that case, connection management and
+        expensive services like file transfer must be implemented by the
+        MuxProcess connected to the target, rather than routed to the
+        MuxProcess responsible for executing the task.
         """
         raise NotImplementedError()
 
@@ -366,8 +381,8 @@ class ClassicWorkerModel(WorkerModel):
 
     def _listener_for_name(self, name):
         """
-        Given a connection stack, return the UNIX listener that should be used
-        to communicate with it. This is a simple hash of the inventory name.
+        Given an inventory hostname, return the UNIX listener that should
+        communicate with it. This is a simple hash of the inventory name.
         """
         if len(self._muxes) == 1:
             return self._muxes[0].path
@@ -401,10 +416,9 @@ class ClassicWorkerModel(WorkerModel):
         This is an :mod:`atexit` handler installed in the top-level process.
 
         Shut the write end of `sock`, causing the receive side of the socket in
-        every worker process to wake up with a 0-byte reads, and causing their
-        main threads to wake up and initiate shutdown. After shutting the
-        socket down, wait for a 0-byte read from the read end, which will occur
-        after the last child closes the descriptor on exit.
+        every worker process to return 0-byte reads, and causing their main
+        threads to wake and initiate shutdown. After shutting the socket down,
+        wait on each child to finish exiting.
 
         This is done using :mod:`atexit` since Ansible lacks any better hook to
         run code during exit, and unless some synchronization exists with
@@ -429,12 +443,13 @@ class ClassicWorkerModel(WorkerModel):
 
     def _initialize(self):
         """
-        Arrange for classic process model connection multiplexer child
-        processes to be started, if they are not already running.
+        Arrange for classic model multiplexers to be started, if they are not
+        already running.
 
-        The parent process picks a UNIX socket path the child will use prior to
-        fork, creates a socketpair used essentially as a semaphore, then blocks
-        waiting for the child to indicate the UNIX socket is ready for use.
+        The parent process picks a UNIX socket path each child will use prior
+        to fork, creates a socketpair used essentially as a semaphore, then
+        blocks waiting for the child to indicate the UNIX socket is ready for
+        use.
 
         :param bool _init_logging:
             For testing, if :data:`False`, don't initialize logging.
@@ -533,8 +548,8 @@ class MuxProcess(object):
     Implement a subprocess forked from the Ansible top-level, as a safe place
     to contain the Mitogen IO multiplexer thread, keeping its use of the
     logging package (and the logging package's heavy use of locks) far away
-    from the clutches of os.fork(), which is used continuously by the
-    multiprocessing package in the top-level process.
+    from os.fork(), which is used continuously by the multiprocessing package
+    in the top-level process.
 
     The problem with running the multiplexer in that process is that should the
     multiplexer thread be in the process of emitting a log entry (and holding
