@@ -63,6 +63,12 @@ Mitogen for Ansible
   matching *Permission denied* errors from some versions of ``su`` running on
   heavily loaded machines.
 
+* `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
+  limit for the Ansible process is increased to the available hard limit. It is
+  common for distributions to ship with a much higher hard limit than their
+  default soft limit, allowing *"too many open files"* errors to be avoided
+  more often in large runs without user configuration.
+
 * `#578 <https://github.com/dw/mitogen/issues/578>`_: the extension could crash
   while rendering an error message, due to an incorrect format string.
 
@@ -140,6 +146,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+`Andreas Hubert <https://github.com/peshay>`_.
 `Anton Markelov <https://github.com/strangeman>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
