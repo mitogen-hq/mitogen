@@ -400,7 +400,7 @@ suitable for managing a fleet of potentially ancient corporate hardware, such
 as Red Hat Enterprise Linux 5, released in 2007.
 
 Every combination of Python 3.x/2.x parent and child should be possible,
-however at present only Python 2.4, 2.6, 2.7 and 3.6 are tested automatically.
+however at present only Python 2.6, 2.7 and 3.5, 3.6, 3.7 are tested automatically.
 
 
 Zero Dependencies
