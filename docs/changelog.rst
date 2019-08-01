@@ -89,6 +89,11 @@ Mitogen for Ansible
   ``mitogen_ssh_keepalive_count`` variables, and the default timeout for an SSH
   server has been increased from `15*3` seconds to `30*10` seconds.
 
+* `#600 <https://github.com/dw/mitogen/issues/600>`_: functionality to reflect
+  changes to ``/etc/environment`` in the running interpreter did not account
+  for Unicode file contents. Now the file may contain data in any single byte
+  encoding.
+
 * `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
   ``lineinfile`` module began leaking writable temporary file descriptors since
   Ansible 2.7.0. When ``lineinfile`` was used to create or modify a script, and
@@ -159,8 +164,9 @@ bug reports, testing, features and fixes in this release contributed by
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
-`@ghp-rr <https://github.com/ghp-rr>`_, and
-`@rizzly <https://github.com/rizzly>`_.
+`@ghp-rr <https://github.com/ghp-rr>`_,
+`@rizzly <https://github.com/rizzly>`_, and
+`@tho86 <https://github.com/tho86>`_.
 
 
 v0.2.7 (2019-05-19)
