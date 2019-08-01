@@ -91,6 +91,11 @@
       shell: locale-gen
       when: distro == "Debian"
 
+    - name: Write Unicode into /etc/environment
+      copy:
+        dest: /etc/environment
+        content: "UNICODE_SNOWMAN=\u2603\n"
+
     - name: Install prebuilt 'doas' binary
       unarchive:
         dest: /

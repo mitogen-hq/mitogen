@@ -265,7 +265,7 @@ We must therefore continue by writing our code as a script::
         print(local.call(my_first_function))
 
     if __name__ == '__main__':
-        mitogen.utils.log_to_file(main)
+        mitogen.utils.log_to_file("mitogen.log")
         mitogen.utils.run_with_router(main)
 
 Let's try running it:

@@ -52,7 +52,6 @@ import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import b
 from mitogen.core import bytes_partition
-from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
@@ -104,12 +103,20 @@ iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
 
-if mitogen.core.PY3:
-    shlex_split = shlex.split
-else:
-    def shlex_split(s, comments=False):
-        return [mitogen.core.to_text(token)
-                for token in shlex.split(str(s), comments=comments)]
+def shlex_split_b(s):
+    """
+    Use shlex.split() to split characters in some single-byte encoding, without
+    knowing what that encoding is. The input is bytes, the output is a list of
+    bytes.
+    """
+    assert isinstance(s, mitogen.core.BytesType)
+    if mitogen.core.PY3:
+        return [
+            t.encode('latin1')
+            for t in shlex.split(s.decode('latin1'), comments=True)
+        ]
+
+    return [t for t in shlex.split(s, comments=True)]
 
 
 class TempFileWatcher(object):
@@ -165,13 +172,19 @@ class EnvironmentFileWatcher(object):
     A more robust future approach may simply be to arrange for the persistent
     interpreter to restart when a change is detected.
     """
+    # We know nothing about the character set of /etc/environment or the
+    # process environment.
+    environ = getattr(os, 'environb', os.environ)
+
     def __init__(self, path):
         self.path = os.path.expanduser(path)
         #: Inode data at time of last check.
         self._st = self._stat()
         #: List of inherited keys appearing to originated from this file.
-        self._keys = [key for key, value in self._load()
-                      if value == os.environ.get(key)]
+        self._keys = [
+            key for key, value in self._load()
+            if value == self.environ.get(key)
+        ]
         LOG.debug('%r installed; existing keys: %r', self, self._keys)
 
     def __repr__(self):
@@ -185,7 +198,7 @@ class EnvironmentFileWatcher(object):
 
     def _load(self):
         try:
-            fp = codecs.open(self.path, 'r', encoding='utf-8')
+            fp = open(self.path, 'rb')
             try:
                 return list(self._parse(fp))
             finally:
@@ -199,36 +212,36 @@ class EnvironmentFileWatcher(object):
         """
         for line in fp:
             # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
-            bits = shlex_split(line, comments=True)
-            if (not bits) or bits[0].startswith('#'):
+            bits = shlex_split_b(line)
+            if (not bits) or bits[0].startswith(b('#')):
                 continue
 
-            if bits[0] == u'export':
+            if bits[0] == b('export'):
                 bits.pop(0)
 
-            key, sep, value = str_partition(u' '.join(bits), u'=')
+            key, sep, value = bytes_partition(b(' ').join(bits), b('='))
             if key and sep:
                 yield key, value
 
     def _on_file_changed(self):
         LOG.debug('%r: file changed, reloading', self)
         for key, value in self._load():
-            if key in os.environ:
+            if key in self.environ:
                 LOG.debug('%r: existing key %r=%r exists, not setting %r',
-                          self, key, os.environ[key], value)
+                          self, key, self.environ[key], value)
             else:
                 LOG.debug('%r: setting key %r to %r', self, key, value)
                 self._keys.append(key)
-                os.environ[key] = value
+                self.environ[key] = value
 
     def _remove_existing(self):
         """
         When a change is detected, remove keys that existed in the old file.
         """
         for key in self._keys:
-            if key in os.environ:
+            if key in self.environ:
                 LOG.debug('%r: removing old key %r', self, key)
-                del os.environ[key]
+                del self.environ[key]
         self._keys = []
 
     def check(self):

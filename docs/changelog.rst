@@ -49,11 +49,12 @@ Enhancements
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: 2 network round-trips
   were removed from early connection setup.
 
-* `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
-  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
-  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
-  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_: locking is avoided in
-  some hot paths, and locks that must be taken are held for less time.
+* `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
+  `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
+  `e93762b3 <https://github.com/dw/mitogen/commit/e93762b3>`_,
+  `50bfe4c7 <https://github.com/dw/mitogen/commit/50bfe4c7>`_: locking is
+  avoided on hot paths, and some locks are released earlier, before waking a
+  thread that must immediately take the same lock.
 
 
 Mitogen for Ansible
@@ -87,6 +88,11 @@ Mitogen for Ansible
   exposes ``mitogen_ssh_keepalive_interval`` and
   ``mitogen_ssh_keepalive_count`` variables, and the default timeout for an SSH
   server has been increased from `15*3` seconds to `30*10` seconds.
+
+* `#600 <https://github.com/dw/mitogen/issues/600>`_: functionality to reflect
+  changes to ``/etc/environment`` in the running interpreter did not account
+  for Unicode file contents. Now the file may contain data in any single byte
+  encoding.
 
 * `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
   ``lineinfile`` module began leaking writable temporary file descriptors since
@@ -136,6 +142,9 @@ Core Library
   `closed` flag, preventing historical bugs where a double close could destroy
   descriptors belonging to unrelated streams.
 
+* `#606 <https://github.com/dw/mitogen/issues/606>`_: fix example code on the
+  documentation front page.
+
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
@@ -150,12 +159,14 @@ bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
+`Pieter Voet <https://github.com/pietervoet/>`_,
+`Stefane Fermigier <https://github.com/sfermigier>`_,
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
 `@ghp-rr <https://github.com/ghp-rr>`_,
-`Pieter Voet <https://github.com/pietervoet/>`_, and
-`@rizzly <https://github.com/rizzly>`_.
+`@rizzly <https://github.com/rizzly>`_, and
+`@tho86 <https://github.com/tho86>`_.
 
 
 v0.2.7 (2019-05-19)
