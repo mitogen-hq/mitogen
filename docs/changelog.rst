@@ -49,11 +49,12 @@ Enhancements
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: 2 network round-trips
   were removed from early connection setup.
 
-* `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
-  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
-  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_,
-  `? <https://github.com/dw/mitogen/commit/7ae926b3>`_: locking is avoided in
-  some hot paths, and locks that must be taken are held for less time.
+* `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
+  `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
+  `e93762b3 <https://github.com/dw/mitogen/commit/e93762b3>`_,
+  `50bfe4c7 <https://github.com/dw/mitogen/commit/50bfe4c7>`_: locking is
+  avoided on hot paths, and some locks are released earlier, before waking a
+  thread that must immediately take the same lock.
 
 
 Mitogen for Ansible
