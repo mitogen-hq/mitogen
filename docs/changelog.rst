@@ -46,8 +46,10 @@ Enhancements
   setup happens on one thread, reducing GIL contention and context switching
   early in a run.
 
-* `#419 <https://github.com/dw/mitogen/issues/419>`_: 2 network round-trips
-  were removed from early connection setup.
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: Connection setup is
+  pipelined, eliminating several network round-trips. Most infrastructure is in
+  place to support future removal of the final round-trip between a target
+  fully booting and receiving its first function call.
 
 * `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
   `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
