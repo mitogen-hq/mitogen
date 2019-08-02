@@ -405,15 +405,6 @@ CONNECTION_METHOD = {
 }
 
 
-class Broker(mitogen.master.Broker):
-    """
-    WorkerProcess maintains at most 2 file descriptors, therefore does not need
-    the exuberant syscall expense of EpollPoller, so override it and restore
-    the poll() poller.
-    """
-    poller_class = mitogen.core.Poller
-
-
 class CallChain(mitogen.parent.CallChain):
     """
     Extend :class:`mitogen.parent.CallChain` to additionally cause the
