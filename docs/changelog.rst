@@ -24,7 +24,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Enhancements
 ^^^^^^^^^^^^
 
-* `#587 <https://github.com/dw/mitogen/issues/587>`_: Ansible 2.8 is partially
+* `#556 <https://github.com/dw/mitogen/issues/556>`_,
+  `#587 <https://github.com/dw/mitogen/issues/587>`_: Ansible 2.8 is partially
   supported. `Become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ and
   `interpreter discovery
@@ -165,6 +166,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Andreas Hubert <https://github.com/peshay>`_.
 `Anton Markelov <https://github.com/strangeman>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
+`James Hogarth <https://github.com/hogarthj>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Pieter Voet <https://github.com/pietervoet/>`_,
