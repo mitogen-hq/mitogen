@@ -46,6 +46,7 @@ import mitogen.core
 import mitogen.fork
 import mitogen.utils
 
+import ansible_mitogen.mixins
 import ansible_mitogen.parsing
 import ansible_mitogen.process
 import ansible_mitogen.services
@@ -533,6 +534,47 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.loader_basedir = loader_basedir
         self._mitogen_reset(mode='put')
 
+    def _get_task_vars(self):
+        """
+        More information is needed than normally provided to an Ansible
+        connection.  For proxied connections, intermediary configuration must
+        be inferred, and for any connection the configured Python interpreter
+        must be known.
+
+        There is no clean way to access this information that would not deviate
+        from the running Ansible version. The least invasive method known is to
+        reuse the running task's task_vars dict.
+
+        This method walks the stack to find task_vars of the Action plugin's
+        run(), or if no Action is present, from Strategy's _execute_meta(), as
+        in the case of 'meta: reset_connection'. The stack is walked in
+        addition to subclassing Action.run()/on_action_run(), as it is possible
+        for new connections to be constructed in addition to the preconstructed
+        connection passed into any running action.
+        """
+        f = sys._getframe()
+
+        while f:
+            if f.f_code.co_name == 'run':
+                f_locals = f.f_locals
+                f_self = f_locals.get('self')
+                if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                    task_vars = f_locals.get('task_vars')
+                    if task_vars:
+                        LOG.debug('recovered task_vars from Action')
+                        return task_vars
+            elif f.f_code.co_name == '_execute_meta':
+                f_all_vars = f.f_locals.get('all_vars')
+                if isinstance(f_all_vars, dict):
+                    LOG.debug('recovered task_vars from meta:')
+                    return f_all_vars
+
+            f = f.f_back
+
+        LOG.warning('could not recover task_vars. This means some connection '
+                    'settings may erroneously be reset to their defaults. '
+                    'Please report a bug if you encounter this message.')
+
     def get_task_var(self, key, default=None):
         """
         Fetch the value of a task variable related to connection configuration,
@@ -544,12 +586,13 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         does not make sense to extract connection-related configuration for the
         delegated-to machine from them.
         """
-        if self._task_vars:
+        task_vars = self._task_vars or self._get_task_vars()
+        if task_vars is not None:
             if self.delegate_to_hostname is None:
-                if key in self._task_vars:
-                    return self._task_vars[key]
+                if key in task_vars:
+                    return task_vars[key]
             else:
-                delegated_vars = self._task_vars['ansible_delegated_vars']
+                delegated_vars = task_vars['ansible_delegated_vars']
                 if self.delegate_to_hostname in delegated_vars:
                     task_vars = delegated_vars[self.delegate_to_hostname]
                     if key in task_vars:
