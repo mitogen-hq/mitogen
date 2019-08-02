@@ -246,11 +246,22 @@ def increase_open_file_limit():
     limit is much higher.
     """
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    if soft < hard:
-        LOG.debug('raising soft open file limit from %d to %d', soft, hard)
-        resource.setrlimit(resource.RLIMIT_NOFILE, (hard, hard))
-    else:
-        LOG.debug('cannot increase open file limit; existing limit is %d', hard)
+    LOG.debug('inherited open file limits: soft=%d hard=%d', soft, hard)
+    if soft >= hard:
+        LOG.debug('max open files already set to hard limit: %d', hard)
+        return
+
+    # OS X is limited by kern.maxfilesperproc sysctl, rather than the
+    # advertised unlimited hard RLIMIT_NOFILE. Just hard-wire known defaults
+    # for that sysctl, to avoid the mess of querying it.
+    for value in (hard, 10240):
+        try:
+            resource.setrlimit(resource.RLIMIT_NOFILE, (value, hard))
+            LOG.debug('raised soft open file limit from %d to %d', soft, value)
+            break
+        except ValueError as e:
+            LOG.debug('could not raise soft open file limit from %d to %d: %s',
+                      soft, value, e)
 
 
 def common_setup(enable_affinity=True, _init_logging=True):
