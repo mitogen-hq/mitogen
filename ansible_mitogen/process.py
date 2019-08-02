@@ -294,6 +294,15 @@ def get_cpu_count(default=None):
     return cpu_count
 
 
+class Broker(mitogen.master.Broker):
+    """
+    WorkerProcess maintains at most 2 file descriptors, therefore does not need
+    the exuberant syscall expense of EpollPoller, so override it and restore
+    the poll() poller.
+    """
+    poller_class = mitogen.core.Poller
+
+
 class Binding(object):
     """
     Represent a bound connection for a particular inventory hostname. When
@@ -530,7 +539,7 @@ class ClassicWorkerModel(WorkerModel):
         See WorkerModel.get_binding().
         """
         if self.broker is None:
-            self.broker = mitogen.master.Broker()
+            self.broker = Broker()
 
         path = self._listener_for_name(inventory_name)
         if path != self.listener_path:

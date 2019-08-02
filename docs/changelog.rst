@@ -94,6 +94,11 @@ Mitogen for Ansible
   for Unicode file contents. Now the file may contain data in any single byte
   encoding.
 
+* `#602 <https://github.com/dw/mitogen/issues/602>`_: connection configuration
+  is more accurately inferred for `meta: reset_connection`, the `synchronize`
+  module, and for any other action plug-ins that establish new connections of
+  their own.
+
 * `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
   ``lineinfile`` module began leaking writable temporary file descriptors since
   Ansible 2.7.0. When ``lineinfile`` was used to create or modify a script, and
@@ -157,6 +162,7 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Andreas Hubert <https://github.com/peshay>`_.
 `Anton Markelov <https://github.com/strangeman>`_,
+`Dave Cottlehuber <https://github.com/dch>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Pieter Voet <https://github.com/pietervoet/>`_,
