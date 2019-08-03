@@ -438,6 +438,12 @@ class ClassicWorkerModel(WorkerModel):
         :param bool _init_logging:
             For testing, if :data:`False`, don't initialize logging.
         """
+        # #573: The process ID that installed the :mod:`atexit` handler. If
+        # some unknown Ansible plug-in forks the Ansible top-level process and
+        # later performs a graceful Python exit, it may try to wait for child
+        # PIDs it never owned, causing a crash. We want to avoid that.
+        self._pid = os.getpid()
+
         common_setup(_init_logging=_init_logging)
 
         self.parent_sock, self.child_sock = socket.socketpair()
@@ -451,7 +457,7 @@ class ClassicWorkerModel(WorkerModel):
         for mux in self._muxes:
             mux.start()
 
-        atexit.register(self._on_process_exit, self.parent_sock)
+        atexit.register(self._on_process_exit)
         self.child_sock.close()
         self.child_sock = None
 
@@ -487,7 +493,7 @@ class ClassicWorkerModel(WorkerModel):
 
         self.listener_path = path
 
-    def _on_process_exit(self, sock):
+    def _on_process_exit(self):
         """
         This is an :mod:`atexit` handler installed in the top-level process.
 
@@ -501,15 +507,18 @@ class ClassicWorkerModel(WorkerModel):
         MuxProcess, debug logs may appear on the user's terminal *after* the
         prompt has been printed.
         """
+        if self._pid != os.getpid():
+            return
+
         try:
-            sock.shutdown(socket.SHUT_WR)
+            self.parent_sock.shutdown(socket.SHUT_WR)
         except socket.error:
             # Already closed. This is possible when tests are running.
             LOG.debug('_on_process_exit: ignoring duplicate call')
             return
 
-        mitogen.core.io_op(sock.recv, 1)
-        sock.close()
+        mitogen.core.io_op(self.parent_sock.recv, 1)
+        self.parent_sock.close()
 
         for mux in self._muxes:
             _, status = os.waitpid(mux.pid, 0)
