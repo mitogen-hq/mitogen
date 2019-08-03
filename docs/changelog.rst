@@ -174,6 +174,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
+`@DavidVentura <https://github.com/DavidVentura>`_,
 `@ghp-rr <https://github.com/ghp-rr>`_,
 `@rizzly <https://github.com/rizzly>`_, and
 `@tho86 <https://github.com/tho86>`_.
