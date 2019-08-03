@@ -155,40 +155,6 @@ Common sources of import latency and bandwidth consumption are mitigated:
   representing 1.7MiB of uncompressed source split across 148 modules.
 
 
-SSH Client Emulation
-####################
-
-.. image:: images/fakessh.svg
-    :class: mitogen-right-300
-
-Support is included for starting subprocesses with a modified environment, that
-cause their attempt to use SSH to be redirected back into the host program. In
-this way tools like `rsync`, `git`, `sftp`, and `scp` can efficiently reuse the
-host program's existing connection to the remote machine, including any
-firewall/user account hopping in use, with no additional configuration.
-
-Scenarios that were not previously possible with these tools are enabled, such
-as running `sftp` and `rsync` over a `sudo` session, to an account the user
-cannot otherwise directly log into, including in restrictive environments that
-for example enforce an interactive TTY and account password.
-
-.. raw:: html
-
-   <div style="clear: both;"></div>
-
-.. code-block:: python
-
-    bastion = router.ssh(hostname='bastion.mycorp.com')
-    webserver = router.ssh(via=bastion, hostname='webserver')
-    webapp = router.sudo(via=webserver, username='webapp')
-    fileserver = router.ssh(via=bastion, hostname='fileserver')
-
-    # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
-    fileserver.call(mitogen.fakessh.run, webapp, [
-        'rsync', 'appdata', 'appserver:appdata'
-    ])
-
-
 Message Routing
 ###############
 
