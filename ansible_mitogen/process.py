@@ -246,7 +246,14 @@ def increase_open_file_limit():
     limit is much higher.
     """
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    LOG.debug('inherited open file limits: soft=%d hard=%d', soft, hard)
+    if hard == resource.RLIM_INFINITY:
+        hard_s = '(infinity)'
+        # cap in case of O(RLIMIT_NOFILE) algorithm in some subprocess.
+        hard = 524288
+    else:
+        hard_s = str(hard)
+
+    LOG.debug('inherited open file limits: soft=%d hard=%s', soft, hard_s)
     if soft >= hard:
         LOG.debug('max open files already set to hard limit: %d', hard)
         return
