@@ -15,7 +15,46 @@ from mitogen.core import b
 import testlib
 
 
+def _osx_mode(n):
+    """
+    fstat(2) on UNIX sockets on OSX return different mode bits depending on
+    which side is being inspected, so zero those bits for comparison.
+    """
+    if sys.platform == 'darwin':
+        n &= ~int('0777', 8)
+    return n
+
+
 def run_fd_check(func, fd, mode, on_start=None):
+    """
+    Run ``tests/data/fd_check.py`` using `func`. The subprocess writes
+    information about the `fd` it received to a temporary file.
+
+    :param func:
+        Function like `create_child()` used to start child.
+    :param fd:
+        FD child should read/write from, and report information about.
+    :param mode:
+        "read" or "write", depending on whether the FD is readable or writeable
+        from the perspective of the child. If "read", `on_start()` should write
+        "TEST" to it and the child reads "TEST" from it, otherwise `on_start()`
+        should read "TEST" from it and the child writes "TEST" to it.
+    :param on_start:
+        Function invoked as `on_start(proc)`
+    :returns:
+        Tuple of `(proc, info, on_start_result)`, where:
+
+            * `proc`: the :class:`mitogen.parent.Process` returned by `func`.
+            * `info`: dict containing information returned by the child:
+                * `buf`: "TEST" that was read in "read" mode
+                * `flags`: :attr:`fcntl.F_GETFL` flags for `fd`
+                * `st_mode`: st_mode field from :func:`os.fstat`
+                * `st_dev`: st_dev field from :func:`os.fstat`
+                * `st_ino`: st_ino field from :func:`os.fstat`
+                * `ttyname`: :func:`os.ttyname` invoked on `fd`.
+                * `controlling_tty`: :func:os.ttyname` invoked on ``/dev/tty``
+                  from within the child.
+    """
     tf = tempfile.NamedTemporaryFile()
     args = [
         sys.executable,
@@ -61,7 +100,7 @@ class StdinSockMixin(object):
         st = os.fstat(proc.stdin.fileno())
         self.assertTrue(stat.S_ISSOCK(st.st_mode))
         self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, info['st_mode'])
+        self.assertEquals(st.st_mode, _osx_mode(info['st_mode']))
         flags = fcntl.fcntl(proc.stdin.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['buf'], 'TEST')
@@ -75,7 +114,7 @@ class StdoutSockMixin(object):
         st = os.fstat(proc.stdout.fileno())
         self.assertTrue(stat.S_ISSOCK(st.st_mode))
         self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, info['st_mode'])
+        self.assertEquals(st.st_mode, _osx_mode(info['st_mode']))
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
@@ -105,8 +144,6 @@ class CreateChildMergedTest(StdinSockMixin, StdoutSockMixin,
         self.assertEquals(None, proc.stderr)
         st = os.fstat(proc.stdout.fileno())
         self.assertTrue(stat.S_ISSOCK(st.st_mode))
-        self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, info['st_mode'])
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
@@ -145,13 +182,11 @@ class TtyCreateChildTest(testlib.TestCase):
 
         self.assertTrue(isinstance(info['ttyname'],
                         mitogen.core.UnicodeType))
-        os.ttyname(proc.stdin.fileno())  # crashes if not TTY
+        self.assertTrue(os.isatty(proc.stdin.fileno()))
 
         flags = fcntl.fcntl(proc.stdin.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['flags'] & os.O_RDWR)
-
-        self.assertNotEquals(st.st_dev, info['st_dev'])
         self.assertTrue(info['buf'], 'TEST')
 
     def test_stdout(self):
@@ -164,17 +199,18 @@ class TtyCreateChildTest(testlib.TestCase):
 
         self.assertTrue(isinstance(info['ttyname'],
                         mitogen.core.UnicodeType))
-        os.ttyname(proc.stdout.fileno()) # crashes if wrong
+        self.assertTrue(os.isatty(proc.stdout.fileno()))
 
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['flags'] & os.O_RDWR)
 
-        self.assertNotEquals(st.st_dev, info['st_dev'])
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
 
     def test_stderr(self):
+        # proc.stderr is None in the parent since there is no separate stderr
+        # stream. In the child, FD 2/stderr is connected to the TTY.
         proc, info, buf = run_fd_check(self.func, 2, 'write',
             lambda proc: wait_read(proc.stdout, 4))
 
@@ -184,13 +220,12 @@ class TtyCreateChildTest(testlib.TestCase):
 
         self.assertTrue(isinstance(info['ttyname'],
                         mitogen.core.UnicodeType))
-        os.ttyname(proc.stdin.fileno())  # crashes if not TTY
+        self.assertTrue(os.isatty(proc.stdout.fileno()))
 
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['flags'] & os.O_RDWR)
 
-        self.assertNotEquals(st.st_dev, info['st_dev'])
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
 
@@ -222,6 +257,7 @@ class TtyCreateChildTest(testlib.TestCase):
 
 class StderrDiagTtyMixin(object):
     def test_stderr(self):
+        # proc.stderr is the PTY master, FD 2 in the child is the PTY slave
         proc, info, buf = run_fd_check(self.func, 2, 'write',
             lambda proc: wait_read(proc.stderr, 4))
 
@@ -231,13 +267,12 @@ class StderrDiagTtyMixin(object):
 
         self.assertTrue(isinstance(info['ttyname'],
                         mitogen.core.UnicodeType))
-        os.ttyname(proc.stderr.fileno())  # crashes if wrong
+        self.assertTrue(os.isatty(proc.stderr.fileno()))
 
         flags = fcntl.fcntl(proc.stderr.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['flags'] & os.O_RDWR)
 
-        self.assertNotEquals(st.st_dev, info['st_dev'])
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
 

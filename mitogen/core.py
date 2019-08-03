@@ -1628,12 +1628,17 @@ class Protocol(object):
         self.stream.on_disconnect(broker)
 
     def on_disconnect(self, broker):
+        # Normally both sides an FD, so it is important that tranmit_side is
+        # deregistered from Poller before closing the receive side, as pollers
+        # like epoll and kqueue unregister all events on FD close, causing
+        # subsequent attempt to unregister the transmit side to fail.
         LOG.debug('%r: disconnecting', self)
-        if self.stream.receive_side:
-            broker.stop_receive(self.stream)
-            self.stream.receive_side.close()
+        broker.stop_receive(self.stream)
         if self.stream.transmit_side:
             broker._stop_transmit(self.stream)
+
+        self.stream.receive_side.close()
+        if self.stream.transmit_side:
             self.stream.transmit_side.close()
 
 
