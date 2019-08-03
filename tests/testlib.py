@@ -427,6 +427,11 @@ class DockerizedSshDaemon(object):
             raise ValueError('could not find SSH port in: %r' % (s,))
 
     def start_container(self):
+        try:
+            subprocess__check_output(['docker'])
+        except Exception:
+            raise unittest2.SkipTest('Docker binary is unavailable')
+
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         args = [
             'docker',
