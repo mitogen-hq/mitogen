@@ -875,7 +875,8 @@ class Message(object):
         if msg.handle:
             (self.router or router).route(msg)
         else:
-            LOG.debug('Message.reply(): discarding due to zero handle: %r', msg)
+            LOG.debug('dropping reply to message with no return address: %r',
+                      msg)
 
     if PY3:
         UNPICKLER_KWARGS = {'encoding': 'bytes'}
@@ -1224,6 +1225,7 @@ class Importer(object):
         ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
+        self._log = LOG.getChild('importer')
         self._context = context
         self._present = {'mitogen': self.MITOGEN_PKG_CONTENT}
         self._lock = threading.Lock()
@@ -1272,7 +1274,7 @@ class Importer(object):
         )
 
     def __repr__(self):
-        return 'Importer()'
+        return 'Importer'
 
     def builtin_find_module(self, fullname):
         # imp.find_module() will always succeed for __main__, because it is a
@@ -1297,18 +1299,18 @@ class Importer(object):
 
         _tls.running = True
         try:
-            _v and LOG.debug('%r.find_module(%r)', self, fullname)
+            #_v and self._log.debug('Python requested %r', fullname)
             fullname = to_text(fullname)
             pkgname, dot, _ = str_rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
-                LOG.debug('%r: %r is submodule of a package we did not load',
-                          self, fullname)
+                self._log.debug('%s is submodule of a locally loaded package',
+                                fullname)
                 return None
 
             suffix = fullname[len(pkgname+dot):]
             if pkgname and suffix not in self._present.get(pkgname, ()):
-                LOG.debug('%r: master doesn\'t know %r', self, fullname)
+                self._log.debug('%s has no submodule %s', pkgname, suffix)
                 return None
 
             # #114: explicitly whitelisted prefixes override any
@@ -1319,10 +1321,9 @@ class Importer(object):
 
             try:
                 self.builtin_find_module(fullname)
-                _vv and IOLOG.debug('%r: %r is available locally',
-                                    self, fullname)
+                _vv and self._log.debug('%r is available locally', fullname)
             except ImportError:
-                _vv and IOLOG.debug('find_module(%r) returning self', fullname)
+                _vv and self._log.debug('we will try to load %r', fullname)
                 return self
         finally:
             del _tls.running
@@ -1373,7 +1374,7 @@ class Importer(object):
 
         tup = msg.unpickle()
         fullname = tup[0]
-        _v and LOG.debug('importer: received %s', fullname)
+        _v and self._log.debug('received %s', fullname)
 
         self._lock.acquire()
         try:
@@ -1397,12 +1398,12 @@ class Importer(object):
             if not present:
                 funcs = self._callbacks.get(fullname)
                 if funcs is not None:
-                    _v and LOG.debug('%s: existing request for %s in flight',
-                                     self, fullname)
+                    _v and self._log.debug('existing request for %s in flight',
+                                           fullname)
                     funcs.append(callback)
                 else:
-                    _v and LOG.debug('%s: requesting %s from parent',
-                                     self, fullname)
+                    _v and self._log.debug('sending new %s request to parent',
+                                           fullname)
                     self._callbacks[fullname] = [callback]
                     self._context.send(
                         Message(data=b(fullname), handle=GET_MODULE)
@@ -1415,7 +1416,7 @@ class Importer(object):
 
     def load_module(self, fullname):
         fullname = to_text(fullname)
-        _v and LOG.debug('importer: requesting %s', fullname)
+        _v and self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
 
         event = threading.Event()
@@ -1679,7 +1680,7 @@ class DelimitedProtocol(Protocol):
     _trailer = b('')
 
     def on_receive(self, broker, buf):
-        IOLOG.debug('%r.on_receive()', self)
+        _vv and IOLOG.debug('%r.on_receive()', self)
         self._trailer, cont = mitogen.core.iter_split(
             buf=self._trailer + buf,
             delim=self.delimiter,
@@ -1743,13 +1744,13 @@ class BufferedWriter(object):
             buf = self._buf.popleft()
             written = self._protocol.stream.transmit_side.write(buf)
             if not written:
-                _v and LOG.debug('%r.on_transmit(): disconnection detected', self)
+                _v and LOG.debug('disconnected during write to %r', self)
                 self._protocol.stream.on_disconnect(broker)
                 return
             elif written != len(buf):
                 self._buf.appendleft(BufferType(buf, written))
 
-            _vv and IOLOG.debug('%r.on_transmit() -> len %d', self, written)
+            _vv and IOLOG.debug('transmitted %d bytes to %r', written, self)
             self._len -= written
 
         if not self._buf:
@@ -2068,13 +2069,13 @@ class Context(object):
         msg.dst_id = self.context_id
         msg.reply_to = receiver.handle
 
-        _v and LOG.debug('%r.send_async(%r)', self, msg)
+        _v and LOG.debug('sending message to %r: %r', self, msg)
         self.send(msg)
         return receiver
 
     def call_service_async(self, service_name, method_name, **kwargs):
-        _v and LOG.debug('%r.call_service_async(%r, %r, %r)',
-                         self, service_name, method_name, kwargs)
+        _v and LOG.debug('calling service %s.%s of %r, args: %r',
+                         service_name, method_name, self, kwargs)
         if isinstance(service_name, BytesType):
             service_name = service_name.encode('utf-8')
         elif not isinstance(service_name, UnicodeType):

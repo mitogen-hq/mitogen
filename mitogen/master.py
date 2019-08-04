@@ -796,6 +796,7 @@ class ModuleFinder(object):
 
 class ModuleResponder(object):
     def __init__(self, router):
+        self._log = logging.getLogger('mitogen.responder')
         self._router = router
         self._finder = ModuleFinder()
         self._cache = {}  # fullname -> pickled
@@ -863,7 +864,7 @@ class ModuleResponder(object):
         if b('mitogen.main(') in src:
             return src
 
-        LOG.error(self.main_guard_msg, path)
+        self._log.error(self.main_guard_msg, path)
         raise ImportError('refused')
 
     def _make_negative_response(self, fullname):
@@ -882,8 +883,7 @@ class ModuleResponder(object):
         if path and is_stdlib_path(path):
             # Prevent loading of 2.x<->3.x stdlib modules! This costs one
             # RTT per hit, so a client-side solution is also required.
-            LOG.debug('%r: refusing to serve stdlib module %r',
-                      self, fullname)
+            self._log.debug('refusing to serve stdlib module %r', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
@@ -891,7 +891,7 @@ class ModuleResponder(object):
         if source is None:
             # TODO: make this .warning() or similar again once importer has its
             # own logging category.
-            LOG.debug('_build_tuple(%r): could not locate source', fullname)
+            self._log.debug('could not find source for %r', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
@@ -904,8 +904,8 @@ class ModuleResponder(object):
 
         if is_pkg:
             pkg_present = get_child_modules(path)
-            LOG.debug('_build_tuple(%r, %r) -> %r',
-                      path, fullname, pkg_present)
+            self._log.debug('%s is a package at %s with submodules %r',
+                            fullname, path, pkg_present)
         else:
             pkg_present = None
 
@@ -936,8 +936,8 @@ class ModuleResponder(object):
                 dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            LOG.debug('%s: sending %s (%.2f KiB) to %s',
-                      self, fullname, len(msg.data) / 1024.0, stream.name)
+            self._log.debug('sending %s (%.2f KiB) to %s',
+                            fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
             stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
@@ -983,7 +983,7 @@ class ModuleResponder(object):
             return
 
         fullname = msg.data.decode()
-        LOG.debug('%s requested module %s', stream.name, fullname)
+        self._log.debug('%s requested module %s', stream.name, fullname)
         self.get_module_count += 1
         if fullname in stream.protocol.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',

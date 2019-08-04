@@ -41,6 +41,7 @@ import getpass
 import heapq
 import inspect
 import logging
+import logging
 import os
 import re
 import signal
@@ -65,8 +66,11 @@ except ImportError:
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import bytes_partition
-from mitogen.core import LOG
 from mitogen.core import IOLOG
+
+
+LOG = logging.getLogger(__name__)
+
 
 try:
     next
@@ -663,7 +667,7 @@ def _upgrade_broker(broker):
         root.setLevel(old_level)
 
     broker.timers = TimerList()
-    LOG.debug('replaced %r with %r (new: %d readers, %d writers; '
+    LOG.debug('upgraded %r with %r (new: %d readers, %d writers; '
               'old: %d readers, %d writers)', old, new,
               len(new.readers), len(new.writers),
               len(old.readers), len(old.writers))
@@ -1141,7 +1145,7 @@ class BootstrapProtocol(RegexProtocol):
         self._writer.write(self.stream.conn.get_preamble())
 
     def _on_ec1_received(self, line, match):
-        LOG.debug('%r: first stage received bootstrap', self)
+        LOG.debug('%r: first stage received mitogen.core source', self)
 
     def _on_ec2_received(self, line, match):
         LOG.debug('%r: new child booted successfully', self)
@@ -1454,8 +1458,8 @@ class Connection(object):
         """
         Fail the connection attempt.
         """
-        LOG.debug('%s: failing connection due to %r',
-                  self.stdio_stream.name, exc)
+        LOG.debug('failing connection %s due to %r',
+                  self.stdio_stream and self.stdio_stream.name, exc)
         if self.exception is None:
             self._adorn_eof_error(exc)
             self.exception = exc
@@ -1558,9 +1562,10 @@ class Connection(object):
         return stream
 
     def _async_connect(self):
+        LOG.debug('creating connection to context %d using %s',
+                  self.context.context_id, self.__class__.__module__)
         mitogen.core.listen(self._router.broker, 'shutdown',
                             self._on_broker_shutdown)
-
         self._start_timer()
         self.stdio_stream = self._setup_stdio_stream()
         if self.context.name is None:
@@ -1570,7 +1575,6 @@ class Connection(object):
             self.stderr_stream = self._setup_stderr_stream()
 
     def connect(self, context):
-        LOG.debug('%r.connect()', self)
         self.context = context
         self.proc = self.start_child()
         LOG.debug('%r.connect(): pid:%r stdin:%r stdout:%r stderr:%r',
@@ -1759,7 +1763,9 @@ class CallChain(object):
         pipelining is disabled, the exception will be logged to the target
         context's logging framework.
         """
-        LOG.debug('%r.call_no_reply(): %r', self, CallSpec(fn, args, kwargs))
+        LOG.debug('starting no-reply function call to %r: %r',
+                  self.context.name or self.context.context_id,
+                  CallSpec(fn, args, kwargs))
         self.context.send(self.make_msg(fn, *args, **kwargs))
 
     def call_async(self, fn, *args, **kwargs):
@@ -1815,7 +1821,9 @@ class CallChain(object):
             contexts and consumed as they complete using
             :class:`mitogen.select.Select`.
         """
-        LOG.debug('%r.call_async(): %r', self, CallSpec(fn, args, kwargs))
+        LOG.debug('starting function call to %s: %r',
+                  self.context.name or self.context.context_id,
+                  CallSpec(fn, args, kwargs))
         return self.context.send_async(self.make_msg(fn, *args, **kwargs))
 
     def call(self, fn, *args, **kwargs):
@@ -1946,6 +1954,7 @@ class RouteMonitor(object):
     def __init__(self, router, parent=None):
         self.router = router
         self.parent = parent
+        self._log = logging.getLogger('mitogen.route_monitor')
         #: Mapping of Stream instance to integer context IDs reachable via the
         #: stream; used to cleanup routes during disconnection.
         self._routes_by_stream = {}
@@ -2066,8 +2075,8 @@ class RouteMonitor(object):
         if routes is None:
             return
 
-        LOG.debug('%r: %r is gone; propagating DEL_ROUTE for %r',
-                  self, stream, routes)
+        self._log.debug('stream %s is gone; propagating DEL_ROUTE for %r',
+                        stream.name, routes)
         for target_id in routes:
             self.router.del_route(target_id)
             self._propagate_up(mitogen.core.DEL_ROUTE, target_id)
@@ -2093,12 +2102,12 @@ class RouteMonitor(object):
         stream = self.router.stream_by_id(msg.auth_id)
         current = self.router.stream_by_id(target_id)
         if current and current.protocol.remote_id != mitogen.parent_id:
-            LOG.error('Cannot add duplicate route to %r via %r, '
-                      'already have existing route via %r',
-                      target_id, stream, current)
+            self._log.error('Cannot add duplicate route to %r via %r, '
+                            'already have existing route via %r',
+                            target_id, stream, current)
             return
 
-        LOG.debug('Adding route to %d via %r', target_id, stream)
+        self._log.debug('Adding route to %d via %r', target_id, stream)
         self._routes_by_stream[stream].add(target_id)
         self.router.add_route(target_id, stream)
         self._propagate_up(mitogen.core.ADD_ROUTE, target_id, target_name)
@@ -2120,16 +2129,16 @@ class RouteMonitor(object):
 
         stream = self.router.stream_by_id(msg.auth_id)
         if registered_stream != stream:
-            LOG.error('%r: received DEL_ROUTE for %d from %r, expected %r',
-                      self, target_id, stream, registered_stream)
+            self._log.error('received DEL_ROUTE for %d from %r, expected %r',
+                            target_id, stream, registered_stream)
             return
 
         context = self.router.context_by_id(target_id, create=False)
         if context:
-            LOG.debug('%r: firing local disconnect for %r', self, context)
+            self._log.debug('firing local disconnect signal for %r', context)
             mitogen.core.fire(context, 'disconnect')
 
-        LOG.debug('%r: deleting route to %d via %r', self, target_id, stream)
+        self._log.debug('deleting route to %d via %r', target_id, stream)
         routes = self._routes_by_stream.get(stream)
         if routes:
             routes.discard(target_id)
@@ -2151,7 +2160,7 @@ class Router(mitogen.core.Router):
     route_monitor = None
 
     def upgrade(self, importer, parent):
-        LOG.debug('%r.upgrade()', self)
+        LOG.debug('upgrading %r with capabilities to start new children', self)
         self.id_allocator = ChildIdAllocator(router=self)
         self.responder = ModuleForwarder(
             router=self,
@@ -2211,7 +2220,8 @@ class Router(mitogen.core.Router):
         but remains public while the design has not yet settled, and situations
         may arise where routing is not fully automatic.
         """
-        LOG.debug('%r.add_route(%r, %r)', self, target_id, stream)
+        LOG.debug('%r: adding route to context %r via %r',
+                  self, target_id, stream)
         assert isinstance(target_id, int)
         assert isinstance(stream, mitogen.core.Stream)
 
@@ -2480,7 +2490,7 @@ class ModuleForwarder(object):
             return
 
         fullname = msg.data.decode('utf-8')
-        LOG.debug('%r: %s requested by %d', self, fullname, msg.src_id)
+        LOG.debug('%r: %s requested by context %d', self, fullname, msg.src_id)
         callback = lambda: self._on_cache_callback(msg, fullname)
         self.importer._request_module(fullname, callback)
 

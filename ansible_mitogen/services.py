@@ -180,7 +180,7 @@ class ContextService(mitogen.service.Service):
         Return a reference, making it eligable for recycling once its reference
         count reaches zero.
         """
-        LOG.debug('%r.put(%r)', self, context)
+        LOG.debug('decrementing reference count for %r', context)
         self._lock.acquire()
         try:
             if self._refs_by_context.get(context, 0) == 0:

@@ -688,10 +688,12 @@ class PushFileService(Service):
 
     def _forward(self, context, path):
         stream = self.router.stream_by_id(context.context_id)
-        child = mitogen.core.Context(self.router, stream.protocol.remote_id)
+        child = self.router.context_by_id(stream.protocol.remote_id)
         sent = self._sent_by_stream.setdefault(stream, set())
         if path in sent:
             if child.context_id != context.context_id:
+                LOG.debug('requesting %s forward small file to %s: %s',
+                          child, context, path)
                 child.call_service_async(
                     service_name=self.name(),
                     method_name='forward',
@@ -699,6 +701,8 @@ class PushFileService(Service):
                     context=context
                 ).close()
         else:
+            LOG.debug('requesting %s cache and forward small file to %s: %s',
+                      child, context, path)
             child.call_service_async(
                 service_name=self.name(),
                 method_name='store_and_forward',
@@ -729,8 +733,8 @@ class PushFileService(Service):
         'path': mitogen.core.FsPathTypes,
     })
     def propagate_to(self, context, path):
-        LOG.debug('%r.propagate_to(%r, %r)', self, context, path)
         if path not in self._cache:
+            LOG.debug('caching small file %s', path)
             fp = open(path, 'rb')
             try:
                 self._cache[path] = mitogen.core.Blob(fp.read())

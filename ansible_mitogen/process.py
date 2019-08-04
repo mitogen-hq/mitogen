@@ -481,7 +481,8 @@ class ClassicWorkerModel(WorkerModel):
         communicate with it. This is a simple hash of the inventory name.
         """
         mux = self._muxes[abs(hash(name)) % len(self._muxes)]
-        LOG.debug('Picked worker %d: %s', mux.index, mux.path)
+        LOG.debug('will use multiplexer %d (%s) to connect to "%s"',
+                  mux.index, mux.path, name)
         return mux.path
 
     def _reconnect(self, path):
@@ -534,7 +535,7 @@ class ClassicWorkerModel(WorkerModel):
         for mux in self._muxes:
             _, status = os.waitpid(mux.pid, 0)
             status = mitogen.fork._convert_exit_status(status)
-            LOG.debug('mux %d PID %d %s', mux.index, mux.pid,
+            LOG.debug('multiplexer %d PID %d %s', mux.index, mux.pid,
                       mitogen.parent.returncode_to_str(status))
 
     def _test_reset(self):
