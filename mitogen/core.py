@@ -3440,30 +3440,36 @@ class ExternalContext(object):
     """
     External context implementation.
 
+    This class contains the main program implementation for new children. It is
+    responsible for setting up everything about the process environment, import
+    hooks, standard IO redirection, logging, configuring a :class:`Router` and
+    :class:`Broker`, and finally arranging for :class:`Dispatcher` to take over
+    the main thread after initialization is complete.
+
     .. attribute:: broker
+
         The :class:`mitogen.core.Broker` instance.
 
     .. attribute:: context
+
         The :class:`mitogen.core.Context` instance.
 
     .. attribute:: channel
+
         The :class:`mitogen.core.Channel` over which :data:`CALL_FUNCTION`
         requests are received.
 
-    .. attribute:: stdout_log
-        The :class:`mitogen.core.IoLogger` connected to ``stdout``.
-
     .. attribute:: importer
+
         The :class:`mitogen.core.Importer` instance.
 
     .. attribute:: stdout_log
-        The :class:`IoLogger` connected to ``stdout``.
+
+        The :class:`IoLogger` connected to :data:`sys.stdout`.
 
     .. attribute:: stderr_log
-        The :class:`IoLogger` connected to ``stderr``.
 
-    .. method:: _dispatch_calls
-        Implementation for the main thread in every child context.
+        The :class:`IoLogger` connected to :data:`sys.stderr`.
     """
     detached = False
 

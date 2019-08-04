@@ -2049,8 +2049,8 @@ class RouteMonitor(object):
     def notice_stream(self, stream):
         """
         When this parent is responsible for a new directly connected child
-        stream, we're also responsible for broadcasting DEL_ROUTE upstream
-        if/when that child disconnects.
+        stream, we're also responsible for broadcasting
+        :data:`mitogen.core.DEL_ROUTE` upstream when that child disconnects.
         """
         self._routes_by_stream[stream] = set([stream.protocol.remote_id])
         self._propagate_up(mitogen.core.ADD_ROUTE, stream.protocol.remote_id,
@@ -2357,6 +2357,22 @@ class Router(mitogen.core.Router):
 
 
 class Process(object):
+    """
+    Process objects contain asynchronous logic for reaping children, and
+    keeping track of their stdio descriptors.
+
+    This base class is extended by :class:`PopenProcess` and
+    :class:`mitogen.fork.Process`.
+
+    :param int pid:
+        The process ID.
+    :param file stdin:
+        File object attached to standard input.
+    :param file stdout:
+        File object attached to standard output.
+    :param file stderr:
+        File object attached to standard error, or :data:`None`.
+    """
     _delays = [0.05, 0.15, 0.3, 1.0, 5.0, 10.0]
     name = None
 
@@ -2376,6 +2392,14 @@ class Process(object):
         )
 
     def poll(self):
+        """
+        Fetch the child process exit status, or :data:`None` if it is still
+        running. This should be overridden by subclasses.
+
+        :returns:
+            Exit status in the style of the :attr:`subprocess.Popen.returncode`
+            attribute, i.e. with signals represented by a negative integer.
+        """
         raise NotImplementedError()
 
     def _signal_child(self, signum):
@@ -2430,8 +2454,15 @@ class Process(object):
 
 
 class PopenProcess(Process):
+    """
+    :class:`Process` subclass wrapping a :class:`subprocess.Popen` object.
+
+    :param subprocess.Popen proc:
+        The subprocess.
+    """
     def __init__(self, proc, stdin, stdout, stderr=None):
         super(PopenProcess, self).__init__(proc.pid, stdin, stdout, stderr)
+        #: The subprocess.
         self.proc = proc
 
     def poll(self):

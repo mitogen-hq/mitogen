@@ -2,6 +2,11 @@
 Internal API Reference
 **********************
 
+.. note::
+
+   Internal APIs are subject to rapid change even across minor releases. This
+   page exists to help users modify and extend the library.
+
 .. toctree::
     :hidden:
 
@@ -40,16 +45,22 @@ Latch
    :members:
 
 
-PidfulStreamHandler
-===================
+Logging
+=======
+
+See also :class:`mitogen.core.IoLoggerProtocol`.
+
+.. currentmodule:: mitogen.master
+.. autoclass:: LogForwarder
+   :members:
 
 .. currentmodule:: mitogen.core
 .. autoclass:: PidfulStreamHandler
    :members:
 
 
-Stream & Side
-=============
+Stream, Side & Protocol
+=======================
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Stream
@@ -58,10 +69,6 @@ Stream & Side
 .. currentmodule:: mitogen.core
 .. autoclass:: Side
    :members:
-
-
-Protocol
-========
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Protocol
@@ -120,72 +127,100 @@ Connection / Options
    :members:
 
 
-Importer
-========
+Import Mechanism
+================
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Importer
    :members:
 
-
-ModuleResponder
-===============
-
 .. currentmodule:: mitogen.master
 .. autoclass:: ModuleResponder
    :members:
-
-
-RouteMonitor
-============
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: RouteMonitor
-   :members:
-
-
-TimerList
-=========
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: TimerList
-   :members:
-
-
-Timer
-=====
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: Timer
-   :members:
-
-
-Forwarder
-=========
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: ModuleForwarder
    :members:
 
 
-ExternalContext
-===============
+Module Finders
+==============
+
+.. currentmodule:: mitogen.master
+.. autoclass:: ModuleFinder
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: FinderMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: DefectivePython3xMainMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: PkgutilMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: SysModulesMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: ParentEnumerationMethod
+   :members:
+
+
+Routing Management
+==================
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: RouteMonitor
+   :members:
+
+
+Timer Management
+================
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: TimerList
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: Timer
+   :members:
+
+
+Child Implementation
+====================
 
 .. currentmodule:: mitogen.core
 .. autoclass:: ExternalContext
     :members:
 
+.. currentmodule:: mitogen.core
+.. autoclass:: Dispatcher
+    :members:
 
-Process
-=======
+
+Process Management
+==================
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: Process
     :members:
 
+.. currentmodule:: mitogen.parent
+.. autoclass:: PopenProcess
+    :members:
 
-Helpers
-=======
+.. currentmodule:: mitogen.fork
+.. autoclass:: Process
+    :members:
+
+
+Helper Functions
+================
 
 
 Subprocess Functions

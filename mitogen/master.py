@@ -430,8 +430,8 @@ class FinderMethod(object):
 
     def find(self, fullname):
         """
-        Accept a canonical module name and return `(path, source, is_pkg)`
-        tuples, where:
+        Accept a canonical module name as would be found in :data:`sys.modules`
+        and return a `(path, source, is_pkg)` tuple, where:
 
         * `path`: Unicode string containing path to source file.
         * `source`: Bytestring containing source file's content.
@@ -447,10 +447,13 @@ class DefectivePython3xMainMethod(FinderMethod):
     """
     Recent versions of Python 3.x introduced an incomplete notion of
     importer specs, and in doing so created permanent asymmetry in the
-    :mod:`pkgutil` interface handling for the `__main__` module. Therefore
-    we must handle `__main__` specially.
+    :mod:`pkgutil` interface handling for the :mod:`__main__` module. Therefore
+    we must handle :mod:`__main__` specially.
     """
     def find(self, fullname):
+        """
+        Find :mod:`__main__` using its :data:`__file__` attribute.
+        """
         if fullname != '__main__':
             return None
 
@@ -477,6 +480,9 @@ class PkgutilMethod(FinderMethod):
     be the only required implementation of get_module().
     """
     def find(self, fullname):
+        """
+        Find `fullname` using :func:`pkgutil.find_loader`.
+        """
         try:
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
@@ -522,10 +528,13 @@ class PkgutilMethod(FinderMethod):
 
 class SysModulesMethod(FinderMethod):
     """
-    Attempt to fetch source code via sys.modules. This is specifically to
-    support __main__, but it may catch a few more cases.
+    Attempt to fetch source code via :data:`sys.modules`. This was originally
+    specifically to support :mod:`__main__`, but it may catch a few more cases.
     """
     def find(self, fullname):
+        """
+        Find `fullname` using its :data:`__file__` attribute.
+        """
         module = sys.modules.get(fullname)
         LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
         if getattr(module, '__name__', None) != fullname:
@@ -566,14 +575,17 @@ class ParentEnumerationMethod(FinderMethod):
     """
     Attempt to fetch source code by examining the module's (hopefully less
     insane) parent package. Required for older versions of
-    ansible.compat.six and plumbum.colors, and Ansible 2.8
-    ansible.module_utils.distro.
+    :mod:`ansible.compat.six`, :mod:`plumbum.colors`, and Ansible 2.8
+    :mod:`ansible.module_utils.distro`.
 
-    For cases like module_utils.distro, this must handle cases where a package
-    transmuted itself into a totally unrelated module during import and vice
-    versa.
+    For cases like :mod:`ansible.module_utils.distro`, this must handle cases
+    where a package transmuted itself into a totally unrelated module during
+    import and vice versa.
     """
     def find(self, fullname):
+        """
+        See implementation for a description of how this works.
+        """
         if fullname not in sys.modules:
             # Don't attempt this unless a module really exists in sys.modules,
             # else we could return junk.
