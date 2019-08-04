@@ -387,18 +387,18 @@ class LogForwarder(object):
         if msg.is_dead:
             return
 
-        logger = self._cache.get(msg.src_id)
-        if logger is None:
-            context = self._router.context_by_id(msg.src_id)
-            if context is None:
-                LOG.error('%s: dropping log from unknown context ID %d',
-                          self, msg.src_id)
-                return
-
-            name = '%s.%s' % (RLOG.name, context.name)
-            self._cache[msg.src_id] = logger = logging.getLogger(name)
+        context = self._router.context_by_id(msg.src_id)
+        if context is None:
+            LOG.error('%s: dropping log from unknown context %d',
+                      self, msg.src_id)
+            return
 
         name, level_s, s = msg.data.decode('utf-8', 'replace').split('\x00', 2)
+
+        logger_name = '%s.[%s]' % (name, context.name)
+        logger = self._cache.get(logger_name)
+        if logger is None:
+            self._cache[logger_name] = logger = logging.getLogger(logger_name)
 
         # See logging.Handler.makeRecord()
         record = logging.LogRecord(
@@ -406,7 +406,7 @@ class LogForwarder(object):
             level=int(level_s),
             pathname='(unknown file)',
             lineno=0,
-            msg=('%s: %s' % (name, s)),
+            msg=s,
             args=(),
             exc_info=None,
         )
