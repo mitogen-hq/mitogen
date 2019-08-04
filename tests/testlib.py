@@ -428,7 +428,7 @@ class DockerizedSshDaemon(object):
 
     def start_container(self):
         try:
-            subprocess__check_output(['docker'])
+            subprocess__check_output(['docker', '--version'])
         except Exception:
             raise unittest2.SkipTest('Docker binary is unavailable')
 
