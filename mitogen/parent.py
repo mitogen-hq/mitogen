@@ -1567,6 +1567,19 @@ class Connection(object):
         mitogen.core.listen(self._router.broker, 'shutdown',
                             self._on_broker_shutdown)
         self._start_timer()
+
+        try:
+            self.proc = self.start_child()
+        except Exception:
+            self._fail_connection(sys.exc_info()[1])
+            return
+
+        LOG.debug('child for %r started: pid:%r stdin:%r stdout:%r stderr:%r',
+                  self, self.proc.pid,
+                  self.proc.stdin.fileno(),
+                  self.proc.stdout.fileno(),
+                  self.proc.stderr and self.proc.stderr.fileno())
+
         self.stdio_stream = self._setup_stdio_stream()
         if self.context.name is None:
             self.context.name = self.stdio_stream.name
@@ -1576,13 +1589,6 @@ class Connection(object):
 
     def connect(self, context):
         self.context = context
-        self.proc = self.start_child()
-        LOG.debug('%r.connect(): pid:%r stdin:%r stdout:%r stderr:%r',
-                  self, self.proc.pid,
-                  self.proc.stdin.fileno(),
-                  self.proc.stdout.fileno(),
-                  self.proc.stderr and self.proc.stderr.fileno())
-
         self.latch = mitogen.core.Latch()
         self._router.broker.defer(self._async_connect)
         self.latch.get()
