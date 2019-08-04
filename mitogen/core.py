@@ -423,8 +423,11 @@ def listen(obj, name, func):
 
 def unlisten(obj, name, func):
     """
-    Remove `func` from the list of functions invoked when signal `name` is
+    Remove `func()` from the list of functions invoked when signal `name` is
     fired by `obj`.
+
+    :raises ValueError:
+        `func()` was not on the list.
     """
     _signals(obj, name).remove(func)
 
@@ -946,7 +949,7 @@ class Sender(object):
     Senders may be serialized, making them convenient to wire up data flows.
     See :meth:`mitogen.core.Receiver.to_sender` for more information.
 
-    :param Context context:
+    :param mitogen.core.Context context:
         Context to send messages to.
     :param int dst_handle:
         Destination handle to send messages to.
@@ -1550,6 +1553,14 @@ class Stream(object):
     name = u'default'
 
     def set_protocol(self, protocol):
+        """
+        Bind a protocol to this stream, by updating :attr:`Protocol.stream` to
+        refer to this stream, and updating this stream's
+        :attr:`Stream.protocol` to the refer to the protocol. Any prior
+        protocol's :attr:`Protocol.stream` is set to :data:`None`.
+        """
+        if self.protocol:
+            self.protocol.stream = None
         self.protocol = protocol
         self.protocol.stream = self
 
@@ -1622,7 +1633,11 @@ class Protocol(object):
     implementation to be replaced without modifying behavioural logic.
     """
     stream_class = Stream
+
+    #: The :class:`Stream` this protocol is currently bound to, or
+    #: :data:`None`.
     stream = None
+
     read_size = CHUNK_SIZE
 
     @classmethod
@@ -1695,9 +1710,27 @@ class DelimitedProtocol(Protocol):
                 self.stream.protocol.on_receive(broker, self._trailer)
 
     def on_line_received(self, line):
+        """
+        Receive a line from the stream.
+
+        :param bytes line:
+            The encoded line, excluding the delimiter.
+        :returns:
+            :data:`False` to indicate this invocation modified the stream's
+            active protocol, and any remaining buffered data should be passed
+            to the new protocol's :meth:`on_receive` method.
+
+            Any other return value is ignored.
+        """
         pass
 
     def on_partial_line_received(self, line):
+        """
+        Receive a trailing unterminated partial line from the stream.
+
+        :param bytes line:
+            The encoded partial line.
+        """
         pass
 
 
@@ -1766,7 +1799,7 @@ class Side(object):
     underlying FD, preventing erroneous duplicate calls to :func:`os.close` due
     to duplicate :meth:`Stream.on_disconnect` calls, which would otherwise risk
     silently succeeding by closing an unrelated descriptor. For this reason, it
-    is crucial only one :class:`Side` exists per unique descriptor.
+    is crucial only one file object exists per unique descriptor.
 
     :param mitogen.core.Stream stream:
         The stream this side is associated with.
@@ -1794,8 +1827,8 @@ class Side(object):
         self.fp = fp
         #: Integer file descriptor to perform IO on, or :data:`None` if
         #: :meth:`close` has been called. This is saved separately from the
-        #: file object, since fileno() cannot be called on it after it has been
-        #: closed.
+        #: file object, since :meth:`file.fileno` cannot be called on it after
+        #: it has been closed.
         self.fd = fp.fileno()
         #: If :data:`True`, causes presence of this side in
         #: :class:`Broker`'s active reader set to defer shutdown until the
@@ -1822,7 +1855,7 @@ class Side(object):
 
     def close(self):
         """
-        Call :func:`os.close` on :attr:`fd` if it is not :data:`None`,
+        Call :meth:`file.close` on :attr:`fp` if it is not :data:`None`,
         then set it to :data:`None`.
         """
         _vv and IOLOG.debug('%r.close()', self)
@@ -1841,7 +1874,7 @@ class Side(object):
         in a 0-sized read like a regular file.
 
         :returns:
-            Bytes read, or the empty to string to indicate disconnection was
+            Bytes read, or the empty string to indicate disconnection was
             detected.
         """
         if self.closed:
@@ -2024,7 +2057,7 @@ class Context(object):
     explicitly, as that method is deduplicating, and returns the only context
     instance :ref:`signals` will be raised on.
 
-    :param Router router:
+    :param mitogen.core.Router router:
         Router to emit messages through.
     :param int context_id:
         Context ID.
@@ -2669,7 +2702,11 @@ class IoLoggerProtocol(DelimitedProtocol):
 
     def on_shutdown(self, broker):
         """
-        Shut down the write end of the logging socket.
+        Shut down the write end of the socket, preventing any further writes to
+        it by this process, or subprocess that inherited it. This allows any
+        remaining kernel-buffered data to be drained during graceful shutdown
+        without the buffer continuously refilling due to some out of control
+        child process.
         """
         _v and LOG.debug('%r: shutting down', self)
         if not IS_WSL:
@@ -2681,6 +2718,9 @@ class IoLoggerProtocol(DelimitedProtocol):
         self.stream.transmit_side.close()
 
     def on_line_received(self, line):
+        """
+        Decode the received line as UTF-8 and pass it to the logging framework.
+        """
         self._log.info('%s', line.decode('utf-8', 'replace'))
 
 
@@ -2881,7 +2921,7 @@ class Router(object):
             If :data:`False`, the handler will be unregistered after a single
             message has been received.
 
-        :param Context respondent:
+        :param mitogen.core.Context respondent:
             Context that messages to this handle are expected to be sent from.
             If specified, arranges for a dead message to be delivered to `fn`
             when disconnection of the context is detected.

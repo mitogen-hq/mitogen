@@ -1121,10 +1121,10 @@ class RegexProtocol(LineLoggingProtocolMixin, mitogen.core.DelimitedProtocol):
 
 class BootstrapProtocol(RegexProtocol):
     """
-    Respond to stdout of a child during bootstrap. Wait for EC0_MARKER to be
-    written by the first stage to indicate it can receive the bootstrap, then
-    await EC1_MARKER to indicate success, and :class:`MitogenProtocol` can be
-    enabled.
+    Respond to stdout of a child during bootstrap. Wait for :attr:`EC0_MARKER`
+    to be written by the first stage to indicate it can receive the bootstrap,
+    then await :attr:`EC1_MARKER` to indicate success, and
+    :class:`MitogenProtocol` can be enabled.
     """
     #: Sentinel value emitted by the first stage to indicate it is ready to
     #: receive the compressed bootstrap. For :mod:`mitogen.ssh` this must have
@@ -1951,9 +1951,9 @@ class RouteMonitor(object):
     RouteMonitor lives entirely on the broker thread, so its data requires no
     locking.
 
-    :param Router router:
+    :param mitogen.master.Router router:
         Router to install handlers on.
-    :param Context parent:
+    :param mitogen.core.Context parent:
         :data:`None` in the master process, or reference to the parent context
         we should propagate route updates towards.
     """

@@ -57,9 +57,7 @@ class Select(object):
 
     If `oneshot` is :data:`True`, then remove each receiver as it yields a
     result; since :meth:`__iter__` terminates once the final receiver is
-    removed, this makes it convenient to respond to calls made in parallel:
-
-    .. code-block:: python
+    removed, this makes it convenient to respond to calls made in parallel::
 
         total = 0
         recvs = [c.call_async(long_running_operation) for c in contexts]
@@ -98,7 +96,7 @@ class Select(object):
         for msg in mitogen.select.Select(selects):
             print(msg.unpickle())
 
-    :class:`Select` may be used to mix inter-thread and inter-process IO:
+    :class:`Select` may be used to mix inter-thread and inter-process IO::
 
         latch = mitogen.core.Latch()
         start_thread(latch)

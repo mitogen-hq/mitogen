@@ -48,46 +48,75 @@ PidfulStreamHandler
    :members:
 
 
-Side
-====
+Stream & Side
+=============
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Stream
+   :members:
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Side
    :members:
 
 
-Stream
-======
+Protocol
+========
 
 .. currentmodule:: mitogen.core
-.. autoclass:: BasicStream
-   :members:
-
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.fork
-.. autoclass:: Stream
+.. autoclass:: Protocol
    :members:
 
 .. currentmodule:: mitogen.parent
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.ssh
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.sudo
-.. autoclass:: Stream
+.. autoclass:: BootstrapProtocol
    :members:
 
 .. currentmodule:: mitogen.core
-.. autoclass:: IoLogger
+.. autoclass:: DelimitedProtocol
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: IoLoggerProtocol
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: MitogenProtocol
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: MitogenProtocol
    :members:
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Waker
+   :members:
+
+
+Connection / Options
+====================
+
+.. currentmodule:: mitogen.fork
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+.. currentmodule:: mitogen.ssh
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+.. currentmodule:: mitogen.sudo
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
    :members:
 
 
@@ -158,21 +187,9 @@ Process
 Helpers
 =======
 
-Blocking I/O
-------------
-
-These functions exist to support the blocking phase of setting up a new
-context. They will eventually be replaced with asynchronous equivalents.
-
-
-.. currentmodule:: mitogen.parent
-.. autofunction:: discard_until
-.. autofunction:: iter_read
-.. autofunction:: write_all
-
 
 Subprocess Functions
-------------
+---------------------
 
 .. currentmodule:: mitogen.parent
 .. autofunction:: create_child
@@ -184,15 +201,15 @@ Helpers
 -------
 
 .. currentmodule:: mitogen.core
-.. autofunction:: to_text
 .. autofunction:: has_parent_authority
+.. autofunction:: io_op
+.. autofunction:: pipe
+.. autofunction:: set_block
 .. autofunction:: set_cloexec
 .. autofunction:: set_nonblock
-.. autofunction:: set_block
-.. autofunction:: io_op
+.. autofunction:: to_text
 
 .. currentmodule:: mitogen.parent
-.. autofunction:: close_nonstandard_fds
 .. autofunction:: create_socketpair
 
 .. currentmodule:: mitogen.master
