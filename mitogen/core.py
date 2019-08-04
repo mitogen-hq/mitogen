@@ -2733,7 +2733,12 @@ class Router(object):
     **Note:** This is the somewhat limited core version of the Router class
     used by child contexts. The master subclass is documented below this one.
     """
+    #: The :class:`mitogen.core.Context` subclass to use when constructing new
+    #: :class:`Context` objects in :meth:`myself` and :meth:`context_by_id`.
+    #: Permits :class:`Router` subclasses to extend the :class:`Context`
+    #: interface, as done in :class:`mitogen.parent.Router`.
     context_class = Context
+
     max_message_size = 128 * 1048576
 
     #: When :data:`True`, permit children to only communicate with the current
@@ -2829,7 +2834,9 @@ class Router(object):
 
     def myself(self):
         """
-        Return a :class:`Context` referring to the current process.
+        Return a :class:`Context` referring to the current process. Since
+        :class:`Context` is serializable, this is convenient to use in remote
+        function call parameter lists.
         """
         return self.context_class(
             router=self,
@@ -2839,8 +2846,25 @@ class Router(object):
 
     def context_by_id(self, context_id, via_id=None, create=True, name=None):
         """
-        Messy factory/lookup function to find a context by its ID, or construct
-        it. This will eventually be replaced by a more sensible interface.
+        Return or construct a :class:`Context` given its ID. An internal
+        mapping of ID to the canonical :class:`Context` representing that ID,
+        so that :ref:`signals` can be raised.
+
+        This may be called from any thread, lookup and construction are atomic.
+
+        :param int context_id:
+            The context ID to look up.
+        :param int via_id:
+            If the :class:`Context` does not already exist, set its
+            :attr:`Context.via` to the :class:`Context` matching this ID.
+        :param bool create:
+            If the :class:`Context` does not already exist, create it.
+        :param str name:
+            If the :class:`Context` does not already exist, set its name.
+
+        :returns:
+            :class:`Context`, or return :data:`None` if `create` is
+            :data:`False` and no :class:`Context` previously existed.
         """
         context = self._context_by_id.get(context_id)
         if context:
@@ -2885,7 +2909,13 @@ class Router(object):
         """
         Return the :class:`Stream` that should be used to communicate with
         `dst_id`. If a specific route for `dst_id` is not known, a reference to
-        the parent context's stream is returned.
+        the parent context's stream is returned. If the parent is disconnected,
+        or when running in the master context, return :data:`None` instead.
+
+        This can be used from any thread, but its output is only meaningful
+        from the context of the :class:`Broker` thread, as disconnection or
+        replacement could happen in parallel on the broker thread at any
+        moment. 
         """
         return (
             self._stream_by_id.get(dst_id) or
@@ -2996,7 +3026,7 @@ class Router(object):
     def on_shutdown(self, broker):
         """
         Called during :meth:`Broker.shutdown`, informs callbacks registered
-        with :meth:`add_handle_cb` the connection is dead.
+        with :meth:`add_handler` the connection is dead.
         """
         _v and LOG.debug('%r: shutting down', self, broker)
         fire(self, 'shutdown')

@@ -1252,6 +1252,10 @@ class Options(object):
 
 class Connection(object):
     """
+    Manage the lifetime of a set of :class:`Streams <Stream>` connecting to a
+    remote Python interpreter, including bootstrap, disconnection, and external
+    tool integration.
+
     Base for streams capable of starting children.
     """
     options_class = Options
@@ -1597,12 +1601,28 @@ class Connection(object):
 
 
 class ChildIdAllocator(object):
+    """
+    Allocate new context IDs from a block of unique context IDs allocated by
+    the master process.
+    """
     def __init__(self, router):
         self.router = router
         self.lock = threading.Lock()
         self.it = iter(xrange(0))
 
     def allocate(self):
+        """
+        Allocate an ID, requesting a fresh block from the master if the
+        existing block is exhausted.
+
+        :returns:
+            The new context ID.
+
+        .. warning::
+
+            This method is not safe to call from the :class:`Broker` thread, as
+            it may block on IO of its own.
+        """
         self.lock.acquire()
         try:
             for id_ in self.it:
@@ -2193,7 +2213,8 @@ class Router(mitogen.core.Router):
 
     def get_streams(self):
         """
-        Return a snapshot of all streams in existence at time of call.
+        Return an atomic snapshot of all streams in existence at time of call.
+        This is safe to call from any thread.
         """
         self._write_lock.acquire()
         try:
@@ -2220,11 +2241,18 @@ class Router(mitogen.core.Router):
 
     def add_route(self, target_id, stream):
         """
-        Arrange for messages whose `dst_id` is `target_id` to be forwarded on
-        the directly connected stream for `via_id`. This method is called
-        automatically in response to :data:`mitogen.core.ADD_ROUTE` messages,
-        but remains public while the design has not yet settled, and situations
-        may arise where routing is not fully automatic.
+        Arrange for messages whose `dst_id` is `target_id` to be forwarded on a
+        directly connected :class:`Stream`. Safe to call from any thread.
+
+        This is called automatically by :class:`RouteMonitor` in response to
+        :data:`mitogen.core.ADD_ROUTE` messages, but remains public while the
+        design has not yet settled, and situations may arise where routing is
+        not fully automatic.
+
+        :param int target_id:
+            Target context ID to add a route for.
+        :param mitogen.core.Stream stream:
+            Stream over which messages to the target should be routed.
         """
         LOG.debug('%r: adding route to context %r via %r',
                   self, target_id, stream)
@@ -2238,6 +2266,19 @@ class Router(mitogen.core.Router):
             self._write_lock.release()
 
     def del_route(self, target_id):
+        """
+        Delete any route that exists for `target_id`. It is not an error to
+        delete a route that does not currently exist. Safe to call from any
+        thread.
+
+        This is called automatically by :class:`RouteMonitor` in response to
+        :data:`mitogen.core.DEL_ROUTE` messages, but remains public while the
+        design has not yet settled, and situations may arise where routing is
+        not fully automatic.
+
+        :param int target_id:
+            Target context ID to delete route for.
+        """
         LOG.debug('%r: deleting route to %r', self, target_id)
         # DEL_ROUTE may be sent by a parent if it knows this context sent
         # messages to a peer that has now disconnected, to let us raise

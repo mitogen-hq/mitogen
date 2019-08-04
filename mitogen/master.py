@@ -1228,6 +1228,21 @@ class Router(mitogen.parent.Router):
 
 
 class IdAllocator(object):
+    """
+    Allocate IDs for new contexts constructed locally, and blocks of IDs for
+    children to allocate their own IDs using
+    :class:`mitogen.parent.ChildIdAllocator` without risk of conflict, and
+    without necessitating network round-trips for each new context.
+
+    This class responds to :data:`mitogen.core.ALLOCATE_ID` messages received
+    from children by replying with fresh block ID allocations.
+
+    The master's :class:`IdAllocator` instance can be accessed via
+    :attr:`mitogen.master.Router.id_allocator`.
+    """
+    #: Block allocations are made in groups of 1000 by default.
+    BLOCK_SIZE = 1000
+
     def __init__(self, router):
         self.router = router
         self.next_id = 1
@@ -1240,14 +1255,12 @@ class IdAllocator(object):
     def __repr__(self):
         return 'IdAllocator(%r)' % (self.router,)
 
-    BLOCK_SIZE = 1000
-
     def allocate(self):
         """
-        Arrange for a unique context ID to be allocated and associated with a
-        route leading to the active context. In masters, the ID is generated
-        directly, in children it is forwarded to the master via a
-        :data:`mitogen.core.ALLOCATE_ID` message.
+        Allocate a context ID by directly incrementing an internal counter.
+
+        :returns:
+            The new context ID.
         """
         self.lock.acquire()
         try:
@@ -1258,6 +1271,15 @@ class IdAllocator(object):
             self.lock.release()
 
     def allocate_block(self):
+        """
+        Allocate a block of IDs for use in a child context.
+
+        This function is safe to call from any thread.
+
+        :returns:
+            Tuple of the form `(id, end_id)` where `id` is the first usable ID
+            and `end_id` is the last usable ID.
+        """
         self.lock.acquire()
         try:
             id_ = self.next_id

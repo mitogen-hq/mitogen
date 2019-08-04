@@ -99,7 +99,7 @@ Stream, Side & Protocol
    :members:
 
 
-Connection / Options
+Connection & Options
 ====================
 
 .. currentmodule:: mitogen.fork
@@ -188,6 +188,18 @@ Timer Management
 
 .. currentmodule:: mitogen.parent
 .. autoclass:: Timer
+   :members:
+
+
+Context ID Allocation
+=====================
+
+.. currentmodule:: mitogen.master
+.. autoclass:: IdAllocator
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: ChildIdAllocator
    :members:
 
 
