@@ -275,13 +275,13 @@ def common_setup(enable_affinity=True, _init_logging=True):
     save_pid('controller')
     ansible_mitogen.logging.set_process_name('top')
 
+    if _init_logging:
+        ansible_mitogen.logging.setup()
+
     if enable_affinity:
         ansible_mitogen.affinity.policy.assign_controller()
 
     mitogen.utils.setup_gil()
-    if _init_logging:
-        ansible_mitogen.logging.setup()
-
     if faulthandler is not None:
         faulthandler.enable()
 
