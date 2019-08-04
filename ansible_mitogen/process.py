@@ -359,6 +359,11 @@ class Binding(object):
 
 
 class WorkerModel(object):
+    """
+    Interface used by StrategyMixin to manage various Mitogen services, by
+    default running in one or more connection multiplexer subprocesses spawned
+    off the top-level Ansible process.
+    """
     def on_strategy_start(self):
         """
         Called prior to strategy start in the top-level process. Responsible
@@ -375,6 +380,11 @@ class WorkerModel(object):
         raise NotImplementedError()
 
     def get_binding(self, inventory_name):
+        """
+        Return a :class:`Binding` to access Mitogen services for
+        `inventory_name`. Usually called from worker processes, but may also be
+        called from top-level process to handle "meta: reset_connection".
+        """
         raise NotImplementedError()
 
 
@@ -434,13 +444,10 @@ class ClassicWorkerModel(WorkerModel):
 
     def __init__(self, _init_logging=True):
         """
-        Arrange for classic model multiplexers to be started, if they are not
-        already running.
-
-        The parent process picks a UNIX socket path each child will use prior
-        to fork, creates a socketpair used essentially as a semaphore, then
-        blocks waiting for the child to indicate the UNIX socket is ready for
-        use.
+        Arrange for classic model multiplexers to be started. The parent choses
+        UNIX socket paths each child will use prior to fork, creates a
+        socketpair used essentially as a semaphore, then blocks waiting for the
+        child to indicate the UNIX socket is ready for use.
 
         :param bool _init_logging:
             For testing, if :data:`False`, don't initialize logging.

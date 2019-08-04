@@ -124,7 +124,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
     the use of shell fragments wherever possible.
 
     This is used instead of static subclassing as it generalizes to third party
-    action modules outside the Ansible tree.
+    action plugins outside the Ansible tree.
     """
     get_kwargs = {'class_only': True}
     if ansible.__version__ >= '2.8':
@@ -141,8 +141,8 @@ def wrap_action_loader__get(name, *args, **kwargs):
 
 def wrap_connection_loader__get(name, *args, **kwargs):
     """
-    While the strategy is active, rewrite connection_loader.get() calls for
-    some transports into requests for a compatible Mitogen transport.
+    While a Mitogen strategy is active, rewrite connection_loader.get() calls
+    for some transports into requests for a compatible Mitogen transport.
     """
     if name in ('buildah', 'docker', 'kubectl', 'jail', 'local',
                 'lxc', 'lxd', 'machinectl', 'setns', 'ssh'):
@@ -152,8 +152,10 @@ def wrap_connection_loader__get(name, *args, **kwargs):
 
 def wrap_worker__run(self):
     """
-    While the strategy is active, rewrite connection_loader.get() calls for
-    some transports into requests for a compatible Mitogen transport.
+    While a Mitogen strategy is active, trap WorkerProcess.run() calls and use
+    the opportunity to set the worker's name in the process list and log
+    output, activate profiling if requested, and bind the worker to a specific
+    CPU.
     """
     if setproctitle:
         setproctitle.setproctitle('worker:%s task:%s' % (
@@ -225,10 +227,14 @@ class AnsibleWrappers(object):
 
 class StrategyMixin(object):
     """
-    This mix-in enhances any built-in strategy by arranging for various Mitogen
-    services to be initialized in the Ansible top-level process, and for worker
-    processes to grow support for using those top-level services to communicate
-    with and execute modules on remote hosts.
+    This mix-in enhances any built-in strategy by arranging for an appropriate
+    WorkerModel instance to be constructed as necessary, or for the existing
+    one to be reused.
+
+    The WorkerModel in turn arranges for a connection multiplexer to be started
+    somewhere (by default in an external process), and for WorkerProcesses to
+    grow support for using those top-level services to communicate with remote
+    hosts.
 
     Mitogen:
 
@@ -246,18 +252,19 @@ class StrategyMixin(object):
         services, review the Standard Handles section of the How It Works guide
         in the documentation.
 
-        A ContextService is installed as a message handler in the master
-        process and run on a private thread. It is responsible for accepting
-        requests to establish new SSH connections from worker processes, and
-        ensuring precisely one connection exists and is reused for subsequent
-        playbook steps. The service presently runs in a single thread, so to
-        begin with, new SSH connections are serialized.
+        A ContextService is installed as a message handler in the connection
+        mutliplexer subprocess and run on a private thread. It is responsible
+        for accepting requests to establish new SSH connections from worker
+        processes, and ensuring precisely one connection exists and is reused
+        for subsequent playbook steps. The service presently runs in a single
+        thread, so to begin with, new SSH connections are serialized.
 
         Finally a mitogen.unix listener is created through which WorkerProcess
-        can establish a connection back into the master process, in order to
-        avail of ContextService. A UNIX listener socket is necessary as there
-        is no more sane mechanism to arrange for IPC between the Router in the
-        master process, and the corresponding Router in the worker process.
+        can establish a connection back into the connection multiplexer, in
+        order to avail of ContextService. A UNIX listener socket is necessary
+        as there is no more sane mechanism to arrange for IPC between the
+        Router in the connection multiplexer, and the corresponding Router in
+        the worker process.
 
     Ansible:
 
@@ -265,10 +272,10 @@ class StrategyMixin(object):
         connection and action plug-ins.
 
         For connection plug-ins, if the desired method is "local" or "ssh", it
-        is redirected to the "mitogen" connection plug-in. That plug-in
-        implements communication via a UNIX socket connection to the top-level
-        Ansible process, and uses ContextService running in the top-level
-        process to actually establish and manage the connection.
+        is redirected to one of the "mitogen_*" connection plug-ins. That
+        plug-in implements communication via a UNIX socket connection to the
+        connection multiplexer process, and uses ContextService running there
+        to establish a persistent connection to the target.
 
         For action plug-ins, the original class is looked up as usual, but a
         new subclass is created dynamically in order to mix-in
