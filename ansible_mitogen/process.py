@@ -509,9 +509,9 @@ class ClassicWorkerModel(WorkerModel):
         This is an :mod:`atexit` handler installed in the top-level process.
 
         Shut the write end of `sock`, causing the receive side of the socket in
-        every worker process to return 0-byte reads, and causing their main
-        threads to wake and initiate shutdown. After shutting the socket down,
-        wait on each child to finish exiting.
+        every :class:`MuxProcess` to return 0-byte reads, and causing their
+        main threads to wake and initiate shutdown. After shutting the socket
+        down, wait on each child to finish exiting.
 
         This is done using :mod:`atexit` since Ansible lacks any better hook to
         run code during exit, and unless some synchronization exists with
