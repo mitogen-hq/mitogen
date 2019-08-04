@@ -99,6 +99,10 @@ def get_or_create_pool(size=None, router=None):
     return _pool
 
 
+def get_thread_name():
+    return threading.currentThread().getName()
+
+
 def call(service_name, method_name, call_context=None, **kwargs):
     """
     Call a service registered with this pool, using the calling thread as a
@@ -611,10 +615,11 @@ class Pool(object):
             try:
                 event = self._select.get_event()
             except mitogen.core.LatchError:
-                LOG.debug('%r: graceful exit', self)
+                LOG.debug('thread %s exiting gracefully', get_thread_name())
                 return
             except mitogen.core.ChannelError:
-                LOG.debug('%r: exitting: %s', self, sys.exc_info()[1])
+                LOG.debug('thread %s exiting with error: %s',
+                          get_thread_name(), sys.exc_info()[1])
                 return
 
             func = self._func_by_source[event.source]
@@ -627,16 +632,14 @@ class Pool(object):
         try:
             self._worker_run()
         except Exception:
-            th = threading.currentThread()
-            LOG.exception('%r: worker %r crashed', self, th.getName())
+            LOG.exception('%r: worker %r crashed', self, get_thread_name())
             raise
 
     def __repr__(self):
-        th = threading.currentThread()
         return 'Pool(%04x, size=%d, th=%r)' % (
             id(self) & 0xffff,
             len(self._threads),
-            th.getName(),
+            get_thread_name(),
         )
 
 
@@ -752,7 +755,7 @@ class PushFileService(Service):
     def store_and_forward(self, path, data, context):
         LOG.debug('%r.store_and_forward(%r, %r, %r) %r',
                   self, path, data, context,
-                  threading.currentThread().getName())
+                  get_thread_name())
         self._lock.acquire()
         try:
             self._cache[path] = data
