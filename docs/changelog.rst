@@ -72,6 +72,9 @@ Mitogen for Ansible
   detected, to work around a broken heuristic in popular SELinux policies that
   prevents inheriting ``AF_UNIX`` sockets across privilege domains.
 
+* `#467 <https://github.com/dw/mitogen/issues/467>`_: an incompatibility
+  running Mitogen under Molecule was resolved.
+
 * `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
   limit for the Ansible process is increased to the available hard limit. It is
   common for distributions to ship with a much higher hard limit than their
@@ -170,6 +173,7 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Andreas Hubert <https://github.com/peshay>`_.
 `Anton Markelov <https://github.com/strangeman>`_,
+`Dan <https://github.com/dsgnr>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
