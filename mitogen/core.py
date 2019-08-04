@@ -1228,7 +1228,7 @@ class Importer(object):
         ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
-        self._log = LOG.getChild('importer')
+        self._log = logging.getLogger('mitogen.importer')
         self._context = context
         self._present = {'mitogen': self.MITOGEN_PKG_CONTENT}
         self._lock = threading.Lock()
