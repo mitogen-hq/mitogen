@@ -480,12 +480,9 @@ class ClassicWorkerModel(WorkerModel):
         Given an inventory hostname, return the UNIX listener that should
         communicate with it. This is a simple hash of the inventory name.
         """
-        if len(self._muxes) == 1:
-            return self._muxes[0].path
-
-        idx = abs(hash(name)) % len(self._muxes)
-        LOG.debug('Picked worker %d: %s', idx, self._muxes[idx].path)
-        return self._muxes[idx].path
+        mux = self._muxes[abs(hash(name)) % len(self._muxes)]
+        LOG.debug('Picked worker %d: %s', mux.index, mux.path)
+        return mux.path
 
     def _reconnect(self, path):
         if self.router is not None:
