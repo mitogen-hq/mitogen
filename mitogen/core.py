@@ -406,22 +406,35 @@ def has_parent_authority(msg, _stream=None):
             msg.auth_id in mitogen.parent_ids)
 
 
+def _signals(obj, signal):
+    return (
+        obj.__dict__
+        .setdefault('_signals', {})
+        .setdefault(signal, [])
+    )
+
+
 def listen(obj, name, func):
     """
-    Arrange for `func(*args, **kwargs)` to be invoked when the named signal is
+    Arrange for `func()` to be invoked when signal `name` is fired on `obj`.
+    """
+    _signals(obj, name).append(func)
+
+
+def unlisten(obj, name, func):
+    """
+    Remove `func` from the list of functions invoked when signal `name` is
     fired by `obj`.
     """
-    signals = vars(obj).setdefault('_signals', {})
-    signals.setdefault(name, []).append(func)
+    _signals(obj, name).remove(func)
 
 
 def fire(obj, name, *args, **kwargs):
     """
     Arrange for `func(*args, **kwargs)` to be invoked for every function
-    registered for the named signal on `obj`.
+    registered for signal `name` on `obj`.
     """
-    signals = vars(obj).get('_signals', {})
-    for func in signals.get(name, ()):
+    for func in _signals(obj, name):
         func(*args, **kwargs)
 
 

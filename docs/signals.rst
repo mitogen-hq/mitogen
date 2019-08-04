@@ -22,6 +22,7 @@ Functions
 .. currentmodule:: mitogen.core
 
 .. autofunction:: listen
+.. autofunction:: unlisten
 .. autofunction:: fire
 
 

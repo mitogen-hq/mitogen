@@ -91,6 +91,10 @@ try:
 except ValueError:
     SC_OPEN_MAX = 1024
 
+BROKER_SHUTDOWN_MSG = (
+    'Connection cancelled because the associated Broker began to shut down.'
+)
+
 OPENPTY_MSG = (
     "Failed to create a PTY: %s. It is likely the maximum number of PTYs has "
     "been reached. Consider increasing the 'kern.tty.ptmx_max' sysctl on OS "
@@ -737,10 +741,18 @@ def returncode_to_str(n):
 
 class EofError(mitogen.core.StreamError):
     """
-    Raised by :func:`iter_read` and :func:`write_all` when EOF is detected by
-    the child process.
+    Raised by :class:`Connection` when an empty read is detected from the
+    remote process before bootstrap completes.
     """
     # inherits from StreamError to maintain compatibility.
+    pass
+
+
+class CancelledError(mitogen.core.StreamError):
+    """
+    Raised by :class:`Connection` when :meth:`mitogen.core.Broker.shutdown` is
+    called before bootstrap completes.
+    """
     pass
 
 
@@ -1427,6 +1439,8 @@ class Connection(object):
     def _complete_connection(self):
         self.timer.cancel()
         if not self.exception:
+            mitogen.core.unlisten(self._router.broker, 'shutdown',
+                                  self._on_broker_shutdown)
             self._router.register(self.context, self.stdio_stream)
             self.stdio_stream.set_protocol(
                 MitogenProtocol(
@@ -1445,6 +1459,8 @@ class Connection(object):
         if self.exception is None:
             self._adorn_eof_error(exc)
             self.exception = exc
+            mitogen.core.unlisten(self._router.broker, 'shutdown',
+                                  self._on_broker_shutdown)
         for stream in self.stdio_stream, self.stderr_stream:
             if stream and not stream.receive_side.closed:
                 stream.on_disconnect(self._router.broker)
@@ -1492,6 +1508,13 @@ class Connection(object):
             ))
         self.proc._async_reap(self, self._router)
 
+    def _on_broker_shutdown(self):
+        """
+        Respond to broker.shutdown() being called by failing the connection
+        attempt.
+        """
+        self._fail_connection(CancelledError(BROKER_SHUTDOWN_MSG))
+
     def _start_timer(self):
         self.timer = self._router.broker.timers.schedule(
             when=self.options.connect_deadline,
@@ -1535,6 +1558,9 @@ class Connection(object):
         return stream
 
     def _async_connect(self):
+        mitogen.core.listen(self._router.broker, 'shutdown',
+                            self._on_broker_shutdown)
+
         self._start_timer()
         self.stdio_stream = self._setup_stdio_stream()
         if self.context.name is None:

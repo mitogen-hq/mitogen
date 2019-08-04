@@ -662,3 +662,7 @@ Exceptions
 .. autoclass:: LatchError
 .. autoclass:: StreamError
 .. autoclass:: TimeoutError
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: EofError
+.. autoclass:: CancelledError
