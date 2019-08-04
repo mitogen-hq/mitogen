@@ -67,6 +67,11 @@ Mitogen for Ansible
   matching *Permission denied* errors from some versions of ``su`` running on
   heavily loaded machines.
 
+* `#410 <https://github.com/dw/mitogen/issues/410>`_: Use of ``AF_UNIX``
+  sockets automatically replaced with plain UNIX pipes when SELinux is
+  detected, to work around a broken heuristic in popular SELinux policies that
+  prevents inheriting ``AF_UNIX`` sockets across privilege domains.
+
 * `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
   limit for the Ansible process is increased to the available hard limit. It is
   common for distributions to ship with a much higher hard limit than their
@@ -166,6 +171,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Andreas Hubert <https://github.com/peshay>`_.
 `Anton Markelov <https://github.com/strangeman>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
+`El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
