@@ -1696,6 +1696,7 @@ class DelimitedProtocol(Protocol):
 
     def on_receive(self, broker, buf):
         _vv and IOLOG.debug('%r.on_receive()', self)
+        stream = self.stream
         self._trailer, cont = mitogen.core.iter_split(
             buf=self._trailer + buf,
             delim=self.delimiter,
@@ -1706,8 +1707,8 @@ class DelimitedProtocol(Protocol):
             if cont:
                 self.on_partial_line_received(self._trailer)
             else:
-                assert self.stream.protocol is not self
-                self.stream.protocol.on_receive(broker, self._trailer)
+                assert stream.protocol is not self
+                stream.protocol.on_receive(broker, self._trailer)
 
     def on_line_received(self, line):
         """
