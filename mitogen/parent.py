@@ -2512,8 +2512,9 @@ class PopenProcess(Process):
 
 class ModuleForwarder(object):
     """
-    Respond to GET_MODULE requests in a slave by forwarding the request to our
-    parent context, or satisfying the request from our local Importer cache.
+    Respond to :data:`mitogen.core.GET_MODULE` requests in a child by
+    forwarding the request to our parent context, or satisfying the request
+    from our local Importer cache.
     """
     def __init__(self, router, parent_context, importer):
         self.router = router
