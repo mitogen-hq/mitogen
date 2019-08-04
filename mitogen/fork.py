@@ -41,7 +41,7 @@ import mitogen.parent
 from mitogen.core import b
 
 
-LOG = logging.getLogger('mitogen')
+LOG = logging.getLogger(__name__)
 
 # Python 2.4/2.5 cannot support fork+threads whatsoever, it doesn't even fix up
 # interpreter state. So 2.4/2.5 interpreters start .local() contexts for

@@ -28,13 +28,8 @@
 
 # !mitogen: minify_safe
 
-import logging
-
 import mitogen.core
 import mitogen.parent
-
-
-LOG = logging.getLogger(__name__)
 
 
 class Options(mitogen.parent.Options):

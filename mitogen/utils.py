@@ -39,7 +39,6 @@ import mitogen.master
 import mitogen.parent
 
 
-LOG = logging.getLogger('mitogen')
 iteritems = getattr(dict, 'iteritems', dict.items)
 
 if mitogen.core.PY3:
