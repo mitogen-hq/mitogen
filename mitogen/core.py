@@ -3333,10 +3333,10 @@ class Broker(object):
             self._loop_once(max(0, deadline - time.time()))
 
         if self.keep_alive():
-            LOG.error('%r: some streams did not close gracefully. '
-                      'The most likely cause for this is one or '
-                      'more child processes still connected to '
-                      'our stdout/stderr pipes.', self)
+            LOG.error('%r: pending work still existed %d seconds after '
+                      'shutdown began. This may be due to a timer that is yet '
+                      'to expire, or a child connection that did not fully '
+                      'shut down.', self, self.shutdown_timeout)
 
     def _do_broker_main(self):
         """
@@ -3511,11 +3511,11 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
-    #: On Python >3.4, the global importer lock has been sharded into a
-    #: per-module lock, meaning there is no guarantee the import statement in
-    #: service_stub_main will be truly complete before a second thread
-    #: attempting the same import will see a partially initialized module.
-    #: Sigh. Therefore serialize execution of the stub itself.
+    #: On Python >3.4, the global importer lock has split into per-module
+    #: locks, so there is no guarantee the import statement in
+    #: service_stub_main will complete before a second thread attempting the
+    #: same import will see a partially initialized module. Therefore serialize
+    #: the stub explicitly.
     service_stub_lock = threading.Lock()
 
     def _service_stub_main(self, msg):
