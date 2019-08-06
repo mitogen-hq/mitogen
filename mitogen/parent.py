@@ -575,7 +575,9 @@ class Timer(object):
     """
     Represents a future event.
     """
-    cancelled = False
+    #: Set to :data:`False` if :meth:`cancel` has been called, or immediately
+    #: prior to being executed by :meth:`TimerList.expire`.
+    active = True
 
     def __init__(self, when, func):
         self.when = when
@@ -598,7 +600,7 @@ class Timer(object):
         Cancel this event. If it has not yet executed, it will not execute
         during any subsequent :meth:`TimerList.expire` call.
         """
-        self.cancelled = True
+        self.active = False
 
 
 class TimerList(object):
@@ -634,7 +636,7 @@ class TimerList(object):
             Floating point delay, or 0.0, or :data:`None` if no events are
             scheduled.
         """
-        while self._lst and self._lst[0].cancelled:
+        while self._lst and not self._lst[0].active:
             heapq.heappop(self._lst)
         if self._lst:
             return max(0, self._lst[0].when - self._now())
@@ -662,7 +664,8 @@ class TimerList(object):
         now = self._now()
         while self._lst and self._lst[0].when <= now:
             timer = heapq.heappop(self._lst)
-            if not timer.cancelled:
+            if timer.active:
+                timer.active = False
                 timer.func()
 
 
