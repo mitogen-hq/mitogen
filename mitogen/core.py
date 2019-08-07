@@ -3594,7 +3594,10 @@ class ExternalContext(object):
         else:
             self.parent = Context(self.router, parent_id, 'parent')
 
-        in_fp = os.fdopen(os.dup(self.config.get('in_fd', 100)), 'rb', 0)
+        in_fd = self.config.get('in_fd', 100)
+        in_fp = os.fdopen(os.dup(in_fd), 'rb', 0)
+        os.close(in_fd)
+
         out_fp = os.fdopen(os.dup(self.config.get('out_fd', 1)), 'wb', 0)
         self.stream = MitogenProtocol.build_stream(self.router, parent_id)
         self.stream.accept(in_fp, out_fp)
