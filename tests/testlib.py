@@ -192,7 +192,7 @@ def sync_with_broker(broker, timeout=10.0):
     """
     sem = mitogen.core.Latch()
     broker.defer(sem.put, None)
-    sem.get(timeout=10.0)
+    sem.get(timeout=timeout)
 
 
 def log_fd_calls():

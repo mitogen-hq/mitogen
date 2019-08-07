@@ -219,6 +219,10 @@ Process Management
 ==================
 
 .. currentmodule:: mitogen.parent
+.. autoclass:: Reaper
+    :members:
+
+.. currentmodule:: mitogen.parent
 .. autoclass:: Process
     :members:
 
