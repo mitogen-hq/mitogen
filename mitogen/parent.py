@@ -364,8 +364,6 @@ def create_child(args, merge_stdio=False, stderr_pipe=False,
         escalates_privilege=escalates_privilege
     )
 
-    parentfp, childfp = create_socketpair()
-
     stderr = None
     stderr_r = None
     if merge_stdio:
