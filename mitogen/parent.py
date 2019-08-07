@@ -303,6 +303,9 @@ def create_best_pipe(escalates_privilege=False):
 
     If SELinux is detected, fall back to using pipes.
 
+    :param bool escalates_privilege:
+        If :data:`True`, the target program may escalate privileges, causing
+        SELinux to disconnect AF_UNIX sockets, so avoid those.
     :returns:
         `(parent_rfp, child_wfp, child_rfp, parent_wfp)`
     """
@@ -344,7 +347,7 @@ def create_child(args, merge_stdio=False, stderr_pipe=False,
     :param bool merge_stdio:
         If :data:`True`, arrange for `stderr` to be connected to the `stdout`
         socketpair, rather than inherited from the parent process. This may be
-        necessary to ensure that not TTY is connected to any stdio handle, for
+        necessary to ensure that no TTY is connected to any stdio handle, for
         instance when using LXC.
     :param bool stderr_pipe:
         If :data:`True` and `merge_stdio` is :data:`False`, arrange for
@@ -526,6 +529,15 @@ def hybrid_tty_create_child(args, escalates_privilege=False):
     like :func:`create_child`, but leave stderr and the controlling TTY
     attached to a TTY.
 
+    This permits high throughput communication with programs that are reached
+    via some program that requires a TTY for password input, like many
+    configurations of sudo. The UNIX TTY layer tends to have tiny (no more than
+    14KiB) buffers, forcing many IO loop iterations when transferring bulk
+    data, causing significant performance loss.
+
+    :param bool escalates_privilege:
+        If :data:`True`, the target program may escalate privileges, causing
+        SELinux to disconnect AF_UNIX sockets, so avoid those.
     :param list args:
         Program argument vector.
     :returns:
@@ -765,7 +777,7 @@ def get_connection_class(name):
 def _proxy_connect(name, method_name, kwargs, econtext):
     """
     Implements the target portion of Router._proxy_connect() by upgrading the
-    local context to a parent if it was not already, then calling back into
+    local process to a parent if it was not already, then calling back into
     Router._connect() using the arguments passed to the parent's
     Router.connect().
 
@@ -1146,7 +1158,6 @@ class RegexProtocol(LineLoggingProtocolMixin, mitogen.core.DelimitedProtocol):
     falling back to :meth:`on_unrecognized_line_received` and
     :meth:`on_unrecognized_partial_line_received`.
     """
-
     #: A sequence of 2-tuples of the form `(compiled pattern, method)` for
     #: patterns that should be matched against complete (delimited) messages,
     #: i.e. full lines.
