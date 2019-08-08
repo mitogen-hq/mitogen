@@ -259,18 +259,26 @@ class Select(object):
             self.remove(recv)
         self._latch.close()
 
+    def size(self):
+        """
+        Return the number of items currently buffered.
+
+        As with :class:`Queue.Queue`, `0` may be returned even though a
+        subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`size` and :meth:`get`.
+
+        As with :class:`Queue.Queue`, `>0` may be returned even though a
+        subsequent call to :meth:`get` will block, since another waiting thread
+        may be woken at any moment between :meth:`size` and :meth:`get`.
+        """
+        return sum(recv.size() for recv in self._receivers)
+
     def empty(self):
         """
-        Return :data:`True` if calling :meth:`get` would block.
+        Return `size() == 0`.
 
-        As with :class:`Queue.Queue`, :data:`True` may be returned even though
-        a subsequent call to :meth:`get` will succeed, since a message may be
-        posted at any moment between :meth:`empty` and :meth:`get`.
-
-        :meth:`empty` may return :data:`False` even when :meth:`get` would
-        block if another thread has drained a receiver added to this select.
-        This can be avoided by only consuming each receiver from a single
-        thread.
+        .. deprecated:: 0.2.8
+           Use :meth:`size` instead.
         """
         return self._latch.empty()
 

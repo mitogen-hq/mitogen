@@ -1095,13 +1095,32 @@ class Receiver(object):
             self.handle = None
         self._latch.close()
 
+    def size(self):
+        """
+        Return the number of items currently buffered.
+
+        As with :class:`Queue.Queue`, `0` may be returned even though a
+        subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`size` and :meth:`get`.
+
+        As with :class:`Queue.Queue`, `>0` may be returned even though a
+        subsequent call to :meth:`get` will block, since another waiting thread
+        may be woken at any moment between :meth:`size` and :meth:`get`.
+
+        :raises LatchError:
+            The underlying latch has already been marked closed.
+        """
+        return self._latch.size()
+
     def empty(self):
         """
-        Return :data:`True` if calling :meth:`get` would block.
+        Return `size() == 0`.
 
-        As with :class:`Queue.Queue`, :data:`True` may be returned even though
-        a subsequent call to :meth:`get` will succeed, since a message may be
-        posted at any moment between :meth:`empty` and :meth:`get`.
+        .. deprecated:: 0.2.8
+           Use :meth:`size` instead.
+
+        :raises LatchError:
+            The latch has already been marked closed.
         """
         return self._latch.empty()
 
@@ -1150,7 +1169,10 @@ class Channel(Sender, Receiver):
     A channel inherits from :class:`mitogen.core.Sender` and
     `mitogen.core.Receiver` to provide bidirectional functionality.
 
-    This class is incomplete and obsolete, it will be removed in Mitogen 0.3.
+    .. deprecated:: 0.2.0
+        This class is incomplete and obsolete, it will be removed in Mitogen
+        0.3.
+
     Channels were an early attempt at syntax sugar. It is always easier to pass
     around unidirectional pairs of senders/receivers, even though the syntax is
     baroque:
@@ -2385,19 +2407,17 @@ class Latch(object):
         finally:
             self._lock.release()
 
-    def empty(self):
+    def size(self):
         """
-        Return :data:`True` if calling :meth:`get` would block.
+        Return the number of items currently buffered.
 
-        As with :class:`Queue.Queue`, :data:`True` may be returned even
-        though a subsequent call to :meth:`get` will succeed, since a
-        message may be posted at any moment between :meth:`empty` and
-        :meth:`get`.
+        As with :class:`Queue.Queue`, `0` may be returned even though a
+        subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`size` and :meth:`get`.
 
-        As with :class:`Queue.Queue`, :data:`False` may be returned even
-        though a subsequent call to :meth:`get` will block, since another
-        waiting thread may be woken at any moment between :meth:`empty` and
-        :meth:`get`.
+        As with :class:`Queue.Queue`, `>0` may be returned even though a
+        subsequent call to :meth:`get` will block, since another waiting thread
+        may be woken at any moment between :meth:`size` and :meth:`get`.
 
         :raises LatchError:
             The latch has already been marked closed.
@@ -2406,9 +2426,21 @@ class Latch(object):
         try:
             if self.closed:
                 raise LatchError()
-            return len(self._queue) == 0
+            return len(self._queue)
         finally:
             self._lock.release()
+
+    def empty(self):
+        """
+        Return `size() == 0`.
+
+        .. deprecated:: 0.2.8
+           Use :meth:`size` instead.
+
+        :raises LatchError:
+            The latch has already been marked closed.
+        """
+        return self.size() == 0
 
     def _get_socketpair(self):
         """
