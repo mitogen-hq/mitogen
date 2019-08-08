@@ -358,6 +358,18 @@ class GetReceiverTest(testlib.RouterMixin, testlib.TestCase):
         msg = select.get()
         self.assertEquals('123', msg.unpickle())
 
+    def test_nonempty_multiple_items_before_add(self):
+        recv = mitogen.core.Receiver(self.router)
+        recv._on_receive(mitogen.core.Message.pickled('123'))
+        recv._on_receive(mitogen.core.Message.pickled('234'))
+        select = self.klass([recv], oneshot=False)
+        msg = select.get()
+        self.assertEquals('123', msg.unpickle())
+        msg = select.get()
+        self.assertEquals('234', msg.unpickle())
+        self.assertRaises(mitogen.core.TimeoutError,
+            lambda: select.get(block=False))
+
     def test_nonempty_after_add(self):
         recv = mitogen.core.Receiver(self.router)
         select = self.klass([recv])
@@ -414,6 +426,16 @@ class GetLatchTest(testlib.RouterMixin, testlib.TestCase):
         latch.put(123)
         select = self.klass([latch])
         self.assertEquals(123, select.get())
+
+    def test_nonempty_multiple_items_before_add(self):
+        latch = mitogen.core.Latch()
+        latch.put(123)
+        latch.put(234)
+        select = self.klass([latch], oneshot=False)
+        self.assertEquals(123, select.get())
+        self.assertEquals(234, select.get())
+        self.assertRaises(mitogen.core.TimeoutError,
+            lambda: select.get(block=False))
 
     def test_nonempty_after_add(self):
         latch = mitogen.core.Latch()

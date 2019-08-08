@@ -224,8 +224,15 @@ class Select(object):
             raise Error(self.owned_msg)
 
         recv.notify = self._put
-        # Avoid race by polling once after installation.
-        if not recv.empty():
+        # After installing the notify function, _put() will potentially begin
+        # receiving calls from other threads immediately, but not for items
+        # they already had buffered. For those we call _put(), possibly
+        # duplicating the effect of other _put() being made concurrently, such
+        # that the Select ends up with more items in its buffer than exist in
+        # the underlying receivers. We handle the possibility of receivers
+        # marked notified yet empty inside Select.get(), so this should be
+        # robust.
+        for _ in range(recv.size()):
             self._put(recv)
 
     not_present_msg = 'Instance is not a member of this Select'
@@ -335,5 +342,6 @@ class Select(object):
                 # A receiver may have been queued with no result if another
                 # thread drained it before we woke up, or because another
                 # thread drained it between add() calling recv.empty() and
-                # self._put(). In this case just sleep again.
+                # self._put(), or because Select.add() caused duplicate _put()
+                # calls. In this case simply retry.
                 continue
