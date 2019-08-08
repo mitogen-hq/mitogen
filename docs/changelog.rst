@@ -186,6 +186,16 @@ Core Library
   buffered items, causing future :meth:`get` calls to block or fail even though
   data existed that could be returned.
 
+* `5924af15 <https://github.com/dw/mitogen/commit/5924af15>`_: *[security]* the
+  unidirectional routing mode, in which contexts may only communicate with
+  their parents and never siblings (such that a program cannot be used as a
+  bridge for air-gapped networks) was not inherited when a new child context
+  was initiated directly from an existing child.
+
+  The bug did not effect the Ansible extension since the top-level controller
+  process initiates any new context that could be used for routing. Only
+  forked tasks are started directly from children.
+
 
 Thanks!
 ~~~~~~~
