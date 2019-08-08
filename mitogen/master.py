@@ -462,7 +462,7 @@ class DefectivePython3xMainMethod(FinderMethod):
             return None
 
         path = getattr(mod, '__file__', None)
-        if not (os.path.exists(path) and _looks_like_script(path)):
+        if not (path is not None and os.path.exists(path) and _looks_like_script(path)):
             return None
 
         fp = open(path, 'rb')
