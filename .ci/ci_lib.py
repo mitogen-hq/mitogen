@@ -224,6 +224,7 @@ def start_containers(containers):
             "docker rm -f %(name)s || true" % container,
             "docker run "
                 "--rm "
+                "--cpuset-cpus 0,1 "
                 "--detach "
                 "--privileged "
                 "--cap-add=SYS_PTRACE "

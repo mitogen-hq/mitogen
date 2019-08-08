@@ -165,6 +165,18 @@ Core Library
   buffer management when logging lines received from a child's redirected
   standard IO.
 
+* `49a6446a <https://github.com/dw/mitogen/commit/49a6446a>`_: the
+  :meth:`empty` method of :class:`mitogen.core.Latch`,
+  :class:`mitogen.core.Receiver` and :class:`mitogen.select.Select` has been
+  replaced by a more general :meth:`size` method. :meth:`empty` will be removed
+  in Mitogen 0.3
+
+* `ecc570cb <https://github.com/dw/mitogen/commit/ecc570cb>`_: previously
+  :meth:`mitogen.select.Select.add` would enqueue a single wake event when
+  adding an existing receiver, latch or subselect that contained multiple
+  buffered items, causing future :meth:`get` calls to block or fail even though
+  data existed that could be returned.
+
 
 Thanks!
 ~~~~~~~
