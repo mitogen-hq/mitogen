@@ -167,6 +167,9 @@ Core Library
 * `#606 <https://github.com/dw/mitogen/issues/606>`_: fix example code on the
   documentation front page.
 
+* `#612 <https://github.com/dw/mitogen/issues/612>`_: fix various errors
+  introduced by stream refactoring.
+
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
@@ -195,6 +198,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Dave Cottlehuber <https://github.com/dch>`_,
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
+`Marc Hartmayer <https://github.com/marc1006>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Pieter Voet <https://github.com/pietervoet/>`_,
