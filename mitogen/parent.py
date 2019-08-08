@@ -161,7 +161,7 @@ _core_source_partial = None
 
 
 def get_log_level():
-    return (LOG.level or logging.getLogger().level or logging.INFO)
+    return (LOG.getEffectiveLevel() or logging.INFO)
 
 
 def get_sys_executable():
