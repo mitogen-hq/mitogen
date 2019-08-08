@@ -75,6 +75,12 @@ Mitogen for Ansible
 * `#467 <https://github.com/dw/mitogen/issues/467>`_: an incompatibility
   running Mitogen under Molecule was resolved.
 
+* `#547 <https://github.com/dw/mitogen/issues/547>`_: fix a serious deadlock
+  possible during initialization of any task executed by forking, such as
+  ``async`` tasks, tasks using custom :mod:`ansible.module_utils`,
+  ``mitogen_task_isolation: fork`` modules, and those present on an internal
+  blacklist of misbehaving modules.
+
 * `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
   limit for the Ansible process is increased to the available hard limit. It is
   common for distributions to ship with a much higher hard limit than their
