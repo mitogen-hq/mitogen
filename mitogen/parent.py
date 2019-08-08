@@ -2331,7 +2331,7 @@ class Router(mitogen.core.Router):
         directly connected.
         """
         stream = self.stream_by_id(context)
-        if stream.remote_id != context.context_id:
+        if stream.protocol.remote_id != context.context_id:
             return
 
         l = mitogen.core.Latch()
