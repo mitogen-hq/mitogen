@@ -2759,6 +2759,18 @@ class Router(object):
     #: parameter.
     unidirectional = False
 
+    duplicate_handle_msg = 'cannot register a handle that already exists'
+    refused_msg = 'refused by policy'
+    invalid_handle_msg = 'invalid handle'
+    too_large_msg = 'message too large (max %d bytes)'
+    respondent_disconnect_msg = 'the respondent Context has disconnected'
+    broker_exit_msg = 'Broker has exitted'
+    no_route_msg = 'no route to %r, my ID is %r'
+    unidirectional_msg = (
+        'routing mode prevents forward of message from context %d via '
+        'context %d'
+    )
+
     def __init__(self, broker):
         self.broker = broker
         listen(broker, 'exit', self._on_broker_exit)
@@ -2826,9 +2838,12 @@ class Router(object):
         for context in notify:
             context.on_disconnect()
 
-    broker_exit_msg = 'Broker has exitted'
-
     def _on_broker_exit(self):
+        """
+        Called prior to broker exit, informs callbacks registered with
+        :meth:`add_handler` the connection is dead.
+        """
+        _v and LOG.debug('%r: broker has exitted', self)
         while self._handle_map:
             _, (_, func, _, _) = self._handle_map.popitem()
             func(Message.dead(self.broker_exit_msg))
@@ -3006,34 +3021,11 @@ class Router(object):
 
         return handle
 
-    duplicate_handle_msg = 'cannot register a handle that already exists'
-    refused_msg = 'refused by policy'
-    invalid_handle_msg = 'invalid handle'
-    too_large_msg = 'message too large (max %d bytes)'
-    respondent_disconnect_msg = 'the respondent Context has disconnected'
-    broker_shutdown_msg = 'Broker is shutting down'
-    no_route_msg = 'no route to %r, my ID is %r'
-    unidirectional_msg = (
-        'routing mode prevents forward of message from context %d via '
-        'context %d'
-    )
-
     def _on_respondent_disconnect(self, context):
         for handle in self._handles_by_respondent.pop(context, ()):
             _, fn, _, _  = self._handle_map[handle]
             fn(Message.dead(self.respondent_disconnect_msg))
             del self._handle_map[handle]
-
-    def on_shutdown(self, broker):
-        """
-        Called during :meth:`Broker.shutdown`, informs callbacks registered
-        with :meth:`add_handler` the connection is dead.
-        """
-        _v and LOG.debug('%r: shutting down', self, broker)
-        fire(self, 'shutdown')
-        for handle, (persist, fn) in self._handle_map.iteritems():
-            _v and LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
-            fn(Message.dead(self.broker_shutdown_msg))
 
     def _maybe_send_dead(self, msg, reason, *args):
         if args:

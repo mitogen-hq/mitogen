@@ -47,10 +47,6 @@ These signals are used internally by Mitogen.
       - ``disconnect``
       - Fired on the Broker thread during shutdown (???)
 
-    * - :py:class:`mitogen.core.Router`
-      - ``shutdown``
-      - Fired on the Broker thread after Broker.shutdown() is called.
-
     * - :py:class:`mitogen.core.Broker`
       - ``shutdown``
       - Fired after Broker.shutdown() is called.
