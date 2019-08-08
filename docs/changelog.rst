@@ -24,7 +24,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Enhancements
 ^^^^^^^^^^^^
 
-* `#587 <https://github.com/dw/mitogen/issues/587>`_: Ansible 2.8 is partially
+* `#556 <https://github.com/dw/mitogen/issues/556>`_,
+  `#587 <https://github.com/dw/mitogen/issues/587>`_: Ansible 2.8 is partially
   supported. `Become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ and
   `interpreter discovery
@@ -46,8 +47,10 @@ Enhancements
   setup happens on one thread, reducing GIL contention and context switching
   early in a run.
 
-* `#419 <https://github.com/dw/mitogen/issues/419>`_: 2 network round-trips
-  were removed from early connection setup.
+* `#419 <https://github.com/dw/mitogen/issues/419>`_: Connection setup is
+  pipelined, eliminating several network round-trips. Most infrastructure is in
+  place to support future removal of the final round-trip between a target
+  fully booting and receiving its first function call.
 
 * `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
   `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
@@ -63,6 +66,20 @@ Mitogen for Ansible
 * `#363 <https://github.com/dw/mitogen/issues/363>`_: fix an obscure race
   matching *Permission denied* errors from some versions of ``su`` running on
   heavily loaded machines.
+
+* `#410 <https://github.com/dw/mitogen/issues/410>`_: Use of ``AF_UNIX``
+  sockets automatically replaced with plain UNIX pipes when SELinux is
+  detected, to work around a broken heuristic in popular SELinux policies that
+  prevents inheriting ``AF_UNIX`` sockets across privilege domains.
+
+* `#467 <https://github.com/dw/mitogen/issues/467>`_: an incompatibility
+  running Mitogen under Molecule was resolved.
+
+* `#547 <https://github.com/dw/mitogen/issues/547>`_: fix a serious deadlock
+  possible during initialization of any task executed by forking, such as
+  ``async`` tasks, tasks using custom :mod:`ansible.module_utils`,
+  ``mitogen_task_isolation: fork`` modules, and those present on an internal
+  blacklist of misbehaving modules.
 
 * `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
   limit for the Ansible process is increased to the available hard limit. It is
@@ -154,6 +171,18 @@ Core Library
   buffer management when logging lines received from a child's redirected
   standard IO.
 
+* `49a6446a <https://github.com/dw/mitogen/commit/49a6446a>`_: the
+  :meth:`empty` method of :class:`mitogen.core.Latch`,
+  :class:`mitogen.core.Receiver` and :class:`mitogen.select.Select` has been
+  replaced by a more general :meth:`size` method. :meth:`empty` will be removed
+  in Mitogen 0.3
+
+* `ecc570cb <https://github.com/dw/mitogen/commit/ecc570cb>`_: previously
+  :meth:`mitogen.select.Select.add` would enqueue a single wake event when
+  adding an existing receiver, latch or subselect that contained multiple
+  buffered items, causing future :meth:`get` calls to block or fail even though
+  data existed that could be returned.
+
 
 Thanks!
 ~~~~~~~
@@ -162,7 +191,10 @@ Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
 `Andreas Hubert <https://github.com/peshay>`_.
 `Anton Markelov <https://github.com/strangeman>`_,
+`Dan <https://github.com/dsgnr>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
+`El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
+`James Hogarth <https://github.com/hogarthj>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Pieter Voet <https://github.com/pietervoet/>`_,
@@ -170,6 +202,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
+`@DavidVentura <https://github.com/DavidVentura>`_,
 `@ghp-rr <https://github.com/ghp-rr>`_,
 `@rizzly <https://github.com/rizzly>`_, and
 `@tho86 <https://github.com/tho86>`_.

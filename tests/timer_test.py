@@ -98,23 +98,31 @@ class ScheduleTest(TimerListMixin, testlib.TestCase):
 class ExpireTest(TimerListMixin, testlib.TestCase):
     def test_in_past(self):
         timer = self.list.schedule(29, mock.Mock())
+        self.assertTrue(timer.active)
         self.list._now = lambda: 30
         self.list.expire()
         self.assertEquals(1, len(timer.func.mock_calls))
+        self.assertFalse(timer.active)
 
     def test_in_future(self):
         timer = self.list.schedule(29, mock.Mock())
+        self.assertTrue(timer.active)
         self.list._now = lambda: 28
         self.list.expire()
         self.assertEquals(0, len(timer.func.mock_calls))
+        self.assertTrue(timer.active)
 
     def test_same_moment(self):
         timer = self.list.schedule(29, mock.Mock())
         timer2 = self.list.schedule(29, mock.Mock())
+        self.assertTrue(timer.active)
+        self.assertTrue(timer2.active)
         self.list._now = lambda: 29
         self.list.expire()
         self.assertEquals(1, len(timer.func.mock_calls))
         self.assertEquals(1, len(timer2.func.mock_calls))
+        self.assertFalse(timer.active)
+        self.assertFalse(timer2.active)
 
     def test_cancelled(self):
         self.list._now = lambda: 29
@@ -131,7 +139,9 @@ class CancelTest(TimerListMixin, testlib.TestCase):
     def test_single_cancel(self):
         self.list._now = lambda: 29
         timer = self.list.schedule(29, mock.Mock())
+        self.assertTrue(timer.active)
         timer.cancel()
+        self.assertFalse(timer.active)
         self.list.expire()
         self.assertEquals(0, len(timer.func.mock_calls))
 
@@ -139,7 +149,9 @@ class CancelTest(TimerListMixin, testlib.TestCase):
         self.list._now = lambda: 29
         timer = self.list.schedule(29, mock.Mock())
         timer.cancel()
+        self.assertFalse(timer.active)
         timer.cancel()
+        self.assertFalse(timer.active)
         self.list.expire()
         self.assertEquals(0, len(timer.func.mock_calls))
 

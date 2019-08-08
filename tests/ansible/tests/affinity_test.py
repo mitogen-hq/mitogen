@@ -197,7 +197,7 @@ class LinuxPolicyTest(testlib.TestCase):
         tf = tempfile.NamedTemporaryFile()
         try:
             before = self._get_cpus()
-            self.policy._set_cpu(3)
+            self.policy._set_cpu(None, 3)
             my_cpu = self._get_cpus()
 
             proc = mitogen.parent.popen(

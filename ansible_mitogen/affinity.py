@@ -73,7 +73,9 @@ necessarily involves preventing the scheduler from making load balancing
 decisions.
 """
 
+from __future__ import absolute_import
 import ctypes
+import logging
 import mmap
 import multiprocessing
 import os
@@ -81,6 +83,9 @@ import struct
 
 import mitogen.core
 import mitogen.parent
+
+
+LOG = logging.getLogger(__name__)
 
 
 try:
@@ -207,11 +212,13 @@ class FixedPolicy(Policy):
             self._reserve_mask = 3
             self._reserve_shift = 2
 
-    def _set_affinity(self, mask):
+    def _set_affinity(self, descr, mask):
+        if descr:
+            LOG.debug('CPU mask for %s: %#08x', descr, mask)
         mitogen.parent._preexec_hook = self._clear
         self._set_cpu_mask(mask)
 
-    def _balance(self):
+    def _balance(self, descr):
         self.state.lock.acquire()
         try:
             n = self.state.counter
@@ -219,28 +226,28 @@ class FixedPolicy(Policy):
         finally:
             self.state.lock.release()
 
-        self._set_cpu(self._reserve_shift + (
+        self._set_cpu(descr, self._reserve_shift + (
             (n % (self.cpu_count - self._reserve_shift))
         ))
 
-    def _set_cpu(self, cpu):
-        self._set_affinity(1 << (cpu % self.cpu_count))
+    def _set_cpu(self, descr, cpu):
+        self._set_affinity(descr, 1 << (cpu % self.cpu_count))
 
     def _clear(self):
         all_cpus = (1 << self.cpu_count) - 1
-        self._set_affinity(all_cpus & ~self._reserve_mask)
+        self._set_affinity(None, all_cpus & ~self._reserve_mask)
 
     def assign_controller(self):
         if self._reserve_controller:
-            self._set_cpu(1)
+            self._set_cpu('Ansible top-level process', 1)
         else:
-            self._balance()
+            self._balance('Ansible top-level process')
 
     def assign_muxprocess(self, index):
-        self._set_cpu(index)
+        self._set_cpu('MuxProcess %d' % (index,), index)
 
     def assign_worker(self):
-        self._balance()
+        self._balance('WorkerProcess')
 
     def assign_subprocess(self):
         self._clear()

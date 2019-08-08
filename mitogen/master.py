@@ -387,18 +387,18 @@ class LogForwarder(object):
         if msg.is_dead:
             return
 
-        logger = self._cache.get(msg.src_id)
-        if logger is None:
-            context = self._router.context_by_id(msg.src_id)
-            if context is None:
-                LOG.error('%s: dropping log from unknown context ID %d',
-                          self, msg.src_id)
-                return
-
-            name = '%s.%s' % (RLOG.name, context.name)
-            self._cache[msg.src_id] = logger = logging.getLogger(name)
+        context = self._router.context_by_id(msg.src_id)
+        if context is None:
+            LOG.error('%s: dropping log from unknown context %d',
+                      self, msg.src_id)
+            return
 
         name, level_s, s = msg.data.decode('utf-8', 'replace').split('\x00', 2)
+
+        logger_name = '%s.[%s]' % (name, context.name)
+        logger = self._cache.get(logger_name)
+        if logger is None:
+            self._cache[logger_name] = logger = logging.getLogger(logger_name)
 
         # See logging.Handler.makeRecord()
         record = logging.LogRecord(
@@ -406,7 +406,7 @@ class LogForwarder(object):
             level=int(level_s),
             pathname='(unknown file)',
             lineno=0,
-            msg=('%s: %s' % (name, s)),
+            msg=s,
             args=(),
             exc_info=None,
         )
@@ -430,8 +430,8 @@ class FinderMethod(object):
 
     def find(self, fullname):
         """
-        Accept a canonical module name and return `(path, source, is_pkg)`
-        tuples, where:
+        Accept a canonical module name as would be found in :data:`sys.modules`
+        and return a `(path, source, is_pkg)` tuple, where:
 
         * `path`: Unicode string containing path to source file.
         * `source`: Bytestring containing source file's content.
@@ -447,10 +447,13 @@ class DefectivePython3xMainMethod(FinderMethod):
     """
     Recent versions of Python 3.x introduced an incomplete notion of
     importer specs, and in doing so created permanent asymmetry in the
-    :mod:`pkgutil` interface handling for the `__main__` module. Therefore
-    we must handle `__main__` specially.
+    :mod:`pkgutil` interface handling for the :mod:`__main__` module. Therefore
+    we must handle :mod:`__main__` specially.
     """
     def find(self, fullname):
+        """
+        Find :mod:`__main__` using its :data:`__file__` attribute.
+        """
         if fullname != '__main__':
             return None
 
@@ -477,6 +480,9 @@ class PkgutilMethod(FinderMethod):
     be the only required implementation of get_module().
     """
     def find(self, fullname):
+        """
+        Find `fullname` using :func:`pkgutil.find_loader`.
+        """
         try:
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
@@ -522,10 +528,13 @@ class PkgutilMethod(FinderMethod):
 
 class SysModulesMethod(FinderMethod):
     """
-    Attempt to fetch source code via sys.modules. This is specifically to
-    support __main__, but it may catch a few more cases.
+    Attempt to fetch source code via :data:`sys.modules`. This was originally
+    specifically to support :mod:`__main__`, but it may catch a few more cases.
     """
     def find(self, fullname):
+        """
+        Find `fullname` using its :data:`__file__` attribute.
+        """
         module = sys.modules.get(fullname)
         LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
         if getattr(module, '__name__', None) != fullname:
@@ -566,14 +575,17 @@ class ParentEnumerationMethod(FinderMethod):
     """
     Attempt to fetch source code by examining the module's (hopefully less
     insane) parent package. Required for older versions of
-    ansible.compat.six and plumbum.colors, and Ansible 2.8
-    ansible.module_utils.distro.
+    :mod:`ansible.compat.six`, :mod:`plumbum.colors`, and Ansible 2.8
+    :mod:`ansible.module_utils.distro`.
 
-    For cases like module_utils.distro, this must handle cases where a package
-    transmuted itself into a totally unrelated module during import and vice
-    versa.
+    For cases like :mod:`ansible.module_utils.distro`, this must handle cases
+    where a package transmuted itself into a totally unrelated module during
+    import and vice versa.
     """
     def find(self, fullname):
+        """
+        See implementation for a description of how this works.
+        """
         if fullname not in sys.modules:
             # Don't attempt this unless a module really exists in sys.modules,
             # else we could return junk.
@@ -796,6 +808,7 @@ class ModuleFinder(object):
 
 class ModuleResponder(object):
     def __init__(self, router):
+        self._log = logging.getLogger('mitogen.responder')
         self._router = router
         self._finder = ModuleFinder()
         self._cache = {}  # fullname -> pickled
@@ -863,7 +876,7 @@ class ModuleResponder(object):
         if b('mitogen.main(') in src:
             return src
 
-        LOG.error(self.main_guard_msg, path)
+        self._log.error(self.main_guard_msg, path)
         raise ImportError('refused')
 
     def _make_negative_response(self, fullname):
@@ -882,8 +895,7 @@ class ModuleResponder(object):
         if path and is_stdlib_path(path):
             # Prevent loading of 2.x<->3.x stdlib modules! This costs one
             # RTT per hit, so a client-side solution is also required.
-            LOG.debug('%r: refusing to serve stdlib module %r',
-                      self, fullname)
+            self._log.debug('refusing to serve stdlib module %r', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
@@ -891,7 +903,7 @@ class ModuleResponder(object):
         if source is None:
             # TODO: make this .warning() or similar again once importer has its
             # own logging category.
-            LOG.debug('_build_tuple(%r): could not locate source', fullname)
+            self._log.debug('could not find source for %r', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
@@ -904,8 +916,8 @@ class ModuleResponder(object):
 
         if is_pkg:
             pkg_present = get_child_modules(path)
-            LOG.debug('_build_tuple(%r, %r) -> %r',
-                      path, fullname, pkg_present)
+            self._log.debug('%s is a package at %s with submodules %r',
+                            fullname, path, pkg_present)
         else:
             pkg_present = None
 
@@ -936,8 +948,8 @@ class ModuleResponder(object):
                 dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            LOG.debug('%s: sending %s (%.2f KiB) to %s',
-                      self, fullname, len(msg.data) / 1024.0, stream.name)
+            self._log.debug('sending %s (%.2f KiB) to %s',
+                            fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
             stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
@@ -983,7 +995,7 @@ class ModuleResponder(object):
             return
 
         fullname = msg.data.decode()
-        LOG.debug('%s requested module %s', stream.name, fullname)
+        self._log.debug('%s requested module %s', stream.name, fullname)
         self.get_module_count += 1
         if fullname in stream.protocol.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
@@ -1216,6 +1228,21 @@ class Router(mitogen.parent.Router):
 
 
 class IdAllocator(object):
+    """
+    Allocate IDs for new contexts constructed locally, and blocks of IDs for
+    children to allocate their own IDs using
+    :class:`mitogen.parent.ChildIdAllocator` without risk of conflict, and
+    without necessitating network round-trips for each new context.
+
+    This class responds to :data:`mitogen.core.ALLOCATE_ID` messages received
+    from children by replying with fresh block ID allocations.
+
+    The master's :class:`IdAllocator` instance can be accessed via
+    :attr:`mitogen.master.Router.id_allocator`.
+    """
+    #: Block allocations are made in groups of 1000 by default.
+    BLOCK_SIZE = 1000
+
     def __init__(self, router):
         self.router = router
         self.next_id = 1
@@ -1228,14 +1255,12 @@ class IdAllocator(object):
     def __repr__(self):
         return 'IdAllocator(%r)' % (self.router,)
 
-    BLOCK_SIZE = 1000
-
     def allocate(self):
         """
-        Arrange for a unique context ID to be allocated and associated with a
-        route leading to the active context. In masters, the ID is generated
-        directly, in children it is forwarded to the master via a
-        :data:`mitogen.core.ALLOCATE_ID` message.
+        Allocate a context ID by directly incrementing an internal counter.
+
+        :returns:
+            The new context ID.
         """
         self.lock.acquire()
         try:
@@ -1246,6 +1271,15 @@ class IdAllocator(object):
             self.lock.release()
 
     def allocate_block(self):
+        """
+        Allocate a block of IDs for use in a child context.
+
+        This function is safe to call from any thread.
+
+        :returns:
+            Tuple of the form `(id, end_id)` where `id` is the first usable ID
+            and `end_id` is the last usable ID.
+        """
         self.lock.acquire()
         try:
             id_ = self.next_id

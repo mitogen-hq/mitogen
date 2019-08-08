@@ -244,6 +244,9 @@ class Connection(mitogen.parent.Connection):
     diag_protocol_class = SetupProtocol
     options_class = Options
     create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    create_child_args = {
+        'escalates_privilege': True,
+    }
     child_is_immediate_subprocess = False
 
     def _get_name(self):

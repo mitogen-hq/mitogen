@@ -246,7 +246,14 @@ def increase_open_file_limit():
     limit is much higher.
     """
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    LOG.debug('inherited open file limits: soft=%d hard=%d', soft, hard)
+    if hard == resource.RLIM_INFINITY:
+        hard_s = '(infinity)'
+        # cap in case of O(RLIMIT_NOFILE) algorithm in some subprocess.
+        hard = 524288
+    else:
+        hard_s = str(hard)
+
+    LOG.debug('inherited open file limits: soft=%d hard=%s', soft, hard_s)
     if soft >= hard:
         LOG.debug('max open files already set to hard limit: %d', hard)
         return
@@ -268,13 +275,13 @@ def common_setup(enable_affinity=True, _init_logging=True):
     save_pid('controller')
     ansible_mitogen.logging.set_process_name('top')
 
+    if _init_logging:
+        ansible_mitogen.logging.setup()
+
     if enable_affinity:
         ansible_mitogen.affinity.policy.assign_controller()
 
     mitogen.utils.setup_gil()
-    if _init_logging:
-        ansible_mitogen.logging.setup()
-
     if faulthandler is not None:
         faulthandler.enable()
 
@@ -352,6 +359,11 @@ class Binding(object):
 
 
 class WorkerModel(object):
+    """
+    Interface used by StrategyMixin to manage various Mitogen services, by
+    default running in one or more connection multiplexer subprocesses spawned
+    off the top-level Ansible process.
+    """
     def on_strategy_start(self):
         """
         Called prior to strategy start in the top-level process. Responsible
@@ -368,6 +380,11 @@ class WorkerModel(object):
         raise NotImplementedError()
 
     def get_binding(self, inventory_name):
+        """
+        Return a :class:`Binding` to access Mitogen services for
+        `inventory_name`. Usually called from worker processes, but may also be
+        called from top-level process to handle "meta: reset_connection".
+        """
         raise NotImplementedError()
 
 
@@ -427,13 +444,10 @@ class ClassicWorkerModel(WorkerModel):
 
     def __init__(self, _init_logging=True):
         """
-        Arrange for classic model multiplexers to be started, if they are not
-        already running.
-
-        The parent process picks a UNIX socket path each child will use prior
-        to fork, creates a socketpair used essentially as a semaphore, then
-        blocks waiting for the child to indicate the UNIX socket is ready for
-        use.
+        Arrange for classic model multiplexers to be started. The parent choses
+        UNIX socket paths each child will use prior to fork, creates a
+        socketpair used essentially as a semaphore, then blocks waiting for the
+        child to indicate the UNIX socket is ready for use.
 
         :param bool _init_logging:
             For testing, if :data:`False`, don't initialize logging.
@@ -466,12 +480,10 @@ class ClassicWorkerModel(WorkerModel):
         Given an inventory hostname, return the UNIX listener that should
         communicate with it. This is a simple hash of the inventory name.
         """
-        if len(self._muxes) == 1:
-            return self._muxes[0].path
-
-        idx = abs(hash(name)) % len(self._muxes)
-        LOG.debug('Picked worker %d: %s', idx, self._muxes[idx].path)
-        return self._muxes[idx].path
+        mux = self._muxes[abs(hash(name)) % len(self._muxes)]
+        LOG.debug('will use multiplexer %d (%s) to connect to "%s"',
+                  mux.index, mux.path, name)
+        return mux.path
 
     def _reconnect(self, path):
         if self.router is not None:
@@ -498,9 +510,9 @@ class ClassicWorkerModel(WorkerModel):
         This is an :mod:`atexit` handler installed in the top-level process.
 
         Shut the write end of `sock`, causing the receive side of the socket in
-        every worker process to return 0-byte reads, and causing their main
-        threads to wake and initiate shutdown. After shutting the socket down,
-        wait on each child to finish exiting.
+        every :class:`MuxProcess` to return 0-byte reads, and causing their
+        main threads to wake and initiate shutdown. After shutting the socket
+        down, wait on each child to finish exiting.
 
         This is done using :mod:`atexit` since Ansible lacks any better hook to
         run code during exit, and unless some synchronization exists with
@@ -523,30 +535,19 @@ class ClassicWorkerModel(WorkerModel):
         for mux in self._muxes:
             _, status = os.waitpid(mux.pid, 0)
             status = mitogen.fork._convert_exit_status(status)
-            LOG.debug('mux %d PID %d %s', mux.index, mux.pid,
+            LOG.debug('multiplexer %d PID %d %s', mux.index, mux.pid,
                       mitogen.parent.returncode_to_str(status))
 
     def _test_reset(self):
         """
         Used to clean up in unit tests.
         """
-        # TODO: split this up a bit.
-        global _classic_worker_model
-        assert self.parent_sock is not None
-        self.parent_sock.close()
-        self.parent_sock = None
-        self.listener_path = None
-        self.router = None
-        self.parent = None
-
-        for mux in self._muxes:
-            pid, status = os.waitpid(mux.pid, 0)
-            status = mitogen.fork._convert_exit_status(status)
-            LOG.debug('mux PID %d %s', pid,
-                mitogen.parent.returncode_to_str(status))
-
-        _classic_worker_model = None
+        self.on_binding_close()
+        self._on_process_exit()
         set_worker_model(None)
+
+        global _classic_worker_model
+        _classic_worker_model = None
 
     def on_strategy_start(self):
         """
@@ -579,6 +580,7 @@ class ClassicWorkerModel(WorkerModel):
         self.broker.join()
         self.router = None
         self.broker = None
+        self.parent = None
         self.listener_path = None
 
         # #420: Ansible executes "meta" actions in the top-level process,
@@ -694,8 +696,8 @@ class MuxProcess(object):
             max_message_size=4096 * 1048576,
         )
         _setup_responder(self.router.responder)
-        mitogen.core.listen(self.broker, 'shutdown', self.on_broker_shutdown)
-        mitogen.core.listen(self.broker, 'exit', self.on_broker_exit)
+        mitogen.core.listen(self.broker, 'shutdown', self._on_broker_shutdown)
+        mitogen.core.listen(self.broker, 'exit', self._on_broker_exit)
         self.listener = mitogen.unix.Listener.build_stream(
             router=self.router,
             path=self.path,
@@ -715,26 +717,20 @@ class MuxProcess(object):
         )
         setup_pool(self.pool)
 
-    def on_broker_shutdown(self):
+    def _on_broker_shutdown(self):
         """
-        Respond to broker shutdown by beginning service pool shutdown. Do not
-        join on the pool yet, since that would block the broker thread which
-        then cannot clean up pending handlers, which is required for the
-        threads to exit gracefully.
+        Respond to broker shutdown by shutting down the pool. Do not join on it
+        yet, since that would block the broker thread which then cannot clean
+        up pending handlers and connections, which is required for the threads
+        to exit gracefully.
         """
-        # In normal operation we presently kill the process because there is
-        # not yet any way to cancel connect().
-        self.pool.stop(join=self.profiling)
+        self.pool.stop(join=False)
 
-    def on_broker_exit(self):
+    def _on_broker_exit(self):
         """
-        Respond to the broker thread about to exit by sending SIGTERM to
-        ourself. In future this should gracefully join the pool, but TERM is
-        fine for now.
+        Respond to the broker thread about to exit by finally joining on the
+        pool. This is safe since pools only block in connection attempts, and
+        connection attempts fail with CancelledError when broker shutdown
+        begins.
         """
-        if not os.environ.get('MITOGEN_PROFILING'):
-            # In normal operation we presently kill the process because there is
-            # not yet any way to cancel connect(). When profiling, threads
-            # including the broker must shut down gracefully, otherwise pstats
-            # won't be written.
-            os.kill(os.getpid(), signal.SIGTERM)
+        self.pool.join()

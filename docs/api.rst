@@ -96,8 +96,12 @@ Router Class
     :members:
 
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
+.. autoclass:: Router
+   :members:
 
+
+.. currentmodule:: mitogen.master
 .. autoclass:: Router (broker=None)
    :members:
 
@@ -553,11 +557,11 @@ Context Class
 
 
 .. currentmodule:: mitogen.parent
-
-.. autoclass:: CallChain
+.. autoclass:: Context
     :members:
 
-.. autoclass:: Context
+.. currentmodule:: mitogen.parent
+.. autoclass:: CallChain
     :members:
 
 
@@ -662,3 +666,7 @@ Exceptions
 .. autoclass:: LatchError
 .. autoclass:: StreamError
 .. autoclass:: TimeoutError
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: EofError
+.. autoclass:: CancelledError

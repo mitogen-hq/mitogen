@@ -57,8 +57,10 @@ def have_docker():
 
 # -----------------
 
-# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
+# Force line buffering on stdout.
+sys.stdout = os.fdopen(1, 'w', 1)
 
+# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
 if 'TRAVIS_HOME' in os.environ:
     proc = subprocess.Popen(
         args=['stdbuf', '-oL', 'cat'],
@@ -86,8 +88,13 @@ def _argv(s, *args):
 def run(s, *args, **kwargs):
     argv = ['/usr/bin/time', '--'] + _argv(s, *args)
     print('Running: %s' % (argv,))
-    ret = subprocess.check_call(argv, **kwargs)
-    print('Finished running: %s' % (argv,))
+    try:
+        ret = subprocess.check_call(argv, **kwargs)
+        print('Finished running: %s' % (argv,))
+    except Exception:
+        print('Exception occurred while running: %s' % (argv,))
+        raise
+
     return ret
 
 
@@ -217,6 +224,7 @@ def start_containers(containers):
             "docker rm -f %(name)s || true" % container,
             "docker run "
                 "--rm "
+                "--cpuset-cpus 0,1 "
                 "--detach "
                 "--privileged "
                 "--cap-add=SYS_PTRACE "

@@ -36,6 +36,7 @@ have the same privilege (auth_id) as the current process.
 """
 
 import errno
+import logging
 import os
 import socket
 import struct
@@ -45,7 +46,8 @@ import tempfile
 import mitogen.core
 import mitogen.master
 
-from mitogen.core import LOG
+
+LOG = logging.getLogger(__name__)
 
 
 class Error(mitogen.core.Error):
@@ -143,8 +145,8 @@ class Listener(mitogen.core.Protocol):
         try:
             pid, = struct.unpack('>L', sock.recv(4))
         except (struct.error, socket.error):
-            LOG.error('%r: failed to read remote identity: %s',
-                      self, sys.exc_info()[1])
+            LOG.error('listener: failed to read remote identity: %s',
+                      sys.exc_info()[1])
             return
 
         context_id = self._router.id_allocator.allocate()
@@ -152,8 +154,8 @@ class Listener(mitogen.core.Protocol):
             sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
                                   os.getpid()))
         except socket.error:
-            LOG.error('%r: failed to assign identity to PID %d: %s',
-                      self, pid, sys.exc_info()[1])
+            LOG.error('listener: failed to assign identity to PID %d: %s',
+                      pid, sys.exc_info()[1])
             return
 
         context = mitogen.parent.Context(self._router, context_id)
@@ -165,7 +167,8 @@ class Listener(mitogen.core.Protocol):
         stream.protocol.auth_id = mitogen.context_id
         stream.protocol.is_privileged = True
         stream.accept(sock, sock)
-        LOG.debug('%r: accepted %r', self, stream)
+        LOG.debug('listener: accepted connection from PID %d: %s',
+                  pid, stream.name)
         self._router.register(context, stream)
 
 
@@ -186,7 +189,7 @@ def _connect(path, broker, sock):
     mitogen.parent_id = remote_id
     mitogen.parent_ids = [remote_id]
 
-    LOG.debug('unix.connect(): local ID is %r, remote is %r',
+    LOG.debug('client: local ID is %r, remote is %r',
               mitogen.context_id, remote_id)
 
     router = mitogen.master.Router(broker=broker)
@@ -204,7 +207,7 @@ def _connect(path, broker, sock):
 
 
 def connect(path, broker=None):
-    LOG.debug('unix.connect(path=%r)', path)
+    LOG.debug('client: connecting to %s', path)
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         return _connect(path, broker, sock)

@@ -346,11 +346,15 @@ Masters listen on the following handles:
 .. currentmodule:: mitogen.core
 .. data:: ALLOCATE_ID
 
-    Replies to any message sent to it with a newly allocated range of context
-    IDs, to allow children to safely start their own contexts. Presently IDs
-    are allocated in batches of 1000 from a 32 bit range, allowing up to 4.2
-    million parent contexts to be created and destroyed before the associated
-    Router must be recreated.
+   Replies to any message sent to it with a newly allocated range of context
+   IDs, to allow children to safely start their own contexts. Presently IDs are
+   allocated in batches of 1000 from a 32 bit range, allowing up to 4.2 million
+   parent contexts to be created and destroyed before the associated Router
+   must be recreated.
+
+   This is handled by :class:`mitogen.master.IdAllocator` in the master
+   process, and messages are sent to it from
+   :class:`mitogen.parent.ChildIdAllocator` in children.
 
 Children listen on the following handles:
 

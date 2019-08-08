@@ -81,7 +81,7 @@ class SetupBootstrapProtocol(mitogen.parent.BootstrapProtocol):
 
     def _on_password_prompt(self, line, match):
         LOG.debug('%r: (password prompt): %r',
-            self.stream.name, line.decode('utf-8', 'replace'))
+                  self.stream.name, line.decode('utf-8', 'replace'))
 
         if self.stream.conn.options.password is None:
             self.stream.conn._fail_connection(

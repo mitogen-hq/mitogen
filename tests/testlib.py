@@ -192,7 +192,7 @@ def sync_with_broker(broker, timeout=10.0):
     """
     sem = mitogen.core.Latch()
     broker.defer(sem.put, None)
-    sem.get(timeout=10.0)
+    sem.get(timeout=timeout)
 
 
 def log_fd_calls():
@@ -338,7 +338,7 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
         if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof -w -p %s' % (os.getpid(),))
+            import os; os.system('lsof +E -w -p %s' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 self, self._fd_count_before, get_fd_count(),
             )
@@ -428,7 +428,7 @@ class DockerizedSshDaemon(object):
 
     def start_container(self):
         try:
-            subprocess__check_output(['docker'])
+            subprocess__check_output(['docker', '--version'])
         except Exception:
             raise unittest2.SkipTest('Docker binary is unavailable')
 

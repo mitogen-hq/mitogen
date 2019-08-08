@@ -49,7 +49,7 @@ except NameError:
     from mitogen.core import any
 
 
-LOG = logging.getLogger('mitogen')
+LOG = logging.getLogger(__name__)
 
 auth_incorrect_msg = 'SSH authentication is incorrect'
 password_incorrect_msg = 'SSH password is incorrect'

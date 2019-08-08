@@ -180,7 +180,7 @@ class ContextService(mitogen.service.Service):
         Return a reference, making it eligable for recycling once its reference
         count reaches zero.
         """
-        LOG.debug('%r.put(%r)', self, context)
+        LOG.debug('decrementing reference count for %r', context)
         self._lock.acquire()
         try:
             if self._refs_by_context.get(context, 0) == 0:
@@ -326,7 +326,6 @@ class ContextService(mitogen.service.Service):
     )
 
     def _send_module_forwards(self, context):
-        return
         self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
 
     _candidate_temp_dirs = None
@@ -383,7 +382,6 @@ class ContextService(mitogen.service.Service):
         mitogen.core.listen(context, 'disconnect',
             lambda: self._on_context_disconnect(context))
 
-        #self._send_module_forwards(context) TODO
         self._send_module_forwards(context)
         init_child_result = context.call(
             ansible_mitogen.target.init_child,

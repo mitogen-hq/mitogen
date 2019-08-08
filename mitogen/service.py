@@ -86,8 +86,13 @@ def get_or_create_pool(size=None, router=None):
         _pool_lock.acquire()
         try:
             if _pool_pid != my_pid:
-                _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
-                             overwrite=True)
+                _pool = Pool(
+                    router,
+                    services=[],
+                    size=size or DEFAULT_POOL_SIZE,
+                    overwrite=True,
+                    recv=mitogen.core.Dispatcher._service_recv,
+                )
                 # In case of Broker shutdown crash, Pool can cause 'zombie'
                 # processes.
                 mitogen.core.listen(router.broker, 'shutdown',
@@ -97,6 +102,10 @@ def get_or_create_pool(size=None, router=None):
             _pool_lock.release()
 
     return _pool
+
+
+def get_thread_name():
+    return threading.currentThread().getName()
 
 
 def call(service_name, method_name, call_context=None, **kwargs):
@@ -471,13 +480,19 @@ class Pool(object):
     program's configuration or its input data.
 
     :param mitogen.core.Router router:
-        Router to listen for ``CALL_SERVICE`` messages on.
+        :class:`mitogen.core.Router` to listen for
+        :data:`mitogen.core.CALL_SERVICE` messages.
     :param list services:
         Initial list of services to register.
+    :param mitogen.core.Receiver recv:
+        :data:`mitogen.core.CALL_SERVICE` receiver to reuse. This is used by
+        :func:`get_or_create_pool` to hand off a queue of messages from the
+        Dispatcher stub handler while avoiding a race.
     """
     activator_class = Activator
 
-    def __init__(self, router, services=(), size=1, overwrite=False):
+    def __init__(self, router, services=(), size=1, overwrite=False,
+                 recv=None):
         self.router = router
         self._activator = self.activator_class()
         self._ipc_latch = mitogen.core.Latch()
@@ -497,6 +512,16 @@ class Pool(object):
             self._ipc_latch: self._on_ipc_latch,
         }
         self._invoker_by_name = {}
+
+        if recv is not None:
+            # When inheriting from mitogen.core.Dispatcher, we must remove its
+            # stub notification function before adding it to our Select. We
+            # always overwrite this receiver since the standard service.Pool
+            # handler policy differs from the one inherited from
+            # core.Dispatcher.
+            recv.notify = None
+            self._select.add(recv)
+            self._func_by_source[recv] = self._on_service_call
 
         for service in services:
             self.add(service)
@@ -611,10 +636,11 @@ class Pool(object):
             try:
                 event = self._select.get_event()
             except mitogen.core.LatchError:
-                LOG.debug('%r: graceful exit', self)
+                LOG.debug('thread %s exiting gracefully', get_thread_name())
                 return
             except mitogen.core.ChannelError:
-                LOG.debug('%r: exitting: %s', self, sys.exc_info()[1])
+                LOG.debug('thread %s exiting with error: %s',
+                          get_thread_name(), sys.exc_info()[1])
                 return
 
             func = self._func_by_source[event.source]
@@ -627,16 +653,14 @@ class Pool(object):
         try:
             self._worker_run()
         except Exception:
-            th = threading.currentThread()
-            LOG.exception('%r: worker %r crashed', self, th.getName())
+            LOG.exception('%r: worker %r crashed', self, get_thread_name())
             raise
 
     def __repr__(self):
-        th = threading.currentThread()
         return 'Pool(%04x, size=%d, th=%r)' % (
             id(self) & 0xffff,
             len(self._threads),
-            th.getName(),
+            get_thread_name(),
         )
 
 
@@ -688,10 +712,12 @@ class PushFileService(Service):
 
     def _forward(self, context, path):
         stream = self.router.stream_by_id(context.context_id)
-        child = mitogen.core.Context(self.router, stream.protocol.remote_id)
+        child = self.router.context_by_id(stream.protocol.remote_id)
         sent = self._sent_by_stream.setdefault(stream, set())
         if path in sent:
             if child.context_id != context.context_id:
+                LOG.debug('requesting %s forward small file to %s: %s',
+                          child, context, path)
                 child.call_service_async(
                     service_name=self.name(),
                     method_name='forward',
@@ -699,6 +725,8 @@ class PushFileService(Service):
                     context=context
                 ).close()
         else:
+            LOG.debug('requesting %s cache and forward small file to %s: %s',
+                      child, context, path)
             child.call_service_async(
                 service_name=self.name(),
                 method_name='store_and_forward',
@@ -729,8 +757,8 @@ class PushFileService(Service):
         'path': mitogen.core.FsPathTypes,
     })
     def propagate_to(self, context, path):
-        LOG.debug('%r.propagate_to(%r, %r)', self, context, path)
         if path not in self._cache:
+            LOG.debug('caching small file %s', path)
             fp = open(path, 'rb')
             try:
                 self._cache[path] = mitogen.core.Blob(fp.read())
@@ -748,7 +776,7 @@ class PushFileService(Service):
     def store_and_forward(self, path, data, context):
         LOG.debug('%r.store_and_forward(%r, %r, %r) %r',
                   self, path, data, context,
-                  threading.currentThread().getName())
+                  get_thread_name())
         self._lock.acquire()
         try:
             self._cache[path] = data
