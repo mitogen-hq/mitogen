@@ -3623,7 +3623,7 @@ class ExternalContext(object):
         self.broker = Broker(activate_compat=False)
         self.router = Router(self.broker)
         self.router.debug = self.config.get('debug', False)
-        self.router.undirectional = self.config['unidirectional']
+        self.router.unidirectional = self.config['unidirectional']
         self.router.add_handler(
             fn=self._on_shutdown_msg,
             handle=SHUTDOWN,
