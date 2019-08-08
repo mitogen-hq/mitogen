@@ -496,15 +496,12 @@ class Pool(object):
         self.router = router
         self._activator = self.activator_class()
         self._ipc_latch = mitogen.core.Latch()
-        self._receiver = recv or mitogen.core.Receiver(
+        self._receiver = mitogen.core.Receiver(
             router=router,
             handle=mitogen.core.CALL_SERVICE,
             overwrite=overwrite,
         )
 
-        # If self._receiver was inherited from mitogen.core.Dispatcher, we must
-        # remove its stub notification function before adding it to our Select.
-        self._receiver.notify = None
         self._select = mitogen.select.Select(oneshot=False)
         self._select.add(self._receiver)
         self._select.add(self._ipc_latch)
@@ -515,6 +512,16 @@ class Pool(object):
             self._ipc_latch: self._on_ipc_latch,
         }
         self._invoker_by_name = {}
+
+        if recv is not None:
+            # When inheriting from mitogen.core.Dispatcher, we must remove its
+            # stub notification function before adding it to our Select. We
+            # always overwrite this receiver since the standard service.Pool
+            # handler policy differs from the one inherited from
+            # core.Dispatcher.
+            recv.notify = None
+            self._select.add(recv)
+            self._func_by_source[recv] = self._on_service_call
 
         for service in services:
             self.add(service)

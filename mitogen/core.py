@@ -3524,7 +3524,8 @@ class Dispatcher(object):
     def _dispatch_calls(self):
         for msg in self.recv:
             if msg.handle == STUB_CALL_SERVICE:
-                self._init_service_pool()
+                if msg.src_id == mitogen.context_id:
+                    self._init_service_pool()
                 continue
 
             chain_id, ret = self._dispatch_one(msg)
