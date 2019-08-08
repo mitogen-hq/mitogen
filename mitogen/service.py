@@ -86,8 +86,13 @@ def get_or_create_pool(size=None, router=None):
         _pool_lock.acquire()
         try:
             if _pool_pid != my_pid:
-                _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
-                             overwrite=True)
+                _pool = Pool(
+                    router,
+                    services=[],
+                    size=size or DEFAULT_POOL_SIZE,
+                    overwrite=True,
+                    recv=mitogen.core.Dispatcher._service_recv,
+                )
                 # In case of Broker shutdown crash, Pool can cause 'zombie'
                 # processes.
                 mitogen.core.listen(router.broker, 'shutdown',
@@ -475,22 +480,31 @@ class Pool(object):
     program's configuration or its input data.
 
     :param mitogen.core.Router router:
-        Router to listen for ``CALL_SERVICE`` messages on.
+        :class:`mitogen.core.Router` to listen for
+        :data:`mitogen.core.CALL_SERVICE` messages.
     :param list services:
         Initial list of services to register.
+    :param mitogen.core.Receiver recv:
+        :data:`mitogen.core.CALL_SERVICE` receiver to reuse. This is used by
+        :func:`get_or_create_pool` to hand off a queue of messages from the
+        Dispatcher stub handler while avoiding a race.
     """
     activator_class = Activator
 
-    def __init__(self, router, services=(), size=1, overwrite=False):
+    def __init__(self, router, services=(), size=1, overwrite=False,
+                 recv=None):
         self.router = router
         self._activator = self.activator_class()
         self._ipc_latch = mitogen.core.Latch()
-        self._receiver = mitogen.core.Receiver(
+        self._receiver = recv or mitogen.core.Receiver(
             router=router,
             handle=mitogen.core.CALL_SERVICE,
             overwrite=overwrite,
         )
 
+        # If self._receiver was inherited from mitogen.core.Dispatcher, we must
+        # remove its stub notification function before adding it to our Select.
+        self._receiver.notify = None
         self._select = mitogen.select.Select(oneshot=False)
         self._select.add(self._receiver)
         self._select.add(self._ipc_latch)
