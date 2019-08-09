@@ -103,7 +103,7 @@ class FetchFileTest(ConnectionMixin, testlib.TestCase):
     def test_success(self):
         with tempfile.NamedTemporaryFile(prefix='mitotest') as ifp, \
             tempfile.NamedTemporaryFile(prefix='mitotest') as ofp:
-            ifp.write('x' * (1048576 * 4))
+            ifp.write(b'x' * (1048576 * 4))
             ifp.flush()
             ifp.seek(0)
 
