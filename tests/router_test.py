@@ -262,6 +262,13 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         size = remote.call(return_router_max_message_size)
         self.assertEquals(size, 64*1024)
 
+    def test_remote_of_remote_configured(self):
+        router = self.klass(broker=self.broker, max_message_size=64*1024)
+        remote = router.local()
+        remote2 = router.local(via=remote)
+        size = remote2.call(return_router_max_message_size)
+        self.assertEquals(size, 64*1024)
+
     def test_remote_exceeded(self):
         # Ensure new contexts receive a router with the same value.
         router = self.klass(broker=self.broker, max_message_size=64*1024)
