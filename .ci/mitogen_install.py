@@ -14,4 +14,5 @@ if ci_lib.have_docker():
         'docker pull %s' % (ci_lib.image_for_distro(ci_lib.DISTRO),),
     ])
 
+
 ci_lib.run_batches(batches)
