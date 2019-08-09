@@ -395,6 +395,12 @@ else:
         return _partition(s, sep, s.find) or (s, '', '')
 
 
+def _has_parent_authority(context_id):
+    return (
+        (context_id == mitogen.context_id) or
+        (context_id in mitogen.parent_ids)
+    )
+
 def has_parent_authority(msg, _stream=None):
     """
     Policy function for use with :class:`Receiver` and
@@ -403,8 +409,7 @@ def has_parent_authority(msg, _stream=None):
     <Stream.auth_id>` has been set to that of a parent context or the current
     context.
     """
-    return (msg.auth_id == mitogen.context_id or
-            msg.auth_id in mitogen.parent_ids)
+    return _has_parent_authority(msg.auth_id)
 
 
 def _signals(obj, signal):
