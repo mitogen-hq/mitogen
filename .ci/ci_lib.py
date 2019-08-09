@@ -215,7 +215,9 @@ def make_containers(name_prefix='', port_offset=0):
     return lst
 
 
-INTERESTING_COMMS = ('python', 'ssh', 'sudo', 'su', 'doas')
+# ssh removed from here because 'linear' strategy relies on processes that hang
+# around after the Ansible run completes
+INTERESTING_COMMS = ('python', 'sudo', 'su', 'doas')
 
 
 def proc_is_docker(pid):
