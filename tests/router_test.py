@@ -357,6 +357,7 @@ def test_siblings_cant_talk(router):
     msg = mitogen.core.Router.unidirectional_msg % (
         l2.context_id,
         l1.context_id,
+        mitogen.context_id,
     )
     assert msg in str(e)
     assert 'routing mode prevents forward of ' in logs.stop()
