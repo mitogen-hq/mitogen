@@ -164,6 +164,10 @@ Core Library
   `closed` flag, preventing historical bugs where a double close could destroy
   descriptors belonging to unrelated streams.
 
+* `#586 <https://github.com/dw/mitogen/issues/586>`_: fix import of the
+  `__main__` module on later versions of Python 3 when running from the
+  interactive console.
+
 * `#606 <https://github.com/dw/mitogen/issues/606>`_: fix example code on the
   documentation front page.
 
@@ -206,6 +210,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Dan <https://github.com/dsgnr>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
+`Denis Krienbühl <https://github.com/href>`_,
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
 `Marc Hartmayer <https://github.com/marc1006>`_,
