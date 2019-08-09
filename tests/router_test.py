@@ -1,9 +1,11 @@
+import sys
 import time
 import zlib
 
 import unittest2
 
 import testlib
+import mitogen.core
 import mitogen.master
 import mitogen.parent
 import mitogen.utils
@@ -260,6 +262,13 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         size = remote.call(return_router_max_message_size)
         self.assertEquals(size, 64*1024)
 
+    def test_remote_of_remote_configured(self):
+        router = self.klass(broker=self.broker, max_message_size=64*1024)
+        remote = router.local()
+        remote2 = router.local(via=remote)
+        size = remote2.call(return_router_max_message_size)
+        self.assertEquals(size, 64*1024)
+
     def test_remote_exceeded(self):
         # Ensure new contexts receive a router with the same value.
         router = self.klass(broker=self.broker, max_message_size=64*1024)
@@ -341,22 +350,43 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         ))
 
 
-class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
-    def test_siblings_cant_talk(self):
-        self.router.unidirectional = True
-        l1 = self.router.local()
-        l2 = self.router.local()
-        logs = testlib.LogCapturer()
-        logs.start()
-        e = self.assertRaises(mitogen.core.CallError,
-                              lambda: l2.call(ping_context, l1))
+def test_siblings_cant_talk(router):
+    l1 = router.local()
+    l2 = router.local()
+    logs = testlib.LogCapturer()
+    logs.start()
 
-        msg = self.router.unidirectional_msg % (
-            l2.context_id,
-            l1.context_id,
-        )
-        self.assertTrue(msg in str(e))
-        self.assertTrue('routing mode prevents forward of ' in logs.stop())
+    try:
+        l2.call(ping_context, l1)
+    except mitogen.core.CallError:
+        e = sys.exc_info()[1]
+
+    msg = mitogen.core.Router.unidirectional_msg % (
+        l2.context_id,
+        l1.context_id,
+        mitogen.context_id,
+    )
+    assert msg in str(e)
+    assert 'routing mode prevents forward of ' in logs.stop()
+
+
+@mitogen.core.takes_econtext
+def test_siblings_cant_talk_remote(econtext):
+    mitogen.parent.upgrade_router(econtext)
+    test_siblings_cant_talk(econtext.router)
+
+
+class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
+    def test_siblings_cant_talk_master(self):
+        self.router.unidirectional = True
+        test_siblings_cant_talk(self.router)
+
+    def test_siblings_cant_talk_parent(self):
+        # ensure 'unidirectional' attribute is respected for contexts started
+        # by children.
+        self.router.unidirectional = True
+        parent = self.router.local()
+        parent.call(test_siblings_cant_talk_remote)
 
     def test_auth_id_can_talk(self):
         self.router.unidirectional = True

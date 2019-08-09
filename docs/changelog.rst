@@ -164,8 +164,15 @@ Core Library
   `closed` flag, preventing historical bugs where a double close could destroy
   descriptors belonging to unrelated streams.
 
+* `#586 <https://github.com/dw/mitogen/issues/586>`_: fix import of
+  :mod:`__main__` on later versions of Python 3 when running from the
+  interactive console.
+
 * `#606 <https://github.com/dw/mitogen/issues/606>`_: fix example code on the
   documentation front page.
+
+* `#612 <https://github.com/dw/mitogen/issues/612>`_: fix various errors
+  introduced by stream refactoring.
 
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
@@ -183,6 +190,14 @@ Core Library
   buffered items, causing future :meth:`get` calls to block or fail even though
   data existed that could be returned.
 
+* `5924af15 <https://github.com/dw/mitogen/commit/5924af15>`_: *[security]* the
+  unidirectional routing mode, in which contexts may only communicate with
+  parents and never siblings (so a program cannot accidentally bridge
+  air-gapped networks) was not inherited when a child context was initiated
+  directly from an existing child. This did not effect the Ansible extension,
+  since the controller initiates any new context used for routing, only forked
+  tasks are initiated by children.
+
 
 Thanks!
 ~~~~~~~
@@ -193,8 +208,10 @@ bug reports, testing, features and fixes in this release contributed by
 `Anton Markelov <https://github.com/strangeman>`_,
 `Dan <https://github.com/dsgnr>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
+`Denis Krienbühl <https://github.com/href>`_,
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
+`Marc Hartmayer <https://github.com/marc1006>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
 `Pieter Voet <https://github.com/pietervoet/>`_,

@@ -162,10 +162,9 @@ class Listener(mitogen.core.Protocol):
         stream = mitogen.core.MitogenProtocol.build_stream(
             router=self._router,
             remote_id=context_id,
+            auth_id=mitogen.context_id,
         )
         stream.name = u'unix_client.%d' % (pid,)
-        stream.protocol.auth_id = mitogen.context_id
-        stream.protocol.is_privileged = True
         stream.accept(sock, sock)
         LOG.debug('listener: accepted connection from PID %d: %s',
                   pid, stream.name)

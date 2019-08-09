@@ -122,9 +122,10 @@ class Select(object):
     @classmethod
     def all(cls, receivers):
         """
-        Take an iterable of receivers and retrieve a :class:`Message` from
-        each, returning the result of calling `msg.unpickle()` on each in turn.
-        Results are returned in the order they arrived.
+        Take an iterable of receivers and retrieve a :class:`Message
+        <mitogen.core.Message>` from each, returning the result of calling
+        :meth:`Message.unpickle() <mitogen.core.Message.unpickle>` on each in
+        turn. Results are returned in the order they arrived.
 
         This is sugar for handling batch :meth:`Context.call_async
         <mitogen.parent.Context.call_async>` invocations:

@@ -20,9 +20,15 @@ def pause_if_interactive():
             signal.pause()
 
 
+interesting = ci_lib.get_interesting_procs()
+
+
 with ci_lib.Fold('unit_tests'):
     os.environ['SKIP_MITOGEN'] = '1'
     ci_lib.run('./run_tests -v')
+
+
+ci_lib.check_stray_processes(interesting)
 
 
 with ci_lib.Fold('docker_setup'):
@@ -74,5 +80,8 @@ with ci_lib.Fold('ansible'):
     except:
         pause_if_interactive()
         raise
+
+
+ci_lib.check_stray_processes(interesting, containers)
 
 pause_if_interactive()
