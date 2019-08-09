@@ -164,8 +164,8 @@ Core Library
   `closed` flag, preventing historical bugs where a double close could destroy
   descriptors belonging to unrelated streams.
 
-* `#586 <https://github.com/dw/mitogen/issues/586>`_: fix import of the
-  `__main__` module on later versions of Python 3 when running from the
+* `#586 <https://github.com/dw/mitogen/issues/586>`_: fix import of
+  :mod:`__main__` on later versions of Python 3 when running from the
   interactive console.
 
 * `#606 <https://github.com/dw/mitogen/issues/606>`_: fix example code on the
@@ -192,13 +192,11 @@ Core Library
 
 * `5924af15 <https://github.com/dw/mitogen/commit/5924af15>`_: *[security]* the
   unidirectional routing mode, in which contexts may only communicate with
-  their parents and never siblings (such that a program cannot be used as a
-  bridge for air-gapped networks) was not inherited when a new child context
-  was initiated directly from an existing child.
-
-  The bug did not effect the Ansible extension since the top-level controller
-  process initiates any new context that could be used for routing. Only
-  forked tasks are started directly from children.
+  parents and never siblings (so a program cannot accidentally bridge
+  air-gapped networks) was not inherited when a child context was initiated
+  directly from an existing child. This did not effect the Ansible extension,
+  since the controller initiates any new context used for routing, only forked
+  tasks are initiated by children.
 
 
 Thanks!
