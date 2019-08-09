@@ -457,7 +457,7 @@ class DockerizedSshDaemon(object):
     def check_processes(self):
         args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
         counts = {}
-        for comm in subprocess__check_output(args).splitlines():
+        for comm in subprocess__check_output(args).decode().splitlines():
             comm = comm.strip()
             counts[comm] = counts.get(comm, 0) + 1
 
