@@ -454,6 +454,22 @@ class DockerizedSshDaemon(object):
     def wait_for_sshd(self):
         wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
 
+    def check_processes(self):
+        args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
+        counts = {}
+        for comm in subprocess__check_output(args).splitlines():
+            comm = comm.strip()
+            counts[comm] = counts.get(comm, 0) + 1
+
+        if counts != {'ps': 1, 'sshd': 1}:
+            assert 0, (
+                'Docker container %r contained extra running processes '
+                'after test completed: %r' % (
+                    self.container_name,
+                    counts
+                )
+            )
+
     def close(self):
         args = ['docker', 'rm', '-f', self.container_name]
         subprocess__check_output(args)
@@ -501,6 +517,7 @@ class DockerMixin(RouterMixin):
 
     @classmethod
     def tearDownClass(cls):
+        cls.dockerized_ssh.check_processes()
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 
