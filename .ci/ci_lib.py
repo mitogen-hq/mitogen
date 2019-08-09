@@ -220,7 +220,7 @@ INTERESTING_COMMS = ('python', 'ssh', 'sudo', 'su', 'doas')
 
 def proc_is_docker(pid):
     try:
-        fp = open('/proc/%s/cgroup' % (pid,), 'rb')
+        fp = open('/proc/%s/cgroup' % (pid,), 'r')
     except IOError:
         return False
 
@@ -236,7 +236,7 @@ def get_interesting_procs(container_name=None):
         args = ['docker', 'exec', container_name] + args
 
     out = []
-    for line in subprocess__check_output(args).splitlines():
+    for line in subprocess__check_output(args).decode().splitlines():
         ppid, pid, comm, rest = line.split(None, 3)
         if (
             (
