@@ -116,6 +116,12 @@ Mitogen for Ansible
   module, and for any other action plug-ins that establish new connections of
   their own.
 
+* `#615 <https://github.com/dw/mitogen/issues/615>`_: streaming file transfer
+  is implemented for the ``fetch`` and any other action that transfers files
+  from the target to the controller. Previously the file would be sent as a
+  single message, requiring the file to fit in RAM and be smaller than internal
+  limits on the size of a single message.
+
 * `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
   ``lineinfile`` module began leaking writable temporary file descriptors since
   Ansible 2.7.0. When ``lineinfile`` was used to create or modify a script, and
@@ -219,6 +225,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
+`@alexhexabeam <https://github.com/alexhexabeam>`_,
 `@DavidVentura <https://github.com/DavidVentura>`_,
 `@ghp-rr <https://github.com/ghp-rr>`_,
 `@rizzly <https://github.com/rizzly>`_, and

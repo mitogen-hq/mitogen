@@ -99,6 +99,21 @@ class OptionalIntTest(testlib.TestCase):
         self.assertEquals(None, self.func({1:2}))
 
 
+class FetchFileTest(ConnectionMixin, testlib.TestCase):
+    def test_success(self):
+        with tempfile.NamedTemporaryFile(prefix='mitotest') as ifp:
+            with tempfile.NamedTemporaryFile(prefix='mitotest') as ofp:
+                ifp.write(b'x' * (1048576 * 4))
+                ifp.flush()
+                ifp.seek(0)
+
+                self.conn.fetch_file(ifp.name, ofp.name)
+                # transfer_file() uses os.rename rather than direct data
+                # overwrite, so we must reopen.
+                with open(ofp.name, 'rb') as fp:
+                    self.assertEquals(ifp.read(), fp.read())
+
+
 class PutDataTest(ConnectionMixin, testlib.TestCase):
     def test_out_path(self):
         path = tempfile.mktemp(prefix='mitotest')

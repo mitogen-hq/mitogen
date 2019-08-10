@@ -1023,7 +1023,11 @@ class FileService(Service):
         :raises Error:
             Unregistered path, or Sender did not match requestee context.
         """
-        if path not in self._paths and not self._prefix_is_authorized(path):
+        if (
+            (path not in self._paths) and
+            (not self._prefix_is_authorized(path)) and
+            (not mitogen.core._has_parent_authority(msg.auth_id))
+        ):
             msg.reply(mitogen.core.CallError(
                 Error(self.unregistered_msg % (path,))
             ))

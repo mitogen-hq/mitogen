@@ -950,11 +950,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str out_path:
             Local filesystem path to write.
         """
-        output = self.get_chain().call(
-            ansible_mitogen.target.read_path,
-            mitogen.utils.cast(in_path),
+        self._connect()
+        ansible_mitogen.target.transfer_file(
+            context=self.context,
+            in_path=in_path,
+            out_path=out_path
         )
-        ansible_mitogen.target.write_path(out_path, output)
 
     def put_data(self, out_path, data, mode=None, utimes=None):
         """
