@@ -107,20 +107,18 @@ Mitogen for Ansible
   server has been increased from `15*3` seconds to `30*10` seconds.
 
 * `#600 <https://github.com/dw/mitogen/issues/600>`_: functionality to reflect
-  changes to ``/etc/environment`` in the running interpreter did not account
-  for Unicode file contents. Now the file may contain data in any single byte
-  encoding.
+  changes to ``/etc/environment`` did not account for Unicode file contents.
+  The file may now use any single byte encoding.
 
 * `#602 <https://github.com/dw/mitogen/issues/602>`_: connection configuration
   is more accurately inferred for `meta: reset_connection`, the `synchronize`
-  module, and for any other action plug-ins that establish new connections of
-  their own.
+  module, and for any action plug-ins that establish additional connections.
 
 * `#615 <https://github.com/dw/mitogen/issues/615>`_: streaming file transfer
-  is implemented for the ``fetch`` and any other action that transfers files
-  from the target to the controller. Previously the file would be sent as a
-  single message, requiring the file to fit in RAM and be smaller than internal
-  limits on the size of a single message.
+  is implemented for ``fetch`` and other actions that transfer files from the
+  target to the controller. Previously the file was sent in one message,
+  requiring it to fit in RAM and be smaller than the internal message size
+  limit.
 
 * `7ae926b3 <https://github.com/dw/mitogen/commit/7ae926b3>`_: the
   ``lineinfile`` module began leaking writable temporary file descriptors since
@@ -188,21 +186,20 @@ Core Library
   :meth:`empty` method of :class:`mitogen.core.Latch`,
   :class:`mitogen.core.Receiver` and :class:`mitogen.select.Select` has been
   replaced by a more general :meth:`size` method. :meth:`empty` will be removed
-  in Mitogen 0.3
+  in 0.3
 
 * `ecc570cb <https://github.com/dw/mitogen/commit/ecc570cb>`_: previously
-  :meth:`mitogen.select.Select.add` would enqueue a single wake event when
-  adding an existing receiver, latch or subselect that contained multiple
-  buffered items, causing future :meth:`get` calls to block or fail even though
-  data existed that could be returned.
+  :meth:`mitogen.select.Select.add` would enqueue one wake event when adding an
+  existing receiver, latch or subselect that contained multiple buffered items,
+  causing :meth:`get` calls to block or fail even though data existed to return.
 
-* `5924af15 <https://github.com/dw/mitogen/commit/5924af15>`_: *[security]* the
-  unidirectional routing mode, in which contexts may only communicate with
-  parents and never siblings (so a program cannot accidentally bridge
-  air-gapped networks) was not inherited when a child context was initiated
-  directly from an existing child. This did not effect the Ansible extension,
-  since the controller initiates any new context used for routing, only forked
-  tasks are initiated by children.
+* `5924af15 <https://github.com/dw/mitogen/commit/5924af15>`_: *[security]*
+  unidirectional routing, where contexts may optionally only communicate with
+  parents and never siblings (so that air-gapped networks cannot be
+  unintentionally bridged) was not inherited when a child was initiated
+  directly from an another child. This did not effect Ansible, since the
+  controller initiates any new child used for routing, only forked tasks are
+  initiated by children.
 
 
 Thanks!
