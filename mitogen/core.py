@@ -448,11 +448,31 @@ def fire(obj, name, *args, **kwargs):
 
 
 def takes_econtext(func):
+    """
+    Decorator that marks a function or class method to automatically receive a
+    kwarg named `econtext`, referencing the
+    :class:`mitogen.core.ExternalContext` active in the context in which the
+    function is being invoked in. The decorator is only meaningful when the
+    function is invoked via :data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>`.
+
+    When the function is invoked directly, `econtext` must still be passed to
+    it explicitly.
+    """
     func.mitogen_takes_econtext = True
     return func
 
 
 def takes_router(func):
+    """
+    Decorator that marks a function or class method to automatically receive a
+    kwarg named `router`, referencing the :class:`mitogen.core.Router` active
+    in the context in which the function is being invoked in. The decorator is
+    only meaningful when the function is invoked via :data:`CALL_FUNCTION
+    <mitogen.core.CALL_FUNCTION>`.
+
+    When the function is invoked directly, `router` must still be passed to it
+    explicitly.
+    """
     func.mitogen_takes_router = True
     return func
 
