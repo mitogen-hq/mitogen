@@ -321,6 +321,11 @@ These signals are used internally by Mitogen.
       - ``disconnect``
       - Fired on the Broker thread during shutdown (???)
 
+    * - :py:class:`mitogen.parent.Process`
+      - ``exit``
+      - Fired when :class:`mitogen.parent.Reaper` detects subprocess has fully
+        exitted.
+
     * - :py:class:`mitogen.core.Broker`
       - ``shutdown``
       - Fired after Broker.shutdown() is called.

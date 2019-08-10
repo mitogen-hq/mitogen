@@ -2331,7 +2331,7 @@ class Router(mitogen.core.Router):
         directly connected.
         """
         stream = self.stream_by_id(context)
-        if stream.protocol.remote_id != context.context_id:
+        if stream is None or stream.protocol.remote_id != context.context_id:
             return
 
         l = mitogen.core.Latch()
@@ -2589,6 +2589,7 @@ class Reaper(object):
         status = self.proc.poll()
         if status is not None:
             LOG.debug('%r: %s', self.proc, returncode_to_str(status))
+            mitogen.core.fire(self.proc, 'exit')
             self._remove_timer()
             return
 
