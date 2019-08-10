@@ -114,6 +114,9 @@ Mitogen for Ansible
   is more accurately inferred for `meta: reset_connection`, the `synchronize`
   module, and for any action plug-ins that establish additional connections.
 
+* `#605 <https://github.com/dw/mitogen/issues/605>`_: fix a deadlock managing a
+  shared counter used for load balancing.
+
 * `#615 <https://github.com/dw/mitogen/issues/615>`_: streaming file transfer
   is implemented for ``fetch`` and other actions that transfer files from the
   target to the controller. Previously the file was sent in one message,
