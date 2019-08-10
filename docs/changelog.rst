@@ -22,7 +22,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
 Enhancements
-^^^^^^^^^^^^
+~~~~~~~~~~~~
 
 * `#556 <https://github.com/dw/mitogen/issues/556>`_,
   `#587 <https://github.com/dw/mitogen/issues/587>`_: Ansible 2.8 is partially
@@ -61,7 +61,7 @@ Enhancements
 
 
 Mitogen for Ansible
-^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~
 
 * `#363 <https://github.com/dw/mitogen/issues/363>`_: fix an obscure race
   matching *Permission denied* errors from some versions of ``su`` running on
@@ -488,7 +488,7 @@ Enhancements
   `#491 <https://github.com/dw/mitogen/issues/491>`_,
   `#493 <https://github.com/dw/mitogen/issues/493>`_: the interface employed
   for in-process queues changed from `kqueue
-  <https://www.freebsd.org/cgi/man.cgi?query=kqueue&sektion=2>`_ / `epoll
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue>`_ / `epoll
   <http://man7.org/linux/man-pages/man7/epoll.7.html>`_ to `poll()
   <http://man7.org/linux/man-pages/man2/poll.2.html>`_, which requires no setup
   or teardown, yielding a 38% latency reduction for inter-thread communication.
@@ -1034,7 +1034,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Josh Smift <https://github.com/jbscare>`_,
 `Luca Nunzi <https://github.com/0xlc>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
-`Peter V. Saveliev <https://github.com/svinota>`_,
+`Peter V. Saveliev <https://github.com/svinota/>`_,
 `Pierre-Henry Muller <https://github.com/pierrehenrymuller>`_,
 `Pierre-Louis Bonicoli <https://github.com/jesteria>`_,
 `Prateek Jain <https://github.com/prateekj201>`_,
@@ -1092,7 +1092,7 @@ Core Library
 
 * `#300 <https://github.com/dw/mitogen/issues/300>`_: the broker could crash on
   OS X during shutdown due to scheduled `kqueue
-  <https://www.freebsd.org/cgi/man.cgi?query=kevent>`_ filter changes for
+  <https://www.freebsd.org/cgi/man.cgi?query=kqueue>`_ filter changes for
   descriptors that were closed before the IO loop resumes. As a temporary
   workaround, kqueue's bulk change feature is not used.
 

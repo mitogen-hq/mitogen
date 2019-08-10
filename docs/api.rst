@@ -2,11 +2,6 @@
 API Reference
 *************
 
-.. toctree::
-    :hidden:
-
-    signals
-
 
 Package Layout
 ==============

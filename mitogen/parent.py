@@ -2516,7 +2516,7 @@ class Reaper(object):
 
     :param mitogen.core.Broker broker:
         The :class:`Broker` on which to install timers
-    :param Process proc:
+    :param mitogen.parent.Process proc:
         The process to reap.
     :param bool kill:
         If :data:`True`, send ``SIGTERM`` and ``SIGKILL`` to the process.

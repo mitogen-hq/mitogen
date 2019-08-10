@@ -741,7 +741,7 @@ class ModuleFinder(object):
         The list is determined by retrieving the source code of
         `fullname`, compiling it, and examining all IMPORT_NAME ops.
 
-        :param fullname: Fully qualified name of an _already imported_ module
+        :param fullname: Fully qualified name of an *already imported* module
             for which source code can be retrieved
         :type fullname: str
         """
@@ -789,7 +789,7 @@ class ModuleFinder(object):
         This method is like :py:meth:`find_related_imports`, but also
         recursively searches any modules which are imported by `fullname`.
 
-        :param fullname: Fully qualified name of an _already imported_ module
+        :param fullname: Fully qualified name of an *already imported* module
             for which source code can be retrieved
         :type fullname: str
         """
@@ -841,7 +841,7 @@ class ModuleResponder(object):
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
-        See :meth:`ModuleFinder.add_source_override.
+        See :meth:`ModuleFinder.add_source_override`.
         """
         self._finder.add_source_override(fullname, path, source, is_pkg)
 
