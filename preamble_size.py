@@ -59,7 +59,7 @@ for mod in (
     original_size = len(original)
     minimized = mitogen.minify.minimize_source(original)
     minimized_size = len(minimized)
-    compressed = zlib.compress(minimized, 9)
+    compressed = zlib.compress(minimized.encode(), 9)
     compressed_size = len(compressed)
     print(
         '%-25s'
