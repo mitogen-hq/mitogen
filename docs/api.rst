@@ -603,6 +603,14 @@ Fork Safety
 Utility Functions
 =================
 
+.. currentmodule:: mitogen.core
+.. function:: now
+
+   A reference to :func:`time.time` on Python 2, or :func:`time.monotonic` on
+   Python >3.3. We prefer :func:`time.monotonic` when available to ensure
+   timers are not impacted by system clock changes.
+
+
 .. module:: mitogen.utils
 
 A random assortment of utility functions useful on masters and children.

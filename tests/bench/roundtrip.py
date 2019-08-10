@@ -5,6 +5,7 @@ Measure latency of local RPC.
 import time
 
 import mitogen
+import mitogen.core
 import mitogen.utils
 import ansible_mitogen.affinity
 
@@ -23,7 +24,7 @@ def do_nothing():
 def main(router):
     f = router.fork()
     f.call(do_nothing)
-    t0 = time.time()
+    t0 = mitogen.core.now()
     for x in xrange(20000):
         f.call(do_nothing)
-    print('++', int(1e6 * ((time.time() - t0) / (1.0+x))), 'usec')
+    print('++', int(1e6 * ((mitogen.core.now() - t0) / (1.0+x))), 'usec')

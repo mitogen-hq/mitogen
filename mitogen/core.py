@@ -362,6 +362,10 @@ def to_text(o):
     return UnicodeType(o)
 
 
+# Documented in api.rst to work around Sphinx limitation.
+now = getattr(time, 'monotonic', time.time)
+
+
 # Python 2.4
 try:
     any
@@ -636,7 +640,7 @@ def _real_profile_hook(name, func, *args):
         return func(*args)
     finally:
         path = _profile_fmt % {
-            'now': int(1e6 * time.time()),
+            'now': int(1e6 * now()),
             'identity': name,
             'pid': os.getpid(),
             'ext': '%s'
@@ -3482,9 +3486,9 @@ class Broker(object):
         for _, (side, _) in self.poller.readers + self.poller.writers:
             self._call(side.stream, side.stream.on_shutdown)
 
-        deadline = time.time() + self.shutdown_timeout
-        while self.keep_alive() and time.time() < deadline:
-            self._loop_once(max(0, deadline - time.time()))
+        deadline = now() + self.shutdown_timeout
+        while self.keep_alive() and now() < deadline:
+            self._loop_once(max(0, deadline - now()))
 
         if self.keep_alive():
             LOG.error('%r: pending work still existed %d seconds after '

@@ -6,6 +6,7 @@ import threading
 import time
 
 import mitogen
+import mitogen.core
 import mitogen.utils
 import ansible_mitogen.affinity
 
@@ -33,8 +34,8 @@ t2.start()
 ready.get()
 ready.get()
 
-t0 = time.time()
+t0 = mitogen.core.now()
 l1.put(None)
 t1.join()
 t2.join()
-print('++', int(1e6 * ((time.time() - t0) / (1.0+X))), 'usec')
+print('++', int(1e6 * ((mitogen.core.now() - t0) / (1.0+X))), 'usec')

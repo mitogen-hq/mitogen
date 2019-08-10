@@ -12,6 +12,7 @@ import unittest2
 import testlib
 from testlib import Popen__terminate
 
+import mitogen.core
 import mitogen.parent
 
 try:
@@ -21,8 +22,8 @@ except NameError:
 
 
 def wait_for_child(pid, timeout=1.0):
-    deadline = time.time() + timeout
-    while timeout < time.time():
+    deadline = mitogen.core.now() + timeout
+    while timeout < mitogen.core.now():
         try:
             target_pid, status = os.waitpid(pid, os.WNOHANG)
             if target_pid == pid:

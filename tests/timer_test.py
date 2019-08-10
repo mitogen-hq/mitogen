@@ -162,7 +162,7 @@ def do_timer_test_econtext(econtext):
 
 
 def do_timer_test(broker):
-    now = time.time()
+    now = mitogen.core.now()
     latch = mitogen.core.Latch()
     broker.defer(lambda:
         broker.timers.schedule(
@@ -172,7 +172,7 @@ def do_timer_test(broker):
     )
 
     assert 'hi' == latch.get()
-    assert time.time() > (now + 0.250)
+    assert mitogen.core.now() > (now + 0.250)
 
 
 class BrokerTimerTest(testlib.TestCase):
