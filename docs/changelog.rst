@@ -72,18 +72,20 @@ Mitogen for Ansible
   detected, to work around a broken heuristic in popular SELinux policies that
   prevents inheriting ``AF_UNIX`` sockets across privilege domains.
 
-* `#467 <https://github.com/dw/mitogen/issues/467>`_: an incompatibility
+* `#467 <httpe://github.com/dw/mitogen/issues/467>`_: an incompatibility
   running Mitogen under Molecule was resolved.
 
 * `#547 <https://github.com/dw/mitogen/issues/547>`_,
   `#598 <https://github.com/dw/mitogen/issues/598>`_: fix a serious deadlock
-  possible during initialization of any task executed by forking, such as
-  ``async`` tasks, tasks using custom :mod:`ansible.module_utils`,
+  possible while initializing the service pool of any child, such as during
+  connection, ``async`` tasks, tasks using custom :mod:`module_utils`,
   ``mitogen_task_isolation: fork`` modules, and those present on an internal
-  blacklist of misbehaving modules. This deadlock is relatively easy hit, has
-  been present since 0.2.0, and is likely to have impacted many users. For new
-  connections it could manifest as a *Connection timed out* error, for forked
-  tasks it could manifest as a timeout or an apparent hang.
+  blacklist of misbehaving modules.
+
+  This deadlock is relatively easy hit, has been present since 0.2.0, and is
+  likely to have impacted many users. For new connections it could manifest as
+  a *Connection timed out* error, for forked tasks it could manifest as a
+  timeout or an apparent hang.
 
 * `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
   limit for the Ansible process is increased to the available hard limit. It is
