@@ -1109,7 +1109,7 @@ class FileService(Service):
             :meth:`fetch`.
         """
         LOG.debug('get_file(): fetching %r from %r', path, context)
-        t0 = time.time()
+        t0 = mitogen.core.now()
         recv = mitogen.core.Receiver(router=context.router)
         metadata = context.call_service(
             service_name=cls.name(),
@@ -1143,5 +1143,6 @@ class FileService(Service):
                       path, metadata['size'], received_bytes)
 
         LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-                  metadata['size'], path, context, 1000 * (time.time() - t0))
+                  metadata['size'], path, context,
+                  1000 * (mitogen.core.now() - t0))
         return ok, metadata

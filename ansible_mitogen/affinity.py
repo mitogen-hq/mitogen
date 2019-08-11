@@ -92,37 +92,37 @@ try:
     _libc = ctypes.CDLL(None, use_errno=True)
     _strerror = _libc.strerror
     _strerror.restype = ctypes.c_char_p
-    _pthread_mutex_init = _libc.pthread_mutex_init
-    _pthread_mutex_lock = _libc.pthread_mutex_lock
-    _pthread_mutex_unlock = _libc.pthread_mutex_unlock
+    _sem_init = _libc.sem_init
+    _sem_wait = _libc.sem_wait
+    _sem_post = _libc.sem_post
     _sched_setaffinity = _libc.sched_setaffinity
 except (OSError, AttributeError):
     _libc = None
     _strerror = None
-    _pthread_mutex_init = None
-    _pthread_mutex_lock = None
-    _pthread_mutex_unlock = None
+    _sem_init = None
+    _sem_wait = None
+    _sem_post = None
     _sched_setaffinity = None
 
 
-class pthread_mutex_t(ctypes.Structure):
+class sem_t(ctypes.Structure):
     """
-    Wrap pthread_mutex_t to allow storing a lock in shared memory.
+    Wrap sem_t to allow storing a lock in shared memory.
     """
     _fields_ = [
-        ('data', ctypes.c_uint8 * 512),
+        ('data', ctypes.c_uint8 * 128),
     ]
 
     def init(self):
-        if _pthread_mutex_init(self.data, 0):
+        if _sem_init(self.data, 1, 1):
             raise Exception(_strerror(ctypes.get_errno()))
 
     def acquire(self):
-        if _pthread_mutex_lock(self.data):
+        if _sem_wait(self.data):
             raise Exception(_strerror(ctypes.get_errno()))
 
     def release(self):
-        if _pthread_mutex_unlock(self.data):
+        if _sem_post(self.data):
             raise Exception(_strerror(ctypes.get_errno()))
 
 
@@ -133,7 +133,7 @@ class State(ctypes.Structure):
     the context of the new child process.
     """
     _fields_ = [
-        ('lock', pthread_mutex_t),
+        ('lock', sem_t),
         ('counter', ctypes.c_uint8),
     ]
 

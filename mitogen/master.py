@@ -741,7 +741,7 @@ class ModuleFinder(object):
         The list is determined by retrieving the source code of
         `fullname`, compiling it, and examining all IMPORT_NAME ops.
 
-        :param fullname: Fully qualified name of an _already imported_ module
+        :param fullname: Fully qualified name of an *already imported* module
             for which source code can be retrieved
         :type fullname: str
         """
@@ -789,7 +789,7 @@ class ModuleFinder(object):
         This method is like :py:meth:`find_related_imports`, but also
         recursively searches any modules which are imported by `fullname`.
 
-        :param fullname: Fully qualified name of an _already imported_ module
+        :param fullname: Fully qualified name of an *already imported* module
             for which source code can be retrieved
         :type fullname: str
         """
@@ -841,7 +841,7 @@ class ModuleResponder(object):
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
-        See :meth:`ModuleFinder.add_source_override.
+        See :meth:`ModuleFinder.add_source_override`.
         """
         self._finder.add_source_override(fullname, path, source, is_pkg)
 
@@ -910,9 +910,9 @@ class ModuleResponder(object):
 
         if self.minify_safe_re.search(source):
             # If the module contains a magic marker, it's safe to minify.
-            t0 = time.time()
+            t0 = mitogen.core.now()
             source = mitogen.minify.minimize_source(source).encode('utf-8')
-            self.minify_secs += time.time() - t0
+            self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
             pkg_present = get_child_modules(path)
@@ -1001,11 +1001,11 @@ class ModuleResponder(object):
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
 
-        t0 = time.time()
+        t0 = mitogen.core.now()
         try:
             self._send_module_and_related(stream, fullname)
         finally:
-            self.get_module_secs += time.time() - t0
+            self.get_module_secs += mitogen.core.now() - t0
 
     def _send_forward_module(self, stream, context, fullname):
         if stream.protocol.remote_id != context.context_id:

@@ -6,6 +6,7 @@ import sys
 import time
 
 import mitogen
+import mitogen.core
 import mitogen.utils
 import ansible_mitogen.affinity
 
@@ -24,12 +25,12 @@ def do_nothing():
 def main(router):
     f = router.ssh(hostname=sys.argv[1])
     f.call(do_nothing)
-    t0 = time.time()
-    end = time.time() + 5.0
+    t0 = mitogen.core.now()
+    end = mitogen.core.now() + 5.0
     i = 0
-    while time.time() < end:
+    while mitogen.core.now() < end:
         f.call(do_nothing)
         i += 1
-        t1 = time.time()
+        t1 = mitogen.core.now()
 
     print('++', float(1e3 * (t1 - t0) / (1.0+i)), 'ms')

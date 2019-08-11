@@ -24,10 +24,12 @@ conn = mitogen.ssh.Connection(options, router)
 conn.context = context
 
 print('SSH command size: %s' % (len(' '.join(conn.get_boot_command())),))
-print('Preamble size: %s (%.2fKiB)' % (
+print('Bootstrap (mitogen.core) size: %s (%.2fKiB)' % (
     len(conn.get_preamble()),
     len(conn.get_preamble()) / 1024.0,
 ))
+print('')
+
 if '--dump' in sys.argv:
     print(zlib.decompress(conn.get_preamble()))
     exit()
@@ -57,7 +59,7 @@ for mod in (
     original_size = len(original)
     minimized = mitogen.minify.minimize_source(original)
     minimized_size = len(minimized)
-    compressed = zlib.compress(minimized, 9)
+    compressed = zlib.compress(minimized.encode(), 9)
     compressed_size = len(compressed)
     print(
         '%-25s'

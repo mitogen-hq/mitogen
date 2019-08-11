@@ -86,12 +86,12 @@ class ClientTest(testlib.TestCase):
 
     def _try_connect(self, path):
         # give server a chance to setup listener
-        timeout = time.time() + 30.0
+        timeout = mitogen.core.now() + 30.0
         while True:
             try:
                 return mitogen.unix.connect(path)
             except mitogen.unix.ConnectError:
-                if time.time() > timeout:
+                if mitogen.core.now() > timeout:
                     raise
                 time.sleep(0.1)
 

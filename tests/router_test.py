@@ -1,3 +1,5 @@
+import errno
+import os
 import sys
 import time
 import zlib
@@ -423,6 +425,109 @@ class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
             mitogen.context_id,
             c2.context_id,
         ]))
+
+
+class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
+    # 613: tests for all the weird shutdown() variants we ended up with.
+
+    def test_shutdown_wait_false(self):
+        l1 = self.router.local()
+        pid = l1.call(os.getpid)
+
+        conn = self.router.stream_by_id(l1.context_id).conn
+        exitted = mitogen.core.Latch()
+        mitogen.core.listen(conn.proc, 'exit', exitted.put)
+
+        l1.shutdown(wait=False)
+        exitted.get()
+
+        e = self.assertRaises(OSError,
+            lambda: os.waitpid(pid, 0))
+        self.assertEquals(e.args[0], errno.ECHILD)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: l1.call(os.getpid))
+        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
+
+    def test_shutdown_wait_true(self):
+        l1 = self.router.local()
+        pid = l1.call(os.getpid)
+
+        conn = self.router.stream_by_id(l1.context_id).conn
+        exitted = mitogen.core.Latch()
+        mitogen.core.listen(conn.proc, 'exit', exitted.put)
+
+        l1.shutdown(wait=True)
+        exitted.get()
+
+        e = self.assertRaises(OSError,
+            lambda: os.waitpid(pid, 0))
+        self.assertEquals(e.args[0], errno.ECHILD)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: l1.call(os.getpid))
+        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
+
+    def test_disconnect_invalid_context(self):
+        self.router.disconnect(
+            mitogen.core.Context(self.router, 1234)
+        )
+
+    def test_disconnect_valid_context(self):
+        l1 = self.router.local()
+        pid = l1.call(os.getpid)
+
+        strm = self.router.stream_by_id(l1.context_id)
+
+        exitted = mitogen.core.Latch()
+        mitogen.core.listen(strm.conn.proc, 'exit', exitted.put)
+        self.router.disconnect_stream(strm)
+        exitted.get()
+
+        e = self.assertRaises(OSError,
+            lambda: os.waitpid(pid, 0))
+        self.assertEquals(e.args[0], errno.ECHILD)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: l1.call(os.getpid))
+        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
+
+    def test_disconnet_all(self):
+        l1 = self.router.local()
+        l2 = self.router.local()
+
+        pids = [l1.call(os.getpid), l2.call(os.getpid)]
+
+        exitted = mitogen.core.Latch()
+        for ctx in l1, l2:
+            strm = self.router.stream_by_id(ctx.context_id)
+            mitogen.core.listen(strm.conn.proc, 'exit', exitted.put)
+
+        self.router.disconnect_all()
+        exitted.get()
+        exitted.get()
+
+        for pid in pids:
+            e = self.assertRaises(OSError,
+                lambda: os.waitpid(pid, 0))
+            self.assertEquals(e.args[0], errno.ECHILD)
+
+        for ctx in l1, l2:
+            e = self.assertRaises(mitogen.core.ChannelError,
+                lambda: ctx.call(os.getpid))
+            self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+                ctx.context_id,
+                mitogen.context_id,
+            ))
 
 
 if __name__ == '__main__':

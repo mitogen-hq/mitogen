@@ -633,7 +633,7 @@ class TimerList(object):
     :meth:`expire`. The main user interface to :class:`TimerList` is
     :meth:`schedule`.
     """
-    _now = time.time
+    _now = mitogen.core.now
 
     def __init__(self):
         self._lst = []
@@ -1124,7 +1124,7 @@ class LineLoggingProtocolMixin(object):
 
     def on_line_received(self, line):
         self.logged_partial = None
-        self.logged_lines.append((time.time(), line))
+        self.logged_lines.append((mitogen.core.now(), line))
         self.logged_lines[:] = self.logged_lines[-100:]
         return super(LineLoggingProtocolMixin, self).on_line_received(line)
 
@@ -1134,7 +1134,7 @@ class LineLoggingProtocolMixin(object):
 
     def on_disconnect(self, broker):
         if self.logged_partial:
-            self.logged_lines.append((time.time(), self.logged_partial))
+            self.logged_lines.append((mitogen.core.now(), self.logged_partial))
             self.logged_partial = None
         super(LineLoggingProtocolMixin, self).on_disconnect(broker)
 
@@ -1324,7 +1324,7 @@ class Options(object):
         self.profiling = profiling
         self.unidirectional = unidirectional
         self.max_message_size = max_message_size
-        self.connect_deadline = time.time() + self.connect_timeout
+        self.connect_deadline = mitogen.core.now() + self.connect_timeout
 
 
 class Connection(object):
@@ -1819,7 +1819,7 @@ class CallChain(object):
             socket.gethostname(),
             os.getpid(),
             thread.get_ident(),
-            int(1e6 * time.time()),
+            int(1e6 * mitogen.core.now()),
         )
 
     def __repr__(self):
@@ -2331,7 +2331,7 @@ class Router(mitogen.core.Router):
         directly connected.
         """
         stream = self.stream_by_id(context)
-        if stream.protocol.remote_id != context.context_id:
+        if stream is None or stream.protocol.remote_id != context.context_id:
             return
 
         l = mitogen.core.Latch()
@@ -2516,7 +2516,7 @@ class Reaper(object):
 
     :param mitogen.core.Broker broker:
         The :class:`Broker` on which to install timers
-    :param Process proc:
+    :param mitogen.parent.Process proc:
         The process to reap.
     :param bool kill:
         If :data:`True`, send ``SIGTERM`` and ``SIGKILL`` to the process.
@@ -2569,7 +2569,7 @@ class Reaper(object):
     def _install_timer(self, delay):
         new = self._timer is None
         self._timer = self.broker.timers.schedule(
-            when=time.time() + delay,
+            when=mitogen.core.now() + delay,
             func=self.reap,
         )
         if new:
@@ -2589,6 +2589,7 @@ class Reaper(object):
         status = self.proc.poll()
         if status is not None:
             LOG.debug('%r: %s', self.proc, returncode_to_str(status))
+            mitogen.core.fire(self.proc, 'exit')
             self._remove_timer()
             return
 

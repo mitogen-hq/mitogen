@@ -9,6 +9,7 @@ import tempfile
 import mock
 import unittest2
 
+import mitogen.core
 import mitogen.parent
 from mitogen.core import b
 
@@ -188,7 +189,6 @@ class TtyCreateChildTest(testlib.TestCase):
             proc = self.func([
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
             ])
-            deadline = time.time() + 5.0
             mitogen.core.set_block(proc.stdin.fileno())
             # read(3) below due to https://bugs.python.org/issue37696
             self.assertEquals(mitogen.core.b('hi\n'), proc.stdin.read(3))
@@ -271,7 +271,6 @@ class TtyCreateChildTest(testlib.TestCase):
             proc = self.func([
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
             ])
-            deadline = time.time() + 5.0
             self.assertEquals(mitogen.core.b('hi\n'), wait_read(proc.stdout, 3))
             waited_pid, status = os.waitpid(proc.pid, 0)
             self.assertEquals(proc.pid, waited_pid)

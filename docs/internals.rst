@@ -7,11 +7,6 @@ Internal API Reference
    Internal APIs are subject to rapid change even across minor releases. This
    page exists to help users modify and extend the library.
 
-.. toctree::
-    :hidden:
-
-    signals
-
 
 Constants
 =========
@@ -49,6 +44,10 @@ Logging
 =======
 
 See also :class:`mitogen.core.IoLoggerProtocol`.
+
+.. currentmodule:: mitogen.core
+.. autoclass:: LogHandler
+   :members:
 
 .. currentmodule:: mitogen.master
 .. autoclass:: LogForwarder
@@ -270,6 +269,8 @@ Helpers
 .. autofunction:: minimize_source
 
 
+.. _signals:
+
 Signals
 =======
 
@@ -312,9 +313,18 @@ These signals are used internally by Mitogen.
       - ``disconnect``
       - Fired on the Broker thread when disconnection is detected.
 
+    * - :py:class:`mitogen.core.Stream`
+      - ``shutdown``
+      - Fired on the Broker thread when broker shutdown begins.
+
     * - :py:class:`mitogen.core.Context`
       - ``disconnect``
       - Fired on the Broker thread during shutdown (???)
+
+    * - :py:class:`mitogen.parent.Process`
+      - ``exit``
+      - Fired when :class:`mitogen.parent.Reaper` detects subprocess has fully
+        exitted.
 
     * - :py:class:`mitogen.core.Broker`
       - ``shutdown``

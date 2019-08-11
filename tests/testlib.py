@@ -107,11 +107,11 @@ def wait_for_port(
     If a regex pattern is supplied try to find it in the initial data.
     Return None on success, or raise on error.
     """
-    start = time.time()
+    start = mitogen.core.now()
     end = start + overall_timeout
     addr = (host, port)
 
-    while time.time() < end:
+    while mitogen.core.now() < end:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(connect_timeout)
         try:
@@ -130,7 +130,7 @@ def wait_for_port(
         sock.settimeout(receive_timeout)
         data = mitogen.core.b('')
         found = False
-        while time.time() < end:
+        while mitogen.core.now() < end:
             try:
                 resp = sock.recv(1024)
             except socket.timeout:
