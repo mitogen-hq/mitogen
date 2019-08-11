@@ -119,7 +119,7 @@ Mitogen for Ansible
   module, and for any action plug-ins that establish additional connections.
 
 * `#598 <https://github.com/dw/mitogen/issues/598>`_,
-* `#605 <https://github.com/dw/mitogen/issues/605>`_: fix a deadlock managing a
+  `#605 <https://github.com/dw/mitogen/issues/605>`_: fix a deadlock managing a
   shared counter used for load balancing.
 
 * `#615 <https://github.com/dw/mitogen/issues/615>`_: streaming file transfer
