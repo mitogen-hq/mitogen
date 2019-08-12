@@ -9,9 +9,10 @@
   # Verify output of a single async job.
 
   - name: start 2 second op
+    # Sleep after writing; see https://github.com/ansible/ansible/issues/51393
     shell: |
+      echo alldone;
       sleep 1;
-      echo alldone
     async: 1000
     poll: 0
     register: job1
@@ -40,9 +41,9 @@
       # ansible/b72e989e1837ccad8dcdc926c43ccbc4d8cdfe44
       - |
         (ansible_version.full >= '2.8' and
-         result1.cmd == "sleep 1;\necho alldone\n") or
+         result1.cmd == "echo alldone;\nsleep 1;\n") or
         (ansible_version.full < '2.8' and
-         result1.cmd == "sleep 1;\n echo alldone")
+         result1.cmd == "echo alldone;\n sleep 1;")
       - result1.delta|length == 14
       - result1.start|length == 26
       - result1.finished == 1

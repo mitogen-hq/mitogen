@@ -37,7 +37,6 @@ import pwd
 import stat
 import sys
 import threading
-import time
 
 import mitogen.core
 import mitogen.select

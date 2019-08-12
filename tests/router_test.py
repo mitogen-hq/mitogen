@@ -434,11 +434,20 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.local()
         pid = l1.call(os.getpid)
 
-        conn = self.router.stream_by_id(l1.context_id).conn
+        strm = self.router.stream_by_id(l1.context_id)
         exitted = mitogen.core.Latch()
-        mitogen.core.listen(conn.proc, 'exit', exitted.put)
+
+        # It is possible for Process 'exit' signal to fire immediately during
+        # processing of Stream 'disconnect' signal, so we must wait for both,
+        # otherwise ChannelError below will return 'respondent context has
+        # disconnected' rather than 'no route', because RouteMonitor hasn't run
+        # yet and the Receiver caught Context 'disconnect' signal instead of a
+        # dead message.
+        mitogen.core.listen(strm.conn.proc, 'exit', exitted.put)
+        mitogen.core.listen(strm, 'disconnect', exitted.put)
 
         l1.shutdown(wait=False)
+        exitted.get()
         exitted.get()
 
         e = self.assertRaises(OSError,

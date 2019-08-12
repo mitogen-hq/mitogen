@@ -37,7 +37,6 @@ how to build arguments for it, preseed related data, etc.
 """
 
 import atexit
-import codecs
 import imp
 import os
 import re

@@ -245,7 +245,7 @@ def main(router):
     if sys.platform == 'darwin':
         kwargs['volname'] = '%s (Mitogen)' % (sys.argv[1],)
 
-    f = fuse.FUSE(
+    fuse.FUSE(
         operations=Operations(sys.argv[1]),
         mountpoint=sys.argv[2],
         foreground=True,

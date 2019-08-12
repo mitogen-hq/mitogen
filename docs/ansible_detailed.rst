@@ -82,8 +82,7 @@ Installation
     <form action="https://networkgenomics.com/save-email/" method="post" id="emailform">
         <input type=hidden name="list_name" value="mitogen-announce">
 
-        Releases occur frequently and often include important fixes. Subscribe
-        to the mitogen-announce list to stay updated.
+        Get notified of new releases and important fixes.
 
         <p>
         <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;">

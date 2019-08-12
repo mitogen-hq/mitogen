@@ -72,14 +72,20 @@ Mitogen for Ansible
   detected, to work around a broken heuristic in popular SELinux policies that
   prevents inheriting ``AF_UNIX`` sockets across privilege domains.
 
-* `#467 <https://github.com/dw/mitogen/issues/467>`_: an incompatibility
+* `#467 <httpe://github.com/dw/mitogen/issues/467>`_: an incompatibility
   running Mitogen under Molecule was resolved.
 
-* `#547 <https://github.com/dw/mitogen/issues/547>`_: fix a serious deadlock
-  possible during initialization of any task executed by forking, such as
-  ``async`` tasks, tasks using custom :mod:`ansible.module_utils`,
+* `#547 <https://github.com/dw/mitogen/issues/547>`_,
+  `#598 <https://github.com/dw/mitogen/issues/598>`_: fix a serious deadlock
+  possible while initializing the service pool of any child, such as during
+  connection, ``async`` tasks, tasks using custom :mod:`module_utils`,
   ``mitogen_task_isolation: fork`` modules, and those present on an internal
   blacklist of misbehaving modules.
+
+  This deadlock is relatively easy hit, has been present since 0.2.0, and is
+  likely to have impacted many users. For new connections it could manifest as
+  a *Connection timed out* error, for forked tasks it could manifest as a
+  timeout or an apparent hang.
 
 * `#549 <https://github.com/dw/mitogen/issues/549>`_: the open file descriptor
   limit for the Ansible process is increased to the available hard limit. It is
@@ -114,7 +120,8 @@ Mitogen for Ansible
   is more accurately inferred for `meta: reset_connection`, the `synchronize`
   module, and for any action plug-ins that establish additional connections.
 
-* `#605 <https://github.com/dw/mitogen/issues/605>`_: fix a deadlock managing a
+* `#598 <https://github.com/dw/mitogen/issues/598>`_,
+  `#605 <https://github.com/dw/mitogen/issues/605>`_: fix a deadlock managing a
   shared counter used for load balancing.
 
 * `#615 <https://github.com/dw/mitogen/issues/615>`_: streaming file transfer
@@ -224,6 +231,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Stefane Fermigier <https://github.com/sfermigier>`_,
 `Szabó Dániel Ernő <https://github.com/r3ap3rpy>`_,
 `Ulrich Schreiner <https://github.com/ulrichSchreiner>`_,
+`yen <https://github.com/antigenius0910>`_,
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
 `@alexhexabeam <https://github.com/alexhexabeam>`_,
 `@DavidVentura <https://github.com/DavidVentura>`_,

@@ -47,7 +47,6 @@ import re
 import string
 import sys
 import threading
-import time
 import types
 import zlib
 

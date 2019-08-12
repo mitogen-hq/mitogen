@@ -673,8 +673,12 @@ code occurring after the first conditional that looks like a standard
     if __name__ == '__main__':
         run_some_code()
 
-This is a hack, but it's the least annoying hack I've found for the problem
-yet.
+To further avoid accidental execution, Mitogen will refuse to serve
+:mod:`__main__` to children if no execution guard is found, as it is common
+that no guard is present during early script prototyping.
+
+These are hacks, but they are the safest and least annoying found to solve the
+problem.
 
 
 Avoiding Negative Imports

@@ -2,6 +2,10 @@ variable "node-count" {
   default = 0
 }
 
+variable "preemptible" {
+  default = true
+}
+
 variable "big" {
     default = false
 }
@@ -93,7 +97,7 @@ resource "google_compute_instance_template" "node" {
   machine_type = "custom-1-1024"
 
   scheduling {
-    preemptible       = true
+    preemptible       = "${var.preemptible}"
     automatic_restart = false
   }
 

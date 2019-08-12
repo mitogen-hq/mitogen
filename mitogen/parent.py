@@ -41,7 +41,6 @@ import getpass
 import heapq
 import inspect
 import logging
-import logging
 import os
 import re
 import signal
@@ -52,7 +51,6 @@ import sys
 import termios
 import textwrap
 import threading
-import time
 import zlib
 
 # Absolute imports for <2.5.
