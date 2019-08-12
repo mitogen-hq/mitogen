@@ -243,6 +243,7 @@ bug reports, testing, features and fixes in this release contributed by
 `@DavidVentura <https://github.com/DavidVentura>`_,
 `@dbiegunski <https://github.com/dbiegunski>`_,
 `@ghp-rr <https://github.com/ghp-rr>`_,
+`@migalsp <https://github.com/migalsp>`_,
 `@rizzly <https://github.com/rizzly>`_,
 `@SQGE <https://github.com/SQGE>`_, and
 `@tho86 <https://github.com/tho86>`_.
