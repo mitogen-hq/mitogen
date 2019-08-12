@@ -93,6 +93,11 @@ Mitogen for Ansible
   default soft limit, allowing *"too many open files"* errors to be avoided
   more often in large runs without user configuration.
 
+* `#558 <https://github.com/dw/mitogen/issues/558>`_,
+  `#582 <https://github.com/dw/mitogen/issues/582>`_: on Ansible 2.3 a remote
+  directory was unconditionally deleted after the first module belonging to an
+  action plug-in had executed, causing the ``unarchive`` module to fail.
+
 * `#578 <https://github.com/dw/mitogen/issues/578>`_: the extension could crash
   while rendering an error message, due to an incorrect format string.
 
@@ -223,6 +228,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Dave Cottlehuber <https://github.com/dch>`_,
 `Denis Krienbühl <https://github.com/href>`_,
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
+`Florent Dutheil <https://github.com/fdutheil>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
 `Marc Hartmayer <https://github.com/marc1006>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
@@ -235,8 +241,10 @@ bug reports, testing, features and fixes in this release contributed by
 `Yuki Nishida <https://github.com/yuki-nishida-exa>`_,
 `@alexhexabeam <https://github.com/alexhexabeam>`_,
 `@DavidVentura <https://github.com/DavidVentura>`_,
+`@dbiegunski <https://github.com/dbiegunski>`_,
 `@ghp-rr <https://github.com/ghp-rr>`_,
-`@rizzly <https://github.com/rizzly>`_, and
+`@rizzly <https://github.com/rizzly>`_,
+`@SQGE <https://github.com/SQGE>`_, and
 `@tho86 <https://github.com/tho86>`_.
 
 

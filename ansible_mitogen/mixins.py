@@ -360,11 +360,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             )
         )
 
-        if ansible.__version__ < '2.5' and delete_remote_tmp and \
-                getattr(self._connection._shell, 'tmpdir', None) is not None:
+        if tmp and ansible.__version__ < '2.5' and delete_remote_tmp:
             # Built-in actions expected tmpdir to be cleaned up automatically
             # on _execute_module().
-            self._remove_tmp_path(self._connection._shell.tmpdir)
+            self._remove_tmp_path(tmp)
 
         return result
 
