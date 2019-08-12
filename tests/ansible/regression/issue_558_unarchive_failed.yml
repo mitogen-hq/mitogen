@@ -9,3 +9,5 @@
   - unarchive:
       src: "{{git_basedir}}/tests/data/unarchive_test.tar"
       dest: /tmp/foo
+    # garbage doesn't work with BSD tar
+    when: ansible_system != 'Darwin'
