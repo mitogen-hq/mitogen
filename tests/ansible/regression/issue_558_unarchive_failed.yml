@@ -1,0 +1,13 @@
+# _execute_module() would unconditionally delete shell.tmpdir without
+# respecting the passed in 'tmp' parameter on Ansible 2.3.
+
+- name: regression/issue_558_unarchive_failed.yml
+  hosts: test-targets
+  tasks:
+  - file: state=absent path=/tmp/foo
+  - file: state=directory path=/tmp/foo
+  - unarchive:
+      src: "{{git_basedir}}/tests/data/unarchive_test.tar"
+      dest: /tmp/foo
+    # garbage doesn't work with BSD tar
+    when: ansible_system != 'Darwin'
