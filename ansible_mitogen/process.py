@@ -32,7 +32,6 @@ import logging
 import multiprocessing
 import os
 import resource
-import signal
 import socket
 import sys
 
