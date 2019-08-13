@@ -3919,7 +3919,7 @@ class ExternalContext(object):
                 self.router.register(self.parent, self.stream)
                 self.router._setup_logging()
 
-                sys.executable = os.environ.pop('ARGV0', sys.executable)
+                _v and LOG.debug('Python version is %s', sys.version)
                 _v and LOG.debug('Parent is context %r (%s); my ID is %r',
                                  self.parent.context_id, self.parent.name,
                                  mitogen.context_id)
@@ -3927,6 +3927,8 @@ class ExternalContext(object):
                                  os.getpid(), os.getppid(), os.geteuid(),
                                  os.getuid(), os.getegid(), os.getgid(),
                                  socket.gethostname())
+
+                sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 if self.config.get('send_ec2', True):
