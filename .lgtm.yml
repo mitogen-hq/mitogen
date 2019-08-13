@@ -1,3 +1,10 @@
 path_classifiers:
-  thirdparty:
-    - "mitogen/compat/*.py"
+  library:
+    - "mitogen/compat"
+    - "ansible_mitogen/compat"
+queries:
+  # Mitogen 2.4 compatibility trips this query everywhere, so just disable it
+  - exclude: py/unreachable-statement
+  - exclude: py/should-use-with
+  # mitogen.core.b() trips this query everywhere, so just disable it
+  - exclude: py/import-and-import-from
