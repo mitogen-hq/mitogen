@@ -233,7 +233,7 @@ def proc_is_docker(pid):
 
 
 def get_interesting_procs(container_name=None):
-    args = ['ps', '-a', '-x', '-oppid=', '-opid=', '-ocomm=', '-ocommand=']
+    args = ['ps', 'ax', '-oppid=', '-opid=', '-ocomm=', '-ocommand=']
     if container_name is not None:
         args = ['docker', 'exec', container_name] + args
 
