@@ -2727,9 +2727,9 @@ class Latch(object):
 
 class Waker(Protocol):
     """
-    :class:`BasicStream` subclass implementing the `UNIX self-pipe trick`_.
-    Used to wake the multiplexer when another thread needs to modify its state
-    (via a cross-thread function call).
+    :class:`Protocol` implementing the `UNIX self-pipe trick`_. Used to wake
+    :class:`Broker` when another thread needs to modify its state, by enqueing
+    a function call to run on the :class:`Broker` thread.
 
     .. _UNIX self-pipe trick: https://cr.yp.to/docs/selfpipe.html
     """

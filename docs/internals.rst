@@ -66,6 +66,10 @@ Stream, Side & Protocol
    :members:
 
 .. currentmodule:: mitogen.core
+.. autoclass:: BufferedWriter
+   :members:
+
+.. currentmodule:: mitogen.core
 .. autoclass:: Side
    :members:
 
@@ -79,6 +83,10 @@ Stream, Side & Protocol
 
 .. currentmodule:: mitogen.core
 .. autoclass:: DelimitedProtocol
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: LogProtocol
    :members:
 
 .. currentmodule:: mitogen.core
