@@ -52,6 +52,11 @@ Enhancements
   place to support future removal of the final round-trip between a target
   fully booting and receiving its first function call.
 
+* `#595 <https://github.com/dw/mitogen/pull/595>`_: the :meth:`Router.buildah
+   <mitogen.parent.Router.buildah>` connection method is available to connect
+   to Buildah containers, and is exposed to Ansible as the ``buildah``
+   transport.
+
 * `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
   `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
   `e93762b3 <https://github.com/dw/mitogen/commit/e93762b3>`_,
@@ -230,6 +235,7 @@ bug reports, testing, features and fixes in this release contributed by
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `Florent Dutheil <https://github.com/fdutheil>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
+`Jordan Webb <https://github.com/jordemort>`_,
 `Marc Hartmayer <https://github.com/marc1006>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,

@@ -175,7 +175,8 @@ Noteworthy Differences
 
        your_ssh_username = (ALL) NOPASSWD:/usr/bin/python -c*
 
-* The `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
+* The `buildah <https://docs.ansible.com/ansible/latest/plugins/connection/buildah.html>`_,
+  `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
   `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,
   `kubectl <https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_,
   `local <https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_,
@@ -720,6 +721,19 @@ Connection Types
 Matching Ansible, connection variables are treated on a per-task basis, causing
 establishment of additional reuseable interpreters as necessary to match the
 configuration of each task.
+
+
+.. _method-buildah:
+
+Buildah
+~~~~~~~
+
+Like `buildah
+<https://docs.ansible.com/ansible/2.6/plugins/connection/buildah.html>`_ except
+connection delegation is supported.
+
+* ``ansible_host``: Name of Buildah container (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
 
 
 .. _doas:
