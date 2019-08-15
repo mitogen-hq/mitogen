@@ -32,30 +32,32 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
-  multiplexer into per-CPU workers. This improves throughput for large runs
-  especially involving file transfer, and is a prerequisite for future
-  in-process SSH support. One multiplexer starts by default, to match existing
-  behaviour.
+* `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
+  installation, both Operon and Ansible are supported by a unified release.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_,
   `#470 <https://github.com/dw/mitogen/issues/470>`_, file descriptor usage
   during large runs is halved, as it is no longer necessary to manage read and
-  write sides distinctly in order to work around a design limitation.
+  write sides distinctly in order to work around a design problem.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: almost all connection
-  setup happens on one thread, reducing GIL contention and context switching
-  early in a run.
+  setup happens on one thread, reducing contention and context switching early
+  in a run.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: Connection setup is
-  pipelined, eliminating several network round-trips. Most infrastructure is in
-  place to support future removal of the final round-trip between a target
-  fully booting and receiving its first function call.
+  better pipelined, eliminating some network round-trips. Most infrastructure
+  is in place to support future removal of the final round-trips between a
+  target fully booting and receiving function calls.
 
-* `#595 <https://github.com/dw/mitogen/pull/595>`_: the :meth:`Router.buildah
-   <mitogen.parent.Router.buildah>` connection method is available to connect
-   to Buildah containers, and is exposed to Ansible as the ``buildah``
-   transport.
+* `#595 <https://github.com/dw/mitogen/pull/595>`_: the
+  :meth:`Router.buildah() <mitogen.parent.Router.buildah>` connection method is
+  available to manipulate `Buildah <https://buildah.io/>`_ containers, and is
+  exposed to Ansible as the ``buildah`` transport.
+
+* The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
+  multiplexer into per-CPU workers. This may improve throughput for runs
+  involving large file transfers, and is required for future in-process SSH
+  support. One multiplexer starts by default, to match existing behaviour.
 
 * `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
   `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
