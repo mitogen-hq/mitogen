@@ -1681,7 +1681,7 @@ class Stream(object):
         self.transmit_side = Side(self, wfp)
 
     def __repr__(self):
-        return "<Stream %s>" % (self.name,)
+        return "<Stream %s #%04x>" % (self.name, id(self) & 0xffff,)
 
     def on_receive(self, broker):
         """
