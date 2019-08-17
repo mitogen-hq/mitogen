@@ -2112,8 +2112,8 @@ class MitogenProtocol(Protocol):
             return False
 
         if msg_len > self._router.max_message_size:
-            LOG.error('Maximum message size exceeded (got %d, max %d)',
-                      msg_len, self._router.max_message_size)
+            LOG.error('%r: Maximum message size exceeded (got %d, max %d)',
+                      self, msg_len, self._router.max_message_size)
             self.stream.on_disconnect(broker)
             return False
 
@@ -3191,28 +3191,55 @@ class Router(object):
             fn(Message.dead(self.respondent_disconnect_msg))
             del self._handle_map[handle]
 
-    def _maybe_send_dead(self, msg, reason, *args):
+    def _maybe_send_dead(self, unreachable, msg, reason, *args):
+        """
+        Send a dead message to either the original sender or the intended
+        recipient of `msg`, if the original sender was expecting a reply
+        (because its `reply_to` was set), otherwise assume the message is a
+        reply of some sort, and send the dead message to the original
+        destination.
+
+        :param bool unreachable:
+            If :data:`True`, the recipient is known to be dead or routing
+            failed due to a security precaution, so don't attempt to fallback
+            to sending the dead message to the recipient if the original sender
+            did not include a reply address.
+        :param mitogen.core.Message msg:
+            Message that triggered the dead message.
+        :param str reason:
+            Human-readable error reason.
+        :param tuple args:
+            Elements to interpolate with `reason`.
+        """
         if args:
             reason %= args
         LOG.debug('%r: %r is dead: %r', self, msg, reason)
         if msg.reply_to and not msg.is_dead:
             msg.reply(Message.dead(reason=reason), router=self)
+        elif not unreachable:
+            self._async_route(
+                Message.dead(
+                    dst_id=msg.dst_id,
+                    handle=msg.handle,
+                    reason=reason,
+                )
+            )
 
     def _invoke(self, msg, stream):
         # IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
             persist, fn, policy, respondent = self._handle_map[msg.handle]
         except KeyError:
-            self._maybe_send_dead(msg, reason=self.invalid_handle_msg)
+            self._maybe_send_dead(True, msg, reason=self.invalid_handle_msg)
             return
 
         if respondent and not (msg.is_dead or
                                msg.src_id == respondent.context_id):
-            self._maybe_send_dead(msg, 'reply from unexpected context')
+            self._maybe_send_dead(True, msg, 'reply from unexpected context')
             return
 
         if policy and not policy(msg, stream):
-            self._maybe_send_dead(msg, self.refused_msg)
+            self._maybe_send_dead(True, msg, self.refused_msg)
             return
 
         if not persist:
@@ -3240,7 +3267,7 @@ class Router(object):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
 
         if len(msg.data) > self.max_message_size:
-            self._maybe_send_dead(msg, self.too_large_msg % (
+            self._maybe_send_dead(False, msg, self.too_large_msg % (
                 self.max_message_size,
             ))
             return
@@ -3275,14 +3302,14 @@ class Router(object):
             out_stream = self._stream_by_id.get(mitogen.parent_id)
 
         if out_stream is None:
-            self._maybe_send_dead(msg, self.no_route_msg,
+            self._maybe_send_dead(True, msg, self.no_route_msg,
                                   msg.dst_id, mitogen.context_id)
             return
 
         if in_stream and self.unidirectional and not \
                 (in_stream.protocol.is_privileged or
                  out_stream.protocol.is_privileged):
-            self._maybe_send_dead(msg, self.unidirectional_msg,
+            self._maybe_send_dead(True, msg, self.unidirectional_msg,
                 in_stream.protocol.remote_id,
                 out_stream.protocol.remote_id,
                 mitogen.context_id)

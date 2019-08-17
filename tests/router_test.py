@@ -11,6 +11,7 @@ import mitogen.core
 import mitogen.master
 import mitogen.parent
 import mitogen.utils
+from mitogen.core import b
 
 try:
     import Queue
@@ -257,6 +258,23 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         self.assertEquals(e.args[0], expect)
 
         self.assertTrue(expect in logs.stop())
+
+    def test_remote_dead_message(self):
+        # Router should send dead message to original recipient when reply_to
+        # is unset.
+        router = self.klass(broker=self.broker, max_message_size=4096)
+
+        # Try function call. Receiver should be woken by a dead message sent by
+        # router due to message size exceeded.
+        child = router.local()
+        recv = mitogen.core.Receiver(router)
+
+        recv.to_sender().send(b('x') * 4097)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get().unpickle()
+        )
+        expect = router.too_large_msg % (4096,)
+        self.assertEquals(e.args[0], expect)
 
     def test_remote_configured(self):
         router = self.klass(broker=self.broker, max_message_size=64*1024)
@@ -510,7 +528,7 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
             mitogen.context_id,
         ))
 
-    def test_disconnet_all(self):
+    def test_disconnect_all(self):
         l1 = self.router.local()
         l2 = self.router.local()
 
