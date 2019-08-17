@@ -140,7 +140,7 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.7 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
+* Ansible 2.3-2.8 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
   your installation is running one of these versions by checking ``ansible
   --version`` output.
 
@@ -163,6 +163,12 @@ Noteworthy Differences
       - nginx
       - initech_app
       - y2k_fix
+
+* Ansible 2.8 `interpreter discovery
+  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
+  and `become plugins
+  <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ are not yet
+  supported.
 
 * The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
   register interest in more.
