@@ -159,7 +159,6 @@ class BrokenModulesTest(testlib.TestCase):
 
         self.assertEquals(1, responder.get_module_count)
         self.assertEquals(1, responder.good_load_module_count)
-        self.assertEquals(7642, responder.good_load_module_size)
         self.assertEquals(0, responder.bad_load_module_count)
 
         call = router._async_route.mock_calls[0]
