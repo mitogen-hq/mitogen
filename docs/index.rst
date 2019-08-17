@@ -27,8 +27,8 @@ and efficient low-level API on which tools like `Salt`_, `Ansible`_, or
 `Fabric`_, ultimately it is not intended for direct use by consumer software.
 
 .. _Salt: https://docs.saltstack.com/en/latest/
-.. _Ansible: http://docs.ansible.com/
-.. _Fabric: http://www.fabfile.org/
+.. _Ansible: https://docs.ansible.com/
+.. _Fabric: https://www.fabfile.org/
 
 The focus is to centralize and perfect the intricate dance required to run
 Python code safely and efficiently on a remote machine, while **avoiding
@@ -132,7 +132,7 @@ any tool such as `py2exe`_ that correctly implement the protocols in PEP-302,
 allowing truly single file applications to run across multiple machines without
 further effort.
 
-.. _py2exe: http://www.py2exe.org/
+.. _py2exe: https://www.py2exe.org/
 
 Common sources of import latency and bandwidth consumption are mitigated:
 

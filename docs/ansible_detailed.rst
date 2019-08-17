@@ -175,16 +175,10 @@ Noteworthy Differences
 
        your_ssh_username = (ALL) NOPASSWD:/usr/bin/python -c*
 
-* The `buildah <https://docs.ansible.com/ansible/latest/plugins/connection/buildah.html>`_,
-  `docker <https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_,
-  `jail <https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_,
-  `kubectl <https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_,
-  `local <https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_,
-  `lxc <https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_,
-  `lxd <https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_,
-  and `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
-  built-in connection types are supported, along with Mitogen-specific
-  :ref:`machinectl <machinectl>`, :ref:`mitogen_doas <doas>`,
+* The :ans:conn:`~buildah`, :ans:conn:`~docker`, :ans:conn:`~jail`,
+  :ans:conn:`~kubectl`, :ans:conn:`~local`, :ans:conn:`~lxd`, and
+  :ans:conn:`~ssh` built-in connection types are supported, along with
+  Mitogen-specific :ref:`machinectl <machinectl>`, :ref:`mitogen_doas <doas>`,
   :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
   types. File bugs to register interest in others.
 
@@ -199,16 +193,14 @@ Noteworthy Differences
   artificial serialization, causing slowdown equivalent to `task_duration *
   num_targets`. This will be addressed soon.
 
-* The Ansible 2.7 `reboot
-  <https://docs.ansible.com/ansible/latest/modules/reboot_module.html>`_ module
-  may require a ``pre_reboot_delay`` on systemd hosts, as insufficient time
-  exists for the reboot command's exit status to be reported before necessary
-  processes are torn down.
+* The Ansible 2.7 :ans:mod:`reboot` may require a ``pre_reboot_delay`` on
+  systemd hosts, as insufficient time exists for the reboot command's exit
+  status to be reported before necessary processes are torn down.
 
 * On OS X when a SSH password is specified and the default connection type of
-  ``smart`` is used, Ansible may select the Paramiko plug-in rather than
-  Mitogen. If you specify a password on OS X, ensure ``connection: ssh``
-  appears in your playbook, ``ansible.cfg``, or as ``-c ssh`` on the
+  :ans:conn:`~smart` is used, Ansible may select the :ans:conn:`paramiko_ssh`
+  rather than Mitogen. If you specify a password on OS X, ensure ``connection:
+  ssh`` appears in your playbook, ``ansible.cfg``, or as ``-c ssh`` on the
   command-line.
 
 * Ansible permits up to ``forks`` connections to be setup in parallel, whereas
@@ -345,19 +337,12 @@ command line, or as host and group variables.
 File Transfer
 ~~~~~~~~~~~~~
 
-Normally `sftp(1)`_ or `scp(1)`_ are used to copy files by the
-`assemble <http://docs.ansible.com/ansible/latest/modules/assemble_module.html>`_,
-`copy <http://docs.ansible.com/ansible/latest/modules/copy_module.html>`_,
-`patch <http://docs.ansible.com/ansible/latest/modules/patch_module.html>`_,
-`script <http://docs.ansible.com/ansible/latest/modules/script_module.html>`_,
-`template <http://docs.ansible.com/ansible/latest/modules/template_module.html>`_, and
-`unarchive <http://docs.ansible.com/ansible/latest/modules/unarchive_module.html>`_
-actions, or when uploading modules with pipelining disabled. With Mitogen
-copies are implemented natively using the same interpreters, connection tree,
-and routed message bus that carries RPCs.
-
-.. _scp(1): https://linux.die.net/man/1/scp
-.. _sftp(1): https://linux.die.net/man/1/sftp
+Normally :linux:man1:`sftp` or :linux:man1:`scp` are used to copy files by the
+:ans:mod:`~assemble`, :ans:mod:`~aws_s3`, :ans:mod:`~copy`, :ans:mod:`~patch`,
+:ans:mod:`~script`, :ans:mod:`~template`, :ans:mod:`~unarchive`, and
+:ans:mod:`~uri` actions, or when uploading modules with pipelining disabled.
+With Mitogen copies are implemented natively using the same interpreters,
+connection tree, and routed message bus that carries RPCs.
 
 This permits direct streaming between endpoints regardless of execution
 environment, without necessitating temporary copies in intermediary accounts or
@@ -373,15 +358,15 @@ Safety
 ^^^^^^
 
 Transfers proceed to a hidden file in the destination directory, with content
-and metadata synced using `fsync(2) <https://linux.die.net/man/2/fsync>`_ prior
-to rename over any existing file. This ensures the file remains consistent at
-all times, in the event of a crash, or when overlapping `ansible-playbook` runs
-deploy differing file contents.
+and metadata synced using :linux:man2:`fsync` prior to rename over any existing
+file. This ensures the file remains consistent at all times, in the event of a
+crash, or when overlapping `ansible-playbook` runs deploy differing file
+contents.
 
-The `sftp(1)`_ and `scp(1)`_ tools may cause undetected data corruption
-in the form of truncated files, or files containing intermingled data segments
-from overlapping runs. As part of normal operation, both tools expose a window
-where readers may observe inconsistent file contents.
+The :linux:man1:`sftp` and :linux:man1:`scp` tools may cause undetected data
+corruption in the form of truncated files, or files containing intermingled
+data segments from overlapping runs. As part of normal operation, both tools
+expose a window where readers may observe inconsistent file contents.
 
 
 Performance
@@ -499,11 +484,11 @@ Ansible may:
 * Create a directory owned by the SSH user either under ``remote_tmp``, or a
   system-default directory,
 * Upload action dependencies such as non-new style modules or rendered
-  templates to that directory via `sftp(1)`_ or `scp(1)`_.
+  templates to that directory via :linux:man1:`sftp` or :linux:man1:`scp`.
 * Attempt to modify the directory's access control list to grant access to the
-  target user using `setfacl(1) <https://linux.die.net/man/1/setfacl>`_,
-  requiring that tool to be installed and a supported filesystem to be in use,
-  or for the ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
+  target user using :linux:man1:`setfacl`, requiring that tool to be installed
+  and a supported filesystem to be in use, or for the
+  ``allow_world_readable_tmpfiles`` setting to be  :data:`True`.
 * Create a directory owned by the target user either under ``remote_tmp``, or
   a system-default directory, if a new-style module needs a temporary directory
   and one was not previously created for a supporting file earlier in the
@@ -569,9 +554,9 @@ in regular Ansible:
   operations relating to modifying the directory to support cross-account
   access are avoided.
 
-* An explicit work-around is included to avoid the `copy` and `template`
-  actions needlessly triggering a round-trip to set their temporary file as
-  executable.
+* An explicit work-around is included to avoid the :ans:mod:`~copy` and
+  :ans:mod:`~template` actions needlessly triggering a round-trip to set their
+  temporary file as executable.
 
 * During task shutdown, it is not necessary to wait to learn if the target has
   succeeded in deleting a temporary directory, since any error that may occur
@@ -601,10 +586,10 @@ DNS Resolution
 ^^^^^^^^^^^^^^
 
 Modifications to ``/etc/resolv.conf`` cause the glibc resolver configuration to
-be reloaded via `res_init(3) <https://linux.die.net/man/3/res_init>`_. This
-isn't necessary on some Linux distributions carrying glibc patches to
-automatically check ``/etc/resolv.conf`` periodically, however it is necessary
-on at least Debian and BSD derivatives.
+be reloaded via :linux:man3:`res_init`. This isn't necessary on some Linux
+distributions carrying glibc patches to automatically check
+``/etc/resolv.conf`` periodically, however it is necessary on at least Debian
+and BSD derivatives.
 
 
 ``/etc/environment``
@@ -728,9 +713,7 @@ configuration of each task.
 Buildah
 ~~~~~~~
 
-Like `buildah
-<https://docs.ansible.com/ansible/2.6/plugins/connection/buildah.html>`_ except
-connection delegation is supported.
+Like the :ans:conn:`buildah` except connection delegation is supported.
 
 * ``ansible_host``: Name of Buildah container (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
@@ -771,9 +754,7 @@ When used as the ``mitogen_doas`` connection method:
 Docker
 ~~~~~~
 
-Like `docker
-<https://docs.ansible.com/ansible/2.6/plugins/connection/docker.html>`_ except
-connection delegation is supported.
+Like the :ans:conn:`docker` except connection delegation is supported.
 
 * ``ansible_host``: Name of Docker container (default: inventory hostname).
 * ``ansible_user``: Name of user within the container to execute as.
@@ -789,9 +770,7 @@ connection delegation is supported.
 FreeBSD Jail
 ~~~~~~~~~~~~
 
-Like `jail
-<https://docs.ansible.com/ansible/2.6/plugins/connection/jail.html>`_ except
-connection delegation is supported.
+Like the :ans:conn:`jail` except connection delegation is supported.
 
 * ``ansible_host``: Name of jail (default: inventory hostname).
 * ``ansible_user``: Name of user within the jail to execute as.
@@ -807,9 +786,7 @@ connection delegation is supported.
 Kubernetes Pod
 ~~~~~~~~~~~~~~
 
-Like `kubectl
-<https://docs.ansible.com/ansible/2.6/plugins/connection/kubectl.html>`_ except
-connection delegation is supported.
+Like the :ans:conn:`kubectl` except connection delegation is supported.
 
 * ``ansible_host``: Name of pod (default: inventory hostname).
 * ``ansible_user``: Name of user to authenticate to API as.
@@ -823,9 +800,7 @@ connection delegation is supported.
 Local
 ~~~~~
 
-Like `local
-<https://docs.ansible.com/ansible/2.6/plugins/connection/local.html>`_ except
-connection delegation is supported.
+Like the :ans:conn:`local` except connection delegation is supported.
 
 * ``ansible_python_interpreter``
 
@@ -852,10 +827,9 @@ additional differences exist that may break existing playbooks.
 LXC
 ~~~
 
-Connect to classic LXC containers, like `lxc
-<https://docs.ansible.com/ansible/2.6/plugins/connection/lxc.html>`_ except
-connection delegation is supported, and ``lxc-attach`` is always used rather
-than the LXC Python bindings, as is usual with ``lxc``.
+Connect to classic LXC containers, like the :ans:conn:`lxc` except connection
+delegation is supported, and ``lxc-attach`` is always used rather than the LXC
+Python bindings, as is usual with ``lxc``.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
@@ -873,10 +847,9 @@ than the LXC Python bindings, as is usual with ``lxc``.
 LXD
 ~~~
 
-Connect to modern LXD containers, like `lxd
-<https://docs.ansible.com/ansible/2.6/plugins/connection/lxd.html>`_ except
-connection delegation is supported. The ``lxc`` command must be available on
-the host machine.
+Connect to modern LXD containers, like the :ans:conn:`lxd` except connection
+delegation is supported. The ``lxc`` command must be available on the host
+machine.
 
 * ``ansible_python_interpreter``
 * ``ansible_host``: Name of LXC container (default: inventory hostname).
@@ -1001,8 +974,7 @@ When used as the ``mitogen_sudo`` connection method:
 SSH
 ~~~
 
-Like `ssh <https://docs.ansible.com/ansible/2.6/plugins/connection/ssh.html>`_
-except connection delegation is supported.
+Like the :ans:conn:`ssh` except connection delegation is supported.
 
 * ``ansible_ssh_timeout``
 * ``ansible_host``, ``ansible_ssh_host``
