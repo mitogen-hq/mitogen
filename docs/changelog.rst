@@ -32,9 +32,6 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
-  installation, both Operon and Ansible are supported by a unified release.
-
 * `#419 <https://github.com/dw/mitogen/issues/419>`_,
   `#470 <https://github.com/dw/mitogen/issues/470>`_, file descriptor usage
   during large runs is halved, as it is no longer necessary to manage read and
@@ -53,6 +50,17 @@ Enhancements
   :meth:`Router.buildah() <mitogen.parent.Router.buildah>` connection method is
   available to manipulate `Buildah <https://buildah.io/>`_ containers, and is
   exposed to Ansible as the ``buildah`` transport.
+
+* `#615 <https://github.com/dw/mitogen/issues/615>`_: the ``mitogen_fetch``
+  action is included, and the standard Ansible ``fetch`` action is redirected
+  to it. This implements streaming file transfer in every case, including when
+  ``become`` is active, preventing excessive CPU usage and memory spikes, and
+  significantly improving throughput. A copy of 2 files of 512 MiB each drops
+  from 47 seconds to just under 7 seconds, with peak memory usage dropping from
+  10.7 GiB to 64.8 MiB.
+
+* `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
+  installation, both Operon and Ansible are supported by a unified release.
 
 * The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
   multiplexer into per-CPU workers. This may improve throughput for runs
