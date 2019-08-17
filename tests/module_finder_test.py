@@ -180,12 +180,51 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
             'pkg_like_ansible.module_utils.distro._distro'
         )
 
+        # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.distro')
         modpath = os.path.join(MODS_DIR,
             'pkg_like_ansible/module_utils/distro/__init__.py')
         self.assertEquals(path, modpath)
         self.assertEquals(src, open(modpath, 'rb').read())
         self.assertEquals(is_pkg, True)
+
+        # ensure we can resolve a child of the subpackage.
+        path, src, is_pkg = self.call(
+            'pkg_like_ansible.module_utils.distro._distro'
+        )
+        modpath = os.path.join(MODS_DIR,
+            'pkg_like_ansible/module_utils/distro/_distro.py')
+        self.assertEquals(path, modpath)
+        self.assertEquals(src, open(modpath, 'rb').read())
+        self.assertEquals(is_pkg, False)
+
+    def test_ansible_module_utils_system_distro_succeeds(self):
+        # #590: a package that turns itself into a module.
+        # #590: a package that turns itself into a module.
+        import pkg_like_ansible.module_utils.sys_distro as d
+        self.assertEquals(d.I_AM, "the system module that replaced the subpackage")
+        self.assertEquals(
+            sys.modules['pkg_like_ansible.module_utils.sys_distro'].__name__,
+            'system_distro'
+        )
+
+        # ensure we can resolve the subpackage.
+        path, src, is_pkg = self.call('pkg_like_ansible.module_utils.sys_distro')
+        modpath = os.path.join(MODS_DIR,
+            'pkg_like_ansible/module_utils/sys_distro/__init__.py')
+        self.assertEquals(path, modpath)
+        self.assertEquals(src, open(modpath, 'rb').read())
+        self.assertEquals(is_pkg, True)
+
+        # ensure we can resolve a child of the subpackage.
+        path, src, is_pkg = self.call(
+            'pkg_like_ansible.module_utils.sys_distro._distro'
+        )
+        modpath = os.path.join(MODS_DIR,
+            'pkg_like_ansible/module_utils/sys_distro/_distro.py')
+        self.assertEquals(path, modpath)
+        self.assertEquals(src, open(modpath, 'rb').read())
+        self.assertEquals(is_pkg, False)
 
 
 class ResolveRelPathTest(testlib.TestCase):

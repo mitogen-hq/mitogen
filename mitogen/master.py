@@ -535,16 +535,18 @@ class SysModulesMethod(FinderMethod):
         Find `fullname` using its :data:`__file__` attribute.
         """
         module = sys.modules.get(fullname)
-        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
-        if getattr(module, '__name__', None) != fullname:
-            LOG.debug('sys.modules[%r].__name__ does not match %r, assuming '
-                      'this is a hacky module alias and ignoring it',
-                      fullname, fullname)
-            return
-
         if not isinstance(module, types.ModuleType):
             LOG.debug('%r: sys.modules[%r] absent or not a regular module',
                       self, fullname)
+            return
+
+        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
+        alleged_name = getattr(module, '__name__', None)
+        if alleged_name != fullname:
+            LOG.debug('sys.modules[%r].__name__ is incorrect, assuming '
+                      'this is a hacky module alias and ignoring it. '
+                      'Got %r, module object: %r',
+                      fullname, alleged_name, module)
             return
 
         path = _py_filename(getattr(module, '__file__', ''))
@@ -573,43 +575,57 @@ class SysModulesMethod(FinderMethod):
 class ParentEnumerationMethod(FinderMethod):
     """
     Attempt to fetch source code by examining the module's (hopefully less
-    insane) parent package. Required for older versions of
-    :mod:`ansible.compat.six`, :mod:`plumbum.colors`, and Ansible 2.8
-    :mod:`ansible.module_utils.distro`.
+    insane) parent package, and if no insane parents exist, simply use
+    :mod:`sys.path` to search for it from scratch on the filesystem using the
+    normal Python lookup mechanism.
+    
+    This is required for older versions of :mod:`ansible.compat.six`,
+    :mod:`plumbum.colors`, Ansible 2.8 :mod:`ansible.module_utils.distro` and
+    its submodule :mod:`ansible.module_utils.distro._distro`.
+
+    When some package dynamically replaces itself in :data:`sys.modules`, but
+    only conditionally according to some program logic, it is possible that
+    children may attempt to load modules and subpackages from it that can no
+    longer be resolved by examining a (corrupted) parent.
 
     For cases like :mod:`ansible.module_utils.distro`, this must handle cases
     where a package transmuted itself into a totally unrelated module during
-    import and vice versa.
+    import and vice versa, where :data:`sys.modules` is replaced with junk that
+    makes it impossible to discover the loaded module using the in-memory
+    module object or any parent package's :data:`__path__`, since they have all
+    been overwritten. Some men just want to watch the world burn.
     """
-    def find(self, fullname):
+    def _find_sane_parent(self, fullname):
         """
-        See implementation for a description of how this works.
+        Iteratively search :data:`sys.modules` for the least indirect parent of
+        `fullname` that is loaded and contains a :data:`__path__` attribute.
+
+        :return:
+            `(parent_name, path, modpath)` tuple, where:
+
+                * `modname`: canonical name of the found package, or the empty
+                   string if none is found.
+                * `search_path`: :data:`__path__` attribute of the least
+                   indirect parent found, or :data:`None` if no indirect parent
+                   was found.
+                * `modpath`: list of module name components leading from `path`
+                   to the target module.
         """
-        if fullname not in sys.modules:
-            # Don't attempt this unless a module really exists in sys.modules,
-            # else we could return junk.
-            return
+        path = None
+        modpath = []
+        while True:
+            pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
+            modpath.insert(0, modname)
+            if not pkgname:
+                return [], None, modpath
 
-        pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
-        pkg = sys.modules.get(pkgname)
-        if pkg is None or not hasattr(pkg, '__file__'):
-            LOG.debug('%r: %r is not a package or lacks __file__ attribute',
-                      self, pkgname)
-            return
+            pkg = sys.modules.get(pkgname)
+            path = getattr(pkg, '__path__', None)
+            if pkg and path:
+                return pkgname.split('.'), path, modpath
 
-        pkg_path = [os.path.dirname(pkg.__file__)]
-        try:
-            fp, path, (suffix, _, kind) = imp.find_module(modname, pkg_path)
-        except ImportError:
-            e = sys.exc_info()[1]
-            LOG.debug('%r: imp.find_module(%r, %r) -> %s',
-                      self, modname, [pkg_path], e)
-            return None
-
-        if kind == imp.PKG_DIRECTORY:
-            return self._found_package(fullname, path)
-        else:
-            return self._found_module(fullname, path, fp)
+            LOG.debug('%r: %r lacks __path__ attribute', self, pkgname)
+            fullname = pkgname
 
     def _found_package(self, fullname, path):
         path = os.path.join(path, '__init__.py')
@@ -637,6 +653,47 @@ class ParentEnumerationMethod(FinderMethod):
             # reinterpreted for Python 3 to mean a Unicode string.
             source = source.encode('utf-8')
         return path, source, is_pkg
+
+    def _find_one_component(self, modname, search_path):
+        try:
+            #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
+            return imp.find_module(modname, search_path)
+        except ImportError:
+            e = sys.exc_info()[1]
+            LOG.debug('%r: imp.find_module(%r, %r) -> %s',
+                      self, modname, [search_path], e)
+            return None
+
+    def find(self, fullname):
+        """
+        See implementation for a description of how this works.
+        """
+        #if fullname not in sys.modules:
+            # Don't attempt this unless a module really exists in sys.modules,
+            # else we could return junk.
+            #return
+
+        fullname = to_text(fullname)
+        modname, search_path, modpath = self._find_sane_parent(fullname)
+        while True:
+            tup = self._find_one_component(modpath.pop(0), search_path)
+            if tup is None:
+                return None
+
+            fp, path, (suffix, _, kind) = tup
+            if modpath:
+                # Still more components to descent. Result must be a package
+                if fp:
+                    fp.close()
+                if kind != imp.PKG_DIRECTORY:
+                    LOG.debug('%r: %r appears to be child of non-package %r',
+                              self, fullname, path)
+                    return None
+                search_path = [path]
+            elif kind == imp.PKG_DIRECTORY:
+                return self._found_package(fullname, path)
+            else:
+                return self._found_module(fullname, path, fp)
 
 
 class ModuleFinder(object):
