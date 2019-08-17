@@ -1546,6 +1546,7 @@ class Connection(object):
                     remote_id=self.context.context_id,
                 )
             )
+            self._router.route_monitor.notice_stream(self.stdio_stream)
         self.latch.put()
 
     def _fail_connection(self, exc):
@@ -2423,7 +2424,6 @@ class Router(mitogen.core.Router):
         except mitogen.core.TimeoutError:
             raise mitogen.core.StreamError(self.connection_timeout_msg)
 
-        self.route_monitor.notice_stream(conn.stdio_stream)
         return context
 
     def connect(self, method_name, name=None, **kwargs):
