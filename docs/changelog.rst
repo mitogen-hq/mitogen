@@ -199,16 +199,17 @@ Core Library
   descriptors belonging to unrelated streams.
 
 * `#533 <https://github.com/dw/mitogen/issues/533>`_: routing accounts for
-  a race between a parent sending a message to a child via an intermediary,
-  where the child had recently disconnected, and ``DEL_ROUTE`` propagating from
-  the intermediary to the parent, informing it that the child no longer exists.
-  This condition is detected at the intermediary and a dead message is returned
-  to the parent.
+  a race between a parent (or cousin) sending a message to a child via an
+  intermediary, where the child had recently disconnected, and
+  :data:`DEL_ROUTE <mitogen.core.DEL_ROUTE>` propagating from the intermediary
+  to the sender, informing it that the child no longer exists. This condition
+  is detected at the intermediary and a dead message is returned to the sender.
 
   Previously since the intermediary had already removed its route for the
   child, the *route messages upwards* rule would be triggered, causing the
-  message (with a privileged ``src_id``/``auth_id``) to be sent upstream,
-  resulting in a ``bad auth_id`` log message and a hang.
+  message (with a privileged :ref:`src_id/auth_id <stream-protocol>`) to be
+  sent upstream, resulting in a ``bad auth_id`` error logged at the first
+  upstream parent, and a possible hang due to a request message being dropped.
 
 * `#586 <https://github.com/dw/mitogen/issues/586>`_: fix import of
   :mod:`__main__` on later versions of Python 3 when running from the
