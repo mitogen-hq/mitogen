@@ -55,7 +55,6 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 
-DEFAULT_POOL_SIZE = 16
 _pool = None
 _pool_pid = None
 #: Serialize pool construction.
@@ -88,7 +87,7 @@ def get_or_create_pool(size=None, router=None):
                 _pool = Pool(
                     router,
                     services=[],
-                    size=size or DEFAULT_POOL_SIZE,
+                    size=size or 2,
                     overwrite=True,
                     recv=mitogen.core.Dispatcher._service_recv,
                 )

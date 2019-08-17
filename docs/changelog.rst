@@ -222,6 +222,10 @@ Core Library
   to a function call, where the reply might be dropped due to exceeding the
   maximum configured message size.
 
+* :gh:issue:`624`: the number of threads used for a child's auto-started thread
+  pool has been reduced from 16 to 2. This may drop to 1 in future, and become
+  configurable via a :class:`Router` option.
+
 * :gh:commit:`a5536c35`: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
