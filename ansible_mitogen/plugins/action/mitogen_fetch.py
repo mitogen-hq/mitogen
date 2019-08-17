@@ -45,29 +45,24 @@ class ActionModule(ActionBase):
             task_vars = dict()
 
         result = super(ActionModule, self).run(tmp, task_vars)
-        del tmp  # tmp no longer has any effect
-
         try:
             if self._play_context.check_mode:
                 result['skipped'] = True
                 result['msg'] = 'check mode not (yet) supported for this module'
                 return result
 
-            source = self._task.args.get('src', None)
-            dest = self._task.args.get('dest', None)
             flat = boolean(self._task.args.get('flat'), strict=False)
             fail_on_missing = boolean(self._task.args.get('fail_on_missing', True), strict=False)
             validate_checksum = boolean(self._task.args.get('validate_checksum', True), strict=False)
 
             # validate source and dest are strings FIXME: use basic.py and module specs
+            source = self._task.args.get('src')
             if not isinstance(source, string_types):
                 result['msg'] = "Invalid type supplied for source option, it must be a string"
 
+            dest = self._task.args.get('dest')
             if not isinstance(dest, string_types):
                 result['msg'] = "Invalid type supplied for dest option, it must be a string"
-
-            if source is None or dest is None:
-                result['msg'] = "src and dest are required"
 
             if result.get('msg'):
                 result['failed'] = True
