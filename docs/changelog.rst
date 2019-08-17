@@ -92,10 +92,9 @@ Mitogen for Ansible
   ``mitogen_task_isolation: fork`` modules, and those present on an internal
   blacklist of misbehaving modules.
 
-  This deadlock is relatively easy hit, has been present since 0.2.0, and is
-  likely to have impacted many users. For new connections it could manifest as
-  a *Connection timed out* error, for forked tasks it could manifest as a
-  timeout or an apparent hang.
+  This deadlock is relatively easy hit, has been present since 0.2.0, and
+  likely impacted many users. For new connections it manifested as a timeout,
+  for forked tasks it could manifest as a timeout or an apparent hang.
 
 * :gh:issue:`549`: the open file descriptor limit for the Ansible process is
   increased to the available hard limit. It is common for distributions to ship
@@ -105,7 +104,7 @@ Mitogen for Ansible
 
 * :gh:issue:`558`, :gh:issue:`582`: on Ansible 2.3 a remote directory was
   unconditionally deleted after the first module belonging to an action plug-in
-  had executed, causing the :ans:mod:`unarchive` module to fail.
+  had executed, causing the :ans:mod:`unarchive` to fail.
 
 * :gh:issue:`578`: the extension could crash while rendering an error message,
   due to an incorrect format string.
@@ -131,7 +130,7 @@ Mitogen for Ansible
   encoding.
 
 * :gh:issue:`602`: connection configuration is more accurately inferred for
-  `meta: reset_connection`, the `synchronize` module, and for any action
+  `meta: reset_connection`, the :ans:mod:`synchronize`, and for any action
   plug-ins that establish additional connections.
 
 * :gh:issue:`598`, :gh:issue:`605`: fix a deadlock managing a shared counter
@@ -264,7 +263,7 @@ bug reports, testing, features and fixes in this release contributed by
 `Florent Dutheil <https://github.com/fdutheil>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
 `Jordan Webb <https://github.com/jordemort>`_,
-`Julian Andres Klode <https://github.com/julian-klode >`_,
+`Julian Andres Klode <https://github.com/julian-klode>`_,
 `Marc Hartmayer <https://github.com/marc1006>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,
