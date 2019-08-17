@@ -203,7 +203,8 @@ Core Library
   intermediary, where the child had recently disconnected, and
   :data:`DEL_ROUTE <mitogen.core.DEL_ROUTE>` propagating from the intermediary
   to the sender, informing it that the child no longer exists. This condition
-  is detected at the intermediary and a dead message is returned to the sender.
+  is detected at the intermediary and a :ref:`dead message <IS_DEAD>` is
+  returned to the sender.
 
   Previously since the intermediary had already removed its route for the
   child, the *route messages upwards* rule would be triggered, causing the
@@ -224,10 +225,10 @@ Core Library
 * `#615 <https://github.com/dw/mitogen/issues/615>`_: when routing fails to
   deliver a message for some reason other than the sender cannot or should not
   reach the recipient, and no reply-to address is present on the message,
-  instead send a dead message to the original recipient. This ensures a
-  descriptive messages is delivered to a thread sleeping on the reply to a
-  function call, where the reply might be dropped due to exceeding the maximum
-  configured message size.
+  instead send a :ref:`dead message <IS_DEAD>` to the original recipient. This
+  ensures a descriptive messages is delivered to a thread sleeping on the reply
+  to a function call, where the reply might be dropped due to exceeding the
+  maximum configured message size.
 
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
