@@ -80,7 +80,7 @@ def get_or_create_pool(size=None, router=None):
     global _pool_pid
 
     my_pid = os.getpid()
-    if _pool is None or my_pid != _pool_pid:
+    if _pool is None or _pool.closed or my_pid != _pool_pid:
         # Avoid acquiring heavily contended lock if possible.
         _pool_lock.acquire()
         try:
