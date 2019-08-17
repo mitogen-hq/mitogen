@@ -200,6 +200,14 @@ Core Library
 * `#612 <https://github.com/dw/mitogen/issues/612>`_: fix various errors
   introduced by stream refactoring.
 
+* `#615 <https://github.com/dw/mitogen/issues/615>`_: when routing fails to
+  deliver a message for some reason other than the sender cannot or should not
+  reach the recipient, and no reply-to address is present on the message,
+  instead send a dead message to the original recipient. This ensures a
+  descriptive messages is delivered to a thread sleeping on the reply to a
+  function call, where the reply might be dropped due to exceeding the maximum
+  configured message size.
+
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
