@@ -901,9 +901,9 @@ class CallSpec(object):
 
 class PollPoller(mitogen.core.Poller):
     """
-    Poller based on the POSIX poll(2) interface. Not available on some versions
-    of OS X, otherwise it is the preferred poller for small FD counts, as there
-    is no setup/teardown/configuration system call overhead.
+    Poller based on the POSIX :linux:man2:`poll` interface. Not available on
+    some versions of OS X, otherwise it is the preferred poller for small FD
+    counts, as there is no setup/teardown/configuration system call overhead.
     """
     SUPPORTED = hasattr(select, 'poll')
     _repr = 'PollPoller()'
@@ -949,7 +949,7 @@ class PollPoller(mitogen.core.Poller):
 
 class KqueuePoller(mitogen.core.Poller):
     """
-    Poller based on the FreeBSD/Darwin kqueue(2) interface.
+    Poller based on the FreeBSD/Darwin :freebsd:man2:`kqueue` interface.
     """
     SUPPORTED = hasattr(select, 'kqueue')
     _repr = 'KqueuePoller()'
@@ -1027,7 +1027,7 @@ class KqueuePoller(mitogen.core.Poller):
 
 class EpollPoller(mitogen.core.Poller):
     """
-    Poller based on the Linux epoll(2) interface.
+    Poller based on the Linux :linux:man2:`epoll` interface.
     """
     SUPPORTED = hasattr(select, 'epoll')
     _repr = 'EpollPoller()'
