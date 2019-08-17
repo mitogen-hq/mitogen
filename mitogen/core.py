@@ -3600,6 +3600,8 @@ class Dispatcher(object):
     mode, any exception that occurs is recorded, and causes all subsequent
     calls with the same `chain_id` to fail with the same exception.
     """
+    _service_recv = None
+
     def __repr__(self):
         return 'Dispatcher'
 

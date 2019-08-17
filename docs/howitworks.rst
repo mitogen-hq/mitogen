@@ -434,8 +434,9 @@ also listen on the following handles:
 
     Receives `target_id` integer from downstream, verifies a route exists to
     `target_id` via the stream on which the message was received, removes that
-    route from its local table, then propagates the message upward towards its
-    own parent.
+    route from its local table, triggers the ``disconnect`` signal on any
+    :class:`mitogen.core.Context` instance in the local process, then
+    propagates the message upward towards its own parent.
 
 .. currentmodule:: mitogen.core
 .. data:: DETACHING
@@ -629,7 +630,8 @@ The `auth_id` field is separate from `src_id` in order to support granting
 privilege to contexts that do not follow the tree's natural trust chain. This
 supports cases where siblings are permitted to execute code on one another, or
 where isolated processes can connect to a listener and communicate with an
-already established established tree.
+already established established tree, such as where a :mod:`mitogen.unix`
+client receives the same privilege as the process it connects to.
 
 
 Differences Between Master And Child Brokers

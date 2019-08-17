@@ -158,14 +158,15 @@ class BrokenModulesTest(testlib.TestCase):
         self.assertEquals(1, len(router._async_route.mock_calls))
 
         self.assertEquals(1, responder.get_module_count)
-        self.assertEquals(0, responder.good_load_module_count)
-        self.assertEquals(0, responder.good_load_module_size)
-        self.assertEquals(1, responder.bad_load_module_count)
+        self.assertEquals(1, responder.good_load_module_count)
+        self.assertEquals(0, responder.bad_load_module_count)
 
         call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
-        self.assertIsInstance(msg.unpickle(), tuple)
+
+        tup = msg.unpickle()
+        self.assertIsInstance(tup, tuple)
 
 
 class ForwardTest(testlib.RouterMixin, testlib.TestCase):

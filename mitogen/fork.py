@@ -73,8 +73,8 @@ def reset_logging_framework():
     threads in the parent may have been using the logging package at the moment
     of fork.
 
-    It is not possible to solve this problem in general; see
-    https://github.com/dw/mitogen/issues/150 for a full discussion.
+    It is not possible to solve this problem in general; see :gh:issue:`150`
+    for a full discussion.
     """
     logging._lock = threading.RLock()
 

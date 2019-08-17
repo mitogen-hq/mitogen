@@ -55,7 +55,6 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 
-DEFAULT_POOL_SIZE = 16
 _pool = None
 _pool_pid = None
 #: Serialize pool construction.
@@ -80,7 +79,7 @@ def get_or_create_pool(size=None, router=None):
     global _pool_pid
 
     my_pid = os.getpid()
-    if _pool is None or my_pid != _pool_pid:
+    if _pool is None or _pool.closed or my_pid != _pool_pid:
         # Avoid acquiring heavily contended lock if possible.
         _pool_lock.acquire()
         try:
@@ -88,7 +87,7 @@ def get_or_create_pool(size=None, router=None):
                 _pool = Pool(
                     router,
                     services=[],
-                    size=size or DEFAULT_POOL_SIZE,
+                    size=size or 2,
                     overwrite=True,
                     recv=mitogen.core.Dispatcher._service_recv,
                 )
