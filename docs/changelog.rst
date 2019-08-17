@@ -32,9 +32,6 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
-  installation, both Operon and Ansible are supported by a unified release.
-
 * `#419 <https://github.com/dw/mitogen/issues/419>`_,
   `#470 <https://github.com/dw/mitogen/issues/470>`_, file descriptor usage
   during large runs is halved, as it is no longer necessary to manage read and
@@ -53,6 +50,17 @@ Enhancements
   :meth:`Router.buildah() <mitogen.parent.Router.buildah>` connection method is
   available to manipulate `Buildah <https://buildah.io/>`_ containers, and is
   exposed to Ansible as the ``buildah`` transport.
+
+* `#615 <https://github.com/dw/mitogen/issues/615>`_: the ``mitogen_fetch``
+  action is included, and the standard Ansible ``fetch`` action is redirected
+  to it. This implements streaming file transfer in every case, including when
+  ``become`` is active, preventing excessive CPU usage and memory spikes, and
+  significantly improving throughput. A copy of 2 files of 512 MiB each drops
+  from 47 seconds to just under 7 seconds, with peak memory usage dropping from
+  10.7 GiB to 64.8 MiB.
+
+* `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
+  installation, both Operon and Ansible are supported by a unified release.
 
 * The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
   multiplexer into per-CPU workers. This may improve throughput for runs
@@ -189,6 +197,18 @@ Core Library
   leaked object will close itself, and ensuring every descriptor is fused to a
   `closed` flag, preventing historical bugs where a double close could destroy
   descriptors belonging to unrelated streams.
+
+* `#533 <https://github.com/dw/mitogen/issues/533>`_: routing accounts for
+  a race between a parent sending a message to a child via an intermediary,
+  where the child had recently disconnected, and ``DEL_ROUTE`` propagating from
+  the intermediary to the parent, informing it that the child no longer exists.
+  This condition is detected at the intermediary and a dead message is returned
+  to the parent.
+
+  Previously since the intermediary had already removed its route for the
+  child, the *route messages upwards* rule would be triggered, causing the
+  message (with a privileged ``src_id``/``auth_id``) to be sent upstream,
+  resulting in a ``bad auth_id`` log message and a hang.
 
 * `#586 <https://github.com/dw/mitogen/issues/586>`_: fix import of
   :mod:`__main__` on later versions of Python 3 when running from the

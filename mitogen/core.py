@@ -3272,34 +3272,48 @@ class Router(object):
             ))
             return
 
-        # Perform source verification.
+        parent_stream = self._stream_by_id.get(mitogen.parent_id)
+        src_stream = self._stream_by_id.get(msg.src_id, parent_stream)
+
+        # When the ingress stream is known, verify the message was received on
+        # the same as the stream we would expect to receive messages from the
+        # src_id and auth_id. This is like Reverse Path Filtering in IP, and
+        # ensures messages from a privileged context cannot be spoofed by a
+        # child.
         if in_stream:
-            parent = self._stream_by_id.get(mitogen.parent_id)
-            expect = self._stream_by_id.get(msg.auth_id, parent)
-            if in_stream != expect:
+            auth_stream = self._stream_by_id.get(msg.auth_id, parent_stream)
+            if in_stream != auth_stream:
                 LOG.error('%r: bad auth_id: got %r via %r, not %r: %r',
-                          self, msg.auth_id, in_stream, expect, msg)
+                          self, msg.auth_id, in_stream, auth_stream, msg)
                 return
 
-            if msg.src_id != msg.auth_id:
-                expect = self._stream_by_id.get(msg.src_id, parent)
-                if in_stream != expect:
-                    LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
-                              self, msg.src_id, in_stream, expect, msg)
-                    return
+            if msg.src_id != msg.auth_id and in_stream != src_stream:
+                LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
+                          self, msg.src_id, in_stream, src_stream, msg)
+                return
 
+            # If the stream's MitogenProtocol has auth_id set, copy it to the
+            # message. This allows subtrees to become privileged by stamping a
+            # parent's context ID. It is used by mitogen.unix to mark client
+            # streams (like Ansible WorkerProcess) as having the same rights as
+            # the parent.
             if in_stream.protocol.auth_id is not None:
                 msg.auth_id = in_stream.protocol.auth_id
 
-            # Maintain a set of IDs the source ever communicated with.
+            # Record the IDs the source ever communicated with.
             in_stream.protocol.egress_ids.add(msg.dst_id)
 
         if msg.dst_id == mitogen.context_id:
             return self._invoke(msg, in_stream)
 
         out_stream = self._stream_by_id.get(msg.dst_id)
-        if out_stream is None:
-            out_stream = self._stream_by_id.get(mitogen.parent_id)
+        if (not out_stream) and (parent_stream != src_stream or not in_stream):
+            # No downstream route exists. The message could be from a child or
+            # ourselves for a parent, in which case we must forward it
+            # upstream, or it could be from a parent for a dead child, in which
+            # case its src_id/auth_id would fail verification if returned to
+            # the parent, so in that case reply with a dead message instead.
+            out_stream = parent_stream
 
         if out_stream is None:
             self._maybe_send_dead(True, msg, self.no_route_msg,
@@ -3310,9 +3324,9 @@ class Router(object):
                 (in_stream.protocol.is_privileged or
                  out_stream.protocol.is_privileged):
             self._maybe_send_dead(True, msg, self.unidirectional_msg,
-                in_stream.protocol.remote_id,
-                out_stream.protocol.remote_id,
-                mitogen.context_id)
+                                  in_stream.protocol.remote_id,
+                                  out_stream.protocol.remote_id,
+                                  mitogen.context_id)
             return
 
         out_stream.protocol._send(msg)

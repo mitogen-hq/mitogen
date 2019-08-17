@@ -11,3 +11,4 @@
 - include: issue_558_unarchive_failed.yml
 - include: issue_590__sys_modules_crap.yml
 - include: issue_591__setuptools_cwd_crash.yml
+- include: issue_615__streaming_transfer.yml

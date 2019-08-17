@@ -1,0 +1,21 @@
+# issue #615: 'fetch' with become: was internally using slurp.
+
+- hosts: target
+  any_errors_fatal: True
+  gather_facts: no
+  become: true
+  vars:
+    mitogen_ssh_compression: false
+  tasks:
+    - shell: |
+        dd if=/dev/zero of=/tmp/512mb.zero bs=1048576 count=512;
+        chmod go= /tmp/512mb.zero
+
+    - fetch:
+        src: /tmp/512mb.zero
+        dest: /tmp/fetch-out
+
+    - file:
+        path: /tmp/fetch-out
+        state: absent
+      delegate_to: localhost

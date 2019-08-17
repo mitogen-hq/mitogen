@@ -62,12 +62,12 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         self.child2_msg.handle = recv.handle
 
-        self.broker.defer(self.router._async_route,
-                          self.child2_msg,
-                          in_stream=self.child1_stream)
-
-        # Wait for IO loop to finish everything above.
-        self.sync_with_broker()
+        self.broker.defer_sync(
+            lambda: self.router._async_route(
+               self.child2_msg,
+               in_stream=self.child1_stream
+           )
+        )
 
         # Ensure message wasn't forwarded.
         self.assertTrue(recv.empty())
@@ -75,6 +75,34 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         # Ensure error was logged.
         expect = 'bad auth_id: got %r via' % (self.child2_msg.auth_id,)
         self.assertTrue(expect in log.stop())
+
+    def test_parent_unaware_of_disconnect(self):
+        # Parent -> Child A -> Child B. B disconnects concurrent to Parent
+        # sending message. Parent does not yet know B has disconnected, A
+        # receives message from Parent with Parent's auth_id, for a stream that
+        # no longer exists.
+        c1 = self.router.local()
+        strm = self.router.stream_by_id(c1.context_id)
+        recv = mitogen.core.Receiver(self.router)
+
+        self.broker.defer(lambda:
+            strm.protocol._send(
+                mitogen.core.Message(
+                    dst_id=1234,  # nonexistent child
+                    handle=1234,
+                    src_id=mitogen.context_id,
+                    reply_to=recv.handle,
+                )
+            )
+        )
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get().unpickle()
+        )
+        self.assertEquals(e.args[0], self.router.no_route_msg % (
+            1234,
+            c1.context_id,
+        ))
 
     def test_bad_src_id(self):
         # Deliver a message locally from child2 with the correct auth_id, but
