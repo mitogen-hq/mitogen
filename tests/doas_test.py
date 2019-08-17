@@ -57,7 +57,7 @@ class DoasTest(testlib.DockerMixin, testlib.TestCase):
             username='mitogen__has_sudo',
             password='has_sudo_password',
         )
-        context = self.router.su(via=ssh, password='rootpassword')
+        context = self.router.doas(via=ssh, password='has_sudo_password')
         self.assertEquals(0, context.call(os.getuid))
 
 
