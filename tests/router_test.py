@@ -62,12 +62,12 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         self.child2_msg.handle = recv.handle
 
-        self.broker.defer(self.router._async_route,
-                          self.child2_msg,
-                          in_stream=self.child1_stream)
-
-        # Wait for IO loop to finish everything above.
-        self.sync_with_broker()
+        self.broker.defer_sync(
+            lambda: self.router._async_route(
+               self.child2_msg,
+               in_stream=self.child1_stream
+           )
+        )
 
         # Ensure message wasn't forwarded.
         self.assertTrue(recv.empty())
