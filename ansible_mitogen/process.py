@@ -72,6 +72,8 @@ ANSIBLE_PKG_OVERRIDE = (
     u"__author__ = %r\n"
 )
 
+MAX_MESSAGE_SIZE = 4096 * 1048576
+
 worker_model_msg = (
     'Mitogen connection types may only be instantiated when one of the '
     '"mitogen_*" or "operon_*" strategies are active.'
@@ -502,6 +504,7 @@ class ClassicWorkerModel(WorkerModel):
             # with_items loops.
             raise ansible.errors.AnsibleError(shutting_down_msg % (e,))
 
+        self.router.max_message_size = MAX_MESSAGE_SIZE
         self.listener_path = path
 
     def _on_process_exit(self):
@@ -692,7 +695,7 @@ class MuxProcess(object):
         self.broker = mitogen.master.Broker(install_watcher=False)
         self.router = mitogen.master.Router(
             broker=self.broker,
-            max_message_size=4096 * 1048576,
+            max_message_size=MAX_MESSAGE_SIZE,
         )
         _setup_responder(self.router.responder)
         mitogen.core.listen(self.broker, 'shutdown', self._on_broker_shutdown)
