@@ -18,18 +18,23 @@ from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
 import os
-import base64
 
-from ansible.errors import AnsibleError
 from ansible.module_utils._text import to_bytes
 from ansible.module_utils.six import string_types
 from ansible.module_utils.parsing.convert_bool import boolean
 from ansible.plugins.action import ActionBase
-from ansible.utils.display import Display
-from ansible.utils.hashing import checksum, checksum_s, md5, secure_hash
+from ansible.utils.hashing import checksum, md5, secure_hash
 from ansible.utils.path import makedirs_safe
 
-display = Display()
+
+REMOTE_CHECKSUM_ERRORS = {
+    '0': "unable to calculate the checksum of the remote file",
+    '1': "the remote file does not exist",
+    '2': "no read permission on remote file",
+    '3': "remote file is a directory, fetch cannot work on directories",
+    '4': "python isn't present on the system.  Unable to compute checksum",
+    '5': "stdlib json was not found on the remote machine. Only the raw module can work without those installed",
+}
 
 
 class ActionModule(ActionBase):
@@ -71,35 +76,10 @@ class ActionModule(ActionBase):
             source = self._connection._shell.join_path(source)
             source = self._remote_expand_user(source)
 
-            remote_checksum = None
-            if not self._play_context.become:
-                # calculate checksum for the remote file, don't bother if using become as slurp will be used
-                # Force remote_checksum to follow symlinks because fetch always follows symlinks
-                remote_checksum = self._remote_checksum(source, all_vars=task_vars, follow=True)
-
-            # use slurp if permissions are lacking or privilege escalation is needed
-            remote_data = None
-            if remote_checksum in ('1', '2', None):
-                slurpres = self._execute_module(module_name='slurp', module_args=dict(src=source), task_vars=task_vars)
-                if slurpres.get('failed'):
-                    if not fail_on_missing and (slurpres.get('msg').startswith('file not found') or remote_checksum == '1'):
-                        result['msg'] = "the remote file does not exist, not transferring, ignored"
-                        result['file'] = source
-                        result['changed'] = False
-                    else:
-                        result.update(slurpres)
-                    return result
-                else:
-                    if slurpres['encoding'] == 'base64':
-                        remote_data = base64.b64decode(slurpres['content'])
-                    if remote_data is not None:
-                        remote_checksum = checksum_s(remote_data)
-                    # the source path may have been expanded on the
-                    # target system, so we compare it here and use the
-                    # expanded version if it's different
-                    remote_source = slurpres.get('source')
-                    if remote_source and remote_source != source:
-                        source = remote_source
+            # calculate checksum for the remote file, don't bother if using
+            # become as slurp will be used Force remote_checksum to follow
+            # symlinks because fetch always follows symlinks
+            remote_checksum = self._remote_checksum(source, all_vars=task_vars, follow=True)
 
             # calculate the destination name
             if os.path.sep not in self._connection._shell.join_path('a', ''):
@@ -133,21 +113,10 @@ class ActionModule(ActionBase):
 
             dest = dest.replace("//", "/")
 
-            if remote_checksum in ('0', '1', '2', '3', '4', '5'):
+            if remote_checksum in REMOTE_CHECKSUM_ERRORS:
                 result['changed'] = False
                 result['file'] = source
-                if remote_checksum == '0':
-                    result['msg'] = "unable to calculate the checksum of the remote file"
-                elif remote_checksum == '1':
-                    result['msg'] = "the remote file does not exist"
-                elif remote_checksum == '2':
-                    result['msg'] = "no read permission on remote file"
-                elif remote_checksum == '3':
-                    result['msg'] = "remote file is a directory, fetch cannot work on directories"
-                elif remote_checksum == '4':
-                    result['msg'] = "python isn't present on the system.  Unable to compute checksum"
-                elif remote_checksum == '5':
-                    result['msg'] = "stdlib json was not found on the remote machine. Only the raw module can work without those installed"
+                result['msg'] = REMOTE_CHECKSUM_ERRORS[remote_checksum]
                 # Historically, these don't fail because you may want to transfer
                 # a log file that possibly MAY exist but keep going to fetch other
                 # log files. Today, this is better achieved by adding
@@ -168,15 +137,7 @@ class ActionModule(ActionBase):
                 makedirs_safe(os.path.dirname(dest))
 
                 # fetch the file and check for changes
-                if remote_data is None:
-                    self._connection.fetch_file(source, dest)
-                else:
-                    try:
-                        f = open(to_bytes(dest, errors='surrogate_or_strict'), 'wb')
-                        f.write(remote_data)
-                        f.close()
-                    except (IOError, OSError) as e:
-                        raise AnsibleError("Failed to fetch the file: %s" % e)
+                self._connection.fetch_file(source, dest)
                 new_checksum = secure_hash(dest)
                 # For backwards compatibility. We'll return None on FIPS enabled systems
                 try:
