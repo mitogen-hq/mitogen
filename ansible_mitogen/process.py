@@ -33,6 +33,7 @@ import multiprocessing
 import os
 import resource
 import socket
+import signal
 import sys
 
 try:
@@ -659,6 +660,12 @@ class MuxProcess(object):
         connected to the parent to be closed (indicating the parent has died).
         """
         save_pid('mux')
+
+        # #623: MuxProcess ignores SIGINT because it wants to live until every
+        # Ansible worker process has been cleaned up by
+        # TaskQueueManager.cleanup(), otherwise harmles yet scary warnings
+        # about being unable connect to MuxProess could be printed.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
         ansible_mitogen.logging.set_process_name('mux')
         ansible_mitogen.affinity.policy.assign_muxprocess(self.index)
 
