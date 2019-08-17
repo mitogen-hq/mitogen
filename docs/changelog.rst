@@ -78,9 +78,9 @@ Mitogen for Ansible
 * :gh:issue:`363`: fix an obscure race matching *Permission denied* errors from
   some versions of ``su`` running on heavily loaded machines.
 
-* :gh:issue:`410`: Uses of :linux:man7:`unix` sockets are replaced with pairs
-  of plain UNIX pipes when SELinux is detected, to work around a broken
-  heuristic in popular SELinux policies that prevents inheriting
+* :gh:issue:`410`: Uses of :linux:man7:`unix` sockets are replaced with
+  traditional :linux:man7:`pipe` pairs when SELinux is detected, to work around
+  a broken heuristic in popular SELinux policies that prevents inheriting
   :linux:man7:`unix` sockets across privilege domains.
 
 * `#467 <httpe://github.com/dw/mitogen/issues/467>`_: an incompatibility
@@ -111,7 +111,7 @@ Mitogen for Ansible
   due to an incorrect format string.
 
 * :gh:issue:`590`: the importer can handle modules that replace themselves in
-  :mod:`sys.modules` during import.
+  :data:`sys.modules` during import.
 
 * :gh:issue:`591`: the target's current working directory is restored to a
   known-existent directory between tasks to ensure :func:`os.getcwd` will not
