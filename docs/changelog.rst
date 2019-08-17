@@ -32,25 +32,32 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
-  multiplexer into per-CPU workers. This improves throughput for large runs
-  especially involving file transfer, and is a prerequisite for future
-  in-process SSH support. One multiplexer starts by default, to match existing
-  behaviour.
+* `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
+  installation, both Operon and Ansible are supported by a unified release.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_,
   `#470 <https://github.com/dw/mitogen/issues/470>`_, file descriptor usage
   during large runs is halved, as it is no longer necessary to manage read and
-  write sides distinctly in order to work around a design limitation.
+  write sides distinctly in order to work around a design problem.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: almost all connection
-  setup happens on one thread, reducing GIL contention and context switching
-  early in a run.
+  setup happens on one thread, reducing contention and context switching early
+  in a run.
 
 * `#419 <https://github.com/dw/mitogen/issues/419>`_: Connection setup is
-  pipelined, eliminating several network round-trips. Most infrastructure is in
-  place to support future removal of the final round-trip between a target
-  fully booting and receiving its first function call.
+  better pipelined, eliminating some network round-trips. Most infrastructure
+  is in place to support future removal of the final round-trips between a
+  target fully booting and receiving function calls.
+
+* `#595 <https://github.com/dw/mitogen/pull/595>`_: the
+  :meth:`Router.buildah() <mitogen.parent.Router.buildah>` connection method is
+  available to manipulate `Buildah <https://buildah.io/>`_ containers, and is
+  exposed to Ansible as the ``buildah`` transport.
+
+* The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
+  multiplexer into per-CPU workers. This may improve throughput for runs
+  involving large file transfers, and is required for future in-process SSH
+  support. One multiplexer starts by default, to match existing behaviour.
 
 * `d6faff06 <https://github.com/dw/mitogen/commit/d6faff06>`_,
   `807cbef9 <https://github.com/dw/mitogen/commit/807cbef9>`_,
@@ -193,6 +200,14 @@ Core Library
 * `#612 <https://github.com/dw/mitogen/issues/612>`_: fix various errors
   introduced by stream refactoring.
 
+* `#615 <https://github.com/dw/mitogen/issues/615>`_: when routing fails to
+  deliver a message for some reason other than the sender cannot or should not
+  reach the recipient, and no reply-to address is present on the message,
+  instead send a dead message to the original recipient. This ensures a
+  descriptive messages is delivered to a thread sleeping on the reply to a
+  function call, where the reply might be dropped due to exceeding the maximum
+  configured message size.
+
 * `a5536c35 <https://github.com/dw/mitogen/commit/a5536c35>`_: avoid quadratic
   buffer management when logging lines received from a child's redirected
   standard IO.
@@ -230,6 +245,7 @@ bug reports, testing, features and fixes in this release contributed by
 `El Mehdi CHAOUKI <https://github.com/elmchaouki>`_,
 `Florent Dutheil <https://github.com/fdutheil>`_,
 `James Hogarth <https://github.com/hogarthj>`_,
+`Jordan Webb <https://github.com/jordemort>`_,
 `Marc Hartmayer <https://github.com/marc1006>`_,
 `Nigel Metheringham <https://github.com/nigelm>`_,
 `Orion Poplawski <https://github.com/opoplawski>`_,

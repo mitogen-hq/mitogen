@@ -127,6 +127,8 @@ def wrap_action_loader__get(name, *args, **kwargs):
     action plugins outside the Ansible tree.
     """
     get_kwargs = {'class_only': True}
+    if name in ('fetch',):
+        name = 'mitogen_' + name
     if ansible.__version__ >= '2.8':
         get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
 

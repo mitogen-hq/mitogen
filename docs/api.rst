@@ -88,6 +88,20 @@ Connection Methods
 ==================
 
 .. currentmodule:: mitogen.parent
+.. method:: Router.buildah (container=None, buildah_path=None, username=None, \**kwargs)
+
+    Construct a context on the local machine over a ``buildah`` invocation.
+    Accepts all parameters accepted by :meth:`local`, in addition to:
+
+    :param str container:
+        The name of the Buildah container to connect to.
+    :param str doas_path:
+        Filename or complete path to the ``buildah`` binary. ``PATH`` will be
+        searched if given as a filename. Defaults to ``buildah``.
+    :param str username:
+        Username to use, defaults to unset.
+
+.. currentmodule:: mitogen.parent
 .. method:: Router.fork (on_fork=None, on_start=None, debug=False, profiling=False, via=None)
 
     Construct a context on the local machine by forking the current

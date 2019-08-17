@@ -953,7 +953,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect()
         ansible_mitogen.target.transfer_file(
             context=self.context,
-            in_path=in_path,
+            # in_path may be AnsibleUnicode
+            in_path=mitogen.utils.cast(in_path),
             out_path=out_path
         )
 

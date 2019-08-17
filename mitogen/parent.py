@@ -1250,6 +1250,9 @@ class LogProtocol(LineLoggingProtocolMixin, mitogen.core.DelimitedProtocol):
     written to it.
     """
     def on_line_received(self, line):
+        """
+        Read a line, decode it as UTF-8, and log it.
+        """
         super(LogProtocol, self).on_line_received(line)
         LOG.info(u'%s: %s', self.stream.name, line.decode('utf-8', 'replace'))
 
