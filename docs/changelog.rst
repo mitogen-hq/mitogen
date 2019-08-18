@@ -41,7 +41,7 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* :gh:issue:`419`, :gh:issue:`470`, file descriptor usage is approximately
+* :gh:issue:`419`, :gh:issue:`470`: file descriptor usage is approximately
   halved, as it is no longer necessary to separately manage read and write
   sides to work around a design problem.
 
