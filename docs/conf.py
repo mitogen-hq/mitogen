@@ -10,6 +10,10 @@ author = u'Network Genomics'
 copyright = u'2019, Network Genomics'
 exclude_patterns = ['_build', '.venv']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.programoutput', 'domainrefs']
+
+# get rid of version from <title>, it messes with piwik
+html_title = 'Mitogen Documentation'
+
 html_show_copyright = False
 html_show_sourcelink = False
 html_show_sphinx = False
