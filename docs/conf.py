@@ -55,11 +55,11 @@ domainrefs = {
         'url': 'https://github.com/dw/mitogen/pull/%s',
     },
     'ans:mod': {
-        'text': '%s Module',
+        'text': '%s module',
         'url': 'https://docs.ansible.com/ansible/latest/modules/%s_module.html',
     },
     'ans:conn': {
-        'text': '%s Connection Plug-in',
+        'text': '%s connection plug-in',
         'url': 'https://docs.ansible.com/ansible/latest/plugins/connection/%s.html',
     },
     'freebsd:man2': {

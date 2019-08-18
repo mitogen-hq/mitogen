@@ -31,43 +31,39 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* :gh:issue:`419`, :gh:issue:`470`, file descriptor usage during large runs is
-  halved, as it is no longer necessary to manage read and write sides
-  distinctly in order to work around a design problem.
+* :gh:issue:`419`, :gh:issue:`470`, file descriptor usage is approximately
+  halved, as it is no longer necessary to separately manage read and write
+  sides to work around a design problem.
 
-* :gh:issue:`419`: almost all connection setup happens on one thread, reducing
-  contention and context switching early in a run.
+* :gh:issue:`419`: setup for all connections happens almost entirely on one
+  thread, reducing contention and context switching early in a run.
 
 * :gh:issue:`419`: Connection setup is better pipelined, eliminating some
   network round-trips. Most infrastructure is in place to support future
-  removal of the final round-trips between a target fully booting and receiving
+  removal of the final round-trips between a target booting and receiving
   function calls.
 
 * :gh:pull:`595`: the :meth:`~mitogen.parent.Router.buildah` connection method
   is available to manipulate `Buildah <https://buildah.io/>`_ containers, and
   is exposed to Ansible as the :ans:conn:`buildah`.
 
-* :gh:issue:`615`: a modified Ansible :ans:mod:`fetch` is included that
-  implement streaming file transfer in every case, including when ``become`` is
-  active, preventing excessive CPU usage and memory spikes, and significantly
-  improving performance. A copy of 2 files of 512 MiB each drops from 47
-  seconds to 7 seconds, with peak memory usage dropping from 10.7 GiB to 64.8
-  MiB.
+* :gh:issue:`615`: a modified :ans:mod:`fetch` implements streaming transfer
+  even when ``become`` is active, avoiding excess CPU usage and memory spikes,
+  and improving performance. A copy of two 512 MiB files drops from 47 seconds
+  to 7 seconds, with peak memory usage dropping from 10.7 GiB to 64.8 MiB.
 
 * `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
-  installation, both Operon and Ansible are supported by a unified release.
+  library installation, both Ansible and Operon are supported by a single
+  Mitogen release.
 
-* The ``MITOGEN_CPU_COUNT`` environment variable shards the connection
-  multiplexer into per-CPU workers. This may improve throughput for runs
-  involving large file transfers, and is required for future in-process SSH
-  support. One multiplexer starts by default, to match existing behaviour.
+* The ``MITOGEN_CPU_COUNT`` variable shards the connection multiplexer into
+  per-CPU workers. This may improve throughput for large runs involving file
+  transfer, and is required for future functionality. One multiplexer starts by
+  default, to match existing behaviour.
 
-* :gh:commit:`d6faff06`,
-  :gh:commit:`807cbef9`,
-  :gh:commit:`e93762b3`,
-  :gh:commit:`50bfe4c7`: locking is
-  avoided on hot paths, and some locks are released earlier, before waking a
-  thread that must immediately take the same lock.
+* :gh:commit:`d6faff06`, :gh:commit:`807cbef9`, :gh:commit:`e93762b3`,
+  :gh:commit:`50bfe4c7`: locking is avoided on hot paths, and some locks are
+  released before waking a thread that must immediately acquire the same lock.
 
 
 Mitogen for Ansible
@@ -85,40 +81,34 @@ Mitogen for Ansible
   running Mitogen under `Molecule
   <https://molecule.readthedocs.io/en/stable/>`_ was resolved.
 
-* :gh:issue:`547`, :gh:issue:`598`: fix a serious deadlock
-  possible while initializing the service pool of any child, such as during
-  connection, ``async`` tasks, tasks using custom :mod:`module_utils`,
-  ``mitogen_task_isolation: fork`` modules, and those present on an internal
-  blacklist of misbehaving modules.
+* :gh:issue:`547`, :gh:issue:`598`: fix a deadlock during initialization of
+  connections, ``async`` tasks, tasks using custom :mod:`module_utils`,
+  ``mitogen_task_isolation: fork`` modules, and modules present on an internal
+  blacklist. This would manifest as a timeout or hang, was easily hit, had been
+  present since 0.2.0, and likely impacted many users.
 
-  This deadlock is relatively easy hit, has been present since 0.2.0, and
-  likely impacted many users. For new connections it manifested as a timeout,
-  for forked tasks it could manifest as a timeout or an apparent hang.
+* :gh:issue:`549`: the open file limit is increased to the permitted hard
+  limit. It is common for distributions to ship with a higher hard limit than
+  the default soft limit, allowing *"too many open files"* errors to be avoided
+  more often in large runs without user intervention.
 
-* :gh:issue:`549`: the open file limit for the Ansible process is increased to
-  the available hard limit. It is common for distributions to ship with a
-  higher hard limit than the default soft limit, allowing *"too many open
-  files"* errors to be avoided more often in large runs without user
-  intervention.
-
-* :gh:issue:`558`, :gh:issue:`582`: on Ansible 2.3 a remote directory was
+* :gh:issue:`558`, :gh:issue:`582`: on Ansible 2.3 a directory was
   unconditionally deleted after the first module belonging to an action plug-in
   had executed, causing the :ans:mod:`unarchive` to fail.
 
-* :gh:issue:`578`: the extension could crash while rendering an error message,
-  due to an incorrect format string.
+* :gh:issue:`578`: the extension could crash while rendering an error due to an
+  incorrect format string.
 
 * :gh:issue:`590`: the importer can handle modules that replace themselves in
   :data:`sys.modules` with completely unrelated modules during import, as in
   the case of Ansible 2.8 :mod:`ansible.module_utils.distro`.
 
-* :gh:issue:`591`: the target's working directory is restored to a
-  known-existent directory between tasks to ensure :func:`os.getcwd` will not
-  fail when called, in the same way that :class:`AnsibleModule` restores it
-  during initialization. However this restore happens before the module ever
-  executes, ensuring any code that calls :func:`os.getcwd` prior to
+* :gh:issue:`591`: the working directory is reset between tasks to ensure
+  :func:`os.getcwd` cannot fail, in the same way :class:`AnsibleModule`
+  resets it during initialization. However this restore happens before the
+  module executes, ensuring code that calls :func:`os.getcwd` prior to
   :class:`AnsibleModule` initialization, such as the Ansible 2.7
-  :ans:mod:`pip`, cannot fail due to the behavior of a prior task.
+  :ans:mod:`pip`, cannot fail due to the actions of a prior task.
 
 * :gh:issue:`593`: the SSH connection method exposes
   ``mitogen_ssh_keepalive_interval`` and ``mitogen_ssh_keepalive_count``
@@ -136,28 +126,26 @@ Mitogen for Ansible
 * :gh:issue:`598`, :gh:issue:`605`: fix a deadlock managing a shared counter
   used for load balancing, present since 0.2.4.
 
-* :gh:issue:`615`: streaming file transfer is implemented for the
-  :ans:mod:`fetch` and other actions that transfer files from the target to the
-  controller. Previously files delivered from target to controller were sent in
-  one message, requiring them to fit in RAM and be smaller than an internal
-  message size sanity check. Transfers from controller to target have been
-  streaming since 0.2.0.
+* :gh:issue:`615`: streaming is implemented for the :ans:mod:`fetch` and other
+  actions that transfer files from targets to the controller. Previously files
+  delivered were sent in one message, requiring them to fit in RAM and be
+  smaller than an internal message size sanity check. Transfers from controller
+  to targets have been streaming since 0.2.0.
 
-* :gh:commit:`7ae926b3`: the Ansible :ans:mod:`lineinfile` began leaking
-  writable temporary file descriptors since Ansible 2.7.0. When
-  :ans:mod:`~lineinfile` was used to create or modify a script, and that script
-  was later executed, the execution could fail with "*text file busy*" due to
-  the leaked descriptor. Temporary descriptors are now tracked and cleaned up
-  on exit for all modules.
+* :gh:commit:`7ae926b3`: the :ans:mod:`lineinfile` leaks writable temporary
+  file descriptors since Ansible 2.7.0. When :ans:mod:`~lineinfile` created or
+  modified a script, and that script was later executed, the execution could
+  fail with "*text file busy*". Temporary descriptors are now tracked and
+  cleaned up on exit for all modules.
 
 
 Core Library
 ~~~~~~~~~~~~
 
-* Log readability is improving, and many :func:`repr` strings are more
-  descriptive. The old pseudo-function-call format is slowly migrating to
-  human-readable output where possible. For example,
-  *"Stream(ssh:123).connect()"* might be written *"connecting to ssh:123"*.
+* Log readability is improving and many :func:`repr` strings are more
+  descriptive. The old pseudo-function-call format is migrating to
+  readable output where possible. For example, *"Stream(ssh:123).connect()"*
+  might be written *"connecting to ssh:123"*.
 
 * In preparation for reducing default log output, many messages are delivered
   to per-component loggers, including messages originating from children,
@@ -171,7 +159,8 @@ Core Library
       12:00:00 D mitogen.importer.[remotehost] loading module "foo"
 
   Allowing a filter or handler for ``mitogen.importer`` to select that logger
-  in every process.
+  in every process. This introduces a small risk of leaking memory in
+  long-lived programs, as logger objects are internally persistent.
 
 * :func:`bytearray` was removed from the list of supported serialization types.
   It was never portable between Python versions, unused, and never made much
@@ -183,27 +172,24 @@ Core Library
   asynchronous context.
 
 * :gh:issue:`419`: the internal
-  :class:`~mitogen.core.Stream` has been refactored into 7 new classes,
+  :class:`~mitogen.core.Stream` has been refactored into many new classes,
   modularizing protocol behaviour, output buffering, line-oriented input
   parsing, option handling and connection management. Connection setup is
-  internally asynchronous, laying almost all the groundwork needed for fully
-  asynchronous connect, proxied Ansible become plug-ins, and integrating
-  `libssh <https://www.libssh.org/>`_.
+  internally asynchronous, laying most groundwork for fully asynchronous
+  connect, proxied Ansible become plug-ins, and in-process SSH.
 
 * :gh:issue:`169`,
   :gh:issue:`419`: zombie subprocess reaping
-  has vastly improved, by using timers to efficiently poll for a slow child to
-  finish exiting, and delaying broker shutdown while any subprocess remains.
-  Polling avoids relying on process-global configuration such as a `SIGCHLD`
-  handler, or :func:`signal.set_wakeup_fd` available in modern Python.
+  has vastly improved, by using timers to efficiently poll for a child to exit,
+  and delaying shutdown while any subprocess remains. Polling avoids
+  process-global configuration such as a `SIGCHLD` handler, or
+  :func:`signal.set_wakeup_fd` available in modern Python.
 
-* :gh:issue:`256`,
-  :gh:issue:`419`: most :func:`os.dup` use
-  was eliminated, along with almost all manual file descriptor management.
-  Descriptors are trapped in :func:`os.fdopen` objects at creation, ensuring a
-  leaked object will close itself, and ensuring every descriptor is fused to a
-  `closed` flag, preventing historical bugs where a double close could destroy
-  descriptors belonging to unrelated streams.
+* :gh:issue:`256`, :gh:issue:`419`: most :func:`os.dup` use was eliminated,
+  along with most manual file descriptor management. Descriptors are trapped in
+  :func:`os.fdopen` objects at creation, ensuring a leaked object will close
+  itself, and ensuring every descriptor is fused to a `closed` flag, preventing
+  historical bugs where a double close could destroy unrelated descriptors.
 
 * :gh:issue:`533`: routing accounts for
   a race between a parent (or cousin) sending a message to a child via an
