@@ -2607,9 +2607,9 @@ class Reaper(object):
 
         if not self.kill:
             pass
-        elif self._tries == 1:
+        elif self._tries == 2:
             self._signal_child(signal.SIGTERM)
-        elif self._tries == 5:  # roughly 4 seconds
+        elif self._tries == 6:  # roughly 4 seconds
             self._signal_child(signal.SIGKILL)
 
 
