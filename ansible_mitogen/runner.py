@@ -37,7 +37,6 @@ how to build arguments for it, preseed related data, etc.
 """
 
 import atexit
-import codecs
 import imp
 import os
 import re
@@ -52,7 +51,6 @@ import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import b
 from mitogen.core import bytes_partition
-from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
@@ -104,12 +102,59 @@ iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
 
-if mitogen.core.PY3:
-    shlex_split = shlex.split
-else:
-    def shlex_split(s, comments=False):
-        return [mitogen.core.to_text(token)
-                for token in shlex.split(str(s), comments=comments)]
+def shlex_split_b(s):
+    """
+    Use shlex.split() to split characters in some single-byte encoding, without
+    knowing what that encoding is. The input is bytes, the output is a list of
+    bytes.
+    """
+    assert isinstance(s, mitogen.core.BytesType)
+    if mitogen.core.PY3:
+        return [
+            t.encode('latin1')
+            for t in shlex.split(s.decode('latin1'), comments=True)
+        ]
+
+    return [t for t in shlex.split(s, comments=True)]
+
+
+class TempFileWatcher(object):
+    """
+    Since Ansible 2.7.0, lineinfile leaks file descriptors returned by
+    :func:`tempfile.mkstemp` (ansible/ansible#57327). Handle this and all
+    similar cases by recording descriptors produced by mkstemp during module
+    execution, and cleaning up any leaked descriptors on completion.
+    """
+    def __init__(self):
+        self._real_mkstemp = tempfile.mkstemp
+        # (fd, st.st_dev, st.st_ino)
+        self._fd_dev_inode = []
+        tempfile.mkstemp = self._wrap_mkstemp
+
+    def _wrap_mkstemp(self, *args, **kwargs):
+        fd, path = self._real_mkstemp(*args, **kwargs)
+        st = os.fstat(fd)
+        self._fd_dev_inode.append((fd, st.st_dev, st.st_ino))
+        return fd, path
+
+    def revert(self):
+        tempfile.mkstemp = self._real_mkstemp
+        for tup in self._fd_dev_inode:
+            self._revert_one(*tup)
+
+    def _revert_one(self, fd, st_dev, st_ino):
+        try:
+            st = os.fstat(fd)
+        except OSError:
+            # FD no longer exists.
+            return
+
+        if not (st.st_dev == st_dev and st.st_ino == st_ino):
+            # FD reused.
+            return
+
+        LOG.info("a tempfile.mkstemp() FD was leaked during the last task")
+        os.close(fd)
 
 
 class EnvironmentFileWatcher(object):
@@ -126,13 +171,19 @@ class EnvironmentFileWatcher(object):
     A more robust future approach may simply be to arrange for the persistent
     interpreter to restart when a change is detected.
     """
+    # We know nothing about the character set of /etc/environment or the
+    # process environment.
+    environ = getattr(os, 'environb', os.environ)
+
     def __init__(self, path):
         self.path = os.path.expanduser(path)
         #: Inode data at time of last check.
         self._st = self._stat()
         #: List of inherited keys appearing to originated from this file.
-        self._keys = [key for key, value in self._load()
-                      if value == os.environ.get(key)]
+        self._keys = [
+            key for key, value in self._load()
+            if value == self.environ.get(key)
+        ]
         LOG.debug('%r installed; existing keys: %r', self, self._keys)
 
     def __repr__(self):
@@ -146,7 +197,7 @@ class EnvironmentFileWatcher(object):
 
     def _load(self):
         try:
-            fp = codecs.open(self.path, 'r', encoding='utf-8')
+            fp = open(self.path, 'rb')
             try:
                 return list(self._parse(fp))
             finally:
@@ -160,36 +211,36 @@ class EnvironmentFileWatcher(object):
         """
         for line in fp:
             # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
-            bits = shlex_split(line, comments=True)
-            if (not bits) or bits[0].startswith('#'):
+            bits = shlex_split_b(line)
+            if (not bits) or bits[0].startswith(b('#')):
                 continue
 
-            if bits[0] == u'export':
+            if bits[0] == b('export'):
                 bits.pop(0)
 
-            key, sep, value = str_partition(u' '.join(bits), u'=')
+            key, sep, value = bytes_partition(b(' ').join(bits), b('='))
             if key and sep:
                 yield key, value
 
     def _on_file_changed(self):
         LOG.debug('%r: file changed, reloading', self)
         for key, value in self._load():
-            if key in os.environ:
+            if key in self.environ:
                 LOG.debug('%r: existing key %r=%r exists, not setting %r',
-                          self, key, os.environ[key], value)
+                          self, key, self.environ[key], value)
             else:
                 LOG.debug('%r: setting key %r to %r', self, key, value)
                 self._keys.append(key)
-                os.environ[key] = value
+                self.environ[key] = value
 
     def _remove_existing(self):
         """
         When a change is detected, remove keys that existed in the old file.
         """
         for key in self._keys:
-            if key in os.environ:
+            if key in self.environ:
                 LOG.debug('%r: removing old key %r', self, key)
-                del os.environ[key]
+                del self.environ[key]
         self._keys = []
 
     def check(self):
@@ -344,11 +395,22 @@ class Runner(object):
             env.update(self.env)
         self._env = TemporaryEnvironment(env)
 
+    def _revert_cwd(self):
+        """
+        #591: make a best-effort attempt to return to :attr:`good_temp_dir`.
+        """
+        try:
+            os.chdir(self.good_temp_dir)
+        except OSError:
+            LOG.debug('%r: could not restore CWD to %r',
+                      self, self.good_temp_dir)
+
     def revert(self):
         """
         Revert any changes made to the process after running a module. The base
         implementation simply restores the original environment.
         """
+        self._revert_cwd()
         self._env.revert()
         self.revert_temp_dir()
 
@@ -760,7 +822,21 @@ class NewStyleRunner(ScriptRunner):
         for fullname, _, _ in self.module_map['custom']:
             mitogen.core.import_module(fullname)
         for fullname in self.module_map['builtin']:
-            mitogen.core.import_module(fullname)
+            try:
+                mitogen.core.import_module(fullname)
+            except ImportError:
+                # #590: Ansible 2.8 module_utils.distro is a package that
+                # replaces itself in sys.modules with a non-package during
+                # import. Prior to replacement, it is a real package containing
+                # a '_distro' submodule which is used on 2.x. Given a 2.x
+                # controller and 3.x target, the import hook never needs to run
+                # again before this replacement occurs, and 'distro' is
+                # replaced with a module from the stdlib. In this case as this
+                # loop progresses to the next entry and attempts to preload
+                # 'distro._distro', the import mechanism will fail. So here we
+                # silently ignore any failure for it.
+                if fullname != 'ansible.module_utils.distro._distro':
+                    raise
 
     def _setup_excepthook(self):
         """
@@ -778,6 +854,7 @@ class NewStyleRunner(ScriptRunner):
         # module, but this has never been a bug report. Instead act like an
         # interpreter that had its script piped on stdin.
         self._argv = TemporaryArgv([''])
+        self._temp_watcher = TempFileWatcher()
         self._importer = ModuleUtilsImporter(
             context=self.service_context,
             module_utils=self.module_map['custom'],
@@ -793,6 +870,7 @@ class NewStyleRunner(ScriptRunner):
 
     def revert(self):
         self.atexit_wrapper.revert()
+        self._temp_watcher.revert()
         self._argv.revert()
         self._stdio.revert()
         self._revert_excepthook()

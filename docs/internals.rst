@@ -2,10 +2,10 @@
 Internal API Reference
 **********************
 
-.. toctree::
-    :hidden:
+.. note::
 
-    signals
+   Internal APIs are subject to rapid change even across minor releases. This
+   page exists to help users modify and extend the library.
 
 
 Constants
@@ -15,85 +15,8 @@ Constants
 .. autodata:: CHUNK_SIZE
 
 
-Poller Classes
-==============
-
-.. currentmodule:: mitogen.core
-.. autoclass:: Poller
-   :members:
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: EpollPoller
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: KqueuePoller
-
-
-Latch Class
-===========
-
-.. currentmodule:: mitogen.core
-.. autoclass:: Latch
-   :members:
-
-
-PidfulStreamHandler Class
-=========================
-
-.. currentmodule:: mitogen.core
-.. autoclass:: PidfulStreamHandler
-   :members:
-
-
-Side Class
-==========
-
-.. currentmodule:: mitogen.core
-.. autoclass:: Side
-   :members:
-
-
-Stream Classes
-==============
-
-.. currentmodule:: mitogen.core
-.. autoclass:: BasicStream
-   :members:
-
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.fork
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.ssh
-.. autoclass:: Stream
-   :members:
-
-.. currentmodule:: mitogen.sudo
-.. autoclass:: Stream
-   :members:
-
-
-Other Stream Subclasses
-=======================
-
-.. currentmodule:: mitogen.core
-
-.. autoclass:: IoLogger
-   :members:
-
-.. autoclass:: Waker
-   :members:
-
-
-Poller Class
-============
+Pollers
+=======
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Poller
@@ -105,24 +28,157 @@ Poller Class
 .. currentmodule:: mitogen.parent
 .. autoclass:: EpollPoller
 
+.. currentmodule:: mitogen.parent
+.. autoclass:: PollPoller
 
-Importer Class
-==============
+
+Latch
+=====
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Latch
+   :members:
+
+
+Logging
+=======
+
+See also :class:`mitogen.core.IoLoggerProtocol`.
+
+.. currentmodule:: mitogen.core
+.. autoclass:: LogHandler
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: LogForwarder
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: PidfulStreamHandler
+   :members:
+
+
+Stream, Side & Protocol
+=======================
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Stream
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: BufferedWriter
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Side
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Protocol
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: BootstrapProtocol
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: DelimitedProtocol
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: LogProtocol
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: IoLoggerProtocol
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: MitogenProtocol
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: MitogenProtocol
+   :members:
+
+.. currentmodule:: mitogen.core
+.. autoclass:: Waker
+   :members:
+
+
+Connection & Options
+====================
+
+.. currentmodule:: mitogen.fork
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+.. currentmodule:: mitogen.ssh
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+.. currentmodule:: mitogen.sudo
+.. autoclass:: Options
+   :members:
+.. autoclass:: Connection
+   :members:
+
+
+Import Mechanism
+================
 
 .. currentmodule:: mitogen.core
 .. autoclass:: Importer
    :members:
 
-
-Responder Class
-===============
-
 .. currentmodule:: mitogen.master
 .. autoclass:: ModuleResponder
    :members:
 
+.. currentmodule:: mitogen.parent
+.. autoclass:: ModuleForwarder
+   :members:
 
-RouteMonitor Class
+
+Module Finders
+==============
+
+.. currentmodule:: mitogen.master
+.. autoclass:: ModuleFinder
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: FinderMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: DefectivePython3xMainMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: PkgutilMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: SysModulesMethod
+   :members:
+
+.. currentmodule:: mitogen.master
+.. autoclass:: ParentEnumerationMethod
+   :members:
+
+
+Routing Management
 ==================
 
 .. currentmodule:: mitogen.parent
@@ -130,45 +186,68 @@ RouteMonitor Class
    :members:
 
 
-Forwarder Class
-===============
+Timer Management
+================
 
 .. currentmodule:: mitogen.parent
-.. autoclass:: ModuleForwarder
+.. autoclass:: TimerList
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: Timer
    :members:
 
 
-ExternalContext Class
+Context ID Allocation
 =====================
+
+.. currentmodule:: mitogen.master
+.. autoclass:: IdAllocator
+   :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: ChildIdAllocator
+   :members:
+
+
+Child Implementation
+====================
 
 .. currentmodule:: mitogen.core
 .. autoclass:: ExternalContext
     :members:
 
-
-mitogen.master
-==============
-
-.. currentmodule:: mitogen.parent
-.. autoclass:: ProcessMonitor
+.. currentmodule:: mitogen.core
+.. autoclass:: Dispatcher
     :members:
 
 
-Blocking I/O Functions
-======================
-
-These functions exist to support the blocking phase of setting up a new
-context. They will eventually be replaced with asynchronous equivalents.
-
+Process Management
+==================
 
 .. currentmodule:: mitogen.parent
-.. autofunction:: discard_until
-.. autofunction:: iter_read
-.. autofunction:: write_all
+.. autoclass:: Reaper
+    :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: Process
+    :members:
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: PopenProcess
+    :members:
+
+.. currentmodule:: mitogen.fork
+.. autoclass:: Process
+    :members:
 
 
-Subprocess Creation Functions
-=============================
+Helper Functions
+================
+
+
+Subprocess Functions
+---------------------
 
 .. currentmodule:: mitogen.parent
 .. autofunction:: create_child
@@ -176,19 +255,19 @@ Subprocess Creation Functions
 .. autofunction:: tty_create_child
 
 
-Helper Functions
-================
+Helpers
+-------
 
 .. currentmodule:: mitogen.core
-.. autofunction:: to_text
 .. autofunction:: has_parent_authority
+.. autofunction:: io_op
+.. autofunction:: pipe
+.. autofunction:: set_block
 .. autofunction:: set_cloexec
 .. autofunction:: set_nonblock
-.. autofunction:: set_block
-.. autofunction:: io_op
+.. autofunction:: to_text
 
 .. currentmodule:: mitogen.parent
-.. autofunction:: close_nonstandard_fds
 .. autofunction:: create_socketpair
 
 .. currentmodule:: mitogen.master
@@ -198,7 +277,67 @@ Helper Functions
 .. autofunction:: minimize_source
 
 
+.. _signals:
+
 Signals
 =======
 
-:ref:`Please refer to Signals <signals>`.
+Mitogen contains a simplistic signal mechanism to decouple its components. When
+a signal is fired by an instance of a class, functions registered to receive it
+are called back.
+
+.. warning::
+
+    As signals execute on the Broker thread, and without exception handling,
+    they are generally unsafe for consumption by user code, as any bugs could
+    trigger crashes and hangs for which the broker is unable to forward logs,
+    or ensure the buggy context always shuts down on disconnect.
+
+
+Functions
+---------
+
+.. currentmodule:: mitogen.core
+
+.. autofunction:: listen
+.. autofunction:: unlisten
+.. autofunction:: fire
+
+
+List
+----
+
+These signals are used internally by Mitogen.
+
+.. list-table::
+    :header-rows: 1
+    :widths: auto
+
+    * - Class
+      - Name
+      - Description
+
+    * - :py:class:`mitogen.core.Stream`
+      - ``disconnect``
+      - Fired on the Broker thread when disconnection is detected.
+
+    * - :py:class:`mitogen.core.Stream`
+      - ``shutdown``
+      - Fired on the Broker thread when broker shutdown begins.
+
+    * - :py:class:`mitogen.core.Context`
+      - ``disconnect``
+      - Fired on the Broker thread during shutdown (???)
+
+    * - :py:class:`mitogen.parent.Process`
+      - ``exit``
+      - Fired when :class:`mitogen.parent.Reaper` detects subprocess has fully
+        exitted.
+
+    * - :py:class:`mitogen.core.Broker`
+      - ``shutdown``
+      - Fired after Broker.shutdown() is called.
+
+    * - :py:class:`mitogen.core.Broker`
+      - ``exit``
+      - Fired immediately prior to the broker thread exit.

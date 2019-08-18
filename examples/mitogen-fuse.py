@@ -241,9 +241,13 @@ def main(router):
         print('usage: %s <host> <mountpoint>' % sys.argv[0])
         sys.exit(1)
 
-    blerp = fuse.FUSE(
+    kwargs = {}
+    if sys.platform == 'darwin':
+        kwargs['volname'] = '%s (Mitogen)' % (sys.argv[1],)
+
+    fuse.FUSE(
         operations=Operations(sys.argv[1]),
         mountpoint=sys.argv[2],
         foreground=True,
-        volname='%s (Mitogen)' % (sys.argv[1],),
+        **kwargs
     )

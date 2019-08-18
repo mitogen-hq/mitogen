@@ -28,7 +28,8 @@
 
 # !mitogen: minify_safe
 
-"""mitogen.profiler
+"""
+mitogen.profiler
     Record and report cProfile statistics from a run. Creates one aggregated
     output file, one aggregate containing only workers, and one for the
     top-level process.
@@ -56,14 +57,11 @@ Example:
 from __future__ import print_function
 import os
 import pstats
-import cProfile
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
-
-import mitogen.core
 
 
 def try_merge(stats, path):
@@ -71,13 +69,13 @@ def try_merge(stats, path):
         stats.add(path)
         return True
     except Exception as e:
-        print('Failed. Race? Will retry. %s' % (e,))
+        print('%s failed. Will retry. %s' % (path, e))
         return False
 
 
 def merge_stats(outpath, inpaths):
     first, rest = inpaths[0], inpaths[1:]
-    for x in range(5):
+    for x in range(1):
         try:
             stats = pstats.Stats(first)
         except EOFError:
@@ -152,7 +150,7 @@ def do_stat(tmpdir, sort, *args):
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] not in ('record', 'report', 'stat'):
-        sys.stderr.write(__doc__)
+        sys.stderr.write(__doc__.lstrip())
         sys.exit(1)
 
     func = globals()['do_' + sys.argv[1]]

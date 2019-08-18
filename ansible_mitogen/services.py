@@ -180,7 +180,7 @@ class ContextService(mitogen.service.Service):
         Return a reference, making it eligable for recycling once its reference
         count reaches zero.
         """
-        LOG.debug('%r.put(%r)', self, context)
+        LOG.debug('decrementing reference count for %r', context)
         self._lock.acquire()
         try:
             if self._refs_by_context.get(context, 0) == 0:
@@ -372,7 +372,7 @@ class ContextService(mitogen.service.Service):
         try:
             method = getattr(self.router, spec['method'])
         except AttributeError:
-            raise Error('unsupported method: %(transport)s' % spec)
+            raise Error('unsupported method: %(method)s' % spec)
 
         context = method(via=via, unidirectional=True, **spec['kwargs'])
         if via and spec.get('enable_lru'):
@@ -443,7 +443,7 @@ class ContextService(mitogen.service.Service):
     @mitogen.service.arg_spec({
         'stack': list
     })
-    def get(self, msg, stack):
+    def get(self, stack):
         """
         Return a Context referring to an established connection with the given
         configuration, establishing new connections as necessary.

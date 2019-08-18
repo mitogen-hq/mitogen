@@ -346,11 +346,15 @@ Masters listen on the following handles:
 .. currentmodule:: mitogen.core
 .. data:: ALLOCATE_ID
 
-    Replies to any message sent to it with a newly allocated range of context
-    IDs, to allow children to safely start their own contexts. Presently IDs
-    are allocated in batches of 1000 from a 32 bit range, allowing up to 4.2
-    million parent contexts to be created and destroyed before the associated
-    Router must be recreated.
+   Replies to any message sent to it with a newly allocated range of context
+   IDs, to allow children to safely start their own contexts. Presently IDs are
+   allocated in batches of 1000 from a 32 bit range, allowing up to 4.2 million
+   parent contexts to be created and destroyed before the associated Router
+   must be recreated.
+
+   This is handled by :class:`mitogen.master.IdAllocator` in the master
+   process, and messages are sent to it from
+   :class:`mitogen.parent.ChildIdAllocator` in children.
 
 Children listen on the following handles:
 
@@ -430,8 +434,9 @@ also listen on the following handles:
 
     Receives `target_id` integer from downstream, verifies a route exists to
     `target_id` via the stream on which the message was received, removes that
-    route from its local table, then propagates the message upward towards its
-    own parent.
+    route from its local table, triggers the ``disconnect`` signal on any
+    :class:`mitogen.core.Context` instance in the local process, then
+    propagates the message upward towards its own parent.
 
 .. currentmodule:: mitogen.core
 .. data:: DETACHING
@@ -625,7 +630,8 @@ The `auth_id` field is separate from `src_id` in order to support granting
 privilege to contexts that do not follow the tree's natural trust chain. This
 supports cases where siblings are permitted to execute code on one another, or
 where isolated processes can connect to a listener and communicate with an
-already established established tree.
+already established established tree, such as where a :mod:`mitogen.unix`
+client receives the same privilege as the process it connects to.
 
 
 Differences Between Master And Child Brokers
@@ -669,8 +675,12 @@ code occurring after the first conditional that looks like a standard
     if __name__ == '__main__':
         run_some_code()
 
-This is a hack, but it's the least annoying hack I've found for the problem
-yet.
+To further avoid accidental execution, Mitogen will refuse to serve
+:mod:`__main__` to children if no execution guard is found, as it is common
+that no guard is present during early script prototyping.
+
+These are hacks, but they are the safest and least annoying found to solve the
+problem.
 
 
 Avoiding Negative Imports

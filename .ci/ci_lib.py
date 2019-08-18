@@ -57,8 +57,10 @@ def have_docker():
 
 # -----------------
 
-# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
+# Force line buffering on stdout.
+sys.stdout = os.fdopen(1, 'w', 1)
 
+# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
 if 'TRAVIS_HOME' in os.environ:
     proc = subprocess.Popen(
         args=['stdbuf', '-oL', 'cat'],
@@ -86,8 +88,13 @@ def _argv(s, *args):
 def run(s, *args, **kwargs):
     argv = ['/usr/bin/time', '--'] + _argv(s, *args)
     print('Running: %s' % (argv,))
-    ret = subprocess.check_call(argv, **kwargs)
-    print('Finished running: %s' % (argv,))
+    try:
+        ret = subprocess.check_call(argv, **kwargs)
+        print('Finished running: %s' % (argv,))
+    except Exception:
+        print('Exception occurred while running: %s' % (argv,))
+        raise
+
     return ret
 
 
@@ -208,6 +215,46 @@ def make_containers(name_prefix='', port_offset=0):
     return lst
 
 
+# ssh removed from here because 'linear' strategy relies on processes that hang
+# around after the Ansible run completes
+INTERESTING_COMMS = ('python', 'sudo', 'su', 'doas')
+
+
+def proc_is_docker(pid):
+    try:
+        fp = open('/proc/%s/cgroup' % (pid,), 'r')
+    except IOError:
+        return False
+
+    try:
+        return 'docker' in fp.read()
+    finally:
+        fp.close()
+
+
+def get_interesting_procs(container_name=None):
+    args = ['ps', 'ax', '-oppid=', '-opid=', '-ocomm=', '-ocommand=']
+    if container_name is not None:
+        args = ['docker', 'exec', container_name] + args
+
+    out = []
+    for line in subprocess__check_output(args).decode().splitlines():
+        ppid, pid, comm, rest = line.split(None, 3)
+        if (
+            (
+                any(comm.startswith(s) for s in INTERESTING_COMMS) or
+                'mitogen:' in rest
+            ) and
+            (
+                container_name is not None or
+                (not proc_is_docker(pid))
+            )
+        ):
+            out.append((int(pid), line))
+
+    return sorted(out)
+
+
 def start_containers(containers):
     if os.environ.get('KEEP'):
         return
@@ -217,6 +264,7 @@ def start_containers(containers):
             "docker rm -f %(name)s || true" % container,
             "docker run "
                 "--rm "
+                "--cpuset-cpus 0,1 "
                 "--detach "
                 "--privileged "
                 "--cap-add=SYS_PTRACE "
@@ -228,7 +276,42 @@ def start_containers(containers):
         ]
         for container in containers
     ])
+
+    for container in containers:
+        container['interesting'] = get_interesting_procs(container['name'])
+
     return containers
+
+
+def verify_procs(hostname, old, new):
+    oldpids = set(pid for pid, _ in old)
+    if any(pid not in oldpids for pid, _ in new):
+        print('%r had stray processes running:' % (hostname,))
+        for pid, line in new:
+            if pid not in oldpids:
+                print('New process:', line)
+
+        print()
+        return False
+
+    return True
+
+
+def check_stray_processes(old, containers=None):
+    ok = True
+
+    new = get_interesting_procs()
+    if old is not None:
+        ok &= verify_procs('test host machine', old, new)
+
+    for container in containers or ():
+        ok &= verify_procs(
+            container['name'],
+            container['interesting'],
+            get_interesting_procs(container['name'])
+        )
+
+    assert ok, 'stray processes were found'
 
 
 def dump_file(path):

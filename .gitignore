@@ -9,7 +9,11 @@ venvs/**
 MANIFEST
 build/
 dist/
+extra/
+tests/ansible/.*.pid
 docs/_build/
 htmlcov/
 *.egg-info
 __pycache__/
+extra
+**/.*.pid

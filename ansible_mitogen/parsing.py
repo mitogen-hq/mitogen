@@ -26,14 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""
-Classes to detect each case from [0] and prepare arguments necessary for the
-corresponding Runner class within the target, including preloading requisite
-files/modules known missing.
-
-[0] "Ansible Module Architecture", developing_program_flow_modules.html
-"""
-
 from __future__ import absolute_import
 from __future__ import unicode_literals
 

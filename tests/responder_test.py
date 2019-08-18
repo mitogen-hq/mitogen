@@ -105,7 +105,7 @@ class BrokenModulesTest(testlib.TestCase):
         # unavailable. Should never happen in the real world.
 
         stream = mock.Mock()
-        stream.sent_modules = set()
+        stream.protocol.sent_modules = set()
         router = mock.Mock()
         router.stream_by_id = lambda n: stream
 
@@ -143,7 +143,7 @@ class BrokenModulesTest(testlib.TestCase):
         import six_brokenpkg
 
         stream = mock.Mock()
-        stream.sent_modules = set()
+        stream.protocol.sent_modules = set()
         router = mock.Mock()
         router.stream_by_id = lambda n: stream
 
@@ -158,14 +158,15 @@ class BrokenModulesTest(testlib.TestCase):
         self.assertEquals(1, len(router._async_route.mock_calls))
 
         self.assertEquals(1, responder.get_module_count)
-        self.assertEquals(0, responder.good_load_module_count)
-        self.assertEquals(0, responder.good_load_module_size)
-        self.assertEquals(1, responder.bad_load_module_count)
+        self.assertEquals(1, responder.good_load_module_count)
+        self.assertEquals(0, responder.bad_load_module_count)
 
         call = router._async_route.mock_calls[0]
         msg, = call[1]
         self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
-        self.assertIsInstance(msg.unpickle(), tuple)
+
+        tup = msg.unpickle()
+        self.assertIsInstance(tup, tuple)
 
 
 class ForwardTest(testlib.RouterMixin, testlib.TestCase):

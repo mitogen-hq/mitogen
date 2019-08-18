@@ -41,7 +41,11 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
+MODS_DIR = os.path.join(DATA_DIR, 'importer')
+
 sys.path.append(DATA_DIR)
+sys.path.append(MODS_DIR)
+
 
 if mitogen.is_master:
     mitogen.utils.log_to_file()
@@ -103,11 +107,11 @@ def wait_for_port(
     If a regex pattern is supplied try to find it in the initial data.
     Return None on success, or raise on error.
     """
-    start = time.time()
+    start = mitogen.core.now()
     end = start + overall_timeout
     addr = (host, port)
 
-    while time.time() < end:
+    while mitogen.core.now() < end:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(connect_timeout)
         try:
@@ -126,7 +130,7 @@ def wait_for_port(
         sock.settimeout(receive_timeout)
         data = mitogen.core.b('')
         found = False
-        while time.time() < end:
+        while mitogen.core.now() < end:
             try:
                 resp = sock.recv(1024)
             except socket.timeout:
@@ -188,7 +192,7 @@ def sync_with_broker(broker, timeout=10.0):
     """
     sem = mitogen.core.Latch()
     broker.defer(sem.put, None)
-    sem.get(timeout=10.0)
+    sem.get(timeout=timeout)
 
 
 def log_fd_calls():
@@ -279,7 +283,11 @@ class LogCapturer(object):
         self.logger.level = logging.DEBUG
 
     def raw(self):
-        return self.sio.getvalue()
+        s = self.sio.getvalue()
+        # Python 2.x logging package hard-wires UTF-8 output.
+        if isinstance(s, mitogen.core.BytesType):
+            s = s.decode('utf-8')
+        return s
 
     def msgs(self):
         return self.handler.msgs
@@ -323,17 +331,43 @@ class TestCase(unittest2.TestCase):
 
         for name in counts:
             assert counts[name] == 1, \
-                'Found %d copies of thread %r running after tests.' % (name,)
+                'Found %d copies of thread %r running after tests.' % (
+                    counts[name], name
+                )
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
         if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof -p %s' % (os.getpid(),))
+            import os; os.system('lsof +E -w -p %s | grep -vw mem' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 self, self._fd_count_before, get_fd_count(),
             )
 
+    # Some class fixtures (like Ansible MuxProcess) start persistent children
+    # for the duration of the class.
+    no_zombie_check = False
+
+    def _teardown_check_zombies(self):
+        if self.no_zombie_check:
+            return
+
+        try:
+            pid, status = os.waitpid(0, os.WNOHANG)
+        except OSError:
+            return  # ECHILD
+
+        if pid:
+            assert 0, "%s failed to reap subprocess %d (status %d)." % (
+                self, pid, status
+            )
+
+        print('')
+        print('Children of unit test process:')
+        os.system('ps uww --ppid ' + str(os.getpid()))
+        assert 0, "%s leaked still-running subprocesses." % (self,)
+
     def tearDown(self):
+        self._teardown_check_zombies()
         self._teardown_check_threads()
         self._teardown_check_fds()
         super(TestCase, self).tearDown()
@@ -393,6 +427,11 @@ class DockerizedSshDaemon(object):
             raise ValueError('could not find SSH port in: %r' % (s,))
 
     def start_container(self):
+        try:
+            subprocess__check_output(['docker', '--version'])
+        except Exception:
+            raise unittest2.SkipTest('Docker binary is unavailable')
+
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         args = [
             'docker',
@@ -414,6 +453,22 @@ class DockerizedSshDaemon(object):
 
     def wait_for_sshd(self):
         wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
+
+    def check_processes(self):
+        args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
+        counts = {}
+        for comm in subprocess__check_output(args).decode().splitlines():
+            comm = comm.strip()
+            counts[comm] = counts.get(comm, 0) + 1
+
+        if counts != {'ps': 1, 'sshd': 1}:
+            assert 0, (
+                'Docker container %r contained extra running processes '
+                'after test completed: %r' % (
+                    self.container_name,
+                    counts
+                )
+            )
 
     def close(self):
         args = ['docker', 'rm', '-f', self.container_name]
@@ -462,6 +517,7 @@ class DockerMixin(RouterMixin):
 
     @classmethod
     def tearDownClass(cls):
+        cls.dockerized_ssh.check_processes()
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 

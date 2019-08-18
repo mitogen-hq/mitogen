@@ -27,8 +27,8 @@ and efficient low-level API on which tools like `Salt`_, `Ansible`_, or
 `Fabric`_, ultimately it is not intended for direct use by consumer software.
 
 .. _Salt: https://docs.saltstack.com/en/latest/
-.. _Ansible: http://docs.ansible.com/
-.. _Fabric: http://www.fabfile.org/
+.. _Ansible: https://docs.ansible.com/
+.. _Fabric: https://www.fabfile.org/
 
 The focus is to centralize and perfect the intricate dance required to run
 Python code safely and efficiently on a remote machine, while **avoiding
@@ -132,7 +132,7 @@ any tool such as `py2exe`_ that correctly implement the protocols in PEP-302,
 allowing truly single file applications to run across multiple machines without
 further effort.
 
-.. _py2exe: http://www.py2exe.org/
+.. _py2exe: https://www.py2exe.org/
 
 Common sources of import latency and bandwidth consumption are mitigated:
 
@@ -153,40 +153,6 @@ Common sources of import latency and bandwidth consumption are mitigated:
   round-trips to one per package nesting level. For example,
   :py:mod:`django.db.models` only requires 3 round-trips to transfer 456KiB,
   representing 1.7MiB of uncompressed source split across 148 modules.
-
-
-SSH Client Emulation
-####################
-
-.. image:: images/fakessh.svg
-    :class: mitogen-right-300
-
-Support is included for starting subprocesses with a modified environment, that
-cause their attempt to use SSH to be redirected back into the host program. In
-this way tools like `rsync`, `git`, `sftp`, and `scp` can efficiently reuse the
-host program's existing connection to the remote machine, including any
-firewall/user account hopping in use, with no additional configuration.
-
-Scenarios that were not previously possible with these tools are enabled, such
-as running `sftp` and `rsync` over a `sudo` session, to an account the user
-cannot otherwise directly log into, including in restrictive environments that
-for example enforce an interactive TTY and account password.
-
-.. raw:: html
-
-   <div style="clear: both;"></div>
-
-.. code-block:: python
-
-    bastion = router.ssh(hostname='bastion.mycorp.com')
-    webserver = router.ssh(via=bastion, hostname='webserver')
-    webapp = router.sudo(via=webserver, username='webapp')
-    fileserver = router.ssh(via=bastion, hostname='fileserver')
-
-    # Transparently tunnelled over fileserver -> .. -> sudo.webapp link
-    fileserver.call(mitogen.fakessh.run, webapp, [
-        'rsync', 'appdata', 'appserver:appdata'
-    ])
 
 
 Message Routing
@@ -329,36 +295,7 @@ External contexts are configured such that any attempt to execute a function
 from the main Python script will correctly cause that script to be imported as
 usual into the slave process.
 
-.. code-block:: python
-
-    #!/usr/bin/env python
-    """
-    Install our application on a remote machine.
-
-    Usage:
-        install_app.py <hostname>
-
-    Where:
-        <hostname>  Hostname to install to.
-    """
-    import os
-    import sys
-
-    import mitogen
-
-
-    def install_app():
-        os.system('tar zxvf my_app.tar.gz')
-
-
-    @mitogen.main()
-    def main(broker):
-        if len(sys.argv) != 2:
-            print(__doc__)
-            sys.exit(1)
-
-        context = mitogen.ssh.connect(broker, sys.argv[1])
-        context.call(install_app)
+.. literalinclude:: ../examples/install_app.py
 
 
 Event-driven IO

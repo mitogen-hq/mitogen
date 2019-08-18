@@ -241,6 +241,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_buildah_path(self):
+        """
+        The path to the "buildah" program for the 'buildah' transport.
+        """
+
+    @abc.abstractmethod
     def mitogen_docker_path(self):
         """
         The path to the "docker" program for the 'docker' transport.
@@ -277,6 +283,18 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_ssh_keepalive_interval(self):
+        """
+        The SSH ServerAliveInterval.
+        """
+
+    @abc.abstractmethod
+    def mitogen_ssh_keepalive_count(self):
+        """
+        The SSH ServerAliveCount.
+        """
+
+    @abc.abstractmethod
     def mitogen_ssh_debug_level(self):
         """
         The SSH debug level.
@@ -292,6 +310,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
     def extra_args(self):
         """
         Connection-specific arguments.
+        """
+
+    @abc.abstractmethod
+    def ansible_doas_exe(self):
+        """
+        Value of "ansible_doas_exe" variable.
         """
 
 
@@ -372,7 +396,15 @@ class PlayContextSpec(Spec):
         ]
 
     def become_exe(self):
-        return self._play_context.become_exe
+        # In Ansible 2.8, PlayContext.become_exe always has a default value due
+        # to the new options mechanism. Previously it was only set if a value
+        # ("somewhere") had been specified for the task.
+        # For consistency in the tests, here we make older Ansibles behave like
+        # newer Ansibles.
+        exe = self._play_context.become_exe
+        if exe is None and self._play_context.become_method == 'sudo':
+            exe = 'sudo'
+        return exe
 
     def sudo_args(self):
         return [
@@ -380,8 +412,9 @@ class PlayContextSpec(Spec):
             for term in ansible.utils.shlex.shlex_split(
                 first_true((
                     self._play_context.become_flags,
-                    self._play_context.sudo_flags,
-                    # Ansible 2.3.
+                    # Ansible <=2.7.
+                    getattr(self._play_context, 'sudo_flags', ''),
+                    # Ansible <=2.3.
                     getattr(C, 'DEFAULT_BECOME_FLAGS', ''),
                     getattr(C, 'DEFAULT_SUDO_FLAGS', '')
                 ), default='')
@@ -396,6 +429,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_mask_remote_name(self):
         return self._connection.get_task_var('mitogen_mask_remote_name')
+
+    def mitogen_buildah_path(self):
+        return self._connection.get_task_var('mitogen_buildah_path')
 
     def mitogen_docker_path(self):
         return self._connection.get_task_var('mitogen_docker_path')
@@ -412,6 +448,12 @@ class PlayContextSpec(Spec):
     def mitogen_lxc_info_path(self):
         return self._connection.get_task_var('mitogen_lxc_info_path')
 
+    def mitogen_ssh_keepalive_interval(self):
+        return self._connection.get_task_var('mitogen_ssh_keepalive_interval')
+
+    def mitogen_ssh_keepalive_count(self):
+        return self._connection.get_task_var('mitogen_ssh_keepalive_count')
+
     def mitogen_machinectl_path(self):
         return self._connection.get_task_var('mitogen_machinectl_path')
 
@@ -423,6 +465,12 @@ class PlayContextSpec(Spec):
 
     def extra_args(self):
         return self._connection.get_extra_args()
+
+    def ansible_doas_exe(self):
+        return (
+            self._connection.get_task_var('ansible_doas_exe') or
+            os.environ.get('ANSIBLE_DOAS_EXE')
+        )
 
 
 class MitogenViaSpec(Spec):
@@ -608,6 +656,9 @@ class MitogenViaSpec(Spec):
     def mitogen_mask_remote_name(self):
         return self._host_vars.get('mitogen_mask_remote_name')
 
+    def mitogen_buildah_path(self):
+        return self._host_vars.get('mitogen_buildah_path')
+
     def mitogen_docker_path(self):
         return self._host_vars.get('mitogen_docker_path')
 
@@ -623,6 +674,12 @@ class MitogenViaSpec(Spec):
     def mitogen_lxc_info_path(self):
         return self._host_vars.get('mitogen_lxc_info_path')
 
+    def mitogen_ssh_keepalive_interval(self):
+        return self._host_vars.get('mitogen_ssh_keepalive_interval')
+
+    def mitogen_ssh_keepalive_count(self):
+        return self._host_vars.get('mitogen_ssh_keepalive_count')
+
     def mitogen_machinectl_path(self):
         return self._host_vars.get('mitogen_machinectl_path')
 
@@ -634,3 +691,9 @@ class MitogenViaSpec(Spec):
 
     def extra_args(self):
         return []  # TODO
+
+    def ansible_doas_exe(self):
+        return (
+            self._host_vars.get('ansible_doas_exe') or
+            os.environ.get('ANSIBLE_DOAS_EXE')
+        )

@@ -32,6 +32,15 @@ Stable names for PluginLoader instances across Ansible versions.
 
 from __future__ import absolute_import
 
+__all__ = [
+    'action_loader',
+    'connection_loader',
+    'module_loader',
+    'module_utils_loader',
+    'shell_loader',
+    'strategy_loader',
+]
+
 try:
     from ansible.plugins.loader import action_loader
     from ansible.plugins.loader import connection_loader

@@ -542,7 +542,8 @@ def extend_path(path, name):
         if os.path.isfile(pkgfile):
             try:
                 f = open(pkgfile)
-            except IOError, msg:
+            except IOError:
+                msg = sys.exc_info()[1]
                 sys.stderr.write("Can't open %s: %s\n" %
                                  (pkgfile, msg))
             else:

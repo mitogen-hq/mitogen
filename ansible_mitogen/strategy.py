@@ -31,6 +31,11 @@ import os
 import signal
 import threading
 
+try:
+    import setproctitle
+except ImportError:
+    setproctitle = None
+
 import mitogen.core
 import ansible_mitogen.affinity
 import ansible_mitogen.loaders
@@ -40,9 +45,15 @@ import ansible_mitogen.process
 import ansible
 import ansible.executor.process.worker
 
+try:
+    # 2.8+ has a standardized "unset" object.
+    from ansible.utils.sentinel import Sentinel
+except ImportError:
+    Sentinel = None
+
 
 ANSIBLE_VERSION_MIN = '2.3'
-ANSIBLE_VERSION_MAX = '2.7'
+ANSIBLE_VERSION_MAX = '2.8'
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
     "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
@@ -113,9 +124,15 @@ def wrap_action_loader__get(name, *args, **kwargs):
     the use of shell fragments wherever possible.
 
     This is used instead of static subclassing as it generalizes to third party
-    action modules outside the Ansible tree.
+    action plugins outside the Ansible tree.
     """
-    klass = action_loader__get(name, class_only=True)
+    get_kwargs = {'class_only': True}
+    if name in ('fetch',):
+        name = 'mitogen_' + name
+    if ansible.__version__ >= '2.8':
+        get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
+
+    klass = action_loader__get(name, **get_kwargs)
     if klass:
         bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
@@ -126,20 +143,28 @@ def wrap_action_loader__get(name, *args, **kwargs):
 
 def wrap_connection_loader__get(name, *args, **kwargs):
     """
-    While the strategy is active, rewrite connection_loader.get() calls for
-    some transports into requests for a compatible Mitogen transport.
+    While a Mitogen strategy is active, rewrite connection_loader.get() calls
+    for some transports into requests for a compatible Mitogen transport.
     """
-    if name in ('docker', 'kubectl', 'jail', 'local', 'lxc',
-                'lxd', 'machinectl', 'setns', 'ssh'):
+    if name in ('buildah', 'docker', 'kubectl', 'jail', 'local',
+                'lxc', 'lxd', 'machinectl', 'setns', 'ssh'):
         name = 'mitogen_' + name
     return connection_loader__get(name, *args, **kwargs)
 
 
-def wrap_worker__run(*args, **kwargs):
+def wrap_worker__run(self):
     """
-    While the strategy is active, rewrite connection_loader.get() calls for
-    some transports into requests for a compatible Mitogen transport.
+    While a Mitogen strategy is active, trap WorkerProcess.run() calls and use
+    the opportunity to set the worker's name in the process list and log
+    output, activate profiling if requested, and bind the worker to a specific
+    CPU.
     """
+    if setproctitle:
+        setproctitle.setproctitle('worker:%s task:%s' % (
+            self._host.name,
+            self._task.action,
+        ))
+
     # Ignore parent's attempts to murder us when we still need to write
     # profiling output.
     if mitogen.core._profile_hook.__name__ != '_profile_hook':
@@ -148,71 +173,27 @@ def wrap_worker__run(*args, **kwargs):
     ansible_mitogen.logging.set_process_name('task')
     ansible_mitogen.affinity.policy.assign_worker()
     return mitogen.core._profile_hook('WorkerProcess',
-        lambda: worker__run(*args, **kwargs)
+        lambda: worker__run(self)
     )
 
 
-class StrategyMixin(object):
+class AnsibleWrappers(object):
     """
-    This mix-in enhances any built-in strategy by arranging for various Mitogen
-    services to be initialized in the Ansible top-level process, and for worker
-    processes to grow support for using those top-level services to communicate
-    with and execute modules on remote hosts.
-
-    Mitogen:
-
-        A private Broker IO multiplexer thread is created to dispatch IO
-        between the local Router and any connected streams, including streams
-        connected to Ansible WorkerProcesses, and SSH commands implementing
-        connections to remote machines.
-
-        A Router is created that implements message dispatch to any locally
-        registered handlers, and message routing for remote streams. Router is
-        the junction point through which WorkerProceses and remote SSH contexts
-        can communicate.
-
-        Router additionally adds message handlers for a variety of base
-        services, review the Standard Handles section of the How It Works guide
-        in the documentation.
-
-        A ContextService is installed as a message handler in the master
-        process and run on a private thread. It is responsible for accepting
-        requests to establish new SSH connections from worker processes, and
-        ensuring precisely one connection exists and is reused for subsequent
-        playbook steps. The service presently runs in a single thread, so to
-        begin with, new SSH connections are serialized.
-
-        Finally a mitogen.unix listener is created through which WorkerProcess
-        can establish a connection back into the master process, in order to
-        avail of ContextService. A UNIX listener socket is necessary as there
-        is no more sane mechanism to arrange for IPC between the Router in the
-        master process, and the corresponding Router in the worker process.
-
-    Ansible:
-
-        PluginLoader monkey patches are installed to catch attempts to create
-        connection and action plug-ins.
-
-        For connection plug-ins, if the desired method is "local" or "ssh", it
-        is redirected to the "mitogen" connection plug-in. That plug-in
-        implements communication via a UNIX socket connection to the top-level
-        Ansible process, and uses ContextService running in the top-level
-        process to actually establish and manage the connection.
-
-        For action plug-ins, the original class is looked up as usual, but a
-        new subclass is created dynamically in order to mix-in
-        ansible_mitogen.target.ActionModuleMixin, which overrides many of the
-        methods usually inherited from ActionBase in order to replace them with
-        pure-Python equivalents that avoid the use of shell.
-
-        In particular, _execute_module() is overridden with an implementation
-        that uses ansible_mitogen.target.run_module() executed in the target
-        Context. run_module() implements module execution by importing the
-        module as if it were a normal Python module, and capturing its output
-        in the remote process. Since the Mitogen module loader is active in the
-        remote process, all the heavy lifting of transferring the action module
-        and its dependencies are automatically handled by Mitogen.
+    Manage add/removal of various Ansible runtime hooks.
     """
+    def _add_plugin_paths(self):
+        """
+        Add the Mitogen plug-in directories to the ModuleLoader path, avoiding
+        the need for manual configuration.
+        """
+        base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
+        ansible_mitogen.loaders.connection_loader.add_directory(
+            os.path.join(base_dir, 'connection')
+        )
+        ansible_mitogen.loaders.action_loader.add_directory(
+            os.path.join(base_dir, 'action')
+        )
+
     def _install_wrappers(self):
         """
         Install our PluginLoader monkey patches and update global variables
@@ -238,18 +219,80 @@ class StrategyMixin(object):
         ansible_mitogen.loaders.connection_loader.get = connection_loader__get
         ansible.executor.process.worker.WorkerProcess.run = worker__run
 
-    def _add_plugin_paths(self):
-        """
-        Add the Mitogen plug-in directories to the ModuleLoader path, avoiding
-        the need for manual configuration.
-        """
-        base_dir = os.path.join(os.path.dirname(__file__), 'plugins')
-        ansible_mitogen.loaders.connection_loader.add_directory(
-            os.path.join(base_dir, 'connection')
-        )
-        ansible_mitogen.loaders.action_loader.add_directory(
-            os.path.join(base_dir, 'action')
-        )
+    def install(self):
+        self._add_plugin_paths()
+        self._install_wrappers()
+
+    def remove(self):
+        self._remove_wrappers()
+
+
+class StrategyMixin(object):
+    """
+    This mix-in enhances any built-in strategy by arranging for an appropriate
+    WorkerModel instance to be constructed as necessary, or for the existing
+    one to be reused.
+
+    The WorkerModel in turn arranges for a connection multiplexer to be started
+    somewhere (by default in an external process), and for WorkerProcesses to
+    grow support for using those top-level services to communicate with remote
+    hosts.
+
+    Mitogen:
+
+        A private Broker IO multiplexer thread is created to dispatch IO
+        between the local Router and any connected streams, including streams
+        connected to Ansible WorkerProcesses, and SSH commands implementing
+        connections to remote machines.
+
+        A Router is created that implements message dispatch to any locally
+        registered handlers, and message routing for remote streams. Router is
+        the junction point through which WorkerProceses and remote SSH contexts
+        can communicate.
+
+        Router additionally adds message handlers for a variety of base
+        services, review the Standard Handles section of the How It Works guide
+        in the documentation.
+
+        A ContextService is installed as a message handler in the connection
+        mutliplexer subprocess and run on a private thread. It is responsible
+        for accepting requests to establish new SSH connections from worker
+        processes, and ensuring precisely one connection exists and is reused
+        for subsequent playbook steps. The service presently runs in a single
+        thread, so to begin with, new SSH connections are serialized.
+
+        Finally a mitogen.unix listener is created through which WorkerProcess
+        can establish a connection back into the connection multiplexer, in
+        order to avail of ContextService. A UNIX listener socket is necessary
+        as there is no more sane mechanism to arrange for IPC between the
+        Router in the connection multiplexer, and the corresponding Router in
+        the worker process.
+
+    Ansible:
+
+        PluginLoader monkey patches are installed to catch attempts to create
+        connection and action plug-ins.
+
+        For connection plug-ins, if the desired method is "local" or "ssh", it
+        is redirected to one of the "mitogen_*" connection plug-ins. That
+        plug-in implements communication via a UNIX socket connection to the
+        connection multiplexer process, and uses ContextService running there
+        to establish a persistent connection to the target.
+
+        For action plug-ins, the original class is looked up as usual, but a
+        new subclass is created dynamically in order to mix-in
+        ansible_mitogen.target.ActionModuleMixin, which overrides many of the
+        methods usually inherited from ActionBase in order to replace them with
+        pure-Python equivalents that avoid the use of shell.
+
+        In particular, _execute_module() is overridden with an implementation
+        that uses ansible_mitogen.target.run_module() executed in the target
+        Context. run_module() implements module execution by importing the
+        module as if it were a normal Python module, and capturing its output
+        in the remote process. Since the Mitogen module loader is active in the
+        remote process, all the heavy lifting of transferring the action module
+        and its dependencies are automatically handled by Mitogen.
+    """
 
     def _queue_task(self, host, task, task_vars, play_context):
         """
@@ -261,14 +304,17 @@ class StrategyMixin(object):
             name=task.action,
             mod_type='',
         )
-        ansible_mitogen.loaders.connection_loader.get(
-            name=play_context.connection,
-            class_only=True,
-        )
         ansible_mitogen.loaders.action_loader.get(
             name=task.action,
             class_only=True,
         )
+        if play_context.connection is not Sentinel:
+            # 2.8 appears to defer computing this until inside the worker.
+            # TODO: figure out where it has moved.
+            ansible_mitogen.loaders.connection_loader.get(
+                name=play_context.connection,
+                class_only=True,
+            )
 
         return super(StrategyMixin, self)._queue_task(
             host=host,
@@ -277,20 +323,35 @@ class StrategyMixin(object):
             play_context=play_context,
         )
 
+    def _get_worker_model(self):
+        """
+        In classic mode a single :class:`WorkerModel` exists, which manages
+        references and configuration of the associated connection multiplexer
+        process.
+        """
+        return ansible_mitogen.process.get_classic_worker_model()
+
     def run(self, iterator, play_context, result=0):
         """
-        Arrange for a mitogen.master.Router to be available for the duration of
-        the strategy's real run() method.
+        Wrap :meth:`run` to ensure requisite infrastructure and modifications
+        are configured for the duration of the call.
         """
         _assert_supported_release()
-
-        ansible_mitogen.process.MuxProcess.start()
-        run = super(StrategyMixin, self).run
-        self._add_plugin_paths()
-        self._install_wrappers()
+        wrappers = AnsibleWrappers()
+        self._worker_model = self._get_worker_model()
+        ansible_mitogen.process.set_worker_model(self._worker_model)
         try:
-            return mitogen.core._profile_hook('Strategy',
-                lambda: run(iterator, play_context)
-            )
+            self._worker_model.on_strategy_start()
+            try:
+                wrappers.install()
+                try:
+                    run = super(StrategyMixin, self).run
+                    return mitogen.core._profile_hook('Strategy',
+                        lambda: run(iterator, play_context)
+                    )
+                finally:
+                    wrappers.remove()
+            finally:
+                self._worker_model.on_strategy_complete()
         finally:
-            self._remove_wrappers()
+            ansible_mitogen.process.set_worker_model(None)

@@ -29,6 +29,7 @@
 # !mitogen: minify_safe
 
 import grp
+import logging
 import os
 import os.path
 import pprint
@@ -36,12 +37,10 @@ import pwd
 import stat
 import sys
 import threading
-import time
 
 import mitogen.core
 import mitogen.select
 from mitogen.core import b
-from mitogen.core import LOG
 from mitogen.core import str_rpartition
 
 try:
@@ -54,7 +53,8 @@ except NameError:
         return True
 
 
-DEFAULT_POOL_SIZE = 16
+LOG = logging.getLogger(__name__)
+
 _pool = None
 _pool_pid = None
 #: Serialize pool construction.
@@ -77,19 +77,51 @@ else:
 def get_or_create_pool(size=None, router=None):
     global _pool
     global _pool_pid
-    _pool_lock.acquire()
-    try:
-        if _pool_pid != os.getpid():
-            _pool = Pool(router, [], size=size or DEFAULT_POOL_SIZE,
-                         overwrite=True)
-            # In case of Broker shutdown crash, Pool can cause 'zombie'
-            # processes.
-            mitogen.core.listen(router.broker, 'shutdown',
-                                lambda: _pool.stop(join=False))
-            _pool_pid = os.getpid()
-        return _pool
-    finally:
-        _pool_lock.release()
+
+    my_pid = os.getpid()
+    if _pool is None or _pool.closed or my_pid != _pool_pid:
+        # Avoid acquiring heavily contended lock if possible.
+        _pool_lock.acquire()
+        try:
+            if _pool_pid != my_pid:
+                _pool = Pool(
+                    router,
+                    services=[],
+                    size=size or 2,
+                    overwrite=True,
+                    recv=mitogen.core.Dispatcher._service_recv,
+                )
+                # In case of Broker shutdown crash, Pool can cause 'zombie'
+                # processes.
+                mitogen.core.listen(router.broker, 'shutdown',
+                                    lambda: _pool.stop(join=True))
+                _pool_pid = os.getpid()
+        finally:
+            _pool_lock.release()
+
+    return _pool
+
+
+def get_thread_name():
+    return threading.currentThread().getName()
+
+
+def call(service_name, method_name, call_context=None, **kwargs):
+    """
+    Call a service registered with this pool, using the calling thread as a
+    host.
+    """
+    if isinstance(service_name, mitogen.core.BytesType):
+        service_name = service_name.encode('utf-8')
+    elif not isinstance(service_name, mitogen.core.UnicodeType):
+        service_name = service_name.name()  # Service.name()
+
+    if call_context:
+        return call_context.call_service(service_name, method_name, **kwargs)
+    else:
+        pool = get_or_create_pool()
+        invoker = pool.get_invoker(service_name, msg=None)
+        return getattr(invoker.service, method_name)(**kwargs)
 
 
 def validate_arg_spec(spec, args):
@@ -239,12 +271,13 @@ class Invoker(object):
         if not policies:
             raise mitogen.core.CallError('Method has no policies set.')
 
-        if not all(p.is_authorized(self.service, msg) for p in policies):
-            raise mitogen.core.CallError(
-                self.unauthorized_msg,
-                method_name,
-                self.service.name()
-            )
+        if msg is not None:
+            if not all(p.is_authorized(self.service, msg) for p in policies):
+                raise mitogen.core.CallError(
+                    self.unauthorized_msg,
+                    method_name,
+                    self.service.name()
+                )
 
         required = getattr(method, 'mitogen_service__arg_spec', {})
         validate_arg_spec(required, kwargs)
@@ -264,7 +297,7 @@ class Invoker(object):
         except Exception:
             if no_reply:
                 LOG.exception('While calling no-reply method %s.%s',
-                              type(self.service).__name__,
+                              self.service.name(),
                               func_name(method))
             else:
                 raise
@@ -445,13 +478,19 @@ class Pool(object):
     program's configuration or its input data.
 
     :param mitogen.core.Router router:
-        Router to listen for ``CALL_SERVICE`` messages on.
+        :class:`mitogen.core.Router` to listen for
+        :data:`mitogen.core.CALL_SERVICE` messages.
     :param list services:
         Initial list of services to register.
+    :param mitogen.core.Receiver recv:
+        :data:`mitogen.core.CALL_SERVICE` receiver to reuse. This is used by
+        :func:`get_or_create_pool` to hand off a queue of messages from the
+        Dispatcher stub handler while avoiding a race.
     """
     activator_class = Activator
 
-    def __init__(self, router, services=(), size=1, overwrite=False):
+    def __init__(self, router, services=(), size=1, overwrite=False,
+                 recv=None):
         self.router = router
         self._activator = self.activator_class()
         self._ipc_latch = mitogen.core.Latch()
@@ -472,12 +511,22 @@ class Pool(object):
         }
         self._invoker_by_name = {}
 
+        if recv is not None:
+            # When inheriting from mitogen.core.Dispatcher, we must remove its
+            # stub notification function before adding it to our Select. We
+            # always overwrite this receiver since the standard service.Pool
+            # handler policy differs from the one inherited from
+            # core.Dispatcher.
+            recv.notify = None
+            self._select.add(recv)
+            self._func_by_source[recv] = self._on_service_call
+
         for service in services:
             self.add(service)
         self._py_24_25_compat()
         self._threads = []
         for x in range(size):
-            name = 'mitogen.service.Pool.%x.worker-%d' % (id(self), x,)
+            name = 'mitogen.Pool.%04x.%d' % (id(self) & 0xffff, x,)
             thread = threading.Thread(
                 name=name,
                 target=mitogen.core._profile_hook,
@@ -485,7 +534,6 @@ class Pool(object):
             )
             thread.start()
             self._threads.append(thread)
-
         LOG.debug('%r: initialized', self)
 
     def _py_24_25_compat(self):
@@ -524,15 +572,18 @@ class Pool(object):
             invoker.service.on_shutdown()
 
     def get_invoker(self, name, msg):
-        self._lock.acquire()
-        try:
-            invoker = self._invoker_by_name.get(name)
-            if not invoker:
-                service = self._activator.activate(self, name, msg)
-                invoker = service.invoker_class(service=service)
-                self._invoker_by_name[name] = invoker
-        finally:
-            self._lock.release()
+        invoker = self._invoker_by_name.get(name)
+        if invoker is None:
+            # Avoid acquiring lock if possible.
+            self._lock.acquire()
+            try:
+                invoker = self._invoker_by_name.get(name)
+                if not invoker:
+                    service = self._activator.activate(self, name, msg)
+                    invoker = service.invoker_class(service=service)
+                    self._invoker_by_name[name] = invoker
+            finally:
+                self._lock.release()
 
         return invoker
 
@@ -582,9 +633,12 @@ class Pool(object):
         while not self.closed:
             try:
                 event = self._select.get_event()
-            except (mitogen.core.ChannelError, mitogen.core.LatchError):
-                e = sys.exc_info()[1]
-                LOG.debug('%r: channel or latch closed, exitting: %s', self, e)
+            except mitogen.core.LatchError:
+                LOG.debug('thread %s exiting gracefully', get_thread_name())
+                return
+            except mitogen.core.ChannelError:
+                LOG.debug('thread %s exiting with error: %s',
+                          get_thread_name(), sys.exc_info()[1])
                 return
 
             func = self._func_by_source[event.source]
@@ -597,16 +651,14 @@ class Pool(object):
         try:
             self._worker_run()
         except Exception:
-            th = threading.currentThread()
-            LOG.exception('%r: worker %r crashed', self, th.getName())
+            LOG.exception('%r: worker %r crashed', self, get_thread_name())
             raise
 
     def __repr__(self):
-        th = threading.currentThread()
-        return 'mitogen.service.Pool(%#x, size=%d, th=%r)' % (
-            id(self),
+        return 'Pool(%04x, size=%d, th=%r)' % (
+            id(self) & 0xffff,
             len(self._threads),
-            th.getName(),
+            get_thread_name(),
         )
 
 
@@ -625,7 +677,7 @@ class PushFileService(Service):
     """
     Push-based file service. Files are delivered and cached in RAM, sent
     recursively from parent to child. A child that requests a file via
-    :meth:`get` will block until it has ben delivered by a parent.
+    :meth:`get` will block until it has been delivered by a parent.
 
     This service will eventually be merged into FileService.
     """
@@ -658,10 +710,12 @@ class PushFileService(Service):
 
     def _forward(self, context, path):
         stream = self.router.stream_by_id(context.context_id)
-        child = mitogen.core.Context(self.router, stream.remote_id)
+        child = self.router.context_by_id(stream.protocol.remote_id)
         sent = self._sent_by_stream.setdefault(stream, set())
         if path in sent:
             if child.context_id != context.context_id:
+                LOG.debug('requesting %s forward small file to %s: %s',
+                          child, context, path)
                 child.call_service_async(
                     service_name=self.name(),
                     method_name='forward',
@@ -669,6 +723,8 @@ class PushFileService(Service):
                     context=context
                 ).close()
         else:
+            LOG.debug('requesting %s cache and forward small file to %s: %s',
+                      child, context, path)
             child.call_service_async(
                 service_name=self.name(),
                 method_name='store_and_forward',
@@ -691,7 +747,7 @@ class PushFileService(Service):
         """
         for path in paths:
             self.propagate_to(context, mitogen.core.to_text(path))
-        self.router.responder.forward_modules(context, modules)
+        #self.router.responder.forward_modules(context, modules) TODO
 
     @expose(policy=AllowParents())
     @arg_spec({
@@ -699,8 +755,8 @@ class PushFileService(Service):
         'path': mitogen.core.FsPathTypes,
     })
     def propagate_to(self, context, path):
-        LOG.debug('%r.propagate_to(%r, %r)', self, context, path)
         if path not in self._cache:
+            LOG.debug('caching small file %s', path)
             fp = open(path, 'rb')
             try:
                 self._cache[path] = mitogen.core.Blob(fp.read())
@@ -718,7 +774,7 @@ class PushFileService(Service):
     def store_and_forward(self, path, data, context):
         LOG.debug('%r.store_and_forward(%r, %r, %r) %r',
                   self, path, data, context,
-                  threading.currentThread().getName())
+                  get_thread_name())
         self._lock.acquire()
         try:
             self._cache[path] = data
@@ -891,7 +947,7 @@ class FileService(Service):
     # The IO loop pumps 128KiB chunks. An ideal message is a multiple of this,
     # odd-sized messages waste one tiny write() per message on the trailer.
     # Therefore subtract 10 bytes pickle overhead + 24 bytes header.
-    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Stream.HEADER_LEN + (
+    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Message.HEADER_LEN + (
         len(
             mitogen.core.Message.pickled(
                 mitogen.core.Blob(b(' ') * mitogen.core.CHUNK_SIZE)
@@ -965,7 +1021,11 @@ class FileService(Service):
         :raises Error:
             Unregistered path, or Sender did not match requestee context.
         """
-        if path not in self._paths and not self._prefix_is_authorized(path):
+        if (
+            (path not in self._paths) and
+            (not self._prefix_is_authorized(path)) and
+            (not mitogen.core._has_parent_authority(msg.auth_id))
+        ):
             msg.reply(mitogen.core.CallError(
                 Error(self.unregistered_msg % (path,))
             ))
@@ -1047,7 +1107,7 @@ class FileService(Service):
             :meth:`fetch`.
         """
         LOG.debug('get_file(): fetching %r from %r', path, context)
-        t0 = time.time()
+        t0 = mitogen.core.now()
         recv = mitogen.core.Receiver(router=context.router)
         metadata = context.call_service(
             service_name=cls.name(),
@@ -1081,5 +1141,6 @@ class FileService(Service):
                       path, metadata['size'], received_bytes)
 
         LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-                  metadata['size'], path, context, 1000 * (time.time() - t0))
+                  metadata['size'], path, context,
+                  1000 * (mitogen.core.now() - t0))
         return ok, metadata

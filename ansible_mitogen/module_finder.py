@@ -57,7 +57,7 @@ def get_code(module):
     """
     Compile and return a Module's code object.
     """
-    fp = open(module.path)
+    fp = open(module.path, 'rb')
     try:
         return compile(fp.read(), str(module.name), 'exec')
     finally:

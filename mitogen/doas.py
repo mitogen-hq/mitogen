@@ -29,85 +29,114 @@
 # !mitogen: minify_safe
 
 import logging
+import re
 
 import mitogen.core
 import mitogen.parent
-from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
+
+password_incorrect_msg = 'doas password is incorrect'
+password_required_msg = 'doas password is required'
 
 
 class PasswordError(mitogen.core.StreamError):
     pass
 
 
-class Stream(mitogen.parent.Stream):
-    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
-    child_is_immediate_subprocess = False
-
-    username = 'root'
+class Options(mitogen.parent.Options):
+    username = u'root'
     password = None
     doas_path = 'doas'
-    password_prompt = b('Password:')
+    password_prompt = u'Password:'
     incorrect_prompts = (
-        b('doas: authentication failed'),
+        u'doas: authentication failed',  # slicer69/doas
+        u'doas: Authorization failed',   # openbsd/src
     )
 
-    def construct(self, username=None, password=None, doas_path=None,
-                  password_prompt=None, incorrect_prompts=None, **kwargs):
-        super(Stream, self).construct(**kwargs)
+    def __init__(self, username=None, password=None, doas_path=None,
+                 password_prompt=None, incorrect_prompts=None, **kwargs):
+        super(Options, self).__init__(**kwargs)
         if username is not None:
-            self.username = username
+            self.username = mitogen.core.to_text(username)
         if password is not None:
-            self.password = password
+            self.password = mitogen.core.to_text(password)
         if doas_path is not None:
             self.doas_path = doas_path
         if password_prompt is not None:
-            self.password_prompt = password_prompt.lower()
+            self.password_prompt = mitogen.core.to_text(password_prompt)
         if incorrect_prompts is not None:
-            self.incorrect_prompts = map(str.lower, incorrect_prompts)
+            self.incorrect_prompts = [
+                mitogen.core.to_text(p)
+                for p in incorrect_prompts
+            ]
+
+
+class BootstrapProtocol(mitogen.parent.RegexProtocol):
+    password_sent = False
+
+    def setup_patterns(self, conn):
+        prompt_pattern = re.compile(
+            re.escape(conn.options.password_prompt).encode('utf-8'),
+            re.I
+        )
+        incorrect_prompt_pattern = re.compile(
+            u'|'.join(
+                re.escape(s)
+                for s in conn.options.incorrect_prompts
+            ).encode('utf-8'),
+            re.I
+        )
+
+        self.PATTERNS = [
+            (incorrect_prompt_pattern, type(self)._on_incorrect_password),
+        ]
+        self.PARTIAL_PATTERNS = [
+            (prompt_pattern, type(self)._on_password_prompt),
+        ]
+
+    def _on_incorrect_password(self, line, match):
+        if self.password_sent:
+            self.stream.conn._fail_connection(
+                PasswordError(password_incorrect_msg)
+            )
+
+    def _on_password_prompt(self, line, match):
+        if self.stream.conn.options.password is None:
+            self.stream.conn._fail_connection(
+                PasswordError(password_required_msg)
+            )
+            return
+
+        if self.password_sent:
+            self.stream.conn._fail_connection(
+                PasswordError(password_incorrect_msg)
+            )
+            return
+
+        LOG.debug('sending password')
+        self.stream.transmit_side.write(
+            (self.stream.conn.options.password + '\n').encode('utf-8')
+        )
+        self.password_sent = True
+
+
+class Connection(mitogen.parent.Connection):
+    options_class = Options
+    diag_protocol_class = BootstrapProtocol
+
+    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    child_is_immediate_subprocess = False
 
     def _get_name(self):
-        return u'doas.' + mitogen.core.to_text(self.username)
+        return u'doas.' + self.options.username
+
+    def stderr_stream_factory(self):
+        stream = super(Connection, self).stderr_stream_factory()
+        stream.protocol.setup_patterns(self)
+        return stream
 
     def get_boot_command(self):
-        bits = [self.doas_path, '-u', self.username, '--']
-        bits = bits + super(Stream, self).get_boot_command()
-        LOG.debug('doas command line: %r', bits)
-        return bits
-
-    password_incorrect_msg = 'doas password is incorrect'
-    password_required_msg = 'doas password is required'
-
-    def _connect_input_loop(self, it):
-        password_sent = False
-        for buf in it:
-            LOG.debug('%r: received %r', self, buf)
-            if buf.endswith(self.EC0_MARKER):
-                self._ec0_received()
-                return
-            if any(s in buf.lower() for s in self.incorrect_prompts):
-                if password_sent:
-                    raise PasswordError(self.password_incorrect_msg)
-            elif self.password_prompt in buf.lower():
-                if self.password is None:
-                    raise PasswordError(self.password_required_msg)
-                if password_sent:
-                    raise PasswordError(self.password_incorrect_msg)
-                LOG.debug('sending password')
-                self.diag_stream.transmit_side.write(
-                    mitogen.core.to_text(self.password + '\n').encode('utf-8')
-                )
-                password_sent = True
-        raise mitogen.core.StreamError('bootstrap failed')
-
-    def _connect_bootstrap(self):
-        it = mitogen.parent.iter_read(
-            fds=[self.receive_side.fd, self.diag_stream.receive_side.fd],
-            deadline=self.connect_deadline,
-        )
-        try:
-            self._connect_input_loop(it)
-        finally:
-            it.close()
+        bits = [self.options.doas_path, '-u', self.options.username, '--']
+        return bits + super(Connection, self).get_boot_command()

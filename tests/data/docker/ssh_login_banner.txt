@@ -19,3 +19,5 @@ incidents to law enforcement officials.
 **************************************************************
 NOTE: This system is connected to DOMAIN.COM,
 please use your password.
+
+ستتم محاكمة المعتدين. هذا يختبر التدويل

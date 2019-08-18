@@ -42,8 +42,6 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class SshTest(testlib.DockerMixin, testlib.TestCase):
-    stream_class = mitogen.ssh.Stream
-
     def test_debug_decoding(self):
         # ensure filter_debug_logs() decodes the logged string.
         capture = testlib.LogCapturer()
@@ -59,6 +57,14 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
 
         expect = "%s: debug1: Reading configuration data" % (context.name,)
         self.assertTrue(expect in s)
+
+    def test_bash_permission_denied(self):
+        # issue #271: only match Permission Denied at start of line.
+        context = self.docker_ssh(
+            username='mitogen__permdenied',
+            password='permdenied_password',
+            ssh_debug_level=3,
+        )
 
     def test_stream_name(self):
         context = self.docker_ssh(
@@ -85,27 +91,21 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         self.assertEquals(name, sudo.name)
 
     def test_password_required(self):
-        try:
-            context = self.docker_ssh(
+        e = self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.docker_ssh(
                 username='mitogen__has_sudo',
             )
-            assert 0, 'exception not thrown'
-        except mitogen.ssh.PasswordError:
-            e = sys.exc_info()[1]
-
-        self.assertEqual(e.args[0], self.stream_class.password_required_msg)
+        )
+        self.assertEqual(e.args[0], mitogen.ssh.password_required_msg)
 
     def test_password_incorrect(self):
-        try:
-            context = self.docker_ssh(
+        e = self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='badpw',
             )
-            assert 0, 'exception not thrown'
-        except mitogen.ssh.PasswordError:
-            e = sys.exc_info()[1]
-
-        self.assertEqual(e.args[0], self.stream_class.password_incorrect_msg)
+        )
+        self.assertEqual(e.args[0], mitogen.ssh.password_incorrect_msg)
 
     def test_password_specified(self):
         context = self.docker_ssh(
@@ -119,15 +119,12 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         )
 
     def test_pubkey_required(self):
-        try:
-            context = self.docker_ssh(
+        e = self.assertRaises(mitogen.ssh.PasswordError,
+            lambda: self.docker_ssh(
                 username='mitogen__has_sudo_pubkey',
             )
-            assert 0, 'exception not thrown'
-        except mitogen.ssh.PasswordError:
-            e = sys.exc_info()[1]
-
-        self.assertEqual(e.args[0], self.stream_class.password_required_msg)
+        )
+        self.assertEqual(e.args[0], mitogen.ssh.password_required_msg)
 
     def test_pubkey_specified(self):
         context = self.docker_ssh(
@@ -150,7 +147,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
                     check_host_keys='enforce',
                 )
             )
-            self.assertEquals(e.args[0], mitogen.ssh.Stream.hostkey_failed_msg)
+            self.assertEquals(e.args[0], mitogen.ssh.hostkey_failed_msg)
         finally:
             fp.close()
 
@@ -184,8 +181,6 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
 class BannerTest(testlib.DockerMixin, testlib.TestCase):
     # Verify the ability to disambiguate random spam appearing in the SSHd's
     # login banner from a legitimate password prompt.
-    stream_class = mitogen.ssh.Stream
-
     def test_verbose_enabled(self):
         context = self.docker_ssh(
             username='mitogen__has_sudo',
@@ -210,8 +205,6 @@ class StubPermissionDeniedTest(StubSshMixin, testlib.TestCase):
 
 
 class StubCheckHostKeysTest(StubSshMixin, testlib.TestCase):
-    stream_class = mitogen.ssh.Stream
-
     def test_check_host_keys_accept(self):
         # required=true, host_key_checking=accept
         context = self.stub_ssh(STUBSSH_MODE='ask', check_host_keys='accept')

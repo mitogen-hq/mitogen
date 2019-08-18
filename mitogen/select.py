@@ -57,9 +57,7 @@ class Select(object):
 
     If `oneshot` is :data:`True`, then remove each receiver as it yields a
     result; since :meth:`__iter__` terminates once the final receiver is
-    removed, this makes it convenient to respond to calls made in parallel:
-
-    .. code-block:: python
+    removed, this makes it convenient to respond to calls made in parallel::
 
         total = 0
         recvs = [c.call_async(long_running_operation) for c in contexts]
@@ -98,7 +96,7 @@ class Select(object):
         for msg in mitogen.select.Select(selects):
             print(msg.unpickle())
 
-    :class:`Select` may be used to mix inter-thread and inter-process IO:
+    :class:`Select` may be used to mix inter-thread and inter-process IO::
 
         latch = mitogen.core.Latch()
         start_thread(latch)
@@ -124,9 +122,10 @@ class Select(object):
     @classmethod
     def all(cls, receivers):
         """
-        Take an iterable of receivers and retrieve a :class:`Message` from
-        each, returning the result of calling `msg.unpickle()` on each in turn.
-        Results are returned in the order they arrived.
+        Take an iterable of receivers and retrieve a :class:`Message
+        <mitogen.core.Message>` from each, returning the result of calling
+        :meth:`Message.unpickle() <mitogen.core.Message.unpickle>` on each in
+        turn. Results are returned in the order they arrived.
 
         This is sugar for handling batch :meth:`Context.call_async
         <mitogen.parent.Context.call_async>` invocations:
@@ -226,8 +225,15 @@ class Select(object):
             raise Error(self.owned_msg)
 
         recv.notify = self._put
-        # Avoid race by polling once after installation.
-        if not recv.empty():
+        # After installing the notify function, _put() will potentially begin
+        # receiving calls from other threads immediately, but not for items
+        # they already had buffered. For those we call _put(), possibly
+        # duplicating the effect of other _put() being made concurrently, such
+        # that the Select ends up with more items in its buffer than exist in
+        # the underlying receivers. We handle the possibility of receivers
+        # marked notified yet empty inside Select.get(), so this should be
+        # robust.
+        for _ in range(recv.size()):
             self._put(recv)
 
     not_present_msg = 'Instance is not a member of this Select'
@@ -261,18 +267,26 @@ class Select(object):
             self.remove(recv)
         self._latch.close()
 
+    def size(self):
+        """
+        Return the number of items currently buffered.
+
+        As with :class:`Queue.Queue`, `0` may be returned even though a
+        subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`size` and :meth:`get`.
+
+        As with :class:`Queue.Queue`, `>0` may be returned even though a
+        subsequent call to :meth:`get` will block, since another waiting thread
+        may be woken at any moment between :meth:`size` and :meth:`get`.
+        """
+        return sum(recv.size() for recv in self._receivers)
+
     def empty(self):
         """
-        Return :data:`True` if calling :meth:`get` would block.
+        Return `size() == 0`.
 
-        As with :class:`Queue.Queue`, :data:`True` may be returned even though
-        a subsequent call to :meth:`get` will succeed, since a message may be
-        posted at any moment between :meth:`empty` and :meth:`get`.
-
-        :meth:`empty` may return :data:`False` even when :meth:`get` would
-        block if another thread has drained a receiver added to this select.
-        This can be avoided by only consuming each receiver from a single
-        thread.
+        .. deprecated:: 0.2.8
+           Use :meth:`size` instead.
         """
         return self._latch.empty()
 
@@ -329,5 +343,6 @@ class Select(object):
                 # A receiver may have been queued with no result if another
                 # thread drained it before we woke up, or because another
                 # thread drained it between add() calling recv.empty() and
-                # self._put(). In this case just sleep again.
+                # self._put(), or because Select.add() caused duplicate _put()
+                # calls. In this case simply retry.
                 continue

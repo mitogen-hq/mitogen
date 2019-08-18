@@ -3,6 +3,7 @@
 from __future__ import print_function
 import os
 import shutil
+import sys
 
 import ci_lib
 
@@ -67,9 +68,15 @@ with ci_lib.Fold('job_setup'):
     os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
 
 
+interesting = ci_lib.get_interesting_procs()
+
 with ci_lib.Fold('first_run'):
-    ci_lib.run('debops common')
+    ci_lib.run('debops common %s', ' '.join(sys.argv[1:]))
+
+ci_lib.check_stray_processes(interesting, containers)
 
 
 with ci_lib.Fold('second_run'):
-    ci_lib.run('debops common')
+    ci_lib.run('debops common %s', ' '.join(sys.argv[1:]))
+
+ci_lib.check_stray_processes(interesting, containers)

@@ -12,6 +12,7 @@ import mitogen.utils
 from mitogen.core import b
 
 import testlib
+import simple_pkg.imports_replaces_self
 
 
 class ImporterMixin(testlib.RouterMixin):
@@ -212,6 +213,14 @@ class ImporterBlacklistTest(testlib.TestCase):
 class Python24LineCacheTest(testlib.TestCase):
     # TODO: mitogen.core.Importer._update_linecache()
     pass
+
+
+class SelfReplacingModuleTest(testlib.RouterMixin, testlib.TestCase):
+    # issue #590
+    def test_importer_handles_self_replacement(self):
+        c = self.router.local()
+        self.assertEquals(0,
+            c.call(simple_pkg.imports_replaces_self.subtract_one, 1))
 
 
 if __name__ == '__main__':

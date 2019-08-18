@@ -15,6 +15,9 @@ jobs:
       Mito27_27:
         python.version: '2.7'
         MODE: mitogen
+      Ans280_27:
+        python.version: '2.7'
+        MODE: localhost_ansible
 
 
 - job: Linux
@@ -87,3 +90,13 @@ jobs:
         #VER: 2.6.2
         #DISTROS: debian
         #STRATEGY: linear
+
+      Ansible_280_27:
+        python.version: '2.7'
+        MODE: ansible
+        VER: 2.8.0
+
+      Ansible_280_35:
+        python.version: '3.5'
+        MODE: ansible
+        VER: 2.8.0

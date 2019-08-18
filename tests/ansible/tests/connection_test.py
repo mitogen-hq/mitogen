@@ -13,42 +13,35 @@ import ansible.errors
 import ansible.playbook.play_context
 
 import mitogen.core
+import mitogen.utils
+
 import ansible_mitogen.connection
 import ansible_mitogen.plugins.connection.mitogen_local
 import ansible_mitogen.process
+
 import testlib
 
 
-LOGGER_NAME = ansible_mitogen.target.LOG.name
+class MuxProcessMixin(object):
+    no_zombie_check = True
+
+    @classmethod
+    def setUpClass(cls):
+        #mitogen.utils.log_to_file()
+        cls.model = ansible_mitogen.process.get_classic_worker_model(
+            _init_logging=False
+        )
+        ansible_mitogen.process.set_worker_model(cls.model)
+        cls.model.on_strategy_start()
+        super(MuxProcessMixin, cls).setUpClass()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.model._test_reset()
+        super(MuxProcessMixin, cls).tearDownClass()
 
 
-# TODO: fixtureize
-import mitogen.utils
-mitogen.utils.log_to_file()
-ansible_mitogen.process.MuxProcess.start(_init_logging=False)
-
-
-class OptionalIntTest(unittest2.TestCase):
-    func = staticmethod(ansible_mitogen.connection.optional_int)
-
-    def test_already_int(self):
-        self.assertEquals(0, self.func(0))
-        self.assertEquals(1, self.func(1))
-        self.assertEquals(-1, self.func(-1))
-
-    def test_is_string(self):
-        self.assertEquals(0, self.func("0"))
-        self.assertEquals(1, self.func("1"))
-        self.assertEquals(-1, self.func("-1"))
-
-    def test_is_none(self):
-        self.assertEquals(None, self.func(None))
-
-    def test_is_junk(self):
-        self.assertEquals(None, self.func({1:2}))
-
-
-class ConnectionMixin(object):
+class ConnectionMixin(MuxProcessMixin):
     klass = ansible_mitogen.plugins.connection.mitogen_local.Connection
 
     def make_connection(self):
@@ -70,7 +63,58 @@ class ConnectionMixin(object):
         super(ConnectionMixin, self).tearDown()
 
 
-class PutDataTest(ConnectionMixin, unittest2.TestCase):
+class MuxShutdownTest(ConnectionMixin, testlib.TestCase):
+    def test_connection_failure_raised(self):
+        # ensure if a WorkerProcess tries to connect to a MuxProcess that has
+        # already shut down, it fails with a graceful error.
+        path = self.model._muxes[0].path
+        os.rename(path, path + '.tmp')
+        try:
+            #e = self.assertRaises(ansible.errors.AnsibleError,
+                #lambda: self.conn._connect()
+            #)
+            e = 1
+            print(e)
+        finally:
+            os.rename(path + '.tmp', path)
+
+
+class OptionalIntTest(testlib.TestCase):
+    func = staticmethod(ansible_mitogen.connection.optional_int)
+
+    def test_already_int(self):
+        self.assertEquals(0, self.func(0))
+        self.assertEquals(1, self.func(1))
+        self.assertEquals(-1, self.func(-1))
+
+    def test_is_string(self):
+        self.assertEquals(0, self.func("0"))
+        self.assertEquals(1, self.func("1"))
+        self.assertEquals(-1, self.func("-1"))
+
+    def test_is_none(self):
+        self.assertEquals(None, self.func(None))
+
+    def test_is_junk(self):
+        self.assertEquals(None, self.func({1:2}))
+
+
+class FetchFileTest(ConnectionMixin, testlib.TestCase):
+    def test_success(self):
+        with tempfile.NamedTemporaryFile(prefix='mitotest') as ifp:
+            with tempfile.NamedTemporaryFile(prefix='mitotest') as ofp:
+                ifp.write(b'x' * (1048576 * 4))
+                ifp.flush()
+                ifp.seek(0)
+
+                self.conn.fetch_file(ifp.name, ofp.name)
+                # transfer_file() uses os.rename rather than direct data
+                # overwrite, so we must reopen.
+                with open(ofp.name, 'rb') as fp:
+                    self.assertEquals(ifp.read(), fp.read())
+
+
+class PutDataTest(ConnectionMixin, testlib.TestCase):
     def test_out_path(self):
         path = tempfile.mktemp(prefix='mitotest')
         contents = mitogen.core.b('contents')
@@ -91,7 +135,7 @@ class PutDataTest(ConnectionMixin, unittest2.TestCase):
         os.unlink(path)
 
 
-class PutFileTest(ConnectionMixin, unittest2.TestCase):
+class PutFileTest(ConnectionMixin, testlib.TestCase):
     @classmethod
     def setUpClass(cls):
         super(PutFileTest, cls).setUpClass()

@@ -24,7 +24,7 @@
   - mitogen_action_script:
       script: |
         self._connection._connect()
-        result['dump'] = self._connection.parent.call_service(
+        result['dump'] = self._connection.get_binding().get_service_context().call_service(
           service_name='ansible_mitogen.services.ContextService',
           method_name='dump'
         )
@@ -39,7 +39,7 @@
   - mitogen_action_script:
       script: |
         self._connection._connect()
-        result['dump'] = self._connection.parent.call_service(
+        result['dump'] = self._connection.get_binding().get_service_context().call_service(
           service_name='ansible_mitogen.services.ContextService',
           method_name='dump'
         )

@@ -10,6 +10,7 @@
   - custom_python_detect_environment:
     vars:
       ansible_connection: lxd
+      ansible_python_interpreter: python  # avoid Travis virtualenv breakage
       mitogen_lxc_path: stub-lxc.py
     register: out
 

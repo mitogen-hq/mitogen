@@ -16,13 +16,19 @@ class MyService(mitogen.service.Service):
         return self._counter, id(self)
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
+    @mitogen.service.arg_spec({
+        'foo': int
+    })
+    def test_arg_spec(self, foo):
+        return foo
+
+    @mitogen.service.expose(policy=mitogen.service.AllowParents())
     def privileged_op(self):
         return 'privileged!'
 
     @mitogen.service.expose(policy=mitogen.service.AllowAny())
     def unprivileged_op(self):
         return 'unprivileged!'
-
 
 
 class MyService2(MyService):
@@ -36,6 +42,44 @@ def call_service_in(context, service_name, method_name):
     return context.call_service(service_name, method_name)
 
 
+class CallTest(testlib.RouterMixin, testlib.TestCase):
+    def test_local(self):
+        pool = mitogen.service.get_or_create_pool(router=self.router)
+        self.assertEquals(
+            'privileged!',
+            mitogen.service.call(MyService, 'privileged_op')
+        )
+        pool.stop()
+
+    def test_remote_bad_arg(self):
+        c1 = self.router.local()
+        self.assertRaises(
+            mitogen.core.CallError,
+            lambda: mitogen.service.call(
+                MyService.name(),
+                'test_arg_spec',
+                foo='x',
+                call_context=c1
+            )
+        )
+
+    def test_local_unicode(self):
+        pool = mitogen.service.get_or_create_pool(router=self.router)
+        self.assertEquals(
+            'privileged!',
+            mitogen.service.call(MyService.name(), 'privileged_op')
+        )
+        pool.stop()
+
+    def test_remote(self):
+        c1 = self.router.local()
+        self.assertEquals(
+            'privileged!',
+            mitogen.service.call(MyService, 'privileged_op',
+                                 call_context=c1)
+        )
+
+
 class ActivationTest(testlib.RouterMixin, testlib.TestCase):
     def test_parent_can_activate(self):
         l1 = self.router.local()
@@ -44,8 +88,8 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(isinstance(id_, int))
 
     def test_sibling_cannot_activate_framework(self):
-        l1 = self.router.local()
-        l2 = self.router.local()
+        l1 = self.router.local(name='l1')
+        l2 = self.router.local(name='l2')
         exc = self.assertRaises(mitogen.core.CallError,
             lambda: l2.call(call_service_in, l1, MyService2.name(), 'get_id'))
         self.assertTrue(mitogen.core.Router.refused_msg in exc.args[0])

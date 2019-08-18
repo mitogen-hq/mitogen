@@ -73,7 +73,9 @@ necessarily involves preventing the scheduler from making load balancing
 decisions.
 """
 
+from __future__ import absolute_import
 import ctypes
+import logging
 import mmap
 import multiprocessing
 import os
@@ -83,41 +85,44 @@ import mitogen.core
 import mitogen.parent
 
 
+LOG = logging.getLogger(__name__)
+
+
 try:
     _libc = ctypes.CDLL(None, use_errno=True)
     _strerror = _libc.strerror
     _strerror.restype = ctypes.c_char_p
-    _pthread_mutex_init = _libc.pthread_mutex_init
-    _pthread_mutex_lock = _libc.pthread_mutex_lock
-    _pthread_mutex_unlock = _libc.pthread_mutex_unlock
+    _sem_init = _libc.sem_init
+    _sem_wait = _libc.sem_wait
+    _sem_post = _libc.sem_post
     _sched_setaffinity = _libc.sched_setaffinity
 except (OSError, AttributeError):
     _libc = None
     _strerror = None
-    _pthread_mutex_init = None
-    _pthread_mutex_lock = None
-    _pthread_mutex_unlock = None
+    _sem_init = None
+    _sem_wait = None
+    _sem_post = None
     _sched_setaffinity = None
 
 
-class pthread_mutex_t(ctypes.Structure):
+class sem_t(ctypes.Structure):
     """
-    Wrap pthread_mutex_t to allow storing a lock in shared memory.
+    Wrap sem_t to allow storing a lock in shared memory.
     """
     _fields_ = [
-        ('data', ctypes.c_uint8 * 512),
+        ('data', ctypes.c_uint8 * 128),
     ]
 
     def init(self):
-        if _pthread_mutex_init(self.data, 0):
+        if _sem_init(self.data, 1, 1):
             raise Exception(_strerror(ctypes.get_errno()))
 
     def acquire(self):
-        if _pthread_mutex_lock(self.data):
+        if _sem_wait(self.data):
             raise Exception(_strerror(ctypes.get_errno()))
 
     def release(self):
-        if _pthread_mutex_unlock(self.data):
+        if _sem_post(self.data):
             raise Exception(_strerror(ctypes.get_errno()))
 
 
@@ -128,7 +133,7 @@ class State(ctypes.Structure):
     the context of the new child process.
     """
     _fields_ = [
-        ('lock', pthread_mutex_t),
+        ('lock', sem_t),
         ('counter', ctypes.c_uint8),
     ]
 
@@ -142,7 +147,7 @@ class Policy(object):
         Assign the Ansible top-level policy to this process.
         """
 
-    def assign_muxprocess(self):
+    def assign_muxprocess(self, index):
         """
         Assign the MuxProcess policy to this process.
         """
@@ -177,9 +182,9 @@ class FixedPolicy(Policy):
     cores, before reusing the second hyperthread of an existing core.
 
     A hook is installed that causes :meth:`reset` to run in the child of any
-    process created with :func:`mitogen.parent.detach_popen`, ensuring
-    CPU-intensive children like SSH are not forced to share the same core as
-    the (otherwise potentially very busy) parent.
+    process created with :func:`mitogen.parent.popen`, ensuring CPU-intensive
+    children like SSH are not forced to share the same core as the (otherwise
+    potentially very busy) parent.
     """
     def __init__(self, cpu_count=None):
         #: For tests.
@@ -207,11 +212,13 @@ class FixedPolicy(Policy):
             self._reserve_mask = 3
             self._reserve_shift = 2
 
-    def _set_affinity(self, mask):
+    def _set_affinity(self, descr, mask):
+        if descr:
+            LOG.debug('CPU mask for %s: %#08x', descr, mask)
         mitogen.parent._preexec_hook = self._clear
         self._set_cpu_mask(mask)
 
-    def _balance(self):
+    def _balance(self, descr):
         self.state.lock.acquire()
         try:
             n = self.state.counter
@@ -219,28 +226,28 @@ class FixedPolicy(Policy):
         finally:
             self.state.lock.release()
 
-        self._set_cpu(self._reserve_shift + (
+        self._set_cpu(descr, self._reserve_shift + (
             (n % (self.cpu_count - self._reserve_shift))
         ))
 
-    def _set_cpu(self, cpu):
-        self._set_affinity(1 << cpu)
+    def _set_cpu(self, descr, cpu):
+        self._set_affinity(descr, 1 << (cpu % self.cpu_count))
 
     def _clear(self):
         all_cpus = (1 << self.cpu_count) - 1
-        self._set_affinity(all_cpus & ~self._reserve_mask)
+        self._set_affinity(None, all_cpus & ~self._reserve_mask)
 
     def assign_controller(self):
         if self._reserve_controller:
-            self._set_cpu(1)
+            self._set_cpu('Ansible top-level process', 1)
         else:
-            self._balance()
+            self._balance('Ansible top-level process')
 
-    def assign_muxprocess(self):
-        self._set_cpu(0)
+    def assign_muxprocess(self, index):
+        self._set_cpu('MuxProcess %d' % (index,), index)
 
     def assign_worker(self):
-        self._balance()
+        self._balance('WorkerProcess')
 
     def assign_subprocess(self):
         self._clear()

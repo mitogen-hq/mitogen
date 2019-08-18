@@ -22,15 +22,26 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
         return recv, msg
 
     def test_unauthorized(self):
+        l1 = self.router.local()
+
         service = self.klass(self.router)
-        recv, msg = self.replyable_msg()
-        service.fetch(
-            path='/etc/shadow',
-            sender=None,
-            msg=msg,
+        pool = mitogen.service.Pool(
+            router=self.router,
+            services=[service],
+            size=1,
         )
-        e = self.assertRaises(mitogen.core.CallError,
-            lambda: recv.get().unpickle())
+        try:
+            e = self.assertRaises(mitogen.core.CallError,
+                lambda: l1.call(
+                    mitogen.service.FileService.get,
+                    context=self.router.myself(),
+                    path='/etc/shadow',
+                    out_fp=None,
+                )
+            )
+        finally:
+            pool.stop()
+
         expect = service.unregistered_msg % ('/etc/shadow',)
         self.assertTrue(expect in e.args[0])
 
@@ -85,30 +96,57 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
         self._validate_response(recv.get().unpickle())
 
     def test_prefix_authorized_abspath_bad(self):
-        recv = mitogen.core.Receiver(self.router)
-        service = self.klass(self.router)
-        service.register_prefix('/etc')
-        recv, msg = self.replyable_msg()
-        service.fetch(
-            path='/etc/foo/bar/../../../passwd',
-            sender=recv.to_sender(),
-            msg=msg,
-        )
-        self.assertEquals(None, recv.get().unpickle())
+        l1 = self.router.local()
 
-    def test_prefix_authorized_abspath_bad(self):
-        recv = mitogen.core.Receiver(self.router)
         service = self.klass(self.router)
         service.register_prefix('/etc')
-        recv, msg = self.replyable_msg()
-        service.fetch(
-            path='/etc/../shadow',
-            sender=recv.to_sender(),
-            msg=msg,
+
+        pool = mitogen.service.Pool(
+            router=self.router,
+            services=[service],
+            size=1,
         )
-        e = self.assertRaises(mitogen.core.CallError,
-            lambda: recv.get().unpickle())
-        expect = service.unregistered_msg % ('/etc/../shadow',)
+        path = '/etc/foo/bar/../../../passwd'
+        try:
+            e = self.assertRaises(mitogen.core.CallError,
+                lambda: l1.call(
+                    mitogen.service.FileService.get,
+                    context=self.router.myself(),
+                    path=path,
+                    out_fp=None,
+                )
+            )
+        finally:
+            pool.stop()
+
+        expect = service.unregistered_msg % (path,)
+        self.assertTrue(expect in e.args[0])
+
+    def test_prefix_authorized_abspath_good(self):
+        l1 = self.router.local()
+
+        service = self.klass(self.router)
+        service.register_prefix('/etc')
+        path = '/etc/../shadow'
+
+        pool = mitogen.service.Pool(
+            router=self.router,
+            services=[service],
+            size=1,
+        )
+        try:
+            e = self.assertRaises(mitogen.core.CallError,
+                lambda: l1.call(
+                    mitogen.service.FileService.get,
+                    context=self.router.myself(),
+                    path=path,
+                    out_fp=None
+                )
+            )
+        finally:
+            pool.stop()
+
+        expect = service.unregistered_msg % (path,)
         self.assertTrue(expect in e.args[0])
 
 

@@ -1,0 +1,24 @@
+# #591: process CWD is not reset before start of module execution. This is
+# usually fine, except for modules importing setuptools early, which attempts
+# to call getcwd() before AnsibleModule has had a chance to clean up the
+# process environment.
+
+- hosts: test-targets
+  tasks:
+  - meta: end_play
+    when: not is_mitogen
+
+  - custom_python_run_script:
+      script: |
+        import os
+        try:
+          os.chdir(module.tmpdir)
+        except:
+          # Ansible 2.3.
+          os.chdir(os.path.dirname(__file__))
+
+  # Will crash if process has a nonexistent CWD.
+  - custom_python_os_getcwd:
+      script: |
+        import os
+        self._connection.get_chain().call(os.getcwd)

@@ -10,5 +10,4 @@
 
   - assert:
       that:
-        - out.state == 'absent'
         - out.msg == 'file (/usr/bin/does-not-exist) is absent, cannot continue'

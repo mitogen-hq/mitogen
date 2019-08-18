@@ -1,14 +1,3 @@
 
-- hosts: all
-  gather_facts: false
-  tasks:
-  - set_fact:
-      # Hacktacular.. but easiest place for it with current structure.
-      sudo_group:
-        MacOSX: admin
-        Debian: sudo
-        Ubuntu: sudo
-        CentOS: wheel
-
 - include: _container_setup.yml
 - include: _user_accounts.yml

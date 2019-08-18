@@ -4,12 +4,14 @@ import sys
 import os
 import time
 
+import mitogen.core
+
 
 times = []
 for x in range(5):
-    t0 = time.time()
+    t0 = mitogen.core.now()
     os.spawnvp(os.P_WAIT, sys.argv[1], sys.argv[1:])
-    t = time.time() - t0
+    t = mitogen.core.now() - t0
     times.append(t)
     print('+++', t)
 

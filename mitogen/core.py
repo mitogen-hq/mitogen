@@ -37,6 +37,7 @@ bootstrap implementation sent to every new slave context.
 import binascii
 import collections
 import encodings.latin_1
+import encodings.utf_8
 import errno
 import fcntl
 import itertools
@@ -49,6 +50,7 @@ import signal
 import socket
 import struct
 import sys
+import syslog
 import threading
 import time
 import traceback
@@ -102,10 +104,9 @@ LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
-LATIN1_CODEC = encodings.latin_1.Codec()
 # str.encode() may take import lock. Deadlock possible if broker calls
 # .encode() on behalf of thread currently waiting for module.
-UTF8_CODEC = encodings.latin_1.Codec()
+LATIN1_CODEC = encodings.latin_1.Codec()
 
 _v = False
 _vv = False
@@ -121,6 +122,7 @@ LOAD_MODULE = 107
 FORWARD_MODULE = 108
 DETACHING = 109
 CALL_SERVICE = 110
+STUB_CALL_SERVICE = 111
 
 #: Special value used to signal disconnection or the inability to route a
 #: message, when it appears in the `reply_to` field. Usually causes
@@ -214,7 +216,8 @@ else:
 
 
 class Error(Exception):
-    """Base for all exceptions raised by Mitogen.
+    """
+    Base for all exceptions raised by Mitogen.
 
     :param str fmt:
         Exception text, or format string if `args` is non-empty.
@@ -230,14 +233,18 @@ class Error(Exception):
 
 
 class LatchError(Error):
-    """Raised when an attempt is made to use a :class:`mitogen.core.Latch`
-    that has been marked closed."""
+    """
+    Raised when an attempt is made to use a :class:`mitogen.core.Latch` that
+    has been marked closed.
+    """
     pass
 
 
 class Blob(BytesType):
-    """A serializable bytes subclass whose content is summarized in repr()
-    output, making it suitable for logging binary data."""
+    """
+    A serializable bytes subclass whose content is summarized in repr() output,
+    making it suitable for logging binary data.
+    """
     def __repr__(self):
         return '[blob: %d bytes]' % len(self)
 
@@ -246,8 +253,10 @@ class Blob(BytesType):
 
 
 class Secret(UnicodeType):
-    """A serializable unicode subclass whose content is masked in repr()
-    output, making it suitable for logging passwords."""
+    """
+    A serializable unicode subclass whose content is masked in repr() output,
+    making it suitable for logging passwords.
+    """
     def __repr__(self):
         return '[secret]'
 
@@ -281,7 +290,7 @@ class Kwargs(dict):
         def __init__(self, dct):
             for k, v in dct.iteritems():
                 if type(k) is unicode:
-                    k, _ = UTF8_CODEC.encode(k)
+                    k, _ = encodings.utf_8.encode(k)
                 self[k] = v
 
     def __repr__(self):
@@ -321,28 +330,40 @@ def _unpickle_call_error(s):
 
 
 class ChannelError(Error):
-    """Raised when a channel dies or has been closed."""
+    """
+    Raised when a channel dies or has been closed.
+    """
     remote_msg = 'Channel closed by remote end.'
     local_msg = 'Channel closed by local end.'
 
 
 class StreamError(Error):
-    """Raised when a stream cannot be established."""
+    """
+    Raised when a stream cannot be established.
+    """
     pass
 
 
 class TimeoutError(Error):
-    """Raised when a timeout occurs on a stream."""
+    """
+    Raised when a timeout occurs on a stream.
+    """
     pass
 
 
 def to_text(o):
-    """Coerce `o` to Unicode by decoding it from UTF-8 if it is an instance of
+    """
+    Coerce `o` to Unicode by decoding it from UTF-8 if it is an instance of
     :class:`bytes`, otherwise pass it to the :class:`str` constructor. The
-    returned object is always a plain :class:`str`, any subclass is removed."""
+    returned object is always a plain :class:`str`, any subclass is removed.
+    """
     if isinstance(o, BytesType):
         return o.decode('utf-8')
     return UnicodeType(o)
+
+
+# Documented in api.rst to work around Sphinx limitation.
+now = getattr(time, 'monotonic', time.time)
 
 
 # Python 2.4
@@ -378,41 +399,84 @@ else:
         return _partition(s, sep, s.find) or (s, '', '')
 
 
+def _has_parent_authority(context_id):
+    return (
+        (context_id == mitogen.context_id) or
+        (context_id in mitogen.parent_ids)
+    )
+
 def has_parent_authority(msg, _stream=None):
-    """Policy function for use with :class:`Receiver` and
+    """
+    Policy function for use with :class:`Receiver` and
     :meth:`Router.add_handler` that requires incoming messages to originate
     from a parent context, or on a :class:`Stream` whose :attr:`auth_id
     <Stream.auth_id>` has been set to that of a parent context or the current
-    context."""
-    return (msg.auth_id == mitogen.context_id or
-            msg.auth_id in mitogen.parent_ids)
+    context.
+    """
+    return _has_parent_authority(msg.auth_id)
+
+
+def _signals(obj, signal):
+    return (
+        obj.__dict__
+        .setdefault('_signals', {})
+        .setdefault(signal, [])
+    )
 
 
 def listen(obj, name, func):
     """
-    Arrange for `func(*args, **kwargs)` to be invoked when the named signal is
-    fired by `obj`.
+    Arrange for `func()` to be invoked when signal `name` is fired on `obj`.
     """
-    signals = vars(obj).setdefault('_signals', {})
-    signals.setdefault(name, []).append(func)
+    _signals(obj, name).append(func)
+
+
+def unlisten(obj, name, func):
+    """
+    Remove `func()` from the list of functions invoked when signal `name` is
+    fired by `obj`.
+
+    :raises ValueError:
+        `func()` was not on the list.
+    """
+    _signals(obj, name).remove(func)
 
 
 def fire(obj, name, *args, **kwargs):
     """
     Arrange for `func(*args, **kwargs)` to be invoked for every function
-    registered for the named signal on `obj`.
+    registered for signal `name` on `obj`.
     """
-    signals = vars(obj).get('_signals', {})
-    for func in signals.get(name, ()):
+    for func in _signals(obj, name):
         func(*args, **kwargs)
 
 
 def takes_econtext(func):
+    """
+    Decorator that marks a function or class method to automatically receive a
+    kwarg named `econtext`, referencing the
+    :class:`mitogen.core.ExternalContext` active in the context in which the
+    function is being invoked in. The decorator is only meaningful when the
+    function is invoked via :data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>`.
+
+    When the function is invoked directly, `econtext` must still be passed to
+    it explicitly.
+    """
     func.mitogen_takes_econtext = True
     return func
 
 
 def takes_router(func):
+    """
+    Decorator that marks a function or class method to automatically receive a
+    kwarg named `router`, referencing the :class:`mitogen.core.Router` active
+    in the context in which the function is being invoked in. The decorator is
+    only meaningful when the function is invoked via :data:`CALL_FUNCTION
+    <mitogen.core.CALL_FUNCTION>`.
+
+    When the function is invoked directly, `router` must still be passed to it
+    explicitly.
+    """
     func.mitogen_takes_router = True
     return func
 
@@ -432,35 +496,42 @@ def is_blacklisted_import(importer, fullname):
 
 
 def set_cloexec(fd):
-    """Set the file descriptor `fd` to automatically close on
-    :func:`os.execve`. This has no effect on file descriptors inherited across
-    :func:`os.fork`, they must be explicitly closed through some other means,
-    such as :func:`mitogen.fork.on_fork`."""
+    """
+    Set the file descriptor `fd` to automatically close on :func:`os.execve`.
+    This has no effect on file descriptors inherited across :func:`os.fork`,
+    they must be explicitly closed through some other means, such as
+    :func:`mitogen.fork.on_fork`.
+    """
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     assert fd > 2
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
 def set_nonblock(fd):
-    """Set the file descriptor `fd` to non-blocking mode. For most underlying
-    file types, this causes :func:`os.read` or :func:`os.write` to raise
+    """
+    Set the file descriptor `fd` to non-blocking mode. For most underlying file
+    types, this causes :func:`os.read` or :func:`os.write` to raise
     :class:`OSError` with :data:`errno.EAGAIN` rather than block the thread
-    when the underlying kernel buffer is exhausted."""
+    when the underlying kernel buffer is exhausted.
+    """
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
 
 def set_block(fd):
-    """Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread
-    when the underlying kernel buffer is exhausted."""
+    """
+    Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread when
+    the underlying kernel buffer is exhausted.
+    """
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
 
 
 def io_op(func, *args):
-    """Wrap `func(*args)` that may raise :class:`select.error`,
-    :class:`IOError`, or :class:`OSError`, trapping UNIX error codes relating
-    to disconnection and retry events in various subsystems:
+    """
+    Wrap `func(*args)` that may raise :class:`select.error`, :class:`IOError`,
+    or :class:`OSError`, trapping UNIX error codes relating to disconnection
+    and retry events in various subsystems:
 
     * When a signal is delivered to the process on Python 2, system call retry
       is signalled through :data:`errno.EINTR`. The invocation is automatically
@@ -491,7 +562,8 @@ def io_op(func, *args):
 
 
 class PidfulStreamHandler(logging.StreamHandler):
-    """A :class:`logging.StreamHandler` subclass used when
+    """
+    A :class:`logging.StreamHandler` subclass used when
     :meth:`Router.enable_debug() <mitogen.master.Router.enable_debug>` has been
     called, or the `debug` parameter was specified during context construction.
     Verifies the process ID has not changed on each call to :meth:`emit`,
@@ -568,7 +640,7 @@ def _real_profile_hook(name, func, *args):
         return func(*args)
     finally:
         path = _profile_fmt % {
-            'now': int(1e6 * time.time()),
+            'now': int(1e6 * now()),
             'identity': name,
             'pid': os.getpid(),
             'ext': '%s'
@@ -594,6 +666,43 @@ def import_module(modname):
     Import `module` and return the attribute named `attr`.
     """
     return __import__(modname, None, None, [''])
+
+
+def pipe():
+    """
+    Create a UNIX pipe pair using :func:`os.pipe`, wrapping the returned
+    descriptors in Python file objects in order to manage their lifetime and
+    ensure they are closed when their last reference is discarded and they have
+    not been closed explicitly.
+    """
+    rfd, wfd = os.pipe()
+    return (
+        os.fdopen(rfd, 'rb', 0),
+        os.fdopen(wfd, 'wb', 0)
+    )
+
+
+def iter_split(buf, delim, func):
+    """
+    Invoke `func(s)` for each `delim`-delimited chunk in the potentially large
+    `buf`, avoiding intermediate lists and quadratic string operations. Return
+    the trailing undelimited portion of `buf`, or any unprocessed portion of
+    `buf` after `func(s)` returned :data:`False`.
+
+    :returns:
+        `(trailer, cont)`, where `cont` is :data:`False` if the last call to
+        `func(s)` returned :data:`False`.
+    """
+    dlen = len(delim)
+    start = 0
+    cont = True
+    while cont:
+        nl = buf.find(delim, start)
+        if nl == -1:
+            break
+        cont = not func(buf[start:nl]) is False
+        start = nl + dlen
+    return buf[start:], cont
 
 
 class Py24Pickler(py_pickle.Pickler):
@@ -687,6 +796,10 @@ class Message(object):
     #: the :class:`mitogen.select.Select` interface. Defaults to :data:`None`.
     receiver = None
 
+    HEADER_FMT = '>hLLLLLL'
+    HEADER_LEN = struct.calcsize(HEADER_FMT)
+    HEADER_MAGIC = 0x4d49  # 'MI'
+
     def __init__(self, **kwargs):
         """
         Construct a message from from the supplied `kwargs`. :attr:`src_id` and
@@ -696,6 +809,14 @@ class Message(object):
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
         assert isinstance(self.data, BytesType)
+
+    def pack(self):
+        return (
+            struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, self.dst_id,
+                        self.src_id, self.auth_id, self.handle,
+                        self.reply_to or 0, len(self.data))
+            + self.data
+        )
 
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(context_id, name, router=self.router)
@@ -708,8 +829,10 @@ class Message(object):
         return s
 
     def _find_global(self, module, func):
-        """Return the class implementing `module_name.class_name` or raise
-        `StreamError` if the module is not whitelisted."""
+        """
+        Return the class implementing `module_name.class_name` or raise
+        `StreamError` if the module is not whitelisted.
+        """
         if module == __name__:
             if func == '_unpickle_call_error' or func == 'CallError':
                 return _unpickle_call_error
@@ -744,7 +867,7 @@ class Message(object):
         """
         Syntax helper to construct a dead message.
         """
-        kwargs['data'], _ = UTF8_CODEC.encode(reason or u'')
+        kwargs['data'], _ = encodings.utf_8.encode(reason or u'')
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
@@ -785,7 +908,8 @@ class Message(object):
         if msg.handle:
             (self.router or router).route(msg)
         else:
-            LOG.debug('Message.reply(): discarding due to zero handle: %r', msg)
+            LOG.debug('dropping reply to message with no return address: %r',
+                      msg)
 
     if PY3:
         UNPICKLER_KWARGS = {'encoding': 'bytes'}
@@ -824,7 +948,11 @@ class Message(object):
             unpickler.find_global = self._find_global
             try:
                 # Must occur off the broker thread.
-                obj = unpickler.load()
+                try:
+                    obj = unpickler.load()
+                except:
+                    LOG.error('raw pickle was: %r', self.data)
+                    raise
                 self._unpickled = obj
             except (TypeError, ValueError):
                 e = sys.exc_info()[1]
@@ -851,7 +979,7 @@ class Sender(object):
     Senders may be serialized, making them convenient to wire up data flows.
     See :meth:`mitogen.core.Receiver.to_sender` for more information.
 
-    :param Context context:
+    :param mitogen.core.Context context:
         Context to send messages to.
     :param int dst_handle:
         Destination handle to send messages to.
@@ -893,7 +1021,7 @@ def _unpickle_sender(router, context_id, dst_handle):
     if not (isinstance(router, Router) and
             isinstance(context_id, (int, long)) and context_id >= 0 and
             isinstance(dst_handle, (int, long)) and dst_handle > 0):
-        raise TypeError('cannot unpickle Sender: bad input')
+        raise TypeError('cannot unpickle Sender: bad input or missing router')
     return Sender(Context(router, context_id), dst_handle)
 
 
@@ -920,11 +1048,11 @@ class Receiver(object):
         routed to the context due to disconnection, and ignores messages that
         did not originate from the respondent context.
     """
-    #: If not :data:`None`, a reference to a function invoked as
-    #: `notify(receiver)` when a new message is delivered to this receiver. The
-    #: function is invoked on the broker thread, therefore it must not block.
-    #: Used by :class:`mitogen.select.Select` to implement waiting on multiple
-    #: receivers.
+    #: If not :data:`None`, a function invoked as `notify(receiver)` after a
+    #: message has been received. The function is invoked on :class:`Broker`
+    #: thread, therefore it must not block. Used by
+    #: :class:`mitogen.select.Select` to efficiently implement waiting on
+    #: multiple event sources.
     notify = None
 
     raise_channelerror = True
@@ -997,13 +1125,32 @@ class Receiver(object):
             self.handle = None
         self._latch.close()
 
+    def size(self):
+        """
+        Return the number of items currently buffered.
+
+        As with :class:`Queue.Queue`, `0` may be returned even though a
+        subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`size` and :meth:`get`.
+
+        As with :class:`Queue.Queue`, `>0` may be returned even though a
+        subsequent call to :meth:`get` will block, since another waiting thread
+        may be woken at any moment between :meth:`size` and :meth:`get`.
+
+        :raises LatchError:
+            The underlying latch has already been marked closed.
+        """
+        return self._latch.size()
+
     def empty(self):
         """
-        Return :data:`True` if calling :meth:`get` would block.
+        Return `size() == 0`.
 
-        As with :class:`Queue.Queue`, :data:`True` may be returned even though
-        a subsequent call to :meth:`get` will succeed, since a message may be
-        posted at any moment between :meth:`empty` and :meth:`get`.
+        .. deprecated:: 0.2.8
+           Use :meth:`size` instead.
+
+        :raises LatchError:
+            The latch has already been marked closed.
         """
         return self._latch.empty()
 
@@ -1052,7 +1199,10 @@ class Channel(Sender, Receiver):
     A channel inherits from :class:`mitogen.core.Sender` and
     `mitogen.core.Receiver` to provide bidirectional functionality.
 
-    This class is incomplete and obsolete, it will be removed in Mitogen 0.3.
+    .. deprecated:: 0.2.0
+        This class is incomplete and obsolete, it will be removed in Mitogen
+        0.3.
+
     Channels were an early attempt at syntax sugar. It is always easier to pass
     around unidirectional pairs of senders/receivers, even though the syntax is
     baroque:
@@ -1089,6 +1239,7 @@ class Importer(object):
     # The Mitogen package is handled specially, since the child context must
     # construct it manually during startup.
     MITOGEN_PKG_CONTENT = [
+        'buildah',
         'compat',
         'debug',
         'doas',
@@ -1129,6 +1280,7 @@ class Importer(object):
         ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
+        self._log = logging.getLogger('mitogen.importer')
         self._context = context
         self._present = {'mitogen': self.MITOGEN_PKG_CONTENT}
         self._lock = threading.Lock()
@@ -1177,7 +1329,7 @@ class Importer(object):
         )
 
     def __repr__(self):
-        return 'Importer()'
+        return 'Importer'
 
     def builtin_find_module(self, fullname):
         # imp.find_module() will always succeed for __main__, because it is a
@@ -1202,18 +1354,18 @@ class Importer(object):
 
         _tls.running = True
         try:
-            _v and LOG.debug('%r.find_module(%r)', self, fullname)
+            #_v and self._log.debug('Python requested %r', fullname)
             fullname = to_text(fullname)
             pkgname, dot, _ = str_rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
-                LOG.debug('%r: %r is submodule of a package we did not load',
-                          self, fullname)
+                self._log.debug('%s is submodule of a locally loaded package',
+                                fullname)
                 return None
 
             suffix = fullname[len(pkgname+dot):]
             if pkgname and suffix not in self._present.get(pkgname, ()):
-                LOG.debug('%r: master doesn\'t know %r', self, fullname)
+                self._log.debug('%s has no submodule %s', pkgname, suffix)
                 return None
 
             # #114: explicitly whitelisted prefixes override any
@@ -1224,10 +1376,9 @@ class Importer(object):
 
             try:
                 self.builtin_find_module(fullname)
-                _vv and IOLOG.debug('%r: %r is available locally',
-                                    self, fullname)
+                _vv and self._log.debug('%r is available locally', fullname)
             except ImportError:
-                _vv and IOLOG.debug('find_module(%r) returning self', fullname)
+                _vv and self._log.debug('we will try to load %r', fullname)
                 return self
         finally:
             del _tls.running
@@ -1278,7 +1429,7 @@ class Importer(object):
 
         tup = msg.unpickle()
         fullname = tup[0]
-        _v and LOG.debug('Importer._on_load_module(%r)', fullname)
+        _v and self._log.debug('received %s', fullname)
 
         self._lock.acquire()
         try:
@@ -1302,10 +1453,12 @@ class Importer(object):
             if not present:
                 funcs = self._callbacks.get(fullname)
                 if funcs is not None:
-                    _v and LOG.debug('_request_module(%r): in flight', fullname)
+                    _v and self._log.debug('existing request for %s in flight',
+                                           fullname)
                     funcs.append(callback)
                 else:
-                    _v and LOG.debug('_request_module(%r): new request', fullname)
+                    _v and self._log.debug('sending new %s request to parent',
+                                           fullname)
                     self._callbacks[fullname] = [callback]
                     self._context.send(
                         Message(data=b(fullname), handle=GET_MODULE)
@@ -1318,7 +1471,7 @@ class Importer(object):
 
     def load_module(self, fullname):
         fullname = to_text(fullname)
-        _v and LOG.debug('Importer.load_module(%r)', fullname)
+        _v and self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
 
         event = threading.Event()
@@ -1342,7 +1495,7 @@ class Importer(object):
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
-            mod.__package__, _ = UTF8_CODEC.encode(mod.__package__)
+            mod.__package__, _ = encodings.utf_8.encode(mod.__package__)
 
         source = self.get_source(fullname)
         try:
@@ -1355,7 +1508,10 @@ class Importer(object):
             exec(code, vars(mod))
         else:
             exec('exec code in vars(mod)')
-        return mod
+
+        # #590: if a module replaces itself in sys.modules during import, below
+        # is necessary. This matches PyImport_ExecCodeModuleEx()
+        return sys.modules.get(fullname, mod)
 
     def get_filename(self, fullname):
         if fullname in self._cache:
@@ -1381,11 +1537,30 @@ class Importer(object):
 
 
 class LogHandler(logging.Handler):
+    """
+    A :class:`logging.Handler` subclass that arranges for :data:`FORWARD_LOG`
+    messages to be sent to a parent context in response to logging messages
+    generated by the current context. This is installed by default in child
+    contexts during bootstrap, so that :mod:`logging` events can be viewed and
+    managed centrally in the master process.
+
+    The handler is initially *corked* after construction, such that it buffers
+    messages until :meth:`uncork` is called. This allows logging to be
+    installed prior to communication with the target being available, and
+    avoids any possible race where early log messages might be dropped.
+
+    :param mitogen.core.Context context:
+        The context to send log messages towards. At present this is always
+        the master process.
+    """
     def __init__(self, context):
         logging.Handler.__init__(self)
         self.context = context
         self.local = threading.local()
         self._buffer = []
+        # Private synchronization is needed while corked, to ensure no
+        # concurrent call to _send() exists during uncork().
+        self._buffer_lock = threading.Lock()
 
     def uncork(self):
         """
@@ -1393,15 +1568,30 @@ class LogHandler(logging.Handler):
         possible to route messages, therefore messages are buffered until
         :meth:`uncork` is called by :class:`ExternalContext`.
         """
-        self._send = self.context.send
-        for msg in self._buffer:
-            self._send(msg)
-        self._buffer = None
+        self._buffer_lock.acquire()
+        try:
+            self._send = self.context.send
+            for msg in self._buffer:
+                self._send(msg)
+            self._buffer = None
+        finally:
+            self._buffer_lock.release()
 
     def _send(self, msg):
-        self._buffer.append(msg)
+        self._buffer_lock.acquire()
+        try:
+            if self._buffer is None:
+                # uncork() may run concurrent to _send()
+                self._send(msg)
+            else:
+                self._buffer.append(msg)
+        finally:
+            self._buffer_lock.release()
 
     def emit(self, rec):
+        """
+        Send a :data:`FORWARD_LOG` message towards the target context.
+        """
         if rec.name == 'mitogen.io' or \
            getattr(self.local, 'in_emit', False):
             return
@@ -1418,45 +1608,371 @@ class LogHandler(logging.Handler):
             self.local.in_emit = False
 
 
+class Stream(object):
+    """
+    A :class:`Stream` is one readable and optionally one writeable file
+    descriptor (represented by :class:`Side`) aggregated alongside an
+    associated :class:`Protocol` that knows how to respond to IO readiness
+    events for those descriptors.
+
+    Streams are registered with :class:`Broker`, and callbacks are invoked on
+    the broker thread in response to IO activity. When registered using
+    :meth:`Broker.start_receive` or :meth:`Broker._start_transmit`, the broker
+    may call any of :meth:`on_receive`, :meth:`on_transmit`,
+    :meth:`on_shutdown` or :meth:`on_disconnect`.
+
+    It is expected that the :class:`Protocol` associated with a stream will
+    change over its life. For example during connection setup, the initial
+    protocol may be :class:`mitogen.parent.BootstrapProtocol` that knows how to
+    enter SSH and sudo passwords and transmit the :mod:`mitogen.core` source to
+    the target, before handing off to :class:`MitogenProtocol` when the target
+    process is initialized.
+
+    Streams connecting to children are in turn aggregated by
+    :class:`mitogen.parent.Connection`, which contains additional logic for
+    managing any child process, and a reference to any separate ``stderr``
+    :class:`Stream` connected to that process.
+    """
+    #: A :class:`Side` representing the stream's receive file descriptor.
+    receive_side = None
+
+    #: A :class:`Side` representing the stream's transmit file descriptor.
+    transmit_side = None
+
+    #: A :class:`Protocol` representing the protocol active on the stream.
+    protocol = None
+
+    #: In parents, the :class:`mitogen.parent.Connection` instance.
+    conn = None
+
+    #: The stream name. This is used in the :meth:`__repr__` output in any log
+    #: messages, it may be any descriptive string.
+    name = u'default'
+
+    def set_protocol(self, protocol):
+        """
+        Bind a :class:`Protocol` to this stream, by updating
+        :attr:`Protocol.stream` to refer to this stream, and updating this
+        stream's :attr:`Stream.protocol` to the refer to the protocol. Any
+        prior protocol's :attr:`Protocol.stream` is set to :data:`None`.
+        """
+        if self.protocol:
+            self.protocol.stream = None
+        self.protocol = protocol
+        self.protocol.stream = self
+
+    def accept(self, rfp, wfp):
+        """
+        Attach a pair of file objects to :attr:`receive_side` and
+        :attr:`transmit_side`, after wrapping them in :class:`Side` instances.
+        :class:`Side` will call :func:`set_nonblock` and :func:`set_cloexec`
+        on the underlying file descriptors during construction.
+
+        The same file object may be used for both sides. The default
+        :meth:`on_disconnect` is handles the possibility that only one
+        descriptor may need to be closed.
+
+        :param file rfp:
+            The file object to receive from.
+        :param file wfp:
+            The file object to transmit to.
+        """
+        self.receive_side = Side(self, rfp)
+        self.transmit_side = Side(self, wfp)
+
+    def __repr__(self):
+        return "<Stream %s #%04x>" % (self.name, id(self) & 0xffff,)
+
+    def on_receive(self, broker):
+        """
+        Invoked by :class:`Broker` when the stream's :attr:`receive_side` has
+        been marked readable using :meth:`Broker.start_receive` and the broker
+        has detected the associated file descriptor is ready for reading.
+
+        Subclasses must implement this if they are registered using
+        :meth:`Broker.start_receive`, and the method must invoke
+        :meth:`on_disconnect` if reading produces an empty string.
+
+        The default implementation reads :attr:`Protocol.read_size` bytes and
+        passes the resulting bytestring to :meth:`Protocol.on_receive`. If the
+        bytestring is 0 bytes, invokes :meth:`on_disconnect` instead.
+        """
+        buf = self.receive_side.read(self.protocol.read_size)
+        if not buf:
+            LOG.debug('%r: empty read, disconnecting', self.receive_side)
+            return self.on_disconnect(broker)
+
+        self.protocol.on_receive(broker, buf)
+
+    def on_transmit(self, broker):
+        """
+        Invoked by :class:`Broker` when the stream's :attr:`transmit_side` has
+        been marked writeable using :meth:`Broker._start_transmit` and the
+        broker has detected the associated file descriptor is ready for
+        writing.
+
+        Subclasses must implement they are ever registerd with
+        :meth:`Broker._start_transmit`.
+
+        The default implementation invokes :meth:`Protocol.on_transmit`.
+        """
+        self.protocol.on_transmit(broker)
+
+    def on_shutdown(self, broker):
+        """
+        Invoked by :meth:`Broker.shutdown` to allow the stream time to
+        gracefully shutdown.
+
+        The default implementation emits a ``shutdown`` signal before
+        invoking :meth:`on_disconnect`.
+        """
+        fire(self, 'shutdown')
+        self.protocol.on_shutdown(broker)
+
+    def on_disconnect(self, broker):
+        """
+        Invoked by :class:`Broker` to force disconnect the stream during
+        shutdown, invoked by the default :meth:`on_shutdown` implementation,
+        and usually invoked by any subclass :meth:`on_receive` implementation
+        in response to a 0-byte read.
+
+        The base implementation fires a ``disconnect`` event, then closes
+        :attr:`receive_side` and :attr:`transmit_side` after unregistering the
+        stream from the broker.
+        """
+        fire(self, 'disconnect')
+        self.protocol.on_disconnect(broker)
+
+
+class Protocol(object):
+    """
+    Implement the program behaviour associated with activity on a
+    :class:`Stream`. The protocol in use may vary over a stream's life, for
+    example to allow :class:`mitogen.parent.BootstrapProtocol` to initialize
+    the connected child before handing it off to :class:`MitogenProtocol`. A
+    stream's active protocol is tracked in the :attr:`Stream.protocol`
+    attribute, and modified via :meth:`Stream.set_protocol`.
+
+    Protocols do not handle IO, they are entirely reliant on the interface
+    provided by :class:`Stream` and :class:`Side`, allowing the underlying IO
+    implementation to be replaced without modifying behavioural logic.
+    """
+    stream_class = Stream
+
+    #: The :class:`Stream` this protocol is currently bound to, or
+    #: :data:`None`.
+    stream = None
+
+    #: The size of the read buffer used by :class:`Stream` when this is the
+    #: active protocol for the stream.
+    read_size = CHUNK_SIZE
+
+    @classmethod
+    def build_stream(cls, *args, **kwargs):
+        stream = cls.stream_class()
+        stream.set_protocol(cls(*args, **kwargs))
+        return stream
+
+    def __repr__(self):
+        return '%s(%s)' % (
+            self.__class__.__name__,
+            self.stream and self.stream.name,
+        )
+
+    def on_shutdown(self, broker):
+        _v and LOG.debug('%r: shutting down', self)
+        self.stream.on_disconnect(broker)
+
+    def on_disconnect(self, broker):
+        # Normally both sides an FD, so it is important that tranmit_side is
+        # deregistered from Poller before closing the receive side, as pollers
+        # like epoll and kqueue unregister all events on FD close, causing
+        # subsequent attempt to unregister the transmit side to fail.
+        LOG.debug('%r: disconnecting', self)
+        broker.stop_receive(self.stream)
+        if self.stream.transmit_side:
+            broker._stop_transmit(self.stream)
+
+        self.stream.receive_side.close()
+        if self.stream.transmit_side:
+            self.stream.transmit_side.close()
+
+
+class DelimitedProtocol(Protocol):
+    """
+    Provide a :meth:`Protocol.on_receive` implementation for protocols that are
+    delimited by a fixed string, like text based protocols. Each message is
+    passed to :meth:`on_line_received` as it arrives, with incomplete messages
+    passed to :meth:`on_partial_line_received`.
+
+    When emulating user input it is often necessary to respond to incomplete
+    lines, such as when a "Password: " prompt is sent.
+    :meth:`on_partial_line_received` may be called repeatedly with an
+    increasingly complete message. When a complete message is finally received,
+    :meth:`on_line_received` will be called once for it before the buffer is
+    discarded.
+
+    If :func:`on_line_received` returns :data:`False`, remaining data is passed
+    unprocessed to the stream's current protocol's :meth:`on_receive`. This
+    allows switching from line-oriented to binary while the input buffer
+    contains both kinds of data.
+    """
+    #: The delimiter. Defaults to newline.
+    delimiter = b('\n')
+    _trailer = b('')
+
+    def on_receive(self, broker, buf):
+        _vv and IOLOG.debug('%r.on_receive()', self)
+        stream = self.stream
+        self._trailer, cont = mitogen.core.iter_split(
+            buf=self._trailer + buf,
+            delim=self.delimiter,
+            func=self.on_line_received,
+        )
+
+        if self._trailer:
+            if cont:
+                self.on_partial_line_received(self._trailer)
+            else:
+                assert stream.protocol is not self
+                stream.protocol.on_receive(broker, self._trailer)
+
+    def on_line_received(self, line):
+        """
+        Receive a line from the stream.
+
+        :param bytes line:
+            The encoded line, excluding the delimiter.
+        :returns:
+            :data:`False` to indicate this invocation modified the stream's
+            active protocol, and any remaining buffered data should be passed
+            to the new protocol's :meth:`on_receive` method.
+
+            Any other return value is ignored.
+        """
+        pass
+
+    def on_partial_line_received(self, line):
+        """
+        Receive a trailing unterminated partial line from the stream.
+
+        :param bytes line:
+            The encoded partial line.
+        """
+        pass
+
+
+class BufferedWriter(object):
+    """
+    Implement buffered output while avoiding quadratic string operations. This
+    is currently constructed by each protocol, in future it may become fixed
+    for each stream instead.
+    """
+    def __init__(self, broker, protocol):
+        self._broker = broker
+        self._protocol = protocol
+        self._buf = collections.deque()
+        self._len = 0
+
+    def write(self, s):
+        """
+        Transmit `s` immediately, falling back to enqueuing it and marking the
+        stream writeable if no OS buffer space is available.
+        """
+        if not self._len:
+            # Modifying epoll/Kqueue state is expensive, as are needless broker
+            # loops. Rather than wait for writeability, just write immediately,
+            # and fall back to the broker loop on error or full buffer.
+            try:
+                n = self._protocol.stream.transmit_side.write(s)
+                if n:
+                    if n == len(s):
+                        return
+                    s = s[n:]
+            except OSError:
+                pass
+
+            self._broker._start_transmit(self._protocol.stream)
+        self._buf.append(s)
+        self._len += len(s)
+
+    def on_transmit(self, broker):
+        """
+        Respond to stream writeability by retrying previously buffered
+        :meth:`write` calls.
+        """
+        if self._buf:
+            buf = self._buf.popleft()
+            written = self._protocol.stream.transmit_side.write(buf)
+            if not written:
+                _v and LOG.debug('disconnected during write to %r', self)
+                self._protocol.stream.on_disconnect(broker)
+                return
+            elif written != len(buf):
+                self._buf.appendleft(BufferType(buf, written))
+
+            _vv and IOLOG.debug('transmitted %d bytes to %r', written, self)
+            self._len -= written
+
+        if not self._buf:
+            broker._stop_transmit(self._protocol.stream)
+
+
 class Side(object):
     """
-    Represent a single side of a :class:`BasicStream`. This exists to allow
-    streams implemented using unidirectional (e.g. UNIX pipe) and bidirectional
-    (e.g. UNIX socket) file descriptors to operate identically.
+    Represent one side of a :class:`Stream`. This allows unidirectional (e.g.
+    pipe) and bidirectional (e.g. socket) streams to operate identically.
+
+    Sides are also responsible for tracking the open/closed state of the
+    underlying FD, preventing erroneous duplicate calls to :func:`os.close` due
+    to duplicate :meth:`Stream.on_disconnect` calls, which would otherwise risk
+    silently succeeding by closing an unrelated descriptor. For this reason, it
+    is crucial only one file object exists per unique descriptor.
 
     :param mitogen.core.Stream stream:
         The stream this side is associated with.
-
-    :param int fd:
-        Underlying file descriptor.
-
+    :param object fp:
+        The file or socket object managing the underlying file descriptor. Any
+        object may be used that supports `fileno()` and `close()` methods.
+    :param bool cloexec:
+        If :data:`True`, the descriptor has its :data:`fcntl.FD_CLOEXEC` flag
+        enabled using :func:`fcntl.fcntl`.
     :param bool keep_alive:
-        Value for :attr:`keep_alive`
-
-    During construction, the file descriptor has its :data:`os.O_NONBLOCK` flag
-    enabled using :func:`fcntl.fcntl`.
+        If :data:`True`, the continued existence of this side will extend the
+        shutdown grace period until it has been unregistered from the broker.
+    :param bool blocking:
+        If :data:`False`, the descriptor has its :data:`os.O_NONBLOCK` flag
+        enabled using :func:`fcntl.fcntl`.
     """
     _fork_refs = weakref.WeakValueDictionary()
+    closed = False
 
-    def __init__(self, stream, fd, cloexec=True, keep_alive=True, blocking=False):
+    def __init__(self, stream, fp, cloexec=True, keep_alive=True, blocking=False):
         #: The :class:`Stream` for which this is a read or write side.
         self.stream = stream
+        # File or socket object responsible for the lifetime of its underlying
+        # file descriptor.
+        self.fp = fp
         #: Integer file descriptor to perform IO on, or :data:`None` if
-        #: :meth:`close` has been called.
-        self.fd = fd
-        self.closed = False
+        #: :meth:`close` has been called. This is saved separately from the
+        #: file object, since :meth:`file.fileno` cannot be called on it after
+        #: it has been closed.
+        self.fd = fp.fileno()
         #: If :data:`True`, causes presence of this side in
         #: :class:`Broker`'s active reader set to defer shutdown until the
         #: side is disconnected.
         self.keep_alive = keep_alive
         self._fork_refs[id(self)] = self
         if cloexec:
-            set_cloexec(fd)
+            set_cloexec(self.fd)
         if not blocking:
-            set_nonblock(fd)
+            set_nonblock(self.fd)
 
     def __repr__(self):
-        return '<Side of %r fd %s>' % (self.stream, self.fd)
+        return '<Side of %s fd %s>' % (
+            self.stream.name or repr(self.stream),
+            self.fd
+        )
 
     @classmethod
     def _on_fork(cls):
@@ -1467,13 +1983,13 @@ class Side(object):
 
     def close(self):
         """
-        Call :func:`os.close` on :attr:`fd` if it is not :data:`None`,
+        Call :meth:`file.close` on :attr:`fp` if it is not :data:`None`,
         then set it to :data:`None`.
         """
+        _vv and IOLOG.debug('%r.close()', self)
         if not self.closed:
-            _vv and IOLOG.debug('%r.close()', self)
             self.closed = True
-            os.close(self.fd)
+            self.fp.close()
 
     def read(self, n=CHUNK_SIZE):
         """
@@ -1486,7 +2002,7 @@ class Side(object):
         in a 0-sized read like a regular file.
 
         :returns:
-            Bytes read, or the empty to string to indicate disconnection was
+            Bytes read, or the empty string to indicate disconnection was
             detected.
         """
         if self.closed:
@@ -1495,7 +2011,7 @@ class Side(object):
             return b('')
         s, disconnected = io_op(os.read, self.fd, n)
         if disconnected:
-            LOG.debug('%r.read(): disconnected: %s', self, disconnected)
+            LOG.debug('%r: disconnected during read: %s', self, disconnected)
             return b('')
         return s
 
@@ -1509,107 +2025,59 @@ class Side(object):
             Number of bytes written, or :data:`None` if disconnection was
             detected.
         """
-        if self.closed or self.fd is None:
-            # Refuse to touch the handle after closed, it may have been reused
-            # by another thread.
+        if self.closed:
+            # Don't touch the handle after close, it may be reused elsewhere.
             return None
 
         written, disconnected = io_op(os.write, self.fd, s)
         if disconnected:
-            LOG.debug('%r.write(): disconnected: %s', self, disconnected)
+            LOG.debug('%r: disconnected during write: %s', self, disconnected)
             return None
         return written
 
 
-class BasicStream(object):
-    #: A :class:`Side` representing the stream's receive file descriptor.
-    receive_side = None
-
-    #: A :class:`Side` representing the stream's transmit file descriptor.
-    transmit_side = None
-
-    def on_receive(self, broker):
-        """
-        Called by :class:`Broker` when the stream's :attr:`receive_side` has
-        been marked readable using :meth:`Broker.start_receive` and the broker
-        has detected the associated file descriptor is ready for reading.
-
-        Subclasses must implement this if :meth:`Broker.start_receive` is ever
-        called on them, and the method must call :meth:`on_disconect` if
-        reading produces an empty string.
-        """
-        pass
-
-    def on_transmit(self, broker):
-        """
-        Called by :class:`Broker` when the stream's :attr:`transmit_side`
-        has been marked writeable using :meth:`Broker._start_transmit` and
-        the broker has detected the associated file descriptor is ready for
-        writing.
-
-        Subclasses must implement this if :meth:`Broker._start_transmit` is
-        ever called on them.
-        """
-        pass
-
-    def on_shutdown(self, broker):
-        """
-        Called by :meth:`Broker.shutdown` to allow the stream time to
-        gracefully shutdown. The base implementation simply called
-        :meth:`on_disconnect`.
-        """
-        _v and LOG.debug('%r.on_shutdown()', self)
-        fire(self, 'shutdown')
-        self.on_disconnect(broker)
-
-    def on_disconnect(self, broker):
-        """
-        Called by :class:`Broker` to force disconnect the stream. The base
-        implementation simply closes :attr:`receive_side` and
-        :attr:`transmit_side` and unregisters the stream from the broker.
-        """
-        LOG.debug('%r.on_disconnect()', self)
-        if self.receive_side:
-            broker.stop_receive(self)
-            self.receive_side.close()
-        if self.transmit_side:
-            broker._stop_transmit(self)
-            self.transmit_side.close()
-        fire(self, 'disconnect')
-
-
-class Stream(BasicStream):
+class MitogenProtocol(Protocol):
     """
-    :class:`BasicStream` subclass implementing mitogen's :ref:`stream
-    protocol <stream-protocol>`.
+    :class:`Protocol` implementing mitogen's :ref:`stream protocol
+    <stream-protocol>`.
     """
-    #: If not :data:`None`, :class:`Router` stamps this into
-    #: :attr:`Message.auth_id` of every message received on this stream.
-    auth_id = None
-
     #: If not :data:`False`, indicates the stream has :attr:`auth_id` set and
     #: its value is the same as :data:`mitogen.context_id` or appears in
     #: :data:`mitogen.parent_ids`.
     is_privileged = False
 
-    def __init__(self, router, remote_id, **kwargs):
+    def __init__(self, router, remote_id, auth_id=None,
+                 local_id=None, parent_ids=None):
         self._router = router
         self.remote_id = remote_id
-        self.name = u'default'
+        #: If not :data:`None`, :class:`Router` stamps this into
+        #: :attr:`Message.auth_id` of every message received on this stream.
+        self.auth_id = auth_id
+
+        if parent_ids is None:
+            parent_ids = mitogen.parent_ids
+        if local_id is None:
+            local_id = mitogen.context_id
+
+        self.is_privileged = (
+            (remote_id in parent_ids) or
+            auth_id in ([local_id] + parent_ids)
+        )
         self.sent_modules = set(['mitogen', 'mitogen.core'])
-        self.construct(**kwargs)
         self._input_buf = collections.deque()
-        self._output_buf = collections.deque()
         self._input_buf_len = 0
-        self._output_buf_len = 0
+        self._writer = BufferedWriter(router.broker, self)
+
         #: Routing records the dst_id of every message arriving from this
         #: stream. Any arriving DEL_ROUTE is rebroadcast for any such ID.
         self.egress_ids = set()
 
-    def construct(self):
-        pass
-
-    def _internal_receive(self, broker, buf):
+    def on_receive(self, broker, buf):
+        """
+        Handle the next complete message on the stream. Raise
+        :class:`StreamError` on failure.
+        """
+        _vv and IOLOG.debug('%r.on_receive()', self)
         if self._input_buf and self._input_buf_len < 128:
             self._input_buf[0] += buf
         else:
@@ -1619,60 +2087,45 @@ class Stream(BasicStream):
         while self._receive_one(broker):
             pass
 
-    def on_receive(self, broker):
-        """Handle the next complete message on the stream. Raise
-        :class:`StreamError` on failure."""
-        _vv and IOLOG.debug('%r.on_receive()', self)
-
-        buf = self.receive_side.read()
-        if not buf:
-            return self.on_disconnect(broker)
-
-        self._internal_receive(broker, buf)
-
-    HEADER_FMT = '>hLLLLLL'
-    HEADER_LEN = struct.calcsize(HEADER_FMT)
-    HEADER_MAGIC = 0x4d49  # 'MI'
-
     corrupt_msg = (
-        'Corruption detected: frame signature incorrect. This likely means '
-        'some external process is interfering with the connection. Received:'
+        '%s: Corruption detected: frame signature incorrect. This likely means'
+        ' some external process is interfering with the connection. Received:'
         '\n\n'
         '%r'
     )
 
     def _receive_one(self, broker):
-        if self._input_buf_len < self.HEADER_LEN:
+        if self._input_buf_len < Message.HEADER_LEN:
             return False
 
         msg = Message()
         msg.router = self._router
         (magic, msg.dst_id, msg.src_id, msg.auth_id,
          msg.handle, msg.reply_to, msg_len) = struct.unpack(
-            self.HEADER_FMT,
-            self._input_buf[0][:self.HEADER_LEN],
+            Message.HEADER_FMT,
+            self._input_buf[0][:Message.HEADER_LEN],
         )
 
-        if magic != self.HEADER_MAGIC:
-            LOG.error(self.corrupt_msg, self._input_buf[0][:2048])
-            self.on_disconnect(broker)
+        if magic != Message.HEADER_MAGIC:
+            LOG.error(self.corrupt_msg, self.stream.name, self._input_buf[0][:2048])
+            self.stream.on_disconnect(broker)
             return False
 
         if msg_len > self._router.max_message_size:
-            LOG.error('Maximum message size exceeded (got %d, max %d)',
-                      msg_len, self._router.max_message_size)
-            self.on_disconnect(broker)
+            LOG.error('%r: Maximum message size exceeded (got %d, max %d)',
+                      self, msg_len, self._router.max_message_size)
+            self.stream.on_disconnect(broker)
             return False
 
-        total_len = msg_len + self.HEADER_LEN
+        total_len = msg_len + Message.HEADER_LEN
         if self._input_buf_len < total_len:
             _vv and IOLOG.debug(
                 '%r: Input too short (want %d, got %d)',
-                self, msg_len, self._input_buf_len - self.HEADER_LEN
+                self, msg_len, self._input_buf_len - Message.HEADER_LEN
             )
             return False
 
-        start = self.HEADER_LEN
+        start = Message.HEADER_LEN
         prev_start = start
         remain = total_len
         bits = []
@@ -1687,7 +2140,7 @@ class Stream(BasicStream):
         msg.data = b('').join(bits)
         self._input_buf.appendleft(buf[prev_start+len(bit):])
         self._input_buf_len -= total_len
-        self._router._async_route(msg, self)
+        self._router._async_route(msg, self.stream)
         return True
 
     def pending_bytes(self):
@@ -1699,68 +2152,31 @@ class Stream(BasicStream):
         For an accurate result, this method should be called from the Broker
         thread, for example by using :meth:`Broker.defer_sync`.
         """
-        return self._output_buf_len
+        return self._writer._len
 
     def on_transmit(self, broker):
-        """Transmit buffered messages."""
+        """
+        Transmit buffered messages.
+        """
         _vv and IOLOG.debug('%r.on_transmit()', self)
-
-        if self._output_buf:
-            buf = self._output_buf.popleft()
-            written = self.transmit_side.write(buf)
-            if not written:
-                _v and LOG.debug('%r.on_transmit(): disconnection detected', self)
-                self.on_disconnect(broker)
-                return
-            elif written != len(buf):
-                self._output_buf.appendleft(BufferType(buf, written))
-
-            _vv and IOLOG.debug('%r.on_transmit() -> len %d', self, written)
-            self._output_buf_len -= written
-
-        if not self._output_buf:
-            broker._stop_transmit(self)
+        self._writer.on_transmit(broker)
 
     def _send(self, msg):
         _vv and IOLOG.debug('%r._send(%r)', self, msg)
-        pkt = struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, msg.dst_id,
-                          msg.src_id, msg.auth_id, msg.handle,
-                          msg.reply_to or 0, len(msg.data)) + msg.data
-
-        if not self._output_buf_len:
-            # Modifying epoll/Kqueue state is expensive, as are needless broker
-            # loops. Rather than wait for writeability, just write immediately,
-            # and fall back to the broker loop on error or full buffer.
-            try:
-                n = self.transmit_side.write(pkt)
-                if n:
-                    if n == len(pkt):
-                        return
-                    pkt = pkt[n:]
-            except OSError:
-                pass
-
-            self._router.broker._start_transmit(self)
-        self._output_buf.append(pkt)
-        self._output_buf_len += len(pkt)
+        self._writer.write(msg.pack())
 
     def send(self, msg):
-        """Send `data` to `handle`, and tell the broker we have output. May
-        be called from any thread."""
+        """
+        Send `data` to `handle`, and tell the broker we have output. May be
+        called from any thread.
+        """
         self._router.broker.defer(self._send, msg)
 
     def on_shutdown(self, broker):
-        """Override BasicStream behaviour of immediately disconnecting."""
-        _v and LOG.debug('%r.on_shutdown(%r)', self, broker)
-
-    def accept(self, rfd, wfd):
-        # TODO: what is this os.dup for?
-        self.receive_side = Side(self, os.dup(rfd))
-        self.transmit_side = Side(self, os.dup(wfd))
-
-    def __repr__(self):
-        cls = type(self)
-        return "%s.%s('%s')" % (cls.__module__, cls.__name__, self.name)
+        """
+        Disable :class:`Protocol` immediate disconnect behaviour.
+        """
+        _v and LOG.debug('%r: shutting down', self)
 
 
 class Context(object):
@@ -1779,28 +2195,27 @@ class Context(object):
     explicitly, as that method is deduplicating, and returns the only context
     instance :ref:`signals` will be raised on.
 
-    :param Router router:
+    :param mitogen.core.Router router:
         Router to emit messages through.
     :param int context_id:
         Context ID.
     :param str name:
         Context name.
     """
+    name = None
     remote_name = None
 
     def __init__(self, router, context_id, name=None):
         self.router = router
         self.context_id = context_id
-        self.name = name
+        if name:
+            self.name = to_text(name)
 
     def __reduce__(self):
-        name = self.name
-        if name and not isinstance(name, UnicodeType):
-            name = UnicodeType(name, 'utf-8')
-        return _unpickle_context, (self.context_id, name)
+        return _unpickle_context, (self.context_id, self.name)
 
     def on_disconnect(self):
-        _v and LOG.debug('%r.on_disconnect()', self)
+        _v and LOG.debug('%r: disconnecting', self)
         fire(self, 'disconnect')
 
     def send_async(self, msg, persist=False):
@@ -1821,20 +2236,17 @@ class Context(object):
             :class:`Receiver` configured to receive any replies sent to the
             message's `reply_to` handle.
         """
-        if self.router.broker._thread == threading.currentThread():  # TODO
-            raise SystemError('Cannot making blocking call on broker thread')
-
         receiver = Receiver(self.router, persist=persist, respondent=self)
         msg.dst_id = self.context_id
         msg.reply_to = receiver.handle
 
-        _v and LOG.debug('%r.send_async(%r)', self, msg)
+        _v and LOG.debug('sending message to %r: %r', self, msg)
         self.send(msg)
         return receiver
 
     def call_service_async(self, service_name, method_name, **kwargs):
-        _v and LOG.debug('%r.call_service_async(%r, %r, %r)',
-                         self, service_name, method_name, kwargs)
+        _v and LOG.debug('calling service %s.%s of %r, args: %r',
+                         service_name, method_name, self, kwargs)
         if isinstance(service_name, BytesType):
             service_name = service_name.encode('utf-8')
         elif not isinstance(service_name, UnicodeType):
@@ -1942,7 +2354,7 @@ class Poller(object):
         self._wfds = {}
 
     def __repr__(self):
-        return '%s(%#x)' % (type(self).__name__, id(self))
+        return '%s' % (type(self).__name__,)
 
     def _update(self, fd):
         """
@@ -2025,9 +2437,6 @@ class Poller(object):
             if gen and gen < self._generation:
                 yield data
 
-        if timeout:
-            timeout *= 1000
-
     def poll(self, timeout=None):
         """
         Block the calling thread until one or more FDs are ready for IO.
@@ -2059,8 +2468,18 @@ class Latch(object):
 
     See :ref:`waking-sleeping-threads` for further discussion.
     """
+    #: The :class:`Poller` implementation to use for waiting. Since the poller
+    #: will be very short-lived, we prefer :class:`mitogen.parent.PollPoller`
+    #: if it is available, or :class:`mitogen.core.Poller` otherwise, since
+    #: these implementations require no system calls to create, configure or
+    #: destroy.
     poller_class = Poller
 
+    #: If not :data:`None`, a function invoked as `notify(latch)` after a
+    #: successful call to :meth:`put`. The function is invoked on the
+    #: :meth:`put` caller's thread, which may be the :class:`Broker` thread,
+    #: therefore it must not block. Used by :class:`mitogen.select.Select` to
+    #: efficiently implement waiting on multiple event sources.
     notify = None
 
     # The _cls_ prefixes here are to make it crystal clear in the code which
@@ -2113,19 +2532,17 @@ class Latch(object):
         finally:
             self._lock.release()
 
-    def empty(self):
+    def size(self):
         """
-        Return :data:`True` if calling :meth:`get` would block.
+        Return the number of items currently buffered.
 
-        As with :class:`Queue.Queue`, :data:`True` may be returned even
-        though a subsequent call to :meth:`get` will succeed, since a
-        message may be posted at any moment between :meth:`empty` and
-        :meth:`get`.
+        As with :class:`Queue.Queue`, `0` may be returned even though a
+        subsequent call to :meth:`get` will succeed, since a message may be
+        posted at any moment between :meth:`size` and :meth:`get`.
 
-        As with :class:`Queue.Queue`, :data:`False` may be returned even
-        though a subsequent call to :meth:`get` will block, since another
-        waiting thread may be woken at any moment between :meth:`empty` and
-        :meth:`get`.
+        As with :class:`Queue.Queue`, `>0` may be returned even though a
+        subsequent call to :meth:`get` will block, since another waiting thread
+        may be woken at any moment between :meth:`size` and :meth:`get`.
 
         :raises LatchError:
             The latch has already been marked closed.
@@ -2134,9 +2551,21 @@ class Latch(object):
         try:
             if self.closed:
                 raise LatchError()
-            return len(self._queue) == 0
+            return len(self._queue)
         finally:
             self._lock.release()
+
+    def empty(self):
+        """
+        Return `size() == 0`.
+
+        .. deprecated:: 0.2.8
+           Use :meth:`size` instead.
+
+        :raises LatchError:
+            The latch has already been marked closed.
+        """
+        return self.size() == 0
 
     def _get_socketpair(self):
         """
@@ -2215,7 +2644,7 @@ class Latch(object):
         :meth:`put` to write a byte to our socket pair.
         """
         _vv and IOLOG.debug(
-            '%r._get_sleep(timeout=%r, block=%r, rfd=%d, wfd=%d)',
+            '%r._get_sleep(timeout=%r, block=%r, fd=%d/%d)',
             self, timeout, block, rsock.fileno(), wsock.fileno()
         )
 
@@ -2270,16 +2699,19 @@ class Latch(object):
                 raise LatchError()
             self._queue.append(obj)
 
+            wsock = None
             if self._waking < len(self._sleeping):
                 wsock, cookie = self._sleeping[self._waking]
                 self._waking += 1
                 _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, wsock.fileno())
-                self._wake(wsock, cookie)
             elif self.notify:
                 self.notify(self)
         finally:
             self._lock.release()
+
+        if wsock:
+            self._wake(wsock, cookie)
 
     def _wake(self, wsock, cookie):
         written, disconnected = io_op(os.write, wsock.fileno(), cookie)
@@ -2293,30 +2725,32 @@ class Latch(object):
         )
 
 
-class Waker(BasicStream):
+class Waker(Protocol):
     """
-    :class:`BasicStream` subclass implementing the `UNIX self-pipe trick`_.
-    Used to wake the multiplexer when another thread needs to modify its state
-    (via a cross-thread function call).
+    :class:`Protocol` implementing the `UNIX self-pipe trick`_. Used to wake
+    :class:`Broker` when another thread needs to modify its state, by enqueing
+    a function call to run on the :class:`Broker` thread.
 
     .. _UNIX self-pipe trick: https://cr.yp.to/docs/selfpipe.html
     """
+    read_size = 1
     broker_ident = None
+
+    @classmethod
+    def build_stream(cls, broker):
+        stream = super(Waker, cls).build_stream(broker)
+        stream.accept(*pipe())
+        return stream
 
     def __init__(self, broker):
         self._broker = broker
         self._lock = threading.Lock()
         self._deferred = []
 
-        rfd, wfd = os.pipe()
-        self.receive_side = Side(self, rfd)
-        self.transmit_side = Side(self, wfd)
-
     def __repr__(self):
-        return 'Waker(%r rfd=%r, wfd=%r)' % (
-            self._broker,
-            self.receive_side and self.receive_side.fd,
-            self.transmit_side and self.transmit_side.fd,
+        return 'Waker(fd=%r/%r)' % (
+            self.stream.receive_side and self.stream.receive_side.fd,
+            self.stream.transmit_side and self.stream.transmit_side.fd,
         )
 
     @property
@@ -2330,7 +2764,7 @@ class Waker(BasicStream):
         finally:
             self._lock.release()
 
-    def on_receive(self, broker):
+    def on_receive(self, broker, buf):
         """
         Drain the pipe and fire callbacks. Since :attr:`_deferred` is
         synchronized, :meth:`defer` and :meth:`on_receive` can conspire to
@@ -2339,7 +2773,6 @@ class Waker(BasicStream):
         _vv and IOLOG.debug('%r.on_receive()', self)
         self._lock.acquire()
         try:
-            self.receive_side.read(1)
             deferred = self._deferred
             self._deferred = []
         finally:
@@ -2351,7 +2784,7 @@ class Waker(BasicStream):
             except Exception:
                 LOG.exception('defer() crashed: %r(*%r, **%r)',
                               func, args, kwargs)
-                self._broker.shutdown()
+                broker.shutdown()
 
     def _wake(self):
         """
@@ -2359,7 +2792,7 @@ class Waker(BasicStream):
         teardown, the FD may already be closed, so ignore EBADF.
         """
         try:
-            self.transmit_side.write(b(' '))
+            self.stream.transmit_side.write(b(' '))
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] != errno.EBADF:
@@ -2386,65 +2819,74 @@ class Waker(BasicStream):
         if self._broker._exitted:
             raise Error(self.broker_shutdown_msg)
 
-        _vv and IOLOG.debug('%r.defer() [fd=%r]', self, self.transmit_side.fd)
+        _vv and IOLOG.debug('%r.defer() [fd=%r]', self,
+                            self.stream.transmit_side.fd)
         self._lock.acquire()
         try:
-            if not self._deferred:
-                self._wake()
+            should_wake = not self._deferred
             self._deferred.append((func, args, kwargs))
         finally:
             self._lock.release()
 
+        if should_wake:
+            self._wake()
 
-class IoLogger(BasicStream):
+
+class IoLoggerProtocol(DelimitedProtocol):
     """
-    :class:`BasicStream` subclass that sets up redirection of a standard
-    UNIX file descriptor back into the Python :mod:`logging` package.
+    Attached to one end of a socket pair whose other end overwrites one of the
+    standard ``stdout`` or ``stderr`` file descriptors in a child context.
+    Received data is split up into lines, decoded as UTF-8 and logged to the
+    :mod:`logging` package as either the ``stdout`` or ``stderr`` logger.
+
+    Logging in child contexts is in turn forwarded to the master process using
+    :class:`LogHandler`.
     """
-    _buf = ''
+    @classmethod
+    def build_stream(cls, name, dest_fd):
+        """
+        Even though the file descriptor `dest_fd` will hold the opposite end of
+        the socket open, we must keep a separate dup() of it (i.e. wsock) in
+        case some code decides to overwrite `dest_fd` later, which would
+        prevent break :meth:`on_shutdown` from calling :meth:`shutdown()
+        <socket.socket.shutdown>` on it.
+        """
+        rsock, wsock = socket.socketpair()
+        os.dup2(wsock.fileno(), dest_fd)
+        stream = super(IoLoggerProtocol, cls).build_stream(name)
+        stream.name = name
+        stream.accept(rsock, wsock)
+        return stream
 
-    def __init__(self, broker, name, dest_fd):
-        self._broker = broker
-        self._name = name
-        self._rsock, self._wsock = socket.socketpair()
-        os.dup2(self._wsock.fileno(), dest_fd)
-        set_cloexec(self._wsock.fileno())
-
+    def __init__(self, name):
         self._log = logging.getLogger(name)
         # #453: prevent accidental log initialization in a child creating a
         # feedback loop.
         self._log.propagate = False
         self._log.handlers = logging.getLogger().handlers[:]
 
-        self.receive_side = Side(self, self._rsock.fileno())
-        self.transmit_side = Side(self, dest_fd, cloexec=False, blocking=True)
-        self._broker.start_receive(self)
-
-    def __repr__(self):
-        return '<IoLogger %s>' % (self._name,)
-
-    def _log_lines(self):
-        while self._buf.find('\n') != -1:
-            line, _, self._buf = str_partition(self._buf, '\n')
-            self._log.info('%s', line.rstrip('\n'))
-
     def on_shutdown(self, broker):
-        """Shut down the write end of the logging socket."""
-        _v and LOG.debug('%r.on_shutdown()', self)
+        """
+        Shut down the write end of the socket, preventing any further writes to
+        it by this process, or subprocess that inherited it. This allows any
+        remaining kernel-buffered data to be drained during graceful shutdown
+        without the buffer continuously refilling due to some out of control
+        child process.
+        """
+        _v and LOG.debug('%r: shutting down', self)
         if not IS_WSL:
-            # #333: WSL generates invalid readiness indication on shutdown()
-            self._wsock.shutdown(socket.SHUT_WR)
-        self._wsock.close()
-        self.transmit_side.close()
+            # #333: WSL generates invalid readiness indication on shutdown().
+            # This modifies the *kernel object* inherited by children, causing
+            # EPIPE on subsequent writes to any dupped FD in any process. The
+            # read side can then drain completely of prior buffered data.
+            self.stream.transmit_side.fp.shutdown(socket.SHUT_WR)
+        self.stream.transmit_side.close()
 
-    def on_receive(self, broker):
-        _vv and IOLOG.debug('%r.on_receive()', self)
-        buf = self.receive_side.read()
-        if not buf:
-            return self.on_disconnect(broker)
-
-        self._buf += buf.decode('latin1')
-        self._log_lines()
+    def on_line_received(self, line):
+        """
+        Decode the received line as UTF-8 and pass it to the logging framework.
+        """
+        self._log.info('%s', line.decode('utf-8', 'replace'))
 
 
 class Router(object):
@@ -2456,7 +2898,12 @@ class Router(object):
     **Note:** This is the somewhat limited core version of the Router class
     used by child contexts. The master subclass is documented below this one.
     """
+    #: The :class:`mitogen.core.Context` subclass to use when constructing new
+    #: :class:`Context` objects in :meth:`myself` and :meth:`context_by_id`.
+    #: Permits :class:`Router` subclasses to extend the :class:`Context`
+    #: interface, as done in :class:`mitogen.parent.Router`.
     context_class = Context
+
     max_message_size = 128 * 1048576
 
     #: When :data:`True`, permit children to only communicate with the current
@@ -2475,6 +2922,18 @@ class Router(object):
     #: :meth:`local() <mitogen.master.Router.local>` `unidirectional`
     #: parameter.
     unidirectional = False
+
+    duplicate_handle_msg = 'cannot register a handle that already exists'
+    refused_msg = 'refused by policy'
+    invalid_handle_msg = 'invalid handle'
+    too_large_msg = 'message too large (max %d bytes)'
+    respondent_disconnect_msg = 'the respondent Context has disconnected'
+    broker_exit_msg = 'Broker has exitted'
+    no_route_msg = 'no route to %r, my ID is %r'
+    unidirectional_msg = (
+        'routing mode prevents forward of message from context %d to '
+        'context %d via context %d'
+    )
 
     def __init__(self, broker):
         self.broker = broker
@@ -2514,12 +2973,13 @@ class Router(object):
         corresponding :attr:`_context_by_id` member. This is replaced by
         :class:`mitogen.parent.RouteMonitor` in an upgraded context.
         """
-        LOG.error('%r._on_del_route() %r', self, msg)
         if msg.is_dead:
             return
 
         target_id_s, _, name = bytes_partition(msg.data, b(':'))
         target_id = int(target_id_s, 10)
+        LOG.error('%r: deleting route to %s (%d)',
+                  self, to_text(name), target_id)
         context = self._context_by_id.get(target_id)
         if context:
             fire(context, 'disconnect')
@@ -2542,16 +3002,21 @@ class Router(object):
         for context in notify:
             context.on_disconnect()
 
-    broker_exit_msg = 'Broker has exitted'
-
     def _on_broker_exit(self):
+        """
+        Called prior to broker exit, informs callbacks registered with
+        :meth:`add_handler` the connection is dead.
+        """
+        _v and LOG.debug('%r: broker has exitted', self)
         while self._handle_map:
             _, (_, func, _, _) = self._handle_map.popitem()
             func(Message.dead(self.broker_exit_msg))
 
     def myself(self):
         """
-        Return a :class:`Context` referring to the current process.
+        Return a :class:`Context` referring to the current process. Since
+        :class:`Context` is serializable, this is convenient to use in remote
+        function call parameter lists.
         """
         return self.context_class(
             router=self,
@@ -2561,8 +3026,25 @@ class Router(object):
 
     def context_by_id(self, context_id, via_id=None, create=True, name=None):
         """
-        Messy factory/lookup function to find a context by its ID, or construct
-        it. This will eventually be replaced by a more sensible interface.
+        Return or construct a :class:`Context` given its ID. An internal
+        mapping of ID to the canonical :class:`Context` representing that ID,
+        so that :ref:`signals` can be raised.
+
+        This may be called from any thread, lookup and construction are atomic.
+
+        :param int context_id:
+            The context ID to look up.
+        :param int via_id:
+            If the :class:`Context` does not already exist, set its
+            :attr:`Context.via` to the :class:`Context` matching this ID.
+        :param bool create:
+            If the :class:`Context` does not already exist, create it.
+        :param str name:
+            If the :class:`Context` does not already exist, set its name.
+
+        :returns:
+            :class:`Context`, or return :data:`None` if `create` is
+            :data:`False` and no :class:`Context` previously existed.
         """
         context = self._context_by_id.get(context_id)
         if context:
@@ -2591,7 +3073,8 @@ class Router(object):
         the stream's receive side to the I/O multiplexer. This method remains
         public while the design has not yet settled.
         """
-        _v and LOG.debug('register(%r, %r)', context, stream)
+        _v and LOG.debug('%s: registering %r to stream %r',
+                         self, context, stream)
         self._write_lock.acquire()
         try:
             self._stream_by_id[context.context_id] = stream
@@ -2606,7 +3089,13 @@ class Router(object):
         """
         Return the :class:`Stream` that should be used to communicate with
         `dst_id`. If a specific route for `dst_id` is not known, a reference to
-        the parent context's stream is returned.
+        the parent context's stream is returned. If the parent is disconnected,
+        or when running in the master context, return :data:`None` instead.
+
+        This can be used from any thread, but its output is only meaningful
+        from the context of the :class:`Broker` thread, as disconnection or
+        replacement could happen in parallel on the broker thread at any
+        moment. 
         """
         return (
             self._stream_by_id.get(dst_id) or
@@ -2642,7 +3131,7 @@ class Router(object):
             If :data:`False`, the handler will be unregistered after a single
             message has been received.
 
-        :param Context respondent:
+        :param mitogen.core.Context respondent:
             Context that messages to this handle are expected to be sent from.
             If specified, arranges for a dead message to be delivered to `fn`
             when disconnection of the context is detected.
@@ -2696,55 +3185,61 @@ class Router(object):
 
         return handle
 
-    duplicate_handle_msg = 'cannot register a handle that is already exists'
-    refused_msg = 'refused by policy'
-    invalid_handle_msg = 'invalid handle'
-    too_large_msg = 'message too large (max %d bytes)'
-    respondent_disconnect_msg = 'the respondent Context has disconnected'
-    broker_shutdown_msg = 'Broker is shutting down'
-    no_route_msg = 'no route to %r, my ID is %r'
-    unidirectional_msg = (
-        'routing mode prevents forward of message from context %d via '
-        'context %d'
-    )
-
     def _on_respondent_disconnect(self, context):
         for handle in self._handles_by_respondent.pop(context, ()):
             _, fn, _, _  = self._handle_map[handle]
             fn(Message.dead(self.respondent_disconnect_msg))
             del self._handle_map[handle]
 
-    def on_shutdown(self, broker):
-        """Called during :meth:`Broker.shutdown`, informs callbacks registered
-        with :meth:`add_handle_cb` the connection is dead."""
-        _v and LOG.debug('%r.on_shutdown(%r)', self, broker)
-        fire(self, 'shutdown')
-        for handle, (persist, fn) in self._handle_map.iteritems():
-            _v and LOG.debug('%r.on_shutdown(): killing %r: %r', self, handle, fn)
-            fn(Message.dead(self.broker_shutdown_msg))
+    def _maybe_send_dead(self, unreachable, msg, reason, *args):
+        """
+        Send a dead message to either the original sender or the intended
+        recipient of `msg`, if the original sender was expecting a reply
+        (because its `reply_to` was set), otherwise assume the message is a
+        reply of some sort, and send the dead message to the original
+        destination.
 
-    def _maybe_send_dead(self, msg, reason, *args):
+        :param bool unreachable:
+            If :data:`True`, the recipient is known to be dead or routing
+            failed due to a security precaution, so don't attempt to fallback
+            to sending the dead message to the recipient if the original sender
+            did not include a reply address.
+        :param mitogen.core.Message msg:
+            Message that triggered the dead message.
+        :param str reason:
+            Human-readable error reason.
+        :param tuple args:
+            Elements to interpolate with `reason`.
+        """
         if args:
             reason %= args
         LOG.debug('%r: %r is dead: %r', self, msg, reason)
         if msg.reply_to and not msg.is_dead:
             msg.reply(Message.dead(reason=reason), router=self)
+        elif not unreachable:
+            self._async_route(
+                Message.dead(
+                    dst_id=msg.dst_id,
+                    handle=msg.handle,
+                    reason=reason,
+                )
+            )
 
     def _invoke(self, msg, stream):
         # IOLOG.debug('%r._invoke(%r)', self, msg)
         try:
             persist, fn, policy, respondent = self._handle_map[msg.handle]
         except KeyError:
-            self._maybe_send_dead(msg, reason=self.invalid_handle_msg)
+            self._maybe_send_dead(True, msg, reason=self.invalid_handle_msg)
             return
 
         if respondent and not (msg.is_dead or
                                msg.src_id == respondent.context_id):
-            self._maybe_send_dead(msg, 'reply from unexpected context')
+            self._maybe_send_dead(True, msg, 'reply from unexpected context')
             return
 
         if policy and not policy(msg, stream):
-            self._maybe_send_dead(msg, self.refused_msg)
+            self._maybe_send_dead(True, msg, self.refused_msg)
             return
 
         if not persist:
@@ -2772,52 +3267,69 @@ class Router(object):
         _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
 
         if len(msg.data) > self.max_message_size:
-            self._maybe_send_dead(msg, self.too_large_msg % (
+            self._maybe_send_dead(False, msg, self.too_large_msg % (
                 self.max_message_size,
             ))
             return
 
-        # Perform source verification.
+        parent_stream = self._stream_by_id.get(mitogen.parent_id)
+        src_stream = self._stream_by_id.get(msg.src_id, parent_stream)
+
+        # When the ingress stream is known, verify the message was received on
+        # the same as the stream we would expect to receive messages from the
+        # src_id and auth_id. This is like Reverse Path Filtering in IP, and
+        # ensures messages from a privileged context cannot be spoofed by a
+        # child.
         if in_stream:
-            parent = self._stream_by_id.get(mitogen.parent_id)
-            expect = self._stream_by_id.get(msg.auth_id, parent)
-            if in_stream != expect:
+            auth_stream = self._stream_by_id.get(msg.auth_id, parent_stream)
+            if in_stream != auth_stream:
                 LOG.error('%r: bad auth_id: got %r via %r, not %r: %r',
-                          self, msg.auth_id, in_stream, expect, msg)
+                          self, msg.auth_id, in_stream, auth_stream, msg)
                 return
 
-            if msg.src_id != msg.auth_id:
-                expect = self._stream_by_id.get(msg.src_id, parent)
-                if in_stream != expect:
-                    LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
-                              self, msg.src_id, in_stream, expect, msg)
-                    return
+            if msg.src_id != msg.auth_id and in_stream != src_stream:
+                LOG.error('%r: bad src_id: got %r via %r, not %r: %r',
+                          self, msg.src_id, in_stream, src_stream, msg)
+                return
 
-            if in_stream.auth_id is not None:
-                msg.auth_id = in_stream.auth_id
+            # If the stream's MitogenProtocol has auth_id set, copy it to the
+            # message. This allows subtrees to become privileged by stamping a
+            # parent's context ID. It is used by mitogen.unix to mark client
+            # streams (like Ansible WorkerProcess) as having the same rights as
+            # the parent.
+            if in_stream.protocol.auth_id is not None:
+                msg.auth_id = in_stream.protocol.auth_id
 
-            # Maintain a set of IDs the source ever communicated with.
-            in_stream.egress_ids.add(msg.dst_id)
+            # Record the IDs the source ever communicated with.
+            in_stream.protocol.egress_ids.add(msg.dst_id)
 
         if msg.dst_id == mitogen.context_id:
             return self._invoke(msg, in_stream)
 
         out_stream = self._stream_by_id.get(msg.dst_id)
-        if out_stream is None:
-            out_stream = self._stream_by_id.get(mitogen.parent_id)
+        if (not out_stream) and (parent_stream != src_stream or not in_stream):
+            # No downstream route exists. The message could be from a child or
+            # ourselves for a parent, in which case we must forward it
+            # upstream, or it could be from a parent for a dead child, in which
+            # case its src_id/auth_id would fail verification if returned to
+            # the parent, so in that case reply with a dead message instead.
+            out_stream = parent_stream
 
         if out_stream is None:
-            self._maybe_send_dead(msg, self.no_route_msg,
+            self._maybe_send_dead(True, msg, self.no_route_msg,
                                   msg.dst_id, mitogen.context_id)
             return
 
         if in_stream and self.unidirectional and not \
-                (in_stream.is_privileged or out_stream.is_privileged):
-            self._maybe_send_dead(msg, self.unidirectional_msg,
-                in_stream.remote_id, out_stream.remote_id)
+                (in_stream.protocol.is_privileged or
+                 out_stream.protocol.is_privileged):
+            self._maybe_send_dead(True, msg, self.unidirectional_msg,
+                                  in_stream.protocol.remote_id,
+                                  out_stream.protocol.remote_id,
+                                  mitogen.context_id)
             return
 
-        out_stream._send(msg)
+        out_stream.protocol._send(msg)
 
     def route(self, msg):
         """
@@ -2832,16 +3344,25 @@ class Router(object):
         self.broker.defer(self._async_route, msg)
 
 
+class NullTimerList(object):
+    def get_timeout(self):
+        return None
+
+
 class Broker(object):
     """
     Responsible for handling I/O multiplexing in a private thread.
 
-    **Note:** This is the somewhat limited core version of the Broker class
-    used by child contexts. The master subclass is documented below.
+    **Note:** This somewhat limited core version is used by children. The
+    master subclass is documented below.
     """
     poller_class = Poller
     _waker = None
     _thread = None
+
+    # :func:`mitogen.parent._upgrade_broker` replaces this with
+    # :class:`mitogen.parent.TimerList` during upgrade.
+    timers = NullTimerList()
 
     #: Seconds grace to allow :class:`streams <Stream>` to shutdown gracefully
     #: before force-disconnecting them during :meth:`shutdown`.
@@ -2850,11 +3371,11 @@ class Broker(object):
     def __init__(self, poller_class=None, activate_compat=True):
         self._alive = True
         self._exitted = False
-        self._waker = Waker(self)
+        self._waker = Waker.build_stream(self)
         #: Arrange for `func(\*args, \**kwargs)` to be executed on the broker
         #: thread, or immediately if the current thread is the broker thread.
         #: Safe to call from any thread.
-        self.defer = self._waker.defer
+        self.defer = self._waker.protocol.defer
         self.poller = self.poller_class()
         self.poller.start_receive(
             self._waker.receive_side.fd,
@@ -2877,7 +3398,7 @@ class Broker(object):
         if sys.version_info < (2, 6):
             # import_module() is used to avoid dep scanner.
             os_fork = import_module('mitogen.os_fork')
-            mitogen.os_fork._notice_broker_or_pool(self)
+            os_fork._notice_broker_or_pool(self)
 
     def start_receive(self, stream):
         """
@@ -2888,7 +3409,7 @@ class Broker(object):
         """
         _vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
         side = stream.receive_side
-        assert side and side.fd is not None
+        assert side and not side.closed
         self.defer(self.poller.start_receive,
                    side.fd, (side, stream.on_receive))
 
@@ -2909,7 +3430,7 @@ class Broker(object):
         """
         _vv and IOLOG.debug('%r._start_transmit(%r)', self, stream)
         side = stream.transmit_side
-        assert side and side.fd is not None
+        assert side and not side.closed
         self.poller.start_transmit(side.fd, (side, stream.on_transmit))
 
     def _stop_transmit(self, stream):
@@ -2928,7 +3449,7 @@ class Broker(object):
         progress (e.g. log draining).
         """
         it = (side.keep_alive for (_, (side, _)) in self.poller.readers)
-        return sum(it, 0)
+        return sum(it, 0) > 0 or self.timers.get_timeout() is not None
 
     def defer_sync(self, func):
         """
@@ -2971,10 +3492,19 @@ class Broker(object):
         """
         _vv and IOLOG.debug('%r._loop_once(%r, %r)',
                             self, timeout, self.poller)
+
+        timer_to = self.timers.get_timeout()
+        if timeout is None:
+            timeout = timer_to
+        elif timer_to is not None and timer_to < timeout:
+            timeout = timer_to
+
         #IOLOG.debug('readers =\n%s', pformat(self.poller.readers))
         #IOLOG.debug('writers =\n%s', pformat(self.poller.writers))
         for side, func in self.poller.poll(timeout):
             self._call(side.stream, func)
+        if timer_to is not None:
+            self.timers.expire()
 
     def _broker_exit(self):
         """
@@ -2982,7 +3512,7 @@ class Broker(object):
         to shut down gracefully, then discard the :class:`Poller`.
         """
         for _, (side, _) in self.poller.readers + self.poller.writers:
-            LOG.debug('_broker_main() force disconnecting %r', side)
+            LOG.debug('%r: force disconnecting %r', self, side)
             side.stream.on_disconnect(self)
 
         self.poller.close()
@@ -2997,15 +3527,15 @@ class Broker(object):
         for _, (side, _) in self.poller.readers + self.poller.writers:
             self._call(side.stream, side.stream.on_shutdown)
 
-        deadline = time.time() + self.shutdown_timeout
-        while self.keep_alive() and time.time() < deadline:
-            self._loop_once(max(0, deadline - time.time()))
+        deadline = now() + self.shutdown_timeout
+        while self.keep_alive() and now() < deadline:
+            self._loop_once(max(0, deadline - now()))
 
         if self.keep_alive():
-            LOG.error('%r: some streams did not close gracefully. '
-                      'The most likely cause for this is one or '
-                      'more child processes still connected to '
-                      'our stdout/stderr pipes.', self)
+            LOG.error('%r: pending work still existed %d seconds after '
+                      'shutdown began. This may be due to a timer that is yet '
+                      'to expire, or a child connection that did not fully '
+                      'shut down.', self, self.shutdown_timeout)
 
     def _do_broker_main(self):
         """
@@ -3013,7 +3543,7 @@ class Broker(object):
         :meth:`shutdown` is called.
         """
         # For Python 2.4, no way to retrieve ident except on thread.
-        self._waker.broker_ident = thread.get_ident()
+        self._waker.protocol.broker_ident = thread.get_ident()
         try:
             while self._alive:
                 self._loop_once()
@@ -3021,22 +3551,28 @@ class Broker(object):
             fire(self, 'shutdown')
             self._broker_shutdown()
         except Exception:
-            LOG.exception('_broker_main() crashed')
+            e = sys.exc_info()[1]
+            LOG.exception('broker crashed')
+            syslog.syslog(syslog.LOG_ERR, 'broker crashed: %s' % (e,))
+            syslog.closelog()  # prevent test 'fd leak'.
 
         self._alive = False  # Ensure _alive is consistent on crash.
         self._exitted = True
         self._broker_exit()
 
     def _broker_main(self):
-        _profile_hook('mitogen.broker', self._do_broker_main)
-        fire(self, 'exit')
+        try:
+            _profile_hook('mitogen.broker', self._do_broker_main)
+        finally:
+            # 'finally' to ensure _on_broker_exit() can always SIGTERM.
+            fire(self, 'exit')
 
     def shutdown(self):
         """
         Request broker gracefully disconnect streams and stop. Safe to call
         from any thread.
         """
-        _v and LOG.debug('%r.shutdown()', self)
+        _v and LOG.debug('%r: shutting down', self)
         def _shutdown():
             self._alive = False
         if self._alive and not self._exitted:
@@ -3050,7 +3586,7 @@ class Broker(object):
         self._thread.join()
 
     def __repr__(self):
-        return 'Broker(%#x)' % (id(self),)
+        return 'Broker(%04x)' % (id(self) & 0xffff,)
 
 
 class Dispatcher(object):
@@ -3064,13 +3600,31 @@ class Dispatcher(object):
     mode, any exception that occurs is recorded, and causes all subsequent
     calls with the same `chain_id` to fail with the same exception.
     """
+    _service_recv = None
+
+    def __repr__(self):
+        return 'Dispatcher'
+
     def __init__(self, econtext):
         self.econtext = econtext
         #: Chain ID -> CallError if prior call failed.
         self._error_by_chain_id = {}
-        self.recv = Receiver(router=econtext.router,
-                             handle=CALL_FUNCTION,
-                             policy=has_parent_authority)
+        self.recv = Receiver(
+            router=econtext.router,
+            handle=CALL_FUNCTION,
+            policy=has_parent_authority,
+        )
+        #: The :data:`CALL_SERVICE` :class:`Receiver` that will eventually be
+        #: reused by :class:`mitogen.service.Pool`, should it ever be loaded.
+        #: This is necessary for race-free reception of all service requests
+        #: delivered regardless of whether the stub or real service pool are
+        #: loaded. See #547 for related sorrows.
+        Dispatcher._service_recv = Receiver(
+            router=econtext.router,
+            handle=CALL_SERVICE,
+            policy=has_parent_authority,
+        )
+        self._service_recv.notify = self._on_call_service
         listen(econtext.broker, 'shutdown', self.recv.close)
 
     @classmethod
@@ -3080,7 +3634,7 @@ class Dispatcher(object):
 
     def _parse_request(self, msg):
         data = msg.unpickle(throw=False)
-        _v and LOG.debug('_dispatch_one(%r)', data)
+        _v and LOG.debug('%r: dispatching %r', self, data)
 
         chain_id, modname, klass, func, args, kwargs = data
         obj = import_module(modname)
@@ -3111,10 +3665,47 @@ class Dispatcher(object):
                 self._error_by_chain_id[chain_id] = e
             return chain_id, e
 
+    def _on_call_service(self, recv):
+        """
+        Notifier for the :data:`CALL_SERVICE` receiver. This is called on the
+        :class:`Broker` thread for any service messages arriving at this
+        context, for as long as no real service pool implementation is loaded.
+
+        In order to safely bootstrap the service pool implementation a sentinel
+        message is enqueued on the :data:`CALL_FUNCTION` receiver in order to
+        wake the main thread, where the importer can run without any
+        possibility of suffering deadlock due to concurrent uses of the
+        importer.
+
+        Should the main thread be blocked indefinitely, preventing the import
+        from ever running, if it is blocked waiting on a service call, then it
+        means :mod:`mitogen.service` has already been imported and
+        :func:`mitogen.service.get_or_create_pool` has already run, meaning the
+        service pool is already active and the duplicate initialization was not
+        needed anyway.
+
+        #547: This trickery is needed to avoid the alternate option of spinning
+        a temporary thread to import the service pool, which could deadlock if
+        a custom import hook executing on the main thread (under the importer
+        lock) would block waiting for some data that was in turn received by a
+        service. Main thread import lock can't be released until service is
+        running, service cannot satisfy request until import lock is released.
+        """
+        self.recv._on_receive(Message(handle=STUB_CALL_SERVICE))
+
+    def _init_service_pool(self):
+        import mitogen.service
+        mitogen.service.get_or_create_pool(router=self.econtext.router)
+
     def _dispatch_calls(self):
         for msg in self.recv:
+            if msg.handle == STUB_CALL_SERVICE:
+                if msg.src_id == mitogen.context_id:
+                    self._init_service_pool()
+                continue
+
             chain_id, ret = self._dispatch_one(msg)
-            _v and LOG.debug('_dispatch_calls: %r -> %r', msg, ret)
+            _v and LOG.debug('%r: %r -> %r', self, msg, ret)
             if msg.reply_to:
                 msg.reply(ret)
             elif isinstance(ret, CallError) and chain_id is None:
@@ -3131,30 +3722,36 @@ class ExternalContext(object):
     """
     External context implementation.
 
+    This class contains the main program implementation for new children. It is
+    responsible for setting up everything about the process environment, import
+    hooks, standard IO redirection, logging, configuring a :class:`Router` and
+    :class:`Broker`, and finally arranging for :class:`Dispatcher` to take over
+    the main thread after initialization is complete.
+
     .. attribute:: broker
+
         The :class:`mitogen.core.Broker` instance.
 
     .. attribute:: context
+
         The :class:`mitogen.core.Context` instance.
 
     .. attribute:: channel
+
         The :class:`mitogen.core.Channel` over which :data:`CALL_FUNCTION`
         requests are received.
 
-    .. attribute:: stdout_log
-        The :class:`mitogen.core.IoLogger` connected to ``stdout``.
-
     .. attribute:: importer
+
         The :class:`mitogen.core.Importer` instance.
 
     .. attribute:: stdout_log
-        The :class:`IoLogger` connected to ``stdout``.
+
+        The :class:`IoLogger` connected to :data:`sys.stdout`.
 
     .. attribute:: stderr_log
-        The :class:`IoLogger` connected to ``stderr``.
 
-    .. method:: _dispatch_calls
-        Implementation for the main thread in every child context.
+        The :class:`IoLogger` connected to :data:`sys.stderr`.
     """
     detached = False
 
@@ -3165,37 +3762,9 @@ class ExternalContext(object):
         if not self.config['profiling']:
             os.kill(os.getpid(), signal.SIGTERM)
 
-    #: On Python >3.4, the global importer lock has been sharded into a
-    #: per-module lock, meaning there is no guarantee the import statement in
-    #: service_stub_main will be truly complete before a second thread
-    #: attempting the same import will see a partially initialized module.
-    #: Sigh. Therefore serialize execution of the stub itself.
-    service_stub_lock = threading.Lock()
-
-    def _service_stub_main(self, msg):
-        self.service_stub_lock.acquire()
-        try:
-            import mitogen.service
-            pool = mitogen.service.get_or_create_pool(router=self.router)
-            pool._receiver._on_receive(msg)
-        finally:
-            self.service_stub_lock.release()
-
-    def _on_call_service_msg(self, msg):
-        """
-        Stub service handler. Start a thread to import the mitogen.service
-        implementation from, and deliver the message to the newly constructed
-        pool. This must be done as CALL_SERVICE for e.g. PushFileService may
-        race with a CALL_FUNCTION blocking the main thread waiting for a result
-        from that service.
-        """
-        if not msg.is_dead:
-            th = threading.Thread(target=self._service_stub_main, args=(msg,))
-            th.start()
-
     def _on_shutdown_msg(self, msg):
-        _v and LOG.debug('_on_shutdown_msg(%r)', msg)
         if not msg.is_dead:
+            _v and LOG.debug('shutdown request from context %d', msg.src_id)
             self.broker.shutdown()
 
     def _on_parent_disconnect(self):
@@ -3204,7 +3773,7 @@ class ExternalContext(object):
             mitogen.parent_id = None
             LOG.info('Detachment complete')
         else:
-            _v and LOG.debug('%r: parent stream is gone, dying.', self)
+            _v and LOG.debug('parent stream is gone, dying.')
             self.broker.shutdown()
 
     def detach(self):
@@ -3215,7 +3784,7 @@ class ExternalContext(object):
             self.parent.send_await(Message(handle=DETACHING))
             LOG.info('Detaching from %r; parent is %s', stream, self.parent)
             for x in range(20):
-                pending = self.broker.defer_sync(lambda: stream.pending_bytes())
+                pending = self.broker.defer_sync(stream.protocol.pending_bytes)
                 if not pending:
                     break
                 time.sleep(0.05)
@@ -3230,15 +3799,10 @@ class ExternalContext(object):
         self.broker = Broker(activate_compat=False)
         self.router = Router(self.broker)
         self.router.debug = self.config.get('debug', False)
-        self.router.undirectional = self.config['unidirectional']
+        self.router.unidirectional = self.config['unidirectional']
         self.router.add_handler(
             fn=self._on_shutdown_msg,
             handle=SHUTDOWN,
-            policy=has_parent_authority,
-        )
-        self.router.add_handler(
-            fn=self._on_call_service_msg,
-            handle=CALL_SERVICE,
             policy=has_parent_authority,
         )
         self.master = Context(self.router, 0, 'master')
@@ -3249,16 +3813,22 @@ class ExternalContext(object):
             self.parent = Context(self.router, parent_id, 'parent')
 
         in_fd = self.config.get('in_fd', 100)
-        out_fd = self.config.get('out_fd', 1)
-        self.stream = Stream(self.router, parent_id)
+        in_fp = os.fdopen(os.dup(in_fd), 'rb', 0)
+        os.close(in_fd)
+
+        out_fp = os.fdopen(os.dup(self.config.get('out_fd', 1)), 'wb', 0)
+        self.stream = MitogenProtocol.build_stream(
+            self.router,
+            parent_id,
+            local_id=self.config['context_id'],
+            parent_ids=self.config['parent_ids']
+        )
+        self.stream.accept(in_fp, out_fp)
         self.stream.name = 'parent'
-        self.stream.accept(in_fd, out_fd)
         self.stream.receive_side.keep_alive = False
 
         listen(self.stream, 'disconnect', self._on_parent_disconnect)
         listen(self.broker, 'exit', self._on_broker_exit)
-
-        os.close(in_fd)
 
     def _reap_first_stage(self):
         try:
@@ -3327,31 +3897,33 @@ class ExternalContext(object):
 
     def _nullify_stdio(self):
         """
-        Open /dev/null to replace stdin, and stdout/stderr temporarily. In case
-        of odd startup, assume we may be allocated a standard handle.
+        Open /dev/null to replace stdio temporarily. In case of odd startup,
+        assume we may be allocated a standard handle.
         """
-        fd = os.open('/dev/null', os.O_RDWR)
-        try:
-            for stdfd in (0, 1, 2):
-                if fd != stdfd:
-                    os.dup2(fd, stdfd)
-        finally:
-            if fd not in (0, 1, 2):
+        for stdfd, mode in ((0, os.O_RDONLY), (1, os.O_RDWR), (2, os.O_RDWR)):
+            fd = os.open('/dev/null', mode)
+            if fd != stdfd:
+                os.dup2(fd, stdfd)
                 os.close(fd)
 
-    def _setup_stdio(self):
-        # #481: when stderr is a TTY due to being started via
-        # tty_create_child()/hybrid_tty_create_child(), and some privilege
-        # escalation tool like prehistoric versions of sudo exec this process
-        # over the top of itself, there is nothing left to keep the slave PTY
-        # open after we replace our stdio. Therefore if stderr is a TTY, keep
-        # around a permanent dup() to avoid receiving SIGHUP.
+    def _preserve_tty_fp(self):
+        """
+        #481: when stderr is a TTY due to being started via tty_create_child()
+        or hybrid_tty_create_child(), and some privilege escalation tool like
+        prehistoric versions of sudo exec this process over the top of itself,
+        there is nothing left to keep the slave PTY open after we replace our
+        stdio. Therefore if stderr is a TTY, keep around a permanent dup() to
+        avoid receiving SIGHUP.
+        """
         try:
             if os.isatty(2):
-                self.reserve_tty_fd = os.dup(2)
-                set_cloexec(self.reserve_tty_fd)
+                self.reserve_tty_fp = os.fdopen(os.dup(2), 'r+b', 0)
+                set_cloexec(self.reserve_tty_fp.fileno())
         except OSError:
             pass
+
+    def _setup_stdio(self):
+        self._preserve_tty_fp()
         # When sys.stdout was opened by the runtime, overwriting it will not
         # close FD 1. However when forking from a child that previously used
         # fdopen(), overwriting it /will/ close FD 1. So we must swallow the
@@ -3364,8 +3936,12 @@ class ExternalContext(object):
         sys.stdout.close()
         self._nullify_stdio()
 
-        self.stdout_log = IoLogger(self.broker, 'stdout', 1)
-        self.stderr_log = IoLogger(self.broker, 'stderr', 2)
+        self.loggers = []
+        for name, fd in (('stdout', 1), ('stderr', 2)):
+            log = IoLoggerProtocol.build_stream(name, fd)
+            self.broker.start_receive(log)
+            self.loggers.append(log)
+
         # Reopen with line buffering.
         sys.stdout = os.fdopen(1, 'w', 1)
 
@@ -3385,18 +3961,23 @@ class ExternalContext(object):
                 self.dispatcher = Dispatcher(self)
                 self.router.register(self.parent, self.stream)
                 self.router._setup_logging()
-                self.log_handler.uncork()
 
-                sys.executable = os.environ.pop('ARGV0', sys.executable)
-                _v and LOG.debug('Connected to context %s; my ID is %r',
-                                 self.parent, mitogen.context_id)
+                _v and LOG.debug('Python version is %s', sys.version)
+                _v and LOG.debug('Parent is context %r (%s); my ID is %r',
+                                 self.parent.context_id, self.parent.name,
+                                 mitogen.context_id)
                 _v and LOG.debug('pid:%r ppid:%r uid:%r/%r, gid:%r/%r host:%r',
                                  os.getpid(), os.getppid(), os.geteuid(),
                                  os.getuid(), os.getegid(), os.getgid(),
                                  socket.gethostname())
+
+                sys.executable = os.environ.pop('ARGV0', sys.executable)
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
+                if self.config.get('send_ec2', True):
+                    self.stream.transmit_side.write(b('MITO002\n'))
                 self.broker._py24_25_compat()
+                self.log_handler.uncork()
                 self.dispatcher.run()
                 _v and LOG.debug('ExternalContext.main() normal exit')
             except KeyboardInterrupt:

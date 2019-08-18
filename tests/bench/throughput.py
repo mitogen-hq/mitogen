@@ -8,6 +8,7 @@ import tempfile
 import time
 
 import mitogen
+import mitogen.core
 import mitogen.service
 import ansible_mitogen.affinity
 
@@ -35,9 +36,9 @@ def run_test(router, fp, s, context):
     size = fp.tell()
     print('Testing %s...' % (s,))
     context.call(prepare)
-    t0 = time.time()
+    t0 = mitogen.core.now()
     context.call(transfer, router.myself(), fp.name)
-    t1 = time.time()
+    t1 = mitogen.core.now()
     print('%s took %.2f ms to transfer %.2f MiB, %.2f MiB/s' % (
         s, 1000 * (t1 - t0), size / 1048576.0,
         (size / (t1 - t0) / 1048576.0),

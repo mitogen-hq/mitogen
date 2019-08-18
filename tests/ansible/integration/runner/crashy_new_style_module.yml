@@ -12,7 +12,14 @@
         that:
         - not out.changed
         - out.rc == 1
-        - out.msg == "MODULE FAILURE"
+        # ansible/62d8c8fde6a76d9c567ded381e9b34dad69afcd6
+        - |
+          (ansible_version.full < '2.7' and out.msg == "MODULE FAILURE") or
+          (ansible_version.full >= '2.7' and
+           out.msg == (
+            "MODULE FAILURE\n" +
+            "See stdout/stderr for the exact error"
+          ))
         - out.module_stdout == ""
         - "'Traceback (most recent call last)' in out.module_stderr"
         - "\"NameError: name 'kaboom' is not defined\" in out.module_stderr"

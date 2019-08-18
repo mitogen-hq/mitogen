@@ -42,8 +42,8 @@ class SockMixin(object):
         self.l2_sock, self.r2_sock = socket.socketpair()
         self.l2 = self.l2_sock.fileno()
         self.r2 = self.r2_sock.fileno()
-        for fd in self.l1, self.r1, self.l2, self.r2:
-            mitogen.core.set_nonblock(fd)
+        for fp in self.l1, self.r1, self.l2, self.r2:
+            mitogen.core.set_nonblock(fp)
 
     def fill(self, fd):
         """Make `fd` unwriteable."""
@@ -164,14 +164,14 @@ class CloseMixin(PollerMixin):
 
 class PollMixin(PollerMixin):
     def test_empty_zero_timeout(self):
-        t0 = time.time()
+        t0 = mitogen.core.now()
         self.assertEquals([], list(self.p.poll(0)))
-        self.assertTrue((time.time() - t0) < .1)  # vaguely reasonable
+        self.assertTrue((mitogen.core.now() - t0) < .1)  # vaguely reasonable
 
     def test_empty_small_timeout(self):
-        t0 = time.time()
+        t0 = mitogen.core.now()
         self.assertEquals([], list(self.p.poll(.2)))
-        self.assertTrue((time.time() - t0) >= .2)
+        self.assertTrue((mitogen.core.now() - t0) >= .2)
 
 
 class ReadableMixin(PollerMixin, SockMixin):
@@ -354,17 +354,17 @@ class FileClosedMixin(PollerMixin, SockMixin):
 class TtyHangupMixin(PollerMixin):
     def test_tty_hangup_detected(self):
         # bug in initial select.poll() implementation failed to detect POLLHUP.
-        master_fd, slave_fd = mitogen.parent.openpty()
+        master_fp, slave_fp = mitogen.parent.openpty()
         try:
-            self.p.start_receive(master_fd)
+            self.p.start_receive(master_fp.fileno())
             self.assertEquals([], list(self.p.poll(0)))
-            os.close(slave_fd)
-            slave_fd = None
-            self.assertEquals([master_fd], list(self.p.poll(0)))
+            slave_fp.close()
+            slave_fp = None
+            self.assertEquals([master_fp.fileno()], list(self.p.poll(0)))
         finally:
-            if slave_fd is not None:
-                os.close(slave_fd)
-            os.close(master_fd)
+            if slave_fp is not None:
+                slave_fp.close()
+            master_fp.close()
 
 
 class DistinctDataMixin(PollerMixin, SockMixin):

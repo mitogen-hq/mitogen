@@ -35,10 +35,12 @@ import re
 
 import mitogen.core
 import mitogen.parent
-from mitogen.core import b
 
 
 LOG = logging.getLogger(__name__)
+
+password_incorrect_msg = 'sudo password is incorrect'
+password_required_msg = 'sudo password is required'
 
 # These are base64-encoded UTF-8 as our existing minifier/module server
 # struggles with Unicode Python source in some (forgotten) circumstances.
@@ -99,14 +101,13 @@ PASSWORD_PROMPTS = [
 
 
 PASSWORD_PROMPT_RE = re.compile(
-    u'|'.join(
-        base64.b64decode(s).decode('utf-8')
+    mitogen.core.b('|').join(
+        base64.b64decode(s)
         for s in PASSWORD_PROMPTS
-    )
+    ),
+    re.I
 )
 
-
-PASSWORD_PROMPT = b('password')
 SUDO_OPTIONS = [
     #(False, 'bool', '--askpass', '-A')
     #(False, 'str', '--auth-type', '-a')
@@ -181,10 +182,7 @@ def option(default, *args):
     return default
 
 
-class Stream(mitogen.parent.Stream):
-    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
-    child_is_immediate_subprocess = False
-
+class Options(mitogen.parent.Options):
     sudo_path = 'sudo'
     username = 'root'
     password = None
@@ -195,15 +193,16 @@ class Stream(mitogen.parent.Stream):
     selinux_role = None
     selinux_type = None
 
-    def construct(self, username=None, sudo_path=None, password=None,
-                  preserve_env=None, set_home=None, sudo_args=None,
-                  login=None, selinux_role=None, selinux_type=None, **kwargs):
-        super(Stream, self).construct(**kwargs)
+    def __init__(self, username=None, sudo_path=None, password=None,
+                 preserve_env=None, set_home=None, sudo_args=None,
+                 login=None, selinux_role=None, selinux_type=None, **kwargs):
+        super(Options, self).__init__(**kwargs)
         opts = parse_sudo_flags(sudo_args or [])
 
         self.username = option(self.username, username, opts.user)
         self.sudo_path = option(self.sudo_path, sudo_path)
-        self.password = password or None
+        if password:
+            self.password = mitogen.core.to_text(password)
         self.preserve_env = option(self.preserve_env,
             preserve_env, opts.preserve_env)
         self.set_home = option(self.set_home, set_home, opts.set_home)
@@ -211,67 +210,62 @@ class Stream(mitogen.parent.Stream):
         self.selinux_role = option(self.selinux_role, selinux_role, opts.role)
         self.selinux_type = option(self.selinux_type, selinux_type, opts.type)
 
+
+class SetupProtocol(mitogen.parent.RegexProtocol):
+    password_sent = False
+
+    def _on_password_prompt(self, line, match):
+        LOG.debug('%s: (password prompt): %s',
+            self.stream.name, line.decode('utf-8', 'replace'))
+
+        if self.stream.conn.options.password is None:
+            self.stream.conn._fail_connection(
+                PasswordError(password_required_msg)
+            )
+            return
+
+        if self.password_sent:
+            self.stream.conn._fail_connection(
+                PasswordError(password_incorrect_msg)
+            )
+            return
+
+        self.stream.transmit_side.write(
+            (self.stream.conn.options.password + '\n').encode('utf-8')
+        )
+        self.password_sent = True
+
+    PARTIAL_PATTERNS = [
+        (PASSWORD_PROMPT_RE, _on_password_prompt),
+    ]
+
+
+class Connection(mitogen.parent.Connection):
+    diag_protocol_class = SetupProtocol
+    options_class = Options
+    create_child = staticmethod(mitogen.parent.hybrid_tty_create_child)
+    create_child_args = {
+        'escalates_privilege': True,
+    }
+    child_is_immediate_subprocess = False
+
     def _get_name(self):
-        return u'sudo.' + mitogen.core.to_text(self.username)
+        return u'sudo.' + mitogen.core.to_text(self.options.username)
 
     def get_boot_command(self):
         # Note: sudo did not introduce long-format option processing until July
         # 2013, so even though we parse long-format options, supply short-form
         # to the sudo command.
-        bits = [self.sudo_path, '-u', self.username]
-        if self.preserve_env:
+        bits = [self.options.sudo_path, '-u', self.options.username]
+        if self.options.preserve_env:
             bits += ['-E']
-        if self.set_home:
+        if self.options.set_home:
             bits += ['-H']
-        if self.login:
+        if self.options.login:
             bits += ['-i']
-        if self.selinux_role:
-            bits += ['-r', self.selinux_role]
-        if self.selinux_type:
-            bits += ['-t', self.selinux_type]
+        if self.options.selinux_role:
+            bits += ['-r', self.options.selinux_role]
+        if self.options.selinux_type:
+            bits += ['-t', self.options.selinux_type]
 
-        bits = bits + ['--'] + super(Stream, self).get_boot_command()
-        LOG.debug('sudo command line: %r', bits)
-        return bits
-
-    password_incorrect_msg = 'sudo password is incorrect'
-    password_required_msg = 'sudo password is required'
-
-    def _connect_input_loop(self, it):
-        password_sent = False
-
-        for buf in it:
-            LOG.debug('%s: received %r', self.name, buf)
-            if buf.endswith(self.EC0_MARKER):
-                self._ec0_received()
-                return
-
-            match = PASSWORD_PROMPT_RE.search(buf.decode('utf-8').lower())
-            if match is not None:
-                LOG.debug('%s: matched password prompt %r',
-                          self.name, match.group(0))
-                if self.password is None:
-                    raise PasswordError(self.password_required_msg)
-                if password_sent:
-                    raise PasswordError(self.password_incorrect_msg)
-                self.diag_stream.transmit_side.write(
-                    (mitogen.core.to_text(self.password) + '\n').encode('utf-8')
-                )
-                password_sent = True
-
-        raise mitogen.core.StreamError('bootstrap failed')
-
-    def _connect_bootstrap(self):
-        fds = [self.receive_side.fd]
-        if self.diag_stream is not None:
-            fds.append(self.diag_stream.receive_side.fd)
-
-        it = mitogen.parent.iter_read(
-            fds=fds,
-            deadline=self.connect_deadline,
-        )
-
-        try:
-            self._connect_input_loop(it)
-        finally:
-            it.close()
+        return bits + ['--'] + super(Connection, self).get_boot_command()

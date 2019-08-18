@@ -265,7 +265,7 @@ We must therefore continue by writing our code as a script::
         print(local.call(my_first_function))
 
     if __name__ == '__main__':
-        mitogen.utils.log_to_file(main)
+        mitogen.utils.log_to_file("mitogen.log")
         mitogen.utils.run_with_router(main)
 
 Let's try running it:
@@ -341,15 +341,13 @@ The following built-in types may be used as parameters or return values in
 remote procedure calls:
 
 * :class:`bool`
-* :class:`bytearray`
-* :func:`bytes`
+* :func:`bytes` (:class:`str` on Python 2.x)
 * :class:`dict`
 * :class:`int`
 * :func:`list`
 * :class:`long`
-* :class:`str`
 * :func:`tuple`
-* :func:`unicode`
+* :func:`unicode` (:class:`str` on Python 3.x)
 
 User-defined types may not be used, except for:
 

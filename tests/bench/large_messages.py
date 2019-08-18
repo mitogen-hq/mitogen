@@ -4,7 +4,9 @@
 import subprocess
 import time
 import socket
+
 import mitogen
+import mitogen.core
 
 
 @mitogen.main()
@@ -15,12 +17,12 @@ def main(router):
     s = ' ' * n
     print('bytes in %.2fMiB string...' % (n/1048576.0),)
 
-    t0 = time.time()
+    t0 = mitogen.core.now()
     for x in range(10):
-        tt0 = time.time()
+        tt0 = mitogen.core.now()
         assert n == c.call(len, s)
-        print('took %dms' % (1000 * (time.time() - tt0),))
-    t1 = time.time()
+        print('took %dms' % (1000 * (mitogen.core.now() - tt0),))
+    t1 = mitogen.core.now()
     print('total %dms / %dms avg / %.2fMiB/sec' % (
         1000 * (t1 - t0),
         (1000 * (t1 - t0)) / (x + 1),

@@ -10,6 +10,7 @@
   - custom_python_detect_environment:
     vars:
       ansible_connection: mitogen_sudo
+      ansible_python_interpreter: python  # avoid Travis virtualenv breakage
       ansible_user: root
       ansible_become_exe: stub-sudo.py
       ansible_become_flags: -H --type=sometype --role=somerole

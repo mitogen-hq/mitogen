@@ -36,6 +36,7 @@ contexts.
 """
 
 import dis
+import errno
 import imp
 import inspect
 import itertools
@@ -45,10 +46,14 @@ import pkgutil
 import re
 import string
 import sys
-import time
 import threading
 import types
 import zlib
+
+try:
+    import sysconfig
+except ImportError:
+    sysconfig = None
 
 if not hasattr(pkgutil, 'find_loader'):
     # find_loader() was new in >=2.5, but the modern pkgutil.py syntax has
@@ -85,22 +90,29 @@ RLOG = logging.getLogger('mitogen.ctx')
 
 
 def _stdlib_paths():
-    """Return a set of paths from which Python imports the standard library.
+    """
+    Return a set of paths from which Python imports the standard library.
     """
     attr_candidates = [
         'prefix',
         'real_prefix',  # virtualenv: only set inside a virtual environment.
         'base_prefix',  # venv: always set, equal to prefix if outside.
     ]
-    prefixes = (getattr(sys, a) for a in attr_candidates if hasattr(sys, a))
+    prefixes = (getattr(sys, a, None) for a in attr_candidates)
     version = 'python%s.%s' % sys.version_info[0:2]
-    return set(os.path.abspath(os.path.join(p, 'lib', version))
-               for p in prefixes)
+    s = set(os.path.abspath(os.path.join(p, 'lib', version))
+            for p in prefixes if p is not None)
+
+    # When running 'unit2 tests/module_finder_test.py' in a Py2 venv on Ubuntu
+    # 18.10, above is insufficient to catch the real directory.
+    if sysconfig is not None:
+        s.add(sysconfig.get_config_var('DESTLIB'))
+    return s
 
 
 def is_stdlib_name(modname):
-    """Return :data:`True` if `modname` appears to come from the standard
-    library.
+    """
+    Return :data:`True` if `modname` appears to come from the standard library.
     """
     if imp.is_builtin(modname) != 0:
         return True
@@ -127,7 +139,8 @@ def is_stdlib_path(path):
 
 
 def get_child_modules(path):
-    """Return the suffixes of submodules directly neated beneath of the package
+    """
+    Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
 
     :param str path:
@@ -140,6 +153,41 @@ def get_child_modules(path):
     """
     it = pkgutil.iter_modules([os.path.dirname(path)])
     return [to_text(name) for _, name, _ in it]
+
+
+def _looks_like_script(path):
+    """
+    Return :data:`True` if the (possibly extensionless) file at `path`
+    resembles a Python script. For now we simply verify the file contains
+    ASCII text.
+    """
+    try:
+        fp = open(path, 'rb')
+    except IOError:
+        e = sys.exc_info()[1]
+        if e.args[0] == errno.EISDIR:
+            return False
+        raise
+
+    try:
+        sample = fp.read(512).decode('latin-1')
+        return not set(sample).difference(string.printable)
+    finally:
+        fp.close()
+
+
+def _py_filename(path):
+    if not path:
+        return None
+
+    if path[-4:] in ('.pyc', '.pyo'):
+        path = path.rstrip('co')
+
+    if path.endswith('.py'):
+        return path
+
+    if os.path.exists(path) and _looks_like_script(path):
+        return path
 
 
 def _get_core_source():
@@ -254,8 +302,10 @@ class ThreadWatcher(object):
 
     @classmethod
     def _reset(cls):
-        """If we have forked since the watch dictionaries were initialized, all
-        that has is garbage, so clear it."""
+        """
+        If we have forked since the watch dictionaries were initialized, all
+        that has is garbage, so clear it.
+        """
         if os.getpid() != cls._cls_pid:
             cls._cls_pid = os.getpid()
             cls._cls_instances_by_target.clear()
@@ -336,18 +386,18 @@ class LogForwarder(object):
         if msg.is_dead:
             return
 
-        logger = self._cache.get(msg.src_id)
+        context = self._router.context_by_id(msg.src_id)
+        if context is None:
+            LOG.error('%s: dropping log from unknown context %d',
+                      self, msg.src_id)
+            return
+
+        name, level_s, s = msg.data.decode('utf-8', 'replace').split('\x00', 2)
+
+        logger_name = '%s.[%s]' % (name, context.name)
+        logger = self._cache.get(logger_name)
         if logger is None:
-            context = self._router.context_by_id(msg.src_id)
-            if context is None:
-                LOG.error('%s: dropping log from unknown context ID %d',
-                          self, msg.src_id)
-                return
-
-            name = '%s.%s' % (RLOG.name, context.name)
-            self._cache[msg.src_id] = logger = logging.getLogger(name)
-
-        name, level_s, s = msg.data.decode('latin1').split('\x00', 2)
+            self._cache[logger_name] = logger = logging.getLogger(logger_name)
 
         # See logging.Handler.makeRecord()
         record = logging.LogRecord(
@@ -355,7 +405,7 @@ class LogForwarder(object):
             level=int(level_s),
             pathname='(unknown file)',
             lineno=0,
-            msg=('%s: %s' % (name, s)),
+            msg=s,
             args=(),
             exc_info=None,
         )
@@ -368,55 +418,40 @@ class LogForwarder(object):
         return 'LogForwarder(%r)' % (self._router,)
 
 
-class ModuleFinder(object):
+class FinderMethod(object):
     """
-    Given the name of a loaded module, make a best-effort attempt at finding
-    related modules likely needed by a child context requesting the original
-    module.
+    Interface to a method for locating a Python module or package given its
+    name according to the running Python interpreter. You'd think this was a
+    simple task, right? Naive young fellow, welcome to the real world.
     """
-    def __init__(self):
-        #: Import machinery is expensive, keep :py:meth`:get_module_source`
-        #: results around.
-        self._found_cache = {}
-
-        #: Avoid repeated dependency scanning, which is expensive.
-        self._related_cache = {}
-
     def __repr__(self):
-        return 'ModuleFinder()'
+        return '%s()' % (type(self).__name__,)
 
-    def _looks_like_script(self, path):
+    def find(self, fullname):
         """
-        Return :data:`True` if the (possibly extensionless) file at `path`
-        resembles a Python script. For now we simply verify the file contains
-        ASCII text.
+        Accept a canonical module name as would be found in :data:`sys.modules`
+        and return a `(path, source, is_pkg)` tuple, where:
+
+        * `path`: Unicode string containing path to source file.
+        * `source`: Bytestring containing source file's content.
+        * `is_pkg`: :data:`True` if `fullname` is a package.
+
+        :returns:
+            :data:`None` if not found, or tuple as described above.
         """
-        fp = open(path, 'rb')
-        try:
-            sample = fp.read(512).decode('latin-1')
-            return not set(sample).difference(string.printable)
-        finally:
-            fp.close()
+        raise NotImplementedError()
 
-    def _py_filename(self, path):
-        if not path:
-            return None
 
-        if path[-4:] in ('.pyc', '.pyo'):
-            path = path.rstrip('co')
-
-        if path.endswith('.py'):
-            return path
-
-        if os.path.exists(path) and self._looks_like_script(path):
-            return path
-
-    def _get_main_module_defective_python_3x(self, fullname):
+class DefectivePython3xMainMethod(FinderMethod):
+    """
+    Recent versions of Python 3.x introduced an incomplete notion of
+    importer specs, and in doing so created permanent asymmetry in the
+    :mod:`pkgutil` interface handling for the :mod:`__main__` module. Therefore
+    we must handle :mod:`__main__` specially.
+    """
+    def find(self, fullname):
         """
-        Recent versions of Python 3.x introduced an incomplete notion of
-        importer specs, and in doing so created permanent asymmetry in the
-        :mod:`pkgutil` interface handling for the `__main__` module. Therefore
-        we must handle `__main__` specially.
+        Find :mod:`__main__` using its :data:`__file__` attribute.
         """
         if fullname != '__main__':
             return None
@@ -426,7 +461,7 @@ class ModuleFinder(object):
             return None
 
         path = getattr(mod, '__file__', None)
-        if not (os.path.exists(path) and self._looks_like_script(path)):
+        if not (path is not None and os.path.exists(path) and _looks_like_script(path)):
             return None
 
         fp = open(path, 'rb')
@@ -437,10 +472,15 @@ class ModuleFinder(object):
 
         return path, source, False
 
-    def _get_module_via_pkgutil(self, fullname):
+
+class PkgutilMethod(FinderMethod):
+    """
+    Attempt to fetch source code via pkgutil. In an ideal world, this would
+    be the only required implementation of get_module().
+    """
+    def find(self, fullname):
         """
-        Attempt to fetch source code via pkgutil. In an ideal world, this would
-        be the only required implementation of get_module().
+        Find `fullname` using :func:`pkgutil.find_loader`.
         """
         try:
             # Pre-'import spec' this returned None, in Python3.6 it raises
@@ -458,7 +498,7 @@ class ModuleFinder(object):
             return
 
         try:
-            path = self._py_filename(loader.get_filename(fullname))
+            path = _py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
             is_pkg = loader.is_package(fullname)
         except (AttributeError, ImportError):
@@ -484,22 +524,36 @@ class ModuleFinder(object):
 
         return path, source, is_pkg
 
-    def _get_module_via_sys_modules(self, fullname):
+
+class SysModulesMethod(FinderMethod):
+    """
+    Attempt to fetch source code via :data:`sys.modules`. This was originally
+    specifically to support :mod:`__main__`, but it may catch a few more cases.
+    """
+    def find(self, fullname):
         """
-        Attempt to fetch source code via sys.modules. This is specifically to
-        support __main__, but it may catch a few more cases.
+        Find `fullname` using its :data:`__file__` attribute.
         """
         module = sys.modules.get(fullname)
-        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
         if not isinstance(module, types.ModuleType):
-            LOG.debug('sys.modules[%r] absent or not a regular module',
-                      fullname)
+            LOG.debug('%r: sys.modules[%r] absent or not a regular module',
+                      self, fullname)
             return
 
-        path = self._py_filename(getattr(module, '__file__', ''))
+        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
+        alleged_name = getattr(module, '__name__', None)
+        if alleged_name != fullname:
+            LOG.debug('sys.modules[%r].__name__ is incorrect, assuming '
+                      'this is a hacky module alias and ignoring it. '
+                      'Got %r, module object: %r',
+                      fullname, alleged_name, module)
+            return
+
+        path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
 
+        LOG.debug('%r: sys.modules[%r]: found %s', self, fullname, path)
         is_pkg = hasattr(module, '__path__')
         try:
             source = inspect.getsource(module)
@@ -517,44 +571,147 @@ class ModuleFinder(object):
 
         return path, source, is_pkg
 
-    def _get_module_via_parent_enumeration(self, fullname):
-        """
-        Attempt to fetch source code by examining the module's (hopefully less
-        insane) parent package. Required for older versions of
-        ansible.compat.six and plumbum.colors.
-        """
-        if fullname not in sys.modules:
-            # Don't attempt this unless a module really exists in sys.modules,
-            # else we could return junk.
-            return
 
-        pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
-        pkg = sys.modules.get(pkgname)
-        if pkg is None or not hasattr(pkg, '__file__'):
-            return
+class ParentEnumerationMethod(FinderMethod):
+    """
+    Attempt to fetch source code by examining the module's (hopefully less
+    insane) parent package, and if no insane parents exist, simply use
+    :mod:`sys.path` to search for it from scratch on the filesystem using the
+    normal Python lookup mechanism.
+    
+    This is required for older versions of :mod:`ansible.compat.six`,
+    :mod:`plumbum.colors`, Ansible 2.8 :mod:`ansible.module_utils.distro` and
+    its submodule :mod:`ansible.module_utils.distro._distro`.
 
-        pkg_path = os.path.dirname(pkg.__file__)
+    When some package dynamically replaces itself in :data:`sys.modules`, but
+    only conditionally according to some program logic, it is possible that
+    children may attempt to load modules and subpackages from it that can no
+    longer be resolved by examining a (corrupted) parent.
+
+    For cases like :mod:`ansible.module_utils.distro`, this must handle cases
+    where a package transmuted itself into a totally unrelated module during
+    import and vice versa, where :data:`sys.modules` is replaced with junk that
+    makes it impossible to discover the loaded module using the in-memory
+    module object or any parent package's :data:`__path__`, since they have all
+    been overwritten. Some men just want to watch the world burn.
+    """
+    def _find_sane_parent(self, fullname):
+        """
+        Iteratively search :data:`sys.modules` for the least indirect parent of
+        `fullname` that is loaded and contains a :data:`__path__` attribute.
+
+        :return:
+            `(parent_name, path, modpath)` tuple, where:
+
+                * `modname`: canonical name of the found package, or the empty
+                   string if none is found.
+                * `search_path`: :data:`__path__` attribute of the least
+                   indirect parent found, or :data:`None` if no indirect parent
+                   was found.
+                * `modpath`: list of module name components leading from `path`
+                   to the target module.
+        """
+        path = None
+        modpath = []
+        while True:
+            pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
+            modpath.insert(0, modname)
+            if not pkgname:
+                return [], None, modpath
+
+            pkg = sys.modules.get(pkgname)
+            path = getattr(pkg, '__path__', None)
+            if pkg and path:
+                return pkgname.split('.'), path, modpath
+
+            LOG.debug('%r: %r lacks __path__ attribute', self, pkgname)
+            fullname = pkgname
+
+    def _found_package(self, fullname, path):
+        path = os.path.join(path, '__init__.py')
+        LOG.debug('%r: %r is PKG_DIRECTORY: %r', self, fullname, path)
+        return self._found_module(
+            fullname=fullname,
+            path=path,
+            fp=open(path, 'rb'),
+            is_pkg=True,
+        )
+
+    def _found_module(self, fullname, path, fp, is_pkg=False):
         try:
-            fp, path, ext = imp.find_module(modname, [pkg_path])
-            try:
-                path = self._py_filename(path)
-                if not path:
-                    fp.close()
-                    return
+            path = _py_filename(path)
+            if not path:
+                return
 
-                source = fp.read()
-            finally:
-                if fp:
-                    fp.close()
+            source = fp.read()
+        finally:
+            if fp:
+                fp.close()
 
-            if isinstance(source, mitogen.core.UnicodeType):
-                # get_source() returns "string" according to PEP-302, which was
-                # reinterpreted for Python 3 to mean a Unicode string.
-                source = source.encode('utf-8')
-            return path, source, False
+        if isinstance(source, mitogen.core.UnicodeType):
+            # get_source() returns "string" according to PEP-302, which was
+            # reinterpreted for Python 3 to mean a Unicode string.
+            source = source.encode('utf-8')
+        return path, source, is_pkg
+
+    def _find_one_component(self, modname, search_path):
+        try:
+            #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
+            return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
-            LOG.debug('imp.find_module(%r, %r) -> %s', modname, [pkg_path], e)
+            LOG.debug('%r: imp.find_module(%r, %r) -> %s',
+                      self, modname, [search_path], e)
+            return None
+
+    def find(self, fullname):
+        """
+        See implementation for a description of how this works.
+        """
+        #if fullname not in sys.modules:
+            # Don't attempt this unless a module really exists in sys.modules,
+            # else we could return junk.
+            #return
+
+        fullname = to_text(fullname)
+        modname, search_path, modpath = self._find_sane_parent(fullname)
+        while True:
+            tup = self._find_one_component(modpath.pop(0), search_path)
+            if tup is None:
+                return None
+
+            fp, path, (suffix, _, kind) = tup
+            if modpath:
+                # Still more components to descent. Result must be a package
+                if fp:
+                    fp.close()
+                if kind != imp.PKG_DIRECTORY:
+                    LOG.debug('%r: %r appears to be child of non-package %r',
+                              self, fullname, path)
+                    return None
+                search_path = [path]
+            elif kind == imp.PKG_DIRECTORY:
+                return self._found_package(fullname, path)
+            else:
+                return self._found_module(fullname, path, fp)
+
+
+class ModuleFinder(object):
+    """
+    Given the name of a loaded module, make a best-effort attempt at finding
+    related modules likely needed by a child context requesting the original
+    module.
+    """
+    def __init__(self):
+        #: Import machinery is expensive, keep :py:meth`:get_module_source`
+        #: results around.
+        self._found_cache = {}
+
+        #: Avoid repeated dependency scanning, which is expensive.
+        self._related_cache = {}
+
+    def __repr__(self):
+        return 'ModuleFinder()'
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
@@ -576,14 +733,15 @@ class ModuleFinder(object):
         self._found_cache[fullname] = (path, source, is_pkg)
 
     get_module_methods = [
-        _get_main_module_defective_python_3x,
-        _get_module_via_pkgutil,
-        _get_module_via_sys_modules,
-        _get_module_via_parent_enumeration,
+        DefectivePython3xMainMethod(),
+        PkgutilMethod(),
+        SysModulesMethod(),
+        ParentEnumerationMethod(),
     ]
 
     def get_module_source(self, fullname):
-        """Given the name of a loaded module `fullname`, attempt to find its
+        """
+        Given the name of a loaded module `fullname`, attempt to find its
         source code.
 
         :returns:
@@ -595,7 +753,7 @@ class ModuleFinder(object):
             return tup
 
         for method in self.get_module_methods:
-            tup = method(self, fullname)
+            tup = method.find(fullname)
             if tup:
                 #LOG.debug('%r returned %r', method, tup)
                 break
@@ -607,9 +765,10 @@ class ModuleFinder(object):
         return tup
 
     def resolve_relpath(self, fullname, level):
-        """Given an ImportFrom AST node, guess the prefix that should be tacked
-        on to an alias name to produce a canonical name. `fullname` is the name
-        of the module in which the ImportFrom appears.
+        """
+        Given an ImportFrom AST node, guess the prefix that should be tacked on
+        to an alias name to produce a canonical name. `fullname` is the name of
+        the module in which the ImportFrom appears.
         """
         mod = sys.modules.get(fullname, None)
         if hasattr(mod, '__path__'):
@@ -638,7 +797,7 @@ class ModuleFinder(object):
         The list is determined by retrieving the source code of
         `fullname`, compiling it, and examining all IMPORT_NAME ops.
 
-        :param fullname: Fully qualified name of an _already imported_ module
+        :param fullname: Fully qualified name of an *already imported* module
             for which source code can be retrieved
         :type fullname: str
         """
@@ -686,7 +845,7 @@ class ModuleFinder(object):
         This method is like :py:meth:`find_related_imports`, but also
         recursively searches any modules which are imported by `fullname`.
 
-        :param fullname: Fully qualified name of an _already imported_ module
+        :param fullname: Fully qualified name of an *already imported* module
             for which source code can be retrieved
         :type fullname: str
         """
@@ -705,6 +864,7 @@ class ModuleFinder(object):
 
 class ModuleResponder(object):
     def __init__(self, router):
+        self._log = logging.getLogger('mitogen.responder')
         self._router = router
         self._finder = ModuleFinder()
         self._cache = {}  # fullname -> pickled
@@ -733,11 +893,11 @@ class ModuleResponder(object):
         )
 
     def __repr__(self):
-        return 'ModuleResponder(%r)' % (self._router,)
+        return 'ModuleResponder'
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
-        See :meth:`ModuleFinder.add_source_override.
+        See :meth:`ModuleFinder.add_source_override`.
         """
         self._finder.add_source_override(fullname, path, source, is_pkg)
 
@@ -760,9 +920,11 @@ class ModuleResponder(object):
         self.blacklist.append(fullname)
 
     def neutralize_main(self, path, src):
-        """Given the source for the __main__ module, try to find where it
-        begins conditional execution based on a "if __name__ == '__main__'"
-        guard, and remove any code after that point."""
+        """
+        Given the source for the __main__ module, try to find where it begins
+        conditional execution based on a "if __name__ == '__main__'" guard, and
+        remove any code after that point.
+        """
         match = self.MAIN_RE.search(src)
         if match:
             return src[:match.start()]
@@ -770,7 +932,7 @@ class ModuleResponder(object):
         if b('mitogen.main(') in src:
             return src
 
-        LOG.error(self.main_guard_msg, path)
+        self._log.error(self.main_guard_msg, path)
         raise ImportError('refused')
 
     def _make_negative_response(self, fullname):
@@ -789,8 +951,7 @@ class ModuleResponder(object):
         if path and is_stdlib_path(path):
             # Prevent loading of 2.x<->3.x stdlib modules! This costs one
             # RTT per hit, so a client-side solution is also required.
-            LOG.debug('%r: refusing to serve stdlib module %r',
-                      self, fullname)
+            self._log.debug('refusing to serve stdlib module %r', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
@@ -798,21 +959,21 @@ class ModuleResponder(object):
         if source is None:
             # TODO: make this .warning() or similar again once importer has its
             # own logging category.
-            LOG.debug('_build_tuple(%r): could not locate source', fullname)
+            self._log.debug('could not find source for %r', fullname)
             tup = self._make_negative_response(fullname)
             self._cache[fullname] = tup
             return tup
 
         if self.minify_safe_re.search(source):
             # If the module contains a magic marker, it's safe to minify.
-            t0 = time.time()
+            t0 = mitogen.core.now()
             source = mitogen.minify.minimize_source(source).encode('utf-8')
-            self.minify_secs += time.time() - t0
+            self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
             pkg_present = get_child_modules(path)
-            LOG.debug('_build_tuple(%r, %r) -> %r',
-                      path, fullname, pkg_present)
+            self._log.debug('%s is a package at %s with submodules %r',
+                            fullname, path, pkg_present)
         else:
             pkg_present = None
 
@@ -836,17 +997,17 @@ class ModuleResponder(object):
         return tup
 
     def _send_load_module(self, stream, fullname):
-        if fullname not in stream.sent_modules:
+        if fullname not in stream.protocol.sent_modules:
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
                 tup,
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            LOG.debug('%s: sending module %s (%.2f KiB)',
-                      stream.name, fullname, len(msg.data) / 1024.0)
+            self._log.debug('sending %s (%.2f KiB) to %s',
+                            fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
-            stream.sent_modules.add(fullname)
+            stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
                 self.good_load_module_count += 1
                 self.good_load_module_size += len(msg.data)
@@ -855,23 +1016,23 @@ class ModuleResponder(object):
 
     def _send_module_load_failed(self, stream, fullname):
         self.bad_load_module_count += 1
-        stream.send(
+        stream.protocol.send(
             mitogen.core.Message.pickled(
                 self._make_negative_response(fullname),
-                dst_id=stream.remote_id,
+                dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
         )
 
     def _send_module_and_related(self, stream, fullname):
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             return
 
         try:
             tup = self._build_tuple(fullname)
             for name in tup[4]:  # related
                 parent, _, _ = str_partition(name, '.')
-                if parent != fullname and parent not in stream.sent_modules:
+                if parent != fullname and parent not in stream.protocol.sent_modules:
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
@@ -890,25 +1051,25 @@ class ModuleResponder(object):
             return
 
         fullname = msg.data.decode()
-        LOG.debug('%s requested module %s', stream.name, fullname)
+        self._log.debug('%s requested module %s', stream.name, fullname)
         self.get_module_count += 1
-        if fullname in stream.sent_modules:
+        if fullname in stream.protocol.sent_modules:
             LOG.warning('_on_get_module(): dup request for %r from %r',
                         fullname, stream)
 
-        t0 = time.time()
+        t0 = mitogen.core.now()
         try:
             self._send_module_and_related(stream, fullname)
         finally:
-            self.get_module_secs += time.time() - t0
+            self.get_module_secs += mitogen.core.now() - t0
 
     def _send_forward_module(self, stream, context, fullname):
-        if stream.remote_id != context.context_id:
-            stream.send(
+        if stream.protocol.remote_id != context.context_id:
+            stream.protocol._send(
                 mitogen.core.Message(
                     data=b('%s\x00%s' % (context.context_id, fullname)),
                     handle=mitogen.core.FORWARD_MODULE,
-                    dst_id=stream.remote_id,
+                    dst_id=stream.protocol.remote_id,
                 )
             )
 
@@ -977,6 +1138,7 @@ class Broker(mitogen.core.Broker):
                 on_join=self.shutdown,
             )
         super(Broker, self).__init__()
+        self.timers = mitogen.parent.TimerList()
 
     def shutdown(self):
         super(Broker, self).shutdown()
@@ -1122,6 +1284,21 @@ class Router(mitogen.parent.Router):
 
 
 class IdAllocator(object):
+    """
+    Allocate IDs for new contexts constructed locally, and blocks of IDs for
+    children to allocate their own IDs using
+    :class:`mitogen.parent.ChildIdAllocator` without risk of conflict, and
+    without necessitating network round-trips for each new context.
+
+    This class responds to :data:`mitogen.core.ALLOCATE_ID` messages received
+    from children by replying with fresh block ID allocations.
+
+    The master's :class:`IdAllocator` instance can be accessed via
+    :attr:`mitogen.master.Router.id_allocator`.
+    """
+    #: Block allocations are made in groups of 1000 by default.
+    BLOCK_SIZE = 1000
+
     def __init__(self, router):
         self.router = router
         self.next_id = 1
@@ -1134,14 +1311,12 @@ class IdAllocator(object):
     def __repr__(self):
         return 'IdAllocator(%r)' % (self.router,)
 
-    BLOCK_SIZE = 1000
-
     def allocate(self):
         """
-        Arrange for a unique context ID to be allocated and associated with a
-        route leading to the active context. In masters, the ID is generated
-        directly, in children it is forwarded to the master via a
-        :data:`mitogen.core.ALLOCATE_ID` message.
+        Allocate a context ID by directly incrementing an internal counter.
+
+        :returns:
+            The new context ID.
         """
         self.lock.acquire()
         try:
@@ -1152,6 +1327,15 @@ class IdAllocator(object):
             self.lock.release()
 
     def allocate_block(self):
+        """
+        Allocate a block of IDs for use in a child context.
+
+        This function is safe to call from any thread.
+
+        :returns:
+            Tuple of the form `(id, end_id)` where `id` is the first usable ID
+            and `end_id` is the last usable ID.
+        """
         self.lock.acquire()
         try:
             id_ = self.next_id

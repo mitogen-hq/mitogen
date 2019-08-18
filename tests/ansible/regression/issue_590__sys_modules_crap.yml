@@ -1,0 +1,12 @@
+
+- hosts: test-targets
+  tasks:
+  - meta: end_play
+    when: ansible_version.full < '2.8'
+
+  - custom_python_uses_distro:
+    register: out
+
+  - assert:
+      that:
+      - "'id' in out.info"

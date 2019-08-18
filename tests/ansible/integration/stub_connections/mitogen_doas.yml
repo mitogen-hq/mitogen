@@ -10,7 +10,8 @@
   - custom_python_detect_environment:
     vars:
       ansible_connection: mitogen_doas
-      ansible_become_exe: stub-doas.py
+      ansible_python_interpreter: python  # avoid Travis virtualenv breakage
+      ansible_doas_exe: stub-doas.py
       ansible_user: someuser
     register: out
 

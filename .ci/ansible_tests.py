@@ -3,6 +3,7 @@
 
 import glob
 import os
+import signal
 import sys
 
 import ci_lib
@@ -13,9 +14,21 @@ TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
 HOSTS_DIR = os.path.join(ci_lib.TMP, 'hosts')
 
 
+def pause_if_interactive():
+    if os.path.exists('/tmp/interactive'):
+        while True:
+            signal.pause()
+
+
+interesting = ci_lib.get_interesting_procs()
+
+
 with ci_lib.Fold('unit_tests'):
     os.environ['SKIP_MITOGEN'] = '1'
     ci_lib.run('./run_tests -v')
+
+
+ci_lib.check_stray_processes(interesting)
 
 
 with ci_lib.Fold('docker_setup'):
@@ -56,8 +69,19 @@ with ci_lib.Fold('job_setup'):
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
 
+    run("bash -c 'sudo ln -vfs /usr/lib/python2.7/plat-x86_64-linux-gnu/_sysconfigdata_nd.py /usr/lib/python2.7 || true'")
+    run("bash -c 'sudo ln -vfs /usr/lib/python2.7/plat-x86_64-linux-gnu/_sysconfigdata_nd.py $VIRTUAL_ENV/lib/python2.7 || true'")
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
-    run('./run_ansible_playbook.py %s -i "%s" %s',
-        playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
+    try:
+        run('./run_ansible_playbook.py %s -i "%s" %s',
+            playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
+    except:
+        pause_if_interactive()
+        raise
+
+
+ci_lib.check_stray_processes(interesting, containers)
+
+pause_if_interactive()

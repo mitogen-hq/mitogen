@@ -1,6 +1,7 @@
 
 import multiprocessing
 import os
+import sys
 import tempfile
 
 import mock
@@ -63,32 +64,32 @@ class FixedPolicyTest(testlib.TestCase):
     def test_assign_muxprocess_1core(self):
         # Uniprocessor .
         policy = self.klass(cpu_count=1)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
 
     def test_assign_muxprocess_2core(self):
         # Small SMP gets dedicated core.
         policy = self.klass(cpu_count=2)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
 
     def test_assign_muxprocess_3core(self):
         # Small SMP gets a dedicated core.
         policy = self.klass(cpu_count=3)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
 
     def test_assign_muxprocess_4core(self):
         # Big SMP gets a dedicated core.
         policy = self.klass(cpu_count=4)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
-        policy.assign_muxprocess()
+        policy.assign_muxprocess(0)
         self.assertEquals(0x1, policy.mask)
 
     def test_assign_worker_1core(self):
@@ -196,13 +197,13 @@ class LinuxPolicyTest(testlib.TestCase):
         tf = tempfile.NamedTemporaryFile()
         try:
             before = self._get_cpus()
-            self.policy._set_cpu(3)
+            self.policy._set_cpu(None, 3)
             my_cpu = self._get_cpus()
 
-            pid = mitogen.parent.detach_popen(
+            proc = mitogen.parent.popen(
                 args=['cp', '/proc/self/status', tf.name]
             )
-            os.waitpid(pid, 0)
+            proc.wait()
 
             his_cpu = self._get_cpus(tf.name)
             self.assertNotEquals(my_cpu, his_cpu)
@@ -220,6 +221,11 @@ class MockLinuxPolicyTest(testlib.TestCase):
         policy = self.klass(cpu_count=4096)
         for x in range(1, 4096, 32):
             policy.assign_subprocess()
+
+MockLinuxPolicyTest = unittest2.skipIf(
+    condition=(not sys.platform.startswith('linuxPolicy')),
+    reason='select.select() not supported'
+)(MockLinuxPolicyTest)
 
 
 if __name__ == '__main__':

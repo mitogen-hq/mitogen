@@ -1,4 +1,5 @@
 sudo: required
+dist: trusty
 
 notifications:
   email: false
@@ -6,15 +7,21 @@ notifications:
 
 language: python
 
+branches:
+  except:
+  - docs-master
+
 cache:
 - pip
 - directories:
   - /home/travis/virtualenv
 
 install:
+- grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
 - .ci/${MODE}_install.py
 
 script:
+- .ci/spawn_reverse_shell.py
 - .ci/${MODE}_tests.py
 
 
@@ -22,7 +29,44 @@ script:
 # newest->oldest in various configuartions.
 
 matrix:
+  allow_failures:
+    # Python 2.4 tests are still unreliable
+    - language: c
+      env: MODE=mitogen_py24 DISTRO=centos5
+
   include:
+    # Debops tests.
+    # 2.8.3; 3.6 -> 2.7
+    - python: "3.6"
+      env: MODE=debops_common VER=2.8.3
+    # 2.4.6.0; 2.7 -> 2.7
+    - python: "2.7"
+      env: MODE=debops_common VER=2.4.6.0
+
+    # Sanity check against vanilla Ansible. One job suffices.
+    - python: "2.7"
+      env: MODE=ansible VER=2.8.3 DISTROS=debian STRATEGY=linear
+
+    # ansible_mitogen tests.
+
+    # 2.8.3 -> {debian, centos6, centos7}
+    - python: "3.6"
+      env: MODE=ansible VER=2.8.3
+    # 2.8.3 -> {debian, centos6, centos7}
+    - python: "2.7"
+      env: MODE=ansible VER=2.8.3
+
+    # 2.4.6.0 -> {debian, centos6, centos7}
+    - python: "3.6"
+      env: MODE=ansible VER=2.4.6.0
+    # 2.4.6.0 -> {debian, centos6, centos7}
+    - python: "2.6"
+      env: MODE=ansible VER=2.4.6.0
+
+    # 2.3 -> {centos5}
+    - python: "2.6"
+      env: MODE=ansible VER=2.3.3.0 DISTROS=centos5
+
     # Mitogen tests.
     # 2.4 -> 2.4
     - language: c
@@ -38,33 +82,3 @@ matrix:
     - python: "2.6"
       env: MODE=mitogen DISTRO=debian-py3
     # 3.6 -> 2.6 -- moved to Azure
-
-    # Debops tests.
-    # 2.4.6.0; 2.7 -> 2.7
-    - python: "2.7"
-      env: MODE=debops_common VER=2.4.6.0
-    # 2.5.7; 3.6 -> 2.7
-    - python: "3.6"
-      env: MODE=debops_common VER=2.6.2
-
-    # ansible_mitogen tests.
-
-    # 2.3 -> {centos5}
-    - python: "2.6"
-      env: MODE=ansible VER=2.3.3.0 DISTROS=centos5
-
-    # 2.6 -> {debian, centos6, centos7}
-    - python: "2.6"
-      env: MODE=ansible VER=2.4.6.0
-    - python: "2.6"
-      env: MODE=ansible VER=2.6.2
-
-    # 3.6 -> {debian, centos6, centos7}
-    - python: "3.6"
-      env: MODE=ansible VER=2.4.6.0
-    - python: "3.6"
-      env: MODE=ansible VER=2.6.2
-
-    # Sanity check against vanilla Ansible. One job suffices.
-    - python: "2.7"
-      env: MODE=ansible VER=2.6.2 DISTROS=debian STRATEGY=linear

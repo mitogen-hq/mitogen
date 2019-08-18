@@ -1,12 +1,17 @@
+import errno
+import os
+import sys
 import time
 import zlib
 
 import unittest2
 
 import testlib
+import mitogen.core
 import mitogen.master
 import mitogen.parent
 import mitogen.utils
+from mitogen.core import b
 
 try:
     import Queue
@@ -57,12 +62,12 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         self.child2_msg.handle = recv.handle
 
-        self.broker.defer(self.router._async_route,
-                          self.child2_msg,
-                          in_stream=self.child1_stream)
-
-        # Wait for IO loop to finish everything above.
-        self.sync_with_broker()
+        self.broker.defer_sync(
+            lambda: self.router._async_route(
+               self.child2_msg,
+               in_stream=self.child1_stream
+           )
+        )
 
         # Ensure message wasn't forwarded.
         self.assertTrue(recv.empty())
@@ -70,6 +75,34 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         # Ensure error was logged.
         expect = 'bad auth_id: got %r via' % (self.child2_msg.auth_id,)
         self.assertTrue(expect in log.stop())
+
+    def test_parent_unaware_of_disconnect(self):
+        # Parent -> Child A -> Child B. B disconnects concurrent to Parent
+        # sending message. Parent does not yet know B has disconnected, A
+        # receives message from Parent with Parent's auth_id, for a stream that
+        # no longer exists.
+        c1 = self.router.local()
+        strm = self.router.stream_by_id(c1.context_id)
+        recv = mitogen.core.Receiver(self.router)
+
+        self.broker.defer(lambda:
+            strm.protocol._send(
+                mitogen.core.Message(
+                    dst_id=1234,  # nonexistent child
+                    handle=1234,
+                    src_id=mitogen.context_id,
+                    reply_to=recv.handle,
+                )
+            )
+        )
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get().unpickle()
+        )
+        self.assertEquals(e.args[0], self.router.no_route_msg % (
+            1234,
+            c1.context_id,
+        ))
 
     def test_bad_src_id(self):
         # Deliver a message locally from child2 with the correct auth_id, but
@@ -171,7 +204,7 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
         self.assertTrue(sem.get().is_dead)
 
         # Ensure it was logged.
-        expect = '_broker_main() crashed'
+        expect = 'broker crashed'
         self.assertTrue(expect in log.stop())
 
         self.broker.join()
@@ -254,10 +287,34 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
 
         self.assertTrue(expect in logs.stop())
 
+    def test_remote_dead_message(self):
+        # Router should send dead message to original recipient when reply_to
+        # is unset.
+        router = self.klass(broker=self.broker, max_message_size=4096)
+
+        # Try function call. Receiver should be woken by a dead message sent by
+        # router due to message size exceeded.
+        child = router.local()
+        recv = mitogen.core.Receiver(router)
+
+        recv.to_sender().send(b('x') * 4097)
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: recv.get().unpickle()
+        )
+        expect = router.too_large_msg % (4096,)
+        self.assertEquals(e.args[0], expect)
+
     def test_remote_configured(self):
         router = self.klass(broker=self.broker, max_message_size=64*1024)
         remote = router.local()
         size = remote.call(return_router_max_message_size)
+        self.assertEquals(size, 64*1024)
+
+    def test_remote_of_remote_configured(self):
+        router = self.klass(broker=self.broker, max_message_size=64*1024)
+        remote = router.local()
+        remote2 = router.local(via=remote)
+        size = remote2.call(return_router_max_message_size)
         self.assertEquals(size, 64*1024)
 
     def test_remote_exceeded(self):
@@ -341,22 +398,43 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         ))
 
 
-class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
-    def test_siblings_cant_talk(self):
-        self.router.unidirectional = True
-        l1 = self.router.local()
-        l2 = self.router.local()
-        logs = testlib.LogCapturer()
-        logs.start()
-        e = self.assertRaises(mitogen.core.CallError,
-                              lambda: l2.call(ping_context, l1))
+def test_siblings_cant_talk(router):
+    l1 = router.local()
+    l2 = router.local()
+    logs = testlib.LogCapturer()
+    logs.start()
 
-        msg = self.router.unidirectional_msg % (
-            l2.context_id,
-            l1.context_id,
-        )
-        self.assertTrue(msg in str(e))
-        self.assertTrue('routing mode prevents forward of ' in logs.stop())
+    try:
+        l2.call(ping_context, l1)
+    except mitogen.core.CallError:
+        e = sys.exc_info()[1]
+
+    msg = mitogen.core.Router.unidirectional_msg % (
+        l2.context_id,
+        l1.context_id,
+        mitogen.context_id,
+    )
+    assert msg in str(e)
+    assert 'routing mode prevents forward of ' in logs.stop()
+
+
+@mitogen.core.takes_econtext
+def test_siblings_cant_talk_remote(econtext):
+    mitogen.parent.upgrade_router(econtext)
+    test_siblings_cant_talk(econtext.router)
+
+
+class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
+    def test_siblings_cant_talk_master(self):
+        self.router.unidirectional = True
+        test_siblings_cant_talk(self.router)
+
+    def test_siblings_cant_talk_parent(self):
+        # ensure 'unidirectional' attribute is respected for contexts started
+        # by children.
+        self.router.unidirectional = True
+        parent = self.router.local()
+        parent.call(test_siblings_cant_talk_remote)
 
     def test_auth_id_can_talk(self):
         self.router.unidirectional = True
@@ -364,8 +442,8 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
         # treated like a parent.
         l1 = self.router.local()
         l1s = self.router.stream_by_id(l1.context_id)
-        l1s.auth_id = mitogen.context_id
-        l1s.is_privileged = True
+        l1s.protocol.auth_id = mitogen.context_id
+        l1s.protocol.is_privileged = True
 
         l2 = self.router.local()
         e = self.assertRaises(mitogen.core.CallError,
@@ -378,12 +456,133 @@ class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
 class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
     def test_egress_ids_populated(self):
         # Ensure Stream.egress_ids is populated on message reception.
-        c1 = self.router.local()
-        stream = self.router.stream_by_id(c1.context_id)
-        self.assertEquals(set(), stream.egress_ids)
+        c1 = self.router.local(name='c1')
+        c2 = self.router.local(name='c2')
 
-        c1.call(time.sleep, 0)
-        self.assertEquals(set([mitogen.context_id]), stream.egress_ids)
+        c1s = self.router.stream_by_id(c1.context_id)
+        try:
+            c1.call(ping_context, c2)
+        except mitogen.core.CallError:
+            # Fails because siblings cant call funcs in each other, but this
+            # causes messages to be sent.
+            pass
+
+        self.assertEquals(c1s.protocol.egress_ids, set([
+            mitogen.context_id,
+            c2.context_id,
+        ]))
+
+
+class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
+    # 613: tests for all the weird shutdown() variants we ended up with.
+
+    def test_shutdown_wait_false(self):
+        l1 = self.router.local()
+        pid = l1.call(os.getpid)
+
+        strm = self.router.stream_by_id(l1.context_id)
+        exitted = mitogen.core.Latch()
+
+        # It is possible for Process 'exit' signal to fire immediately during
+        # processing of Stream 'disconnect' signal, so we must wait for both,
+        # otherwise ChannelError below will return 'respondent context has
+        # disconnected' rather than 'no route', because RouteMonitor hasn't run
+        # yet and the Receiver caught Context 'disconnect' signal instead of a
+        # dead message.
+        mitogen.core.listen(strm.conn.proc, 'exit', exitted.put)
+        mitogen.core.listen(strm, 'disconnect', exitted.put)
+
+        l1.shutdown(wait=False)
+        exitted.get()
+        exitted.get()
+
+        e = self.assertRaises(OSError,
+            lambda: os.waitpid(pid, 0))
+        self.assertEquals(e.args[0], errno.ECHILD)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: l1.call(os.getpid))
+        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
+
+    def test_shutdown_wait_true(self):
+        l1 = self.router.local()
+        pid = l1.call(os.getpid)
+
+        conn = self.router.stream_by_id(l1.context_id).conn
+        exitted = mitogen.core.Latch()
+        mitogen.core.listen(conn.proc, 'exit', exitted.put)
+
+        l1.shutdown(wait=True)
+        exitted.get()
+
+        e = self.assertRaises(OSError,
+            lambda: os.waitpid(pid, 0))
+        self.assertEquals(e.args[0], errno.ECHILD)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: l1.call(os.getpid))
+        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
+
+    def test_disconnect_invalid_context(self):
+        self.router.disconnect(
+            mitogen.core.Context(self.router, 1234)
+        )
+
+    def test_disconnect_valid_context(self):
+        l1 = self.router.local()
+        pid = l1.call(os.getpid)
+
+        strm = self.router.stream_by_id(l1.context_id)
+
+        exitted = mitogen.core.Latch()
+        mitogen.core.listen(strm.conn.proc, 'exit', exitted.put)
+        self.router.disconnect_stream(strm)
+        exitted.get()
+
+        e = self.assertRaises(OSError,
+            lambda: os.waitpid(pid, 0))
+        self.assertEquals(e.args[0], errno.ECHILD)
+
+        e = self.assertRaises(mitogen.core.ChannelError,
+            lambda: l1.call(os.getpid))
+        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            l1.context_id,
+            mitogen.context_id,
+        ))
+
+    def test_disconnect_all(self):
+        l1 = self.router.local()
+        l2 = self.router.local()
+
+        pids = [l1.call(os.getpid), l2.call(os.getpid)]
+
+        exitted = mitogen.core.Latch()
+        for ctx in l1, l2:
+            strm = self.router.stream_by_id(ctx.context_id)
+            mitogen.core.listen(strm.conn.proc, 'exit', exitted.put)
+
+        self.router.disconnect_all()
+        exitted.get()
+        exitted.get()
+
+        for pid in pids:
+            e = self.assertRaises(OSError,
+                lambda: os.waitpid(pid, 0))
+            self.assertEquals(e.args[0], errno.ECHILD)
+
+        for ctx in l1, l2:
+            e = self.assertRaises(mitogen.core.ChannelError,
+                lambda: ctx.call(os.getpid))
+            self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+                ctx.context_id,
+                mitogen.context_id,
+            ))
 
 
 if __name__ == '__main__':

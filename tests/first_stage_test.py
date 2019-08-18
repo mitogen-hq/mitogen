@@ -19,8 +19,10 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
     #   * 3.x starting 2.7
 
     def test_valid_syntax(self):
-        stream = mitogen.parent.Stream(self.router, 0, max_message_size=123)
-        args = stream.get_boot_command()
+        options = mitogen.parent.Options(max_message_size=123)
+        conn = mitogen.parent.Connection(options, self.router)
+        conn.context = mitogen.core.Context(None, 123)
+        args = conn.get_boot_command()
 
         # Executing the boot command will print "EC0" and expect to read from
         # stdin, which will fail because it's pointing at /dev/null, causing
@@ -38,7 +40,8 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             )
             stdout, stderr = proc.communicate()
             self.assertEquals(0, proc.returncode)
-            self.assertEquals(mitogen.parent.Stream.EC0_MARKER, stdout)
+            self.assertEquals(stdout,
+                mitogen.parent.BootstrapProtocol.EC0_MARKER+b('\n'))
             self.assertIn(b("Error -5 while decompressing data"), stderr)
         finally:
             fp.close()

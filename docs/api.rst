@@ -2,11 +2,6 @@
 API Reference
 *************
 
-.. toctree::
-    :hidden:
-
-    signals
-
 
 Package Layout
 ==============
@@ -31,29 +26,10 @@ mitogen.core
 .. automodule:: mitogen.core
 
 .. currentmodule:: mitogen.core
-.. decorator:: takes_econtext
-
-    Decorator that marks a function or class method to automatically receive a
-    kwarg named `econtext`, referencing the
-    :class:`mitogen.core.ExternalContext` active in the context in which the
-    function is being invoked in. The decorator is only meaningful when the
-    function is invoked via :data:`CALL_FUNCTION
-    <mitogen.core.CALL_FUNCTION>`.
-
-    When the function is invoked directly, `econtext` must still be passed to
-    it explicitly.
+.. autodecorator:: takes_econtext
 
 .. currentmodule:: mitogen.core
-.. decorator:: takes_router
-
-    Decorator that marks a function or class method to automatically receive a
-    kwarg named `router`, referencing the :class:`mitogen.core.Router`
-    active in the context in which the function is being invoked in. The
-    decorator is only meaningful when the function is invoked via
-    :data:`CALL_FUNCTION <mitogen.core.CALL_FUNCTION>`.
-
-    When the function is invoked directly, `router` must still be passed to it
-    explicitly.
+.. autodecorator:: takes_router
 
 
 mitogen.master
@@ -96,8 +72,12 @@ Router Class
     :members:
 
 
-.. currentmodule:: mitogen.master
+.. currentmodule:: mitogen.parent
+.. autoclass:: Router
+   :members:
 
+
+.. currentmodule:: mitogen.master
 .. autoclass:: Router (broker=None)
    :members:
 
@@ -106,6 +86,20 @@ Router Class
 
 Connection Methods
 ==================
+
+.. currentmodule:: mitogen.parent
+.. method:: Router.buildah (container=None, buildah_path=None, username=None, \**kwargs)
+
+    Construct a context on the local machine over a ``buildah`` invocation.
+    Accepts all parameters accepted by :meth:`local`, in addition to:
+
+    :param str container:
+        The name of the Buildah container to connect to.
+    :param str doas_path:
+        Filename or complete path to the ``buildah`` binary. ``PATH`` will be
+        searched if given as a filename. Defaults to ``buildah``.
+    :param str username:
+        Username to use, defaults to unset.
 
 .. currentmodule:: mitogen.parent
 .. method:: Router.fork (on_fork=None, on_start=None, debug=False, profiling=False, via=None)
@@ -383,6 +377,9 @@ Connection Methods
     the root PID of a running Docker, LXC, LXD, or systemd-nspawn
     container.
 
+    The setns method depends on the built-in :mod:`ctypes` module, and thus
+    does not support Python 2.4.
+
     A program is required only to find the root PID, after which management
     of the child Python interpreter is handled directly.
 
@@ -550,11 +547,11 @@ Context Class
 
 
 .. currentmodule:: mitogen.parent
-
-.. autoclass:: CallChain
+.. autoclass:: Context
     :members:
 
-.. autoclass:: Context
+.. currentmodule:: mitogen.parent
+.. autoclass:: CallChain
     :members:
 
 
@@ -620,6 +617,14 @@ Fork Safety
 Utility Functions
 =================
 
+.. currentmodule:: mitogen.core
+.. function:: now
+
+   A reference to :func:`time.time` on Python 2, or :func:`time.monotonic` on
+   Python >3.3. We prefer :func:`time.monotonic` when available to ensure
+   timers are not impacted by system clock changes.
+
+
 .. module:: mitogen.utils
 
 A random assortment of utility functions useful on masters and children.
@@ -659,3 +664,7 @@ Exceptions
 .. autoclass:: LatchError
 .. autoclass:: StreamError
 .. autoclass:: TimeoutError
+
+.. currentmodule:: mitogen.parent
+.. autoclass:: EofError
+.. autoclass:: CancelledError
