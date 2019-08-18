@@ -25,8 +25,7 @@ Enhancements
 ~~~~~~~~~~~~
 
 * :gh:issue:`556`,
-  :gh:issue:`587`: Ansible 2.8 is partially
-  supported. `Become plugins
+  :gh:issue:`587`: Ansible 2.8 is supported. `Become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ and
   `interpreter discovery
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
@@ -80,11 +79,12 @@ Mitogen for Ansible
 
 * :gh:issue:`410`: Uses of :linux:man7:`unix` sockets are replaced with
   traditional :linux:man7:`pipe` pairs when SELinux is detected, to work around
-  a broken heuristic in popular SELinux policies that prevents inheriting
+  a broken heuristic in common SELinux policies that prevents inheriting
   :linux:man7:`unix` sockets across privilege domains.
 
 * `#467 <httpe://github.com/dw/mitogen/issues/467>`_: an incompatibility
-  running Mitogen under Molecule was resolved.
+  running Mitogen under `Molecule
+  <https://molecule.readthedocs.io/en/stable/>`_ was resolved.
 
 * :gh:issue:`547`, :gh:issue:`598`: fix a serious deadlock
   possible while initializing the service pool of any child, such as during
@@ -96,11 +96,11 @@ Mitogen for Ansible
   likely impacted many users. For new connections it manifested as a timeout,
   for forked tasks it could manifest as a timeout or an apparent hang.
 
-* :gh:issue:`549`: the open file descriptor limit for the Ansible process is
-  increased to the available hard limit. It is common for distributions to ship
-  with a much higher hard limit than their default soft limit, allowing *"too
-  many open files"* errors to be avoided more often in large runs without user
-  configuration.
+* :gh:issue:`549`: the open file limit for the Ansible process is increased to
+  the available hard limit. It is common for distributions to ship with a
+  higher hard limit than the default soft limit, allowing *"too many open
+  files"* errors to be avoided more often in large runs without user
+  intervention.
 
 * :gh:issue:`558`, :gh:issue:`582`: on Ansible 2.3 a remote directory was
   unconditionally deleted after the first module belonging to an action plug-in
@@ -110,9 +110,10 @@ Mitogen for Ansible
   due to an incorrect format string.
 
 * :gh:issue:`590`: the importer can handle modules that replace themselves in
-  :data:`sys.modules` during import.
+  :data:`sys.modules` with completely unrelated modules during import, as in
+  the case of Ansible 2.8 :mod:`ansible.module_utils.distro`.
 
-* :gh:issue:`591`: the target's current working directory is restored to a
+* :gh:issue:`591`: the target's working directory is restored to a
   known-existent directory between tasks to ensure :func:`os.getcwd` will not
   fail when called, in the same way that :class:`AnsibleModule` restores it
   during initialization. However this restore happens before the module ever
@@ -130,16 +131,18 @@ Mitogen for Ansible
   encoding.
 
 * :gh:issue:`602`: connection configuration is more accurately inferred for
-  `meta: reset_connection`, the :ans:mod:`synchronize`, and for any action
-  plug-ins that establish additional connections.
+  :ans:mod:`meta: reset_connection <meta>` the :ans:mod:`synchronize`, and for
+  any action plug-ins that establish additional connections.
 
 * :gh:issue:`598`, :gh:issue:`605`: fix a deadlock managing a shared counter
-  used for load balancing.
+  used for load balancing, present since 0.2.4.
 
-* :gh:issue:`615`: streaming file transfer is implemented for ``fetch`` and
-  other actions that transfer files from the target to the controller.
-  Previously the file was sent in one message, requiring it to fit in RAM and
-  be smaller than the internal message size limit.
+* :gh:issue:`615`: streaming file transfer is implemented for the
+  :ans:mod:`fetch` and other actions that transfer files from the target to the
+  controller. Previously files delivered from target to controller were sent in
+  one message, requiring them to fit in RAM and be smaller than an internal
+  message size sanity check. Transfers from controller to target have been
+  streaming since 0.2.0.
 
 * :gh:commit:`7ae926b3`: the Ansible :ans:mod:`lineinfile` began leaking
   writable temporary file descriptors since Ansible 2.7.0. When
@@ -156,6 +159,20 @@ Core Library
   descriptive. The old pseudo-function-call format is slowly migrating to
   human-readable output where possible. For example,
   *"Stream(ssh:123).connect()"* might be written *"connecting to ssh:123"*.
+
+* In preparation for reducing default log output, many messages are delivered
+  to per-component loggers, including messages originating from children,
+  enabling :mod:`logging` aggregation to function as designed. An importer
+  message like::
+
+      12:00:00 D mitogen.ctx.remotehost mitogen: loading module "foo"
+
+  Might instead be logged to the ``mitogen.importer.[remotehost]`` logger::
+
+      12:00:00 D mitogen.importer.[remotehost] loading module "foo"
+
+  Allowing a filter or handler for ``mitogen.importer`` to select that logger
+  in every process.
 
 * :func:`bytearray` was removed from the list of supported serialization types.
   It was never portable between Python versions, unused, and never made much
@@ -217,13 +234,13 @@ Core Library
   deliver a message for some reason other than the sender cannot or should not
   reach the recipient, and no reply-to address is present on the message,
   instead send a :ref:`dead message <IS_DEAD>` to the original recipient. This
-  ensures a descriptive messages is delivered to a thread sleeping on the reply
+  ensures a descriptive message is delivered to a thread sleeping on the reply
   to a function call, where the reply might be dropped due to exceeding the
   maximum configured message size.
 
-* :gh:issue:`624`: the number of threads used for a child's auto-started thread
-  pool has been reduced from 16 to 2. This may drop to 1 in future, and become
-  configurable via a :class:`Router` option.
+* :gh:issue:`624`: the number of threads used for a child's automatically
+  initialized service thread pool has been reduced from 16 to 2. This may drop
+  to 1 in future, and become configurable via a :class:`Router` option.
 
 * :gh:commit:`a5536c35`: avoid quadratic
   buffer management when logging lines received from a child's redirected
