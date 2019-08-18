@@ -139,7 +139,7 @@ Mitogen for Ansible
   encoding.
 
 * :gh:issue:`602`: connection configuration is more accurately inferred for
-  :ans:mod:`meta: reset_connection <meta>` the :ans:mod:`synchronize`, and for
+  :ans:mod:`meta: reset_connection <meta>`, the :ans:mod:`synchronize`, and for
   any action plug-ins that establish additional connections.
 
 * :gh:issue:`598`, :gh:issue:`605`: fix a deadlock managing a shared counter
@@ -147,9 +147,9 @@ Mitogen for Ansible
 
 * :gh:issue:`615`: streaming is implemented for the :ans:mod:`fetch` and other
   actions that transfer files from targets to the controller. Previously files
-  delivered were sent in one message, requiring them to fit in RAM and be
-  smaller than an internal message size sanity check. Transfers from controller
-  to targets have been streaming since 0.2.0.
+  were sent in one message, requiring them to fit in RAM and be smaller than an
+  internal message size sanity check. Transfers from controller to targets have
+  been streaming since 0.2.0.
 
 * :gh:commit:`7ae926b3`: the :ans:mod:`lineinfile` leaks writable temporary
   file descriptors since Ansible 2.7.0. When :ans:mod:`~lineinfile` created or
