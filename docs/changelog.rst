@@ -96,8 +96,7 @@ Mitogen for Ansible
   a broken heuristic in common SELinux policies that prevents inheriting
   :linux:man7:`unix` sockets across privilege domains.
 
-* `#467 <httpe://github.com/dw/mitogen/issues/467>`_: an incompatibility
-  running Mitogen under `Molecule
+* :gh:issue:`467`: an incompatibility running Mitogen under `Molecule
   <https://molecule.readthedocs.io/en/stable/>`_ was resolved.
 
 * :gh:issue:`547`, :gh:issue:`598`: fix a deadlock during initialization of
