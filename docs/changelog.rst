@@ -151,11 +151,11 @@ Mitogen for Ansible
   internal message size sanity check. Transfers from controller to targets have
   been streaming since 0.2.0.
 
-* :gh:commit:`7ae926b3`: the :ans:mod:`lineinfile` leaks writable temporary
-  file descriptors since Ansible 2.7.0. When :ans:mod:`~lineinfile` created or
-  modified a script, and that script was later executed, the execution could
-  fail with "*text file busy*". Temporary descriptors are now tracked and
-  cleaned up on exit for all modules.
+* :gh:commit:`7ae926b3`: the :ans:mod:`lineinfile` leaked writable temporary
+  file descriptors between Ansible 2.7.0 and 2.8.2. When :ans:mod:`~lineinfile`
+  created or modified a script, and that script was later executed, the
+  execution could fail with "*text file busy*". Temporary descriptors are now
+  tracked and cleaned up on exit for all modules.
 
 
 Core Library
