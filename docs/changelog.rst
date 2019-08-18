@@ -80,7 +80,7 @@ Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
 * :gh:issue:`363`: fix an obscure race matching *Permission denied* errors from
-  some versions of ``su`` running on heavily loaded machines.
+  some versions of :linux:man1:`su` running on heavily loaded machines.
 
 * :gh:issue:`410`: Uses of :linux:man7:`unix` sockets are replaced with
   traditional :linux:man7:`pipe` pairs when SELinux is detected, to work around
