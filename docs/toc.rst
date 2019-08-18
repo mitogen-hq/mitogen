@@ -7,11 +7,11 @@ Table Of Contents
 
    index
    Mitogen for Ansible <ansible_detailed>
-   contributors
    changelog
+   contributors
    howitworks
-   getting_started
    api
+   getting_started
    examples
    internals
 
