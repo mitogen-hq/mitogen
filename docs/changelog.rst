@@ -47,13 +47,12 @@ Enhancements
   is available to manipulate `Buildah <https://buildah.io/>`_ containers, and
   is exposed to Ansible as the :ans:conn:`buildah`.
 
-* :gh:issue:`615`: the ``mitogen_fetch``
-  action is included, and the standard Ansible :ans:mod:`fetch` is redirected
-  to it. This implements streaming file transfer in every case, including when
-  ``become`` is active, preventing excessive CPU usage and memory spikes, and
-  significantly improving throughput. A copy of 2 files of 512 MiB each drops
-  from 47 seconds to just under 7 seconds, with peak memory usage dropping from
-  10.7 GiB to 64.8 MiB.
+* :gh:issue:`615`: a modified Ansible :ans:mod:`fetch` is included that
+  implement streaming file transfer in every case, including when ``become`` is
+  active, preventing excessive CPU usage and memory spikes, and significantly
+  improving performance. A copy of 2 files of 512 MiB each drops from 47
+  seconds to 7 seconds, with peak memory usage dropping from 10.7 GiB to 64.8
+  MiB.
 
 * `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
   installation, both Operon and Ansible are supported by a unified release.
