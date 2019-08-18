@@ -264,7 +264,7 @@ Core Library
   unidirectional routing, where contexts may optionally only communicate with
   parents and never siblings (so that air-gapped networks cannot be
   unintentionally bridged) was not inherited when a child was initiated
-  directly from an another child. This did not effect Ansible, since the
+  directly from another child. This did not effect Ansible, since the
   controller initiates any new child used for routing, only forked tasks are
   initiated by children.
 
