@@ -15,11 +15,21 @@ Release Notes
     </style>
 
 
-v0.2.8 (unreleased)
+v0.2.9 (unreleased)
 -------------------
 
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
+
+*(no changes)*
+
+
+v0.2.8 (2019-08-18)
+-------------------
+
+This release includes Ansible 2.8 and SELinux support, fixes for two deadlocks,
+and major internal design overhauls in preparation for future functionality.
+
 
 Enhancements
 ~~~~~~~~~~~~
