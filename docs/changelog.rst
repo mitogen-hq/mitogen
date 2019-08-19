@@ -44,10 +44,9 @@ Enhancements
 ~~~~~~~~~~~~
 
 * :gh:issue:`556`,
-  :gh:issue:`587`: Ansible 2.8 is supported. `Become plugins
-  <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ and
-  `interpreter discovery
-  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
+  :gh:issue:`587`: Ansible 2.8 is supported.
+  `Become plugins <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ (:gh:issue:`631`) and
+  `interpreter discovery <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_ (:gh:issue:`630`)
   are not yet handled.
 
 * :gh:issue:`419`, :gh:issue:`470`: file descriptor usage is approximately
