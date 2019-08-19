@@ -67,8 +67,9 @@ Enhancements
 
 * :gh:issue:`615`: a modified :ans:mod:`fetch` implements streaming transfer
   even when ``become`` is active, avoiding excess CPU usage and memory spikes,
-  and improving performance. A copy of two 512 MiB files drops from 47 seconds
-  to 7 seconds, with peak memory usage dropping from 10.7 GiB to 64.8 MiB.
+  and improving performance. A representative copy of two 512 MiB files drops
+  from 47 seconds to 7 seconds, with peak memory usage dropping from 10.7 GiB
+  to 64.8 MiB.
 
 * `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
   library installation, both Ansible and Operon are supported by a single
