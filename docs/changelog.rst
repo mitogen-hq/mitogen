@@ -66,10 +66,10 @@ Enhancements
   is exposed to Ansible as the :ans:conn:`buildah`.
 
 * :gh:issue:`615`: a modified :ans:mod:`fetch` implements streaming transfer
-  even when ``become`` is active, avoiding excess CPU usage and memory spikes,
-  and improving performance. A representative copy of two 512 MiB files drops
-  from 47 seconds to 7 seconds, with peak memory usage dropping from 10.7 GiB
-  to 64.8 MiB.
+  even when ``become`` is active, avoiding excess CPU and memory spikes, and
+  improving performance. A representative copy of two 512 MiB files drops from
+  55.7 seconds to 6.3 seconds, with peak memory usage dropping from 10.7 GiB to
+  64.8 MiB. [#i615]_
 
 * `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
   library installation, both Ansible and Operon are supported by a single
@@ -302,6 +302,13 @@ bug reports, testing, features and fixes in this release contributed by
 `@rizzly <https://github.com/rizzly>`_,
 `@SQGE <https://github.com/SQGE>`_, and
 `@tho86 <https://github.com/tho86>`_.
+
+
+.. rubric:: Footnotes
+
+.. [#i615] Peak RSS of controller and target as measured with ``/usr/bin/time
+   -v ansible-playbook -c local`` using the reproduction supplied in
+   :gh:issue:`615`.
 
 
 v0.2.7 (2019-05-19)
