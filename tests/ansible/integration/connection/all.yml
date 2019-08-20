@@ -8,3 +8,4 @@
 - include: put_large_file.yml
 - include: put_small_file.yml
 - include: reset.yml
+- include: reset_become.yml

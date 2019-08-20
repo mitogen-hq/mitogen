@@ -1,0 +1,48 @@
+# issue #633: Connection.reset() should ignore "become", and apply to the login
+# account.
+
+- hosts: test-targets
+  become: true
+  gather_facts: false
+  tasks:
+  - debug: msg="reset_become.yml skipped on Ansible<2.5.6"
+    when: ansible_version.full < '2.5.6'
+
+  - meta: end_play
+    when: ansible_version.full < '2.5.6'
+
+  - name: save pid of the become acct
+    custom_python_detect_environment:
+    register: become_acct
+
+  - name: save pid of the login acct
+    become: false
+    custom_python_detect_environment:
+    register: login_acct
+
+  - name: ensure login != become
+    assert:
+      that:
+      - become_acct.pid != login_acct.pid
+
+  - name: reset the connection
+    meta: reset_connection
+
+  - name: save new pid of the become acct
+    custom_python_detect_environment:
+    register: new_become_acct
+
+  - name: ensure become_acct != new_become_acct
+    assert:
+      that:
+      - become_acct.pid != new_become_acct.pid
+
+  - name: save new pid of login acct
+    become: false
+    custom_python_detect_environment:
+    register: new_login_acct
+
+  - name: ensure login_acct != new_login_acct
+    assert:
+      that:
+      - login_acct.pid != new_login_acct.pid

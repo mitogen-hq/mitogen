@@ -46,7 +46,13 @@ class ConnectionMixin(MuxProcessMixin):
 
     def make_connection(self):
         play_context = ansible.playbook.play_context.PlayContext()
-        return self.klass(play_context, new_stdin=False)
+        conn = self.klass(play_context, new_stdin=False)
+        conn.on_action_run(
+            task_vars={},
+            delegate_to_hostname=None,
+            loader_basedir=None,
+        )
+        return conn
 
     def wait_for_completion(self):
         # put_data() is asynchronous, must wait for operation to happen. Do

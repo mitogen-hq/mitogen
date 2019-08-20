@@ -56,6 +56,12 @@ import ansible_mitogen.transport_config
 
 LOG = logging.getLogger(__name__)
 
+task_vars_msg = (
+    'could not recover task_vars. This means some connection '
+    'settings may erroneously be reset to their defaults. '
+    'Please report a bug if you encounter this message.'
+)
+
 
 def get_remote_name(spec):
     """
@@ -486,14 +492,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     # the case of the synchronize module.
     #
 
-    #: Set to the host name as it appears in inventory by on_action_run().
-    inventory_hostname = None
-
     #: Set to task_vars by on_action_run().
     _task_vars = None
-
-    #: Set to 'hostvars' by on_action_run()
-    host_vars = None
 
     #: Set by on_action_run()
     delegate_to_hostname = None
@@ -527,12 +527,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str loader_basedir:
             Loader base directory; see :attr:`loader_basedir`.
         """
-        self.inventory_hostname = task_vars['inventory_hostname']
         self._task_vars = task_vars
-        self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
-        self._mitogen_reset(mode='put')
+        self._put_connection()
 
     def _get_task_vars(self):
         """
@@ -552,8 +550,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         for new connections to be constructed in addition to the preconstructed
         connection passed into any running action.
         """
-        f = sys._getframe()
+        if self._task_vars is not None:
+            return self._task_vars
 
+        f = sys._getframe()
         while f:
             if f.f_code.co_name == 'run':
                 f_locals = f.f_locals
@@ -571,9 +571,23 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
             f = f.f_back
 
-        LOG.warning('could not recover task_vars. This means some connection '
-                    'settings may erroneously be reset to their defaults. '
-                    'Please report a bug if you encounter this message.')
+        raise ansible.errors.AnsibleConnectionFailure(task_vars_msg)
+
+    def get_host_vars(self, inventory_hostname):
+        """
+        Fetch the HostVars for a host.
+
+        :returns:
+            Variables dictionary or :data:`None`.
+        :raises ansible.errors.AnsibleConnectionFailure:
+            Task vars unavailable.
+        """
+        task_vars = self._get_task_vars()
+        hostvars = task_vars.get('hostvars')
+        if hostvars:
+            return hostvars.get(inventory_hostname)
+
+        raise ansible.errors.AnsibleConnectionFailure(task_vars_msg)
 
     def get_task_var(self, key, default=None):
         """
@@ -586,17 +600,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         does not make sense to extract connection-related configuration for the
         delegated-to machine from them.
         """
-        task_vars = self._task_vars or self._get_task_vars()
-        if task_vars is not None:
-            if self.delegate_to_hostname is None:
+        task_vars = self._get_task_vars()
+        if self.delegate_to_hostname is None:
+            if key in task_vars:
+                return task_vars[key]
+        else:
+            delegated_vars = task_vars['ansible_delegated_vars']
+            if self.delegate_to_hostname in delegated_vars:
+                task_vars = delegated_vars[self.delegate_to_hostname]
                 if key in task_vars:
                     return task_vars[key]
-            else:
-                delegated_vars = task_vars['ansible_delegated_vars']
-                if self.delegate_to_hostname in delegated_vars:
-                    task_vars = delegated_vars[self.delegate_to_hostname]
-                    if key in task_vars:
-                        return task_vars[key]
 
         return default
 
@@ -628,7 +641,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         # must use __contains__ to avoid a TypeError for a missing host on
         # Ansible 2.3.
-        if self.host_vars is None or inventory_name not in self.host_vars:
+        via_vars = self.get_host_vars(inventory_name)
+        if via_vars is None:
             raise ansible.errors.AnsibleConnectionFailure(
                 self.unknown_via_msg % (
                     via_spec,
@@ -636,7 +650,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 )
             )
 
-        via_vars = self.host_vars[inventory_name]
         return ansible_mitogen.transport_config.MitogenViaSpec(
             inventory_name=inventory_name,
             play_context=self._play_context,
@@ -712,7 +725,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             connection=self,
             play_context=self._play_context,
             transport=self.transport,
-            inventory_name=self.inventory_hostname,
+            inventory_name=self.get_task_var('inventory_hostname'),
         )
         stack = self._stack_from_spec(spec)
         return spec.inventory_name(), stack
@@ -781,15 +794,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.binding = worker_model.get_binding(inventory_name)
         self._connect_stack(stack)
 
-    def _mitogen_reset(self, mode):
+    def _put_connection(self):
         """
         Forget everything we know about the connected context. This function
         cannot be called _reset() since that name is used as a public API by
         Ansible 2.4 wait_for_connection plug-in.
-
-        :param str mode:
-            Name of ContextService method to use to discard the context, either
-            'put' or 'reset'.
         """
         if not self.context:
             return
@@ -798,7 +807,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         mitogen.service.call(
             call_context=self.binding.get_service_context(),
             service_name='ansible_mitogen.services.ContextService',
-            method_name=mode,
+            method_name='put',
             context=self.context
         )
 
@@ -813,23 +822,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
-        self._mitogen_reset(mode='put')
+        self._put_connection()
         if self.binding:
             self.binding.close()
             self.binding = None
-
-    def _reset_find_task_vars(self):
-        """
-        Monsterous hack: since "meta: reset_connection" does not run from an
-        action, we cannot capture task variables via :meth:`on_action_run`.
-        Instead walk the parent frames searching for the `all_vars` local from
-        StrategyBase._execute_meta(). If this fails, just leave task_vars
-        unset, likely causing a subtly wrong configuration to be selected.
-        """
-        frame = sys._getframe()
-        while frame and not self._task_vars:
-            self._task_vars = frame.f_locals.get('all_vars')
-            frame = frame.f_back
 
     reset_compat_msg = (
         'Mitogen only supports "reset_connection" on Ansible 2.5.6 or later'
@@ -842,9 +838,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         the 'disconnected' state, and informs ContextService the connection is
         bad somehow, and should be shut down and discarded.
         """
-        if self._task_vars is None:
-            self._reset_find_task_vars()
-
         if self._play_context.remote_addr is None:
             # <2.5.6 incorrectly populate PlayContext for reset_connection
             # https://github.com/ansible/ansible/issues/27520
@@ -852,10 +845,24 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 self.reset_compat_msg
             )
 
-        self._connect()
-        self._mitogen_reset(mode='reset')
-        self.binding.close()
-        self.binding = None
+        # Clear out state in case we were ever connected.
+        self.close()
+
+        inventory_name, stack = self._build_stack()
+        if self._play_context.become:
+            stack = stack[:-1]
+
+        worker_model = ansible_mitogen.process.get_worker_model()
+        binding = worker_model.get_binding(inventory_name)
+        try:
+            mitogen.service.call(
+                call_context=binding.get_service_context(),
+                service_name='ansible_mitogen.services.ContextService',
+                method_name='reset',
+                stack=mitogen.utils.cast(list(stack)),
+            )
+        finally:
+            binding.close()
 
     # Compatibility with Ansible 2.4 wait_for_connection plug-in.
     _reset = reset

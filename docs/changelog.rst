@@ -21,7 +21,16 @@ v0.2.9 (unreleased)
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-*(no changes)*
+* :gh:issue:`633`: :ans:mod:`meta: reset_connection <meta>` could fail to reset
+  a connection when ``become: true`` was set on the playbook.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Can Ozokur httpe://github.com/canozokur/>`_,
 
 
 v0.2.8 (2019-08-18)
@@ -41,7 +50,7 @@ Enhancements
   <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
   are not yet handled.
 
-* :gh:issue:`419`, :gh:issue:`470`, file descriptor usage is approximately
+* :gh:issue:`419`, :gh:issue:`470`: file descriptor usage is approximately
   halved, as it is no longer necessary to separately manage read and write
   sides to work around a design problem.
 
@@ -80,7 +89,7 @@ Mitogen for Ansible
 ~~~~~~~~~~~~~~~~~~~
 
 * :gh:issue:`363`: fix an obscure race matching *Permission denied* errors from
-  some versions of ``su`` running on heavily loaded machines.
+  some versions of :linux:man1:`su` running on heavily loaded machines.
 
 * :gh:issue:`410`: Uses of :linux:man7:`unix` sockets are replaced with
   traditional :linux:man7:`pipe` pairs when SELinux is detected, to work around
@@ -266,7 +275,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Andreas Hubert <https://github.com/peshay>`_.
+`Andreas Hubert <https://github.com/peshay>`_,
 `Anton Markelov <https://github.com/strangeman>`_,
 `Dan <https://github.com/dsgnr>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
