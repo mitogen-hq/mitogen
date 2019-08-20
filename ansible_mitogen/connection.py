@@ -486,9 +486,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     # the case of the synchronize module.
     #
 
-    #: Set to the host name as it appears in inventory by on_action_run().
-    inventory_hostname = None
-
     #: Set to task_vars by on_action_run().
     _task_vars = None
 
@@ -527,7 +524,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         :param str loader_basedir:
             Loader base directory; see :attr:`loader_basedir`.
         """
-        self.inventory_hostname = task_vars['inventory_hostname']
         self._task_vars = task_vars
         self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
@@ -712,7 +708,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             connection=self,
             play_context=self._play_context,
             transport=self.transport,
-            inventory_name=self.inventory_hostname,
+            inventory_name=self.get_task_var('inventory_hostname'),
         )
         stack = self._stack_from_spec(spec)
         return spec.inventory_name(), stack
