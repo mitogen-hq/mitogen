@@ -30,7 +30,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Can Ozokur httpe://github.com/canozokur/>`_,
+`Can Ozokur <https://github.com/canozokur/>`_,
 
 
 v0.2.8 (2019-08-18)
