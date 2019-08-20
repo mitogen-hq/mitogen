@@ -528,7 +528,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
-        self._mitogen_reset(mode='put')
+        self._put_connection()
 
     def _get_task_vars(self):
         """
@@ -777,15 +777,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.binding = worker_model.get_binding(inventory_name)
         self._connect_stack(stack)
 
-    def _mitogen_reset(self, mode):
+    def _put_connection(self):
         """
         Forget everything we know about the connected context. This function
         cannot be called _reset() since that name is used as a public API by
         Ansible 2.4 wait_for_connection plug-in.
-
-        :param str mode:
-            Name of ContextService method to use to discard the context, either
-            'put' or 'reset'.
         """
         if not self.context:
             return
@@ -794,7 +790,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         mitogen.service.call(
             call_context=self.binding.get_service_context(),
             service_name='ansible_mitogen.services.ContextService',
-            method_name=mode,
+            method_name='put',
             context=self.context
         )
 
@@ -809,23 +805,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
         """
-        self._mitogen_reset(mode='put')
+        self._put_connection()
         if self.binding:
             self.binding.close()
             self.binding = None
-
-    def _reset_find_task_vars(self):
-        """
-        Monsterous hack: since "meta: reset_connection" does not run from an
-        action, we cannot capture task variables via :meth:`on_action_run`.
-        Instead walk the parent frames searching for the `all_vars` local from
-        StrategyBase._execute_meta(). If this fails, just leave task_vars
-        unset, likely causing a subtly wrong configuration to be selected.
-        """
-        frame = sys._getframe()
-        while frame and not self._task_vars:
-            self._task_vars = frame.f_locals.get('all_vars')
-            frame = frame.f_back
 
     reset_compat_msg = (
         'Mitogen only supports "reset_connection" on Ansible 2.5.6 or later'
@@ -838,9 +821,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         the 'disconnected' state, and informs ContextService the connection is
         bad somehow, and should be shut down and discarded.
         """
-        if self._task_vars is None:
-            self._reset_find_task_vars()
-
         if self._play_context.remote_addr is None:
             # <2.5.6 incorrectly populate PlayContext for reset_connection
             # https://github.com/ansible/ansible/issues/27520
@@ -848,10 +828,24 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 self.reset_compat_msg
             )
 
-        self._connect()
-        self._mitogen_reset(mode='reset')
-        self.binding.close()
-        self.binding = None
+        # Clear out state in case we were ever connected.
+        self.close()
+
+        inventory_name, stack = self._build_stack()
+        if self._play_context.become:
+            stack = stack[:-1]
+
+        worker_model = ansible_mitogen.process.get_worker_model()
+        binding = worker_model.get_binding(inventory_name)
+        try:
+            mitogen.service.call(
+                call_context=binding.get_service_context(),
+                service_name='ansible_mitogen.services.ContextService',
+                method_name='reset',
+                stack=mitogen.utils.cast(list(stack)),
+            )
+        finally:
+            binding.close()
 
     # Compatibility with Ansible 2.4 wait_for_connection plug-in.
     _reset = reset
