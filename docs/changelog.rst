@@ -21,7 +21,16 @@ v0.2.9 (unreleased)
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-*(no changes)*
+* :gh:issue:`633`: :ans:mod:`meta: reset_connection <meta>` could fail to reset
+  a connection when ``become: true`` was set on the playbook.
+
+
+Thanks!
+~~~~~~~
+
+Mitogen would not be possible without the support of users. A huge thanks for
+bug reports, testing, features and fixes in this release contributed by
+`Can Ozokur httpe://github.com/canozokur/>`_,
 
 
 v0.2.8 (2019-08-18)
@@ -266,7 +275,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Andreas Hubert <https://github.com/peshay>`_.
+`Andreas Hubert <https://github.com/peshay>`_,
 `Anton Markelov <https://github.com/strangeman>`_,
 `Dan <https://github.com/dsgnr>`_,
 `Dave Cottlehuber <https://github.com/dch>`_,
