@@ -173,12 +173,12 @@ class ContextService(mitogen.service.Service):
         l = mitogen.core.Latch()
         context = None
         with self._lock:
-            for spec in stack:
+            for i, spec in enumerate(stack):
                 key = key_from_dict(via=context, **spec)
                 response = self._response_by_key.get(key)
                 if response is None:
-                    LOG.debug('%r: could not find connection to shut down',
-                              self)
+                    LOG.debug('%r: could not find connection to shut down; '
+                              'failed at hop %d', self, i)
                     return False
 
                 context = response['context']

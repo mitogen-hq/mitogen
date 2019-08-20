@@ -56,6 +56,12 @@ import ansible_mitogen.transport_config
 
 LOG = logging.getLogger(__name__)
 
+task_vars_msg = (
+    'could not recover task_vars. This means some connection '
+    'settings may erroneously be reset to their defaults. '
+    'Please report a bug if you encounter this message.'
+)
+
 
 def get_remote_name(spec):
     """
@@ -489,9 +495,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Set to task_vars by on_action_run().
     _task_vars = None
 
-    #: Set to 'hostvars' by on_action_run()
-    host_vars = None
-
     #: Set by on_action_run()
     delegate_to_hostname = None
 
@@ -525,7 +528,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Loader base directory; see :attr:`loader_basedir`.
         """
         self._task_vars = task_vars
-        self.host_vars = task_vars['hostvars']
         self.delegate_to_hostname = delegate_to_hostname
         self.loader_basedir = loader_basedir
         self._put_connection()
@@ -548,8 +550,10 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         for new connections to be constructed in addition to the preconstructed
         connection passed into any running action.
         """
-        f = sys._getframe()
+        if self._task_vars is not None:
+            return self._task_vars
 
+        f = sys._getframe()
         while f:
             if f.f_code.co_name == 'run':
                 f_locals = f.f_locals
@@ -567,9 +571,23 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
             f = f.f_back
 
-        LOG.warning('could not recover task_vars. This means some connection '
-                    'settings may erroneously be reset to their defaults. '
-                    'Please report a bug if you encounter this message.')
+        raise ansible.errors.AnsibleConnectionFailure(task_vars_msg)
+
+    def get_host_vars(self, inventory_hostname):
+        """
+        Fetch the HostVars for a host.
+
+        :returns:
+            Variables dictionary or :data:`None`.
+        :raises ansible.errors.AnsibleConnectionFailure:
+            Task vars unavailable.
+        """
+        task_vars = self._get_task_vars()
+        hostvars = task_vars.get('hostvars')
+        if hostvars:
+            return hostvars.get(inventory_hostname)
+
+        raise ansible.errors.AnsibleConnectionFailure(task_vars_msg)
 
     def get_task_var(self, key, default=None):
         """
@@ -582,17 +600,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         does not make sense to extract connection-related configuration for the
         delegated-to machine from them.
         """
-        task_vars = self._task_vars or self._get_task_vars()
-        if task_vars is not None:
-            if self.delegate_to_hostname is None:
+        task_vars = self._get_task_vars()
+        if self.delegate_to_hostname is None:
+            if key in task_vars:
+                return task_vars[key]
+        else:
+            delegated_vars = task_vars['ansible_delegated_vars']
+            if self.delegate_to_hostname in delegated_vars:
+                task_vars = delegated_vars[self.delegate_to_hostname]
                 if key in task_vars:
                     return task_vars[key]
-            else:
-                delegated_vars = task_vars['ansible_delegated_vars']
-                if self.delegate_to_hostname in delegated_vars:
-                    task_vars = delegated_vars[self.delegate_to_hostname]
-                    if key in task_vars:
-                        return task_vars[key]
 
         return default
 
@@ -624,7 +641,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         # must use __contains__ to avoid a TypeError for a missing host on
         # Ansible 2.3.
-        if self.host_vars is None or inventory_name not in self.host_vars:
+        via_vars = self.get_host_vars(inventory_name)
+        if via_vars is None:
             raise ansible.errors.AnsibleConnectionFailure(
                 self.unknown_via_msg % (
                     via_spec,
@@ -632,7 +650,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 )
             )
 
-        via_vars = self.host_vars[inventory_name]
         return ansible_mitogen.transport_config.MitogenViaSpec(
             inventory_name=inventory_name,
             play_context=self._play_context,
