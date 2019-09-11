@@ -503,7 +503,7 @@ def set_cloexec(fd):
     :func:`mitogen.fork.on_fork`.
     """
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-    assert fd > 2
+    assert fd > 2, 'fd %r <= 2' % (fd,)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
@@ -808,7 +808,7 @@ class Message(object):
         self.src_id = mitogen.context_id
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
-        assert isinstance(self.data, BytesType)
+        assert isinstance(self.data, BytesType), 'Message data is not Bytes'
 
     def pack(self):
         return (
@@ -1834,7 +1834,8 @@ class DelimitedProtocol(Protocol):
             if cont:
                 self.on_partial_line_received(self._trailer)
             else:
-                assert stream.protocol is not self
+                assert stream.protocol is not self, \
+                    'stream protocol is no longer %r' % (self,)
                 stream.protocol.on_receive(broker, self._trailer)
 
     def on_line_received(self, line):

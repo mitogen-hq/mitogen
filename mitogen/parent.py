@@ -1680,6 +1680,7 @@ class Connection(object):
         try:
             self.proc = self.start_child()
         except Exception:
+            LOG.debug('failed to start child', exc_info=True)
             self._fail_connection(sys.exc_info()[1])
             return
 
