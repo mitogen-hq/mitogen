@@ -647,7 +647,7 @@ The Module Importer
 
 :py:class:`mitogen.core.Importer` is still a work in progress, as there
 are a variety of approaches to implementing it, and the present implementation
-is not pefectly efficient in every case.
+is not perfectly efficient in every case.
 
 It operates by intercepting :keyword:`import` statements via
 :py:data:`sys.meta_path`, asking Python if it can satisfy the import by itself,
