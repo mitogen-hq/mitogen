@@ -79,16 +79,8 @@ def reset_logging_framework():
     logging._lock = threading.RLock()
 
     # The root logger does not appear in the loggerDict.
-    for name in [None] + list(logging.Logger.manager.loggerDict):
-        for handler in logging.getLogger(name).handlers:
-            handler.createLock()
-
-    root = logging.getLogger()
-    root.handlers = [
-        handler
-        for handler in root.handlers
-        if not isinstance(handler, mitogen.core.LogHandler)
-    ]
+    logging.Logger.manager.loggerDict = {}
+    logging.getLogger().handlers = []
 
 
 def on_fork():
@@ -244,6 +236,8 @@ class Connection(mitogen.parent.Connection):
         # desired FDs. In that case closing it breaks ExternalContext.main().
         if childfp.fileno() not in (0, 1, 100):
             childfp.close()
+
+        mitogen.core.IOLOG.setLevel(logging.INFO)
 
         try:
             try:

@@ -6,6 +6,8 @@
   any_errors_fatal: true
   gather_facts: true
   tasks:
+    - meta: end_play
+      when: ansible_version.full < '2.6'
 
     # Copy the naughty 'ansible' into place.
     - copy:
@@ -13,7 +15,7 @@
         src: ansible.py
 
     # Restart the connection.
-    - mitogen_shutdown_all:
+    - meta: reset_connection
 
     - custom_python_detect_environment:
       register: env

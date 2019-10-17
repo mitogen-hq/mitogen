@@ -54,6 +54,15 @@ if faulthandler is not None:
     faulthandler.enable()
 
 
+#
+# Temporary hack: Operon changed logging somewhat, and this broke LogCapturer /
+# log_handler_test.
+#
+
+mitogen.core.LOG.propagate = True
+
+
+
 def get_fd_count():
     """
     Return the number of FDs open by this process.

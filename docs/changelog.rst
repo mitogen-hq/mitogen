@@ -15,11 +15,19 @@ Release Notes
     </style>
 
 
-v0.2.9 (unreleased)
--------------------
+v0.2.10 (unreleased)
+--------------------
 
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
+
+*(no changes)*
+
+
+v0.2.9 (2019-11-02)
+-------------------
+
+This release contains minimal fixes beyond those required for Ansible 2.9.
 
 * :gh:issue:`633`: :ans:mod:`meta: reset_connection <meta>` could fail to reset
   a connection when ``become: true`` was set on the playbook.
@@ -30,7 +38,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Can Ozokur httpe://github.com/canozokur/>`_,
+`Can Ozokur <https://github.com/canozokur/>`_.
 
 
 v0.2.8 (2019-08-18)
@@ -44,10 +52,9 @@ Enhancements
 ~~~~~~~~~~~~
 
 * :gh:issue:`556`,
-  :gh:issue:`587`: Ansible 2.8 is supported. `Become plugins
-  <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ and
-  `interpreter discovery
-  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
+  :gh:issue:`587`: Ansible 2.8 is supported.
+  `Become plugins <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ (:gh:issue:`631`) and
+  `interpreter discovery <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_ (:gh:issue:`630`)
   are not yet handled.
 
 * :gh:issue:`419`, :gh:issue:`470`: file descriptor usage is approximately
@@ -67,9 +74,10 @@ Enhancements
   is exposed to Ansible as the :ans:conn:`buildah`.
 
 * :gh:issue:`615`: a modified :ans:mod:`fetch` implements streaming transfer
-  even when ``become`` is active, avoiding excess CPU usage and memory spikes,
-  and improving performance. A copy of two 512 MiB files drops from 47 seconds
-  to 7 seconds, with peak memory usage dropping from 10.7 GiB to 64.8 MiB.
+  even when ``become`` is active, avoiding excess CPU and memory spikes, and
+  improving performance. A representative copy of two 512 MiB files drops from
+  55.7 seconds to 6.3 seconds, with peak memory usage dropping from 10.7 GiB to
+  64.8 MiB. [#i615]_
 
 * `Operon <https://networkgenomics.com/operon/>`_ no longer requires a custom
   library installation, both Ansible and Operon are supported by a single
@@ -96,8 +104,7 @@ Mitogen for Ansible
   a broken heuristic in common SELinux policies that prevents inheriting
   :linux:man7:`unix` sockets across privilege domains.
 
-* `#467 <httpe://github.com/dw/mitogen/issues/467>`_: an incompatibility
-  running Mitogen under `Molecule
+* :gh:issue:`467`: an incompatibility running Mitogen under `Molecule
   <https://molecule.readthedocs.io/en/stable/>`_ was resolved.
 
 * :gh:issue:`547`, :gh:issue:`598`: fix a deadlock during initialization of
@@ -139,7 +146,7 @@ Mitogen for Ansible
   encoding.
 
 * :gh:issue:`602`: connection configuration is more accurately inferred for
-  :ans:mod:`meta: reset_connection <meta>` the :ans:mod:`synchronize`, and for
+  :ans:mod:`meta: reset_connection <meta>`, the :ans:mod:`synchronize`, and for
   any action plug-ins that establish additional connections.
 
 * :gh:issue:`598`, :gh:issue:`605`: fix a deadlock managing a shared counter
@@ -147,15 +154,15 @@ Mitogen for Ansible
 
 * :gh:issue:`615`: streaming is implemented for the :ans:mod:`fetch` and other
   actions that transfer files from targets to the controller. Previously files
-  delivered were sent in one message, requiring them to fit in RAM and be
-  smaller than an internal message size sanity check. Transfers from controller
-  to targets have been streaming since 0.2.0.
+  were sent in one message, requiring them to fit in RAM and be smaller than an
+  internal message size sanity check. Transfers from controller to targets have
+  been streaming since 0.2.0.
 
-* :gh:commit:`7ae926b3`: the :ans:mod:`lineinfile` leaks writable temporary
-  file descriptors since Ansible 2.7.0. When :ans:mod:`~lineinfile` created or
-  modified a script, and that script was later executed, the execution could
-  fail with "*text file busy*". Temporary descriptors are now tracked and
-  cleaned up on exit for all modules.
+* :gh:commit:`7ae926b3`: the :ans:mod:`lineinfile` leaked writable temporary
+  file descriptors between Ansible 2.7.0 and 2.8.2. When :ans:mod:`~lineinfile`
+  created or modified a script, and that script was later executed, the
+  execution could fail with "*text file busy*". Temporary descriptors are now
+  tracked and cleaned up on exit for all modules.
 
 
 Core Library
@@ -265,7 +272,7 @@ Core Library
   unidirectional routing, where contexts may optionally only communicate with
   parents and never siblings (so that air-gapped networks cannot be
   unintentionally bridged) was not inherited when a child was initiated
-  directly from an another child. This did not effect Ansible, since the
+  directly from another child. This did not effect Ansible, since the
   controller initiates any new child used for routing, only forked tasks are
   initiated by children.
 
@@ -303,6 +310,13 @@ bug reports, testing, features and fixes in this release contributed by
 `@rizzly <https://github.com/rizzly>`_,
 `@SQGE <https://github.com/SQGE>`_, and
 `@tho86 <https://github.com/tho86>`_.
+
+
+.. rubric:: Footnotes
+
+.. [#i615] Peak RSS of controller and target as measured with ``/usr/bin/time
+   -v ansible-playbook -c local`` using the reproduction supplied in
+   :gh:issue:`615`.
 
 
 v0.2.7 (2019-05-19)

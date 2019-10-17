@@ -31,11 +31,6 @@ from __future__ import absolute_import
 import os.path
 import sys
 
-try:
-    from ansible.plugins.connection import kubectl
-except ImportError:
-    kubectl = None
-
 from ansible.errors import AnsibleConnectionFailure
 from ansible.module_utils.six import iteritems
 
@@ -47,6 +42,19 @@ except ImportError:
     del base_dir
 
 import ansible_mitogen.connection
+import ansible_mitogen.loaders
+
+
+_class = ansible_mitogen.loaders.connection_loader__get(
+    'kubectl',
+    class_only=True,
+)
+
+if _class:
+    kubectl = sys.modules[_class.__module__]
+    del _class
+else:
+    kubectl = None
 
 
 class Connection(ansible_mitogen.connection.Connection):

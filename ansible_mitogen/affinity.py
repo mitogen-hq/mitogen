@@ -265,9 +265,19 @@ class LinuxPolicy(FixedPolicy):
             mask >>= 64
         return mitogen.core.b('').join(chunks)
 
+    def _get_thread_ids(self):
+        try:
+            ents = os.listdir('/proc/self/task')
+        except OSError:
+            LOG.debug('cannot fetch thread IDs for current process')
+            return [os.getpid()]
+
+        return [int(s) for s in ents if s.isdigit()]
+
     def _set_cpu_mask(self, mask):
         s = self._mask_to_bytes(mask)
-        _sched_setaffinity(os.getpid(), len(s), s)
+        for tid in self._get_thread_ids():
+            _sched_setaffinity(tid, len(s), s)
 
 
 if _sched_setaffinity is not None:

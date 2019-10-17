@@ -2047,6 +2047,10 @@ class MitogenProtocol(Protocol):
     #: :data:`mitogen.parent_ids`.
     is_privileged = False
 
+    #: Invoked as `on_message(stream, msg)` each message received from the
+    #: peer.
+    on_message = None
+
     def __init__(self, router, remote_id, auth_id=None,
                  local_id=None, parent_ids=None):
         self._router = router
@@ -2246,12 +2250,12 @@ class Context(object):
         return receiver
 
     def call_service_async(self, service_name, method_name, **kwargs):
-        _v and LOG.debug('calling service %s.%s of %r, args: %r',
-                         service_name, method_name, self, kwargs)
         if isinstance(service_name, BytesType):
             service_name = service_name.encode('utf-8')
         elif not isinstance(service_name, UnicodeType):
             service_name = service_name.name()  # Service.name()
+        _v and LOG.debug('calling service %s.%s of %r, args: %r',
+                         service_name, method_name, self, kwargs)
         tup = (service_name, to_text(method_name), Kwargs(kwargs))
         msg = Message.pickled(tup, handle=CALL_SERVICE)
         return self.send_async(msg)
@@ -2576,6 +2580,7 @@ class Latch(object):
             return self._cls_idle_socketpairs.pop()  # pop() must be atomic
         except IndexError:
             rsock, wsock = socket.socketpair()
+            rsock.setblocking(False)
             set_cloexec(rsock.fileno())
             set_cloexec(wsock.fileno())
             self._cls_all_sockets.extend((rsock, wsock))
@@ -2650,9 +2655,8 @@ class Latch(object):
         )
 
         e = None
-        woken = None
         try:
-            woken = list(poller.poll(timeout))
+            list(poller.poll(timeout))
         except Exception:
             e = sys.exc_info()[1]
 
@@ -2660,11 +2664,19 @@ class Latch(object):
         try:
             i = self._sleeping.index((wsock, cookie))
             del self._sleeping[i]
-            if not woken:
-                raise e or TimeoutError()
 
-            got_cookie = rsock.recv(self.COOKIE_SIZE)
+            try:
+                got_cookie = rsock.recv(self.COOKIE_SIZE)
+            except socket.error:
+                e2 = sys.exc_info()[1]
+                if e2.args[0] == errno.EAGAIN:
+                    e = TimeoutError()
+                else:
+                    e = e2
+
             self._cls_idle_socketpairs.append((rsock, wsock))
+            if e:
+                raise e
 
             assert cookie == got_cookie, (
                 "Cookie incorrect; got %r, expected %r" \
@@ -2745,8 +2757,7 @@ class Waker(Protocol):
 
     def __init__(self, broker):
         self._broker = broker
-        self._lock = threading.Lock()
-        self._deferred = []
+        self._deferred = collections.deque()
 
     def __repr__(self):
         return 'Waker(fd=%r/%r)' % (
@@ -2759,11 +2770,7 @@ class Waker(Protocol):
         """
         Prevent immediate Broker shutdown while deferred functions remain.
         """
-        self._lock.acquire()
-        try:
-            return len(self._deferred)
-        finally:
-            self._lock.release()
+        return len(self._deferred)
 
     def on_receive(self, broker, buf):
         """
@@ -2772,14 +2779,12 @@ class Waker(Protocol):
         ensure only one byte needs to be pending regardless of queue length.
         """
         _vv and IOLOG.debug('%r.on_receive()', self)
-        self._lock.acquire()
-        try:
-            deferred = self._deferred
-            self._deferred = []
-        finally:
-            self._lock.release()
+        while True:
+            try:
+                func, args, kwargs = self._deferred.popleft()
+            except IndexError:
+                return
 
-        for func, args, kwargs in deferred:
             try:
                 func(*args, **kwargs)
             except Exception:
@@ -2796,7 +2801,7 @@ class Waker(Protocol):
             self.stream.transmit_side.write(b(' '))
         except OSError:
             e = sys.exc_info()[1]
-            if e.args[0] != errno.EBADF:
+            if e.args[0] in (errno.EBADF, errno.EWOULDBLOCK):
                 raise
 
     broker_shutdown_msg = (
@@ -2822,15 +2827,8 @@ class Waker(Protocol):
 
         _vv and IOLOG.debug('%r.defer() [fd=%r]', self,
                             self.stream.transmit_side.fd)
-        self._lock.acquire()
-        try:
-            should_wake = not self._deferred
-            self._deferred.append((func, args, kwargs))
-        finally:
-            self._lock.release()
-
-        if should_wake:
-            self._wake()
+        self._deferred.append((func, args, kwargs))
+        self._wake()
 
 
 class IoLoggerProtocol(DelimitedProtocol):
@@ -3300,6 +3298,8 @@ class Router(object):
             # the parent.
             if in_stream.protocol.auth_id is not None:
                 msg.auth_id = in_stream.protocol.auth_id
+            if in_stream.protocol.on_message is not None:
+                in_stream.protocol.on_message(in_stream, msg)
 
             # Record the IDs the source ever communicated with.
             in_stream.protocol.egress_ids.add(msg.dst_id)
@@ -3549,6 +3549,7 @@ class Broker(object):
             while self._alive:
                 self._loop_once()
 
+            fire(self, 'before_shutdown')
             fire(self, 'shutdown')
             self._broker_shutdown()
         except Exception:
@@ -3626,7 +3627,13 @@ class Dispatcher(object):
             policy=has_parent_authority,
         )
         self._service_recv.notify = self._on_call_service
-        listen(econtext.broker, 'shutdown', self.recv.close)
+        listen(econtext.broker, 'shutdown', self._on_broker_shutdown)
+
+    def _on_broker_shutdown(self):
+        if self._service_recv.notify == self._on_call_service:
+            self._service_recv.notify = None
+        self.recv.close()
+
 
     @classmethod
     @takes_econtext
@@ -3988,4 +3995,3 @@ class ExternalContext(object):
                 raise
         finally:
             self.broker.shutdown()
-            self.broker.join()
