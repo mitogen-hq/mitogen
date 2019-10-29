@@ -1461,36 +1461,11 @@ class Connection(object):
         by returning a 1-element list containing :attr:`python_path` + codecs
 
         This allows emulation of existing tools where the Python invocation may
-        be set to e.g. `['/usr/bin/env', 'python']` or
-        `['source', '/opt/rh/rh-python36/enable, '&&', 'python']`
+        be set to e.g. `['/usr/bin/env', 'python']`
         """
-        # if isinstance(self.options.python_path, list):
-        #     python_path = " ".join(self.options.python_path)
-        # else:
-        #     python_path = self.options.python_path
-
-        # quoting the entire command necessary to invoke python supports
-        # complex python_paths
-        # return ["'" + python_path, '-c',
-        #     'import codecs,os,sys;_=codecs.decode;'
-        #     'exec(_(_("%s".encode(),"base64"),"zip"))\'' % (encoded.decode(),)
-        #         ]
-
         if isinstance(self.options.python_path, list):
             return self.options.python_path
         return [self.options.python_path]
-
-        """
-        return self.get_python_argv() + [
--            '-c',
--            'import codecs,os,sys;_=codecs.decode;'
--            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
--        ]
-
-        if isinstance(self.options.python_path, list):
--            return self.options.python_path
--        return [self.options.python_path]
-        """
 
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
@@ -1507,7 +1482,6 @@ class Connection(object):
         # codecs.decode() requires a bytes object. Since we must be compatible
         # with 2.4 (no bytes literal), an extra .encode() either returns the
         # same str (2.x) or an equivalent bytes (3.x).
-        # return self.get_python_cmd(encoded)
         return self.get_python_argv() + [
             '-c',
             'import codecs,os,sys;_=codecs.decode;'
@@ -1549,8 +1523,6 @@ class Connection(object):
 
     def start_child(self):
         args = self.get_boot_command()
-        LOG.debug('%s', args)
-        LOG.debug('walrus')
         LOG.debug('command line for %r: %s', self, Argv(args))
         try:
             return self.create_child(args=args, **self.create_child_args)

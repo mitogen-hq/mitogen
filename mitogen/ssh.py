@@ -298,12 +298,10 @@ class Connection(mitogen.parent.Connection):
         if self.options.ssh_args:
             bits += self.options.ssh_args
         bits.append(self.options.hostname)
-        # import pdb
-        # pdb.set_trace()
         base = super(Connection, self).get_boot_command()
+
         base_parts = []
         for s in base:
             val = s if s in self.SHLEX_IGNORE else shlex_quote(s).strip()
             base_parts.append(val)
         return bits + base_parts
-        # return bits + [shlex_quote(s).strip() for s in base]

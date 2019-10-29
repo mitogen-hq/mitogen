@@ -114,10 +114,10 @@ SUDO_OPTIONS = [
     #(False, 'bool', '--background', '-b')
     #(False, 'str', '--close-from', '-C')
     #(False, 'str', '--login-class', 'c')
-    (True,  'bool', '--preserve-env', '-E'),
+    (True, 'bool', '--preserve-env', '-E'),
     #(False, 'bool', '--edit', '-e')
     #(False, 'str', '--group', '-g')
-    (True,  'bool', '--set-home', '-H'),
+    (True, 'bool', '--set-home', '-H'),
     #(False, 'str', '--host', '-h')
     (False, 'bool', '--login', '-i'),
     #(False, 'bool', '--remove-timestamp', '-K')
@@ -146,8 +146,10 @@ SUDO_OPTIONS = [
 class OptionParser(optparse.OptionParser):
     def help(self):
         self.exit()
+
     def error(self, msg):
         self.exit(msg=msg)
+
     def exit(self, status=0, msg=None):
         msg = 'sudo: ' + (msg or 'unsupported option')
         raise mitogen.core.StreamError(msg)
@@ -167,7 +169,7 @@ def parse_sudo_flags(args):
     parser = make_sudo_parser()
     opts, args = parser.parse_args(args)
     if len(args):
-        raise mitogen.core.StreamError('unsupported sudo arguments:'+str(args))
+        raise mitogen.core.StreamError('unsupported sudo arguments:' + str(args))
     return opts
 
 
@@ -249,6 +251,12 @@ class Connection(mitogen.parent.Connection):
     }
     child_is_immediate_subprocess = False
 
+    # sudo can't run bash builtins; if a supported builtin is detected
+    # append `-s` to the sudo command to start a shell as the desired user
+    SUPPORTED_BASH_BUILTINS = [
+        "source"
+    ]
+
     def _get_name(self):
         return u'sudo.' + mitogen.core.to_text(self.options.username)
 
@@ -256,6 +264,8 @@ class Connection(mitogen.parent.Connection):
         # Note: sudo did not introduce long-format option processing until July
         # 2013, so even though we parse long-format options, supply short-form
         # to the sudo command.
+        boot_cmd = super(Connection, self).get_boot_command()
+
         bits = [self.options.sudo_path, '-u', self.options.username]
         if self.options.preserve_env:
             bits += ['-E']
@@ -267,5 +277,9 @@ class Connection(mitogen.parent.Connection):
             bits += ['-r', self.options.selinux_role]
         if self.options.selinux_type:
             bits += ['-t', self.options.selinux_type]
+        for builtin in self.SUPPORTED_BASH_BUILTINS:
+            if builtin in boot_cmd:
+                bits += ['-s']
+                break
 
-        return bits + ['--'] + super(Connection, self).get_boot_command()
+        return bits + ['--'] + boot_cmd
