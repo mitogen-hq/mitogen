@@ -1471,10 +1471,10 @@ class Connection(object):
 
         # quoting the entire command necessary to invoke python supports
         # complex python_paths
-        return ["'" + python_path + ' -c '
-            + '"\'import codecs,os,sys;_=codecs.decode;'
-            'exec(_(_("%s".encode(),"base64"),"zip"))\'"' % (encoded.decode(),),
-            "'"]
+        return ["'" + python_path, '-c',
+            'import codecs,os,sys;_=codecs.decode;'
+            'exec(_(_("%s".encode(),"base64"),"zip"))\'' % (encoded.decode(),)
+                ]
 
         """
         return self.get_python_argv() + [
