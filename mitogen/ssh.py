@@ -221,6 +221,14 @@ class Connection(mitogen.parent.Connection):
 
     child_is_immediate_subprocess = False
 
+    # strings that, if escaped, cause problems creating connections
+    # example: `source /opt/rh/rh-python36/enable && python`
+    # is an acceptable ansible_python_version but shlex would quote the &&
+    # and prevent python from executing
+    SHLEX_IGNORE = [
+        "&&"
+    ]
+
     def _get_name(self):
         s = u'ssh.' + mitogen.core.to_text(self.options.hostname)
         if self.options.port and self.options.port != 22:
@@ -233,8 +241,8 @@ class Connection(mitogen.parent.Connection):
         because it must interactively accept host keys or type a password.
         """
         return (
-            self.options.check_host_keys == 'accept' or
-            self.options.password is not None
+            self.options.check_host_keys == 'accept'
+            or self.options.password is not None
         )
 
     def create_child(self, **kwargs):
@@ -259,8 +267,8 @@ class Connection(mitogen.parent.Connection):
             bits += ['-l', self.options.username]
         if self.options.port is not None:
             bits += ['-p', str(self.options.port)]
-        if self.options.identities_only and (self.options.identity_file or
-                                             self.options.password):
+        if self.options.identities_only and (self.options.identity_file
+                                             or self.options.password):
             bits += ['-o', 'IdentitiesOnly yes']
         if self.options.identity_file:
             bits += ['-i', self.options.identity_file]
@@ -290,5 +298,12 @@ class Connection(mitogen.parent.Connection):
         if self.options.ssh_args:
             bits += self.options.ssh_args
         bits.append(self.options.hostname)
+        # import pdb
+        # pdb.set_trace()
         base = super(Connection, self).get_boot_command()
-        return bits + [shlex_quote(s).strip() for s in base]
+        base_parts = []
+        for s in base:
+            val = s if s in self.SHLEX_IGNORE else shlex_quote(s).strip()
+            base_parts.append(val)
+        return bits + base_parts
+        # return bits + [shlex_quote(s).strip() for s in base]

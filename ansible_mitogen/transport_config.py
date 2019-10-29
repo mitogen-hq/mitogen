@@ -325,6 +325,7 @@ class PlayContextSpec(Spec):
     PlayContext. It is used for normal connections and delegate_to connections,
     and should always be accurate.
     """
+
     def __init__(self, connection, play_context, transport, inventory_name):
         self._connection = connection
         self._play_context = play_context
@@ -366,6 +367,7 @@ class PlayContextSpec(Spec):
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
+        # raise ValueError(parse_python_path(s))
         return parse_python_path(s or '/usr/bin/python')
 
     def private_key_file(self):
@@ -379,9 +381,9 @@ class PlayContextSpec(Spec):
 
     def ansible_ssh_timeout(self):
         return (
-            self._connection.get_task_var('ansible_timeout') or
-            self._connection.get_task_var('ansible_ssh_timeout') or
-            self.timeout()
+            self._connection.get_task_var('ansible_timeout')
+            or self._connection.get_task_var('ansible_ssh_timeout')
+            or self.timeout()
         )
 
     def ssh_args(self):
@@ -468,8 +470,8 @@ class PlayContextSpec(Spec):
 
     def ansible_doas_exe(self):
         return (
-            self._connection.get_task_var('ansible_doas_exe') or
-            os.environ.get('ANSIBLE_DOAS_EXE')
+            self._connection.get_task_var('ansible_doas_exe')
+            or os.environ.get('ANSIBLE_DOAS_EXE')
         )
 
 
@@ -490,6 +492,7 @@ class MitogenViaSpec(Spec):
     having a configruation problem with connection delegation, the answer to
     your problem lies in the method implementations below!
     """
+
     def __init__(self, inventory_name, host_vars, become_method, become_user,
                  play_context):
         """
@@ -520,8 +523,8 @@ class MitogenViaSpec(Spec):
 
     def transport(self):
         return (
-            self._host_vars.get('ansible_connection') or
-            C.DEFAULT_TRANSPORT
+            self._host_vars.get('ansible_connection')
+            or C.DEFAULT_TRANSPORT
         )
 
     def inventory_name(self):
@@ -530,16 +533,16 @@ class MitogenViaSpec(Spec):
     def remote_addr(self):
         # play_context.py::MAGIC_VARIABLE_MAPPING
         return (
-            self._host_vars.get('ansible_ssh_host') or
-            self._host_vars.get('ansible_host') or
-            self._inventory_name
+            self._host_vars.get('ansible_ssh_host')
+            or self._host_vars.get('ansible_host')
+            or self._inventory_name
         )
 
     def remote_user(self):
         return (
-            self._host_vars.get('ansible_ssh_user') or
-            self._host_vars.get('ansible_user') or
-            C.DEFAULT_REMOTE_USER
+            self._host_vars.get('ansible_ssh_user')
+            or self._host_vars.get('ansible_user')
+            or C.DEFAULT_REMOTE_USER
         )
 
     def become(self):
@@ -547,9 +550,9 @@ class MitogenViaSpec(Spec):
 
     def become_method(self):
         return (
-            self._become_method or
-            self._host_vars.get('ansible_become_method') or
-            C.DEFAULT_BECOME_METHOD
+            self._become_method
+            or self._host_vars.get('ansible_become_method')
+            or C.DEFAULT_BECOME_METHOD
         )
 
     def become_user(self):
@@ -557,21 +560,21 @@ class MitogenViaSpec(Spec):
 
     def become_pass(self):
         return optional_secret(
-            self._host_vars.get('ansible_become_password') or
-            self._host_vars.get('ansible_become_pass')
+            self._host_vars.get('ansible_become_password')
+            or self._host_vars.get('ansible_become_pass')
         )
 
     def password(self):
         return optional_secret(
-            self._host_vars.get('ansible_ssh_pass') or
-            self._host_vars.get('ansible_password')
+            self._host_vars.get('ansible_ssh_pass')
+            or self._host_vars.get('ansible_password')
         )
 
     def port(self):
         return (
-            self._host_vars.get('ansible_ssh_port') or
-            self._host_vars.get('ansible_port') or
-            C.DEFAULT_REMOTE_PORT
+            self._host_vars.get('ansible_ssh_port')
+            or self._host_vars.get('ansible_port')
+            or C.DEFAULT_REMOTE_PORT
         )
 
     def python_path(self):
@@ -579,20 +582,21 @@ class MitogenViaSpec(Spec):
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
+        # raise ValueError(parse_python_path(s))
         return parse_python_path(s or '/usr/bin/python')
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.
         return (
-            self._host_vars.get('ansible_ssh_private_key_file') or
-            self._host_vars.get('ansible_private_key_file') or
-            C.DEFAULT_PRIVATE_KEY_FILE
+            self._host_vars.get('ansible_ssh_private_key_file')
+            or self._host_vars.get('ansible_private_key_file')
+            or C.DEFAULT_PRIVATE_KEY_FILE
         )
 
     def ssh_executable(self):
         return (
-            self._host_vars.get('ansible_ssh_executable') or
-            C.ANSIBLE_SSH_EXECUTABLE
+            self._host_vars.get('ansible_ssh_executable')
+            or C.ANSIBLE_SSH_EXECUTABLE
         )
 
     def timeout(self):
@@ -601,9 +605,9 @@ class MitogenViaSpec(Spec):
 
     def ansible_ssh_timeout(self):
         return (
-            self._host_vars.get('ansible_timeout') or
-            self._host_vars.get('ansible_ssh_timeout') or
-            self.timeout()
+            self._host_vars.get('ansible_timeout')
+            or self._host_vars.get('ansible_ssh_timeout')
+            or self.timeout()
         )
 
     def ssh_args(self):
@@ -611,19 +615,19 @@ class MitogenViaSpec(Spec):
             mitogen.core.to_text(term)
             for s in (
                 (
-                    self._host_vars.get('ansible_ssh_args') or
-                    getattr(C, 'ANSIBLE_SSH_ARGS', None) or
-                    os.environ.get('ANSIBLE_SSH_ARGS')
+                    self._host_vars.get('ansible_ssh_args')
+                    or getattr(C, 'ANSIBLE_SSH_ARGS', None)
+                    or os.environ.get('ANSIBLE_SSH_ARGS')
                     # TODO: ini entry. older versions.
                 ),
                 (
-                    self._host_vars.get('ansible_ssh_common_args') or
-                    os.environ.get('ANSIBLE_SSH_COMMON_ARGS')
+                    self._host_vars.get('ansible_ssh_common_args')
+                    or os.environ.get('ANSIBLE_SSH_COMMON_ARGS')
                     # TODO: ini entry.
                 ),
                 (
-                    self._host_vars.get('ansible_ssh_extra_args') or
-                    os.environ.get('ANSIBLE_SSH_EXTRA_ARGS')
+                    self._host_vars.get('ansible_ssh_extra_args')
+                    or os.environ.get('ANSIBLE_SSH_EXTRA_ARGS')
                     # TODO: ini entry.
                 ),
             )
@@ -633,8 +637,8 @@ class MitogenViaSpec(Spec):
 
     def become_exe(self):
         return (
-            self._host_vars.get('ansible_become_exe') or
-            C.DEFAULT_BECOME_EXE
+            self._host_vars.get('ansible_become_exe')
+            or C.DEFAULT_BECOME_EXE
         )
 
     def sudo_args(self):
@@ -694,6 +698,6 @@ class MitogenViaSpec(Spec):
 
     def ansible_doas_exe(self):
         return (
-            self._host_vars.get('ansible_doas_exe') or
-            os.environ.get('ANSIBLE_DOAS_EXE')
+            self._host_vars.get('ansible_doas_exe')
+            or os.environ.get('ANSIBLE_DOAS_EXE')
         )

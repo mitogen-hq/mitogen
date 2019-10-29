@@ -1455,7 +1455,7 @@ class Connection(object):
         os.write(1, 'MITO001\n'.encode())
         os.close(2)
 
-    def get_python_cmd(self, encoded):
+    def get_python_argv(self):
         """
         Return the command necessary to invoke Python,
         by returning a 1-element list containing :attr:`python_path` + codecs
@@ -1464,17 +1464,21 @@ class Connection(object):
         be set to e.g. `['/usr/bin/env', 'python']` or
         `['source', '/opt/rh/rh-python36/enable, '&&', 'python']`
         """
-        if isinstance(self.options.python_path, list):
-            python_path = " ".join(self.options.python_path)
-        else:
-            pthon_path = self.options.python_path
+        # if isinstance(self.options.python_path, list):
+        #     python_path = " ".join(self.options.python_path)
+        # else:
+        #     python_path = self.options.python_path
 
         # quoting the entire command necessary to invoke python supports
         # complex python_paths
-        return ["'" + python_path, '-c',
-            'import codecs,os,sys;_=codecs.decode;'
-            'exec(_(_("%s".encode(),"base64"),"zip"))\'' % (encoded.decode(),)
-                ]
+        # return ["'" + python_path, '-c',
+        #     'import codecs,os,sys;_=codecs.decode;'
+        #     'exec(_(_("%s".encode(),"base64"),"zip"))\'' % (encoded.decode(),)
+        #         ]
+
+        if isinstance(self.options.python_path, list):
+            return self.options.python_path
+        return [self.options.python_path]
 
         """
         return self.get_python_argv() + [
@@ -1504,7 +1508,11 @@ class Connection(object):
         # with 2.4 (no bytes literal), an extra .encode() either returns the
         # same str (2.x) or an equivalent bytes (3.x).
         # return self.get_python_cmd(encoded)
-        return self.get_python_cmd(encoded)
+        return self.get_python_argv() + [
+            '-c',
+            'import codecs,os,sys;_=codecs.decode;'
+            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
+        ]
 
     def get_econtext_config(self):
         assert self.options.max_message_size is not None
@@ -1541,6 +1549,8 @@ class Connection(object):
 
     def start_child(self):
         args = self.get_boot_command()
+        LOG.debug('%s', args)
+        LOG.debug('walrus')
         LOG.debug('command line for %r: %s', self, Argv(args))
         try:
             return self.create_child(args=args, **self.create_child_args)
