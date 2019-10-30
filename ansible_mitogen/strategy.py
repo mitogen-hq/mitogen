@@ -113,6 +113,7 @@ def _patch_awx_callback():
     EventContext._local = threading.local()
     EventContext.add_local = patch_add_local
 
+
 _patch_awx_callback()
 
 
@@ -181,6 +182,7 @@ class AnsibleWrappers(object):
     """
     Manage add/removal of various Ansible runtime hooks.
     """
+
     def _add_plugin_paths(self):
         """
         Add the Mitogen plug-in directories to the ModuleLoader path, avoiding

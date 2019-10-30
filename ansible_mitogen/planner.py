@@ -64,6 +64,7 @@ class Invocation(object):
     Collect up a module's execution environment then use it to invoke
     target.run_module() or helpers.run_module_async() in the target context.
     """
+
     def __init__(self, action, connection, module_name, module_args,
                  task_vars, templar, env, wrap_async, timeout_secs):
         #: ActionBase instance invoking the module. Required to access some
@@ -104,6 +105,7 @@ class Planner(object):
     file, indicates whether or not it understands how to run the module, and
     exports a method to run the module.
     """
+
     def __init__(self, invocation):
         self._inv = invocation
 
@@ -193,6 +195,7 @@ class ScriptPlanner(BinaryPlanner):
     Common functionality for script module planners -- handle interpreter
     detection and rewrite.
     """
+
     def _rewrite_interpreter(self, path):
         """
         Given the original interpreter binary extracted from the script's
@@ -311,10 +314,10 @@ class NewStylePlanner(ScriptPlanner):
         * the module is known to leak like a sieve.
         """
         return (
-            super(NewStylePlanner, self).should_fork() or
-            (self._inv.task_vars.get('mitogen_task_isolation') == 'fork') or
-            (self._inv.module_name in self.ALWAYS_FORK_MODULES) or
-            (len(self.get_module_map()['custom']) > 0)
+            super(NewStylePlanner, self).should_fork()
+            or (self._inv.task_vars.get('mitogen_task_isolation') == 'fork')
+            or (self._inv.module_name in self.ALWAYS_FORK_MODULES)
+            or (len(self.get_module_map()['custom']) > 0)
         )
 
     def get_search_path(self):

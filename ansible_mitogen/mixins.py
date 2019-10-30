@@ -87,6 +87,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
       that crop up due to this. Mitogen always runs a task completely within
       the target user account, so it's not a problem for us.
     """
+
     def __init__(self, task, connection, *args, **kwargs):
         """
         Verify the received connection is really a Mitogen connection. If not,
@@ -102,6 +103,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         super(ActionModuleMixin, self).__init__(task, connection, *args, **kwargs)
         if not isinstance(connection, ansible_mitogen.connection.Connection):
             _, self.__class__ = type(self).__bases__
+
+        connection.templar = self._templar
 
     def run(self, tmp=None, task_vars=None):
         """
@@ -178,7 +181,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         return os.path.join(
             self._connection.get_good_temp_dir(),
             'ansible_mitogen_action_%016x' % (
-                random.getrandbits(8*8),
+                random.getrandbits(8 * 8),
             )
         )
 

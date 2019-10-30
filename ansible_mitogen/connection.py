@@ -159,6 +159,7 @@ def _connect_ssh(spec):
         }
     }
 
+
 def _connect_buildah(spec):
     """
     Return ContextService arguments for a Buildah connection.
@@ -173,6 +174,7 @@ def _connect_buildah(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+
 
 def _connect_docker(spec):
     """
@@ -600,16 +602,33 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         does not make sense to extract connection-related configuration for the
         delegated-to machine from them.
         """
+        def _fetch_task_var(task_vars, key):
+            """
+            Special helper func in case vars can be templated
+            """
+            SPECIAL_TASK_VARS = [
+                'ansible_python_interpreter'
+            ]
+            if key in task_vars:
+                val = task_vars[key]
+                if '{' in str(val) and key in SPECIAL_TASK_VARS:
+                    # template every time rather than storing in a cache
+                    # in case a different template value is used in a different task
+                    val = self.templar.template(
+                        val,
+                        preserve_trailing_newlines=True,
+                        escape_backslashes=False
+                    )
+                return val
+
         task_vars = self._get_task_vars()
         if self.delegate_to_hostname is None:
-            if key in task_vars:
-                return task_vars[key]
+            return _fetch_task_var(task_vars, key)
         else:
             delegated_vars = task_vars['ansible_delegated_vars']
             if self.delegate_to_hostname in delegated_vars:
                 task_vars = delegated_vars[self.delegate_to_hostname]
-                if key in task_vars:
-                    return task_vars[key]
+                return _fetch_task_var(task_vars, key)
 
         return default
 
@@ -708,8 +727,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         stack += (CONNECTION_METHOD[spec.transport()](spec),)
-        if spec.become() and ((spec.become_user() != spec.remote_user()) or
-                              C.BECOME_ALLOW_SAME_USER):
+        if spec.become() and ((spec.become_user() != spec.remote_user())
+                              or C.BECOME_ALLOW_SAME_USER):
             stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
         return stack
