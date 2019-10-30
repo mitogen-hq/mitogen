@@ -251,12 +251,6 @@ class Connection(mitogen.parent.Connection):
     }
     child_is_immediate_subprocess = False
 
-    # sudo can't run bash builtins; if a supported builtin is detected
-    # append `-s` to the sudo command to start a shell as the desired user
-    SUPPORTED_BASH_BUILTINS = [
-        "source"
-    ]
-
     def _get_name(self):
         return u'sudo.' + mitogen.core.to_text(self.options.username)
 
@@ -277,9 +271,26 @@ class Connection(mitogen.parent.Connection):
             bits += ['-r', self.options.selinux_role]
         if self.options.selinux_type:
             bits += ['-t', self.options.selinux_type]
-        for builtin in self.SUPPORTED_BASH_BUILTINS:
-            if builtin in boot_cmd:
-                bits += ['-s']
-                break
+
+        # special handling for bash builtins
+        # TODO: more efficient way of doing this, at least
+        # it's only 1 iteration of boot_cmd to go through
+        source_found = False
+        for cmd in boot_cmd[:]:
+            # rip `source` from boot_cmd if it exists; sudo.py can't run this
+            # even with -i or -s options
+            # since we've already got our ssh command working we shouldn't
+            # need to source anymore
+            # couldn't figure out how to get this to work using sudo flags
+            if 'source' == cmd:
+                boot_cmd.remove(cmd)
+                source_found = True
+                continue
+            if source_found:
+                # remove words until we hit the python interpreter call
+                if not cmd.endswith('python'):
+                    boot_cmd.remove(cmd)
+                else:
+                    break
 
         return bits + ['--'] + boot_cmd
