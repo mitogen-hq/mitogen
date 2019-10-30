@@ -367,7 +367,6 @@ class PlayContextSpec(Spec):
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
-        # raise ValueError(parse_python_path(s))
         return parse_python_path(s or '/usr/bin/python')
 
     def private_key_file(self):
@@ -582,7 +581,6 @@ class MitogenViaSpec(Spec):
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
-        # raise ValueError(parse_python_path(s))
         return parse_python_path(s or '/usr/bin/python')
 
     def private_key_file(self):

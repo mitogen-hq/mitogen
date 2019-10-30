@@ -1457,11 +1457,12 @@ class Connection(object):
 
     def get_python_argv(self):
         """
-        Return the command necessary to invoke Python,
-        by returning a 1-element list containing :attr:`python_path` + codecs
+        Return the initial argument vector elements necessary to invoke Python,
+        by returning a 1-element list containing :attr:`python_path` if it is a
+        string, or simply returning it if it is already a list.
 
         This allows emulation of existing tools where the Python invocation may
-        be set to e.g. `['/usr/bin/env', 'python']`
+        be set to e.g. `['/usr/bin/env', 'python']`.
         """
         if isinstance(self.options.python_path, list):
             return self.options.python_path
