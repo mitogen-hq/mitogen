@@ -803,9 +803,10 @@ class NewStyleRunner(ScriptRunner):
     #: path => new-style module bytecode.
     _code_by_path = {}
 
-    def __init__(self, module_map, **kwargs):
+    def __init__(self, module_map, py_module_name, **kwargs):
         super(NewStyleRunner, self).__init__(**kwargs)
         self.module_map = module_map
+        self.py_module_name = py_module_name
 
     def _setup_imports(self):
         """
@@ -942,9 +943,22 @@ class NewStyleRunner(ScriptRunner):
             self._handle_magic_exception(mod, sys.exc_info()[1])
             raise
 
+    def _get_module_package(self):
+        """
+        Since Ansible 2.9 __package__ must be set in accordance with an
+        approximation of the original package hierarchy, so that relative
+        imports function correctly.
+        """
+        pkg, sep, modname = str_rpartition(self.py_module_name, '.')
+        if not sep:
+            return None
+        if mitogen.core.PY3:
+            return pkg
+        return pkg.encode()
+
     def _run(self):
         mod = types.ModuleType(self.main_module_name)
-        mod.__package__ = None
+        mod.__package__ = self._get_module_package()
         # Some Ansible modules use __file__ to find the Ansiballz temporary
         # directory. We must provide some temporary path in __file__, but we
         # don't want to pointlessly write the module to disk when it never

@@ -336,6 +336,14 @@ These signals are used internally by Mitogen.
 
     * - :py:class:`mitogen.core.Broker`
       - ``shutdown``
+      - Fired after Broker.shutdown() is called, but before ``shutdown`` event
+        fires. This can be used to trigger any behaviour that relies on the
+        process remaining intact, as processing of ``shutdown`` races with any
+        parent sending the child a signal because it is not shutting down in
+        reasonable time.
+
+    * - :py:class:`mitogen.core.Broker`
+      - ``shutdown``
       - Fired after Broker.shutdown() is called.
 
     * - :py:class:`mitogen.core.Broker`
