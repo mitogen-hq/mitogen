@@ -42,21 +42,23 @@ DOCUMENTATION = """
     options:
 """
 
-import ansible.plugins.connection.ssh
-
 try:
-    import ansible_mitogen.connection
+    import ansible_mitogen
 except ImportError:
     base_dir = os.path.dirname(__file__)
     sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
     del base_dir
 
 import ansible_mitogen.connection
+import ansible_mitogen.loaders
 
 
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'ssh'
-    vanilla_class = ansible.plugins.connection.ssh.Connection
+    vanilla_class = ansible_mitogen.loaders.connection_loader__get(
+        'ssh',
+        class_only=True,
+    )
 
     @staticmethod
     def _create_control_path(*args, **kwargs):

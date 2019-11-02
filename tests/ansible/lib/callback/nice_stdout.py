@@ -1,6 +1,7 @@
 from __future__ import unicode_literals
-import os
 import io
+import os
+import sys
 
 from ansible import constants as C
 from ansible.module_utils import six
@@ -14,6 +15,27 @@ try:
     pprint = __import__(os.environ['NICE_STDOUT_PPRINT'])
 except KeyError:
     pprint = None
+
+DefaultModule = callback_loader.get('default', class_only=True)
+DOCUMENTATION = '''
+    callback: nice_stdout
+    type: stdout
+    options:
+      check_mode_markers:
+        name: Show markers when running in check mode
+        description:
+        - "Toggle to control displaying markers when running in check mode. The markers are C(DRY RUN)
+        at the beggining and ending of playbook execution (when calling C(ansible-playbook --check))
+        and C(CHECK MODE) as a suffix at every play and task that is run in check mode."
+        type: bool
+        default: no
+        version_added: 2.9
+        env:
+          - name: ANSIBLE_CHECK_MODE_MARKERS
+        ini:
+          - key: check_mode_markers
+            section: defaults
+'''
 
 
 def printi(tio, obj, key=None, indent=0):
@@ -50,8 +72,6 @@ def printi(tio, obj, key=None, indent=0):
     else:
         write('%r', obj)
 
-
-DefaultModule = callback_loader.get('default', class_only=True)
 
 class CallbackModule(DefaultModule):
     def _dump_results(self, result, *args, **kwargs):

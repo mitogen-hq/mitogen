@@ -85,10 +85,15 @@ Installation
         Get notified of new releases and important fixes.
 
         <p>
-        <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;">
+        <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;"><br>
+        <input name="captcha_1" placeholder="Captcha" style="width: 10ex;">
+        <img class="captcha-image">
+        <a class="captcha-refresh" href="#">&#x21bb</a>
+
         <button type="submit" style="font-size: 105%;">
             Subscribe
         </button>
+
         </p>
 
         <div id="emailthanks" style="display:none">
@@ -1380,6 +1385,7 @@ bandwidth and 1.8x less time**.
                 page_id: "operon",
                 urls: {
                     save_email: "https://networkgenomics.com/save-email/",
+                    save_email_captcha: "https://networkgenomics.com/save-email/captcha/",
                 }
             }
         };

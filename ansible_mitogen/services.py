@@ -156,20 +156,41 @@ class ContextService(mitogen.service.Service):
 
     @mitogen.service.expose(mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
-        'context': mitogen.core.Context
+        'stack': list,
     })
-    def reset(self, context):
+    def reset(self, stack):
         """
         Return a reference, forcing close and discard of the underlying
         connection. Used for 'meta: reset_connection' or when some other error
         is detected.
+
+        :returns:
+            :data:`True` if a connection was found to discard, otherwise
+            :data:`False`.
         """
-        LOG.debug('%r.reset(%r)', self, context)
-        self._lock.acquire()
-        try:
+        LOG.debug('%r.reset(%r)', self, stack)
+
+        l = mitogen.core.Latch()
+        context = None
+        with self._lock:
+            for i, spec in enumerate(stack):
+                key = key_from_dict(via=context, **spec)
+                response = self._response_by_key.get(key)
+                if response is None:
+                    LOG.debug('%r: could not find connection to shut down; '
+                              'failed at hop %d', self, i)
+                    return False
+
+                context = response['context']
+
+            mitogen.core.listen(context, 'disconnect', l.put)
             self._shutdown_unlocked(context)
-        finally:
-            self._lock.release()
+
+        # The timeout below is to turn a hang into a crash in case there is any
+        # possible race between 'disconnect' signal subscription, and the child
+        # abruptly disconnecting.
+        l.get(timeout=30.0)
+        return True
 
     @mitogen.service.expose(mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
@@ -326,7 +347,8 @@ class ContextService(mitogen.service.Service):
     )
 
     def _send_module_forwards(self, context):
-        self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
+        if hasattr(self.router.responder, 'forward_modules'):
+            self.router.responder.forward_modules(context, self.ALWAYS_PRELOAD)
 
     _candidate_temp_dirs = None
 

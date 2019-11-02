@@ -324,13 +324,13 @@ class Select(object):
         if not self._receivers:
             raise Error(self.empty_msg)
 
-        event = Event()
         while True:
             recv = self._latch.get(timeout=timeout, block=block)
             try:
                 if isinstance(recv, Select):
                     event = recv.get_event(block=False)
                 else:
+                    event = Event()
                     event.source = recv
                     event.data = recv.get(block=False)
                 if self._oneshot:

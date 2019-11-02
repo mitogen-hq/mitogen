@@ -7,7 +7,7 @@ batches = [
         'docker pull %s' % (ci_lib.image_for_distro(ci_lib.DISTRO),),
     ],
     [
-        'sudo tar -C / -jxvf tests/data/ubuntu-python-2.4.6.tar.bz2',
+        'curl https://dw.github.io/mitogen/binaries/ubuntu-python-2.4.6.tar.bz2 | sudo tar -C / -jxv',
     ]
 ]
 
