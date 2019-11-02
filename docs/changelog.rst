@@ -741,10 +741,12 @@ v0.2.10 (2021-11-24)
 v0.2.9 (2019-11-02)
 -------------------
 
-This release contains minimal fixes beyond those required for Ansible 2.9.
+This release contains minimal changes required for Ansible 2.9.
 
 * :gh:issue:`633`: :ans:mod:`meta: reset_connection <meta>` could fail to reset
   a connection when ``become: true`` was set on the playbook.
+
+* :gh:issue:`660`: Ansible 2.9 is supported.
 
 
 Thanks!
@@ -752,7 +754,8 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
-`Can Ozokur <https://github.com/canozokur/>`_.
+`Can Ozokur <https://github.com/canozokur/>`_ and
+`Olexandr Minzak <https://github.com/bizlevel/>`_.
 
 
 v0.2.8 (2019-08-18)
