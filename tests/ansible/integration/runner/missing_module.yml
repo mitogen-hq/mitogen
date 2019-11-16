@@ -1,6 +1,6 @@
 
 - name: integration/runner/missing_module.yml
-  hosts: test-targets
+  hosts: test-targets[0]
   connection: local
   tasks:
     - connection: local

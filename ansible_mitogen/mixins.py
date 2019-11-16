@@ -55,6 +55,11 @@ import ansible_mitogen.planner
 import ansible_mitogen.target
 from ansible.module_utils._text import to_text
 
+try:
+    from ansible.utils.unsafe_proxy import wrap_var
+except ImportError:
+    from ansible.vars.unsafe_proxy import wrap_var
+
 
 LOG = logging.getLogger(__name__)
 
@@ -309,7 +314,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         except AttributeError:
             return getattr(self._task, 'async')
 
-    def _temp_file_gibberish(self, module_args, wrap_async):
+    def _set_temp_file_args(self, module_args, wrap_async):
         # Ansible>2.5 module_utils reuses the action's temporary directory if
         # one exists. Older versions error if this key is present.
         if ansible.__version__ > '2.5':
@@ -346,7 +351,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._update_module_args(module_name, module_args, task_vars)
         env = {}
         self._compute_environment_string(env)
-        self._temp_file_gibberish(module_args, wrap_async)
+        self._set_temp_file_args(module_args, wrap_async)
 
         self._connection._connect()
         result = ansible_mitogen.planner.invoke(
@@ -368,7 +373,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # on _execute_module().
             self._remove_tmp_path(tmp)
 
-        return result
+        return wrap_var(result)
 
     def _postprocess_response(self, result):
         """

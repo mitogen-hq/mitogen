@@ -1686,6 +1686,7 @@ class Connection(object):
         try:
             self.proc = self.start_child()
         except Exception:
+            LOG.debug('failed to start child', exc_info=True)
             self._fail_connection(sys.exc_info()[1])
             return
 
@@ -2239,7 +2240,7 @@ class RouteMonitor(object):
         target_name = target_name.decode()
         target_id = int(target_id_s)
         self.router.context_by_id(target_id).name = target_name
-        stream = self.router.stream_by_id(msg.auth_id)
+        stream = self.router.stream_by_id(msg.src_id)
         current = self.router.stream_by_id(target_id)
         if current and current.protocol.remote_id != mitogen.parent_id:
             self._log.error('Cannot add duplicate route to %r via %r, '
@@ -2267,7 +2268,7 @@ class RouteMonitor(object):
         if registered_stream is None:
             return
 
-        stream = self.router.stream_by_id(msg.auth_id)
+        stream = self.router.stream_by_id(msg.src_id)
         if registered_stream != stream:
             self._log.error('received DEL_ROUTE for %d from %r, expected %r',
                             target_id, stream, registered_stream)

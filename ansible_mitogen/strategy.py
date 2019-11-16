@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
+import distutils.version
 import os
 import signal
 import threading
@@ -52,8 +53,8 @@ except ImportError:
     Sentinel = None
 
 
-ANSIBLE_VERSION_MIN = '2.3'
-ANSIBLE_VERSION_MAX = '2.8'
+ANSIBLE_VERSION_MIN = (2, 3)
+ANSIBLE_VERSION_MAX = (2, 9)
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
     "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
@@ -76,13 +77,15 @@ def _assert_supported_release():
     an unsupported Ansible release.
     """
     v = ansible.__version__
+    if not isinstance(v, tuple):
+        v = tuple(distutils.version.LooseVersion(v).version)
 
-    if v[:len(ANSIBLE_VERSION_MIN)] < ANSIBLE_VERSION_MIN:
+    if v[:2] < ANSIBLE_VERSION_MIN:
         raise ansible.errors.AnsibleError(
             OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
         )
 
-    if v[:len(ANSIBLE_VERSION_MAX)] > ANSIBLE_VERSION_MAX:
+    if v[:2] > ANSIBLE_VERSION_MAX:
         raise ansible.errors.AnsibleError(
             NEW_VERSION_MSG % (ansible.__version__, ANSIBLE_VERSION_MAX)
         )
@@ -133,7 +136,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
     if ansible.__version__ >= '2.8':
         get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
 
-    klass = action_loader__get(name, **get_kwargs)
+    klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
     if klass:
         bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
@@ -142,15 +145,29 @@ def wrap_action_loader__get(name, *args, **kwargs):
         return adorned_klass(*args, **kwargs)
 
 
+REDIRECTED_CONNECTION_PLUGINS = (
+    'buildah',
+    'docker',
+    'kubectl',
+    'jail',
+    'local',
+    'lxc',
+    'lxd',
+    'machinectl',
+    'setns',
+    'ssh',
+)
+
+
 def wrap_connection_loader__get(name, *args, **kwargs):
     """
     While a Mitogen strategy is active, rewrite connection_loader.get() calls
     for some transports into requests for a compatible Mitogen transport.
     """
-    if name in ('buildah', 'docker', 'kubectl', 'jail', 'local',
-                'lxc', 'lxd', 'machinectl', 'setns', 'ssh'):
+    if name in REDIRECTED_CONNECTION_PLUGINS:
         name = 'mitogen_' + name
-    return connection_loader__get(name, *args, **kwargs)
+
+    return ansible_mitogen.loaders.connection_loader__get(name, *args, **kwargs)
 
 
 def wrap_worker__run(self):
@@ -201,12 +218,7 @@ class AnsibleWrappers(object):
         Install our PluginLoader monkey patches and update global variables
         with references to the real functions.
         """
-        global action_loader__get
-        action_loader__get = ansible_mitogen.loaders.action_loader.get
         ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
-
-        global connection_loader__get
-        connection_loader__get = ansible_mitogen.loaders.connection_loader.get
         ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
 
         global worker__run
@@ -217,8 +229,12 @@ class AnsibleWrappers(object):
         """
         Uninstall the PluginLoader monkey patches.
         """
-        ansible_mitogen.loaders.action_loader.get = action_loader__get
-        ansible_mitogen.loaders.connection_loader.get = connection_loader__get
+        ansible_mitogen.loaders.action_loader.get = (
+            ansible_mitogen.loaders.action_loader__get
+        )
+        ansible_mitogen.loaders.connection_loader.get = (
+            ansible_mitogen.loaders.connection_loader__get
+        )
         ansible.executor.process.worker.WorkerProcess.run = worker__run
 
     def install(self):

@@ -45,6 +45,7 @@ import random
 from ansible.executor import module_common
 import ansible.errors
 import ansible.module_utils
+import ansible.release
 import mitogen.core
 import mitogen.select
 
@@ -57,6 +58,8 @@ LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
 NO_MODULE_MSG = 'The module %s was not found in configured module paths.'
+
+_planner_by_path = {}
 
 
 class Invocation(object):
@@ -93,7 +96,12 @@ class Invocation(object):
         self.module_path = None
         #: Initially ``None``, but set by :func:`invoke`. The raw source or
         #: binary contents of the module.
-        self.module_source = None
+        self._module_source = None
+
+    def get_module_source(self):
+        if self._module_source is None:
+            self._module_source = read_file(self.module_path)
+        return self._module_source
 
     def __repr__(self):
         return 'Invocation(module_name=%s)' % (self.module_name,)
@@ -109,7 +117,8 @@ class Planner(object):
     def __init__(self, invocation):
         self._inv = invocation
 
-    def detect(self):
+    @classmethod
+    def detect(cls, path, source):
         """
         Return true if the supplied `invocation` matches the module type
         implemented by this planner.
@@ -173,8 +182,9 @@ class BinaryPlanner(Planner):
     """
     runner_name = 'BinaryRunner'
 
-    def detect(self):
-        return module_common._is_binary(self._inv.module_source)
+    @classmethod
+    def detect(cls, path, source):
+        return module_common._is_binary(source)
 
     def get_push_files(self):
         return [mitogen.core.to_text(self._inv.module_path)]
@@ -221,7 +231,7 @@ class ScriptPlanner(BinaryPlanner):
 
     def _get_interpreter(self):
         path, arg = ansible_mitogen.parsing.parse_hashbang(
-            self._inv.module_source
+            self._inv.get_module_source()
         )
         if path is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
@@ -250,8 +260,9 @@ class JsonArgsPlanner(ScriptPlanner):
     """
     runner_name = 'JsonArgsRunner'
 
-    def detect(self):
-        return module_common.REPLACER_JSONARGS in self._inv.module_source
+    @classmethod
+    def detect(cls, path, source):
+        return module_common.REPLACER_JSONARGS in source
 
 
 class WantJsonPlanner(ScriptPlanner):
@@ -268,8 +279,9 @@ class WantJsonPlanner(ScriptPlanner):
     """
     runner_name = 'WantJsonRunner'
 
-    def detect(self):
-        return b'WANT_JSON' in self._inv.module_source
+    @classmethod
+    def detect(cls, path, source):
+        return b'WANT_JSON' in source
 
 
 class NewStylePlanner(ScriptPlanner):
@@ -281,8 +293,9 @@ class NewStylePlanner(ScriptPlanner):
     runner_name = 'NewStyleRunner'
     marker = b'from ansible.module_utils.'
 
-    def detect(self):
-        return self.marker in self._inv.module_source
+    @classmethod
+    def detect(cls, path, source):
+        return cls.marker in source
 
     def _get_interpreter(self):
         return None, None
@@ -326,7 +339,6 @@ class NewStylePlanner(ScriptPlanner):
             for path in ansible_mitogen.loaders.module_utils_loader._get_paths(
                 subdirs=False
             )
-            if os.path.isdir(path)
         )
 
     _module_map = None
@@ -350,6 +362,10 @@ class NewStylePlanner(ScriptPlanner):
     def get_kwargs(self):
         return super(NewStylePlanner, self).get_kwargs(
             module_map=self.get_module_map(),
+            py_module_name=py_modname_from_path(
+                self._inv.module_name,
+                self._inv.module_path,
+            ),
         )
 
 
@@ -379,14 +395,16 @@ class ReplacerPlanner(NewStylePlanner):
     """
     runner_name = 'ReplacerRunner'
 
-    def detect(self):
-        return module_common.REPLACER in self._inv.module_source
+    @classmethod
+    def detect(cls, path, source):
+        return module_common.REPLACER in source
 
 
 class OldStylePlanner(ScriptPlanner):
     runner_name = 'OldStyleRunner'
 
-    def detect(self):
+    @classmethod
+    def detect(cls, path, source):
         # Everything else.
         return True
 
@@ -401,14 +419,54 @@ _planners = [
 ]
 
 
-def get_module_data(name):
-    path = ansible_mitogen.loaders.module_loader.find_plugin(name, '')
-    if path is None:
-        raise ansible.errors.AnsibleError(NO_MODULE_MSG % (name,))
+try:
+    _get_ansible_module_fqn = module_common._get_ansible_module_fqn
+except AttributeError:
+    _get_ansible_module_fqn = None
 
-    with open(path, 'rb') as fp:
-        source = fp.read()
-    return mitogen.core.to_text(path), source
+
+def py_modname_from_path(name, path):
+    """
+    Fetch the logical name of a new-style module as it might appear in
+    :data:`sys.modules` of the target's Python interpreter.
+
+    * For Ansible <2.7, this is an unpackaged module named like
+      "ansible_module_%s".
+
+    * For Ansible <2.9, this is an unpackaged module named like
+      "ansible.modules.%s"
+
+    * Since Ansible 2.9, modules appearing within a package have the original
+      package hierarchy approximated on the target, enabling relative imports
+      to function correctly. For example, "ansible.modules.system.setup".
+    """
+    # 2.9+
+    if _get_ansible_module_fqn:
+        try:
+            return _get_ansible_module_fqn(path)
+        except ValueError:
+            pass
+
+    if ansible.__version__ < '2.7':
+        return 'ansible_module_' + name
+
+    return 'ansible.modules.' + name
+
+
+def read_file(path):
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        bits = []
+        chunk = True
+        while True:
+            chunk = os.read(fd, 65536)
+            if not chunk:
+                break
+            bits.append(chunk)
+    finally:
+        os.close(fd)
+
+    return mitogen.core.b('').join(bits)
 
 
 def _propagate_deps(invocation, planner, context):
@@ -469,14 +527,12 @@ def _invoke_isolated_task(invocation, planner):
         context.shutdown()
 
 
-def _get_planner(invocation):
+def _get_planner(name, path, source):
     for klass in _planners:
-        planner = klass(invocation)
-        if planner.detect():
-            LOG.debug('%r accepted %r (filename %r)', planner,
-                      invocation.module_name, invocation.module_path)
-            return planner
-        LOG.debug('%r rejected %r', planner, invocation.module_name)
+        if klass.detect(path, source):
+            LOG.debug('%r accepted %r (filename %r)', klass, name, path)
+            return klass
+        LOG.debug('%r rejected %r', klass, name)
     raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
 
@@ -491,10 +547,24 @@ def invoke(invocation):
     :raises ansible.errors.AnsibleError:
         Unrecognized/unsupported module type.
     """
-    (invocation.module_path,
-     invocation.module_source) = get_module_data(invocation.module_name)
-    planner = _get_planner(invocation)
+    path = ansible_mitogen.loaders.module_loader.find_plugin(
+        invocation.module_name,
+        '',
+    )
+    if path is None:
+        raise ansible.errors.AnsibleError(NO_MODULE_MSG % (
+            invocation.module_name,
+        ))
 
+    invocation.module_path = mitogen.core.to_text(path)
+    if invocation.module_path not in _planner_by_path:
+        _planner_by_path[invocation.module_path] = _get_planner(
+            invocation.module_name,
+            invocation.module_path,
+            invocation.get_module_source()
+        )
+
+    planner = _planner_by_path[invocation.module_path](invocation)
     if invocation.wrap_async:
         response = _invoke_async_task(invocation, planner)
     elif planner.should_fork():

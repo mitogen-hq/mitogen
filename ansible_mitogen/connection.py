@@ -810,7 +810,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         inventory_name, stack = self._build_stack()
         worker_model = ansible_mitogen.process.get_worker_model()
-        self.binding = worker_model.get_binding(inventory_name)
+        self.binding = worker_model.get_binding(
+            mitogen.utils.cast(inventory_name)
+        )
         self._connect_stack(stack)
 
     def _put_connection(self):

@@ -107,8 +107,9 @@ def setup():
     l_mitogen = logging.getLogger('mitogen')
     l_mitogen_io = logging.getLogger('mitogen.io')
     l_ansible_mitogen = logging.getLogger('ansible_mitogen')
+    l_operon = logging.getLogger('operon')
 
-    for logger in l_mitogen, l_mitogen_io, l_ansible_mitogen:
+    for logger in l_mitogen, l_mitogen_io, l_ansible_mitogen, l_operon:
         logger.handlers = [Handler(display.vvv)]
         logger.propagate = False
 

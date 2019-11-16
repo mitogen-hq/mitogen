@@ -193,7 +193,7 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
         sem = mitogen.core.Latch()
         router.add_handler(sem.put)
 
-        log = testlib.LogCapturer('mitogen')
+        log = testlib.LogCapturer()
         log.start()
 
         # Force a crash and ensure it wakes up.

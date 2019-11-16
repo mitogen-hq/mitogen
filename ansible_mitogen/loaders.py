@@ -55,3 +55,8 @@ except ImportError:  # Ansible <2.4
     from ansible.plugins import module_utils_loader
     from ansible.plugins import shell_loader
     from ansible.plugins import strategy_loader
+
+
+# These are original, unwrapped implementations
+action_loader__get = action_loader.get
+connection_loader__get = connection_loader.get
