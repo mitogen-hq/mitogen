@@ -344,8 +344,9 @@ remote procedure calls:
 * :func:`bytes` (:class:`str` on Python 2.x)
 * :class:`dict`
 * :class:`int`
-* :func:`list`
 * :class:`long`
+* :class:`float`
+* :func:`list`
 * :func:`tuple`
 * :func:`unicode` (:class:`str` on Python 3.x)
 

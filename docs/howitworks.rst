@@ -145,10 +145,9 @@ such that :py:mod:`cPickle` correctly serializes instance module names.
 
 Once a synthetic :py:mod:`mitogen` package and :py:mod:`mitogen.core` module
 have been generated, the bootstrap **deletes** `sys.modules['__main__']`, so
-that any attempt to import it (by :py:mod:`cPickle`) will cause the import to
-be satisfied by fetching the master's actual :mod:`__main__` module. This is
-necessary to allow master programs to be written as a self-contained Python
-script.
+that any attempt to import it will cause the import to be satisfied by fetching
+the master's actual :mod:`__main__` module. This is necessary to allow master
+programs to be written as a self-contained Python script.
 
 
 Reaping The First Stage
@@ -312,7 +311,7 @@ parent and child. Integers use big endian in their encoded form.
 
     * - `data`
       - n/a
-      - Message data, which may be raw or pickled.
+      - Message data, which may be raw or serialized.
 
 
 
@@ -496,24 +495,22 @@ Additional handles are created to receive the result of every function call
 triggered by :py:meth:`call_async() <mitogen.parent.Context.call_async>`.
 
 
-Use of Pickle
+Serialization
 #############
 
-The current implementation uses the Python :py:mod:`cPickle` module, with a
-restrictive class whitelist to prevent triggering undesirable code execution.
-The primary reason for using :py:mod:`cPickle` is that it is computationally
-efficient, and avoids including a potentially large body of serialization code
-in the bootstrap.
+Previous releases used the native :py:mod:`cPickle` module with various
+security restrictions, however this became impractical due to `compatibility
+kludges <https://bugs.python.org/issue13505>`_ introduced during Python 3 that
+cause excess CPU usage and an input-dependent variable length encoding for
+8-bit data. Python 2-compatible pickles produced by Python 3 therefore became
+unsuitable for high bandwidth use, such as in file transfer.
 
-The pickler will instantiate only built-in types and one of 3 constructor
-functions, to support unpickling :py:class:`CallError
-<mitogen.core.CallError>`, :py:class:`mitogen.core.Sender`,and
-:py:class:`Context <mitogen.core.Context>`.
-
-The choice of Pickle is one area to be revisited later. All accounts suggest it
-cannot be used securely, however few of those accounts appear to be expert, and
-none mention any additional attacks that would not be prevented by using a
-restrictive class whitelist.
+Mitogen 0.3 introduced a built-in serializer, primarily aiming for minimal code
+and CPU footprint. Compared to pickle it is much slower for complex messages
+and cannot encode cyclical data structures, but type errors can now be detected
+during encoding rather than decoding, many compatibility hacks are removed,
+decoded messages always have size proportional to their encoding, and behaviour
+is identical on every Python version.
 
 
 The IO Multiplexer

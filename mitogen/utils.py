@@ -194,33 +194,23 @@ PASSTHROUGH = (
 
 def cast(obj):
     """
-    Many tools love to subclass built-in types in order to implement useful
-    functionality, such as annotating the safety of a Unicode string, or adding
-    additional methods to a dict. However, cPickle loves to preserve those
-    subtypes during serialization, resulting in CallError during :meth:`call
-    <mitogen.parent.Context.call>` in the target when it tries to deserialize
-    the data.
+    Produce a copy of the object graph `obj` with any subclasses of types
+    supported for serialization replaced with the original type.
 
-    This function walks the object graph `obj`, producing a copy with any
-    custom sub-types removed. The functionality is not default since the
-    resulting walk may be computationally expensive given a large enough graph.
+    Many tools use subclasses to annotate the safety of a string, or add
+    additional methods to a dict. Since Mitogen 0.2.9 and earlier used pickle,
+    which preserved those subtypes, errors could occur during deserialization
+    as custom types were not safe to unpickle.
 
-    See :ref:`serialization-rules` for a list of supported types.
+    Mitogen 0.2.10 introduced a custom encoding that automatically strips
+    subclasses. This function therefore is only maintained for compatibility,
+    and simply returns the original object.
+
+    See :ref:`serialization-rules` for supported types.
 
     :param obj:
         Object to undecorate.
     :returns:
         Undecorated object.
     """
-    if isinstance(obj, dict):
-        return dict((cast(k), cast(v)) for k, v in iteritems(obj))
-    if isinstance(obj, (list, tuple)):
-        return [cast(v) for v in obj]
-    if isinstance(obj, PASSTHROUGH):
-        return obj
-    if isinstance(obj, mitogen.core.UnicodeType):
-        return mitogen.core.UnicodeType(obj)
-    if isinstance(obj, mitogen.core.BytesType):
-        return mitogen.core.BytesType(obj)
-
-    raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))
+    return obj

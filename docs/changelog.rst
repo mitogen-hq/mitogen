@@ -21,7 +21,15 @@ v0.2.10 (unreleased)
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-*(no changes)*
+* A custom codec replaces the :mod:`pickle` module, eliminating a source of
+  worries, many compatibility and security hacks, and bringing achievable file
+  transfer throughput on Python 3 in line with Python 2 (approx 800 MiB/s).
+
+  The serializer increases bootstrap size by 400 bytes and is around 5-10x
+  slower on complex messages, requiring 62 μsec to encode a typical Ansible
+  module RPC compared to 12 μsec in Mitogen 0.2.9, while RPC size is reduced by
+  around 10%.
+
 
 
 v0.2.9 (2019-11-02)
