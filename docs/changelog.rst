@@ -40,6 +40,7 @@ Thanks!
 
 Mitogen would not be possible without the support of users. A huge thanks for
 bug reports, testing, features and fixes in this release contributed by
+
 `Can Ozokur <https://github.com/canozokur/>`_ and
 `Olexandr Minzak <https://github.com/bizlevel/>`_.
 
