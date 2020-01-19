@@ -1877,7 +1877,7 @@ class Stream(object):
         self.protocol = protocol
         self.protocol.stream = self
 
-    def accept(self, rfp, wfp):
+    def accept(self, rfp, wfp, cloexec=True):
         """
         Attach a pair of file objects to :attr:`receive_side` and
         :attr:`transmit_side`, after wrapping them in :class:`Side` instances.
@@ -1892,8 +1892,8 @@ class Stream(object):
         :param file wfp:
             The file object to transmit to.
         """
-        self.receive_side = Side(self, rfp)
-        self.transmit_side = Side(self, wfp)
+        self.receive_side = Side(self, rfp, cloexec=cloexec)
+        self.transmit_side = Side(self, wfp, cloexec=cloexec)
 
     def __repr__(self):
         return "<Stream %s #%04x>" % (self.name, id(self) & 0xffff,)
@@ -3970,7 +3970,7 @@ class ExternalContext(object):
         self.config = config
 
     def _on_broker_exit(self):
-        if not self.config['profiling']:
+        if not self.config['profiling'] and not hasattr(mitogen, "exit_status"):
             os.kill(os.getpid(), signal.SIGTERM)
 
     def _on_shutdown_msg(self, msg):
@@ -4025,11 +4025,13 @@ class ExternalContext(object):
 
         in_fd = self.config.get('in_fd', 100)
         in_fp = os.fdopen(os.dup(in_fd), 'rb', 0)
-        os.close(in_fd)
-
         out_fd = self.config.get('out_fd', pty.STDOUT_FILENO)
         out_fd2 = os.dup(out_fd)
         out_fp = os.fdopen(out_fd2, 'wb', 0)
+        # Avoid closing in_fd until after duplicating out_fd in case
+        # (in_fd == out_fd) are the same bidirectional socket fd
+        os.close(in_fd)
+
         self.stream = MitogenProtocol.build_stream(
             self.router,
             parent_id,
