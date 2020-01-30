@@ -65,18 +65,47 @@ import os
 import ansible.utils.shlex
 import ansible.constants as C
 
+from ansible.executor.interpreter_discovery import discover_interpreter
 from ansible.module_utils.six import with_metaclass
+from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 
 
 import mitogen.core
 
 
-def parse_python_path(s):
+def run_interpreter_discovery_if_necessary(s, task_vars, action):
+    """
+    Triggers ansible python interpreter discovery if requested.
+    Caches this value the same way Ansible does it.
+    """
+    if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
+        # python is the only supported interpreter_name as of Ansible 2.8.6
+        interpreter_name = 'python'
+        discovered_interpreter_config = u'discovered_interpreter_%s' % interpreter_name
+        facts_from_task_vars = task_vars.get('ansible_facts', {})
+
+        if discovered_interpreter_config not in facts_from_task_vars:
+            s = AnsibleUnsafeText(discover_interpreter(
+                action=action,
+                interpreter_name=interpreter_name,
+                discovery_mode=s,
+                task_vars=task_vars))
+            # cache discovered interpreter
+            facts_from_task_vars['ansible_facts'][interpreter_name] = s
+        else:
+            s = facts_from_task_vars[discovered_interpreter_config]
+    return s
+        
+
+def parse_python_path(s, task_vars, action):
     """
     Given the string set for ansible_python_interpeter, parse it using shell
-    syntax and return an appropriate argument vector.
+    syntax and return an appropriate argument vector. If the value detected is 
+    one of interpreter discovery then run that first. Caches python interpreter
+    discovery value in `facts_from_task_vars` like how Ansible handles this.
     """
     if s:
+        s = run_interpreter_discovery_if_necessary(s, task_vars, action)
         return ansible.utils.shlex.shlex_split(s)
 
 
@@ -325,11 +354,14 @@ class PlayContextSpec(Spec):
     PlayContext. It is used for normal connections and delegate_to connections,
     and should always be accurate.
     """
-    def __init__(self, connection, play_context, transport, inventory_name):
+    def __init__(self, connection, play_context, transport, inventory_name, action):
         self._connection = connection
         self._play_context = play_context
         self._transport = transport
         self._inventory_name = inventory_name
+        self._task_vars = self._connection._get_task_vars()
+        # used to run interpreter discovery
+        self._action = action
 
     def transport(self):
         return self._transport
@@ -366,7 +398,10 @@ class PlayContextSpec(Spec):
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
-        return parse_python_path(s or '/usr/bin/python')
+        return parse_python_path(
+            s or '/usr/bin/python',
+            task_vars=self._task_vars,
+            action=self._action)
 
     def private_key_file(self):
         return self._play_context.private_key_file
@@ -490,12 +525,14 @@ class MitogenViaSpec(Spec):
     having a configruation problem with connection delegation, the answer to
     your problem lies in the method implementations below!
     """
-    def __init__(self, inventory_name, host_vars, become_method, become_user,
-                 play_context):
+    def __init__(self, inventory_name, host_vars, task_vars, become_method, become_user,
+                 play_context, action):
         """
         :param str inventory_name:
             The inventory name of the intermediary machine, i.e. not the target
             machine.
+        :param dict host_vars:
+            The HostVars magic dictionary provided by Ansible in task_vars.
         :param dict host_vars:
             The HostVars magic dictionary provided by Ansible in task_vars.
         :param str become_method:
@@ -509,14 +546,18 @@ class MitogenViaSpec(Spec):
             the real target machine. Values from this object are **strictly
             restricted** to values that are Ansible-global, e.g. the passwords
             specified interactively.
+        :param ActionModuleMixin action:
+            Backref to the ActionModuleMixin required for ansible interpreter discovery
         """
         self._inventory_name = inventory_name
         self._host_vars = host_vars
+        self._task_vars = task_vars
         self._become_method = become_method
         self._become_user = become_user
         # Dangerous! You may find a variable you want in this object, but it's
         # almost certainly for the wrong machine!
         self._dangerous_play_context = play_context
+        self._action = action
 
     def transport(self):
         return (
@@ -579,7 +620,10 @@ class MitogenViaSpec(Spec):
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
-        return parse_python_path(s or '/usr/bin/python')
+        return parse_python_path(
+            s or '/usr/bin/python',
+            task_vars=self._task_vars,
+            action=self._action)
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.

@@ -559,12 +559,20 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 f_locals = f.f_locals
                 f_self = f_locals.get('self')
                 if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                    # backref for python interpreter discovery, should be safe because _get_task_vars
+                    # is always called before running interpreter discovery
+                    self._action = f_self
                     task_vars = f_locals.get('task_vars')
                     if task_vars:
                         LOG.debug('recovered task_vars from Action')
                         return task_vars
             elif f.f_code.co_name == '_execute_meta':
                 f_all_vars = f.f_locals.get('all_vars')
+                f_self = f_locals.get('self')
+                if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                    # backref for python interpreter discovery, should be safe because _get_task_vars
+                    # is always called before running interpreter discovery
+                    self._action = f_self
                 if isinstance(f_all_vars, dict):
                     LOG.debug('recovered task_vars from meta:')
                     return f_all_vars
@@ -671,6 +679,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             inventory_name=inventory_name,
             play_context=self._play_context,
             host_vars=dict(via_vars),  # TODO: make it lazy
+            task_vars=self._get_task_vars(),    # needed for interpreter discovery in parse_python_path
+            action=self._action,
             become_method=become_method or None,
             become_user=become_user or None,
         )
@@ -743,6 +753,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             play_context=self._play_context,
             transport=self.transport,
             inventory_name=self.get_task_var('inventory_hostname'),
+            action=self._action
         )
         stack = self._stack_from_spec(spec)
         return spec.inventory_name(), stack

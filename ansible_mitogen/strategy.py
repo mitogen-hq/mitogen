@@ -353,6 +353,7 @@ class StrategyMixin(object):
         are configured for the duration of the call.
         """
         _assert_supported_release()
+
         wrappers = AnsibleWrappers()
         self._worker_model = self._get_worker_model()
         ansible_mitogen.process.set_worker_model(self._worker_model)
