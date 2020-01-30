@@ -1614,8 +1614,8 @@ class Connection(object):
             proc=self.proc,
             kill=not (
                 (self.detached and self.child_is_immediate_subprocess) or
-                # kill: # Avoid killing so child has chance to write cProfile data
-                 self._router.profiling
+                # Avoid killing so child has chance to write cProfile data
+                self._router.profiling
             ),
             # Don't delay shutdown waiting for a detached child, since the
             # detached child may expect to live indefinitely after its parent
