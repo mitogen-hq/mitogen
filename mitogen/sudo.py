@@ -114,10 +114,10 @@ SUDO_OPTIONS = [
     #(False, 'bool', '--background', '-b')
     #(False, 'str', '--close-from', '-C')
     #(False, 'str', '--login-class', 'c')
-    (True, 'bool', '--preserve-env', '-E'),
+    (True,  'bool', '--preserve-env', '-E'),
     #(False, 'bool', '--edit', '-e')
     #(False, 'str', '--group', '-g')
-    (True, 'bool', '--set-home', '-H'),
+    (True,  'bool', '--set-home', '-H'),
     #(False, 'str', '--host', '-h')
     (False, 'bool', '--login', '-i'),
     #(False, 'bool', '--remove-timestamp', '-K')
@@ -146,10 +146,8 @@ SUDO_OPTIONS = [
 class OptionParser(optparse.OptionParser):
     def help(self):
         self.exit()
-
     def error(self, msg):
         self.exit(msg=msg)
-
     def exit(self, status=0, msg=None):
         msg = 'sudo: ' + (msg or 'unsupported option')
         raise mitogen.core.StreamError(msg)
@@ -169,7 +167,7 @@ def parse_sudo_flags(args):
     parser = make_sudo_parser()
     opts, args = parser.parse_args(args)
     if len(args):
-        raise mitogen.core.StreamError('unsupported sudo arguments:' + str(args))
+        raise mitogen.core.StreamError('unsupported sudo arguments:'+str(args))
     return opts
 
 

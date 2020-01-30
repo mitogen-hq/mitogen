@@ -159,7 +159,6 @@ def _connect_ssh(spec):
         }
     }
 
-
 def _connect_buildah(spec):
     """
     Return ContextService arguments for a Buildah connection.
@@ -174,7 +173,6 @@ def _connect_buildah(spec):
             'remote_name': get_remote_name(spec),
         }
     }
-
 
 def _connect_docker(spec):
     """
@@ -727,8 +725,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
 
         stack += (CONNECTION_METHOD[spec.transport()](spec),)
-        if spec.become() and ((spec.become_user() != spec.remote_user())
-                              or C.BECOME_ALLOW_SAME_USER):
+        if spec.become() and ((spec.become_user() != spec.remote_user()) or
+                              C.BECOME_ALLOW_SAME_USER):
             stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
         return stack

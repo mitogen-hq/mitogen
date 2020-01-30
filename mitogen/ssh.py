@@ -241,8 +241,8 @@ class Connection(mitogen.parent.Connection):
         because it must interactively accept host keys or type a password.
         """
         return (
-            self.options.check_host_keys == 'accept'
-            or self.options.password is not None
+            self.options.check_host_keys == 'accept' or
+            self.options.password is not None
         )
 
     def create_child(self, **kwargs):
@@ -267,8 +267,8 @@ class Connection(mitogen.parent.Connection):
             bits += ['-l', self.options.username]
         if self.options.port is not None:
             bits += ['-p', str(self.options.port)]
-        if self.options.identities_only and (self.options.identity_file
-                                             or self.options.password):
+        if self.options.identities_only and (self.options.identity_file or
+                                             self.options.password):
             bits += ['-o', 'IdentitiesOnly yes']
         if self.options.identity_file:
             bits += ['-i', self.options.identity_file]
