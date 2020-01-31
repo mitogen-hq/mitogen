@@ -551,6 +551,26 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         connection passed into any running action.
         """
         if self._task_vars is not None:
+            # check for if self._action has already been set or not
+            # there are some cases where the ansible executor passes in task_vars
+            # so we don't walk the stack to find them
+            # TODO: is there a better way to get the ActionModuleMixin object?
+            # ansible python discovery needs it to run discover_interpreter()
+            if not hasattr(self, '_action'):
+                f = sys._getframe()
+                while f:
+                    if f.f_code.co_name == 'run':
+                        f_self = f.f_locals.get('self')
+                        if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                            self._action = f_self
+                            break
+                    elif f.f_code.co_name == '_execute_meta':
+                        f_self = f.f_locals.get('self')
+                        if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                            self._action = f_self
+                            break
+                    f = f.f_back
+
             return self._task_vars
 
         f = sys._getframe()
