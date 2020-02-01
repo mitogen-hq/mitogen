@@ -548,8 +548,8 @@ class MitogenViaSpec(Spec):
             machine.
         :param dict host_vars:
             The HostVars magic dictionary provided by Ansible in task_vars.
-        :param dict host_vars:
-            The HostVars magic dictionary provided by Ansible in task_vars.
+        :param dict task_vars:
+            Task vars provided by Ansible.
         :param str become_method:
             If the mitogen_via= spec included a become method, the method it
             specifies.
