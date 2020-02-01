@@ -108,7 +108,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if not isinstance(connection, ansible_mitogen.connection.Connection):
             _, self.__class__ = type(self).__bases__
 
+        # required for python interpreter discovery
         connection.templar = self._templar
+        self._finding_python_interpreter = False
 
     def run(self, tmp=None, task_vars=None):
         """

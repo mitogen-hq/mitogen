@@ -78,24 +78,36 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action):
     Triggers ansible python interpreter discovery if requested.
     Caches this value the same way Ansible does it.
     """
+    # special case where we've already called discover_interpreter which then
+    # calls low_level_exec_command which then retriggers spec.python_path()
+    # in connect_ssh(), so we'll return the default '/usr/bin/python' to finish building the stack
+    # TODO: possible issues here? Chicken-and-egg issue, in order to `connect_ssh` we need a python path
+    if action._finding_python_interpreter:
+        return '/usr/bin/python'
+    
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
         # python is the only supported interpreter_name as of Ansible 2.8.6
         interpreter_name = 'python'
         discovered_interpreter_config = u'discovered_interpreter_%s' % interpreter_name
-        facts_from_task_vars = task_vars.get('ansible_facts', {})
+        
+        if task_vars.get('ansible_facts') is None:
+           task_vars['ansible_facts'] = {}
 
-        if discovered_interpreter_config not in facts_from_task_vars:
+        if discovered_interpreter_config not in task_vars['ansible_facts']:
+            action._finding_python_interpreter = True
             s = AnsibleUnsafeText(discover_interpreter(
                 action=action,
                 interpreter_name=interpreter_name,
                 discovery_mode=s,
                 task_vars=task_vars))
             # cache discovered interpreter
-            facts_from_task_vars['ansible_facts'][interpreter_name] = s
+            task_vars['ansible_facts'][discovered_interpreter_config] = s
         else:
-            s = facts_from_task_vars[discovered_interpreter_config]
+            s = task_vars['ansible_facts'][discovered_interpreter_config]
+
+    action._finding_python_interpreter = False
     return s
-        
+
 
 def parse_python_path(s, task_vars, action):
     """
