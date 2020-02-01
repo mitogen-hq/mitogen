@@ -95,6 +95,8 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action):
 
         if discovered_interpreter_config not in task_vars['ansible_facts']:
             action._finding_python_interpreter = True
+            # fake pipelining so discover_interpreter can be happy
+            action._connection.has_pipelining = True
             s = AnsibleUnsafeText(discover_interpreter(
                 action=action,
                 interpreter_name=interpreter_name,
@@ -102,6 +104,7 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action):
                 task_vars=task_vars))
             # cache discovered interpreter
             task_vars['ansible_facts'][discovered_interpreter_config] = s
+            action._connection.has_pipelining = False
         else:
             s = task_vars['ansible_facts'][discovered_interpreter_config]
 
