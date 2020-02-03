@@ -105,11 +105,12 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action):
             # cache discovered interpreter
             task_vars['ansible_facts'][discovered_interpreter_config] = s
             action._connection.has_pipelining = False
-            # propagate discovered interpreter as fact
-            action._discovered_interpreter_key = discovered_interpreter_config
-            action._discovered_interpreter = s
         else:
             s = task_vars['ansible_facts'][discovered_interpreter_config]
+
+        # propagate discovered interpreter as fact
+        action._discovered_interpreter_key = discovered_interpreter_config
+        action._discovered_interpreter = s
 
     action._finding_python_interpreter = False
     return s
