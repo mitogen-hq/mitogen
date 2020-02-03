@@ -374,6 +374,24 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # on _execute_module().
             self._remove_tmp_path(tmp)
 
+        # taken from _execute_module of ansible 2.8.6
+        # propagate interpreter discovery results back to the controller
+        if self._discovered_interpreter_key:
+            if result.get('ansible_facts') is None:
+                result['ansible_facts'] = {}
+
+            result['ansible_facts'][self._discovered_interpreter_key] = self._discovered_interpreter
+
+        if self._discovery_warnings:
+            if result.get('warnings') is None:
+                result['warnings'] = []
+            result['warnings'].extend(self._discovery_warnings)
+
+        if self._discovery_deprecation_warnings:
+            if result.get('deprecations') is None:
+                result['deprecations'] = []
+            data['deprecations'].extend(self._discovery_deprecation_warnings)
+
         return wrap_var(result)
 
     def _postprocess_response(self, result):
