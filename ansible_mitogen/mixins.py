@@ -54,6 +54,7 @@ import ansible_mitogen.connection
 import ansible_mitogen.planner
 import ansible_mitogen.target
 from ansible.module_utils._text import to_text
+from ansible.vars.clean import remove_internal_keys
 
 try:
     from ansible.utils.unsafe_proxy import wrap_var
@@ -373,6 +374,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # Built-in actions expected tmpdir to be cleaned up automatically
             # on _execute_module().
             self._remove_tmp_path(tmp)
+
+        # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
+        remove_internal_keys(result)
 
         # taken from _execute_module of ansible 2.8.6
         # propagate interpreter discovery results back to the controller
