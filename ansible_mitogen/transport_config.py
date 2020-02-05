@@ -65,9 +65,14 @@ import os
 import ansible.utils.shlex
 import ansible.constants as C
 
-from ansible.executor.interpreter_discovery import discover_interpreter
 from ansible.module_utils.six import with_metaclass
 from ansible.utils.unsafe_proxy import AnsibleUnsafeText
+
+# this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
+try:
+    from ansible.executor.interpreter_discovery import discover_interpreter
+except ModuleNotFoundError:
+    discover_interpreter = lambda a,b,c,d: '/usr/bin/python'
 
 
 import mitogen.core
