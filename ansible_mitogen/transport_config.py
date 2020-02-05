@@ -71,7 +71,7 @@ from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 # this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
 try:
     from ansible.executor.interpreter_discovery import discover_interpreter
-except ModuleNotFoundError:
+except ImportError:
     discover_interpreter = lambda a,b,c,d: '/usr/bin/python'
 
 
