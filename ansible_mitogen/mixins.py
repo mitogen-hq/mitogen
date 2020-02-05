@@ -394,7 +394,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if self._discovery_deprecation_warnings:
             if result.get('deprecations') is None:
                 result['deprecations'] = []
-            data['deprecations'].extend(self._discovery_deprecation_warnings)
+            result['deprecations'].extend(self._discovery_deprecation_warnings)
 
         return wrap_var(result)
 
