@@ -169,9 +169,7 @@ Noteworthy Differences
       - initech_app
       - y2k_fix
 
-* Ansible 2.8 `interpreter discovery
-  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
-  and `become plugins
+* Ansible `become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ are not yet
   supported.
 
