@@ -505,6 +505,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     # set by `_get_task_vars()` for interpreter discovery
     _action = None
+    # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
+    _discovered_interpreter_key = None
+    _discovered_interpreter = False
+    _discovery_deprecation_warnings = []
+    _discovery_warnings = []
 
     def __del__(self):
         """
