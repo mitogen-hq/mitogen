@@ -503,6 +503,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: matching vanilla Ansible behaviour.
     loader_basedir = None
 
+    # set by `_get_task_vars()` for interpreter discovery
+    _action = None
+
     def __del__(self):
         """
         Ansible cannot be trusted to always call close() e.g. the synchronize
