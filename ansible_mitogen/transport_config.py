@@ -87,7 +87,7 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action):
     # calls low_level_exec_command which then retriggers spec.python_path()
     # in connect_ssh(), so we'll return the default '/usr/bin/python' to finish building the stack
     # TODO: possible issues here? Chicken-and-egg issue, in order to `connect_ssh` we need a python path
-    if action is None or action._finding_python_interpreter or s is None:
+    if action._finding_python_interpreter or s is None:
         return '/usr/bin/python'
     
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:

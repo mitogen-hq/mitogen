@@ -504,7 +504,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     loader_basedir = None
 
     # set by `_get_task_vars()` for interpreter discovery
-    _action = None
+    # we need it to be an object with the value of "_finding_python_interpreter" in case we aren't
+    # running interpreter discovery fully
+    _action = type('actionTemp', (object,), {'_finding_python_interpreter': False})
     # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
     _discovered_interpreter_key = None
     _discovered_interpreter = False
@@ -564,7 +566,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             # so we don't walk the stack to find them
             # TODO: is there a better way to get the ActionModuleMixin object?
             # ansible python discovery needs it to run discover_interpreter()
-            if not hasattr(self, '_action'):
+            if not isinstance(self._action, ansible_mitogen.mixins.ActionModuleMixin):
                 f = sys._getframe()
                 while f:
                     if f.f_code.co_name == 'run':
