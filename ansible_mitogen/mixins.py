@@ -54,12 +54,16 @@ import ansible_mitogen.connection
 import ansible_mitogen.planner
 import ansible_mitogen.target
 from ansible.module_utils._text import to_text
-from ansible.vars.clean import remove_internal_keys
 
 try:
     from ansible.utils.unsafe_proxy import wrap_var
 except ImportError:
     from ansible.vars.unsafe_proxy import wrap_var
+
+try:
+    from ansible.vars.clean import remove_internal_keys
+except ImportError:
+    from ansible.vars.manager import remove_internal_keys
 
 
 LOG = logging.getLogger(__name__)
