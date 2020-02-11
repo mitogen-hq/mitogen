@@ -506,7 +506,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     # set by `_get_task_vars()` for interpreter discovery
     # we need it to be an object with the value of "_finding_python_interpreter" in case we aren't
     # running interpreter discovery fully
-    _action = type('actionTemp', (object,), {'_finding_python_interpreter': False})
+    _action = type(str('actionTemp'), (object,), {'_finding_python_interpreter': False})
     # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
     _discovered_interpreter_key = None
     _discovered_interpreter = False
