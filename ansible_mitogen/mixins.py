@@ -61,9 +61,15 @@ except ImportError:
     from ansible.vars.unsafe_proxy import wrap_var
 
 try:
+    # ansible 2.8 moved remove_internal_keys to the clean module
     from ansible.vars.clean import remove_internal_keys
 except ImportError:
-    from ansible.vars.manager import remove_internal_keys
+    try:
+        from ansible.vars.manager import remove_internal_keys
+    except ImportError:
+        # ansible 2.3.3 has remove_internal_keys as a protected func on the action class
+        # we'll fallback to calling self._remove_internal_keys in this case
+        remove_internal_keys = lambda a: None
 
 
 LOG = logging.getLogger(__name__)
@@ -385,7 +391,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             self._remove_tmp_path(tmp)
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
-        remove_internal_keys(result)
+        # handle ansible 2.3.3 that has remove_internal_keys in a different place
+        remove_internal_keys(result) or self._remove_internal_keys(result)
 
         # taken from _execute_module of ansible 2.8.6
         # propagate interpreter discovery results back to the controller
