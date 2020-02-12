@@ -593,7 +593,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                         return task_vars
             elif f.f_code.co_name == '_execute_meta':
                 f_all_vars = f.f_locals.get('all_vars')
-                f_self = f_locals.get('self')
+                f_self = f.f_locals.get('self')
                 if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
                     # backref for python interpreter discovery, should be safe because _get_task_vars
                     # is always called before running interpreter discovery
