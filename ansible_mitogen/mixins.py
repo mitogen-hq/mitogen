@@ -69,7 +69,7 @@ except ImportError:
     except ImportError:
         # ansible 2.3.3 has remove_internal_keys as a protected func on the action class
         # we'll fallback to calling self._remove_internal_keys in this case
-        remove_internal_keys = lambda a: None
+        remove_internal_keys = lambda a: "Not found"
 
 
 LOG = logging.getLogger(__name__)
@@ -392,7 +392,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
         # handle ansible 2.3.3 that has remove_internal_keys in a different place
-        remove_internal_keys(result) or self._remove_internal_keys(result)
+        check = remove_internal_keys(result)
+        if check == 'Not found':
+            self._remove_internal_keys(result)
 
         # taken from _execute_module of ansible 2.8.6
         # propagate interpreter discovery results back to the controller
