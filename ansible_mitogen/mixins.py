@@ -116,6 +116,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # required for python interpreter discovery
         connection.templar = self._templar
         self._finding_python_interpreter = False
+        # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
+        self._discovered_interpreter_key = None
+        self._discovered_interpreter = False
+        self._discovery_deprecation_warnings = []
+        self._discovery_warnings = []
 
     def run(self, tmp=None, task_vars=None):
         """
