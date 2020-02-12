@@ -9,6 +9,10 @@
     # directly.
     - shell: virtualenv /tmp/issue_152_virtualenv
       when: lout.python_version > '2.6'
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+        PATH: "{{ lookup('env', 'PATH') }}"
 
     - custom_python_detect_environment:
       vars:
