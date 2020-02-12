@@ -66,7 +66,6 @@ import ansible.utils.shlex
 import ansible.constants as C
 
 from ansible.module_utils.six import with_metaclass
-from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 
 # this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
 try:
@@ -74,6 +73,10 @@ try:
 except ImportError:
     discover_interpreter = lambda a,b,c,d: '/usr/bin/python'
 
+try:
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
+except ImportError:
+    from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 
 import mitogen.core
 
