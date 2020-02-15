@@ -94,7 +94,8 @@
           from ansible.module_utils.basic import get_module_path
           path = get_module_path() + '/foo.txt'
           result['path'] = path
-          open(path, 'w').write("bar")
+          with open(path, 'w') as f:
+            f.write("bar")
       register: out
 
     - name: "Verify junk disappeared."
@@ -136,7 +137,8 @@
           from ansible.module_utils.basic import get_module_path
           path = get_module_path() + '/foo.txt'
           result['path'] = path
-          open(path, 'w').write("bar")
+          with open(path, 'w') as f:
+            f.write("bar")
       register: tmp_path
 
     #
