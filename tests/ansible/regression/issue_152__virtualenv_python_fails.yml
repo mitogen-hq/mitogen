@@ -15,16 +15,19 @@
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
 
-    # virtualenv on Mac points to /usr/local/Cellar/python/3.7.2_1/bin/python3.7 as the sys.executable
-    # which matches up with the .Python set up in /tmp/issue_152_virtualenv:
-    # .Python -> /usr/local/Cellar/python/3.7.2_1/Frameworks/Python.framework/Versions/3.7/Python
-    # on Mac, lout's sys.executable is the normal /usr/bin/python
     - custom_python_detect_environment:
       vars:
         ansible_python_interpreter: /tmp/issue_152_virtualenv/bin/python
       register: out
       when: lout.python_version > '2.6'
 
+    # virtualenv on Mac points to /usr/local/Cellar/python/3.7.2_1/bin/python3.7 as the sys.executable
+    # or for python2 the python path is /usr/local/opt/python@2/bin/python2.7 on azure
+    # which matches up with the .Python set up in /tmp/issue_152_virtualenv:
+    # .Python -> /usr/local/Cellar/python/3.7.2_1/Frameworks/Python.framework/Versions/3.7/Python
+    # on Mac, lout's sys.executable is the normal /usr/bin/python
+    # TODO: better fix than this? This seems to be the right test because the python exc is pointing to
+    # something that lives inside of the venv but I'm not sure
     - assert:
         that:
           - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
@@ -32,7 +35,7 @@
 
     - assert:
         that:
-          - "'/usr/local/Cellar/python' in out.sys_executable"
+          - "'/usr/local/Cellar/python' in out.sys_executable or '/usr/local/opt/python@2' in out.sys_executable"
       when: lout.python_version > '2.6' and ansible_os_family == 'Darwin'
 
     - file:
