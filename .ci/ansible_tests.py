@@ -66,6 +66,7 @@ with ci_lib.Fold('job_setup'):
     ci_lib.dump_file(inventory_path)
 
     if not ci_lib.exists_in_path('sshpass'):
+        run("sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 78BD65473CB3BD13")
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
 
