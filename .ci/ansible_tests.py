@@ -68,10 +68,7 @@ with ci_lib.Fold('job_setup'):
     if not ci_lib.exists_in_path('sshpass'):
         # fix errors with apt-get update
         run("sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 78BD65473CB3BD13")
-        # DEBUG
-        run("sudo ls -aol /etc/apt/sources.list.d")
-        run("sudo ls -aol /etc/apt/sources.list")
-        run("sed -i -e 's#deb https://downloads.apache.org/cassandra/debian 39x main#deb http://downloads.apache.org/cassandra/debian 39x main#g' /etc/apt/sources.list.d/39x.list")
+        run("sed -i -e 's#deb https://downloads.apache.org/cassandra/debian 39x main#deb http://downloads.apache.org/cassandra/debian 39x main#g' /etc/apt/sources.list.d/cassandra.list")
 
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
