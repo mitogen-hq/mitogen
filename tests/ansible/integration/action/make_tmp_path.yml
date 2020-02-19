@@ -129,7 +129,7 @@
     #
 
     - name: DEBUGGING - dump all users and their groups and group ids; become_user fails with sudo gid error
-      shell: dscl . list /Users | grep -v '^_' | xargs -I{} -t -n1 sh -c "id -Gn {} | python -c \"from __future__ import print_function; import sys; import grp; print([line for line in sys.stdin.read().strip().replace('\n', ' ').split(' ')])\""
+      shell: dscl . list /Users | grep -v '^_' | xargs -I{} -t -n1 sh -c "id -Gn {} | python -c \"from __future__ import print_function; import sys; import grp; print([grp.getgrnam(line) for line in sys.stdin.read().strip().replace('\n', ' ').split(' ')])\""
       
 
     - name: "Try writing to temp directory for the readonly_homedir user"
