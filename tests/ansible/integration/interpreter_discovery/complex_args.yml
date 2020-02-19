@@ -65,3 +65,4 @@
         src: "/bin/shBACKUP"
         dest: "/bin/sh"
         remote_src: yes
+        mode: 0555
