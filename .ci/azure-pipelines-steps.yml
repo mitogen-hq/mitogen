@@ -15,7 +15,9 @@ steps:
 # hard-fought battle and for now I am tired of this crap.
 - script: |
     sudo ln -fs /usr/bin/python$(python.version) /usr/bin/python
-    /usr/bin/python -m pip install -U virtualenv setuptools wheel
+    # need wheel before building virtualenv because of bdist_wheel dep
+    /usr/bin/python -m pip install -U pip wheel
+    /usr/bin/python -m pip install -U virtualenv setuptools
     /usr/bin/python -m virtualenv /tmp/venv -p /usr/bin/python$(python.version)
     echo "##vso[task.prependpath]/tmp/venv/bin"
 
