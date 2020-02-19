@@ -6,66 +6,38 @@
   any_errors_fatal: true
   gather_facts: true
   tasks:
-    - name: Run tests on either redhat or darwin only for now
-      block:
-        - name: set redhat special python
-          block:
-            - name: ensure we can install rh-python36
-              become: yes
-              package:
-                name:
-                  - centos-release-scl
-                state: present
+    - name: create temp file to source
+      file:
+        path: /tmp/fake
+        state: touch
 
-            - name: ensure rh-python36 is installed
-              become: yes
-              package:
-                name:
-                  - rh-python36
-                  - rh-python36-python-devel
-                state: present
+    - name: set python using sourced file
+      set_fact:
+        special_python: source /tmp/fake && python
 
-            - name: set special python fact
-              set_fact:
-                special_python: source /opt/rh/rh-python36/enable && python
-          when: ansible_os_family == 'RedHat'
+    - name: run get_url with specially-sourced python
+      get_url:
+        url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
+        dest: "/tmp/"
+        mode: 0644
+      vars:
+        ansible_python_interpreter: "{{ special_python }}"
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
 
-        - name: set darwin "special" python
-          block:
-            - name: create temp file to source
-              file:
-                path: /tmp/fake
-                state: touch
-
-            - name: set python using sourced file
-              set_fact:
-                special_python: source /tmp/fake && python
-          when: ansible_os_family == 'Darwin'
-
-        - name: run get_url with specially-sourced python
-          get_url:
-            url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
-            dest: "/tmp/"
-            mode: 0644
-          vars:
-            ansible_python_interpreter: "{{ special_python }}"
-          environment:
-            https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-            no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
-
-        - name: run get_url with specially-sourced python including jinja
-          get_url:
-            url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
-            dest: "/tmp/"
-            mode: 0644
-          vars:
-            ansible_python_interpreter: >
-              {% if "1" == "1" %}
-                {{ special_python }}
-              {% else %}
-                python 
-              {% endif %}
-          environment:
-            https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-            no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
-      when: ansible_os_family in ('RedHat', 'Darwin')
+    - name: run get_url with specially-sourced python including jinja
+      get_url:
+        url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
+        dest: "/tmp/"
+        mode: 0644
+      vars:
+        ansible_python_interpreter: >
+          {% if "1" == "1" %}
+            {{ special_python }}
+          {% else %}
+            python 
+          {% endif %}
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
