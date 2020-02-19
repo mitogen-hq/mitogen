@@ -10,6 +10,12 @@
       block:
         - name: set redhat special python
           block:
+            - name: ensure we can install rh-python36
+              package:
+                name:
+                  - centos-release-scl
+                state: present
+
             - name: ensure rh-python36 is installed
               package:
                 name:
