@@ -37,6 +37,8 @@
         url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
         dest: "/tmp/"
         mode: 0644
+        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
+        validate_certs: no
       vars:
         ansible_python_interpreter: "{{ special_python }}"
       environment:
@@ -48,6 +50,8 @@
         url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
         dest: "/tmp/"
         mode: 0644
+        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
+        validate_certs: no
       vars:
         ansible_python_interpreter: >
           {% if "1" == "1" %}
