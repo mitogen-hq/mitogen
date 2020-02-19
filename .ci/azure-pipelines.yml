@@ -18,6 +18,7 @@ jobs:
       Ans280_27:
         python.version: '2.7'
         MODE: localhost_ansible
+        VER: 2.8.0
 
 
 - job: Linux
