@@ -15,6 +15,23 @@
       set_fact:
         special_python: source /tmp/fake && python
 
+    - name: set up symlink to bash so source command works
+      block:
+        - name: back up old sh shell
+          become: yes
+          copy:
+            src: "/bin/sh"
+            dest: "/bin/shBACKUP"
+            remote_src: yes
+
+        - name: set up symlink
+          become: yes
+          file:
+            src: "/bin/bash"
+            dest: "/bin/sh"
+            state: link
+            force: yes
+
     - name: run get_url with specially-sourced python
       get_url:
         url: https://camo.githubusercontent.com/65061efd40e810e88184d7d962bb079ce27d8f7f/68747470733a2f2f7472617669732d63692e6f72672f64772f6d69746f67656e2e7376673f6272616e63683d6d6173746572
@@ -25,8 +42,6 @@
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
-      args:
-        executable: "/bin/bash"
 
     - name: run get_url with specially-sourced python including jinja
       get_url:
@@ -43,5 +58,10 @@
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
-      args:
-        executable: "/bin/bash"
+
+    - name: revert sh shell setup
+      become: yes
+      copy:
+        src: "/bin/shBACKUP"
+        dest: "/bin/sh"
+        remote_src: yes
