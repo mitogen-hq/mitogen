@@ -71,7 +71,7 @@ from ansible.module_utils.six import with_metaclass
 try:
     from ansible.executor.interpreter_discovery import discover_interpreter
 except ImportError:
-    discover_interpreter = lambda a,b,c,d: '/usr/bin/python'
+    discover_interpreter = lambda action,interpreter_name,discovery_mode,task_vars: '/usr/bin/python'
 
 try:
     from ansible.utils.unsafe_proxy import AnsibleUnsafeText
