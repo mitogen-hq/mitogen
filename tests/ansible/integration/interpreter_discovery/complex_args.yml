@@ -25,6 +25,8 @@
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+      args:
+        executable: "/bin/bash"
 
     - name: run get_url with specially-sourced python including jinja
       get_url:
@@ -41,3 +43,5 @@
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+      args:
+        executable: "/bin/bash"
