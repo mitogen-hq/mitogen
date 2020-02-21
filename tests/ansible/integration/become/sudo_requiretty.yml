@@ -5,17 +5,18 @@
   any_errors_fatal: true
   tasks:
 
-    - name: Verify we can login to a non-passworded requiretty account
-      shell: whoami
-      become: true
-      become_user: mitogen__require_tty
-      register: out
-      when: is_mitogen
+    # TODO: https://github.com/dw/mitogen/issues/692
+    # - name: Verify we can login to a non-passworded requiretty account
+    #   shell: whoami
+    #   become: true
+    #   become_user: mitogen__require_tty
+    #   register: out
+    #   when: is_mitogen
 
-    - assert:
-        that:
-          - out.stdout == 'mitogen__require_tty'
-      when: is_mitogen
+    # - assert:
+    #     that:
+    #       - out.stdout == 'mitogen__require_tty'
+    #   when: is_mitogen
 
 
     # ---------------
