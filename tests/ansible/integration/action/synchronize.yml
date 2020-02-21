@@ -34,10 +34,11 @@
         content: "item!"
       delegate_to: localhost
 
-    - file:
-        path: /tmp/sync-test.out
-        state: absent
-      become: true
+    # TODO: https://github.com/dw/mitogen/issues/692
+    # - file:
+    #     path: /tmp/sync-test.out
+    #     state: absent
+    #   become: true
 
     - synchronize:
         private_key: /tmp/synchronize-action-key
