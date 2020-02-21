@@ -46,10 +46,6 @@ jobs:
         MODE: mitogen
         DISTRO: centos6
 
-      #
-      #
-      #
-
       #Py26CentOS7:
         #python.version: '2.7'
         #MODE: mitogen
