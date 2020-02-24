@@ -21,7 +21,7 @@ steps:
       /usr/bin/python -m pip install -U pip wheel setuptools &&
       /usr/bin/python -m pip install -U virtualenv &&
       /usr/bin/python -m virtualenv /tmp/venv -p /usr/bin/python$(python.version)) ||
-    (/usr/bin/python$(python.version) -m pip install -U pip wheel setuptools &&
+    (sudo /usr/bin/python$(python.version) -m pip install -U pip wheel setuptools &&
       /usr/bin/python$(python.version) -m venv /tmp/venv)
     echo "##vso[task.prependpath]/tmp/venv/bin"
 
