@@ -9,7 +9,14 @@
     # Can't use pip module because it can't create virtualenvs, must call it
     # directly.
     - shell: virtualenv /tmp/issue_152_virtualenv
-      when: lout.python_version > '2.6'
+      when: lout.python_version > '2.6' and not lout.python_version.startswith('3')
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+        PATH: "{{ lookup('env', 'PATH') }}"
+
+    - shell: python3 -m venv /tmp/issue_152_virtualenv
+      when: lout.python_version > '2.6' and lout.python_version.startswith('3')
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
