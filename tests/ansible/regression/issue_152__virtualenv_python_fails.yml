@@ -9,28 +9,33 @@
     # Can't use pip module because it can't create virtualenvs, must call it
     # directly.
     - shell: virtualenv /tmp/issue_152_virtualenv
-      when: lout.python_version > '2.6' and not lout.python_version.startswith('3')
+      when: lout.python_version > '2.6'
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
 
-    - shell: python3 -m venv /tmp/issue_152_virtualenv
-      when: lout.python_version > '2.6' and lout.python_version.startswith('3')
-      environment:
-        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
-        PATH: "{{ lookup('env', 'PATH') }}"
+    - name: set python interpreter because mac symlinks things and complains
+      block:
+        - name: set python3 interpreter
+          when: lout.python_version.startswith('3')
+          set_fact:
+            python_interpreter: /tmp/issue_152_virtualenv/bin/python3
+
+        - name: set python2 interpreter
+          when: lout.python_version.startswith('2')
+          set_fact:
+            python_interpreter: /tmp/issue_152_virtualenv/bin/python
 
     - custom_python_detect_environment:
       vars:
-        ansible_python_interpreter: /tmp/issue_152_virtualenv/bin/python
+        ansible_python_interpreter: "{{ python_interpreter }}"
       register: out
       when: lout.python_version > '2.6'
 
     - assert:
         that:
-          - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
+          - out.sys_executable == "{{ python_interpreter }}"
       when: lout.python_version > '2.6'
 
     - file:
