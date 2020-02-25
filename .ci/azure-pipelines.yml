@@ -15,8 +15,8 @@ jobs:
       Mito27_27:
         python.version: '2.7'
         MODE: mitogen
-      Ans288_37:
-        python.version: '3'
+      Ans288_27:
+        python.version: '2.7'
         MODE: localhost_ansible
         VER: 2.8.8
 

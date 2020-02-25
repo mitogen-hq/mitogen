@@ -15,27 +15,15 @@
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
 
-    - name: set python interpreter because mac symlinks things and complains
-      block:
-        - name: set python3 interpreter
-          when: lout.python_version.startswith('3')
-          set_fact:
-            python_interpreter: /tmp/issue_152_virtualenv/bin/python3
-
-        - name: set python2 interpreter
-          when: lout.python_version.startswith('2')
-          set_fact:
-            python_interpreter: /tmp/issue_152_virtualenv/bin/python
-
     - custom_python_detect_environment:
       vars:
-        ansible_python_interpreter: "{{ python_interpreter }}"
+        ansible_python_interpreter: /tmp/issue_152_virtualenv/bin/python
       register: out
       when: lout.python_version > '2.6'
 
     - assert:
         that:
-          - out.sys_executable == "{{ python_interpreter }}"
+          - out.sys_executable == /tmp/issue_152_virtualenv/bin/python
       when: lout.python_version > '2.6'
 
     - file:
