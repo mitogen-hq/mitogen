@@ -23,7 +23,7 @@
 
     - assert:
         that:
-          - out.sys_executable == /tmp/issue_152_virtualenv/bin/python
+          - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
       when: lout.python_version > '2.6'
 
     - file:
