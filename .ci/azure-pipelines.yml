@@ -9,7 +9,7 @@ jobs:
   steps:
   - template: azure-pipelines-steps.yml
   pool:
-    vmImage: macOS-10.15
+    vmImage: macOS-10.14
   strategy:
     matrix:
       Mito27_27:
