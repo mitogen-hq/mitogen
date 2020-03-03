@@ -183,7 +183,7 @@ def _connect_docker(spec):
         'kwargs': {
             'username': spec.remote_user(),
             'container': spec.remote_addr(),
-            'python_path': spec.python_path(),
+            'python_path': spec.python_path(rediscover_python=True),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
             'remote_name': get_remote_name(spec),
         }

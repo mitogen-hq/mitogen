@@ -451,6 +451,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_low_level_execute_command(%r, in_data=%r, exe=%r, dir=%r)',
                   cmd, type(in_data), executable, chdir)
+
         if executable is None:  # executable defaults to False
             executable = self._play_context.executable
         if executable:

@@ -81,25 +81,25 @@ except ImportError:
 import mitogen.core
 
 
-def run_interpreter_discovery_if_necessary(s, task_vars, action):
+def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python):
     """
     Triggers ansible python interpreter discovery if requested.
     Caches this value the same way Ansible does it.
+    For connections like `docker`, we want to rediscover the python interpreter because
+    it could be different than what's ran on the host
     """
-    # _finding_python_interpreter is a special case where we've already called discover_interpreter which then
-    # calls low_level_exec_command which then retriggers spec.python_path()
-    # in connect_ssh(), so we'll return the default '/usr/bin/python' to finish building the stack
-    # TODO: possible issues here? Chicken-and-egg issue, in order to `connect_ssh` we need a python path
-    if action._finding_python_interpreter or s is None:
-        return '/usr/bin/python'
-    
+    # TODO: avoid infinite recursion via _finding_python_interpreter + low_level_execute_command called from discover_interpreter
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
-        # python is the only supported interpreter_name as of Ansible 2.8.6
+        # python is the only supported interpreter_name as of Ansible 2.8.8
         interpreter_name = 'python'
         discovered_interpreter_config = u'discovered_interpreter_%s' % interpreter_name
         
         if task_vars.get('ansible_facts') is None:
            task_vars['ansible_facts'] = {}
+
+        if rediscover_python and task_vars.get('ansible_facts', {}).get(discovered_interpreter_config):
+            # blow away the discovered_interpreter_config cache and rediscover
+            del task_vars['ansible_facts'][discovered_interpreter_config]
 
         if discovered_interpreter_config not in task_vars['ansible_facts']:
             action._finding_python_interpreter = True
@@ -124,16 +124,23 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action):
     return s
 
 
-def parse_python_path(s, task_vars, action):
+def parse_python_path(s, task_vars, action, rediscover_python):
     """
     Given the string set for ansible_python_interpeter, parse it using shell
     syntax and return an appropriate argument vector. If the value detected is 
     one of interpreter discovery then run that first. Caches python interpreter
     discovery value in `facts_from_task_vars` like how Ansible handles this.
     """
-    if s:
-        s = run_interpreter_discovery_if_necessary(s, task_vars, action)
-        return ansible.utils.shlex.shlex_split(s)
+    if not s:
+        # if python_path doesn't exist, default to `auto` and attempt to discover it
+        s = 'auto'
+
+    s = run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python)
+    # if unable to determine python_path, fallback to '/usr/bin/python'
+    if not s:
+        s = '/usr/bin/python'
+
+    return ansible.utils.shlex.shlex_split(s)
 
 
 def optional_secret(value):
@@ -420,15 +427,16 @@ class PlayContextSpec(Spec):
     def port(self):
         return self._play_context.port
 
-    def python_path(self):
+    def python_path(self, rediscover_python=False):
         s = self._connection.get_task_var('ansible_python_interpreter')
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
         return parse_python_path(
-            s or '/usr/bin/python',
+            s,
             task_vars=self._task_vars,
-            action=self._action)
+            action=self._action,
+            rediscover_python=rediscover_python)
 
     def private_key_file(self):
         return self._play_context.private_key_file
@@ -642,15 +650,16 @@ class MitogenViaSpec(Spec):
             C.DEFAULT_REMOTE_PORT
         )
 
-    def python_path(self):
+    def python_path(self, rediscover_python=False):
         s = self._host_vars.get('ansible_python_interpreter')
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
         return parse_python_path(
-            s or '/usr/bin/python',
+            s,
             task_vars=self._task_vars,
-            action=self._action)
+            action=self._action,
+            rediscover_python=rediscover_python)
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.
