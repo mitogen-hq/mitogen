@@ -122,6 +122,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # required for python interpreter discovery
         connection.templar = self._templar
         self._finding_python_interpreter = False
+        self._rediscovered_python = False
         # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
         self._discovered_interpreter_key = None
         self._discovered_interpreter = False
@@ -402,7 +403,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             if result.get('ansible_facts') is None:
                 result['ansible_facts'] = {}
 
-            result['ansible_facts'][self._discovered_interpreter_key] = self._discovered_interpreter
+            # only cache discovered_interpreter if we're not running a rediscovery
+            # rediscovery happens in places like docker connections that could have different
+            # python interpreters than the main host
+            if not self._rediscovered_python:
+                result['ansible_facts'][self._discovered_interpreter_key] = self._discovered_interpreter
 
         if self._discovery_warnings:
             if result.get('warnings') is None:
@@ -457,12 +462,47 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if executable:
             cmd = executable + ' -c ' + shlex_quote(cmd)
 
-        rc, stdout, stderr = self._connection.exec_command(
-            cmd=cmd,
-            in_data=in_data,
-            sudoable=sudoable,
-            mitogen_chdir=chdir,
-        )
+        # TODO: HACK: if finding python interpreter then we need to keep
+        # calling exec_command until we run into the right python we'll use
+        # chicken-and-egg issue, mitogen needs a python to run low_level_execute_command
+        # which is required by Ansible's discover_interpreter function
+        if self._finding_python_interpreter:
+            possible_pythons = [
+                '/usr/bin/python',
+                'python3.7',
+                'python3.6',
+                'python3.5',
+                'python2.7',
+                'python2.6',
+                'usr/libexec/platform-python',
+                'usr/bin/python3',
+                'python'
+            ]
+        else:
+            # not used, just adding a filler value
+            possible_pythons = ['python']
+
+        def _run_cmd():
+            return self._connection.exec_command(
+                cmd=cmd,
+                in_data=in_data,
+                sudoable=sudoable,
+                mitogen_chdir=chdir,
+            )
+
+        for possible_python in possible_pythons:
+            try:
+                self._possible_python_interpreter = possible_python
+                rc, stdout, stderr = _run_cmd()
+            # TODO: what exception is thrown?
+            except:
+                # we've reached the last python attempted and failed
+                # TODO: could use enumerate(), need to check which version of python first had it though
+                if possible_python == 'python':
+                    raise
+                else:
+                    continue
+
         stdout_text = to_text(stdout, errors=encoding_errors)
 
         return {

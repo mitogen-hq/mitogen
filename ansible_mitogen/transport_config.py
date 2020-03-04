@@ -88,7 +88,10 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
     For connections like `docker`, we want to rediscover the python interpreter because
     it could be different than what's ran on the host
     """
-    # TODO: avoid infinite recursion via _finding_python_interpreter + low_level_execute_command called from discover_interpreter
+    # keep trying different interpreters until we don't error
+    if action._finding_python_interpreter:
+        return action._possible_python_interpreter
+    
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
         # python is the only supported interpreter_name as of Ansible 2.8.8
         interpreter_name = 'python'
@@ -98,6 +101,11 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
            task_vars['ansible_facts'] = {}
 
         if rediscover_python and task_vars.get('ansible_facts', {}).get(discovered_interpreter_config):
+            # if we're rediscovering python then chances are we're running something like a docker connection
+            # this will handle scenarios like running a playbook that does stuff + then dynamically creates a docker container,
+            # then runs the rest of the playbook inside that container, and then rerunning the playbook again
+            action._rediscovered_python = True
+
             # blow away the discovered_interpreter_config cache and rediscover
             del task_vars['ansible_facts'][discovered_interpreter_config]
 
@@ -110,6 +118,7 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
                 interpreter_name=interpreter_name,
                 discovery_mode=s,
                 task_vars=task_vars))
+
             # cache discovered interpreter
             task_vars['ansible_facts'][discovered_interpreter_config] = s
             action._connection.has_pipelining = False
