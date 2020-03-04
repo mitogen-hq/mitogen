@@ -469,6 +469,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if self._finding_python_interpreter:
             possible_pythons = [
                 '/usr/bin/python',
+                'python3',
                 'python3.7',
                 'python3.6',
                 'python3.5',
