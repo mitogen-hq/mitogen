@@ -504,9 +504,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     loader_basedir = None
 
     # set by `_get_task_vars()` for interpreter discovery
-    # we need it to be an object with the value of "_finding_python_interpreter" in case we aren't
-    # running interpreter discovery fully
-    _action = type(str('actionTemp'), (object,), {'_finding_python_interpreter': False})
+    _action = None
 
     def __del__(self):
         """
@@ -778,7 +776,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             play_context=self._play_context,
             transport=self.transport,
             inventory_name=self.get_task_var('inventory_hostname'),
-            action=self._action
         )
         stack = self._stack_from_spec(spec)
         return spec.inventory_name(), stack

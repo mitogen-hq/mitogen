@@ -397,14 +397,14 @@ class PlayContextSpec(Spec):
     PlayContext. It is used for normal connections and delegate_to connections,
     and should always be accurate.
     """
-    def __init__(self, connection, play_context, transport, inventory_name, action):
+    def __init__(self, connection, play_context, transport, inventory_name):
         self._connection = connection
         self._play_context = play_context
         self._transport = transport
         self._inventory_name = inventory_name
         self._task_vars = self._connection._get_task_vars()
         # used to run interpreter discovery
-        self._action = action
+        self._action = connection._action
 
     def transport(self):
         return self._transport

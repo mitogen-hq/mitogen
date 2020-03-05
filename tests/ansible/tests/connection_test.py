@@ -47,11 +47,15 @@ class ConnectionMixin(MuxProcessMixin):
     def make_connection(self):
         play_context = ansible.playbook.play_context.PlayContext()
         conn = self.klass(play_context, new_stdin=False)
+        # conn functions don't fetch ActionModuleMixin objs from _get_task_vars()
+        # through the usual walk-the-stack approach so we'll not run interpreter discovery here
+        conn._action = mock.MagicMock(_possible_python_interpreter='/usr/bin/python')
         conn.on_action_run(
             task_vars={},
             delegate_to_hostname=None,
             loader_basedir=None,
         )
+
         return conn
 
     def wait_for_completion(self):
