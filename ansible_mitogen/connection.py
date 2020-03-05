@@ -568,10 +568,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                             self._action = f_self
                             break
                     elif f.f_code.co_name == '_execute_meta':
-                        f_self = f.f_locals.get('self')
-                        if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
-                            self._action = f_self
-                            break
+                        break
                     f = f.f_back
 
             return self._task_vars
@@ -591,11 +588,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                         return task_vars
             elif f.f_code.co_name == '_execute_meta':
                 f_all_vars = f.f_locals.get('all_vars')
-                f_self = f.f_locals.get('self')
-                if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
-                    # backref for python interpreter discovery, should be safe because _get_task_vars
-                    # is always called before running interpreter discovery
-                    self._action = f_self
                 if isinstance(f_all_vars, dict):
                     LOG.debug('recovered task_vars from meta:')
                     return f_all_vars
@@ -896,6 +888,12 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(
                 self.reset_compat_msg
             )
+
+        # TODO
+        # Strategy's _execute_meta doesn't have an action obj but we'll need one for
+        # running interpreter_discovery
+        # self._action = ansible_mitogen.mixins.ActionModuleMixin
+        # import epdb; epdb.set_trace()
 
         # Clear out state in case we were ever connected.
         self.close()
