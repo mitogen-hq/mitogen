@@ -77,7 +77,8 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
+
 
 - hosts: localhost
   vars: {mitogen_via: tc-python-path-local-unset}
