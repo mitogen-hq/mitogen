@@ -20,7 +20,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
       right: ["/hostvar/path/to/python"]
@@ -45,7 +45,7 @@
       right: ["/hostvar/path/to/python"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
 
 
 # Implicit localhost gets ansible_python_interpreter=virtualenv interpreter
