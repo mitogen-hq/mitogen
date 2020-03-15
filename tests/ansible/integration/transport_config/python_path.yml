@@ -2,8 +2,8 @@
 # Each case is followed by mitogen_via= case to test hostvars method.
 
 
-# When no ansible_python_interpreter is set, executor/module_common.py chooses
-# "/usr/bin/python".
+# When no ansible_python_interpreter is set, ansible 2.8+ automatically
+# tries to detect the desired interpreter, falling back to "/usr/bin/python" if necessary
 - name: integration/transport_config/python_path.yml
   hosts: tc-python-path-unset
   tasks:
