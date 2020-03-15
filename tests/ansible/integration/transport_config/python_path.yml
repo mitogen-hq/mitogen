@@ -11,7 +11,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
 
 - hosts: tc-python-path-hostvar
   vars: {mitogen_via: tc-python-path-unset}
@@ -67,7 +67,7 @@
       right: ["{{ansible_playbook_python}}"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
 
 
 # explicit local connections get the same treatment as everything else.
@@ -87,7 +87,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
       right: ["{{ansible_playbook_python}}"]
