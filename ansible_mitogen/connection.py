@@ -889,11 +889,17 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 self.reset_compat_msg
             )
 
-        # TODO
         # Strategy's _execute_meta doesn't have an action obj but we'll need one for
         # running interpreter_discovery
-        # self._action = ansible_mitogen.mixins.ActionModuleMixin
-        # import epdb; epdb.set_trace()
+        # will create a new temporary action obj for this purpose
+        self._action = ansible_mitogen.mixins.ActionModuleMixin(
+            task=0,
+            connection=self,
+            play_context=self._play_context,
+            loader=0,
+            templar=0,
+            shared_loader_obj=0
+        )
 
         # Clear out state in case we were ever connected.
         self.close()
