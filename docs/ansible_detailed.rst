@@ -243,7 +243,9 @@ Noteworthy Differences
 ..
     * The ``ansible_python_interpreter`` variable is parsed using a restrictive
       :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
-      FOO=bar python`` or ``source /opt/rh/rh-python36/enable && python``, which occur in practice. Jinja2 templating is also supported for complex task-level interpreter settings. Ansible `documents this
+      FOO=bar python`` or ``source /opt/rh/rh-python36/enable && python``, which
+      occur in practice. Jinja2 templating is also supported for complex task-level
+      interpreter settings. Ansible `documents this
       <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
       as an absolute path, however the implementation passes it unquoted through
       the shell, permitting arbitrary code to be injected.
