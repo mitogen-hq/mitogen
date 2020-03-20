@@ -475,8 +475,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 'python3.5',
                 'python2.7',
                 'python2.6',
-                'usr/libexec/platform-python',
-                'usr/bin/python3',
+                '/usr/libexec/platform-python',
+                '/usr/bin/python3',
                 'python'
             ]
         else:
