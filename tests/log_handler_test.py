@@ -70,7 +70,7 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_earliest_messages_logged_via(self):
         c1 = self.router.local(name='c1')
-        # ensure any c1-related msgs are processed before beginning capture.
+        # ensure any c1-related msgs are processed before beginning capture
         c1.call(ping)
 
         log = testlib.LogCapturer()
