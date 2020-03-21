@@ -26,7 +26,7 @@
 
     - name: run get_url with specially-sourced python
       get_url:
-        url: https://en.wikipedia.org/wiki/File:001_Tacos_de_carnitas,_carne_asada_y_al_pastor.jpg
+        url: https://upload.wikimedia.org/wikipedia/commons/7/73/001_Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg
         dest: "/tmp/"
         mode: 0644
         # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
@@ -39,7 +39,7 @@
 
     - name: run get_url with specially-sourced python including jinja
       get_url:
-        url: https://en.wikipedia.org/wiki/File:001_Tacos_de_carnitas,_carne_asada_y_al_pastor.jpg
+        url: https://upload.wikimedia.org/wikipedia/commons/7/73/001_Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg
         dest: "/tmp/"
         mode: 0644
         # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
