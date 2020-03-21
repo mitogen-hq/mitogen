@@ -1,6 +1,7 @@
 
 import logging
 import mock
+import sys
 
 import unittest2
 import testlib
@@ -84,6 +85,11 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
 
         expect = 'Parent is context %s (%s)' % (c1.context_id, 'parent')
         self.assertTrue(expect in logs)
+
+StartupTest = unittest2.skipIf(
+    condition=sys.version_info < (2, 7),
+    reason="Message log flaky on Python < 2.7"
+)(StartupTest)
 
 
 if __name__ == '__main__':
