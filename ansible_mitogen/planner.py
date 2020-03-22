@@ -535,7 +535,7 @@ def _get_planner(name, path, source):
 
 def invoke(invocation):
     """
-    Find a Planner subclass corresnding to `invocation` and use it to invoke
+    Find a Planner subclass corresponding to `invocation` and use it to invoke
     the module.
 
     :param Invocation invocation:

@@ -1279,7 +1279,8 @@ class Router(mitogen.parent.Router):
         self.broker.defer(stream.on_disconnect, self.broker)
 
     def disconnect_all(self):
-        for stream in self._stream_by_id.values():
+        # making stream_by_id python3-safe by converting stream_by_id values iter to list
+        for stream in list(self._stream_by_id.values()):
             self.disconnect_stream(stream)
 
 

@@ -34,10 +34,11 @@
         content: "item!"
       delegate_to: localhost
 
-    - file:
-        path: /tmp/sync-test.out
-        state: absent
-      become: true
+    # TODO: https://github.com/dw/mitogen/issues/692
+    # - file:
+    #     path: /tmp/sync-test.out
+    #     state: absent
+    #   become: true
 
     - synchronize:
         private_key: /tmp/synchronize-action-key
@@ -53,11 +54,12 @@
     - assert:
         that: outout == "item!"
 
-    - file:
-        path: "{{item}}"
-        state: absent
-      become: true
-      with_items:
-      - /tmp/synchronize-action-key
-      - /tmp/sync-test
-      - /tmp/sync-test.out
+    # TODO: https://github.com/dw/mitogen/issues/692
+    # - file:
+    #     path: "{{item}}"
+    #     state: absent
+    #   become: true
+    #   with_items:
+    #   - /tmp/synchronize-action-key
+    #   - /tmp/sync-test
+    #   - /tmp/sync-test.out

@@ -221,6 +221,14 @@ class Connection(mitogen.parent.Connection):
 
     child_is_immediate_subprocess = False
 
+    # strings that, if escaped, cause problems creating connections
+    # example: `source /opt/rh/rh-python36/enable && python`
+    # is an acceptable ansible_python_version but shlex would quote the &&
+    # and prevent python from executing
+    SHLEX_IGNORE = [
+        "&&"
+    ]
+
     def _get_name(self):
         s = u'ssh.' + mitogen.core.to_text(self.options.hostname)
         if self.options.port and self.options.port != 22:
@@ -291,4 +299,9 @@ class Connection(mitogen.parent.Connection):
             bits += self.options.ssh_args
         bits.append(self.options.hostname)
         base = super(Connection, self).get_boot_command()
-        return bits + [shlex_quote(s).strip() for s in base]
+
+        base_parts = []
+        for s in base:
+            val = s if s in self.SHLEX_IGNORE else shlex_quote(s).strip()
+            base_parts.append(val)
+        return bits + base_parts
