@@ -169,9 +169,7 @@ Noteworthy Differences
       - initech_app
       - y2k_fix
 
-* Ansible 2.8 `interpreter discovery
-  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
-  and `become plugins
+* Ansible `become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ are not yet
   supported.
 
@@ -245,7 +243,9 @@ Noteworthy Differences
 ..
     * The ``ansible_python_interpreter`` variable is parsed using a restrictive
       :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
-      FOO=bar python``, which occur in practice. Ansible `documents this
+      FOO=bar python`` or ``source /opt/rh/rh-python36/enable && python``, which
+      occur in practice. Jinja2 templating is also supported for complex task-level
+      interpreter settings. Ansible `documents this
       <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
       as an absolute path, however the implementation passes it unquoted through
       the shell, permitting arbitrary code to be injected.

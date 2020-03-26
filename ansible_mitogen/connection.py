@@ -188,7 +188,7 @@ def _connect_docker(spec):
         'kwargs': {
             'username': spec.remote_user(),
             'container': spec.remote_addr(),
-            'python_path': spec.python_path(),
+            'python_path': spec.python_path(rediscover_python=True),
             'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
             'remote_name': get_remote_name(spec),
         }
@@ -508,6 +508,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: matching vanilla Ansible behaviour.
     loader_basedir = None
 
+    # set by `_get_task_vars()` for interpreter discovery
+    _action = None
+
     def __del__(self):
         """
         Ansible cannot be trusted to always call close() e.g. the synchronize
@@ -556,6 +559,23 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         connection passed into any running action.
         """
         if self._task_vars is not None:
+            # check for if self._action has already been set or not
+            # there are some cases where the ansible executor passes in task_vars
+            # so we don't walk the stack to find them
+            # TODO: is there a better way to get the ActionModuleMixin object?
+            # ansible python discovery needs it to run discover_interpreter()
+            if not isinstance(self._action, ansible_mitogen.mixins.ActionModuleMixin):
+                f = sys._getframe()
+                while f:
+                    if f.f_code.co_name == 'run':
+                        f_self = f.f_locals.get('self')
+                        if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                            self._action = f_self
+                            break
+                    elif f.f_code.co_name == '_execute_meta':
+                        break
+                    f = f.f_back
+
             return self._task_vars
 
         f = sys._getframe()
@@ -564,6 +584,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 f_locals = f.f_locals
                 f_self = f_locals.get('self')
                 if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                    # backref for python interpreter discovery, should be safe because _get_task_vars
+                    # is always called before running interpreter discovery
+                    self._action = f_self
                     task_vars = f_locals.get('task_vars')
                     if task_vars:
                         LOG.debug('recovered task_vars from Action')
@@ -605,16 +628,33 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         does not make sense to extract connection-related configuration for the
         delegated-to machine from them.
         """
+        def _fetch_task_var(task_vars, key):
+            """
+            Special helper func in case vars can be templated
+            """
+            SPECIAL_TASK_VARS = [
+                'ansible_python_interpreter'
+            ]
+            if key in task_vars:
+                val = task_vars[key]
+                if '{' in str(val) and key in SPECIAL_TASK_VARS:
+                    # template every time rather than storing in a cache
+                    # in case a different template value is used in a different task
+                    val = self.templar.template(
+                        val,
+                        preserve_trailing_newlines=True,
+                        escape_backslashes=False
+                    )
+                return val
+
         task_vars = self._get_task_vars()
         if self.delegate_to_hostname is None:
-            if key in task_vars:
-                return task_vars[key]
+            return _fetch_task_var(task_vars, key)
         else:
             delegated_vars = task_vars['ansible_delegated_vars']
             if self.delegate_to_hostname in delegated_vars:
                 task_vars = delegated_vars[self.delegate_to_hostname]
-                if key in task_vars:
-                    return task_vars[key]
+                return _fetch_task_var(task_vars, key)
 
         return default
 
@@ -659,6 +699,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             inventory_name=inventory_name,
             play_context=self._play_context,
             host_vars=dict(via_vars),  # TODO: make it lazy
+            task_vars=self._get_task_vars(),    # needed for interpreter discovery in parse_python_path
+            action=self._action,
             become_method=become_method or None,
             become_user=become_user or None,
         )
@@ -851,6 +893,18 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             raise ansible.errors.AnsibleConnectionFailure(
                 self.reset_compat_msg
             )
+
+        # Strategy's _execute_meta doesn't have an action obj but we'll need one for
+        # running interpreter_discovery
+        # will create a new temporary action obj for this purpose
+        self._action = ansible_mitogen.mixins.ActionModuleMixin(
+            task=0,
+            connection=self,
+            play_context=self._play_context,
+            loader=0,
+            templar=0,
+            shared_loader_obj=0
+        )
 
         # Clear out state in case we were ever connected.
         self.close()

@@ -1,6 +1,7 @@
 
 import logging
 import mock
+import sys
 
 import unittest2
 import testlib
@@ -70,7 +71,7 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_earliest_messages_logged_via(self):
         c1 = self.router.local(name='c1')
-        # ensure any c1-related msgs are processed before beginning capture.
+        # ensure any c1-related msgs are processed before beginning capture
         c1.call(ping)
 
         log = testlib.LogCapturer()
@@ -84,6 +85,11 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
 
         expect = 'Parent is context %s (%s)' % (c1.context_id, 'parent')
         self.assertTrue(expect in logs)
+
+StartupTest = unittest2.skipIf(
+    condition=sys.version_info < (2, 7),
+    reason="Message log flaky on Python < 2.7"
+)(StartupTest)
 
 
 if __name__ == '__main__':

@@ -67,17 +67,89 @@ import ansible.constants as C
 
 from ansible.module_utils.six import with_metaclass
 
+# this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
+try:
+    from ansible.executor.interpreter_discovery import discover_interpreter
+except ImportError:
+    discover_interpreter = lambda action,interpreter_name,discovery_mode,task_vars: '/usr/bin/python'
+
+try:
+    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
+except ImportError:
+    from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 
 import mitogen.core
 
 
-def parse_python_path(s):
+def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python):
+    """
+    Triggers ansible python interpreter discovery if requested.
+    Caches this value the same way Ansible does it.
+    For connections like `docker`, we want to rediscover the python interpreter because
+    it could be different than what's ran on the host
+    """
+    # keep trying different interpreters until we don't error
+    if action._finding_python_interpreter:
+        return action._possible_python_interpreter
+    
+    if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
+        # python is the only supported interpreter_name as of Ansible 2.8.8
+        interpreter_name = 'python'
+        discovered_interpreter_config = u'discovered_interpreter_%s' % interpreter_name
+        
+        if task_vars.get('ansible_facts') is None:
+           task_vars['ansible_facts'] = {}
+
+        if rediscover_python and task_vars.get('ansible_facts', {}).get(discovered_interpreter_config):
+            # if we're rediscovering python then chances are we're running something like a docker connection
+            # this will handle scenarios like running a playbook that does stuff + then dynamically creates a docker container,
+            # then runs the rest of the playbook inside that container, and then rerunning the playbook again
+            action._rediscovered_python = True
+
+            # blow away the discovered_interpreter_config cache and rediscover
+            del task_vars['ansible_facts'][discovered_interpreter_config]
+
+        if discovered_interpreter_config not in task_vars['ansible_facts']:
+            action._finding_python_interpreter = True
+            # fake pipelining so discover_interpreter can be happy
+            action._connection.has_pipelining = True
+            s = AnsibleUnsafeText(discover_interpreter(
+                action=action,
+                interpreter_name=interpreter_name,
+                discovery_mode=s,
+                task_vars=task_vars))
+
+            # cache discovered interpreter
+            task_vars['ansible_facts'][discovered_interpreter_config] = s
+            action._connection.has_pipelining = False
+        else:
+            s = task_vars['ansible_facts'][discovered_interpreter_config]
+
+        # propagate discovered interpreter as fact
+        action._discovered_interpreter_key = discovered_interpreter_config
+        action._discovered_interpreter = s
+
+    action._finding_python_interpreter = False
+    return s
+
+
+def parse_python_path(s, task_vars, action, rediscover_python):
     """
     Given the string set for ansible_python_interpeter, parse it using shell
-    syntax and return an appropriate argument vector.
+    syntax and return an appropriate argument vector. If the value detected is 
+    one of interpreter discovery then run that first. Caches python interpreter
+    discovery value in `facts_from_task_vars` like how Ansible handles this.
     """
-    if s:
-        return ansible.utils.shlex.shlex_split(s)
+    if not s:
+        # if python_path doesn't exist, default to `auto` and attempt to discover it
+        s = 'auto'
+
+    s = run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python)
+    # if unable to determine python_path, fallback to '/usr/bin/python'
+    if not s:
+        s = '/usr/bin/python'
+
+    return ansible.utils.shlex.shlex_split(s)
 
 
 def optional_secret(value):
@@ -336,6 +408,9 @@ class PlayContextSpec(Spec):
         self._play_context = play_context
         self._transport = transport
         self._inventory_name = inventory_name
+        self._task_vars = self._connection._get_task_vars()
+        # used to run interpreter discovery
+        self._action = connection._action
 
     def transport(self):
         return self._transport
@@ -367,12 +442,16 @@ class PlayContextSpec(Spec):
     def port(self):
         return self._play_context.port
 
-    def python_path(self):
+    def python_path(self, rediscover_python=False):
         s = self._connection.get_task_var('ansible_python_interpreter')
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
-        return parse_python_path(s or '/usr/bin/python')
+        return parse_python_path(
+            s,
+            task_vars=self._task_vars,
+            action=self._action,
+            rediscover_python=rediscover_python)
 
     def private_key_file(self):
         return self._play_context.private_key_file
@@ -502,14 +581,16 @@ class MitogenViaSpec(Spec):
     having a configruation problem with connection delegation, the answer to
     your problem lies in the method implementations below!
     """
-    def __init__(self, inventory_name, host_vars, become_method, become_user,
-                 play_context):
+    def __init__(self, inventory_name, host_vars, task_vars, become_method, become_user,
+                 play_context, action):
         """
         :param str inventory_name:
             The inventory name of the intermediary machine, i.e. not the target
             machine.
         :param dict host_vars:
             The HostVars magic dictionary provided by Ansible in task_vars.
+        :param dict task_vars:
+            Task vars provided by Ansible.
         :param str become_method:
             If the mitogen_via= spec included a become method, the method it
             specifies.
@@ -521,14 +602,18 @@ class MitogenViaSpec(Spec):
             the real target machine. Values from this object are **strictly
             restricted** to values that are Ansible-global, e.g. the passwords
             specified interactively.
+        :param ActionModuleMixin action:
+            Backref to the ActionModuleMixin required for ansible interpreter discovery
         """
         self._inventory_name = inventory_name
         self._host_vars = host_vars
+        self._task_vars = task_vars
         self._become_method = become_method
         self._become_user = become_user
         # Dangerous! You may find a variable you want in this object, but it's
         # almost certainly for the wrong machine!
         self._dangerous_play_context = play_context
+        self._action = action
 
     def transport(self):
         return (
@@ -586,12 +671,16 @@ class MitogenViaSpec(Spec):
             C.DEFAULT_REMOTE_PORT
         )
 
-    def python_path(self):
+    def python_path(self, rediscover_python=False):
         s = self._host_vars.get('ansible_python_interpreter')
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
-        return parse_python_path(s or '/usr/bin/python')
+        return parse_python_path(
+            s,
+            task_vars=self._task_vars,
+            action=self._action,
+            rediscover_python=rediscover_python)
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.

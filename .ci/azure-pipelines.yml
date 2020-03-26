@@ -9,20 +9,21 @@ jobs:
   steps:
   - template: azure-pipelines-steps.yml
   pool:
-    vmImage: macOS-10.13
+    vmImage: macOS-10.14
   strategy:
     matrix:
       Mito27_27:
         python.version: '2.7'
         MODE: mitogen
-      Ans280_27:
+      Ans288_27:
         python.version: '2.7'
         MODE: localhost_ansible
+        VER: 2.8.8
 
 
 - job: Linux
   pool:
-    vmImage: "Ubuntu 16.04"
+    vmImage: "Ubuntu 18.04"
   steps:
   - template: azure-pipelines-steps.yml
   strategy:
@@ -44,10 +45,6 @@ jobs:
         python.version: '3.6'
         MODE: mitogen
         DISTRO: centos6
-
-      #
-      #
-      #
 
       #Py26CentOS7:
         #python.version: '2.7'

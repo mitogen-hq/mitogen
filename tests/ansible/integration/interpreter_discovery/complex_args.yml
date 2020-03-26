@@ -1,0 +1,56 @@
+# checks complex ansible_python_interpreter values as well as jinja in the ansible_python_interpreter value
+---
+
+- name: integration/interpreter_discovery/complex_args.yml
+  hosts: test-targets
+  any_errors_fatal: true
+  gather_facts: true
+  tasks:
+    - name: create temp file to source
+      file:
+        path: /tmp/fake
+        state: touch
+
+    # TODO: this works in Mac 10.15 because sh defaults to bash
+    # but due to Mac SIP we can't write to /bin so we can't change
+    # /bin/sh to point to /bin/bash
+    # Mac 10.15 is failing python interpreter discovery tests from ansible 2.8.8
+    # because Mac doesn't make default python /usr/bin/python anymore
+    # so for now, can't use `source` since it's a bash builtin
+    # - name: set python using sourced file
+    #   set_fact:
+    #     special_python: source /tmp/fake && python
+    - name: set python using sourced file
+      set_fact:
+        special_python: source /tmp/fake || true && python
+
+    - name: run get_url with specially-sourced python
+      get_url:
+        url: https://google.com
+        dest: "/tmp/"
+        mode: 0644
+        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
+        validate_certs: no
+      vars:
+        ansible_python_interpreter: "{{ special_python }}"
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+
+    - name: run get_url with specially-sourced python including jinja
+      get_url:
+        url: https://google.com
+        dest: "/tmp/"
+        mode: 0644
+        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
+        validate_certs: no
+      vars:
+        ansible_python_interpreter: >
+          {% if "1" == "1" %}
+            {{ special_python }}
+          {% else %}
+            python 
+          {% endif %}
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
