@@ -470,8 +470,9 @@ class PlayContextSpec(Spec):
         )
 
     def ssh_host_key_checking(self):
-        if self._connection.get_task_var('ansible_ssh_host_key_checking') is not None:
-            return self._connection.get_task_var('ansible_ssh_host_key_checking')
+        ansible_ssh_host_key_checking = self._connection.get_task_var('ansible_ssh_host_key_checking')
+        if ansible_ssh_host_key_checking is not None:
+            return ansible_ssh_host_key_checking
         else:
             return self._connection.get_task_var('ansible_host_key_checking')
 
