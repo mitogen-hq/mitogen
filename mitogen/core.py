@@ -1254,6 +1254,7 @@ class Importer(object):
         'minify',
         'os_fork',
         'parent',
+        'podman',
         'select',
         'service',
         'setns',
@@ -3094,7 +3095,7 @@ class Router(object):
         This can be used from any thread, but its output is only meaningful
         from the context of the :class:`Broker` thread, as disconnection or
         replacement could happen in parallel on the broker thread at any
-        moment. 
+        moment.
         """
         return (
             self._stream_by_id.get(dst_id) or

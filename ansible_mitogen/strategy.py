@@ -153,6 +153,7 @@ REDIRECTED_CONNECTION_PLUGINS = (
     'lxc',
     'lxd',
     'machinectl',
+    'podman',
     'setns',
     'ssh',
 )

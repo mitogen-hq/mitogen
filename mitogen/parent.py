@@ -639,7 +639,7 @@ class TimerList(object):
     def get_timeout(self):
         """
         Return the floating point seconds until the next event is due.
-        
+
         :returns:
             Floating point delay, or 0.0, or :data:`None` if no events are
             scheduled.
@@ -2470,6 +2470,9 @@ class Router(mitogen.core.Router):
 
     def docker(self, **kwargs):
         return self.connect(u'docker', **kwargs)
+
+    def podman(self, **kwargs):
+        return self.connect(u'podman', **kwargs)
 
     def kubectl(self, **kwargs):
         return self.connect(u'kubectl', **kwargs)

@@ -776,6 +776,22 @@ Like the :ans:conn:`docker` except connection delegation is supported.
   some circumstances.
 
 
+.. _method-podman:
+
+Podman
+~~~~~~
+
+Like the :ans:conn:`podman` except connection delegation is supported.
+
+* ``ansible_host``: Name of Podman container (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
+
+
 .. _method-jail:
 
 FreeBSD Jail
@@ -1256,7 +1272,7 @@ on each process whose name begins with ``mitogen:``::
     [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
     ^C
 
-    $ 
+    $
 
 This shows one thread waiting on IO (``poll``) and two more waiting on the same
 lock. It is taken from a real example of a deadlock due to a forking bug.
