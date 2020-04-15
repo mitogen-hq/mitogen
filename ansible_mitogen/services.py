@@ -185,14 +185,14 @@ class ContextService(mitogen.service.Service):
             if context:
                 mitogen.core.listen(context, 'disconnect', l.put)
                 self._shutdown_unlocked(context)
-
-                # The timeout below is to turn a hang into a crash in case there is any
-                # possible race between 'disconnect' signal subscription, and the child
-                # abruptly disconnecting.
-                l.get(timeout=30.0)
-                return True
-            else:
-                return False
+        if context != None:
+            # The timeout below is to turn a hang into a crash in case there is any
+            # possible race between 'disconnect' signal subscription, and the child
+            # abruptly disconnecting.
+            l.get(timeout=30.0)
+            return True
+        else:
+            return False
 
     @mitogen.service.expose(mitogen.service.AllowParents())
     @mitogen.service.arg_spec({
