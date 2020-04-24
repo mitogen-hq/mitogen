@@ -13,6 +13,9 @@ batches = [
     ]
 ]
 
+# separately install ansible based on version passed in from azure-pipelines.yml or .travis.yml
+batches.append("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
+
 batches.extend(
     ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
     for distro in ci_lib.DISTROS

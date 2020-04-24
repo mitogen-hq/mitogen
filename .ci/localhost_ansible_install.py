@@ -13,4 +13,7 @@ batches = [
     ]
 ]
 
+# separately install ansible based on version passed in from azure-pipelines.yml or .travis.yml
+batches.append("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
+
 ci_lib.run_batches(batches)
