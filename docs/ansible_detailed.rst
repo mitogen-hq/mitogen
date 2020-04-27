@@ -145,7 +145,7 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.8 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
+* Ansible 2.3-2.9 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
   your installation is running one of these versions by checking ``ansible
   --version`` output.
 
