@@ -36,6 +36,9 @@ matrix:
 
   include:
     # Debops tests.
+    # 2.9.6; 3.6 -> 2.7
+    - python: "3.6"
+      env: MODE=debops_common VER=2.9.6
     # 2.8.3; 3.6 -> 2.7
     - python: "3.6"
       env: MODE=debops_common VER=2.8.3
@@ -49,6 +52,9 @@ matrix:
 
     # ansible_mitogen tests.
 
+    # 2.9.6 -> {debian, centos6, centos7}
+    - python: "3.6"
+      env: MODE=ansible VER=2.9.6
     # 2.8.3 -> {debian, centos6, centos7}
     - python: "3.6"
       env: MODE=ansible VER=2.8.3
@@ -75,6 +81,8 @@ matrix:
     # 2.7 -> 2.6
     #- python: "2.7"
       #env: MODE=mitogen DISTRO=centos6
+    - python: "3.6"
+      env: MODE=mitogen DISTRO=centos7
     # 2.6 -> 2.7
     - python: "2.6"
       env: MODE=mitogen DISTRO=centos7
