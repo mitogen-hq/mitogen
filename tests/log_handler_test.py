@@ -87,8 +87,8 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
         self.assertTrue(expect in logs)
 
 StartupTest = unittest2.skipIf(
-    condition=sys.version_info < (2, 7),
-    reason="Message log flaky on Python < 2.7"
+    condition=sys.version_info < (2, 7) or sys.version_info >= (3, 6),
+    reason="Message log flaky on Python < 2.7 or >= 3.6"
 )(StartupTest)
 
 
