@@ -36,7 +36,7 @@ matrix:
 
   include:
     # Debops tests.
-    # 2.9.6; 3.7 -> 2.7
+    # 2.9.6; 3.6 -> 2.7
     - python: "3.6"
       env: MODE=debops_common VER=2.9.6
     # 2.8.3; 3.6 -> 2.7
