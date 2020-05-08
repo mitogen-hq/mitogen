@@ -497,6 +497,17 @@ class PkgutilMethod(FinderMethod):
         if not loader:
             return
 
+        # if fullname == "ansible_collections":
+        #     import epdb; epdb.set_trace()
+        #     ba = loader.load_module("ansible_collections.alikins")
+        # # if fullname == "ansible_collections":
+        # #     # ansible named the fake __file__ for collections `__synthetic__` with no extension
+        # #     module.__file__ = module.__file__ + ".py"
+        # #     import epdb; epdb.set_trace()
+        # #     # import epdb; epdb.set_trace()
+        # #     # taco      
+        # doesn't work because .get_source doesn't exist. Collections loader is super complicated
+        # and doesn't offer an easy way to extract source code  
         try:
             path = _py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
@@ -549,6 +560,12 @@ class SysModulesMethod(FinderMethod):
                       fullname, alleged_name, module)
             return
 
+        if fullname == "ansible_collections":
+            # ansible named the fake __file__ for collections `__synthetic__` with no extension
+            module.__file__ = module.__file__ + ".py"
+            # import epdb; epdb.set_trace()
+            # taco
+            # faking this leads to a "no module named X" error because submodules are empty
         path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
@@ -657,6 +674,13 @@ class ParentEnumerationMethod(FinderMethod):
     def _find_one_component(self, modname, search_path):
         try:
             #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
+            # if modname == "ansible_collections":
+            #     print(dir(sys.modules['ansible_collections']))
+            #     A
+            #     taco
+            #     filename = sys.modules['ansible_collections'].__file__ + ".py"
+            #     return open(filename), filename, ('.py', 'r', imp.PY_SOURCE)
+            # regular imp.find_module doesn't work here, but perhaps we can try the loader?
             return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
@@ -941,6 +965,15 @@ class ModuleResponder(object):
     minify_safe_re = re.compile(b(r'\s+#\s*!mitogen:\s*minify_safe'))
 
     def _build_tuple(self, fullname):
+        # tried to see if anything with collections was in the cache already
+        # no luck though
+        # taco
+        # if fullname == "ansible_collections":
+        #     import epdb; epdb.set_trace()
+        #     for key, val in self._cache.items():
+        #         if "collection_inspect" in key:
+        #             print(key, val)
+        #     import epdb; epdb.set_trace()
         if fullname in self._cache:
             return self._cache[fullname]
 
@@ -971,6 +1004,10 @@ class ModuleResponder(object):
             self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
+            # taco
+            # child modules are empty...
+            # if fullname == "ansible_collections":
+            #     import epdb; epdb.set_trace()
             pkg_present = get_child_modules(path)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)
