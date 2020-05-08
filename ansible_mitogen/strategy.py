@@ -138,12 +138,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
 
     klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
     if klass:
-        try:
-            bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
-        except AttributeError:
-            # if we're loading a collection, there's no ActionModuleMixin
-            bases = (klass,)
-
+        bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
         if kwargs.get('class_only'):
             return adorned_klass
