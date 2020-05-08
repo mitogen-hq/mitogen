@@ -74,7 +74,7 @@ else:
 
 
 @mitogen.core.takes_router
-def get_or_create_pool(size=None, router=None):
+def get_or_create_pool(size=None, router=None, context=None):
     global _pool
     global _pool_pid
 
@@ -84,6 +84,12 @@ def get_or_create_pool(size=None, router=None):
         _pool_lock.acquire()
         try:
             if _pool_pid != my_pid:
+                if router is None:
+                    # fallback to trying to get router from context if that exists
+                    if context is not None:
+                        router = context.router
+                    else:
+                        raise ValueError("Unable to create Pool! Missing router.")
                 _pool = Pool(
                     router,
                     services=[],
@@ -119,7 +125,7 @@ def call(service_name, method_name, call_context=None, **kwargs):
     if call_context:
         return call_context.call_service(service_name, method_name, **kwargs)
     else:
-        pool = get_or_create_pool()
+        pool = get_or_create_pool(context=kwargs.get('context'))
         invoker = pool.get_invoker(service_name, msg=None)
         return getattr(invoker.service, method_name)(**kwargs)
 
