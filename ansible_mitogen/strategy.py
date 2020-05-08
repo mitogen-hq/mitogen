@@ -40,6 +40,7 @@ except ImportError:
 import mitogen.core
 import ansible_mitogen.affinity
 import ansible_mitogen.loaders
+# import epdb; epdb.set_trace()
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 
@@ -137,7 +138,12 @@ def wrap_action_loader__get(name, *args, **kwargs):
 
     klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
     if klass:
-        bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
+        try:
+            bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
+        except AttributeError:
+            # if we're loading a collection, there's no ActionModuleMixin
+            bases = (klass,)
+
         adorned_klass = type(str(name), bases, {})
         if kwargs.get('class_only'):
             return adorned_klass
