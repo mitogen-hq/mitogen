@@ -138,7 +138,7 @@ def is_stdlib_path(path):
     )
 
 
-def get_child_modules(path):
+def get_child_modules(path, fullname):
     """
     Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
@@ -148,11 +148,29 @@ def get_child_modules(path):
         equivalent. Usually this is the module's ``__file__`` attribute, but
         is specified explicitly to avoid loading the module.
 
+    :param str fullname:
+        Full name of a module path. Only used with collections because
+        its modules can't be loaded with iter_modules()
+
     :return:
         List of submodule name suffixes.
     """
-    it = pkgutil.iter_modules([os.path.dirname(path)])
-    return [to_text(name) for _, name, _ in it]
+    if fullname.startswith("ansible_collections"):
+        # taco
+        # import epdb; epdb.set_trace()
+        # ISSUE: not everything is being loaded via sys.modules *facepalm*
+        # only `action` and `modules` show up from here: https://github.com/alikins/collection_inspect/tree/master/plugins 
+        # so we aren't able to load things like `module_utils`
+        # gonna have to go the file path route it looks like, or leverage other *method classes
+        submodules = []
+        import epdb; epdb.set_trace()
+        for each in dir(sys.modules[fullname]):
+            if not each.startswith("__"):
+                submodules.append(to_text(each))
+        return submodules
+    else:
+        it = pkgutil.iter_modules([os.path.dirname(path)])
+        return [to_text(name) for _, name, _ in it]
 
 
 def _looks_like_script(path):
@@ -560,8 +578,8 @@ class SysModulesMethod(FinderMethod):
                       fullname, alleged_name, module)
             return
 
-        if fullname == "ansible_collections":
-            # ansible named the fake __file__ for collections `__synthetic__` with no extension
+        if fullname.startswith("ansible_collections"):
+            # ansible names the fake __file__ for collections `__synthetic__` with no extension
             module.__file__ = module.__file__ + ".py"
             # import epdb; epdb.set_trace()
             # taco
@@ -1006,9 +1024,7 @@ class ModuleResponder(object):
         if is_pkg:
             # taco
             # child modules are empty...
-            # if fullname == "ansible_collections":
-            #     import epdb; epdb.set_trace()
-            pkg_present = get_child_modules(path)
+            pkg_present = get_child_modules(path, fullname)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)
         else:
