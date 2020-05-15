@@ -157,6 +157,10 @@ class ActionModule(ActionBase):
                 result.update(dict(changed=False, md5sum=local_md5, file=source, dest=dest, checksum=local_checksum))
 
         finally:
-            self._remove_tmp_path(self._connection._shell.tmpdir)
+            try:
+                self._remove_tmp_path(self._connection._shell.tmpdir)
+            except AttributeError:
+                # .tmpdir was added to ShellModule in v2.6.0, so old versions don't have it
+                pass
 
         return result
