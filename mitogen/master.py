@@ -700,24 +700,26 @@ class ParentEnumerationMethod(FinderMethod):
         return path, source, is_pkg
 
     def _find_one_component(self, modname, search_path):
+        """
+        Creates an __init__.py if one doesn't exist in the search path dirs for ansible collections
+        This will help imp load packages like `.ansible/collections/ansible_collections/.....plugins/module_utils`
+        that don't get loaded from Ansible via sys.modules
+        Unfortunately this leaves __init__.py files around in collections that don't have them
+        TODO: delete these when Mitogen exits?
+        Tried to hack types.ModuleType instead but no luck
+        Appears imp loads modules old-style with a required __init__.py
+        TODO: can the __init__ stuff be moved to ansible_mitogen somewhere, really want it to be there instead
+        """
+        for path in search_path:
+            if "collections/ansible_collections" in path:
+                init_file = os.path.join(path, modname, "__init__.py")
+                if not os.path.isfile(init_file):
+                    with open(init_file, "w") as f:
+                        pass
+
         try:
             #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
-            # if modname == "ansible_collections":
-            #     print(dir(sys.modules['ansible_collections']))
-            #     A
-            #     taco
-            #     filename = sys.modules['ansible_collections'].__file__ + ".py"
-            #     return open(filename), filename, ('.py', 'r', imp.PY_SOURCE)
-            # regular imp.find_module doesn't work here, but perhaps we can try the loader?
-            
-            if modname.startswith("ansible_collections"):
-                try:
-                    return imp.find_module(modname, search_path)
-                except ImportError:
-                    # `touch search_path/__init__.py` works in this case
-                    # TODO 
-            else:    
-                return imp.find_module(modname, search_path)
+            return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
             LOG.debug('%r: imp.find_module(%r, %r) -> %s',
