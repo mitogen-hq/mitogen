@@ -55,7 +55,8 @@ except ImportError:
 
 
 ANSIBLE_VERSION_MIN = (2, 3)
-ANSIBLE_VERSION_MAX = (2, 9)
+ANSIBLE_VERSION_MAX = (2, 10)
+
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
     "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
