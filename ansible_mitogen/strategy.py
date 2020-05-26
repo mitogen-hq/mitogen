@@ -54,7 +54,7 @@ except ImportError:
     Sentinel = None
 
 
-ANSIBLE_VERSION_MIN = (2, 3)
+ANSIBLE_VERSION_MIN = (2, 10)
 ANSIBLE_VERSION_MAX = (2, 10)
 
 NEW_VERSION_MSG = (
@@ -134,8 +134,6 @@ def wrap_action_loader__get(name, *args, **kwargs):
     get_kwargs = {'class_only': True}
     if name in ('fetch',):
         name = 'mitogen_' + name
-    if ansible.__version__ >= '2.8':
-        get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
 
     klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
     if klass:
