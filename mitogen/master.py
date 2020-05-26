@@ -169,7 +169,7 @@ def get_child_modules(path, fullname):
         for each in os.listdir(sys.modules[fullname].__path__[0]):
             if not each.startswith("__"):
                 submodules.append(to_text(each))
-                # taco
+                # jjj
                 # hack: insert submodule on the path so it can be loaded
                 # sys.path.insert(0, each)
         return submodules
@@ -528,7 +528,7 @@ class PkgutilMethod(FinderMethod):
         # #     module.__file__ = module.__file__ + ".py"
         # #     import epdb; epdb.set_trace()
         # #     # import epdb; epdb.set_trace()
-        # #     # taco      
+        # #     # jjj      
         # doesn't work because .get_source doesn't exist. Collections loader is super complicated
         # and doesn't offer an easy way to extract source code  
         try:
@@ -569,7 +569,7 @@ class SysModulesMethod(FinderMethod):
         Find `fullname` using its :data:`__file__` attribute.
         """
         module = sys.modules.get(fullname)
-        # taco
+        # jjj
         # this is hit
         # if fullname.startswith("ansible_collections"):
         #     import epdb; epdb.set_trace()
@@ -593,7 +593,7 @@ class SysModulesMethod(FinderMethod):
             print(fullname)
             module.__file__ = module.__file__ + ".py"
             # import epdb; epdb.set_trace()
-            # taco
+            # jjj
         path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
@@ -710,6 +710,7 @@ class ParentEnumerationMethod(FinderMethod):
         Appears imp loads modules old-style with a required __init__.py
         TODO: can the __init__ stuff be moved to ansible_mitogen somewhere, really want it to be there instead
         """
+        # jjj
         for path in search_path:
             if "collections/ansible_collections" in path:
                 init_file = os.path.join(path, modname, "__init__.py")
@@ -1005,7 +1006,7 @@ class ModuleResponder(object):
     def _build_tuple(self, fullname):
         # tried to see if anything with collections was in the cache already
         # no luck though
-        # taco
+        # jjj
         # if fullname == "ansible_collections":
         #     import epdb; epdb.set_trace()
         #     for key, val in self._cache.items():
@@ -1042,7 +1043,7 @@ class ModuleResponder(object):
             self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
-            # taco
+            # jjj
             pkg_present = get_child_modules(path, fullname)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)
