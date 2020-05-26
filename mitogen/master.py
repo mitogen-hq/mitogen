@@ -155,18 +155,23 @@ def get_child_modules(path, fullname):
     :return:
         List of submodule name suffixes.
     """
+    # TODO: move this somehow to ansible_mitogen, if it's even possible
+    # ISSUE: not everything is being loaded via sys.modules in ansible when it comes to collections
+    # only `action` and `modules` show up in sys.modules[fullname]
+    # but sometimes you want things like `module_utils`
     if fullname.startswith("ansible_collections"):
-        # taco
-        # import epdb; epdb.set_trace()
-        # ISSUE: not everything is being loaded via sys.modules *facepalm*
-        # only `action` and `modules` show up from here: https://github.com/alikins/collection_inspect/tree/master/plugins 
-        # so we aren't able to load things like `module_utils`
-        # gonna have to go the file path route it looks like, or leverage other *method classes
         submodules = []
-        import epdb; epdb.set_trace()
-        for each in dir(sys.modules[fullname]):
+        # import epdb; epdb.set_trace()
+        # sys.modules[fullname].__path__
+        # for each in dir(sys.modules[fullname]):
+        #     if not each.startswith("__"):
+        #         submodules.append(to_text(each))
+        for each in os.listdir(sys.modules[fullname].__path__[0]):
             if not each.startswith("__"):
                 submodules.append(to_text(each))
+                # taco
+                # hack: insert submodule on the path so it can be loaded
+                # sys.path.insert(0, each)
         return submodules
     else:
         it = pkgutil.iter_modules([os.path.dirname(path)])
@@ -564,6 +569,10 @@ class SysModulesMethod(FinderMethod):
         Find `fullname` using its :data:`__file__` attribute.
         """
         module = sys.modules.get(fullname)
+        # taco
+        # this is hit
+        # if fullname.startswith("ansible_collections"):
+        #     import epdb; epdb.set_trace()
         if not isinstance(module, types.ModuleType):
             LOG.debug('%r: sys.modules[%r] absent or not a regular module',
                       self, fullname)
@@ -578,12 +587,13 @@ class SysModulesMethod(FinderMethod):
                       fullname, alleged_name, module)
             return
 
+        # TODO: move to ansible_mitogen somehow if possible
+        # ansible names the fake __file__ for collections `__synthetic__` with no extension
         if fullname.startswith("ansible_collections"):
-            # ansible names the fake __file__ for collections `__synthetic__` with no extension
+            print(fullname)
             module.__file__ = module.__file__ + ".py"
             # import epdb; epdb.set_trace()
             # taco
-            # faking this leads to a "no module named X" error because submodules are empty
         path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
@@ -699,7 +709,15 @@ class ParentEnumerationMethod(FinderMethod):
             #     filename = sys.modules['ansible_collections'].__file__ + ".py"
             #     return open(filename), filename, ('.py', 'r', imp.PY_SOURCE)
             # regular imp.find_module doesn't work here, but perhaps we can try the loader?
-            return imp.find_module(modname, search_path)
+            
+            if modname.startswith("ansible_collections"):
+                try:
+                    return imp.find_module(modname, search_path)
+                except ImportError:
+                    # `touch search_path/__init__.py` works in this case
+                    # TODO 
+            else:    
+                return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
             LOG.debug('%r: imp.find_module(%r, %r) -> %s',
@@ -1023,7 +1041,6 @@ class ModuleResponder(object):
 
         if is_pkg:
             # taco
-            # child modules are empty...
             pkg_present = get_child_modules(path, fullname)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)

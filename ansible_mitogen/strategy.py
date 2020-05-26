@@ -134,6 +134,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
     get_kwargs = {'class_only': True}
     if name in ('fetch',):
         name = 'mitogen_' + name
+    get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
 
     klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
     if klass:
