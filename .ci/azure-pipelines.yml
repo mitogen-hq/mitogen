@@ -52,6 +52,13 @@ jobs:
         DISTRO: debian
         VER: 2.9.6
 
+      # pointing to https://github.com/ansible/ansible/pull/67684 in prep for collections + Ansible 2.10
+      Mito37Debian_27:
+        python.version: '3.7'
+        MODE: mitogen
+        DISTRO: debian
+        VER: git+https://github.com/nitzmahone/ansible.git@ed9757f1541546af8906307987cfdad40ff4cb3e
+
       #Py26CentOS7:
         #python.version: '2.7'
         #MODE: mitogen
@@ -108,3 +115,8 @@ jobs:
         python.version: '3.7'
         MODE: ansible
         VER: 2.9.6
+
+      Ansible_210_37:
+        python.version: '3.7'
+        MODE: ansible
+        VER: git+https://github.com/nitzmahone/ansible.git@ed9757f1541546af8906307987cfdad40ff4cb3e
