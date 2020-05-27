@@ -554,6 +554,9 @@ def invoke(invocation):
         ))
 
     invocation.module_path = mitogen.core.to_text(path)
+    #jjj
+    # if 'ansible_collections' in invocation.module_path:
+    #     import epdb; epdb.set_trace()
     if invocation.module_path not in _planner_by_path:
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation.module_name,

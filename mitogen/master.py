@@ -159,23 +159,23 @@ def get_child_modules(path, fullname):
     # ISSUE: not everything is being loaded via sys.modules in ansible when it comes to collections
     # only `action` and `modules` show up in sys.modules[fullname]
     # but sometimes you want things like `module_utils`
-    if fullname.startswith("ansible_collections"):
-        submodules = []
-        # import epdb; epdb.set_trace()
-        # sys.modules[fullname].__path__
-        # for each in dir(sys.modules[fullname]):
-        #     if not each.startswith("__"):
-        #         submodules.append(to_text(each))
-        for each in os.listdir(sys.modules[fullname].__path__[0]):
-            if not each.startswith("__"):
-                submodules.append(to_text(each))
-                # jjj
-                # hack: insert submodule on the path so it can be loaded
-                # sys.path.insert(0, each)
-        return submodules
-    else:
-        it = pkgutil.iter_modules([os.path.dirname(path)])
-        return [to_text(name) for _, name, _ in it]
+    # if fullname.startswith("ansible_collections"):
+    #     submodules = []
+    #     # import epdb; epdb.set_trace()
+    #     # sys.modules[fullname].__path__
+    #     # for each in dir(sys.modules[fullname]):
+    #     #     if not each.startswith("__"):
+    #     #         submodules.append(to_text(each))
+    #     for each in os.listdir(sys.modules[fullname].__path__[0]):
+    #         if not each.startswith("__"):
+    #             submodules.append(to_text(each))
+    #             # jjj
+    #             # hack: insert submodule on the path so it can be loaded
+    #             # sys.path.insert(0, each)
+    #     return submodules
+    # else:
+    it = pkgutil.iter_modules([os.path.dirname(path)])
+    return [to_text(name) for _, name, _ in it]
 
 
 def _looks_like_script(path):
@@ -589,11 +589,11 @@ class SysModulesMethod(FinderMethod):
 
         # TODO: move to ansible_mitogen somehow if possible
         # ansible names the fake __file__ for collections `__synthetic__` with no extension
-        if fullname.startswith("ansible_collections"):
-            print(fullname)
-            module.__file__ = module.__file__ + ".py"
-            # import epdb; epdb.set_trace()
-            # jjj
+        # if fullname.startswith("ansible_collections"):
+        #     print(fullname)
+        #     module.__file__ = module.__file__ + ".py"
+        #     # import epdb; epdb.set_trace()
+        #     # jjj
         path = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
@@ -711,12 +711,12 @@ class ParentEnumerationMethod(FinderMethod):
         TODO: can the __init__ stuff be moved to ansible_mitogen somewhere, really want it to be there instead
         """
         # jjj
-        for path in search_path:
-            if "collections/ansible_collections" in path:
-                init_file = os.path.join(path, modname, "__init__.py")
-                if not os.path.isfile(init_file):
-                    with open(init_file, "w") as f:
-                        pass
+        # for path in search_path:
+        #     if "collections/ansible_collections" in path:
+        #         init_file = os.path.join(path, modname, "__init__.py")
+        #         if not os.path.isfile(init_file):
+        #             with open(init_file, "w") as f:
+        #                 pass
 
         try:
             #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
