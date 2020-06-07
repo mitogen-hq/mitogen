@@ -1009,7 +1009,7 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``mitogen_ssh_keepalive_count``: integer count of server keepalive messages to
   which no reply is received before considering the SSH server dead. Defaults
   to 10.
-* ``mitogen_ssh_keepalive_count``: integer seconds delay between keepalive
+* ``mitogen_ssh_keepalive_interval``: integer seconds delay between keepalive
   messages. Defaults to 30.
 
 
