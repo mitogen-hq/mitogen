@@ -13,10 +13,10 @@ jobs:
   strategy:
     matrix:
       Mito27_27:
-        python.version: '2.7'
+        python.version: '2.7.18'
         MODE: mitogen
       Ans288_27:
-        python.version: '2.7'
+        python.version: '2.7.18'
         MODE: localhost_ansible
         VER: 2.8.8
 

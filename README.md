@@ -1,4 +1,3 @@
-
 # Mitogen
 
 <!-- [![Build Status](https://travis-ci.org/dw/mitogen.png?branch=master)](https://travis-ci.org/dw/mitogen}) -->
