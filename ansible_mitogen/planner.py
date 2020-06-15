@@ -96,6 +96,9 @@ class Invocation(object):
         #: Initially ``None``, but set by :func:`invoke`. The raw source or
         #: binary contents of the module.
         self._module_source = None
+        #: Initially ``{}``, but set by :func:`invoke`. Optional source to send
+        #: to :func:`propagate_paths_and_modules` to fix Python3.5 relative import errors
+        self._overridden_sources = {}
 
     def get_module_source(self):
         if self._module_source is None:
@@ -476,6 +479,7 @@ def _propagate_deps(invocation, planner, context):
         context=context,
         paths=planner.get_push_files(),
         modules=planner.get_module_deps(),
+        overridden_sources=invocation._overridden_sources
     )
 
 
@@ -533,6 +537,26 @@ def _get_planner(name, path, source):
     raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
 
+def _fix_py35(invocation, module_source):
+    """
+    super edge case with a relative import error in Python 3.5.1-3.5.3
+    in Ansible's setup module when using Mitogen
+    https://github.com/dw/mitogen/issues/672#issuecomment-636408833
+    We replace a relative import in the setup module with the actual full file path
+    This works in vanilla Ansible but not in Mitogen otherwise
+    """
+    if invocation.module_name == 'setup' and \
+            invocation.module_path not in invocation._overridden_sources:
+        # in-memory replacement of setup module's relative import
+        # would check for just python3.5 and run this then but we don't know the
+        # target python at this time yet
+        module_source = module_source.replace(
+            b"from ...module_utils.basic import AnsibleModule",
+            b"from ansible.module_utils.basic import AnsibleModule"
+        )
+        invocation._overridden_sources[invocation.module_path] = module_source
+
+
 def invoke(invocation):
     """
     Find a Planner subclass corresponding to `invocation` and use it to invoke
@@ -555,10 +579,12 @@ def invoke(invocation):
 
     invocation.module_path = mitogen.core.to_text(path)
     if invocation.module_path not in _planner_by_path:
+        module_source = invocation.get_module_source()
+        _fix_py35(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation.module_name,
             invocation.module_path,
-            invocation.get_module_source()
+            module_source
         )
 
     planner = _planner_by_path[invocation.module_path](invocation)
