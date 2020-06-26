@@ -9,7 +9,7 @@ Mitogen for Ansible
 
 **Mitogen for Ansible** is a completely redesigned UNIX connection layer and
 module runtime for `Ansible`_. Requiring minimal configuration changes, it
-updates Ansible's slow and wasteful shell-centic implementation with
+updates Ansible's slow and wasteful shell-centric implementation with
 pure-Python equivalents, invoked via highly efficient remote procedure calls to
 persistent interpreters tunnelled over SSH. No changes are required to target
 hosts.
