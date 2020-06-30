@@ -222,6 +222,18 @@ def _connect_jail(spec):
         }
     }
 
+def _connect_chroot(spec):
+    """
+    Return ContextService arguments for a local chroot connection.
+    """
+    return {
+        'method': 'chroot',
+        'kwargs': {
+            'path': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'chroot_exe': spec.chroot_exe(),
+        }
+    }
 
 def _connect_lxc(spec):
     """
@@ -396,6 +408,7 @@ CONNECTION_METHOD = {
     'docker': _connect_docker,
     'kubectl': _connect_kubectl,
     'jail': _connect_jail,
+    'chroot': _connect_chroot,
     'local': _connect_local,
     'lxc': _connect_lxc,
     'lxd': _connect_lxd,

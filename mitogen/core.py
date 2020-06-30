@@ -1248,6 +1248,7 @@ class Importer(object):
         'fakessh',
         'fork',
         'jail',
+        'chroot',
         'lxc',
         'lxd',
         'master',
