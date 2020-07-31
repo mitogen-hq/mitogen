@@ -120,10 +120,15 @@ def _connect_ssh(spec):
     """
     Return ContextService arguments for an SSH connection.
     """
-    if C.HOST_KEY_CHECKING:
+    if spec.ssh_host_key_checking() == 'no' or spec.ssh_host_key_checking() is False:
+        check_host_keys = 'ignore'
+    elif spec.ssh_host_key_checking() == 'yes' or spec.ssh_host_key_checking() is True:
         check_host_keys = 'enforce'
     else:
-        check_host_keys = 'ignore'
+        if C.HOST_KEY_CHECKING:
+            check_host_keys = 'enforce'
+        else:
+            check_host_keys = 'ignore'
 
     # #334: tilde-expand private_key_file to avoid implementation difference
     # between Python and OpenSSH.

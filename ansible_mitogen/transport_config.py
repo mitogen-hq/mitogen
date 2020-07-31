@@ -269,6 +269,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def ssh_host_key_checking(self):
+        """
+        Whether the SSH client should check host keys or not
+        """
+
+    @abc.abstractmethod
     def ssh_args(self):
         """
         The list of additional arguments that should be included in an SSH
@@ -462,6 +468,13 @@ class PlayContextSpec(Spec):
             self._connection.get_task_var('ansible_ssh_timeout') or
             self.timeout()
         )
+
+    def ssh_host_key_checking(self):
+        ansible_ssh_host_key_checking = self._connection.get_task_var('ansible_ssh_host_key_checking')
+        if ansible_ssh_host_key_checking is not None:
+            return ansible_ssh_host_key_checking
+        else:
+            return self._connection.get_task_var('ansible_host_key_checking')
 
     def ssh_args(self):
         return [

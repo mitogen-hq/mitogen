@@ -21,7 +21,12 @@ v0.2.10 (unreleased)
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-*(no changes)*
+Mitogen for Ansible
+~~~~~~~~~~~~~~~~~~~
+* It is not possible to control SSH host key checking for certain host or group
+  of hosts by setting `ansible_ssh_host_key_checking` or `ansible_host_key_checking`
+  like stated in the ansible documentation for the SSH connection plugin:
+  https://docs.ansible.com/ansible/latest/plugins/connection/ssh.html#parameter-host_key_checking
 
 
 v0.2.9 (2019-11-02)
