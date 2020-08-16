@@ -59,6 +59,8 @@ import mitogen.utils
 import ansible
 import ansible.constants as C
 import ansible.errors
+# required for mocking sshpass check on ansible's side
+from ansible.plugins.connection import ssh
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
@@ -671,6 +673,12 @@ class MuxProcess(object):
 
         self._setup_master()
         self._setup_services()
+
+        # mock checking if sshpass exists; mitogen doesn't need it to ssh
+        # TODO: confirm this
+        # TODO TODO: this isn't working
+        ssh.SSHPASS_AVAILABLE = True
+        import epdb; epdb.set_trace()
 
         try:
             # Let the parent know our listening socket is ready.
