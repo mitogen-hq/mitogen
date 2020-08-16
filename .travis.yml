@@ -41,7 +41,7 @@ matrix:
       env: MODE=debops_common VER=2.9.6
     # ~2.10; 3.6 -> 2.7
     - python: "3.6"
-      env: MODE=debops_common VER=git+https://github.com/nitzmahone/ansible.git@a7d0db69142134c2e36a0a62b81a32d9442792ef
+      env: MODE=debops_common VER: git+https://github.com/ansible/ansible.git@v2.10.0
     # 2.8.3; 3.6 -> 2.7
     - python: "3.6"
       env: MODE=debops_common VER=2.8.3
@@ -57,7 +57,7 @@ matrix:
 
     # ~2.10 -> {debian, centos6, centos7}
     - python: "3.6"
-      env: MODE=ansible VER=git+https://github.com/nitzmahone/ansible.git@a7d0db69142134c2e36a0a62b81a32d9442792ef
+      env: MODE=ansible VER: git+https://github.com/ansible/ansible.git@v2.10.0
     # 2.9.6 -> {debian, centos6, centos7}
     - python: "3.6"
       env: MODE=ansible VER=2.9.6
@@ -88,7 +88,7 @@ matrix:
     #- python: "2.7"
       #env: MODE=mitogen DISTRO=centos6
     - python: "3.6"
-      env: MODE=mitogen DISTRO=centos7 VER=git+https://github.com/nitzmahone/ansible.git@a7d0db69142134c2e36a0a62b81a32d9442792ef
+      env: MODE=mitogen DISTRO=centos7 VER: git+https://github.com/ansible/ansible.git@v2.10.0
     - python: "3.6"
       env: MODE=mitogen DISTRO=centos7
     # 2.6 -> 2.7
