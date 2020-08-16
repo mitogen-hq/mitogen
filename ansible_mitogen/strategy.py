@@ -54,6 +54,7 @@ except ImportError:
     Sentinel = None
 
 
+# TODO: might be possible to lower this back to 2.3 if collection support works without hacks
 ANSIBLE_VERSION_MIN = (2, 10)
 ANSIBLE_VERSION_MAX = (2, 10)
 

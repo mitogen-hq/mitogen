@@ -77,7 +77,7 @@ LOG = logging.getLogger(__name__)
 try:
     BaseActionClass = ansible.plugins.action.ActionBase
 except AttributeError:
-    # collections were added in https://github.com/ansible/ansible/pull/52194/files
+    # full collection support was added in v2.10.0
     # monkeypatching collections since they don't have an actionBase
     BaseActionClass = type('DummyActionBase', (object,), {})
 

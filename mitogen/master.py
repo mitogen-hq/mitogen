@@ -155,6 +155,7 @@ def get_child_modules(path, fullname):
     :return:
         List of submodule name suffixes.
     """
+    # jjj
     # TODO: move this somehow to ansible_mitogen, if it's even possible
     # ISSUE: not everything is being loaded via sys.modules in ansible when it comes to collections
     # only `action` and `modules` show up in sys.modules[fullname]
@@ -520,6 +521,7 @@ class PkgutilMethod(FinderMethod):
         if not loader:
             return
 
+        # jjj
         # if fullname == "ansible_collections":
         #     import epdb; epdb.set_trace()
         #     ba = loader.load_module("ansible_collections.alikins")
