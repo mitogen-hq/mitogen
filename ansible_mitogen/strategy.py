@@ -363,7 +363,10 @@ class StrategyMixin(object):
             try:
                 wrappers.install()
                 try:
+                    # TODO: ansible 2.10 doesn't actually call Mitogen like it used to
+                    # mitogen_linear is called as expected but connection wrapping doesn't work
                     run = super(StrategyMixin, self).run
+                    import epdb; epdb.set_trace()
                     return mitogen.core._profile_hook('Strategy',
                         lambda: run(iterator, play_context)
                     )
