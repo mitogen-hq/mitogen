@@ -165,6 +165,8 @@ def wrap_connection_loader__get(name, *args, **kwargs):
     While a Mitogen strategy is active, rewrite connection_loader.get() calls
     for some transports into requests for a compatible Mitogen transport.
     """
+    # THIS ISN'T BEING CALLED NOW
+    import epdb; epdb.set_trace()
     if name in REDIRECTED_CONNECTION_PLUGINS:
         name = 'mitogen_' + name
 
