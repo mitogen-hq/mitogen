@@ -42,7 +42,12 @@ import logging
 import os
 import random
 
+from ansible import context as ansible_context
 from ansible.executor import module_common
+from ansible.galaxy.collection import (
+    find_existing_collections,
+    validate_collection_path
+)
 import ansible.errors
 import ansible.module_utils
 import ansible.release
@@ -557,6 +562,49 @@ def _fix_py35(invocation, module_source):
         invocation._overridden_sources[invocation.module_path] = module_source
 
 
+def _load_collections(invocation):
+    """
+    Special loader that ensures that `ansible_collections` exists as a module path for import
+    """
+    # import epdb; epdb.set_trace()
+    # find_existing_collections()
+    # collection_path = validate_collection_path(path)
+    # collection_path = GalaxyCLI._resolve_path(path)
+
+    # import epdb; epdb.set_trace()
+    from ansible.utils.collection_loader import AnsibleCollectionConfig
+    from ansible.cli.galaxy import _get_collection_widths, _display_header, _display_collection
+    from ansible.module_utils._text import to_bytes, to_native, to_text
+    import sys
+
+    # for path in AnsibleCollectionConfig.collection_paths:
+    #     if os.path.isdir(path):
+    #         collections = find_existing_collections(path, fallback_metadata=True)
+
+    #         fqcn_width, version_width = _get_collection_widths(collections)
+    #         # _display_header(path, 'Collection', 'Version', fqcn_width, version_width)
+
+    #         # Sort collections by the namespace and name
+    #         collections.sort(key=to_text)
+    #         for collection in collections:
+    #             _display_collection(collection, fqcn_width, version_width)
+
+    for path in AnsibleCollectionConfig.collection_paths:
+        if os.path.isdir(path):
+            # import epdb; epdb.set_trace()
+            collections = find_existing_collections(path, fallback_metadata=True)
+
+            # add the collection's parent path to sys.path
+            # additionally, handle __synthetic__
+            # TODO: left off here. See ansible.utils.collection_loader; can't just add to path
+            # jjj
+            for collection in collections:
+                collection_path_parent = collection.b_path
+                # import epdb; epdb.set_trace()
+                # sys.path.insert(0, '/Users/me/.ansible/collections/ansible_collections')
+                sys.path.insert(0, collection.b_path.decode('utf-8'))
+    # import epdb; epdb.set_trace()
+
 def invoke(invocation):
     """
     Find a Planner subclass corresponding to `invocation` and use it to invoke
@@ -582,6 +630,8 @@ def invoke(invocation):
     # if 'ansible_collections' in invocation.module_path:
     #     import epdb; epdb.set_trace()
     if invocation.module_path not in _planner_by_path:
+        if 'ansible_collections' in invocation.module_path:
+            _load_collections(invocation)
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
