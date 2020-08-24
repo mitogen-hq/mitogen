@@ -59,8 +59,6 @@ import mitogen.utils
 import ansible
 import ansible.constants as C
 import ansible.errors
-# required for mocking sshpass check on ansible's side
-from ansible.plugins.connection import ssh
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
@@ -673,23 +671,6 @@ class MuxProcess(object):
 
         self._setup_master()
         self._setup_services()
-
-        # mock checking if sshpass exists
-        # NOTE: extreme hack:
-        #       https://github.com/ansible/ansible/blob/v2.10.0/lib/ansible/plugins/connection/ssh.py#L577
-        #       is forcing 'sshpass' to exist but Mitogen doesn't need it
-        #       open to less hacky things here
-        #       tried from ansible.plugins.connection import ssh; ssh.SSHPASS_AVAILABLE = True
-        #       but we're in a socket call so that won't work, maybe there's another place we can set it?
-        # TODO: here's a place where it only applies to ansible 2.10+
-        # we could check distutils.version.LooseVersion(ansible.__version__).version for 2.10.0+
-        # won't work on python < 3.3
-        from unittest.mock import MagicMock
-        if not ssh.Connection(
-                play_context=MagicMock(), new_stdin=MagicMock(), shell='bash')._sshpass_available():
-            # create a dummy sshpass "program", somehow
-            print('MOCK SOMEHOW NOT HACKILY')
-
 
         try:
             # Let the parent know our listening socket is ready.
