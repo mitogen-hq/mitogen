@@ -165,7 +165,6 @@ def wrap_connection_loader__get(name, *args, **kwargs):
     While a Mitogen strategy is active, rewrite connection_loader.get() calls
     for some transports into requests for a compatible Mitogen transport.
     """
-    # THIS ISN'T BEING CALLED NOW
     if name in REDIRECTED_CONNECTION_PLUGINS:
         name = 'mitogen_' + name
 
@@ -366,8 +365,6 @@ class StrategyMixin(object):
             try:
                 wrappers.install()
                 try:
-                    # TODO: ansible 2.10 doesn't actually call Mitogen like it used to
-                    # mitogen_linear is called as expected but connection wrapping doesn't work
                     run = super(StrategyMixin, self).run
                     return mitogen.core._profile_hook('Strategy',
                         lambda: run(iterator, play_context)
