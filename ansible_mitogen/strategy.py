@@ -220,6 +220,8 @@ class AnsibleWrappers(object):
         with references to the real functions.
         """
         ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
+        # NOTE: this used to be `connection_loader.get`; breaking change unless we do a hack based on
+        # ansible version again
         ansible_mitogen.loaders.connection_loader.get_with_context = wrap_connection_loader__get
 
         global worker__run
