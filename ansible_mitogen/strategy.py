@@ -166,7 +166,6 @@ def wrap_connection_loader__get(name, *args, **kwargs):
     for some transports into requests for a compatible Mitogen transport.
     """
     # THIS ISN'T BEING CALLED NOW
-    import epdb; epdb.set_trace()
     if name in REDIRECTED_CONNECTION_PLUGINS:
         name = 'mitogen_' + name
 
@@ -221,7 +220,7 @@ class AnsibleWrappers(object):
         with references to the real functions.
         """
         ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
-        ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
+        ansible_mitogen.loaders.connection_loader.get_with_context = wrap_connection_loader__get
 
         global worker__run
         worker__run = ansible.executor.process.worker.WorkerProcess.run
@@ -368,7 +367,6 @@ class StrategyMixin(object):
                     # TODO: ansible 2.10 doesn't actually call Mitogen like it used to
                     # mitogen_linear is called as expected but connection wrapping doesn't work
                     run = super(StrategyMixin, self).run
-                    import epdb; epdb.set_trace()
                     return mitogen.core._profile_hook('Strategy',
                         lambda: run(iterator, play_context)
                     )

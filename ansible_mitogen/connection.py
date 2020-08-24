@@ -828,7 +828,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         process to establish the real connection on our behalf, or return a
         reference to the existing one.
         """
-        import epdb; epdb.set_trace()
         if self.connected:
             return
 
