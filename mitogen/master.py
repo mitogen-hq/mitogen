@@ -521,6 +521,9 @@ class PkgutilMethod(FinderMethod):
         if not loader:
             return
 
+        # jjjj
+        # if fullname == "ansible_collections":
+        #     import epdb; epdb.set_trace()
         # jjj
         # if fullname == "ansible_collections":
         #     import epdb; epdb.set_trace()
@@ -817,6 +820,7 @@ class ModuleFinder(object):
         if tup:
             return tup
 
+        # jjj
         for method in self.get_module_methods:
             tup = method.find(fullname)
             if tup:
@@ -1015,6 +1019,9 @@ class ModuleResponder(object):
         #         if "collection_inspect" in key:
         #             print(key, val)
         #     import epdb; epdb.set_trace()
+        # JJJJ
+        if fullname == "ansible_collections":
+            import epdb; epdb.set_trace()
         if fullname in self._cache:
             return self._cache[fullname]
 

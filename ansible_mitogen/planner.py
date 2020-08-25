@@ -104,6 +104,10 @@ class Invocation(object):
         #: Initially ``{}``, but set by :func:`invoke`. Optional source to send
         #: to :func:`propagate_paths_and_modules` to fix Python3.5 relative import errors
         self._overridden_sources = {}
+        #: Initially ``set()``, but set by :func:`invoke`. Optional source paths to send
+        #: to :func:`propagate_paths_and_modules` to handle loading source dependencies from
+        #: places outside of the main source path, such as collections
+        self._extra_sys_paths = set()
 
     def get_module_source(self):
         if self._module_source is None:
@@ -483,8 +487,9 @@ def _propagate_deps(invocation, planner, context):
 
         context=context,
         paths=planner.get_push_files(),
-        modules=planner.get_module_deps(),
-        overridden_sources=invocation._overridden_sources
+        # modules=planner.get_module_deps(), TODO
+        overridden_sources=invocation._overridden_sources,
+        extra_sys_paths=list(invocation._extra_sys_paths)
     )
 
 
@@ -577,6 +582,8 @@ def _load_collections(invocation):
     from ansible.module_utils._text import to_bytes, to_native, to_text
     import sys
 
+    from ansible.utils.collection_loader._collection_finder import _AnsibleCollectionFinder
+
     # for path in AnsibleCollectionConfig.collection_paths:
     #     if os.path.isdir(path):
     #         collections = find_existing_collections(path, fallback_metadata=True)
@@ -599,11 +606,18 @@ def _load_collections(invocation):
             # TODO: left off here. See ansible.utils.collection_loader; can't just add to path
             # jjj
             for collection in collections:
-                collection_path_parent = collection.b_path
+                # collection_path_parent = collection.b_path
                 # import epdb; epdb.set_trace()
                 # sys.path.insert(0, '/Users/me/.ansible/collections/ansible_collections')
-                sys.path.insert(0, collection.b_path.decode('utf-8'))
+                # sys.path.insert(0, collection.b_path.decode('utf-8'))
+                invocation._extra_sys_paths.add(collection.b_path.decode('utf-8'))
     # import epdb; epdb.set_trace()
+    # handle '__synthetic__' created by ansible
+    # sys.modules['ansible_collections'].__file__ = sys.modules['ansible_collections'].__file__ + ".py"
+    # import epdb; epdb.set_trace()
+    # import epdb; epdb.set_trace()
+    # uuu
+    # finder = _AnsibleCollectionFinder(AnsibleCollectionConfig.collection_paths, True)
 
 def invoke(invocation):
     """
@@ -616,6 +630,7 @@ def invoke(invocation):
     :raises ansible.errors.AnsibleError:
         Unrecognized/unsupported module type.
     """
+    # import epdb; epdb.set_trace()
     path = ansible_mitogen.loaders.module_loader.find_plugin(
         invocation.module_name,
         '',
@@ -631,6 +646,7 @@ def invoke(invocation):
     #     import epdb; epdb.set_trace()
     if invocation.module_path not in _planner_by_path:
         if 'ansible_collections' in invocation.module_path:
+            # import epdb; epdb.set_trace()
             _load_collections(invocation)
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
@@ -647,6 +663,7 @@ def invoke(invocation):
         response = _invoke_isolated_task(invocation, planner)
     else:
         _propagate_deps(invocation, planner, invocation.connection.context)
+        # import epdb; epdb.set_trace()
         response = invocation.connection.get_chain().call(
             ansible_mitogen.target.run_module,
             kwargs=planner.get_kwargs(),

@@ -691,6 +691,7 @@ class PushFileService(Service):
         super(PushFileService, self).__init__(**kwargs)
         self._lock = threading.Lock()
         self._cache = {}
+        self._extra_sys_paths = set()
         self._waiters = {}
         self._sent_by_stream = {}
 
@@ -744,21 +745,32 @@ class PushFileService(Service):
     @arg_spec({
         'context': mitogen.core.Context,
         'paths': list,
-        'modules': list,
+        # 'modules': list, TODO, modules was passed into this func but it's not used yet
     })
-    def propagate_paths_and_modules(self, context, paths, modules, overridden_sources=None):
+    def propagate_paths_and_modules(self, context, paths, overridden_sources=None, extra_sys_paths=None):
         """
         One size fits all method to ensure a target context has been preloaded
         with a set of small files and Python modules.
 
         overridden_sources: optional dict containing source code to override path's source code
+        extra_sys_paths:    loads additional sys paths for use in finding modules; beneficial
+                            in situations like loading Ansible Collections because source code
+                            dependencies come from different file paths than where the source lives
         """
         for path in paths:
             overridden_source = None
             if overridden_sources is not None and path in overridden_sources:
                 overridden_source = overridden_sources[path]
             self.propagate_to(context, mitogen.core.to_text(path), overridden_source)
-        #self.router.responder.forward_modules(context, modules) TODO
+        # self.router.responder.forward_modules(context, modules) TODO
+        # NOTE: could possibly be handled by the above TODO, but not sure how forward_modules works enough
+        #       to know for sure, so for now going to pass the sys paths themselves and have `propagate_to`
+        #       load them up in sys.path for later import
+        # NOOOO there should be no need for this because we aren't sending a file(s) to the child process
+        # jjj
+        if extra_sys_paths:
+            sys.path = extra_sys_paths + sys.path
+            # import epdb; epdb.set_trace()
 
     @expose(policy=AllowParents())
     @arg_spec({
