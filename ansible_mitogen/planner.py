@@ -42,12 +42,9 @@ import logging
 import os
 import random
 
-from ansible import context as ansible_context
 from ansible.executor import module_common
-from ansible.galaxy.collection import (
-    find_existing_collections,
-    validate_collection_path
-)
+from ansible.galaxy.collection import find_existing_collections
+from ansible.utils.collection_loader import AnsibleCollectionConfig
 import ansible.errors
 import ansible.module_utils
 import ansible.release
@@ -489,6 +486,7 @@ def _propagate_deps(invocation, planner, context):
         paths=planner.get_push_files(),
         # modules=planner.get_module_deps(), TODO
         overridden_sources=invocation._overridden_sources,
+        # needs to be a list because can't unpickle() a set()
         extra_sys_paths=list(invocation._extra_sys_paths)
     )
 
@@ -569,55 +567,17 @@ def _fix_py35(invocation, module_source):
 
 def _load_collections(invocation):
     """
-    Special loader that ensures that `ansible_collections` exists as a module path for import
+    Special loader that ensures that `ansible_collections` exist as a module path for import
+    Goes through all collection path possibilities and stores paths to installed collections
+    Stores them on the current invocation to later be passed to the master service
     """
-    # import epdb; epdb.set_trace()
-    # find_existing_collections()
-    # collection_path = validate_collection_path(path)
-    # collection_path = GalaxyCLI._resolve_path(path)
-
-    # import epdb; epdb.set_trace()
-    from ansible.utils.collection_loader import AnsibleCollectionConfig
-    from ansible.cli.galaxy import _get_collection_widths, _display_header, _display_collection
-    from ansible.module_utils._text import to_bytes, to_native, to_text
-    import sys
-
-    from ansible.utils.collection_loader._collection_finder import _AnsibleCollectionFinder
-
-    # for path in AnsibleCollectionConfig.collection_paths:
-    #     if os.path.isdir(path):
-    #         collections = find_existing_collections(path, fallback_metadata=True)
-
-    #         fqcn_width, version_width = _get_collection_widths(collections)
-    #         # _display_header(path, 'Collection', 'Version', fqcn_width, version_width)
-
-    #         # Sort collections by the namespace and name
-    #         collections.sort(key=to_text)
-    #         for collection in collections:
-    #             _display_collection(collection, fqcn_width, version_width)
-
     for path in AnsibleCollectionConfig.collection_paths:
         if os.path.isdir(path):
-            # import epdb; epdb.set_trace()
             collections = find_existing_collections(path, fallback_metadata=True)
 
-            # add the collection's parent path to sys.path
-            # additionally, handle __synthetic__
-            # TODO: left off here. See ansible.utils.collection_loader; can't just add to path
-            # jjj
             for collection in collections:
-                # collection_path_parent = collection.b_path
-                # import epdb; epdb.set_trace()
-                # sys.path.insert(0, '/Users/me/.ansible/collections/ansible_collections')
-                # sys.path.insert(0, collection.b_path.decode('utf-8'))
                 invocation._extra_sys_paths.add(collection.b_path.decode('utf-8'))
-    # import epdb; epdb.set_trace()
-    # handle '__synthetic__' created by ansible
-    # sys.modules['ansible_collections'].__file__ = sys.modules['ansible_collections'].__file__ + ".py"
-    # import epdb; epdb.set_trace()
-    # import epdb; epdb.set_trace()
-    # uuu
-    # finder = _AnsibleCollectionFinder(AnsibleCollectionConfig.collection_paths, True)
+
 
 def invoke(invocation):
     """
@@ -630,7 +590,6 @@ def invoke(invocation):
     :raises ansible.errors.AnsibleError:
         Unrecognized/unsupported module type.
     """
-    # import epdb; epdb.set_trace()
     path = ansible_mitogen.loaders.module_loader.find_plugin(
         invocation.module_name,
         '',
@@ -641,13 +600,10 @@ def invoke(invocation):
         ))
 
     invocation.module_path = mitogen.core.to_text(path)
-    #jjj
-    # if 'ansible_collections' in invocation.module_path:
-    #     import epdb; epdb.set_trace()
     if invocation.module_path not in _planner_by_path:
         if 'ansible_collections' in invocation.module_path:
-            # import epdb; epdb.set_trace()
             _load_collections(invocation)
+
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
@@ -663,7 +619,6 @@ def invoke(invocation):
         response = _invoke_isolated_task(invocation, planner)
     else:
         _propagate_deps(invocation, planner, invocation.connection.context)
-        # import epdb; epdb.set_trace()
         response = invocation.connection.get_chain().call(
             ansible_mitogen.target.run_module,
             kwargs=planner.get_kwargs(),

@@ -766,11 +766,14 @@ class PushFileService(Service):
         # NOTE: could possibly be handled by the above TODO, but not sure how forward_modules works enough
         #       to know for sure, so for now going to pass the sys paths themselves and have `propagate_to`
         #       load them up in sys.path for later import
-        # NOOOO there should be no need for this because we aren't sending a file(s) to the child process
-        # jjj
-        if extra_sys_paths:
-            sys.path = extra_sys_paths + sys.path
-            # import epdb; epdb.set_trace()
+        # jjjj
+        # ensure we don't add to sys.path the same path we've already seen
+        for extra_path in extra_sys_paths:
+            # store extra paths in cached set for O(1) lookup
+            if extra_path not in self._extra_sys_paths:
+                # not sure if it matters but we could prepend to sys.path instead if we need to
+                sys.path.append(extra_path)
+                self._extra_sys_paths.add(extra_path)
 
     @expose(policy=AllowParents())
     @arg_spec({
