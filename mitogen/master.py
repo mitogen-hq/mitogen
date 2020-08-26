@@ -146,7 +146,7 @@ def is_stdlib_path(path):
     )
 
 
-def get_child_modules(path, fullname):
+def get_child_modules(path):
     """
     Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
@@ -155,10 +155,6 @@ def get_child_modules(path, fullname):
         Path to the module's source code on disk, or some PEP-302-recognized
         equivalent. Usually this is the module's ``__file__`` attribute, but
         is specified explicitly to avoid loading the module.
-
-    :param str fullname:
-        Full name of a module path. Only used with collections because
-        its modules can't be loaded with iter_modules()
 
     :return:
         List of submodule name suffixes.
@@ -552,7 +548,6 @@ class SysModulesMethod(FinderMethod):
         Find `fullname` using its :data:`__file__` attribute.
         """
         module = sys.modules.get(fullname)
-
         if not isinstance(module, types.ModuleType):
             LOG.debug('%r: sys.modules[%r] absent or not a regular module',
                       self, fullname)
@@ -989,7 +984,7 @@ class ModuleResponder(object):
             self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
-            pkg_present = get_child_modules(path, fullname)
+            pkg_present = get_child_modules(path)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)
         else:

@@ -763,10 +763,10 @@ class PushFileService(Service):
                 overridden_source = overridden_sources[path]
             self.propagate_to(context, mitogen.core.to_text(path), overridden_source)
         # self.router.responder.forward_modules(context, modules) TODO
+
         # NOTE: could possibly be handled by the above TODO, but not sure how forward_modules works enough
         #       to know for sure, so for now going to pass the sys paths themselves and have `propagate_to`
         #       load them up in sys.path for later import
-        # jjjj
         # ensure we don't add to sys.path the same path we've already seen
         for extra_path in extra_sys_paths:
             # store extra paths in cached set for O(1) lookup

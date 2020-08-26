@@ -1471,7 +1471,6 @@ class Importer(object):
 
     def load_module(self, fullname):
         fullname = to_text(fullname)
-        # jjj
         _v and self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
 

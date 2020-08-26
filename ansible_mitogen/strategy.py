@@ -40,7 +40,6 @@ except ImportError:
 import mitogen.core
 import ansible_mitogen.affinity
 import ansible_mitogen.loaders
-# import epdb; epdb.set_trace()
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 
