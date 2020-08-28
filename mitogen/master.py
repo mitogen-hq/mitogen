@@ -92,9 +92,9 @@ RLOG = logging.getLogger('mitogen.ctx')
 # there are some cases where modules are loaded in memory only, such as
 # ansible collections, and the module "filename" is something like __synthetic__
 # which doesn't actually exist
-SPECIAL_FILE_PATHS = [
-    "__synthetic__"
-]
+SPECIAL_FILE_PATHS = {
+    "__synthetic__",
+}
 
 
 def _stdlib_paths():
@@ -198,9 +198,8 @@ def _py_filename(path):
         return path
 
     basepath = os.path.basename(path)
-    for filename in SPECIAL_FILE_PATHS:
-        if basepath == filename:
-            return path
+    if basepath in SPECIAL_FILE_PATHS:
+        return path
 
 
 def _get_core_source():
