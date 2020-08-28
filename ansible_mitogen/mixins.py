@@ -74,15 +74,8 @@ except ImportError:
 
 LOG = logging.getLogger(__name__)
 
-try:
-    BaseActionClass = ansible.plugins.action.ActionBase
-except AttributeError:
-    # full collection support was added in v2.10.0
-    # monkeypatching collections since they don't have an actionBase
-    BaseActionClass = type('DummyActionBase', (object,), {})
 
-
-class ActionModuleMixin(BaseActionClass):
+class ActionModuleMixin(ansible.plugins.action.ActionBase):
     """
     The Mitogen-patched PluginLoader dynamically mixes this into every action
     class that Ansible attempts to load. It exists to override all the
