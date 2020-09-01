@@ -185,21 +185,27 @@ def _looks_like_script(path):
 
 
 def _py_filename(path):
+    """
+    Returns a tuple of a Python path (if the file looks Pythonic) and whether or not
+    the Python path is special. Special file paths/modules might only exist in memory
+    """
     if not path:
-        return None
+        return None, False
 
     if path[-4:] in ('.pyc', '.pyo'):
         path = path.rstrip('co')
 
     if path.endswith('.py'):
-        return path
+        return path, False
 
     if os.path.exists(path) and _looks_like_script(path):
-        return path
+        return path, False
 
     basepath = os.path.basename(path)
     if basepath in SPECIAL_FILE_PATHS:
-        return path
+        return path, True
+
+    return None, False
 
 
 def _get_core_source():
@@ -510,9 +516,13 @@ class PkgutilMethod(FinderMethod):
             return
 
         try:
-            path = _py_filename(loader.get_filename(fullname))
+            path, is_special = _py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
             is_pkg = loader.is_package(fullname)
+
+            # workaround for special python modules that might only exist in memory
+            if is_special and is_pkg and not source:
+                source = '\n'
         except (AttributeError, ImportError):
             # - Per PEP-302, get_source() and is_package() are optional,
             #   calling them may throw AttributeError.
@@ -561,7 +571,7 @@ class SysModulesMethod(FinderMethod):
                       fullname, alleged_name, module)
             return
 
-        path = _py_filename(getattr(module, '__file__', ''))
+        path, _ = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
 
@@ -651,7 +661,7 @@ class ParentEnumerationMethod(FinderMethod):
 
     def _found_module(self, fullname, path, fp, is_pkg=False):
         try:
-            path = _py_filename(path)
+            path, _ = _py_filename(path)
             if not path:
                 return
 
