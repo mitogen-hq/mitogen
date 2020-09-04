@@ -3,6 +3,10 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
+# pointing to ansible 2.10 tag on github; ansible changed to ansible-base on pypi
+# so to avoid complicating things for now, use git hash
+# TODO: point to ansible==2.10 when it comes out so we don't need to install collections separately
+
 jobs:
 
 - job: Mac
@@ -18,7 +22,7 @@ jobs:
       Ans288_27:
         python.version: '2.7.18'
         MODE: localhost_ansible
-        VER: 2.8.8
+        VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
 
 - job: Linux
@@ -35,6 +39,7 @@ jobs:
         python.version: '2.7'
         MODE: mitogen
         DISTRO: debian
+        VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
       #MitoPy27CentOS6_26:
         #python.version: '2.7'
@@ -45,17 +50,9 @@ jobs:
         python.version: '3.6'
         MODE: mitogen
         DISTRO: centos6
+        VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
       Mito37Debian_27:
-        python.version: '3.7'
-        MODE: mitogen
-        DISTRO: debian
-        VER: 2.9.6
-
-      # pointing to ansible 2.10 tag on github; ansible changed to ansible-base on pypi
-      # so to avoid complicating things for now, use git hash
-      # TODO: handle this better
-      Mito37Ans~210Debian_27:
         python.version: '3.7'
         MODE: mitogen
         DISTRO: debian
@@ -103,22 +100,12 @@ jobs:
         #DISTROS: debian
         #STRATEGY: linear
 
-      Ansible_280_27:
+      Ansible_210_27:
         python.version: '2.7'
         MODE: ansible
-        VER: 2.8.0
+        VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
-      Ansible_280_35:
+      Ansible_210_35:
         python.version: '3.5'
-        MODE: ansible
-        VER: 2.8.0
-
-      Ansible_296_37:
-        python.version: '3.7'
-        MODE: ansible
-        VER: 2.9.6
-
-      Ansible_210_37:
-        python.version: '3.7'
         MODE: ansible
         VER: git+https://github.com/ansible/ansible.git@v2.10.0

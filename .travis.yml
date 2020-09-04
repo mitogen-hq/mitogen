@@ -29,72 +29,49 @@ script:
 # newest->oldest in various configuartions.
 
 matrix:
-  allow_failures:
-    # Python 2.4 tests are still unreliable
-    - language: c
-      env: MODE=mitogen_py24 DISTRO=centos5
-
   include:
     # Debops tests.
-    # 2.9.6; 3.6 -> 2.7
+    # 2.10; 3.6 -> 2.7
     - python: "3.6"
-      env: MODE=debops_common VER=2.9.6
-    # ~2.10; 3.6 -> 2.7
-    - python: "3.6"
-      env: MODE=debops_common VER: git+https://github.com/ansible/ansible.git@v2.10.0
-    # 2.8.3; 3.6 -> 2.7
-    - python: "3.6"
-      env: MODE=debops_common VER=2.8.3
-    # 2.4.6.0; 2.7 -> 2.7
+      env: MODE=debops_common VER=git+https://github.com/ansible/ansible.git@v2.10.0
+    # 2.10; 2.7 -> 2.7
     - python: "2.7"
-      env: MODE=debops_common VER=2.4.6.0
+      env: MODE=debops_common VER=git+https://github.com/ansible/ansible.git@v2.10.0
 
     # Sanity check against vanilla Ansible. One job suffices.
     - python: "2.7"
-      env: MODE=ansible VER=2.8.3 DISTROS=debian STRATEGY=linear
+      env: MODE=ansible VER=git+https://github.com/ansible/ansible.git@v2.10.0 DISTROS=debian STRATEGY=linear
 
     # ansible_mitogen tests.
 
-    # ~2.10 -> {debian, centos6, centos7}
+    # 2.10 -> {debian, centos6, centos7}
     - python: "3.6"
-      env: MODE=ansible VER: git+https://github.com/ansible/ansible.git@v2.10.0
-    # 2.9.6 -> {debian, centos6, centos7}
-    - python: "3.6"
-      env: MODE=ansible VER=2.9.6
-    # 2.8.3 -> {debian, centos6, centos7}
-    - python: "3.6"
-      env: MODE=ansible VER=2.8.3
-    # 2.8.3 -> {debian, centos6, centos7}
+      env: MODE=ansible VER=git+https://github.com/ansible/ansible.git@v2.10.0
+    # 2.10 -> {debian, centos6, centos7}
     - python: "2.7"
-      env: MODE=ansible VER=2.8.3
-
-    # 2.4.6.0 -> {debian, centos6, centos7}
-    - python: "3.6"
-      env: MODE=ansible VER=2.4.6.0
-    # 2.4.6.0 -> {debian, centos6, centos7}
+      env: MODE=ansible VER=git+https://github.com/ansible/ansible.git@v2.10.0
+    # 2.10 -> {debian, centos6, centos7}
     - python: "2.6"
-      env: MODE=ansible VER=2.4.6.0
+      env: MODE=ansible VER=git+https://github.com/ansible/ansible.git@v2.10.0
 
-    # 2.3 -> {centos5}
+    # 2.10 -> {centos5}
     - python: "2.6"
-      env: MODE=ansible VER=2.3.3.0 DISTROS=centos5
+      env: MODE=ansible DISTROS=centos5 VER=git+https://github.com/ansible/ansible.git@v2.10.0
 
     # Mitogen tests.
     # 2.4 -> 2.4
     - language: c
-      env: MODE=mitogen_py24 DISTRO=centos5
+      env: MODE=mitogen_py24 DISTROS=centos5 VER=git+https://github.com/ansible/ansible.git@v2.10.0
     # 2.7 -> 2.7 -- moved to Azure
     # 2.7 -> 2.6
     #- python: "2.7"
       #env: MODE=mitogen DISTRO=centos6
     - python: "3.6"
-      env: MODE=mitogen DISTRO=centos7 VER: git+https://github.com/ansible/ansible.git@v2.10.0
-    - python: "3.6"
-      env: MODE=mitogen DISTRO=centos7
+      env: MODE=mitogen DISTROS=centos7 VER=git+https://github.com/ansible/ansible.git@v2.10.0
     # 2.6 -> 2.7
     - python: "2.6"
-      env: MODE=mitogen DISTRO=centos7
+      env: MODE=mitogen DISTROS=centos7 VER=git+https://github.com/ansible/ansible.git@v2.10.0
     # 2.6 -> 3.5
     - python: "2.6"
-      env: MODE=mitogen DISTRO=debian-py3
+      env: MODE=mitogen DISTROS=debian-py3 VER=git+https://github.com/ansible/ansible.git@v2.10.0
     # 3.6 -> 2.6 -- moved to Azure
