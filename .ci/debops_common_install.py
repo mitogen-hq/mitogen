@@ -10,7 +10,9 @@ ci_lib.run_batches([
         # Must be installed separately, as PyNACL indirect requirement causes
         # newer version to be installed if done in a single pip run.
         'pip install "pycparser<2.19"',
-        'pip install -qqqU debops==0.7.2 ansible==%s' % ci_lib.ANSIBLE_VERSION,
+        # 'pip install -qqqU debops==0.7.2 ansible==%s' % ci_lib.ANSIBLE_VERSION,
+        # ansible v2.10 isn't out yet so we're installing from github for now
+        'pip install -qqqU debops==0.7.2 {}'.format(ci_lib.ANSIBLE_VERSION)
     ],
     [
         'docker pull %s' % (ci_lib.image_for_distro('debian'),),
