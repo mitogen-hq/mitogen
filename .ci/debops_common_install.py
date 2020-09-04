@@ -18,3 +18,6 @@ ci_lib.run_batches([
         'docker pull %s' % (ci_lib.image_for_distro('debian'),),
     ],
 ])
+
+# after ansible is installed, install common collections until ansible==2.10 comes out
+ci_lib.run('ansible-galaxy collection install community.general')

@@ -42,6 +42,9 @@ with ci_lib.Fold('job_setup'):
     # ansible v2.10 isn't out yet so we're installing from github for now
     run('pip install -q {}'.format(ci_lib.ANSIBLE_VERSION))
 
+    # after ansible is installed, install common collections until ansible==2.10 comes out
+    run('ansible-galaxy collection install community.general')
+
     os.chdir(TESTS_DIR)
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
 
