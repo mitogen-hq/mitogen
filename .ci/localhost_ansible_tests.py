@@ -23,7 +23,7 @@ with ci_lib.Fold('job_setup'):
     # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
     # run("pip install -q virtualenv ansible==%s", ci_lib.ANSIBLE_VERSION)
     # ansible v2.10 isn't out yet so we're installing from github for now
-    run('pip install -q virtualenv {}'.format(ci_lib.ANSIBLE_VERSION)
+    run('pip install -q virtualenv {}'.format(ci_lib.ANSIBLE_VERSION))
 
     os.chmod(KEY_PATH, int('0600', 8))
     if not ci_lib.exists_in_path('sshpass'):
