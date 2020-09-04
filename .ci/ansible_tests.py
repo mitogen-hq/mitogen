@@ -38,7 +38,9 @@ with ci_lib.Fold('docker_setup'):
 
 with ci_lib.Fold('job_setup'):
     # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
-    run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
+    # run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
+    # ansible v2.10 isn't out yet so we're installing from github for now
+    run('pip install -q {}'.format(ci_lib.ANSIBLE_VERSION))
 
     os.chdir(TESTS_DIR)
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))

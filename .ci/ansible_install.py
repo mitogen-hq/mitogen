@@ -11,7 +11,9 @@ batches = [
         'pip install '
             '-r tests/requirements.txt '
             '-r tests/ansible/requirements.txt',
-        'pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
+        # 'pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
+        # ansible v2.10 isn't out yet so we're installing from github for now
+        'pip install -q {}'.format(ci_lib.ANSIBLE_VERSION)
     ]
 ]
 
