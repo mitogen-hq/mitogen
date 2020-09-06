@@ -13,7 +13,8 @@ batches = [
             '-r tests/ansible/requirements.txt',
         # 'pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
         # ansible v2.10 isn't out yet so we're installing from github for now
-        'pip install -q {}'.format(ci_lib.ANSIBLE_VERSION)
+        # encoding is required for installing ansible 2.10 with pip2, otherwise we get a UnicodeDecode error
+        'LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 pip install -q {}'.format(ci_lib.ANSIBLE_VERSION)
     ]
 ]
 

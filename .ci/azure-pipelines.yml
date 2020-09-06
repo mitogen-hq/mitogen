@@ -102,7 +102,7 @@ jobs:
         #STRATEGY: linear
 
       Ansible_210_27:
-        python.version: '2.7.18'
+        python.version: '2.7'
         MODE: ansible
         VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
