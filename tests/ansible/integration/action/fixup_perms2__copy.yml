@@ -5,8 +5,9 @@
   hosts: test-targets
   any_errors_fatal: true
   tasks:
+    # default file mode changed to 600 from 666 as of Ansible 2.9.12: https://github.com/geerlingguy/ansible-for-devops/issues/314#issuecomment-675802282
     - name: Get default remote file mode
-      shell: python -c 'import os; print("%04o" % (int("0666", 8) & ~os.umask(0)))'
+      shell: python -c 'import os; print("%04o" % (int("0600", 8) & ~os.umask(0)))'
       register: py_umask
 
     - name: Set default file mode
