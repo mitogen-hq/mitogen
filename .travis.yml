@@ -18,6 +18,7 @@ cache:
 
 install:
 - grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
+- pip install -U pip==20.2.1
 - .ci/${MODE}_install.py
 
 script:
