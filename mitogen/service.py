@@ -1105,7 +1105,7 @@ class FileService(Service):
             state.lock.release()
 
     @classmethod
-    def get(cls, context, path, out_fp):
+    def get(cls, context, path, out_fp, validate_checksum=True):
         """
         Streamily download a file from the connection multiplexer process in
         the controller.
@@ -1147,19 +1147,22 @@ class FileService(Service):
             out_fp.write(s)
             received_bytes += len(s)
 
-        ok = received_bytes == metadata['size']
-        if received_bytes < metadata['size']:
-            LOG.error('get_file(%r): receiver was closed early, controller '
-                      'may be shutting down, or the file was truncated '
-                      'during transfer. Expected %d bytes, received %d.',
-                      path, metadata['size'], received_bytes)
-        elif received_bytes > metadata['size']:
-            LOG.error('get_file(%r): the file appears to have grown '
-                      'while transfer was in progress. Expected %d '
-                      'bytes, received %d.',
-                      path, metadata['size'], received_bytes)
+        if validate_checksum:
+            ok = received_bytes == metadata['size']
+            if received_bytes < metadata['size']:
+                LOG.error('get_file(%r): receiver was closed early, controller '
+                        'may be shutting down, or the file was truncated '
+                        'during transfer. Expected %d bytes, received %d.',
+                        path, metadata['size'], received_bytes)
+            elif received_bytes > metadata['size']:
+                LOG.error('get_file(%r): the file appears to have grown '
+                        'while transfer was in progress. Expected %d '
+                        'bytes, received %d.',
+                        path, metadata['size'], received_bytes)
 
-        LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
-                  metadata['size'], path, context,
-                  1000 * (mitogen.core.now() - t0))
-        return ok, metadata
+            LOG.debug('target.get_file(): fetched %d bytes of %r from %r in %dms',
+                    metadata['size'], path, context,
+                    1000 * (mitogen.core.now() - t0))
+            return ok, metadata
+        else:
+            return True, metadata
