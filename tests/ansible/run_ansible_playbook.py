@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # Wrap ansible-playbook, setting up some test of the test environment.
-
+from __future__ import print_function
 import json
 import os
 import sys
-from __future__ import print_function
 
 GIT_BASEDIR = os.path.dirname(
     os.path.abspath(
