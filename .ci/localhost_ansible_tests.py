@@ -20,14 +20,6 @@ with ci_lib.Fold('unit_tests'):
 
 
 with ci_lib.Fold('job_setup'):
-    # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
-    # run("pip install -q virtualenv ansible==%s", ci_lib.ANSIBLE_VERSION)
-    # ansible v2.10 isn't out yet so we're installing from github for now
-    run('pip install -q virtualenv {}'.format(ci_lib.ANSIBLE_VERSION))
-
-    # after ansible is installed, install common collections until ansible==2.10 comes out
-    run('ansible-galaxy collection install community.general')
-
     os.chmod(KEY_PATH, int('0600', 8))
     if not ci_lib.exists_in_path('sshpass'):
         run("brew install http://git.io/sshpass.rb")

@@ -7,13 +7,14 @@ batches = [
         # Must be installed separately, as PyNACL indirect requirement causes
         # newer version to be installed if done in a single pip run.
         # Separately install ansible based on version passed in from azure-pipelines.yml or .travis.yml
-        'pip install "pycparser<2.19" "idna<2.7"',
+        'pip install "pycparser<2.19" "idna<2.7" virtualenv',
         'pip install '
             '-r tests/requirements.txt '
             '-r tests/ansible/requirements.txt',
         # 'pip install -q ansible=={}'.format(ci_lib.ANSIBLE_VERSION)
         # ansible v2.10 isn't out yet so we're installing from github for now
-        'pip install -q {}'.format(ci_lib.ANSIBLE_VERSION)
+        # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
+        'pip install -q virtualenv {}'.format(ci_lib.ANSIBLE_VERSION)
     ]
 ]
 
