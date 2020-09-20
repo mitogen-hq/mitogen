@@ -9,7 +9,7 @@ Mitogen for Ansible
 
 **Mitogen for Ansible** is a completely redesigned UNIX connection layer and
 module runtime for `Ansible`_. Requiring minimal configuration changes, it
-updates Ansible's slow and wasteful shell-centic implementation with
+updates Ansible's slow and wasteful shell-centric implementation with
 pure-Python equivalents, invoked via highly efficient remote procedure calls to
 persistent interpreters tunnelled over SSH. No changes are required to target
 hosts.
@@ -1009,7 +1009,7 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``mitogen_ssh_keepalive_count``: integer count of server keepalive messages to
   which no reply is received before considering the SSH server dead. Defaults
   to 10.
-* ``mitogen_ssh_keepalive_count``: integer seconds delay between keepalive
+* ``mitogen_ssh_keepalive_interval``: integer seconds delay between keepalive
   messages. Defaults to 30.
 
 

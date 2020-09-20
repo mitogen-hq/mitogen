@@ -13,10 +13,10 @@ jobs:
   strategy:
     matrix:
       Mito27_27:
-        python.version: '2.7'
+        python.version: '2.7.18'
         MODE: mitogen
       Ans288_27:
-        python.version: '2.7'
+        python.version: '2.7.18'
         MODE: localhost_ansible
         VER: 2.8.8
 
@@ -45,6 +45,12 @@ jobs:
         python.version: '3.6'
         MODE: mitogen
         DISTRO: centos6
+
+      Mito37Debian_27:
+        python.version: '3.7'
+        MODE: mitogen
+        DISTRO: debian
+        VER: 2.9.6
 
       #Py26CentOS7:
         #python.version: '2.7'
@@ -97,3 +103,8 @@ jobs:
         python.version: '3.5'
         MODE: ansible
         VER: 2.8.0
+
+      Ansible_296_37:
+        python.version: '3.7'
+        MODE: ansible
+        VER: 2.9.6
