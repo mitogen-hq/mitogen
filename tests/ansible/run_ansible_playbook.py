@@ -4,7 +4,7 @@
 import json
 import os
 import sys
-
+from __future__ import print_function
 
 GIT_BASEDIR = os.path.dirname(
     os.path.abspath(
@@ -58,4 +58,5 @@ else:
 
 args += ['-e', json.dumps(extra)]
 args += sys.argv[1:]
+print(args[0], "--", args)
 os.execvp(args[0], args)

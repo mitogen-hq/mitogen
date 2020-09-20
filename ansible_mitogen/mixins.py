@@ -378,6 +378,12 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if module_name == 'ansible.legacy.ping' and type(self).__name__ == 'wait_for_connection':
             self._connection.context = None
 
+        if module_name == 'ansible.posix.synchronize':
+            print("SYNCHRONIZE")
+        else:
+            print("NOT SYNCHRONIZE")
+        print(type(self._connection))
+
         self._connection._connect()
         result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
