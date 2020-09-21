@@ -378,6 +378,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if module_name == 'ansible.legacy.ping' and type(self).__name__ == 'wait_for_connection':
             self._connection.context = None
 
+        # throw error if synchronize collection detected, this is what happens when running synchronize locally
+        # tests are being weird I think
+        if module_name == 'ansible.posix.synchronize':
+            A
+
         self._connection._connect()
         result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
