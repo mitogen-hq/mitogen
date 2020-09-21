@@ -21,3 +21,5 @@ ci_lib.run_batches([
 
 # after ansible is installed, install common collections until ansible==2.10 comes out
 ci_lib.run('ansible-galaxy collection install community.general')
+ci_lib.run('ansible-galaxy collection install ansible.netcommon')
+ci_lib.run('ansible-galaxy collection install ansible.posix')
