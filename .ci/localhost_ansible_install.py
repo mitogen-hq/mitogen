@@ -14,7 +14,7 @@ batches = [
         # 'pip install -q ansible=={}'.format(ci_lib.ANSIBLE_VERSION)
         # ansible v2.10 isn't out yet so we're installing from github for now
         # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
-        'pip install -q virtualenv {}'.format(ci_lib.ANSIBLE_VERSION)
+        'pip install -q {}'.format(ci_lib.ANSIBLE_VERSION)
     ]
 ]
 
