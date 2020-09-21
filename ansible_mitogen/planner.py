@@ -577,8 +577,6 @@ def _load_collections(invocation):
 
             for collection in collections:
                 invocation._extra_sys_paths.add(collection.b_path.decode('utf-8'))
-    # find out what tests are doing differently
-    raise ValueError(invocation._extra_sys_paths)
 
 
 def invoke(invocation):

@@ -769,6 +769,9 @@ class PushFileService(Service):
         #       load them up in sys.path for later import
         # ensure we don't add to sys.path the same path we've already seen
         for extra_path in extra_sys_paths:
+            # jjj
+            # validate extra_sys_paths are what we expect
+            raise ValueError(extra_sys_paths)
             # store extra paths in cached set for O(1) lookup
             if extra_path not in self._extra_sys_paths:
                 # not sure if it matters but we could prepend to sys.path instead if we need to

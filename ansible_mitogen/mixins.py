@@ -379,6 +379,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             self._connection.context = None
 
         # going to verify that synchronize is actually loading in Azure DevOps as expected
+        # this fails locally but is showing that azure isn't loading the collections right since it's not failing online
+        # jjj
         if module_name == 'ansible.posix.synchronize':
             A
 
@@ -401,13 +403,6 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # Built-in actions expected tmpdir to be cleaned up automatically
             # on _execute_module().
             self._remove_tmp_path(tmp)
-
-        # self._remove_tmp_path(self._connection._shell.tmpdir)
-        # jjjj
-        # if module_name == 'ansible.posix.synchronize':
-        #     # import epdb; epdb.set_trace()
-        #     from ansible.plugins.action import get_with_context_result
-        #     self._remove_tmp_path(self._connection._shell.tmpdir)
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
         # handle ansible 2.3.3 that has remove_internal_keys in a different place

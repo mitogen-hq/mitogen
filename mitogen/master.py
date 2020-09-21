@@ -522,6 +522,9 @@ class PkgutilMethod(FinderMethod):
 
             # workaround for special python modules that might only exist in memory
             if is_special and is_pkg and not source:
+                # jjj
+                # hope this raises an error
+                raise ValueError(fullname)
                 source = '\n'
         except (AttributeError, ImportError):
             # - Per PEP-302, get_source() and is_package() are optional,
