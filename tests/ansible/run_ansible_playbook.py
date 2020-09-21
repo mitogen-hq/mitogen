@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # Wrap ansible-playbook, setting up some test of the test environment.
-from __future__ import print_function
 import json
 import os
 import sys
@@ -57,5 +56,4 @@ else:
 
 args += ['-e', json.dumps(extra)]
 args += sys.argv[1:]
-print(args[0], "--", args)
 os.execvp(args[0], args)
