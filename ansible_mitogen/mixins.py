@@ -378,6 +378,10 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if module_name == 'ansible.legacy.ping' and type(self).__name__ == 'wait_for_connection':
             self._connection.context = None
 
+        # going to verify that synchronize is actually loading in Azure DevOps as expected
+        if module_name == 'ansible.posix.synchronize':
+            A
+
         self._connection._connect()
         result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
