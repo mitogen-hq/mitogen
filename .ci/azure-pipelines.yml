@@ -101,22 +101,12 @@ jobs:
         #DISTROS: debian
         #STRATEGY: linear
 
-      # fails with error
-      # exception:   File "/tmp/venv/lib/python2.7/site-packages/ansible/plugins/action/__init__.py", line 129, in cleanup
-      # exception:     self._remove_tmp_path(self._connection._shell.tmpdir)
-      # exception: AttributeError: 'get_with_context_result' object has no attribute '_shell'
-      # TODO: looks like a bug on Ansible's end with this release? Maybe 2.10.1 will fix it
-      # Ansible_210_27:
-      #   python.version: '2.7'
-      #   MODE: ansible
-      #   VER: git+https://github.com/ansible/ansible.git@v2.10.0
+      Ansible_210_27:
+        python.version: '2.7'
+        MODE: ansible
+        VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
-      # fails with error
-      # exception:   File "/tmp/venv/lib/python3.5/site-packages/ansible/plugins/action/__init__.py", line 129, in cleanup
-      # exception:     self._remove_tmp_path(self._connection._shell.tmpdir)
-      # exception: AttributeError: 'get_with_context_result' object has no attribute '_shell'
-      # TODO: looks like a bug on Ansible's end with this release? Maybe 2.10.1 will fix it
-      # Ansible_210_35:
-      #   python.version: '3.5'
-      #   MODE: ansible
-      #   VER: git+https://github.com/ansible/ansible.git@v2.10.0
+      Ansible_210_35:
+        python.version: '3.5'
+        MODE: ansible
+        VER: git+https://github.com/ansible/ansible.git@v2.10.0

@@ -40,19 +40,26 @@
     #     state: absent
     #   become: true
 
-    - synchronize:
-        private_key: /tmp/synchronize-action-key
-        dest: /tmp/sync-test.out
-        src: /tmp/sync-test/
+    # exception:   File "/tmp/venv/lib/python2.7/site-packages/ansible/plugins/action/__init__.py", line 129, in cleanup
+    # exception:     self._remove_tmp_path(self._connection._shell.tmpdir)
+    # exception: AttributeError: 'get_with_context_result' object has no attribute '_shell'
+    # TODO: looks like a bug on Ansible's end with 2.10? Maybe 2.10.1 will fix it
+    - name: do synchronize test
+      block:
+        - synchronize:
+            private_key: /tmp/synchronize-action-key
+            dest: /tmp/sync-test.out
+            src: /tmp/sync-test/
 
-    - slurp:
-        src: /tmp/sync-test.out/item
-      register: out
+        - slurp:
+            src: /tmp/sync-test.out/item
+          register: out
 
-    - set_fact: outout="{{out.content|b64decode}}"
+        - set_fact: outout="{{out.content|b64decode}}"
 
-    - assert:
-        that: outout == "item!"
+        - assert:
+            that: outout == "item!"
+      when: is_mitogen
 
     # TODO: https://github.com/dw/mitogen/issues/692
     # - file:
