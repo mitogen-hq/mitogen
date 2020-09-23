@@ -20,8 +20,8 @@ jobs:
         python.version: '2.7.18'
         MODE: mitogen
         VER: git+https://github.com/ansible/ansible.git@v2.10.0
-      Ans210_27:
-        python.version: '2.7.18'
+      Ans210_35:
+        python.version: '3.5'
         MODE: localhost_ansible
         VER: git+https://github.com/ansible/ansible.git@v2.10.0
 
