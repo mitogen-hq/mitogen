@@ -54,7 +54,8 @@ if ci_lib.have_apt():
 # Mac's System Integrity Protection prevents symlinking /usr/bin
 # and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
 # so we'll use /usr/local/bin/python for everything
-if ci_lib.have_brew():
+# /usr/local/bin/python2.7 already exists!
+if os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
     batches.append([
         'brew install python@{pv}'
         .format(pv=os.environ['PYTHONVERSION'])
