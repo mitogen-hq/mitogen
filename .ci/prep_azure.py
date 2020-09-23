@@ -69,7 +69,7 @@ if os.environ['PYTHONVERSION'].startswith('2'):
         '/usr/local/bin/python{pv} -m virtualenv /tmp/venv -p /usr/local/bin/python{pv}'.format(py=os.environ['PYTHONVERSION'])
     ])
 else:
-    venv_steps.append('/usr/local/bin/python{pv} -m venv /tmp/venv'.format(py=os.environ['PYTHONVERSION'])
+    venv_steps.append('/usr/local/bin/python{pv} -m venv /tmp/venv'.format(py=os.environ['PYTHONVERSION']))
 batches.append(venv_steps)
 
 
