@@ -65,7 +65,7 @@ if ci_lib.have_brew():
 venv_steps = ['/usr/local/bin/python{pv} -m pip install -U pip wheel setuptools']
 if os.environ['PYTHONVERSION'].startswith('2'):
     venv_steps.extend([
-        '/usr/local/bin/python{pv} -m pip install -U virtualenv'.format(py=os.environ['PYTHONVERSION'])
+        '/usr/local/bin/python{pv} -m pip install -U virtualenv'.format(py=os.environ['PYTHONVERSION']),
         '/usr/local/bin/python{pv} -m virtualenv /tmp/venv -p /usr/local/bin/python{pv}'.format(py=os.environ['PYTHONVERSION'])
     ])
 else:
