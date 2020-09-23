@@ -30,6 +30,11 @@ if 0 and os.uname()[0] == 'Linux':
         ]
     ]
 
+# @dw: The VSTS-shipped Pythons available via UsePythonVErsion are pure garbage,
+# broken symlinks, incorrect permissions and missing codecs. So we use the
+# deadsnakes PPA to get sane Pythons, and setup a virtualenv to install our
+# stuff into. The virtualenv can probably be removed again, but this was a
+# hard-fought battle and for now I am tired of this crap.
 if ci_lib.have_apt():
     batches.append([
         'echo force-unsafe-io | sudo tee /etc/dpkg/dpkg.cfg.d/nosync',
@@ -40,8 +45,32 @@ if ci_lib.have_apt():
             'python{pv}-dev '
             'libsasl2-dev '
             'libldap2-dev '
-            .format(pv=os.environ['PYTHONVERSION'])
+            .format(pv=os.environ['PYTHONVERSION']),
+        'sudo ln -fs /usr/bin/python{pv} /usr/local/bin/python{pv}'
+        .format(pv=os.environ['PYTHONVERSION'])
     ])
+
+
+# Mac's System Integrity Protection prevents symlinking /usr/bin
+# and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
+# so we'll use /usr/local/bin/python for everything
+if ci_lib.have_brew():
+    batches.append([
+        'brew install python@{pv}'
+        .format(pv=os.environ['PYTHONVERSION'])
+    ])
+
+# setup venv
+# need wheel before building virtualenv because of bdist_wheel and setuptools deps
+venv_steps = ['/usr/local/bin/python{pv} -m pip install -U pip wheel setuptools']
+if os.environ['PYTHONVERSION'].startswith('2'):
+    venv_steps.extend([
+        '/usr/local/bin/python{pv} -m pip install -U virtualenv'.format(py=os.environ['PYTHONVERSION'])
+        '/usr/local/bin/python{pv} -m virtualenv /tmp/venv -p /usr/local/bin/python{pv}'.format(py=os.environ['PYTHONVERSION'])
+    ])
+else:
+    venv_steps.append('/usr/local/bin/python{pv} -m venv /tmp/venv'.format(py=os.environ['PYTHONVERSION'])
+batches.append(venv_steps)
 
 
 if ci_lib.have_docker():
