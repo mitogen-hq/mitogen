@@ -55,12 +55,12 @@ if ci_lib.have_apt():
 # and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
 # so we'll use /usr/local/bin/python for everything
 # /usr/local/bin/python2.7 already exists!
+need_to_fix_psycopg2 = False
 if os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
+    need_to_fix_psycopg2 = True
     batches.append([
         'brew install python@{pv} postgresql'
-        .format(pv=os.environ['PYTHONVERSION']),
-        # fixes https://stackoverflow.com/questions/59595649/can-not-install-psycopg2-on-macos-catalina
-        'pip3 install psycopg2-binary'
+        .format(pv=os.environ['PYTHONVERSION'])
     ])
 
 # setup venv
@@ -73,6 +73,10 @@ if os.environ['PYTHONVERSION'].startswith('2'):
     ])
 else:
     venv_steps.append('/usr/local/bin/python{pv} -m venv /tmp/venv'.format(pv=os.environ['PYTHONVERSION']))
+# fixes https://stackoverflow.com/questions/59595649/can-not-install-psycopg2-on-macos-catalina
+if need_to_fix_psycopg2:
+    venv_steps.append('/tmp/venv/bin/pip3 install psycopg2-binary')
+
 batches.append(venv_steps)
 
 
