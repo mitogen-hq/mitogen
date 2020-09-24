@@ -57,8 +57,8 @@ if ci_lib.have_apt():
 # /usr/local/bin/python2.7 already exists!
 if os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
     batches.append([
-        'brew install python@{pv}'
-        .format(pv=os.environ['PYTHONVERSION'])
+        'brew install python@{pv} postgresql'
+        .format(pv=os.environ['PYTHONVERSION']),
     ])
 
 # setup venv
