@@ -73,9 +73,9 @@ if os.environ['PYTHONVERSION'].startswith('2'):
     ])
 else:
     venv_steps.append('/usr/local/bin/python{pv} -m venv /tmp/venv'.format(pv=os.environ['PYTHONVERSION']))
-# fixes https://stackoverflow.com/questions/59595649/can-not-install-psycopg2-on-macos-catalina
+# fixes https://stackoverflow.com/questions/59595649/can-not-install-psycopg2-on-macos-catalina https://github.com/Azure/azure-cli/issues/12854#issuecomment-619213863
 if need_to_fix_psycopg2:
-    venv_steps.append('/tmp/venv/bin/pip3 install psycopg2-binary')
+    venv_steps.append('/tmp/venv/bin/pip3 install psycopg2==2.8.5 psycopg2-binary')
 
 batches.append(venv_steps)
 
