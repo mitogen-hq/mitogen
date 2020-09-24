@@ -59,6 +59,8 @@ if os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
     batches.append([
         'brew install python@{pv} postgresql'
         .format(pv=os.environ['PYTHONVERSION']),
+        # fixes https://stackoverflow.com/questions/59595649/can-not-install-psycopg2-on-macos-catalina
+        'pip3 install psycopg2-binary'
     ])
 
 # setup venv
