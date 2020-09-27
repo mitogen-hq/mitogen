@@ -57,7 +57,7 @@ if ci_lib.have_apt():
         .format(pv=os.environ['PYTHONVERSION'])
     ])
     if is_python3:
-        venv_steps.append('sudo apt-get -y install python3-venv')
+        venv_steps.append('sudo apt-get -y install python{pv}-venv'.format(os.environ['PYTHONVERSION']))
 # TODO: somehow `Mito36CentOS6_26` has both brew and apt installed https://dev.azure.com/dw-mitogen/Mitogen/_build/results?buildId=1031&view=logs&j=7bdbcdc6-3d3e-568d-ccf8-9ddca1a9623a&t=73d379b6-4eea-540f-c97e-046a2f620483
 elif is_python3 and ci_lib.have_brew():
     # Mac's System Integrity Protection prevents symlinking /usr/bin
