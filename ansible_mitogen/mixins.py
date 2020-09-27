@@ -383,8 +383,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # jjj
         # what is going on!?
         if 'synchronize' in module_name:
-            print('*' * 80)
-            print(module_name)
+            raise ValueError(module_name)
 
         if module_name == 'ansible.posix.synchronize':
             A
