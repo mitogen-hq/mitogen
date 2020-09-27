@@ -56,8 +56,4 @@ else:
 
 args += ['-e', json.dumps(extra)]
 args += sys.argv[1:]
-# get visibility into what's being ran
-print('*' * 80)
-print(args)
-print('*' * 80)
 os.execvp(args[0], args)
