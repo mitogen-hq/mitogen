@@ -559,6 +559,9 @@ class SysModulesMethod(FinderMethod):
         """
         Find `fullname` using its :data:`__file__` attribute.
         """
+        # see if collections are being loaded in sys.path here
+        if 'synchronize' in fullname:
+            raise ValueError(sys.path)
         module = sys.modules.get(fullname)
         if not isinstance(module, types.ModuleType):
             LOG.debug('%r: sys.modules[%r] absent or not a regular module',

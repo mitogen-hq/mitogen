@@ -774,8 +774,6 @@ class PushFileService(Service):
                 # not sure if it matters but we could prepend to sys.path instead if we need to
                 sys.path.append(extra_path)
                 self._extra_sys_paths.add(extra_path)
-            # see if this is an issue with python2 loading packages
-            sys.path.append("/Users/runner/.ansible/collections/ansible_collections/ansible/posix")
 
     @expose(policy=AllowParents())
     @arg_spec({
