@@ -381,6 +381,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # going to verify that synchronize is actually loading in Azure DevOps as expected
         # this fails locally but is showing that azure isn't loading the collections right since it's not failing online
         # jjj
+        # what is going on!?
+        if 'synchronize' in module_name:
+            print('*' * 80)
+            print(module_name)
+
         if module_name == 'ansible.posix.synchronize':
             A
 
