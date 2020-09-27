@@ -30,13 +30,16 @@ if 0 and os.uname()[0] == 'Linux':
         ]
     ]
 
+# setup venv, need all python commands in 1 list to be subprocessed at the same time
+venv_steps = []
+
 # @dw: The VSTS-shipped Pythons available via UsePythonVErsion are pure garbage,
 # broken symlinks, incorrect permissions and missing codecs. So we use the
 # deadsnakes PPA to get sane Pythons, and setup a virtualenv to install our
 # stuff into. The virtualenv can probably be removed again, but this was a
 # hard-fought battle and for now I am tired of this crap.
 if ci_lib.have_apt():
-    batches.append([
+    venv_steps.extend([
         'echo force-unsafe-io | sudo tee /etc/dpkg/dpkg.cfg.d/nosync',
         'sudo add-apt-repository ppa:deadsnakes/ppa',
         'sudo apt-get update',
@@ -58,14 +61,14 @@ if ci_lib.have_apt():
 need_to_fix_psycopg2 = False
 if os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
     need_to_fix_psycopg2 = True
-    batches.append([
+    venv_steps.append(
         'brew install python@{pv} postgresql'
         .format(pv=os.environ['PYTHONVERSION'])
-    ])
+    )
 
-# setup venv
 # need wheel before building virtualenv because of bdist_wheel and setuptools deps
-venv_steps = ['/usr/local/bin/python{pv} -m pip install -U pip wheel setuptools'.format(pv=os.environ['PYTHONVERSION'])]
+venv_steps.append('/usr/local/bin/python{pv} -m pip install -U pip wheel setuptools'.format(pv=os.environ['PYTHONVERSION']))
+
 if os.environ['PYTHONVERSION'].startswith('2'):
     venv_steps.extend([
         '/usr/local/bin/python{pv} -m pip install -U virtualenv'.format(pv=os.environ['PYTHONVERSION']),
