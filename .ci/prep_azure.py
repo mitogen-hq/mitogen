@@ -33,6 +33,8 @@ if 0 and os.uname()[0] == 'Linux':
 # setup venv, need all python commands in 1 list to be subprocessed at the same time
 venv_steps = []
 
+need_to_fix_psycopg2 = False
+
 # @dw: The VSTS-shipped Pythons available via UsePythonVErsion are pure garbage,
 # broken symlinks, incorrect permissions and missing codecs. So we use the
 # deadsnakes PPA to get sane Pythons, and setup a virtualenv to install our
@@ -52,14 +54,12 @@ if ci_lib.have_apt():
         'sudo ln -fs /usr/bin/python{pv} /usr/local/bin/python{pv}'
         .format(pv=os.environ['PYTHONVERSION'])
     ])
-
-
-# Mac's System Integrity Protection prevents symlinking /usr/bin
-# and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
-# so we'll use /usr/local/bin/python for everything
-# /usr/local/bin/python2.7 already exists!
-need_to_fix_psycopg2 = False
-if os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
+# TODO: somehow `Mito36CentOS6_26` has both brew and apt installed https://dev.azure.com/dw-mitogen/Mitogen/_build/results?buildId=1031&view=logs&j=7bdbcdc6-3d3e-568d-ccf8-9ddca1a9623a&t=73d379b6-4eea-540f-c97e-046a2f620483
+elif os.environ['PYTHONVERSION'].startswith('3') and ci_lib.have_brew():
+    # Mac's System Integrity Protection prevents symlinking /usr/bin
+    # and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
+    # so we'll use /usr/local/bin/python for everything
+    # /usr/local/bin/python2.7 already exists!
     need_to_fix_psycopg2 = True
     venv_steps.append(
         'brew install python@{pv} postgresql'
