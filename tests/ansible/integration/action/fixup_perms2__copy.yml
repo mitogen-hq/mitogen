@@ -20,7 +20,7 @@
       register: out
     - assert:
         that:
-        -  out.stat.mode in ("0644", "0666")
+        -  out.stat.mode in ("0644", "0664")
 
     #
     # copy module (explicit mode).
@@ -62,7 +62,7 @@
       register: out
     - assert:
         that:
-        - out.stat.mode in ("0644", "0666")
+        - out.stat.mode in ("0644", "0664")
 
     #
     # copy module (existing disk files, preserve mode).
