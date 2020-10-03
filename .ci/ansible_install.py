@@ -11,10 +11,8 @@ batches = [
         'pip install '
             '-r tests/requirements.txt '
             '-r tests/ansible/requirements.txt',
-        # 'pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
-        # ansible v2.10 isn't out yet so we're installing from github for now
         # encoding is required for installing ansible 2.10 with pip2, otherwise we get a UnicodeDecode error
-        'LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 pip install -q {}'.format(ci_lib.ANSIBLE_VERSION)
+        'LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
     ]
 ]
 
@@ -24,8 +22,3 @@ batches.extend(
 )
 
 ci_lib.run_batches(batches)
-
-# after ansible is installed, install common collections until ansible==2.10 comes out
-ci_lib.run('ansible-galaxy collection install community.general')
-ci_lib.run('ansible-galaxy collection install ansible.netcommon')
-ci_lib.run('ansible-galaxy collection install ansible.posix')
