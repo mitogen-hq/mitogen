@@ -90,10 +90,10 @@ RLOG = logging.getLogger('mitogen.ctx')
 
 
 # there are some cases where modules are loaded in memory only, such as
-# ansible collections, and the module "filename" is something like __synthetic__
-# which doesn't actually exist
+# ansible collections, and the module "filename" doesn't actually exist
 SPECIAL_FILE_PATHS = {
     "__synthetic__",
+    "<ansible_synthetic_collection_package>"
 }
 
 
@@ -146,7 +146,7 @@ def is_stdlib_path(path):
     )
 
 
-def get_child_modules(path):
+def get_child_modules(path, fullname):
     """
     Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
@@ -155,12 +155,19 @@ def get_child_modules(path):
         Path to the module's source code on disk, or some PEP-302-recognized
         equivalent. Usually this is the module's ``__file__`` attribute, but
         is specified explicitly to avoid loading the module.
+    :param str fullname:
+        Name of the package we're trying to get child modules for
 
     :return:
         List of submodule name suffixes.
     """
-    it = pkgutil.iter_modules([os.path.dirname(path)])
-    return [to_text(name) for _, name, _ in it]
+    mod_path = os.path.dirname(path)
+    if mod_path != '':
+        return [to_text(name) for _, name, _ in pkgutil.iter_modules([mod_path])]
+    else:
+        # we loaded some weird package in memory, so we'll see if it has a custom loader we can use
+        loader = pkgutil.find_loader(fullname)
+        return [to_text(name) for name, _ in loader.iter_modules(None)] if loader else []
 
 
 def _looks_like_script(path):
@@ -993,7 +1000,7 @@ class ModuleResponder(object):
             self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
-            pkg_present = get_child_modules(path)
+            pkg_present = get_child_modules(path, fullname)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)
         else:

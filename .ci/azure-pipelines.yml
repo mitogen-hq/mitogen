@@ -3,10 +3,6 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
-# pointing to ansible 2.10 tag on github; ansible changed to ansible-base on pypi
-# so to avoid complicating things for now, use git hash
-# TODO: point to ansible==2.10 when it comes out so we don't need to install collections separately
-
 jobs:
 
 - job: Mac
@@ -19,12 +15,12 @@ jobs:
       Mito27_27:
         python.version: '2.7'
         MODE: mitogen
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
       # TODO: test python3, python3 tests are broken
       Ans210_27:
         python.version: '2.7'
         MODE: localhost_ansible
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
 
 
 - job: Linux
@@ -41,7 +37,7 @@ jobs:
         python.version: '2.7'
         MODE: mitogen
         DISTRO: debian
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
 
       #MitoPy27CentOS6_26:
         #python.version: '2.7'
@@ -52,13 +48,13 @@ jobs:
         python.version: '3.6'
         MODE: mitogen
         DISTRO: centos6
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
 
       Mito37Debian_27:
         python.version: '3.7'
         MODE: mitogen
         DISTRO: debian
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
 
       #Py26CentOS7:
         #python.version: '2.7'
@@ -105,9 +101,9 @@ jobs:
       Ansible_210_27:
         python.version: '2.7'
         MODE: ansible
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
 
       Ansible_210_35:
         python.version: '3.5'
         MODE: ansible
-        VER: git+https://github.com/ansible/ansible.git@v2.10.0
+        VER: 2.10.0
