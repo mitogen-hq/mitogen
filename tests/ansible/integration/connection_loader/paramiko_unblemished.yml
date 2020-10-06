@@ -1,4 +1,5 @@
 # Ensure paramiko connections aren't grabbed.
+---
 
 # TODO: this is flaky -> https://github.com/dw/mitogen/issues/747
 # - name: integration/connection_loader/paramiko_unblemished.yml
