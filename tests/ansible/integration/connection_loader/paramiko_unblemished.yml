@@ -1,12 +1,13 @@
 # Ensure paramiko connections aren't grabbed.
 
-- name: integration/connection_loader/paramiko_unblemished.yml
-  hosts: test-targets
-  any_errors_fatal: true
-  tasks:
-    - custom_python_detect_environment:
-      connection: paramiko
-      register: out
+# TODO: this is flaky -> https://github.com/dw/mitogen/issues/747
+# - name: integration/connection_loader/paramiko_unblemished.yml
+#   hosts: test-targets
+#   any_errors_fatal: true
+#   tasks:
+#     - custom_python_detect_environment:
+#       connection: paramiko
+#       register: out
 
-    - assert:
-        that: not out.mitogen_loaded
+#     - assert:
+#         that: not out.mitogen_loaded
