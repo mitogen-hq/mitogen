@@ -233,7 +233,7 @@ class AnsibleWrappers(object):
         ansible_mitogen.loaders.action_loader.get = (
             ansible_mitogen.loaders.action_loader__get
         )
-        ansible_mitogen.loaders.connection_loader.get = (
+        ansible_mitogen.loaders.connection_loader.get_with_context = (
             ansible_mitogen.loaders.connection_loader__get
         )
         ansible.executor.process.worker.WorkerProcess.run = worker__run
