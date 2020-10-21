@@ -24,7 +24,7 @@ with ci_lib.Fold('job_setup'):
     # NOTE: sshpass v1.06 causes errors so pegging to 1.05 -> "msg": "Error when changing password","out": "passwd: DS error: eDSAuthFailed\n", 
     # there's a checksum error with "brew install http://git.io/sshpass.rb" though, so installing manually
     if not ci_lib.exists_in_path('sshpass'):
-        run("curl -O -L  https://sourceforge.net/projects/sshpass/files/sshpass/1.05/sshpass-1.05.tar.gz && \
+        os.system("curl -O -L  https://sourceforge.net/projects/sshpass/files/sshpass/1.05/sshpass-1.05.tar.gz && \
                 tar xvf sshpass-1.05.tar.gz && \
                 cd sshpass-1.05 && \
                 ./configure && \
