@@ -136,7 +136,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
-      - out.result|length == 4
+      - out.result|length == 3
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "a.b.c"
