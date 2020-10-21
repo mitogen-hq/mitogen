@@ -22,7 +22,7 @@ with ci_lib.Fold('unit_tests'):
 with ci_lib.Fold('job_setup'):
     os.chmod(KEY_PATH, int('0600', 8))
     if not ci_lib.exists_in_path('sshpass'):
-        run("brew install http://git.io/sshpass.rb")
+        run("brew install esolitos/ipa/sshpass")
 
 
 with ci_lib.Fold('machine_prep'):
