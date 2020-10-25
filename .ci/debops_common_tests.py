@@ -64,6 +64,9 @@ with ci_lib.Fold('job_setup'):
     print('---')
     print()
 
+    print("Setting up python-netaddr...")
+    ci_lib.run('ansible all -i {} -m apt -a "name=python-netaddr state=present" --become'.format(inventory_path))
+
     # Now we have real host key checking, we need to turn it off
     os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
 

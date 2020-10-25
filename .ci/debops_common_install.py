@@ -14,7 +14,6 @@ ci_lib.run_batches([
     ],
     [
         'docker pull %s' % (ci_lib.image_for_distro('debian'),),
-        'sudo apt-get update && sudo apt-get install --no-install-recommends python-netaddr',
     ],
 ])
 
