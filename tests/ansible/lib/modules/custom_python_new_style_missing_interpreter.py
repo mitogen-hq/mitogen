@@ -3,7 +3,7 @@
 import sys
 
 # As of Ansible 2.10, Ansible changed new-style detection: # https://github.com/ansible/ansible/pull/61196/files#diff-5675e463b6ce1fbe274e5e7453f83cd71e61091ea211513c93e7c0b4d527d637L828-R980
-# from ansible.module_utils import basic
+# import ansible.module_utils.basic
 
 
 def usage():
