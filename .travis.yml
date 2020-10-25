@@ -23,8 +23,10 @@ install:
 
 script:
 - .ci/spawn_reverse_shell.py
-- .ci/${MODE}_tests.py
+- MODE=${MODE} .ci/travis.sh
 
+# Travis has a 4MB log limit (https://github.com/travis-ci/travis-ci/issues/1382), but verbose Mitogen logs run larger than that
+# in order to keep verbosity to debug a build failure, will run with this workaround: https://stackoverflow.com/a/26082445
 
 # To avoid matrix explosion, just test against oldest->newest and
 # newest->oldest in various configuartions.
