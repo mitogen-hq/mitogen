@@ -53,17 +53,17 @@ matrix:
     - python: "2.7"
       env: MODE=ansible VER=2.10.0
     # 2.10 -> {debian, centos6, centos7}
-    - python: "2.6"
-      env: MODE=ansible VER=2.10.0
+    # - python: "2.6"
+    #   env: MODE=ansible VER=2.10.0
 
     # 2.10 -> {centos5}
-    - python: "2.6"
-      env: MODE=ansible DISTROS=centos5 VER=2.10.0
+    # - python: "2.6"
+    #   env: MODE=ansible DISTROS=centos5 VER=2.10.0
 
     # Mitogen tests.
     # 2.4 -> 2.4
-    - language: c
-      env: MODE=mitogen_py24 DISTROS=centos5 VER=2.10.0
+    # - language: c
+    #   env: MODE=mitogen_py24 DISTROS=centos5 VER=2.10.0
     # 2.7 -> 2.7 -- moved to Azure
     # 2.7 -> 2.6
     #- python: "2.7"
@@ -71,9 +71,9 @@ matrix:
     - python: "3.6"
       env: MODE=mitogen DISTROS=centos7 VER=2.10.0
     # 2.6 -> 2.7
-    - python: "2.6"
-      env: MODE=mitogen DISTROS=centos7 VER=2.10.0
+    # - python: "2.6"
+    #   env: MODE=mitogen DISTROS=centos7 VER=2.10.0
     # 2.6 -> 3.5
-    - python: "2.6"
-      env: MODE=mitogen DISTROS=debian-py3 VER=2.10.0
+    # - python: "2.6"
+    #   env: MODE=mitogen DISTROS=debian-py3 VER=2.10.0
     # 3.6 -> 2.6 -- moved to Azure
