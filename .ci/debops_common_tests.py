@@ -66,10 +66,6 @@ with ci_lib.Fold('job_setup'):
     print('---')
     print()
 
-    print("Setting up python-netaddr...")
-    os.system('ANSIBLE_HOST_KEY_CHECKING=False ANSIBLE_STRATEGY_PLUGINS={} ansible all -i {} -m apt -a "name=python-netaddr state=present update_cache=yes" --become'.format(
-        ansible_strategy_plugin, inventory_path))
-
     # Now we have real host key checking, we need to turn it off
     os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
 
