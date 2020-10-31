@@ -42,8 +42,9 @@ matrix:
     #   env: MODE=debops_common VER=2.10.0
 
     # Sanity check against vanilla Ansible. One job suffices.
-    - python: "2.7"
-      env: MODE=ansible VER=2.10.0 DISTROS=debian STRATEGY=linear
+    # https://github.com/dw/mitogen/pull/715#issuecomment-719266420 migrating to Azure for now
+    # - python: "2.7"
+    #   env: MODE=ansible VER=2.10.0 DISTROS=debian STRATEGY=linear
 
     # ansible_mitogen tests.
 
