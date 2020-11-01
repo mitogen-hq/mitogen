@@ -22,6 +22,13 @@ jobs:
         MODE: localhost_ansible
         VER: 2.10.0
 
+      # NOTE: this hangs when ran in Ubuntu 18.04
+      Vanilla_210_27:
+        python.version: '2.7'
+        MODE: localhost_ansible
+        VER: 2.10.0
+        STRATEGY: linear
+
 
 - job: Linux
   pool:
@@ -97,13 +104,6 @@ jobs:
         #VER: 2.6.2
         #DISTROS: debian
         #STRATEGY: linear
-
-      Vanilla_210_27:
-        python.version: '2.7'
-        MODE: ansible
-        VER: 2.10.0
-        DISTROS: debian
-        STRATEGY: linear
 
       Ansible_210_27:
         python.version: '2.7'
