@@ -59,7 +59,8 @@ import ansible_mitogen.target
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
-NO_MODULE_MSG = 'The module %s was not found in configured module paths.'
+# NOTE: Ansible 2.10 no longer has a `.` at the end of NO_MODULE_MSG error
+NO_MODULE_MSG = 'The module %s was not found in configured module paths'
 
 _planner_by_path = {}
 
