@@ -6,6 +6,8 @@
 jobs:
 
 - job: Mac
+  # vanilla Ansible is really slow
+  timeoutInMinutes: 120
   steps:
   - template: azure-pipelines-steps.yml
   pool:
