@@ -43,8 +43,7 @@ import os
 import random
 
 from ansible.executor import module_common
-from ansible.galaxy.collection import find_existing_collections
-from ansible.utils.collection_loader import AnsibleCollectionConfig
+from ansible.collections.list import list_collection_dirs
 import ansible.errors
 import ansible.module_utils
 import ansible.release
@@ -572,12 +571,8 @@ def _load_collections(invocation):
     Goes through all collection path possibilities and stores paths to installed collections
     Stores them on the current invocation to later be passed to the master service
     """
-    for path in AnsibleCollectionConfig.collection_paths:
-        if os.path.isdir(path):
-            collections = find_existing_collections(path, fallback_metadata=True)
-
-            for collection in collections:
-                invocation._extra_sys_paths.add(collection.b_path.decode('utf-8'))
+    for collection_path in list_collection_dirs():
+        invocation._extra_sys_paths.add(collection_path.decode('utf-8'))
 
 
 def invoke(invocation):
