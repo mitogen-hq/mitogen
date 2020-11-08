@@ -21,7 +21,8 @@ v0.2.10 (unreleased)
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-*(no changes)*
+* :gh:issue:`756` ssh connections with `check_host_keys='accept'` would
+  timeout, when using recent OpenSSH client versions.
 
 
 v0.2.9 (2019-11-02)
