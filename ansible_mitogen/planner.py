@@ -487,7 +487,7 @@ def _propagate_deps(invocation, planner, context):
         # modules=planner.get_module_deps(), TODO
         overridden_sources=invocation._overridden_sources,
         # needs to be a list because can't unpickle() a set()
-        extra_sys_paths=list(invocation._extra_sys_paths)
+        extra_sys_paths=list(invocation._extra_sys_paths),
     )
 
 
