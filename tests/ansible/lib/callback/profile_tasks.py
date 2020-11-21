@@ -37,6 +37,7 @@ class CallbackModule(CallbackBase):
     A plugin for timing tasks
     """
     def __init__(self):
+        super(CallbackModule, self).__init__()
         self.stats = {}
         self.current = None
 
