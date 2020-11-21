@@ -23,6 +23,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 
 * :gh:issue:`756` ssh connections with `check_host_keys='accept'` would
   timeout, when using recent OpenSSH client versions.
+* :gh:issue:`758` fix initilialisation of callback plugins in test suite, to
+  to address a `KeyError` in
+  :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
 
 
 v0.2.9 (2019-11-02)
