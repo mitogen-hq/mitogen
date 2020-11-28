@@ -103,6 +103,24 @@ if hasattr(subprocess.Popen, 'terminate'):
     Popen__terminate = subprocess.Popen.terminate
 
 
+def get_ssh_client_version():
+    proc = subprocess.Popen(['ssh', '-V'], stderr=subprocess.PIPE)
+    _, stderr = proc.communicate()
+    stderr = stderr.decode('ascii')
+    match = re.match(r'OpenSSH_(\d+)\.(\d+)', stderr)
+    major = int(match.group(1))
+    minor = int(match.group(2))
+    return (major, minor, 0, 0)
+
+
+# OpenSSH releases since 7.0 don't enable 1024-bit key exchange by default.
+# Some of our Docker test images are too old to support the newer algorithms
+if get_ssh_client_version() >= (7, 0, 0, 0):
+    SSH_DEFAULT_ARGS = ['-o', 'KexAlgorithms +diffie-hellman-group1-sha1']
+else:
+    SSH_DEFAULT_ARGS = []
+
+
 def wait_for_port(
         host,
         port,
@@ -547,4 +565,5 @@ class DockerMixin(RouterMixin):
         return self.docker_ssh(
             username='mitogen__has_sudo_nopw',
             password='has_sudo_nopw_password',
+            **kwargs
         )

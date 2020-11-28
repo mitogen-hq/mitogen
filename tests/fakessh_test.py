@@ -12,7 +12,9 @@ import testlib
 class RsyncTest(testlib.DockerMixin, testlib.TestCase):
     @unittest2.skip('broken')
     def test_rsync_from_master(self):
-        context = self.docker_ssh_any()
+        context = self.docker_ssh_any(
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
+        )
 
         if context.call(os.path.exists, '/tmp/data'):
             context.call(shutil.rmtree, '/tmp/data')
@@ -34,11 +36,13 @@ class RsyncTest(testlib.DockerMixin, testlib.TestCase):
         pubkey_acct = self.docker_ssh(
             username='mitogen__has_sudo_pubkey',
             identity_file=testlib.data_path('docker/mitogen__has_sudo_pubkey.key'),
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
 
         nopw_acct = self.docker_ssh(
             username='mitogen__has_sudo_nopw',
             password='has_sudo_nopw_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
 
         webapp_acct = self.router.sudo(

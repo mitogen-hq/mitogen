@@ -44,6 +44,7 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         ssh = self.docker_ssh(
             username='mitogen__has_sudo',
             password='has_sudo_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.su(via=ssh)
@@ -54,6 +55,7 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         ssh = self.docker_ssh(
             username='mitogen__has_sudo',
             password='has_sudo_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.su(via=ssh, password='x')
@@ -64,6 +66,7 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         ssh = self.docker_ssh(
             username='mitogen__has_sudo',
             password='has_sudo_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         context = self.router.su(via=ssh, password='rootpassword')
         self.assertEquals(0, context.call(os.getuid))

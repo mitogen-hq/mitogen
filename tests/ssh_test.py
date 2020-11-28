@@ -23,6 +23,7 @@ class StubSshMixin(testlib.RouterMixin):
                 hostname='hostname',
                 username='mitogen__has_sudo',
                 ssh_path=testlib.data_path('stubs/stub-ssh.py'),
+                ssh_args=testlib.SSH_DEFAULT_ARGS,
                 **kwargs
             )
         finally:
@@ -35,6 +36,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             hostname='hostname',
             username='mitogen__has_sudo',
             ssh_path=testlib.data_path('stubs/stub-ssh.py'),
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         #context.call(mitogen.utils.log_to_file, '/tmp/log')
         #context.call(mitogen.utils.disable_site_packages)
@@ -51,6 +53,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
                 username='mitogen__has_sudo',
                 password='has_sudo_password',
                 ssh_debug_level=3,
+                ssh_args=testlib.SSH_DEFAULT_ARGS,
             )
         finally:
             s = capture.stop()
@@ -64,12 +67,14 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             username='mitogen__permdenied',
             password='permdenied_password',
             ssh_debug_level=3,
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
 
     def test_stream_name(self):
         context = self.docker_ssh(
             username='mitogen__has_sudo',
             password='has_sudo_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         name = 'ssh.%s:%s' % (
             self.dockerized_ssh.get_host(),
@@ -81,6 +86,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         context = self.docker_ssh(
             username='mitogen__has_sudo_nopw',
             password='has_sudo_nopw_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         sudo = self.router.sudo(via=context)
 
@@ -94,6 +100,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.ssh.PasswordError,
             lambda: self.docker_ssh(
                 username='mitogen__has_sudo',
+                ssh_args=testlib.SSH_DEFAULT_ARGS,
             )
         )
         self.assertEqual(e.args[0], mitogen.ssh.password_required_msg)
@@ -103,6 +110,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             lambda: self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='badpw',
+                ssh_args=testlib.SSH_DEFAULT_ARGS,
             )
         )
         self.assertEqual(e.args[0], mitogen.ssh.password_incorrect_msg)
@@ -111,6 +119,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         context = self.docker_ssh(
             username='mitogen__has_sudo',
             password='has_sudo_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
 
         self.assertEqual(
@@ -122,6 +131,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.ssh.PasswordError,
             lambda: self.docker_ssh(
                 username='mitogen__has_sudo_pubkey',
+                ssh_args=testlib.SSH_DEFAULT_ARGS,
             )
         )
         self.assertEqual(e.args[0], mitogen.ssh.password_required_msg)
@@ -130,6 +140,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
         context = self.docker_ssh(
             username='mitogen__has_sudo_pubkey',
             identity_file=testlib.data_path('docker/mitogen__has_sudo_pubkey.key'),
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
         )
         self.assertEqual(
             'i-am-mitogen-test-docker-image\n',
@@ -143,7 +154,9 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
                 lambda: self.docker_ssh(
                     username='mitogen__has_sudo_pubkey',
                     password='has_sudo_password',
-                    ssh_args=['-o', 'UserKnownHostsFile ' + fp.name],
+                    ssh_args=testlib.SSH_DEFAULT_ARGS + [
+                        '-o', 'UserKnownHostsFile ' + fp.name,
+                    ],
                     check_host_keys='enforce',
                 )
             )
@@ -157,7 +170,9 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             context = self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='has_sudo_password',
-                ssh_args=['-o', 'UserKnownHostsFile ' + fp.name],
+                ssh_args=testlib.SSH_DEFAULT_ARGS + [
+                    '-o', 'UserKnownHostsFile ' + fp.name,
+                ],
                 check_host_keys='accept',
             )
             context.shutdown(wait=True)
@@ -170,7 +185,9 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             context = self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='has_sudo_password',
-                ssh_args=['-o', 'UserKnownHostsFile ' + fp.name],
+                ssh_args=testlib.SSH_DEFAULT_ARGS + [
+                    '-o', 'UserKnownHostsFile ' + fp.name,
+                ],
                 check_host_keys='enforce',
             )
             context.shutdown(wait=True)
@@ -185,6 +202,7 @@ class BannerTest(testlib.DockerMixin, testlib.TestCase):
         context = self.docker_ssh(
             username='mitogen__has_sudo',
             password='has_sudo_password',
+            ssh_args=testlib.SSH_DEFAULT_ARGS,
             ssh_debug_level=3,
         )
         name = 'ssh.%s:%s' % (
