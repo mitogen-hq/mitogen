@@ -364,10 +364,11 @@ class TestCase(unittest2.TestCase):
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
-        if get_fd_count() != self._fd_count_before:
+        fd_count_after = get_fd_count()
+        if fd_count_after != self._fd_count_before:
             import os; os.system('lsof +E -w -p %s | grep -vw mem' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
-                self, self._fd_count_before, get_fd_count(),
+                self, self._fd_count_before, fd_count_after,
             )
 
     # Some class fixtures (like Ansible MuxProcess) start persistent children
