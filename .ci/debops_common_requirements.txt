@@ -1,0 +1,5 @@
+# This should be kept in sync with the Ansible debops collection version,
+# specified in debops_common_install.py
+debops==2.1.2
+importlib-metadata==2.1.0; python_version < "3.0"
+importlib-metadata==3.1.0; python_version >= "3.0"

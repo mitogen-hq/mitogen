@@ -13,5 +13,7 @@ unittest2==1.1.0
 # Fix InsecurePlatformWarning while creating py26 tox environment
 # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
 urllib3[secure]; python_version < '2.7.9'
+# Avoids `AttributeError: __exit__` in tox environment py27-mode_ansible-ansible28-distros_debian-strategy_linear
+pyOpenSSL<20.0.0
 # Last idna compatible with Python 2.6 was idna 2.7.
 idna==2.7; python_version < '2.7'

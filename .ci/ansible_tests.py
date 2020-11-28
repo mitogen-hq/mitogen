@@ -66,8 +66,6 @@ with ci_lib.Fold('job_setup'):
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
 
-    run("bash -c 'sudo ln -vfs /usr/lib/python2.7/plat-x86_64-linux-gnu/_sysconfigdata_nd.py /usr/lib/python2.7 || true'")
-    run("bash -c 'sudo ln -vfs /usr/lib/python2.7/plat-x86_64-linux-gnu/_sysconfigdata_nd.py $VIRTUAL_ENV/lib/python2.7 || true'")
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
