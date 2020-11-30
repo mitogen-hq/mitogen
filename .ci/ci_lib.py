@@ -102,7 +102,30 @@ def run(s, *args, **kwargs):
     return ret
 
 
+def _combine(batch):
+    """Combine a batch of shell command strings into a single string.
+
+    >>> combine(['ls -l', 'grep foo bar.txt'])
+    'set -x; ( ls -l; ) && ( grep foo bar.txt; )'
+    """
+    commands = ' && '.join('( %s; )' % (cmd,) for cmd in batch)
+    return 'set -x; %s' % (commands,)
+
+
 def run_batches(batches):
+    """Execute a list of lists of command strings, verbosely in sub-shells.
+
+    >>> run_batches([
+    ...     ['echo foo', 'echo bar'],
+    ...     ['date --date=@2147483647 --utc'],
+    ... ])
+    + echo foo
+    foo
+    + echo bar
+    bar
+    + date --date=@2147483647 --utc
+    Tue Jan 19 03:14:07 UTC 2038
+    """
     combine = lambda batch: 'set -x; ' + (' && '.join(
         '( %s; )' % (cmd,)
         for cmd in batch
@@ -314,7 +337,8 @@ def check_stray_processes(old, containers=None):
             container['interesting'],
             get_interesting_procs(container['name'])
         )
-
+    if not ok:
+        subprocess.check_call(['pstree'])
     assert ok, 'stray processes were found'
 
 
