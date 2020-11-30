@@ -1,7 +1,7 @@
 # issue #527: catch exceptions from crashy modules.
 
 - name: integration/runner/crashy_new_style_module.yml
-  hosts: test-targets
+  hosts: test_targets
   tasks:
     - custom_python_run_script:
         script: kaboom

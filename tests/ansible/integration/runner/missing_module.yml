@@ -1,13 +1,13 @@
 
 - name: integration/runner/missing_module.yml
-  hosts: test-targets[0]
+  hosts: test_targets[0]
   connection: local
   tasks:
     - connection: local
       command: |
         ansible -vvv
         -i "{{MITOGEN_INVENTORY_FILE}}"
-        test-targets
+        test_targets
         -m missing_module
       args:
         chdir: ../..

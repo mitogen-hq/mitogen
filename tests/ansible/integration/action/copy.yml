@@ -1,7 +1,7 @@
 # Verify copy module for small and large files, and inline content.
 
 - name: integration/action/copy.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - copy:

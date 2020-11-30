@@ -3,7 +3,7 @@
 #
 
 - name: integration/playbook_semantics/become_flags.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 
@@ -15,7 +15,7 @@
     - assert:
         that: "out.stdout == ''"
 
-- hosts: test-targets
+- hosts: test_targets
   any_errors_fatal: true
   become_flags: -E
   tasks:

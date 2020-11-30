@@ -3,7 +3,7 @@
 # to call getcwd() before AnsibleModule has had a chance to clean up the
 # process environment.
 
-- hosts: test-targets
+- hosts: test_targets
   tasks:
   - meta: end_play
     when: not is_mitogen

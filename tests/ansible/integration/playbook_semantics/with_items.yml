@@ -2,7 +2,7 @@
 # the correct context.
 
 - name: integration/playbook_semantics/with_items.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

@@ -1,7 +1,7 @@
 # issue #118 repro: chmod +x not happening during script upload
 
 - name: regression/issue_118__script_not_marked_exec.yml
-  hosts: test-targets
+  hosts: test_targets
   become: True
   tasks:
 

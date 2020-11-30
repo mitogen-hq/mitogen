@@ -3,7 +3,7 @@
 # with_items should crash for other reasons (RAM, file descriptor count, ..)
 
 - name: regression/issue_140__thread_pileup.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

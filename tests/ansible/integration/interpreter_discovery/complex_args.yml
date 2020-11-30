@@ -2,7 +2,7 @@
 ---
 
 - name: integration/interpreter_discovery/complex_args.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   gather_facts: true
   tasks:

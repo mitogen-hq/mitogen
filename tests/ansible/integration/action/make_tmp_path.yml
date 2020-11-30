@@ -8,7 +8,7 @@
 #   https://github.com/dw/mitogen/issues/301
 
 - name: integration/action/make_tmp_path.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - meta: end_play

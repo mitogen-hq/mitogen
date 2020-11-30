@@ -1,7 +1,7 @@
 
 - name: integration/async/result_shell_echo_hi.yml
   gather_facts: true
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

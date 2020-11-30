@@ -2,7 +2,7 @@
 # cleanup of dependent (via=) contexts.
 
 - name: integration/context_service/reconnection.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - mitogen_shutdown_all:

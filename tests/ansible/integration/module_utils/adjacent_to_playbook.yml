@@ -2,7 +2,7 @@
 # external1 is loaded from integration/module_utils/module_utils/..
 
 - name: integration/module_utils/adjacent_to_playbook.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

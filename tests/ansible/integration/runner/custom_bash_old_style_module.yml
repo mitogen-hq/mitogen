@@ -1,5 +1,5 @@
 - name: integration/runner/custom_bash_old_style_module.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

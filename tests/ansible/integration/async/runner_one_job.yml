@@ -2,7 +2,7 @@
 # fields.
 
 - name: integration/async/runner_one_job.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

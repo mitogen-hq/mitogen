@@ -1,7 +1,7 @@
 # Verify the behaviour of _low_level_execute_command().
 
 - name: integration/action/low_level_execute_command.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

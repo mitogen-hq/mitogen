@@ -1,6 +1,6 @@
 - name: regression/issue_177__copy_module_failing.yml
   any_errors_fatal: true
-  hosts: test-targets
+  hosts: test_targets
   tasks:
 
   - copy:

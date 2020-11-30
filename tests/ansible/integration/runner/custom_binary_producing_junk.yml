@@ -1,5 +1,5 @@
 - name: integration/runner/custom_binary_producing_junk.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: true
   tasks:
     - block:
@@ -21,7 +21,7 @@
       when: ansible_system == "Linux"
 
 
-- hosts: test-targets
+- hosts: test_targets
   any_errors_fatal: true
   tasks:
     - assert:

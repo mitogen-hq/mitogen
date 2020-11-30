@@ -3,7 +3,7 @@
 # whatever reason.
 
 - name: integration/ssh/variables.yml
-  hosts: test-targets[0]
+  hosts: test_targets[0]
   connection: local
   vars:
     # ControlMaster has the effect of caching the previous auth to the same
@@ -18,7 +18,7 @@
       shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_ssh_user=mitogen__has_sudo
         -e ansible_ssh_pass=has_sudo_password
       args:
@@ -29,7 +29,7 @@
     - shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_ssh_user=mitogen__has_sudo
         -e ansible_ssh_pass=wrong_password
       args:
@@ -47,7 +47,7 @@
       shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_pass=has_sudo_password
       args:
@@ -58,7 +58,7 @@
     - shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_pass=wrong_password
       args:
@@ -76,7 +76,7 @@
       shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_password=has_sudo_password
       args:
@@ -87,7 +87,7 @@
     - shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_password=wrong_password
       args:
@@ -110,7 +110,7 @@
       shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_user=mitogen__has_sudo_pubkey
         -e ansible_ssh_private_key_file=../data/docker/mitogen__has_sudo_pubkey.key
       args:
@@ -121,7 +121,7 @@
     - shell: >
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
-        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+        ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_private_key_file=/dev/null
       args:

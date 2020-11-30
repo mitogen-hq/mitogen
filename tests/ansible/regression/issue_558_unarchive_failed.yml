@@ -2,7 +2,7 @@
 # respecting the passed in 'tmp' parameter on Ansible 2.3.
 
 - name: regression/issue_558_unarchive_failed.yml
-  hosts: test-targets
+  hosts: test_targets
   tasks:
   - file: state=absent path=/tmp/foo
   - file: state=directory path=/tmp/foo

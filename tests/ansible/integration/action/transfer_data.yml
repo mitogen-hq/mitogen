@@ -1,6 +1,6 @@
 
 - name: integration/action/transfer_data.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

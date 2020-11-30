@@ -3,7 +3,7 @@
 # child Ansible via sudo. But that only works if sudo works.
 
 - name: integration/stub_connections/setns_lxc.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: false
   any_errors_fatal: false
   connection: local

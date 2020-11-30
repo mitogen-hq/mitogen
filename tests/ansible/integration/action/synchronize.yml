@@ -1,7 +1,7 @@
 # Verify basic operation of the synchronize module.
 
 - name: integration/action/synchronize.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   vars:
     ansible_user: mitogen__has_sudo_pubkey

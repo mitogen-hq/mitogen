@@ -1,7 +1,7 @@
 # Verify the value of the Connection.homedir attribute is as expected.
 
 - name: integration/connection/home_dir.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - name: "Find out root's homedir."

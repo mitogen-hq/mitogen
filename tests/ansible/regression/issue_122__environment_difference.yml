@@ -6,7 +6,7 @@
 #
 
 - name: regression/issue_122__environment_difference.yml
-  hosts: test-targets
+  hosts: test_targets
   tasks:
 
   - script: scripts/print_env.py

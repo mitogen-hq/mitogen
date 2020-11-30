@@ -3,7 +3,7 @@
 
 - name: regression/issue_113__duplicate_module_imports.yml
   any_errors_fatal: true
-  hosts: test-targets
+  hosts: test_targets
   tasks:
 
   - name: Get auth token

@@ -2,7 +2,7 @@
 ---
 
 - name: integration/interpreter_discovery/ansible_2_8_tests.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   gather_facts: true
   tasks:

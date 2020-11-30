@@ -4,7 +4,7 @@
 # can test for.
 
 - name: regression/issue_152__local_action_wrong_interpreter.yml
-  hosts: test-targets
+  hosts: test_targets
   connection: local
   any_errors_fatal: true
   tasks:

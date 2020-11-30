@@ -2,7 +2,7 @@
 ---
 
 - name: integration/connection/exec_command.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: no
   any_errors_fatal: true
   tasks:

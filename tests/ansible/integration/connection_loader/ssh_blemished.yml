@@ -1,7 +1,7 @@
 # Ensure 'ssh' connections are grabbed.
 
 - name: integration/connection_loader__ssh_blemished.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - determine_strategy:

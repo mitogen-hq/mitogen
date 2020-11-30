@@ -3,7 +3,7 @@
 # but less likely to brick a development workstation
 
 - name: integration/runner/etc_environment.yml
-  hosts: test-targets[0]
+  hosts: test_targets[0]
   any_errors_fatal: true
   gather_facts: true
   tasks:
