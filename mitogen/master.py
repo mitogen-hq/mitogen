@@ -212,6 +212,10 @@ def _py_filename(path):
     if basepath in SPECIAL_FILE_PATHS:
         return path, True
 
+    # return None, False means that the filename passed to _py_filename does not appear
+    # to be python, and code later will handle when this function returns None
+    # see https://github.com/dw/mitogen/pull/715#discussion_r532380528 for how this
+    # decision was made to handle non-python files in this manner
     return None, False
 
 
