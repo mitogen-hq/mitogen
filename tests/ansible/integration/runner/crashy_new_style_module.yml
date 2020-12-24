@@ -14,8 +14,8 @@
         - out.rc == 1
         # ansible/62d8c8fde6a76d9c567ded381e9b34dad69afcd6
         - |
-          (ansible_version.full < '2.7' and out.msg == "MODULE FAILURE") or
-          (ansible_version.full >= '2.7' and
+          (ansible_version.full is version('2.7', '<') and out.msg == "MODULE FAILURE") or
+          (ansible_version.full is version('2.7', '>=') and
            out.msg == (
             "MODULE FAILURE\n" +
             "See stdout/stderr for the exact error"

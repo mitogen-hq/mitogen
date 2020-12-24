@@ -43,6 +43,7 @@ import os
 import random
 
 from ansible.executor import module_common
+from ansible.collections.list import list_collection_dirs
 import ansible.errors
 import ansible.module_utils
 import ansible.release
@@ -57,7 +58,8 @@ import ansible_mitogen.target
 LOG = logging.getLogger(__name__)
 NO_METHOD_MSG = 'Mitogen: no invocation method found for: '
 NO_INTERPRETER_MSG = 'module (%s) is missing interpreter line'
-NO_MODULE_MSG = 'The module %s was not found in configured module paths.'
+# NOTE: Ansible 2.10 no longer has a `.` at the end of NO_MODULE_MSG error
+NO_MODULE_MSG = 'The module %s was not found in configured module paths'
 
 _planner_by_path = {}
 
@@ -99,6 +101,10 @@ class Invocation(object):
         #: Initially ``{}``, but set by :func:`invoke`. Optional source to send
         #: to :func:`propagate_paths_and_modules` to fix Python3.5 relative import errors
         self._overridden_sources = {}
+        #: Initially ``set()``, but set by :func:`invoke`. Optional source paths to send
+        #: to :func:`propagate_paths_and_modules` to handle loading source dependencies from
+        #: places outside of the main source path, such as collections
+        self._extra_sys_paths = set()
 
     def get_module_source(self):
         if self._module_source is None:
@@ -478,8 +484,10 @@ def _propagate_deps(invocation, planner, context):
 
         context=context,
         paths=planner.get_push_files(),
-        modules=planner.get_module_deps(),
-        overridden_sources=invocation._overridden_sources
+        # modules=planner.get_module_deps(), TODO
+        overridden_sources=invocation._overridden_sources,
+        # needs to be a list because can't unpickle() a set()
+        extra_sys_paths=list(invocation._extra_sys_paths),
     )
 
 
@@ -545,16 +553,27 @@ def _fix_py35(invocation, module_source):
     We replace a relative import in the setup module with the actual full file path
     This works in vanilla Ansible but not in Mitogen otherwise
     """
-    if invocation.module_name == 'setup' and \
+    if invocation.module_name in {'ansible.builtin.setup', 'setup'} and \
             invocation.module_path not in invocation._overridden_sources:
         # in-memory replacement of setup module's relative import
         # would check for just python3.5 and run this then but we don't know the
         # target python at this time yet
+        # NOTE: another ansible 2.10-specific fix: `from ..module_utils` used to be `from ...module_utils`
         module_source = module_source.replace(
-            b"from ...module_utils.basic import AnsibleModule",
+            b"from ..module_utils.basic import AnsibleModule",
             b"from ansible.module_utils.basic import AnsibleModule"
         )
         invocation._overridden_sources[invocation.module_path] = module_source
+
+
+def _load_collections(invocation):
+    """
+    Special loader that ensures that `ansible_collections` exist as a module path for import
+    Goes through all collection path possibilities and stores paths to installed collections
+    Stores them on the current invocation to later be passed to the master service
+    """
+    for collection_path in list_collection_dirs():
+        invocation._extra_sys_paths.add(collection_path.decode('utf-8'))
 
 
 def invoke(invocation):
@@ -579,6 +598,9 @@ def invoke(invocation):
 
     invocation.module_path = mitogen.core.to_text(path)
     if invocation.module_path not in _planner_by_path:
+        if 'ansible_collections' in invocation.module_path:
+            _load_collections(invocation)
+
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(

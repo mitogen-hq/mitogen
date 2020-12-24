@@ -89,6 +89,14 @@ except NameError:
 RLOG = logging.getLogger('mitogen.ctx')
 
 
+# there are some cases where modules are loaded in memory only, such as
+# ansible collections, and the module "filename" doesn't actually exist
+SPECIAL_FILE_PATHS = {
+    "__synthetic__",
+    "<ansible_synthetic_collection_package>"
+}
+
+
 def _stdlib_paths():
     """
     Return a set of paths from which Python imports the standard library.
@@ -138,7 +146,7 @@ def is_stdlib_path(path):
     )
 
 
-def get_child_modules(path):
+def get_child_modules(path, fullname):
     """
     Return the suffixes of submodules directly neated beneath of the package
     directory at `path`.
@@ -147,12 +155,19 @@ def get_child_modules(path):
         Path to the module's source code on disk, or some PEP-302-recognized
         equivalent. Usually this is the module's ``__file__`` attribute, but
         is specified explicitly to avoid loading the module.
+    :param str fullname:
+        Name of the package we're trying to get child modules for
 
     :return:
         List of submodule name suffixes.
     """
-    it = pkgutil.iter_modules([os.path.dirname(path)])
-    return [to_text(name) for _, name, _ in it]
+    mod_path = os.path.dirname(path)
+    if mod_path != '':
+        return [to_text(name) for _, name, _ in pkgutil.iter_modules([mod_path])]
+    else:
+        # we loaded some weird package in memory, so we'll see if it has a custom loader we can use
+        loader = pkgutil.find_loader(fullname)
+        return [to_text(name) for name, _ in loader.iter_modules(None)] if loader else []
 
 
 def _looks_like_script(path):
@@ -177,17 +192,31 @@ def _looks_like_script(path):
 
 
 def _py_filename(path):
+    """
+    Returns a tuple of a Python path (if the file looks Pythonic) and whether or not
+    the Python path is special. Special file paths/modules might only exist in memory
+    """
     if not path:
-        return None
+        return None, False
 
     if path[-4:] in ('.pyc', '.pyo'):
         path = path.rstrip('co')
 
     if path.endswith('.py'):
-        return path
+        return path, False
 
     if os.path.exists(path) and _looks_like_script(path):
-        return path
+        return path, False
+
+    basepath = os.path.basename(path)
+    if basepath in SPECIAL_FILE_PATHS:
+        return path, True
+
+    # return None, False means that the filename passed to _py_filename does not appear
+    # to be python, and code later will handle when this function returns None
+    # see https://github.com/dw/mitogen/pull/715#discussion_r532380528 for how this
+    # decision was made to handle non-python files in this manner
+    return None, False
 
 
 def _get_core_source():
@@ -498,9 +527,13 @@ class PkgutilMethod(FinderMethod):
             return
 
         try:
-            path = _py_filename(loader.get_filename(fullname))
+            path, is_special = _py_filename(loader.get_filename(fullname))
             source = loader.get_source(fullname)
             is_pkg = loader.is_package(fullname)
+
+            # workaround for special python modules that might only exist in memory
+            if is_special and is_pkg and not source:
+                source = '\n'
         except (AttributeError, ImportError):
             # - Per PEP-302, get_source() and is_package() are optional,
             #   calling them may throw AttributeError.
@@ -549,7 +582,7 @@ class SysModulesMethod(FinderMethod):
                       fullname, alleged_name, module)
             return
 
-        path = _py_filename(getattr(module, '__file__', ''))
+        path, _ = _py_filename(getattr(module, '__file__', ''))
         if not path:
             return
 
@@ -639,7 +672,7 @@ class ParentEnumerationMethod(FinderMethod):
 
     def _found_module(self, fullname, path, fp, is_pkg=False):
         try:
-            path = _py_filename(path)
+            path, _ = _py_filename(path)
             if not path:
                 return
 
@@ -971,7 +1004,7 @@ class ModuleResponder(object):
             self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
-            pkg_present = get_child_modules(path)
+            pkg_present = get_child_modules(path, fullname)
             self._log.debug('%s is a package at %s with submodules %r',
                             fullname, path, pkg_present)
         else:
