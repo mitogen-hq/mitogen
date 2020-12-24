@@ -8,23 +8,7 @@ steps:
 - script: "PYTHONVERSION=$(python.version) .ci/prep_azure.py"
   displayName: "Run prep_azure.py"
 
-# The VSTS-shipped Pythons available via UsePythonVErsion are pure garbage,
-# broken symlinks, incorrect permissions and missing codecs. So we use the
-# deadsnakes PPA to get sane Pythons, and setup a virtualenv to install our
-# stuff into. The virtualenv can probably be removed again, but this was a
-# hard-fought battle and for now I am tired of this crap.
 - script: |
-    # need wheel before building virtualenv because of bdist_wheel and setuptools deps
-    # Mac's System Integrity Protection prevents symlinking /usr/bin
-    # and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
-    # the || will activate when running python3 tests
-    # TODO: get python3 tests passing
-    (sudo ln -fs /usr/bin/python$(python.version) /usr/bin/python &&
-      /usr/bin/python -m pip install -U pip wheel setuptools &&
-      /usr/bin/python -m pip install -U virtualenv &&
-      /usr/bin/python -m virtualenv /tmp/venv -p /usr/bin/python$(python.version)) ||
-    (sudo /usr/bin/python$(python.version) -m pip install -U pip wheel setuptools &&
-      /usr/bin/python$(python.version) -m venv /tmp/venv)
     echo "##vso[task.prependpath]/tmp/venv/bin"
 
   displayName: activate venv

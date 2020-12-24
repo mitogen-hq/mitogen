@@ -375,7 +375,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # wait_for_connection, the `ping` test from Ansible won't pass because we lost connection
         # clearing out context forces a reconnect
         # see https://github.com/dw/mitogen/issues/655 and Ansible's `wait_for_connection` module for more info
-        if module_name == 'ping' and type(self).__name__ == 'wait_for_connection':
+        if module_name == 'ansible.legacy.ping' and type(self).__name__ == 'wait_for_connection':
             self._connection.context = None
 
         self._connection._connect()

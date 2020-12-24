@@ -59,4 +59,6 @@ except ImportError:  # Ansible <2.4
 
 # These are original, unwrapped implementations
 action_loader__get = action_loader.get
-connection_loader__get = connection_loader.get
+# NOTE: this used to be `connection_loader.get`; breaking change unless we do a hack based on
+# ansible version again
+connection_loader__get = connection_loader.get_with_context
