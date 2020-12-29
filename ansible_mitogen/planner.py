@@ -553,7 +553,7 @@ def _fix_py35(invocation, module_source):
     We replace a relative import in the setup module with the actual full file path
     This works in vanilla Ansible but not in Mitogen otherwise
     """
-    if invocation.module_name in {'ansible.builtin.setup', 'setup'} and \
+    if invocation.module_name in {'ansible.builtin.setup', 'ansible.legacy.setup', 'setup'} and \
             invocation.module_path not in invocation._overridden_sources:
         # in-memory replacement of setup module's relative import
         # would check for just python3.5 and run this then but we don't know the
