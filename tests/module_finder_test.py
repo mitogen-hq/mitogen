@@ -308,7 +308,6 @@ if sys.version_info > (2, 6):
         #   AttributeError: module 'html.parser' has no attribute
         #   'HTMLParseError'
         #
-        import pkg_resources._vendor.six
         from django.utils.six.moves import html_parser as _html_parser
         _html_parser.HTMLParseError = Exception
 
