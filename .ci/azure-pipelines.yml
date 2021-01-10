@@ -17,7 +17,6 @@ jobs:
       Mito27_27:
         python.version: '2.7'
         MODE: mitogen
-        VER: 2.10.0
       # TODO: test python3, python3 tests are broken
       Ans210_27:
         python.version: '2.7'
@@ -46,7 +45,6 @@ jobs:
         python.version: '2.7'
         MODE: mitogen
         DISTRO: debian
-        VER: 2.10.0
 
       #MitoPy27CentOS6_26:
         #python.version: '2.7'
@@ -57,13 +55,11 @@ jobs:
         python.version: '3.6'
         MODE: mitogen
         DISTRO: centos6
-        VER: 2.10.0
 
       Mito37Debian_27:
         python.version: '3.7'
         MODE: mitogen
         DISTRO: debian
-        VER: 2.10.0
 
       #Py26CentOS7:
         #python.version: '2.7'
