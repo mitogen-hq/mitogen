@@ -31,14 +31,14 @@ class RunWithRouterTest(testlib.TestCase):
     def test_run_with_broker(self):
         router = mitogen.utils.run_with_router(func0)
         self.assertIsInstance(router, mitogen.master.Router)
-        self.assertFalse(router.broker._thread.isAlive())
+        self.assertFalse(testlib.threading__thread_is_alive(router.broker._thread))
 
 
 class WithRouterTest(testlib.TestCase):
     def test_with_broker(self):
         router = func()
         self.assertIsInstance(router, mitogen.master.Router)
-        self.assertFalse(router.broker._thread.isAlive())
+        self.assertFalse(testlib.threading__thread_is_alive(router.broker._thread))
 
 
 class Dict(dict): pass
