@@ -7,7 +7,7 @@ import mitogen
 VERSION = '%s.%s.%s' % mitogen.__version__
 
 author = u'Network Genomics'
-copyright = u'2019, Network Genomics'
+copyright = u'2021, the Mitogen authors'
 exclude_patterns = ['_build', '.venv']
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 'sphinxcontrib.programoutput', 'domainrefs']
 
