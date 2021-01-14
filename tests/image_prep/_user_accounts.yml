@@ -167,7 +167,8 @@
     - name: Require password for two accounts
       lineinfile:
         path: /etc/sudoers
-        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}) ALL"
+        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}:ALL) ALL"
+        validate: '/usr/sbin/visudo -cf %s'
       with_items:
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
@@ -175,7 +176,8 @@
     - name: Allow passwordless sudo for require_tty/readonly_homedir
       lineinfile:
         path: /etc/sudoers
-        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}) NOPASSWD:ALL"
+        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}:ALL) NOPASSWD:ALL"
+        validate: '/usr/sbin/visudo -cf %s'
       with_items:
         - mitogen__require_tty
         - mitogen__readonly_homedir
@@ -183,5 +185,6 @@
     - name: Allow passwordless for many accounts
       lineinfile:
         path: /etc/sudoers
-        line: "{{lookup('pipe', 'whoami')}} ALL = (mitogen__{{item}}) NOPASSWD:ALL"
+        line: "{{lookup('pipe', 'whoami')}} ALL = (mitogen__{{item}}:ALL) NOPASSWD:ALL"
+        validate: '/usr/sbin/visudo -cf %s'
       with_items: "{{normal_users}}"

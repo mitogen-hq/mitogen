@@ -11,6 +11,7 @@
 - include: connection_loader/all.yml
 - include: context_service/all.yml
 - include: glibc_caches/all.yml
+- include: interpreter_discovery/all.yml
 - include: local/all.yml
 - include: module_utils/all.yml
 - include: playbook_semantics/all.yml

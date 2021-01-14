@@ -9,7 +9,7 @@ Mitogen for Ansible
 
 **Mitogen for Ansible** is a completely redesigned UNIX connection layer and
 module runtime for `Ansible`_. Requiring minimal configuration changes, it
-updates Ansible's slow and wasteful shell-centic implementation with
+updates Ansible's slow and wasteful shell-centric implementation with
 pure-Python equivalents, invoked via highly efficient remote procedure calls to
 persistent interpreters tunnelled over SSH. No changes are required to target
 hosts.
@@ -145,7 +145,7 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.8 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
+* Ansible 2.3-2.9 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
   your installation is running one of these versions by checking ``ansible
   --version`` output.
 
@@ -169,9 +169,7 @@ Noteworthy Differences
       - initech_app
       - y2k_fix
 
-* Ansible 2.8 `interpreter discovery
-  <https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html>`_
-  and `become plugins
+* Ansible `become plugins
   <https://docs.ansible.com/ansible/latest/plugins/become.html>`_ are not yet
   supported.
 
@@ -245,7 +243,9 @@ Noteworthy Differences
 ..
     * The ``ansible_python_interpreter`` variable is parsed using a restrictive
       :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
-      FOO=bar python``, which occur in practice. Ansible `documents this
+      FOO=bar python`` or ``source /opt/rh/rh-python36/enable && python``, which
+      occur in practice. Jinja2 templating is also supported for complex task-level
+      interpreter settings. Ansible `documents this
       <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
       as an absolute path, however the implementation passes it unquoted through
       the shell, permitting arbitrary code to be injected.
@@ -1009,7 +1009,7 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``mitogen_ssh_keepalive_count``: integer count of server keepalive messages to
   which no reply is received before considering the SSH server dead. Defaults
   to 10.
-* ``mitogen_ssh_keepalive_count``: integer seconds delay between keepalive
+* ``mitogen_ssh_keepalive_interval``: integer seconds delay between keepalive
   messages. Defaults to 30.
 
 

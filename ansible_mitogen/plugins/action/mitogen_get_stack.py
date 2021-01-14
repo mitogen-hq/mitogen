@@ -52,4 +52,6 @@ class ActionModule(ActionBase):
             'changed': True,
             'result': stack,
             '_ansible_verbose_always': True,
+            # for ansible < 2.8, we'll default to /usr/bin/python like before
+            'discovered_interpreter': self._connection._action._discovered_interpreter
         }

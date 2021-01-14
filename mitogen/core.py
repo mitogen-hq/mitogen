@@ -2801,7 +2801,7 @@ class Waker(Protocol):
             self.stream.transmit_side.write(b(' '))
         except OSError:
             e = sys.exc_info()[1]
-            if e.args[0] in (errno.EBADF, errno.EWOULDBLOCK):
+            if e.args[0] not in (errno.EBADF, errno.EWOULDBLOCK):
                 raise
 
     broker_shutdown_msg = (

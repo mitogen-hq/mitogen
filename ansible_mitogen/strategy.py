@@ -52,9 +52,9 @@ try:
 except ImportError:
     Sentinel = None
 
+ANSIBLE_VERSION_MIN = (2, 10)
+ANSIBLE_VERSION_MAX = (2, 10)
 
-ANSIBLE_VERSION_MIN = (2, 3)
-ANSIBLE_VERSION_MAX = (2, 9)
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
     "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
@@ -132,8 +132,7 @@ def wrap_action_loader__get(name, *args, **kwargs):
     get_kwargs = {'class_only': True}
     if name in ('fetch',):
         name = 'mitogen_' + name
-    if ansible.__version__ >= '2.8':
-        get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
+    get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
 
     klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
     if klass:
@@ -217,7 +216,7 @@ class AnsibleWrappers(object):
         with references to the real functions.
         """
         ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
-        ansible_mitogen.loaders.connection_loader.get = wrap_connection_loader__get
+        ansible_mitogen.loaders.connection_loader.get_with_context = wrap_connection_loader__get
 
         global worker__run
         worker__run = ansible.executor.process.worker.WorkerProcess.run
@@ -230,7 +229,7 @@ class AnsibleWrappers(object):
         ansible_mitogen.loaders.action_loader.get = (
             ansible_mitogen.loaders.action_loader__get
         )
-        ansible_mitogen.loaders.connection_loader.get = (
+        ansible_mitogen.loaders.connection_loader.get_with_context = (
             ansible_mitogen.loaders.connection_loader__get
         )
         ansible.executor.process.worker.WorkerProcess.run = worker__run

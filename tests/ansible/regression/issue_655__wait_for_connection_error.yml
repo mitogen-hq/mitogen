@@ -1,0 +1,85 @@
+# https://github.com/dw/mitogen/issues/655
+# Spins up a Centos8 container and runs the wait_for_connection test inside of it
+# Doing it this way because the shutdown command causes issues in our tests
+#   since things are ran on localhost; Azure DevOps loses connection and fails
+# TODO: do we want to install docker a different way to be able to do this for other tests too
+---
+# this should only run on our Mac hosts
+- hosts: target
+  any_errors_fatal: True
+  gather_facts: yes
+  become: no
+  tasks:
+    - name: set up test container and run tests inside it
+      block:
+        - name: install deps
+          block:
+            - name: install docker
+              shell: |
+                # NOTE: for tracking purposes: https://github.com/docker/for-mac/issues/2359
+                # using docker for mac CI workaround: https://github.com/drud/ddev/pull/1748/files#diff-19288f650af2dabdf1dcc5b354d1f245
+                DOCKER_URL=https://download.docker.com/mac/stable/31259/Docker.dmg && 
+                curl -O -sSL $DOCKER_URL && 
+                open -W Docker.dmg && cp -r /Volumes/Docker/Docker.app /Applications
+                sudo /Applications/Docker.app/Contents/MacOS/Docker --quit-after-install --unattended && 
+                ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/docker && 
+                nohup /Applications/Docker.app/Contents/MacOS/Docker --unattended & 
+                # wait 2 min for docker to come up
+                counter=0 && 
+                  while ! /usr/local/bin/docker ps 2>/dev/null ; do
+                    if [ $counter -lt 24 ]; then
+                      let counter=counter+1
+                    else
+                      exit 1
+                    fi
+                    sleep 5
+                  done
+
+        # python bindings (docker_container) aren't working on this host, so gonna shell out
+        - name: create docker container
+          shell: /usr/local/bin/docker run --name testMitogen -d --rm centos:8 bash -c "sleep infinity & wait"
+
+        - name: add container to inventory
+          add_host:
+            name: testMitogen
+            ansible_connection: docker
+            ansible_user: root
+          changed_when: false
+          environment:
+            PATH: /usr/local/bin/:{{ ansible_env.PATH }}
+
+        - name: run tests
+          block:
+            # to repro the issue, will create /var/run/reboot-required
+            - name: create test file
+              file:
+                path: /var/run/reboot-required
+                state: touch
+
+            - name: Check if reboot is required
+              stat:
+                path: /var/run/reboot-required
+              register: reboot_required
+
+            - name: Reboot server
+              shell: sleep 2 && shutdown -r now "Ansible updates triggered"
+              async: 1
+              poll: 0
+              when: reboot_required.stat.exists == True
+
+            - name: Wait 300 seconds for server to become available
+              wait_for_connection:
+                delay: 30
+                timeout: 300
+              when: reboot_required.stat.exists == True
+
+            - name: cleanup test file
+              file:
+                path: /var/run/reboot-required
+                state: absent
+          delegate_to: testMitogen
+          environment:
+            PATH: /usr/local/bin/:{{ ansible_env.PATH }}
+
+        - name: remove test container
+          shell: /usr/local/bin/docker stop testMitogen
