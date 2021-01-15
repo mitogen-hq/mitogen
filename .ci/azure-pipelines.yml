@@ -66,6 +66,12 @@ jobs:
         DISTRO: debian
         VER: 2.10.0
 
+      Mito39Debian_27:
+        python.version: '3.9'
+        MODE: mitogen
+        DISTRO: debian
+        VER: 2.10.0
+
       #Py26CentOS7:
         #python.version: '2.7'
         #MODE: mitogen
@@ -115,5 +121,10 @@ jobs:
 
       Ansible_210_35:
         python.version: '3.5'
+        MODE: ansible
+        VER: 2.10.0
+
+      Ansible_210_39:
+        python.version: '3.9'
         MODE: ansible
         VER: 2.10.0
