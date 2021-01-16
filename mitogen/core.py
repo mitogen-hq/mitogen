@@ -1269,6 +1269,9 @@ class Importer(object):
         # a negative round-trip.
         'builtins',
         '__builtin__',
+
+        # Python 2.x module that was renamed to _thread in 3.x.
+        # This entry avoids a roundtrip on 2.x -> 3.x.
         'thread',
 
         # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
