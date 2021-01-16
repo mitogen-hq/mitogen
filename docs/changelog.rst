@@ -26,6 +26,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 * :gh:issue:`758` fix initilialisation of callback plugins in test suite, to
   to address a `KeyError` in
   :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+* :gh:issue:`775` Add msvcrt to the default module deny list
 
 
 v0.2.9 (2019-11-02)
