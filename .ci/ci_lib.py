@@ -49,6 +49,10 @@ def have_apt():
     proc = subprocess.Popen('apt --help >/dev/null 2>/dev/null', shell=True)
     return proc.wait() == 0
 
+def have_brew():
+    proc = subprocess.Popen('brew help >/dev/null 2>/dev/null', shell=True)
+    return proc.wait() == 0
+
 
 def have_docker():
     proc = subprocess.Popen('docker info >/dev/null 2>/dev/null', shell=True)
