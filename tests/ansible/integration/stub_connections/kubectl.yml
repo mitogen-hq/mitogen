@@ -8,7 +8,7 @@
     when: not is_mitogen
 
   - meta: end_play
-    when: ansible_version.full < '2.5'
+    when: ansible_version.full is version_compare('2.5', '<', strict=true)
 
   - custom_python_detect_environment:
     vars:

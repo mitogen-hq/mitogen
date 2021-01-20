@@ -5,14 +5,16 @@
 import ansible
 from ansible.module_utils.basic import AnsibleModule
 
-if ansible.__version__ > '2.8':
+ansible_version = tuple(int(s) for s in ansible.__version__.split('.'))
+
+if ansible_version[:2] >= (2, 8):
     from ansible.module_utils import distro
 else:
     distro = None
 
 def main():
     module = AnsibleModule(argument_spec={})
-    if ansible.__version__ > '2.8':
+    if ansible_version[:2] >= (2, 8):
         module.exit_json(info=distro.info())
     else:
         module.exit_json(info={'id': None})

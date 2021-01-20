@@ -144,7 +144,7 @@ def subprocess__Popen__close_fds(self, but):
 
 if (
     sys.platform.startswith(u'linux') and
-    sys.version < u'3.0' and
+    sys.version_info[:2] < (3, 0) and
     hasattr(subprocess.Popen, u'_close_fds') and
     not mitogen.is_master
 ):

@@ -127,24 +127,24 @@
             assert:
               that:
               - auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python3'
-            when: distro == 'fedora' and distro_version is version('23', '>=')
+            when: distro == 'fedora' and distro_version is version_compare('23', '>=')
 
           - name: rhel assertions
             assert:
               that:
               # rhel 6/7
-              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and distro_version is version('8','<')) or distro_version is version('8','>=')
+              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and distro_version is version_compare('8','<')) or distro_version is version_compare('8','>=')
               # rhel 8+
-              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/libexec/platform-python' and distro_version is version('8','>=')) or distro_version is version('8','<')
+              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/libexec/platform-python' and distro_version is version_compare('8','>=')) or distro_version is version_compare('8','<')
             when: distro in ('redhat', 'centos')
 
           - name: ubuntu assertions
             assert:
               that:
               # ubuntu < 16
-              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and distro_version is version('16.04','<')) or distro_version is version('16.04','>=')
+              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and distro_version is version_compare('16.04','<')) or distro_version is version_compare('16.04','>=')
               # ubuntu >= 16
-              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python3' and distro_version is version('16.04','>=')) or distro_version is version('16.04','<')
+              - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python3' and distro_version is version_compare('16.04','>=')) or distro_version is version_compare('16.04','<')
             when: distro == 'ubuntu'
 
           - name: mac assertions

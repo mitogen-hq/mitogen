@@ -226,7 +226,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         with a pipelined call to :func:`ansible_mitogen.target.prune_tree`.
         """
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
-        if tmp_path is None and ansible.__version__ > '2.6':
+        if tmp_path is None and ansible_mitogen.util.ansible_version[:2] > (2, 6):
             tmp_path = self._connection._shell.tmpdir  # 06f73ad578d
         if tmp_path is not None:
             self._connection.get_chain().call_no_reply(
@@ -335,7 +335,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
     def _set_temp_file_args(self, module_args, wrap_async):
         # Ansible>2.5 module_utils reuses the action's temporary directory if
         # one exists. Older versions error if this key is present.
-        if ansible.__version__ > '2.5':
+        if ansible_mitogen.util.ansible_version[:2] > (2, 5):
             if wrap_async:
                 # Sharing is not possible with async tasks, as in that case,
                 # the directory must outlive the action plug-in.
@@ -346,7 +346,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # If _ansible_tmpdir is unset, Ansible>2.6 module_utils will use
         # _ansible_remote_tmp as the location to create the module's temporary
         # directory. Older versions error if this key is present.
-        if ansible.__version__ > '2.6':
+        if ansible_mitogen.util.ansible_version[:2] > (2, 6):
             module_args['_ansible_remote_tmp'] = (
                 self._connection.get_good_temp_dir()
             )
@@ -393,7 +393,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             )
         )
 
-        if tmp and ansible.__version__ < '2.5' and delete_remote_tmp:
+        if tmp and ansible_mitogen.util.ansible_version[:2] < (2, 5) and delete_remote_tmp:
             # Built-in actions expected tmpdir to be cleaned up automatically
             # on _execute_module().
             self._remove_tmp_path(tmp)

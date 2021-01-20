@@ -53,6 +53,7 @@ import mitogen.select
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
 import ansible_mitogen.target
+import ansible_mitogen.util
 
 
 LOG = logging.getLogger(__name__)
@@ -453,7 +454,7 @@ def py_modname_from_path(name, path):
         except ValueError:
             pass
 
-    if ansible.__version__ < '2.7':
+    if ansible_mitogen.util.ansible_version[:2] < (2, 7):
         return 'ansible_module_' + name
 
     return 'ansible.modules.' + name

@@ -60,4 +60,5 @@
   - assert:
       that:
         - result2.stdout == 'im_alive'
-    when: ansible_version.full > '2.8'  # ansible#51393
+    # https://github.com/ansible/ansible/issues/51393
+    when: ansible_version.full is version_compare('2.8', '>', strict=true)

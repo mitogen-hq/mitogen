@@ -26,7 +26,7 @@ except NameError:
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
-        python_version=sys.version[:3],
+        python_version='%i.%i' % sys.version_info[:2],
         argv=sys.argv,
         __file__=__file__,
         argv_types_correct=all(type(s) is str for s in sys.argv),
