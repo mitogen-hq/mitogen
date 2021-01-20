@@ -42,6 +42,7 @@ import ansible_mitogen.affinity
 import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
+import ansible_mitogen.util
 
 import ansible
 import ansible.executor.process.worker
@@ -71,23 +72,22 @@ OLD_VERSION_MSG = (
 )
 
 
-def _assert_supported_release():
+def _assert_supported_release(version=ansible_mitogen.util.ansible_version,
+                              version_min=ANSIBLE_VERSION_MIN,
+                              version_max=ANSIBLE_VERSION_MAX,
+                              ):
     """
     Throw AnsibleError with a descriptive message in case of being loaded into
     an unsupported Ansible release.
     """
-    v = ansible.__version__
-    if not isinstance(v, tuple):
-        v = tuple(distutils.version.LooseVersion(v).version)
-
-    if v[:2] < ANSIBLE_VERSION_MIN:
+    if version[:2] < version_min:
         raise ansible.errors.AnsibleError(
-            OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
+            OLD_VERSION_MSG % (version.join('.'), version_min.join('.'))
         )
 
-    if v[:2] > ANSIBLE_VERSION_MAX:
+    if version[:2] > version_max:
         raise ansible.errors.AnsibleError(
-            NEW_VERSION_MSG % (ansible.__version__, ANSIBLE_VERSION_MAX)
+            NEW_VERSION_MSG % (version.join('.'), version_max.join('.'))
         )
 
 

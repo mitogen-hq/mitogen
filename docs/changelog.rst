@@ -25,6 +25,7 @@ This release separates itself from the v0.2.X releases. Ansible's API changed to
 
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
+* :gh:issue:`786` correctly compare versions for compatibility checks
 
 
 v0.2.10 (unreleased)
