@@ -18,6 +18,8 @@ cache:
 
 install:
 - grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
+# https://blog.travis-ci.com/docker-rate-limits
+- echo "$DOCKER_HUB_ACCESS_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
 - pip install -U pip==20.2.1
 - .ci/${MODE}_install.py
 

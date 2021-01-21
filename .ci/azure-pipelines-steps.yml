@@ -7,6 +7,10 @@ parameters:
 steps:
 - script: "PYTHONVERSION=$(python.version) .ci/prep_azure.py"
   displayName: "Run prep_azure.py"
+  env:
+    # https://docs.microsoft.com/en-gb/azure/devops/pipelines/process/variables?view=azure-devops&tabs=yaml%2Cbatch#secret-variables
+    DOCKER_HUB_ACCESS_TOKEN: $(docker hub access token)
+    DOCKER_HUB_USERNAME: $(docker hub username)
 
 - script: |
     echo "##vso[task.prependpath]/tmp/venv/bin"

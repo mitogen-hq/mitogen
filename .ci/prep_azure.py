@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import subprocess
 import sys
 
 import ci_lib
@@ -88,6 +89,13 @@ batches.append(venv_steps)
 
 
 if ci_lib.have_docker():
+    # Authenticate to Docker Hub, so rate limits cause fewer build failures
+    # https://www.docker.com/increase-rate-limits
+    # Don't use ci_lib.run*(), so the token is not written to logs or build output
+    subprocess.check_call(
+        'echo "$DOCKER_HUB_ACCESS_TOKEN" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin',
+        shell=True,
+    )
     batches.extend(
         ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
         for distro in ci_lib.DISTROS
