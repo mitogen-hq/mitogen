@@ -16,7 +16,7 @@ batches = [
 ]
 
 batches.extend(
-    ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
+    ['docker pull %s' % (ci_lib.image_for_distro(distro),), 'sleep 1']
     for distro in ci_lib.DISTROS
 )
 
