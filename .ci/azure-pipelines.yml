@@ -6,19 +6,30 @@
 jobs:
 
 - job: Mac
+  # vanilla Ansible is really slow
+  timeoutInMinutes: 120
   steps:
   - template: azure-pipelines-steps.yml
   pool:
-    vmImage: macOS-10.14
+    vmImage: macOS-10.15
   strategy:
     matrix:
       Mito27_27:
         python.version: '2.7'
         MODE: mitogen
-      Ans288_27:
+        VER: 2.10.0
+      # TODO: test python3, python3 tests are broken
+      Ans210_27:
         python.version: '2.7'
         MODE: localhost_ansible
-        VER: 2.8.8
+        VER: 2.10.0
+
+      # NOTE: this hangs when ran in Ubuntu 18.04
+      Vanilla_210_27:
+        python.version: '2.7'
+        MODE: localhost_ansible
+        VER: 2.10.0
+        STRATEGY: linear
 
 
 - job: Linux
@@ -35,6 +46,7 @@ jobs:
         python.version: '2.7'
         MODE: mitogen
         DISTRO: debian
+        VER: 2.10.0
 
       #MitoPy27CentOS6_26:
         #python.version: '2.7'
@@ -45,6 +57,13 @@ jobs:
         python.version: '3.6'
         MODE: mitogen
         DISTRO: centos6
+        VER: 2.10.0
+
+      Mito37Debian_27:
+        python.version: '3.7'
+        MODE: mitogen
+        DISTRO: debian
+        VER: 2.10.0
 
       #Py26CentOS7:
         #python.version: '2.7'
@@ -88,12 +107,12 @@ jobs:
         #DISTROS: debian
         #STRATEGY: linear
 
-      Ansible_280_27:
+      Ansible_210_27:
         python.version: '2.7'
         MODE: ansible
-        VER: 2.8.0
+        VER: 2.10.0
 
-      Ansible_280_35:
+      Ansible_210_35:
         python.version: '3.5'
         MODE: ansible
-        VER: 2.8.0
+        VER: 2.10.0

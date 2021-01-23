@@ -9,7 +9,7 @@ Mitogen for Ansible
 
 **Mitogen for Ansible** is a completely redesigned UNIX connection layer and
 module runtime for `Ansible`_. Requiring minimal configuration changes, it
-updates Ansible's slow and wasteful shell-centic implementation with
+updates Ansible's slow and wasteful shell-centric implementation with
 pure-Python equivalents, invoked via highly efficient remote procedure calls to
 persistent interpreters tunnelled over SSH. No changes are required to target
 hosts.
@@ -145,7 +145,7 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.8 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
+* Ansible 2.3-2.9 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
   your installation is running one of these versions by checking ``ansible
   --version`` output.
 
@@ -1025,7 +1025,7 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``mitogen_ssh_keepalive_count``: integer count of server keepalive messages to
   which no reply is received before considering the SSH server dead. Defaults
   to 10.
-* ``mitogen_ssh_keepalive_count``: integer seconds delay between keepalive
+* ``mitogen_ssh_keepalive_interval``: integer seconds delay between keepalive
   messages. Defaults to 30.
 
 

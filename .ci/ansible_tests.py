@@ -37,9 +37,6 @@ with ci_lib.Fold('docker_setup'):
 
 
 with ci_lib.Fold('job_setup'):
-    # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
-    run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
-
     os.chdir(TESTS_DIR)
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
 
@@ -66,10 +63,6 @@ with ci_lib.Fold('job_setup'):
     ci_lib.dump_file(inventory_path)
 
     if not ci_lib.exists_in_path('sshpass'):
-        # fix errors with apt-get update
-        run("sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 78BD65473CB3BD13")
-        run("sudo sed -i -e 's#deb https://downloads.apache.org/cassandra/debian 39x main#deb http://downloads.apache.org/cassandra/debian 39x main#g' /etc/apt/sources.list.d/cassandra.list")
-
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
 
@@ -79,7 +72,7 @@ with ci_lib.Fold('job_setup'):
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
-        run('./run_ansible_playbook.py %s -i "%s" %s',
+        run('./run_ansible_playbook.py %s -i "%s" -vvv %s',
             playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
     except:
         pause_if_interactive()

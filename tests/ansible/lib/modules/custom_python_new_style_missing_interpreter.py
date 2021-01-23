@@ -2,8 +2,11 @@
 
 import sys
 
-# This is the magic marker Ansible looks for:
+# As of Ansible 2.10, Ansible changed new-style detection: # https://github.com/ansible/ansible/pull/61196/files#diff-5675e463b6ce1fbe274e5e7453f83cd71e61091ea211513c93e7c0b4d527d637L828-R980
+# NOTE: this import works for Mitogen, and the import below matches new-style Ansible 2.10
+# TODO: find out why 1 import won't work for both Mitogen and Ansible
 # from ansible.module_utils.
+# import ansible.module_utils.
 
 
 def usage():

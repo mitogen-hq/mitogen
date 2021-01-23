@@ -371,6 +371,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._compute_environment_string(env)
         self._set_temp_file_args(module_args, wrap_async)
 
+        # there's a case where if a task shuts down the node and then immediately calls
+        # wait_for_connection, the `ping` test from Ansible won't pass because we lost connection
+        # clearing out context forces a reconnect
+        # see https://github.com/dw/mitogen/issues/655 and Ansible's `wait_for_connection` module for more info
+        if module_name == 'ansible.legacy.ping' and type(self).__name__ == 'wait_for_connection':
+            self._connection.context = None
+
         self._connection._connect()
         result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(

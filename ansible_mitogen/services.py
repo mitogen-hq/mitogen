@@ -170,6 +170,12 @@ class ContextService(mitogen.service.Service):
         """
         LOG.debug('%r.reset(%r)', self, stack)
 
+        # this could happen if we have a `shutdown -r` shell command
+        # and then a `wait_for_connection` right afterwards
+        # in this case, we have no stack to disconnect from
+        if not stack:
+            return False
+
         l = mitogen.core.Latch()
         context = None
         with self._lock:

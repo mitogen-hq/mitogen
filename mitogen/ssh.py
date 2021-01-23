@@ -72,7 +72,10 @@ PASSWORD_PROMPT_PATTERN = re.compile(
 )
 
 HOSTKEY_REQ_PATTERN = re.compile(
-    b(r'are you sure you want to continue connecting \(yes/no\)\?'),
+    b(
+            r'are you sure you want to continue connecting '
+            r'\(yes/no(?:/\[fingerprint\])?\)\?'
+    ),
     re.I
 )
 

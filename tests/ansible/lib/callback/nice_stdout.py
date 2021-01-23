@@ -20,6 +20,8 @@ DefaultModule = callback_loader.get('default', class_only=True)
 DOCUMENTATION = '''
     callback: nice_stdout
     type: stdout
+    extends_documentation_fragment:
+      - default_callback
     options:
       check_mode_markers:
         name: Show markers when running in check mode
@@ -74,6 +76,10 @@ def printi(tio, obj, key=None, indent=0):
 
 
 class CallbackModule(DefaultModule):
+    CALLBACK_VERSION = 2.0
+    CALLBACK_TYPE = 'stdout'
+    CALLBACK_NAME = 'nice_stdout'
+
     def _dump_results(self, result, *args, **kwargs):
         try:
             tio = io.StringIO()
