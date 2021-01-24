@@ -184,7 +184,11 @@ def get_docker_hostname():
 
 
 def image_for_distro(distro):
-    return 'mitogen/%s-test' % (distro.partition('-')[0],)
+    """Return the container image name or path for a test distro name.
+
+    The returned value is suitable for use with `docker pull`.
+    """
+    return 'public.ecr.aws/n5z0e8q9/%s-test' % (distro.partition('-')[0],)
 
 
 def make_containers(name_prefix='', port_offset=0):
