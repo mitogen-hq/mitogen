@@ -254,14 +254,16 @@ def get_docker_hostname():
 
 
 def image_for_distro(distro):
-    """Return the docker image for running `distro` in a container.
+    """Return the container image name or path for a test distro name.
+
+    The returned value is suitable for use with `docker pull`.
 
     >>> image_for_distro('centos5')
-    'mitogen/centos5-test'
+    'public.ecr.aws/n5z0e8q9/centos5-test'
     >>> image_for_distro('centos5-something_custom')
-    'mitogen/centos5-test'
+    'public.ecr.aws/n5z0e8q9/centos5-test'
     """
-    return 'mitogen/%s-test' % (distro.partition('-')[0],)
+    return 'public.ecr.aws/n5z0e8q9/%s-test' % (distro.partition('-')[0],)
 
 
 def make_containers(name_prefix='', port_offset=0):
