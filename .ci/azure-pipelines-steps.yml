@@ -37,3 +37,5 @@ steps:
 
 - script: .ci/$(MODE)_tests.py
   displayName: "Run $(MODE)_tests.py"
+  env:
+    NOCOVERAGE: 1

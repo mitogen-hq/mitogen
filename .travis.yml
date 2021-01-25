@@ -16,6 +16,9 @@ cache:
 - directories:
   - /home/travis/virtualenv
 
+env:
+  - NOCOVERAGE=1
+
 install:
 - grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
 - .ci/${MODE}_install.py
