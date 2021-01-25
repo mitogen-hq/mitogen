@@ -3867,7 +3867,7 @@ class ExternalContext(object):
         else:
             core_src_fd = self.config.get('core_src_fd', 101)
             if core_src_fd:
-                fp = os.fdopen(core_src_fd, 'rb', 1)
+                fp = os.fdopen(core_src_fd, 'rb', 0)
                 try:
                     core_src = fp.read()
                     # Strip "ExternalContext.main()" call from last line.
