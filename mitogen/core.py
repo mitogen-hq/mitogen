@@ -1269,6 +1269,13 @@ class Importer(object):
         # a negative round-trip.
         'builtins',
         '__builtin__',
+
+        # On some Python releases (e.g. 3.8, 3.9) the subprocess module tries
+        # to import of this Windows-only builtin module.
+        'msvcrt',
+
+        # Python 2.x module that was renamed to _thread in 3.x.
+        # This entry avoids a roundtrip on 2.x -> 3.x.
         'thread',
 
         # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
