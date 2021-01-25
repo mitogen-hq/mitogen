@@ -2,3 +2,5 @@
   tasks:
   - include_tasks: _includes.yml
     with_sequence: start=1 end=1000
+  tags:
+    - resource_intensive

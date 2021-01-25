@@ -30,6 +30,7 @@ jobs:
         MODE: localhost_ansible
         VER: 2.10.0
         STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
 
 
 - job: Linux

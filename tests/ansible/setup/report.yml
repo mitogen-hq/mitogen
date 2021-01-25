@@ -1,0 +1,8 @@
+- name: Report runtime settings
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - debug: {var: ansible_forks}
+    - debug: {var: ansible_run_tags}
+    - debug: {var: ansible_skip_tags}
+    - debug: {var: ansible_version.full}
