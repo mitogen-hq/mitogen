@@ -40,10 +40,20 @@ def grep_version():
                 return '.'.join(map(str, eval(s)))
 
 
+def long_description():
+    here = os.path.dirname(__file__)
+    readme_path = os.path.join(here, 'README.md')
+    with open(readme_path) as fp:
+        readme = fp.read()
+    return readme
+
+
 setup(
     name = 'mitogen',
     version = grep_version(),
     description = 'Library for writing distributed self-replicating programs.',
+    long_description = long_description(),
+    long_description_content_type='text/markdown',
     author = 'David Wilson',
     license = 'New BSD',
     url = 'https://github.com/mitogen-hq/mitogen/',
