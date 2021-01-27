@@ -37,7 +37,7 @@ def grep_version():
         for line in fp:
             if line.startswith('__version__'):
                 _, _, s = line.partition('=')
-                return '.'.join(map(str, eval(s)))
+                return '%i.%i.%i%s%i' % eval(s)
 
 
 def long_description():
