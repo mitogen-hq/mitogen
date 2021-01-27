@@ -46,7 +46,7 @@ setup(
     description = 'Library for writing distributed self-replicating programs.',
     author = 'David Wilson',
     license = 'New BSD',
-    url = 'https://github.com/dw/mitogen/',
+    url = 'https://github.com/mitogen-hq/mitogen/',
     packages = find_packages(exclude=['tests', 'examples']),
     zip_safe = False,
     classifiers = [
