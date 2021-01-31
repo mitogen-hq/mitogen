@@ -30,6 +30,7 @@ jobs:
         MODE: localhost_ansible
         VER: 2.10.0
         STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
 
 
 - job: Linux
@@ -61,6 +62,12 @@ jobs:
 
       Mito37Debian_27:
         python.version: '3.7'
+        MODE: mitogen
+        DISTRO: debian
+        VER: 2.10.0
+
+      Mito39Debian_27:
+        python.version: '3.9'
         MODE: mitogen
         DISTRO: debian
         VER: 2.10.0
@@ -114,5 +121,10 @@ jobs:
 
       Ansible_210_35:
         python.version: '3.5'
+        MODE: ansible
+        VER: 2.10.0
+
+      Ansible_210_39:
+        python.version: '3.9'
         MODE: ansible
         VER: 2.10.0

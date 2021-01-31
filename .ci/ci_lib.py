@@ -84,12 +84,28 @@ if 'TRAVIS_HOME' in os.environ:
 # -----------------
 
 def _argv(s, *args):
+    """Interpolate a command line using *args, return an argv style list.
+
+    >>> _argv('git commit -m "Use frobnicate 2.0 (fixes #%d)"', 1234)
+    ['git', commit', '-m', 'Use frobnicate 2.0 (fixes #1234)']
+    """
     if args:
         s %= args
     return shlex.split(s)
 
 
 def run(s, *args, **kwargs):
+    """ Run a command, with arguments, and print timing information
+
+    >>> rc = run('echo "%s %s"', 'foo', 'bar')
+    Running: ['/usr/bin/time', '--', 'echo', 'foo bar']
+    foo bar
+    0.00user 0.00system 0:00.00elapsed ?%CPU (0avgtext+0avgdata 1964maxresident)k
+    0inputs+0outputs (0major+71minor)pagefaults 0swaps
+    Finished running: ['/usr/bin/time', '--', 'echo', 'foo bar']
+    >>> rc
+    0
+    """
     argv = ['/usr/bin/time', '--'] + _argv(s, *args)
     print('Running: %s' % (argv,))
     try:
@@ -102,12 +118,36 @@ def run(s, *args, **kwargs):
     return ret
 
 
-def run_batches(batches):
-    combine = lambda batch: 'set -x; ' + (' && '.join(
+def combine(batch):
+    """
+    >>> combine(['ls -l', 'echo foo'])
+    'set -x; ( ls -l; ) && ( echo foo; )'
+    """
+    return 'set -x; ' + (' && '.join(
         '( %s; )' % (cmd,)
         for cmd in batch
     ))
 
+
+def run_batches(batches):
+    """ Run shell commands grouped into batches, showing an execution trace.
+
+    Raise AssertionError if any command has exits with a non-zero status.
+
+    >>> run_batches([['echo foo', 'true']])
+    + echo foo
+    foo
+    + true
+    >>> run_batches([['true', 'echo foo'], ['false']])
+    + true
+    + echo foo
+    foo
+    + false
+    Traceback (most recent call last):
+    File "...", line ..., in <module>
+    File "...", line ..., in run_batches
+    AssertionError
+    """
     procs = [
         subprocess.Popen(combine(batch), shell=True)
         for batch in batches
@@ -116,12 +156,28 @@ def run_batches(batches):
 
 
 def get_output(s, *args, **kwargs):
+    """
+    Print and run command line s, %-interopolated using *args. Return stdout.
+
+    >>> s = get_output('echo "%s %s"', 'foo', 'bar')
+    Running: ['echo', 'foo bar']
+    >>> s
+    'foo bar\n'
+    """
     argv = _argv(s, *args)
     print('Running: %s' % (argv,))
     return subprocess.check_output(argv, **kwargs)
 
 
 def exists_in_path(progname):
+    """
+    Return True if proganme exists in $PATH.
+
+    >>> exists_in_path('echo')
+    True
+    >>> exists_in_path('kwyjibo') # Only found in North American cartoons
+    False
+    """
     return any(os.path.exists(os.path.join(dirname, progname))
                for dirname in os.environ['PATH'].split(os.pathsep))
 
@@ -136,6 +192,18 @@ class TempDir(object):
 
 
 class Fold(object):
+    """
+    Bracket a section of stdout with travis_fold markers.
+
+    This allows the section to be collapsed or expanded in Travis CI web UI.
+
+    >>> with Fold('stage 1'):
+    ...     print('Frobnicate the frobnitz')
+    ...
+    travis_fold:start:stage 1
+    Frobnicate the frobnitz
+    travis_fold:end:stage 1
+    """
     def __init__(self, name):
         self.name = name
 
@@ -175,6 +243,8 @@ os.environ['PYTHONPATH'] = '%s:%s' % (
 )
 
 def get_docker_hostname():
+    """Return the hostname where the docker daemon is running.
+    """
     url = os.environ.get('DOCKER_HOST')
     if url in (None, 'http+docker://localunixsocket'):
         return 'localhost'
@@ -184,10 +254,34 @@ def get_docker_hostname():
 
 
 def image_for_distro(distro):
-    return 'mitogen/%s-test' % (distro.partition('-')[0],)
+    """Return the container image name or path for a test distro name.
+
+    The returned value is suitable for use with `docker pull`.
+
+    >>> image_for_distro('centos5')
+    'public.ecr.aws/n5z0e8q9/centos5-test'
+    >>> image_for_distro('centos5-something_custom')
+    'public.ecr.aws/n5z0e8q9/centos5-test'
+    """
+    return 'public.ecr.aws/n5z0e8q9/%s-test' % (distro.partition('-')[0],)
 
 
 def make_containers(name_prefix='', port_offset=0):
+    """
+    >>> import pprint
+    >>> BASE_PORT=2200; DISTROS=['debian', 'centos6']
+    >>> pprint.pprint(make_containers())
+    [{'distro': 'debian',
+      'hostname': 'localhost',
+      'name': 'target-debian-1',
+      'port': 2201,
+      'python_path': '/usr/bin/python'},
+     {'distro': 'centos6',
+      'hostname': 'localhost',
+      'name': 'target-centos6-2',
+      'port': 2202,
+      'python_path': '/usr/bin/python'}]
+    """
     docker_hostname = get_docker_hostname()
     firstbit = lambda s: (s+'-').split('-')[0]
     secondbit = lambda s: (s+'-').split('-')[1]
@@ -260,6 +354,14 @@ def get_interesting_procs(container_name=None):
 
 
 def start_containers(containers):
+    """Run docker containers in the background, with sshd on specified ports.
+
+    >>> containers = start_containers([
+    ...     {'distro': 'debian', 'hostname': 'localhost',
+    ...      'name': 'target-debian-1', 'port': 2201,
+    ...      'python_path': '/usr/bin/python'},
+    ... ])
+    """
     if os.environ.get('KEEP'):
         return
 
