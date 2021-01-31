@@ -43,12 +43,4 @@ if ci_lib.have_apt():
             .format(pv=os.environ['PYTHONVERSION'])
     ])
 
-
-if ci_lib.have_docker():
-    batches.extend(
-        ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
-        for distro in ci_lib.DISTROS
-    )
-
-
 ci_lib.run_batches(batches)

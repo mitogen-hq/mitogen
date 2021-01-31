@@ -14,17 +14,25 @@ steps:
 # stuff into. The virtualenv can probably be removed again, but this was a
 # hard-fought battle and for now I am tired of this crap.
 - script: |
-    # need wheel before building virtualenv because of bdist_wheel and setuptools deps
-    # Mac's System Integrity Protection prevents symlinking /usr/bin
-    # and Azure isn't allowing disabling it apparently: https://developercommunityapi.westus.cloudapp.azure.com/idea/558702/allow-disabling-sip-on-microsoft-hosted-macos-agen.html
-    # the || will activate when running python3 tests
     # TODO: get python3 tests passing
-    (sudo ln -fs /usr/bin/python$(python.version) /usr/bin/python &&
-      /usr/bin/python -m pip install -U pip wheel setuptools &&
-      /usr/bin/python -m pip install -U virtualenv &&
-      /usr/bin/python -m virtualenv /tmp/venv -p /usr/bin/python$(python.version)) ||
-    (sudo /usr/bin/python$(python.version) -m pip install -U pip wheel setuptools &&
-      /usr/bin/python$(python.version) -m venv /tmp/venv)
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+    set -x
+
+    # Ensure virtualenv is in system-wide $PATH on OSX, for Ansible test tasks
+    # that use it, e.g. regression/issue_152__virtualenv_python_fails.yml
+    if [[ -d /Library/Frameworks/Python.framework/Versions/2.7/bin ]]; then
+        echo $PATH
+        which python
+        python -m pip install -U pip virtualenv
+        ln -s  /Library/Frameworks/Python.framework/Versions/2.7/bin/virtualenv /usr/local/bin/virtualenv
+        virtualenv --version
+    fi
+
+    # Create virtualenv using desired Python version, to run the testcases
+    python$(python.version) -m pip install -U pip wheel setuptools virtualenv
+    python$(python.version) -m virtualenv /tmp/venv -p python$(python.version)
     echo "##vso[task.prependpath]/tmp/venv/bin"
 
   displayName: activate venv
@@ -37,3 +45,5 @@ steps:
 
 - script: .ci/$(MODE)_tests.py
   displayName: "Run $(MODE)_tests.py"
+  env:
+    NOCOVERAGE: 1
