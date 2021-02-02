@@ -23,6 +23,7 @@ v0.3.0 (unreleased)
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
 `See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
 
+* :gh:issue:`636` os.chdir fails if the sudo/become user lacks adequate permissions to chdir prior to task
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
 
@@ -30,6 +31,7 @@ This release separates itself from the v0.2.X releases. Ansible's API changed to
 v0.2.10 (unreleased)
 --------------------
 
+* :gh:issue:`636` os.chdir fails if the sudo/become user lacks adequate permissions to chdir prior to task
 * :gh:issue:`597` mitogen does not support Ansible 2.8 Python interpreter detection
 * :gh:issue:`655` wait_for_connection gives errors
 * :gh:issue:`672` cannot perform relative import error
