@@ -4,13 +4,13 @@
 # usage: release-notes.py 0.2.6
 
 import sys
-import urllib
+import urllib.request
 import lxml.html
 
 import subprocess
 
 
-response = urllib.urlopen('https://mitogen.networkgenomics.com/changelog.html')
+response = urllib.request.urlopen('https://mitogen.networkgenomics.com/changelog.html')
 tree = lxml.html.parse(response)
 
 prefix = 'v' + sys.argv[1].replace('.', '-')
