@@ -79,8 +79,12 @@ def is_path_dead(path):
     return False
 
 
-def make_socket_path():
-    return tempfile.mktemp(prefix='mitogen_unix_', suffix='.sock')
+def make_socket_path(dir=None):
+    return tempfile.mktemp(
+        prefix='mitogen_unix_',
+        suffix='.sock',
+        dir=dir,
+    )
 
 
 class ListenerStream(mitogen.core.Stream):

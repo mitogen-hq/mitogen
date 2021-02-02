@@ -627,7 +627,10 @@ class MuxProcess(object):
         #: MuxProcess CPU index.
         self.index = index
         #: Individual path of this process.
-        self.path = mitogen.unix.make_socket_path()
+        self.path = mitogen.unix.make_socket_path(
+            # issue #754: overlong temp paths may easily overflow sockaddr_un
+            dir=os.environ.get('MITOGEN_UNIX_DIR'),
+        )
 
     def start(self):
         self.pid = os.fork()

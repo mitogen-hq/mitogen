@@ -515,6 +515,18 @@ In summary, for each task Ansible may create one or more of:
 * ``$TMPDIR/ansible_<modname>_payload_.../`` owned by the become user,
 * ``$TMPDIR/ansible-module-tmp-.../`` owned by the become user.
 
+Temporary Files (Controller)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To create UNIX sockets used for inter-process communication on the Ansible
+controller host, Mitogen normally uses a temporary directory selected
+by the :mod:`tempfile` module, however is possible the selected directory
+cannot be used as its name its path exceeds the system-defined 108 byte limit
+on UNIX socket paths.
+
+In this case, the ``MITOGEN_UNIX_DIR`` environment variable may be used to
+define an alternative directory.
+
 
 Mitogen for Ansible
 ^^^^^^^^^^^^^^^^^^^
