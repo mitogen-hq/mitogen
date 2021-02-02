@@ -4,7 +4,7 @@ import sys
 sys.path.append('..')
 sys.path.append('.')
 import mitogen
-VERSION = '%s.%s.%s' % mitogen.__version__
+VERSION = '%s.%s.%s' % mitogen.__version__[:3]
 
 author = u'Network Genomics'
 copyright = u'2021, the Mitogen authors'
