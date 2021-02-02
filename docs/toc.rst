@@ -14,6 +14,7 @@ Table Of Contents
    getting_started
    examples
    internals
+   development
 
 .. toctree::
    :hidden:
