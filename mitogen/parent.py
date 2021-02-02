@@ -692,9 +692,11 @@ class PartialZlib(object):
     A full compression costs ~6ms on a modern machine, this method costs ~35
     usec.
     """
+    HAS_COPY = hasattr(zlib.compressobj(), 'copy')
+
     def __init__(self, s):
         self.s = s
-        if sys.version_info > (2, 5):
+        if self.HAS_COPY:
             self._compressor = zlib.compressobj(9)
             self._out = self._compressor.compress(s)
             self._out += self._compressor.flush(zlib.Z_SYNC_FLUSH)
