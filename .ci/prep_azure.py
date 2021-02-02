@@ -86,12 +86,4 @@ if need_to_fix_psycopg2:
 
 batches.append(venv_steps)
 
-
-if ci_lib.have_docker():
-    batches.extend(
-        ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
-        for distro in ci_lib.DISTROS
-    )
-
-
 ci_lib.run_batches(batches)

@@ -1,5 +1,5 @@
 sudo: required
-dist: trusty
+dist: xenial  # Ubuntu 16.04 LTS
 
 notifications:
   email: false
@@ -17,7 +17,6 @@ cache:
   - /home/travis/virtualenv
 
 install:
-- grep -Erl git-lfs\|couchdb /etc/apt | sudo xargs rm -v
 - pip install -U pip==20.2.1
 - .ci/${MODE}_install.py
 
@@ -53,6 +52,9 @@ matrix:
     - python: "3.6"
       env: MODE=ansible VER=2.10.0
     # 2.10 -> {debian, centos6, centos7}
+    - python: "3.9"
+      env: MODE=ansible VER=2.10.0
+    # 2.10 -> {debian, centos6, centos7}
     - python: "2.7"
       env: MODE=ansible VER=2.10.0
     # 2.10 -> {debian, centos6, centos7}
@@ -72,6 +74,8 @@ matrix:
     #- python: "2.7"
       #env: MODE=mitogen DISTRO=centos6
     - python: "3.6"
+      env: MODE=mitogen DISTRO=centos7
+    - python: "3.9"
       env: MODE=mitogen DISTRO=centos7
     # 2.6 -> 2.7
     # - python: "2.6"
