@@ -1,3 +1,11 @@
+---
+name: Mitogen 0.3.x bug report
+about: Report a bug in Mitogen 0.3.x (for Ansible 2.10.x)
+title: ''
+labels: affects-0.3, bug
+assignees: ''
+
+---
 
 Please drag-drop large logs as text file attachments.
 
