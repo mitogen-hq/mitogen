@@ -217,9 +217,12 @@ class Fold(object):
 
 os.environ.setdefault('ANSIBLE_STRATEGY',
     os.environ.get('STRATEGY', 'mitogen_linear'))
+# Ignoreed when MODE=mitogen
 ANSIBLE_VERSION = os.environ.get('VER', '2.6.2')
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Used only when MODE=mitogen
 DISTRO = os.environ.get('DISTRO', 'debian')
+# Used only when MODE=ansible
 DISTROS = os.environ.get('DISTROS', 'debian centos6 centos7').split()
 TARGET_COUNT = int(os.environ.get('TARGET_COUNT', '2'))
 BASE_PORT = 2200
