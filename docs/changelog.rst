@@ -23,6 +23,8 @@ v0.3.0 (unreleased)
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
 `See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
 
+* :gh:pull:`683`: Previously broken :mod:`mitogen.fakessh` functionality
+  is restored
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
 
