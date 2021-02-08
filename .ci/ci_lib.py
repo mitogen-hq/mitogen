@@ -125,6 +125,20 @@ def combine(batch):
     ))
 
 
+def throttle(batch, pause=1):
+    """
+    Add pauses between commands in a batch
+
+    >>> throttle(['echo foo', 'echo bar', 'echo baz'])
+    ['echo foo', 'sleep 1', 'echo bar', 'sleep 1', 'echo baz']
+    """
+    def _with_pause(batch, pause):
+        for cmd in batch:
+            yield cmd
+            yield 'sleep %i' % (pause,)
+    return list(_with_pause(batch, pause))[:-1]
+
+
 def run_batches(batches):
     """ Run shell commands grouped into batches, showing an execution trace.
 
