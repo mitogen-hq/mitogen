@@ -45,16 +45,10 @@ import ansible_mitogen.connection
 import ansible_mitogen.loaders
 
 
-_class = ansible_mitogen.loaders.connection_loader__get(
+_get_result = ansible_mitogen.loaders.connection_loader__get(
     'kubectl',
     class_only=True,
 )
-
-if _class:
-    kubectl = sys.modules[_class.__module__]
-    del _class
-else:
-    kubectl = None
 
 
 class Connection(ansible_mitogen.connection.Connection):
@@ -66,13 +60,19 @@ class Connection(ansible_mitogen.connection.Connection):
     )
 
     def __init__(self, *args, **kwargs):
-        if kubectl is None:
+        if not _get_result:
             raise AnsibleConnectionFailure(self.not_supported_msg)
         super(Connection, self).__init__(*args, **kwargs)
 
     def get_extra_args(self):
+        try:
+            # Ansible < 2.10, _get_result is the connection class
+            connection_options = _get_result.connection_options
+        except AttributeError:
+            # Ansible >= 2.10, _get_result is a get_with_context_result
+            connection_options = _get_result.object.connection_options
         parameters = []
-        for key, option in iteritems(kubectl.CONNECTION_OPTIONS):
+        for key, option in iteritems(connection_options):
             if self.get_task_var('ansible_' + key) is not None:
                 parameters += [ option, self.get_task_var('ansible_' + key) ]
 
