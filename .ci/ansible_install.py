@@ -11,13 +11,14 @@ batches = [
         'pip install '
             '-r tests/requirements.txt '
             '-r tests/ansible/requirements.txt',
-        'pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
+        # encoding is required for installing ansible 2.10 with pip2, otherwise we get a UnicodeDecode error
+        'LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
     ]
 ]
 
-batches.extend(
-    ['docker pull %s' % (ci_lib.image_for_distro(distro),)]
+batches.append(ci_lib.throttle(
+    'docker pull %s' % (ci_lib.image_for_distro(distro),)
     for distro in ci_lib.DISTROS
-)
+))
 
 ci_lib.run_batches(batches)

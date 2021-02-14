@@ -14,14 +14,37 @@ Release Notes
         }
     </style>
 
+To avail of fixes in an unreleased version, please download a ZIP file
+`directly from GitHub <https://github.com/dw/mitogen/>`_.
+
+v0.3.0 (unreleased)
+--------------------
+
+This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
+`See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
+
+* :gh:issue:`770` better check for supported Ansible version
+* :gh:issue:`731` ansible 2.10 support
+* :gh:issue:`652` support for ansible collections import hook
+* :gh:issue:`730` support for :ans:conn:`~chroot`
+
 
 v0.2.10 (unreleased)
 --------------------
 
-To avail of fixes in an unreleased version, please download a ZIP file
-`directly from GitHub <https://github.com/dw/mitogen/>`_.
+* :gh:issue:`597` mitogen does not support Ansible 2.8 Python interpreter detection
+* :gh:issue:`655` wait_for_connection gives errors
+* :gh:issue:`672` cannot perform relative import error
+* :gh:issue:`673` mitogen fails on RHEL8 server with bash /usr/bin/python: No such file or directory
+* :gh:issue:`676` mitogen fail to run playbook without “/usr/bin/python” on target host
+* :gh:issue:`716` fetch fails with "AttributeError: 'ShellModule' object has no attribute 'tmpdir'"
+* :gh:issue:`756` ssh connections with `check_host_keys='accept'` would
+  timeout, when using recent OpenSSH client versions.
+* :gh:issue:`758` fix initilialisation of callback plugins in test suite, to address a `KeyError` in
+  :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+* :gh:issue:`775` Test with Python 3.9
+* :gh:issue:`775` Add msvcrt to the default module deny list
 
-* added support for :ans:conn:`~chroot`
 
 v0.2.9 (2019-11-02)
 -------------------

@@ -2,6 +2,10 @@
   hosts: test-targets
   any_errors_fatal: true
   tasks:
+    # without Mitogen Ansible 2.10 hangs on this play
+    - meta: end_play
+      when: not is_mitogen
+
     - custom_python_new_style_module:
         foo: true
       with_sequence: start=0 end={{end|default(1)}}

@@ -28,7 +28,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals('1', context.call(os.getenv, 'THIS_IS_STUB_DOAS'))
 
 
-# TODO: https://github.com/dw/mitogen/issues/694 they are flaky on python 2.6 MODE=mitogen DISTRO=centos7
+# TODO: https://github.com/dw/mitogen/issues/694 they are flaky on python 2.6 MODE=mitogen DISTROS=centos7
 # class DoasTest(testlib.DockerMixin, testlib.TestCase):
 #     # Only mitogen/debian-test has doas.
 #     mitogen_test_distro = 'debian'

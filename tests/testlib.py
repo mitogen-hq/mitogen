@@ -103,6 +103,18 @@ if hasattr(subprocess.Popen, 'terminate'):
     Popen__terminate = subprocess.Popen.terminate
 
 
+def threading__thread_is_alive(thread):
+    """Return whether the thread is alive (Python version compatibility shim).
+
+    On Python >= 3.8 thread.isAlive() is deprecated (removed in Python 3.9).
+    On Python <= 2.5 thread.is_alive() isn't present (added in Python 2.6).
+    """
+    try:
+        return thread.is_alive()
+    except AttributeError:
+        return thread.isAlive()
+
+
 def wait_for_port(
         host,
         port,
@@ -334,7 +346,9 @@ class TestCase(unittest2.TestCase):
         for thread in threading.enumerate():
             name = thread.getName()
             # Python 2.4: enumerate() may return stopped threads.
-            assert (not thread.isAlive()) or name in self.ALLOWED_THREADS, \
+            assert \
+                not threading__thread_is_alive(thread) \
+                or name in self.ALLOWED_THREADS, \
                 'Found thread %r still running after tests.' % (name,)
             counts[name] = counts.get(name, 0) + 1
 

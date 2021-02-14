@@ -15,7 +15,7 @@
         content: |
           #!/bin/bash
           export CUSTOM_INTERPRETER=1
-          exec python2.7 "$@"
+          exec python "$@"
 
     - custom_python_detect_environment:
       vars:

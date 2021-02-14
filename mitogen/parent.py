@@ -42,6 +42,7 @@ import heapq
 import inspect
 import logging
 import os
+import platform
 import re
 import signal
 import socket
@@ -1434,7 +1435,10 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            if sys.platform == 'darwin' and sys.executable == '/usr/bin/python':
+            # this doesn't apply anymore to Mac OSX 10.15+ (Darwin 19+), new interpreter looks like this:
+            # /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
+            if sys.platform == 'darwin' and sys.executable == '/usr/bin/python' and \
+                    int(platform.release()[:2]) < 19:
                 sys.executable += sys.version[:3]
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
