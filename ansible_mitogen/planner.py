@@ -436,25 +436,15 @@ def py_modname_from_path(name, path):
     Fetch the logical name of a new-style module as it might appear in
     :data:`sys.modules` of the target's Python interpreter.
 
-    * For Ansible <2.7, this is an unpackaged module named like
-      "ansible_module_%s".
-
-    * For Ansible <2.9, this is an unpackaged module named like
-      "ansible.modules.%s"
-
     * Since Ansible 2.9, modules appearing within a package have the original
       package hierarchy approximated on the target, enabling relative imports
       to function correctly. For example, "ansible.modules.system.setup".
     """
-    # 2.9+
     if _get_ansible_module_fqn:
         try:
             return _get_ansible_module_fqn(path)
         except ValueError:
             pass
-
-    if ansible.__version__ < '2.7':
-        return 'ansible_module_' + name
 
     return 'ansible.modules.' + name
 

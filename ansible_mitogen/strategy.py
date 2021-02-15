@@ -27,7 +27,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import absolute_import
-import distutils.version
 import os
 import signal
 import threading
@@ -43,52 +42,8 @@ import ansible_mitogen.loaders
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 
-import ansible
 import ansible.executor.process.worker
-
-try:
-    # 2.8+ has a standardized "unset" object.
-    from ansible.utils.sentinel import Sentinel
-except ImportError:
-    Sentinel = None
-
-ANSIBLE_VERSION_MIN = (2, 10)
-ANSIBLE_VERSION_MAX = (2, 10)
-
-NEW_VERSION_MSG = (
-    "Your Ansible version (%s) is too recent. The most recent version\n"
-    "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
-    "release notes to see if a new version is available, otherwise\n"
-    "subscribe to the corresponding GitHub issue to be notified when\n"
-    "support becomes available.\n"
-    "\n"
-    "    https://mitogen.rtfd.io/en/latest/changelog.html\n"
-    "    https://github.com/dw/mitogen/issues/\n"
-)
-OLD_VERSION_MSG = (
-    "Your version of Ansible (%s) is too old. The oldest version supported by "
-    "Mitogen for Ansible is %s."
-)
-
-
-def _assert_supported_release():
-    """
-    Throw AnsibleError with a descriptive message in case of being loaded into
-    an unsupported Ansible release.
-    """
-    v = ansible.__version__
-    if not isinstance(v, tuple):
-        v = tuple(distutils.version.LooseVersion(v).version)
-
-    if v[:2] < ANSIBLE_VERSION_MIN:
-        raise ansible.errors.AnsibleError(
-            OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
-        )
-
-    if v[:2] > ANSIBLE_VERSION_MAX:
-        raise ansible.errors.AnsibleError(
-            NEW_VERSION_MSG % (ansible.__version__, ANSIBLE_VERSION_MAX)
-        )
+from ansible.utils.sentinel import Sentinel
 
 
 def _patch_awx_callback():
@@ -351,7 +306,6 @@ class StrategyMixin(object):
         Wrap :meth:`run` to ensure requisite infrastructure and modifications
         are configured for the duration of the call.
         """
-        _assert_supported_release()
         wrappers = AnsibleWrappers()
         self._worker_model = self._get_worker_model()
         ansible_mitogen.process.set_worker_model(self._worker_model)
