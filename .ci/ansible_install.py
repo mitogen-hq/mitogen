@@ -16,9 +16,9 @@ batches = [
     ]
 ]
 
-batches.extend(
-    ['docker pull %s' % (ci_lib.image_for_distro(distro),), 'sleep 1']
+batches.append(ci_lib.throttle(
+    'docker pull %s' % (ci_lib.image_for_distro(distro),)
     for distro in ci_lib.DISTROS
-)
+))
 
 ci_lib.run_batches(batches)
