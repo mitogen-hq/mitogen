@@ -301,9 +301,6 @@ class NewStylePlanner(ScriptPlanner):
 
     @classmethod
     def detect(cls, path, source):
-        if b'from ansible_collections.openstack.' in source:
-            cls.marker = b'from ansible_collections.openstack.'
-        LOG.debug('cls.marker: %r, source: %r', cls.marker, source)
         return cls.marker in source
 
     def _get_interpreter(self):
