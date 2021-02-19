@@ -1,83 +1,63 @@
 
 - hosts: all
-  vars_files:
-  - shared_vars.yml
   strategy: linear
   gather_facts: false
   tasks:
-    - raw: >
-        if ! python -c ''; then
-          if type -p yum; then
-            yum -y install python;
-          else
-            apt-get -y update && apt-get -y install python;
-          fi;
+    - name: Install bootstrap packages
+      raw: |
+        set -o errexit
+        set -o nounset
+        if type -p yum; then
+          yum -y install {{ bootstrap_packages | join(' ') }}
+        else
+          apt-get -y update
+          apt-get -y --no-install-recommends install {{ bootstrap_packages | join(' ') }}
         fi
+      when: bootstrap_packages | length
 
 - hosts: all
-  vars_files:
-  - shared_vars.yml
   strategy: mitogen_free
+  # Resource limitation, my laptop freezes doing every container concurrently
+  serial: 4
   # Can't gather facts before here.
   gather_facts: true
   vars:
     distro: "{{ansible_distribution}}"
-    ver: "{{ansible_distribution_major_version}}"
-
-    packages:
-      common:
-        - openssh-server
-        - rsync
-        - strace
-        - sudo
-      Debian:
-        "9":
-          - libjson-perl
-          - python-virtualenv
-          - locales
-      CentOS:
-        "5":
-        - perl
-        - sudo
-          #- perl-JSON  -- skipped on CentOS 5, packages are a pain.
-        "6":
-          - perl-JSON
-        "7":
-          - perl-JSON
-          - python-virtualenv
-
   tasks:
     - when: ansible_virtualization_type != "docker"
       meta: end_play
 
-    - name: Ensure requisite Debian packages are installed
+    - name: Ensure requisite apt packages are installed
       apt:
-        name: "{{packages.common + packages[distro][ver]}}"
-        state: installed
+        name: "{{ common_packages + packages }}"
+        state: present
+        install_recommends: false
         update_cache: true
-      when: distro == "Debian"
+      when: ansible_pkg_mgr == 'apt'
 
-    - name: Ensure requisite Red Hat packaed are installed
+    - name: Ensure requisite yum packages are installed
       yum:
-        name: "{{packages.common + packages[distro][ver]}}"
-        state: installed
+        name: "{{ common_packages + packages }}"
+        state: present
         update_cache: true
-      when: distro == "CentOS"
+      when: ansible_pkg_mgr == 'yum'
 
-    - name: Clean up apt cache
-      command: apt-get clean
-      when: distro == "Debian"
+    - name: Clean up package cache
+      vars:
+        clean_command:
+          apt: apt-get clean
+          yum: yum clean all
+      command: "{{ clean_command[ansible_pkg_mgr] }}"
+      args:
+        warn: false
 
     - name: Clean up apt package lists
       shell: rm -rf {{item}}/*
       with_items:
       - /var/cache/apt
       - /var/lib/apt/lists
-      when: distro == "Debian"
+      when: ansible_pkg_mgr == 'apt'
 
-    - name: Clean up yum cache
-      command: yum clean all
-      when: distro == "CentOS"
 
     - name: Enable UTF-8 locale on Debian
       copy:
@@ -85,11 +65,11 @@
         content: |
           en_US.UTF-8 UTF-8
           fr_FR.UTF-8 UTF-8
-      when: distro == "Debian"
+      when: ansible_pkg_mgr == 'apt'
 
     - name: Generate UTF-8 locale on Debian
       shell: locale-gen
-      when: distro == "Debian"
+      when: ansible_pkg_mgr == 'apt'
 
     - name: Write Unicode into /etc/environment
       copy:
@@ -114,16 +94,6 @@
         content: |
           permit :mitogen__group
           permit :root
-
-    - name: Vanilla Ansible needs simplejson on CentOS 5.
-      shell: mkdir -p /usr/lib/python2.4/site-packages/simplejson/
-      when: distro == "CentOS" and ver == "5"
-
-    - name: Vanilla Ansible needs simplejson on CentOS 5.
-      synchronize:
-        dest: /usr/lib/python2.4/site-packages/simplejson/
-        src: ../../ansible_mitogen/compat/simplejson/
-      when: distro == "CentOS" and ver == "5"
 
     - name: Set root user password and shell
       user:
@@ -182,8 +152,9 @@
     - name: Install CentOS wheel sudo rule
       lineinfile:
         path: /etc/sudoers
-        line: "%wheel ALL=(ALL) ALL"
-      when: distro == "CentOS"
+        regexp: '#* *%wheel +ALL=(ALL) +ALL'
+        line: "%wheel  ALL=(ALL)       ALL"
+      when: ansible_os_family == 'RedHat'
 
     - name: Enable SSH banner
       lineinfile:

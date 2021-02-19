@@ -450,7 +450,7 @@ class DockerizedSshDaemon(object):
         subprocess__check_output(args)
         self._get_container_port()
 
-    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian')):
+    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
         if '-'  in mitogen_test_distro:
             distro, _py3 = mitogen_test_distro.split('-')
         else:
@@ -462,7 +462,7 @@ class DockerizedSshDaemon(object):
         else:
             self.python_path = '/usr/bin/python'
 
-        self.image = 'mitogen/%s-test' % (distro,)
+        self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
 
         # 22/tcp -> 0.0.0.0:32771
         self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')

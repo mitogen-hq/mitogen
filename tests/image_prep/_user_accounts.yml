@@ -5,15 +5,11 @@
 #
 
 - hosts: all
-  vars_files:
-  - shared_vars.yml
   gather_facts: true
   strategy: mitogen_free
   become: true
   vars:
     distro: "{{ansible_distribution}}"
-    ver: "{{ansible_distribution_major_version}}"
-
     special_users:
       - has_sudo
       - has_sudo_nopw
