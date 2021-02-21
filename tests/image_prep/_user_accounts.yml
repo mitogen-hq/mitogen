@@ -168,6 +168,8 @@
       with_items:
         - mitogen__pw_required
         - mitogen__require_tty_pw_required
+      when:
+        - ansible_virtualization_type != "docker"
 
     - name: Allow passwordless sudo for require_tty/readonly_homedir
       lineinfile:
@@ -177,6 +179,8 @@
       with_items:
         - mitogen__require_tty
         - mitogen__readonly_homedir
+      when:
+        - ansible_virtualization_type != "docker"
 
     - name: Allow passwordless for many accounts
       lineinfile:
@@ -184,3 +188,5 @@
         line: "{{lookup('pipe', 'whoami')}} ALL = (mitogen__{{item}}:ALL) NOPASSWD:ALL"
         validate: '/usr/sbin/visudo -cf %s'
       with_items: "{{normal_users}}"
+      when:
+        - ansible_virtualization_type != "docker"
