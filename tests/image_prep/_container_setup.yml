@@ -42,11 +42,19 @@
         update_cache: true
       when: ansible_pkg_mgr == 'yum'
 
+    - name: Ensure requisite dnf packages are installed
+      dnf:
+        name: "{{ common_packages + packages }}"
+        state: present
+        update_cache: true
+      when: ansible_pkg_mgr == 'dnf'
+
     - name: Clean up package cache
       vars:
         clean_command:
           apt: apt-get clean
           yum: yum clean all
+          dnf: dnf clean all
       command: "{{ clean_command[ansible_pkg_mgr] }}"
       args:
         warn: false
@@ -58,6 +66,11 @@
       - /var/lib/apt/lists
       when: ansible_pkg_mgr == 'apt'
 
+    - name: Configure /usr/bin/python
+      command: alternatives --set python /usr/bin/python3.8
+      args:
+        creates: /usr/bin/python
+      when: inventory_hostname in ["centos8"]
 
     - name: Enable UTF-8 locale on Debian
       copy:
@@ -172,6 +185,15 @@
         path: /etc/pam.d/sshd
         regexp: '.*session.*required.*pam_loginuid.so'
         line: session optional pam_loginuid.so
+
+    # Normally this would be removed by systemd-networkd-wait-online. If
+    # present ssh works only for root. The message displayed is
+    # > System is booting up. Unprivileged users are not permitted to log in
+    # > yet. Please come back later. For technical details, see pam_nologin(8).
+    - name: Remove login lockout
+      file:
+        path: /run/nologin
+        state: absent
 
     - name: Install convenience script for running an straced Python
       copy:
