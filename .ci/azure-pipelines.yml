@@ -45,7 +45,7 @@ jobs:
       Mito27Debian_27:
         python.version: '2.7'
         MODE: mitogen
-        DISTRO: debian
+        DISTRO: debian9
 
       #MitoPy27CentOS6_26:
         #python.version: '2.7'
@@ -60,12 +60,12 @@ jobs:
       Mito37Debian_27:
         python.version: '3.7'
         MODE: mitogen
-        DISTRO: debian
+        DISTRO: debian9
 
       Mito39Debian_27:
         python.version: '3.9'
         MODE: mitogen
-        DISTRO: debian
+        DISTRO: debian9
         VER: 2.10.0
 
       #Py26CentOS7:
