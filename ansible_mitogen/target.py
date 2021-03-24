@@ -171,7 +171,7 @@ def get_small_file(context, path):
     return service.get(path)
 
 
-def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
+def transfer_file(context, in_path, out_path, sync=False, set_owner=False, validate_checksum=True):
     """
     Streamily download a file from the connection multiplexer process in the
     controller.
@@ -191,6 +191,8 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
     :param bool set_owner:
         If :data:`True`, look up the metadata username and group on the local
         system and file the file owner using :func:`os.fchmod`.
+    :param bool validate_checksum:
+        If :data:`True`, file must be unchanged during transfer.
     """
     out_path = os.path.abspath(out_path)
     fd, tmp_path = tempfile.mkstemp(suffix='.tmp',
@@ -205,6 +207,7 @@ def transfer_file(context, in_path, out_path, sync=False, set_owner=False):
                 context=context,
                 path=in_path,
                 out_fp=fp,
+                validate_checksum=validate_checksum,
             )
             if not ok:
                 raise IOError('transfer of %r was interrupted.' % (in_path,))
