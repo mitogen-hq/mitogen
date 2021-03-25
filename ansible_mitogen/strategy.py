@@ -103,6 +103,7 @@ REDIRECTED_CONNECTION_PLUGINS = (
     'docker',
     'kubectl',
     'jail',
+    'chroot',
     'local',
     'lxc',
     'lxd',

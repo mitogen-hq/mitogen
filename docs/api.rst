@@ -325,6 +325,19 @@ Connection Methods
         Filename or complete path to the ``jexec`` binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``/usr/sbin/jexec``.
 
+.. method:: Router.chroot (path, chroot_bin=None, \**kwargs)
+
+    Construct a context on the local machine within a chroot using
+    the ``chroot`` program.
+
+    Accepts all parameters accepted by :meth:`local`, in addition to:
+
+    :param str path
+        Path to chroot into
+    :param str chroot_exe:
+        Filename or complete path to the ``chroot`` binary. ``PATH`` will be
+        searched if given as a filename. Defaults to ``/usr/sbin/chroot``.
+
 .. method:: Router.kubectl (pod, kubectl_path=None, kubectl_args=None, \**kwargs)
 
     Construct a context in a container via the Kubernetes ``kubectl``

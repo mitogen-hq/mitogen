@@ -2484,6 +2484,9 @@ class Router(mitogen.core.Router):
     def jail(self, **kwargs):
         return self.connect(u'jail', **kwargs)
 
+    def chroot(self, **kwargs):
+        return self.connect(u'chroot', **kwargs)
+
     def local(self, **kwargs):
         return self.connect(u'local', **kwargs)
 
