@@ -26,6 +26,7 @@ This release separates itself from the v0.2.X releases. Ansible's API changed to
 * :gh:issue:`770` better check for supported Ansible version
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
+* :gh:issue:`682`: mitogen did not deploy class level imports.
 
 
 v0.2.10 (unreleased)
