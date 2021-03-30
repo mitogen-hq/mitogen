@@ -2309,7 +2309,7 @@ class Context(object):
 def _unpickle_context(context_id, name, router=None):
     if not (isinstance(context_id, (int, long)) and context_id >= 0 and (
         (name is None) or
-        (isinstance(name, UnicodeType) and len(name) < 100))
+        (isinstance(name, UnicodeType) and len(name) < 519))
     ):
         raise TypeError('cannot unpickle Context: bad input')
 
