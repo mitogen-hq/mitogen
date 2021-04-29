@@ -493,7 +493,9 @@ class PlayContextSpec(Spec):
         return self._connection_option('port')
 
     def python_path(self, rediscover_python=False):
-        s = self._connection.get_task_var('ansible_python_interpreter')
+        s = self._connection.get_task_var('ansible_python_interpreter',
+                default=C.config.get_config_value('INTERPRETER_PYTHON',
+                    variables=self._task_vars))
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
@@ -703,6 +705,9 @@ class MitogenViaSpec(Spec):
 
     def python_path(self, rediscover_python=False):
         s = self._host_vars.get('ansible_python_interpreter')
+        if s is None:
+            s = C.config.get_config_value('INTERPRETER_PYTHON',
+                    variables=self._task_vars)
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
