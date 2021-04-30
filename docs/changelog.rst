@@ -23,6 +23,7 @@ v0.3.0 (unreleased)
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
 `See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
 
+* :gh:issue:`770` better check for supported Ansible version
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
 
@@ -40,6 +41,8 @@ v0.2.10 (unreleased)
   timeout, when using recent OpenSSH client versions.
 * :gh:issue:`758` fix initilialisation of callback plugins in test suite, to address a `KeyError` in
   :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+* :gh:issue:`775` Test with Python 3.9
+* :gh:issue:`775` Add msvcrt to the default module deny list
 
 
 v0.2.9 (2019-11-02)
