@@ -309,6 +309,26 @@ Connection Methods
         Filename or complete path to the Docker binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``docker``.
 
+.. method:: Router.podman (container=None, image=None, podman_path=None, \**kwargs)
+
+    Construct a context on the local machine within an existing or
+    temporary new Podman container using the ``podman`` program. One of
+    `container` or `image` must be specified.
+
+    Accepts all parameters accepted by :meth:`local`, in addition to:
+
+    :param str container:
+        Existing container to connect to. Defaults to :data:`None`.
+    :param str username:
+        Username within the container to :func:`setuid` to. Defaults to
+        :data:`None`, which Podman interprets as ``root``.
+    :param str image:
+        Image tag to use to construct a temporary container. Defaults to
+        :data:`None`.
+    :param str podman_path:
+        Filename or complete path to the Podman binary. ``PATH`` will be
+        searched if given as a filename. Defaults to ``podman``.
+
 .. method:: Router.jail (container, jexec_path=None, \**kwargs)
 
     Construct a context on the local machine within a FreeBSD jail using

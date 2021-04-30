@@ -189,6 +189,20 @@ def _connect_docker(spec):
         }
     }
 
+def _connect_podman(spec):
+    """
+    Return ContextService arguments for a Podman connection.
+    """
+    return {
+        'method': 'podman',
+        'kwargs': {
+            'username': spec.remote_user(),
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(rediscover_python=True),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
+            'remote_name': get_remote_name(spec),
+        }
+    }
 
 def _connect_kubectl(spec):
     """
@@ -394,6 +408,7 @@ def _connect_mitogen_doas(spec):
 CONNECTION_METHOD = {
     'buildah': _connect_buildah,
     'docker': _connect_docker,
+    'podman': _connect_podman,
     'kubectl': _connect_kubectl,
     'jail': _connect_jail,
     'local': _connect_local,
