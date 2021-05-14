@@ -175,6 +175,8 @@ def with_router(func):
     """
     def wrapper(*args, **kwargs):
         return run_with_router(func, *args, **kwargs)
+
+    wrapper.__doc__ = func.__doc__
     if mitogen.core.PY3:
         wrapper.func_name = func.__name__
     else:
