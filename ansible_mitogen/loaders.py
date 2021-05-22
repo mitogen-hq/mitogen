@@ -45,7 +45,7 @@ __all__ = [
 import ansible
 
 ANSIBLE_VERSION_MIN = (2, 10)
-ANSIBLE_VERSION_MAX = (2, 10)
+ANSIBLE_VERSION_MAX = (2, 11)
 
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
