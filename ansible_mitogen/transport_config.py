@@ -464,7 +464,7 @@ class PlayContextSpec(Spec):
         )
 
     def ssh_args(self):
-        variables = self._task_vars["vars"].get("vars", {})
+        variables = self._task_vars.get("vars", {})
         return [
             mitogen.core.to_text(term)
             for s in (
