@@ -464,6 +464,7 @@ class PlayContextSpec(Spec):
         )
 
     def ssh_args(self):
+        variables = self._task_vars["vars"].get("vars", {})
         return [
             mitogen.core.to_text(term)
             for s in (
@@ -471,19 +472,19 @@ class PlayContextSpec(Spec):
                     "ssh_args",
                     plugin_type="connection",
                     plugin_name="ssh",
-                    variables=self._task_vars["vars"]["vars"],
+                    variables=variables,
                 ),
                 C.config.get_config_value(
                     "ssh_common_args",
                     plugin_type="connection",
                     plugin_name="ssh",
-                    variables=self._task_vars["vars"]["vars"],
+                    variables=variables,
                 ),
                 C.config.get_config_value(
                     "ssh_extra_args",
                     plugin_type="connection",
                     plugin_name="ssh",
-                    variables=self._task_vars["vars"]["vars"],
+                    variables=variables,
                 ),
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
