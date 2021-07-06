@@ -321,6 +321,7 @@ class NewStylePlanner(ScriptPlanner):
     ALWAYS_FORK_MODULES = frozenset([
         'dnf',  # issue #280; py-dnf/hawkey need therapy
         'firewalld',  # issue #570: ansible module_utils caches dbus conn
+        'ansible.legacy.dnf',  # issue #776
     ])
 
     def should_fork(self):
