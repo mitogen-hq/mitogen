@@ -84,6 +84,12 @@ else:
 if need_to_fix_psycopg2:
     venv_steps.append('/tmp/venv/bin/pip3 install psycopg2==2.8.5 psycopg2-binary')
 
+venv_steps.extend([
+    # pbr is a transitive setup_requires of hdrhistogram. If it's not already
+    # installed then setuptools attempts to use easy_install, which fails.
+    '/tmp/venv/bin/pip install pbr==5.6.0',
+])
+
 batches.append(venv_steps)
 
 ci_lib.run_batches(batches)
