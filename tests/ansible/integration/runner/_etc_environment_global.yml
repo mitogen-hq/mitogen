@@ -10,6 +10,7 @@
 
 - assert:
     that: echo.stdout == ""
+    fail_msg: echo={{echo}}
 
 - copy:
     dest: /etc/environment
@@ -27,6 +28,7 @@
 
 - assert:
     that: echo.stdout == "555"
+    fail_msg: echo={{echo}}
 
 - file:
     path: /etc/environment
@@ -43,3 +45,4 @@
 
 - assert:
     that: echo.stdout == ""
+    fail_msg: echo={{echo}}

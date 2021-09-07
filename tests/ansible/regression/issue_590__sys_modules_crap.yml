@@ -10,3 +10,4 @@
   - assert:
       that:
       - "'id' in out.info"
+      fail_msg: out={{out}}

@@ -9,6 +9,7 @@
 
 - assert:
     that: echo.stdout == ""
+    fail_msg: echo={{echo}}
 
 - copy:
     dest: ~/.pam_environment
@@ -20,6 +21,7 @@
 
 - assert:
     that: echo.stdout == "321"
+    fail_msg: echo={{echo}}
 
 - file:
     path: ~/.pam_environment
@@ -30,3 +32,4 @@
 
 - assert:
     that: echo.stdout == ""
+    fail_msg: echo={{echo}}

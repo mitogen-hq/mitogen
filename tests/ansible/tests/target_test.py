@@ -86,6 +86,8 @@ class IsGoodTempDirTest(unittest2.TestCase):
             self.assertFalse(self.func(bleh))
             self.assertEquals(open(bleh).read(), 'derp')
 
+    @unittest2.skipIf(
+        os.geteuid() == 0, 'writes by root ignore directory permissions')
     def test_unwriteable(self):
         with NamedTemporaryDirectory() as temp_path:
             os.chmod(temp_path, 0)

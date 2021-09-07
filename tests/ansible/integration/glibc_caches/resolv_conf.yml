@@ -44,6 +44,7 @@
         - out.failed
         - '"Name or service not known" in out.msg or
            "Temporary failure in name resolution" in out.msg'
+        fail_msg: out={{out}}
       when: |
         ansible_virtualization_type == "docker" and
         ansible_python_version > "2.5"

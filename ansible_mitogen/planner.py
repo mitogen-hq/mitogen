@@ -41,6 +41,7 @@ import json
 import logging
 import os
 import random
+import re
 
 from ansible.executor import module_common
 from ansible.collections.list import list_collection_dirs
@@ -297,11 +298,11 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
-    marker = b'from ansible.module_utils.'
+    MARKER = re.compile(b'from ansible(?:_collections|\.module_utils)\.')
 
     @classmethod
     def detect(cls, path, source):
-        return cls.marker in source
+        return cls.MARKER.search(source) != None
 
     def _get_interpreter(self):
         return None, None
@@ -321,6 +322,7 @@ class NewStylePlanner(ScriptPlanner):
     ALWAYS_FORK_MODULES = frozenset([
         'dnf',  # issue #280; py-dnf/hawkey need therapy
         'firewalld',  # issue #570: ansible module_utils caches dbus conn
+        'ansible.legacy.dnf',  # issue #776
     ])
 
     def should_fork(self):
