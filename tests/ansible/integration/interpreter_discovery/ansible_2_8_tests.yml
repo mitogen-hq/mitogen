@@ -49,6 +49,7 @@
               that:
               - auto_out.ansible_facts.discovered_interpreter_python is defined
               - echoout.running_python_interpreter == auto_out.ansible_facts.discovered_interpreter_python
+              fail_msg: auto_out={{auto_out}} echoout={{echoout}}
 
 
         - name: test that auto_legacy gives a dep warning when /usr/bin/python present but != auto result
@@ -66,6 +67,7 @@
             assert:
               that:
               - legacy.deprecations | default([]) | length > 0
+              fail_msg: legacy={{legacy}}
             # only check for a dep warning if legacy returned /usr/bin/python and auto didn't
             when: legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and
                   auto_out.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
@@ -86,6 +88,7 @@
               that:
               - auto_silent_out.warnings is not defined
               - auto_silent_out.ansible_facts.discovered_interpreter_python == auto_out.ansible_facts.discovered_interpreter_python
+              fail_msg: auto_silent_out={{auto_silent_out}}
 
 
         - name: test that auto_legacy_silent never warns and got the same answer as auto_legacy
@@ -103,6 +106,7 @@
               that:
                 - legacy_silent.warnings is not defined
                 - legacy_silent.ansible_facts.discovered_interpreter_python == legacy.ansible_facts.discovered_interpreter_python
+              fail_msg: legacy_silent={{legacy_silent}}
 
         - name: ensure modules can't set discovered_interpreter_X or ansible_X_interpreter
           block:
@@ -127,6 +131,7 @@
             assert:
               that:
               - auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python3'
+              fail_msg: auto_out={{auto_out}}
             when: distro == 'fedora' and distro_version is version('23', '>=')
 
           - name: rhel assertions
@@ -136,6 +141,7 @@
               - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and distro_version is version('8','<')) or distro_version is version('8','>=')
               # rhel 8+
               - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/libexec/platform-python' and distro_version is version('8','>=')) or distro_version is version('8','<')
+              fail_msg: auto_out={{auto_out}}
             when: distro in ('redhat', 'centos')
 
           - name: ubuntu assertions
@@ -145,12 +151,14 @@
               - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and distro_version is version('16.04','<')) or distro_version is version('16.04','>=')
               # ubuntu >= 16
               - (auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python3' and distro_version is version('16.04','>=')) or distro_version is version('16.04','<')
+              fail_msg: auto_out={{auto_out}}
             when: distro == 'ubuntu'
 
           - name: mac assertions
             assert:
               that:
               - auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
+              fail_msg: auto_out={{auto_out}}
             when: os_family == 'Darwin'
 
           always:

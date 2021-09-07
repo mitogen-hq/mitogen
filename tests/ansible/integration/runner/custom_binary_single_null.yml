@@ -27,6 +27,7 @@
           'custom_binary_single_null: cannot execute binary file: Exec format error\r\n',
         ))
         or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '16.04')
+      fail_msg: out={{out}}
 
 
 # Can't test this: Mitogen returns 126, 2.5.x returns 126, 2.4.x discarded the

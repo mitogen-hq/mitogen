@@ -25,6 +25,7 @@
     - assert:
         that:
           - out.env.CUSTOM_INTERPRETER == "1"
+        fail_msg: out={{out}}
 
     - file:
         path: /tmp/issue_152_interpreter.sh

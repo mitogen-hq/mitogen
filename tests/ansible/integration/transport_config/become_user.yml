@@ -14,6 +14,7 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "root"
+      fail_msg: out={{out}}
 
 # Not set, unbecoming mitogen_via=
 - hosts: tc-become-user-unset
@@ -29,6 +30,7 @@
       - out.result[1].method == "ssh"
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.username == "root"
+      fail_msg: out={{out}}
 
 # Not set, becoming mitogen_via=
 - hosts: tc-become-user-unset
@@ -46,6 +48,7 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.username == "root"
+      fail_msg: out={{out}}
 
 
 # ansible_become_user= set.
@@ -60,6 +63,7 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "ansi-become-user"
+      fail_msg: out={{out}}
 
 
 # ansible_become_user=, unbecoming via=
@@ -80,6 +84,7 @@
 
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.username == "ansi-become-user"
+      fail_msg: out={{out}}
 
 
 # ansible_become_user=, becoming via=
@@ -103,4 +108,5 @@
 
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.username == "ansi-become-user"
+      fail_msg: out={{out}}
 

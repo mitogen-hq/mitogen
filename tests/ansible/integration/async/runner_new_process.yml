@@ -16,6 +16,7 @@
   - assert:
       that:
       - sync_proc1.pid == sync_proc2.pid
+      fail_msg: sync_proc1={{sync_proc1}} sync_proc2={{sync_proc2}}
     when: is_mitogen
 
   - name: get async process ID.
@@ -48,7 +49,9 @@
 
   - assert:
       that:
+      # FIXME should this be async_proc1, and async_proc2?
       - sync_proc1.pid == sync_proc2.pid
       - async_result1.pid != sync_proc1.pid
       - async_result1.pid != async_result2.pid
+      fail_msg: async_result1={{async_result1}} async_result2={{async_result2}}
     when: is_mitogen

@@ -20,3 +20,4 @@
             ("sudo: invalid option -- '-'" in out.module_stderr) or
             ("sudo: unrecognized option `--derps'" in out.module_stderr) or
             ("sudo: unrecognized option '--derps'" in out.module_stderr)
+        fail_msg: out={{out}}

@@ -23,3 +23,4 @@
         - out.module_stdout == ""
         - "'Traceback (most recent call last)' in out.module_stderr"
         - "\"NameError: name 'kaboom' is not defined\" in out.module_stderr"
+        fail_msg: out={{out}}
