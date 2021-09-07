@@ -17,3 +17,4 @@
     - assert:
         that: |
           'The module missing_module was not found in configured module paths' in out.stdout
+        fail_msg: out={{out}}

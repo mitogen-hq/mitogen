@@ -12,3 +12,4 @@
 
     - assert:
         that: (not not out.mitogen_loaded) == (not not is_mitogen)
+        fail_msg: out={{out}}

@@ -14,6 +14,7 @@
 
     - assert:
         that: "out.stdout == ''"
+        fail_msg: out={{out}}
 
 - hosts: test-targets
   any_errors_fatal: true
@@ -28,3 +29,4 @@
 
     - assert:
         that: "out2.stdout == '2'"
+        fail_msg: out={{out}}
