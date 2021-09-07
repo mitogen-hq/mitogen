@@ -24,3 +24,4 @@
           out.changed and
           out.results[0].changed and
           out.results[0].msg == 'Hello, world.'
+        fail_msg: out={{out}}

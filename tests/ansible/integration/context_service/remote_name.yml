@@ -18,6 +18,7 @@
   - assert:
       that:
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:[a-z]+@[^:]+:[0-9]+\)')
+      fail_msg: out={{out}}
 
   - shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
     register: out
@@ -28,4 +29,5 @@
   - assert:
       that:
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:ansible\)')
+      fail_msg: out={{out}}
 

@@ -17,3 +17,4 @@
           out.result[0].kwargs.identity_file == (
             lookup('env', 'HOME') + '/fakekey'
           )
+        fail_msg: out={{out}}

@@ -60,6 +60,7 @@
 
         - assert:
             that: outout == "item!"
+            fail_msg: outout={{outout}}
       when: False
 
     # TODO: https://github.com/dw/mitogen/issues/692

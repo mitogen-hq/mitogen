@@ -12,6 +12,7 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.username == "ansible-cfg-remote-user"
+      fail_msg: out={{out}}
 
 - hosts: tc-become-unset
   vars: {mitogen_via: becomeuser@tc-become-set}
@@ -29,6 +30,7 @@
 
       - out.result[2].method == "ssh"
       - out.result[2].kwargs.hostname == "tc-become-unset"
+      fail_msg: out={{out}}
 
 
 # Become set.
@@ -46,6 +48,7 @@
       - out.result[0].kwargs.username == "ansible-cfg-remote-user"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "becomeuser"
+      fail_msg: out={{out}}
 
 - hosts: tc-become-set
   vars: {mitogen_via: tc-become-unset}
@@ -66,3 +69,4 @@
 
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.username == "becomeuser"
+      fail_msg: out={{out}}
