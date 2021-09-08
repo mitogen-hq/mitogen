@@ -13,6 +13,7 @@ ci_lib.run_batches([
         'pip install -qqq debops[ansible]==2.1.2 ansible==%s' % ci_lib.ANSIBLE_VERSION,
     ],
     [
+        'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',
         'docker pull %s' % (ci_lib.image_for_distro('debian'),),
     ],
 ])
