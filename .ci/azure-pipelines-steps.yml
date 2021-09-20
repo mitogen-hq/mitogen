@@ -18,6 +18,10 @@ steps:
 
 - script: .ci/$(MODE)_install.py
   displayName: "Run $(MODE)_install.py"
+  env:
+    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+    AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)
 
 - script: .ci/$(MODE)_tests.py
   displayName: "Run $(MODE)_tests.py"
