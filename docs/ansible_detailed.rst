@@ -184,9 +184,9 @@ Noteworthy Differences
 
        your_ssh_username = (ALL) NOPASSWD:/usr/bin/python -c*
 
-* The :ans:conn:`~buildah`, :ans:conn:`~docker`, :ans:conn:`~jail`,
-  :ans:conn:`~kubectl`, :ans:conn:`~local`, :ans:conn:`~lxd`, and
-  :ans:conn:`~ssh` built-in connection types are supported, along with
+* The :ans:conn:`~buildah`, :ans:conn:`~chroot`, :ans:conn:`~docker`, 
+  :ans:conn:`~jail`, :ans:conn:`~kubectl`, :ans:conn:`~local`, :ans:conn:`~lxd`,
+  and :ans:conn:`~ssh` built-in connection types are supported, along with
   Mitogen-specific :ref:`machinectl <machinectl>`, :ref:`mitogen_doas <doas>`,
   :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
   types. File bugs to register interest in others.

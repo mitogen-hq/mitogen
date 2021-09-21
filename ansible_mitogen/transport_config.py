@@ -66,6 +66,7 @@ import ansible.utils.shlex
 import ansible.constants as C
 
 from ansible.module_utils.six import with_metaclass
+from ansible.module_utils.common.process import get_bin_path
 
 # this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
 try:
@@ -499,6 +500,13 @@ class PlayContextSpec(Spec):
                 ), default='')
             )
         ]
+
+    def chroot_exe(self):
+        chroot_exe = self._connection.get_task_var('ansible_chroot_exe') or 'chroot'
+        # same logic as in vanilla ansible plugin
+        if not os.path.isabs(chroot_exe):
+            chroot_exe = get_bin_path(chroot_exe)
+        return chroot_exe
 
     def mitogen_via(self):
         return self._connection.get_task_var('mitogen_via')
