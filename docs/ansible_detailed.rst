@@ -11,7 +11,7 @@ Mitogen for Ansible
 module runtime for `Ansible`_. Requiring minimal configuration changes, it
 updates Ansible's slow and wasteful shell-centric implementation with
 pure-Python equivalents, invoked via highly efficient remote procedure calls to
-persistent interpreters tunnelled over SSH. No changes are required to target
+persistent interpreters tunneled over SSH. No changes are required to target
 hosts.
 
 The extension is considered stable and real-world use is encouraged.
@@ -145,9 +145,9 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.9 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
-  your installation is running one of these versions by checking ``ansible
-  --version`` output.
+* Ansible 2.3-2.11 are supported along with Python 2.6, 2.7, 3.6, 3.7, 3.8, and
+  3.9. Verify your installation is running one of these versions by checking
+  ``ansible --version`` output.
 
 * The ``raw`` action executes as a regular Mitogen connection, which requires
   Python on the target, precluding its use for installing Python. This will be
@@ -176,7 +176,7 @@ Noteworthy Differences
 * The ``doas``, ``su`` and ``sudo`` become methods are available. File bugs to
   register interest in more.
 
-* The ``sudo`` comands executed differ slightly compared to Ansible. In some
+* The ``sudo`` commands executed differ slightly compared to Ansible. In some
   cases where the target has a ``sudo`` configuration that restricts the exact
   commands allowed to run, it may be necessary to add a ``sudoers`` rule like:
 

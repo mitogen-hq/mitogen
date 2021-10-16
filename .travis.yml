@@ -28,7 +28,7 @@ script:
 - MODE=${MODE} .ci/travis.sh
 
 # To avoid matrix explosion, just test against oldest->newest and
-# newest->oldest in various configuartions.
+# newest->oldest in various configurations.
 
 matrix:
   include:

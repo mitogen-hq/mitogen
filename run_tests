@@ -36,7 +36,7 @@ if [ ! "$NOCOVERAGE_ERASE" ]; then
     coverage erase
 fi
 
-# First run overwites coverage output.
+# First run overwrites coverage output.
 [ "$SKIP_MITOGEN" ] || {
     if [ ! "$NOCOVERAGE" ]; then
         coverage run -a "${UNIT2}" discover \
