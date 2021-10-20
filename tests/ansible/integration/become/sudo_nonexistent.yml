@@ -9,6 +9,11 @@
       become_user: slartibartfast
       ignore_errors: true
       register: out
+      when:
+        # https://github.com/ansible/ansible/pull/70785
+        - ansible_facts.distribution not in ["MacOSX"]
+          or ansible_version.full is version("2.11", ">=", strict=True)
+          or is_mitogen
 
     - name: Verify raw module output.
       assert:
@@ -20,3 +25,8 @@
             ('sudo: unknown user: slartibartfast' in out.module_stderr | default(out.msg))
             or (ansible_facts.os_family == 'RedHat' and ansible_facts.distribution_version == '6.10')
         fail_msg: out={{out}}
+      when:
+        # https://github.com/ansible/ansible/pull/70785
+        - ansible_facts.distribution not in ["MacOSX"]
+          or ansible_version.full is version("2.11", ">=", strict=True)
+          or is_mitogen
