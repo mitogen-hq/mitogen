@@ -8,19 +8,18 @@
       register: out
       ignore_errors: true
 
-    - assert:
+    - name: Check error report
+      vars:
+        msg_pattern: "MODULE FAILURE(?:\nSee stdout/stderr for the exact error)?"
+        # (?s) -> . matches any character, even newlines
+        tb_pattern:  "(?s)Traceback \\(most recent call last\\).+NameError: name 'kaboom' is not defined"
+      assert:
         that:
         - not out.changed
         - out.rc == 1
-        # ansible/62d8c8fde6a76d9c567ded381e9b34dad69afcd6
-        - |
-          (ansible_version.full is version('2.7', '<') and out.msg == "MODULE FAILURE") or
-          (ansible_version.full is version('2.7', '>=') and
-           out.msg == (
-            "MODULE FAILURE\n" +
-            "See stdout/stderr for the exact error"
-          ))
-        - out.module_stdout == ""
-        - "'Traceback (most recent call last)' in out.module_stderr"
-        - "\"NameError: name 'kaboom' is not defined\" in out.module_stderr"
+        # https://github.com/ansible/ansible/commit/62d8c8fde6a76d9c567ded381e9b34dad69afcd6
+        - out.msg is match(msg_pattern)
+        - (out.module_stdout == "" and out.module_stderr is search(tb_pattern))
+          or
+          (out.module_stdout is search(tb_pattern) and out.module_stderr is match("Shared connection to localhost closed."))
         fail_msg: out={{out}}
