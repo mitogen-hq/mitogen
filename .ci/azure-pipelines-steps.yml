@@ -13,9 +13,6 @@ steps:
 
   displayName: activate venv
 
-- script: .ci/spawn_reverse_shell.py
-  displayName: "Spawn reverse shell"
-
 - script: .ci/$(MODE)_install.py
   displayName: "Run $(MODE)_install.py"
   env:
