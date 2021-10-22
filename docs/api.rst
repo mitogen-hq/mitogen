@@ -95,7 +95,7 @@ Connection Methods
 
     :param str container:
         The name of the Buildah container to connect to.
-    :param str doas_path:
+    :param str buildah_path:
         Filename or complete path to the ``buildah`` binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``buildah``.
     :param str username:
