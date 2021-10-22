@@ -367,6 +367,20 @@ Connection Methods
         Filename or complete path to the ``lxc`` binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``lxc``.
 
+.. currentmodule:: mitogen.parent
+.. method:: Router.podman (container=None, podman_path=None, username=None, \**kwargs)
+
+    Construct a context on the local machine over a ``podman`` invocation.
+    Accepts all parameters accepted by :meth:`local`, in addition to:
+
+    :param str container:
+        The name of the Podman container to connect to.
+    :param str podman_path:
+        Filename or complete path to the ``podman`` binary. ``PATH`` will be
+        searched if given as a filename. Defaults to ``podman``.
+    :param str username:
+        Username to use, defaults to unset.
+
 .. method:: Router.setns (container, kind, username=None, docker_path=None, lxc_info_path=None, machinectl_path=None, \**kwargs)
 
     Construct a context in the style of :meth:`local`, but change the
