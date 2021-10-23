@@ -64,24 +64,6 @@ def have_docker():
 # Force line buffering on stdout.
 sys.stdout = os.fdopen(1, 'w', 1)
 
-# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
-if 'TRAVIS_HOME' in os.environ:
-    proc = subprocess.Popen(
-        args=['stdbuf', '-oL', 'cat'],
-        stdin=subprocess.PIPE
-    )
-
-    os.dup2(proc.stdin.fileno(), 1)
-    os.dup2(proc.stdin.fileno(), 2)
-
-    def cleanup_travis_junk(stdout=sys.stdout, stderr=sys.stderr, proc=proc):
-        stdout.close()
-        stderr.close()
-        proc.terminate()
-
-    atexit.register(cleanup_travis_junk)
-
-# -----------------
 
 def _argv(s, *args):
     """Interpolate a command line using *args, return an argv style list.
@@ -206,27 +188,9 @@ class TempDir(object):
 
 
 class Fold(object):
-    """
-    Bracket a section of stdout with travis_fold markers.
-
-    This allows the section to be collapsed or expanded in Travis CI web UI.
-
-    >>> with Fold('stage 1'):
-    ...     print('Frobnicate the frobnitz')
-    ...
-    travis_fold:start:stage 1
-    Frobnicate the frobnitz
-    travis_fold:end:stage 1
-    """
-    def __init__(self, name):
-        self.name = name
-
-    def __enter__(self):
-        print('travis_fold:start:%s' % (self.name))
-
-    def __exit__(self, _1, _2, _3):
-        print('')
-        print('travis_fold:end:%s' % (self.name))
+    def __init__(self, name): pass
+    def __enter__(self): pass
+    def __exit__(self, _1, _2, _3): pass
 
 
 os.environ.setdefault('ANSIBLE_STRATEGY',

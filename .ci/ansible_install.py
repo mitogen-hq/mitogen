@@ -12,7 +12,7 @@ batches = [
             '-r tests/requirements.txt '
             '-r tests/ansible/requirements.txt',
         # encoding is required for installing ansible 2.10 with pip2, otherwise we get a UnicodeDecode error
-        'LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
+        'LC_CTYPE=en_US.UTF-8 LANG=en_US.UTF-8 pip install "ansible-base<2.10.14" "ansible=={}"'.format(ci_lib.ANSIBLE_VERSION)
     ],
     [
         'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',
