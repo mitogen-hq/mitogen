@@ -17,7 +17,7 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-v0.2.10 (unreleased)
+v0.2.10 (2021-10-28)
 --------------------
 
 * :gh:issue:`597` mitogen does not support Ansible 2.8 Python interpreter detection
