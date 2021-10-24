@@ -17,8 +17,8 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-v0.3.0 (unreleased)
---------------------
+v0.3.0 (2021-10-28)
+-------------------
 
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
 `See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
@@ -30,7 +30,7 @@ This release separates itself from the v0.2.X releases. Ansible's API changed to
 * :gh:issue:`847` Removed historic Continuous Integration reverse shell
 
 
-v0.2.10 (unreleased)
+v0.2.10 (2021-10-28)
 --------------------
 
 * :gh:issue:`597` mitogen does not support Ansible 2.8 Python interpreter detection
@@ -45,6 +45,7 @@ v0.2.10 (unreleased)
   :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
 * :gh:issue:`775` Test with Python 3.9
 * :gh:issue:`775` Add msvcrt to the default module deny list
+* :gh:issue:`847` Removed historic Continuous Integration reverse shell
 
 
 v0.2.9 (2019-11-02)
