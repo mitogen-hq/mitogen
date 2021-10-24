@@ -179,7 +179,8 @@ class LinuxPolicyTest(testlib.TestCase):
         try:
             for line in fp:
                 if line.startswith('Cpus_allowed'):
-                    return int(line.split()[1], 16)
+                    mask = line.split()[1].replace(',', '')
+                    return int(mask, 16)
         finally:
             fp.close()
 

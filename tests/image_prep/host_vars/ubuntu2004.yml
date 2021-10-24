@@ -1,0 +1,11 @@
+bootstrap_packages: [python3]
+
+docker_base: ubuntu:20.04
+
+packages:
+  - libjson-perl
+  - locales
+  - python-is-python3
+  - python2
+  - python3-virtualenv
+  - virtualenv

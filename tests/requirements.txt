@@ -3,7 +3,7 @@ coverage==4.5.1
 Django==1.6.11  # Last version supporting 2.6.
 mock==2.0.0
 pytz==2018.5
-cffi==1.11.2  # Random pin to try and fix pyparser==2.18 not having effect
+cffi==1.14.3  # Random pin to try and fix pyparser==2.18 not having effect
 pycparser==2.18  # Last version supporting 2.6.
 faulthandler==3.1; python_version < '3.3'  # used by testlib
 pytest-catchlog==1.2.2
@@ -12,6 +12,7 @@ timeoutcontext==1.2.0
 unittest2==1.1.0
 # Fix InsecurePlatformWarning while creating py26 tox environment
 # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings
-urllib3[secure]; python_version < '2.7.9'
+urllib3[secure]==1.23; python_version < '2.7'
+urllib3[secure]==1.26; python_version > '2.6' and python_version < '2.7.9'
 # Last idna compatible with Python 2.6 was idna 2.7.
 idna==2.7; python_version < '2.7'

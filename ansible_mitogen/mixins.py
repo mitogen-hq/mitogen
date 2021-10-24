@@ -60,6 +60,17 @@ try:
 except ImportError:
     from ansible.vars.unsafe_proxy import wrap_var
 
+try:
+    # ansible 2.8 moved remove_internal_keys to the clean module
+    from ansible.vars.clean import remove_internal_keys
+except ImportError:
+    try:
+        from ansible.vars.manager import remove_internal_keys
+    except ImportError:
+        # ansible 2.3.3 has remove_internal_keys as a protected func on the action class
+        # we'll fallback to calling self._remove_internal_keys in this case
+        remove_internal_keys = lambda a: "Not found"
+
 
 LOG = logging.getLogger(__name__)
 
@@ -107,6 +118,16 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         super(ActionModuleMixin, self).__init__(task, connection, *args, **kwargs)
         if not isinstance(connection, ansible_mitogen.connection.Connection):
             _, self.__class__ = type(self).__bases__
+
+        # required for python interpreter discovery
+        connection.templar = self._templar
+        self._finding_python_interpreter = False
+        self._rediscovered_python = False
+        # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
+        self._discovered_interpreter_key = None
+        self._discovered_interpreter = False
+        self._discovery_deprecation_warnings = []
+        self._discovery_warnings = []
 
     def run(self, tmp=None, task_vars=None):
         """
@@ -350,6 +371,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._compute_environment_string(env)
         self._set_temp_file_args(module_args, wrap_async)
 
+        # there's a case where if a task shuts down the node and then immediately calls
+        # wait_for_connection, the `ping` test from Ansible won't pass because we lost connection
+        # clearing out context forces a reconnect
+        # see https://github.com/dw/mitogen/issues/655 and Ansible's `wait_for_connection` module for more info
+        if module_name == 'ansible.legacy.ping' and type(self).__name__ == 'wait_for_connection':
+            self._connection.context = None
+
         self._connection._connect()
         result = ansible_mitogen.planner.invoke(
             ansible_mitogen.planner.Invocation(
@@ -369,6 +397,34 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # Built-in actions expected tmpdir to be cleaned up automatically
             # on _execute_module().
             self._remove_tmp_path(tmp)
+
+        # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
+        # handle ansible 2.3.3 that has remove_internal_keys in a different place
+        check = remove_internal_keys(result)
+        if check == 'Not found':
+            self._remove_internal_keys(result)
+
+        # taken from _execute_module of ansible 2.8.6
+        # propagate interpreter discovery results back to the controller
+        if self._discovered_interpreter_key:
+            if result.get('ansible_facts') is None:
+                result['ansible_facts'] = {}
+
+            # only cache discovered_interpreter if we're not running a rediscovery
+            # rediscovery happens in places like docker connections that could have different
+            # python interpreters than the main host
+            if not self._rediscovered_python:
+                result['ansible_facts'][self._discovered_interpreter_key] = self._discovered_interpreter
+
+        if self._discovery_warnings:
+            if result.get('warnings') is None:
+                result['warnings'] = []
+            result['warnings'].extend(self._discovery_warnings)
+
+        if self._discovery_deprecation_warnings:
+            if result.get('deprecations') is None:
+                result['deprecations'] = []
+            result['deprecations'].extend(self._discovery_deprecation_warnings)
 
         return wrap_var(result)
 
@@ -407,17 +463,54 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         """
         LOG.debug('_low_level_execute_command(%r, in_data=%r, exe=%r, dir=%r)',
                   cmd, type(in_data), executable, chdir)
+
         if executable is None:  # executable defaults to False
             executable = self._play_context.executable
         if executable:
             cmd = executable + ' -c ' + shlex_quote(cmd)
 
-        rc, stdout, stderr = self._connection.exec_command(
-            cmd=cmd,
-            in_data=in_data,
-            sudoable=sudoable,
-            mitogen_chdir=chdir,
-        )
+        # TODO: HACK: if finding python interpreter then we need to keep
+        # calling exec_command until we run into the right python we'll use
+        # chicken-and-egg issue, mitogen needs a python to run low_level_execute_command
+        # which is required by Ansible's discover_interpreter function
+        if self._finding_python_interpreter:
+            possible_pythons = [
+                '/usr/bin/python',
+                'python3',
+                'python3.7',
+                'python3.6',
+                'python3.5',
+                'python2.7',
+                'python2.6',
+                '/usr/libexec/platform-python',
+                '/usr/bin/python3',
+                'python'
+            ]
+        else:
+            # not used, just adding a filler value
+            possible_pythons = ['python']
+
+        def _run_cmd():
+            return self._connection.exec_command(
+                cmd=cmd,
+                in_data=in_data,
+                sudoable=sudoable,
+                mitogen_chdir=chdir,
+            )
+
+        for possible_python in possible_pythons:
+            try:
+                self._possible_python_interpreter = possible_python
+                rc, stdout, stderr = _run_cmd()
+            # TODO: what exception is thrown?
+            except:
+                # we've reached the last python attempted and failed
+                # TODO: could use enumerate(), need to check which version of python first had it though
+                if possible_python == 'python':
+                    raise
+                else:
+                    continue
+
         stdout_text = to_text(stdout, errors=encoding_errors)
 
         return {

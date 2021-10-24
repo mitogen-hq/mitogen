@@ -26,12 +26,14 @@ with ci_lib.Fold('job_setup'):
     ci_lib.run('debops-init %s', project_dir)
     os.chdir(project_dir)
 
+    ansible_strategy_plugin = "{}/ansible_mitogen/plugins/strategy".format(ci_lib.GIT_ROOT)
+
     with open('.debops.cfg', 'w') as fp:
         fp.write(
             "[ansible defaults]\n"
-            "strategy_plugins = %s/ansible_mitogen/plugins/strategy\n"
+            "strategy_plugins = {}\n"
             "strategy = mitogen_linear\n"
-            % (ci_lib.GIT_ROOT,)
+            .format(ansible_strategy_plugin)
         )
 
     with open(vars_path, 'w') as fp:

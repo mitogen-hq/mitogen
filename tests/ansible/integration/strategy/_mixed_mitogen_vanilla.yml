@@ -11,10 +11,12 @@
       register: out
     - assert:
         that: out.mitogen_loaded
+        fail_msg: out={{out}}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
+        fail_msg: strategy={{strategy}}
 
 
 - name: integration/strategy/_mixed_mitogen_vanilla.yml (linear)
@@ -26,10 +28,12 @@
       register: out
     - assert:
         that: not out.mitogen_loaded
+        fail_msg: out={{out}}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.linear.StrategyModule'
+        fail_msg: strategy={{strategy}}
 
 
 - name: integration/strategy/_mixed_mitogen_vanilla.yml (mitogen_linear)
@@ -41,7 +45,9 @@
       register: out
     - assert:
         that: out.mitogen_loaded
+        fail_msg: out={{out}}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
+        fail_msg: strategy={{strategy}}

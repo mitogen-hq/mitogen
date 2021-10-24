@@ -32,12 +32,15 @@
   - assert:
       that:
       - fork_proc.pid != regular_proc.pid
+      fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
     when: is_mitogen
 
   - assert:
       that: fork_proc.ppid != regular_proc.pid
+      fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
     when: is_mitogen and forkmode.uses_fork
 
   - assert:
       that: fork_proc.ppid == regular_proc.pid
+      fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
     when: is_mitogen and not forkmode.uses_fork
