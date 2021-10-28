@@ -37,9 +37,6 @@ with ci_lib.Fold('docker_setup'):
 
 
 with ci_lib.Fold('job_setup'):
-    # Don't set -U as that will upgrade Paramiko to a non-2.6 compatible version.
-    run("pip install -q ansible==%s", ci_lib.ANSIBLE_VERSION)
-
     os.chdir(TESTS_DIR)
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
 
@@ -69,13 +66,11 @@ with ci_lib.Fold('job_setup'):
         run("sudo apt-get update")
         run("sudo apt-get install -y sshpass")
 
-    run("bash -c 'sudo ln -vfs /usr/lib/python2.7/plat-x86_64-linux-gnu/_sysconfigdata_nd.py /usr/lib/python2.7 || true'")
-    run("bash -c 'sudo ln -vfs /usr/lib/python2.7/plat-x86_64-linux-gnu/_sysconfigdata_nd.py $VIRTUAL_ENV/lib/python2.7 || true'")
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
-        run('./run_ansible_playbook.py %s -i "%s" %s',
+        run('./run_ansible_playbook.py %s -i "%s" -vvv %s',
             playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
     except:
         pause_if_interactive()

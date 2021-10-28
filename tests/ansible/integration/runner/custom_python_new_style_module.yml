@@ -2,6 +2,10 @@
   hosts: test-targets
   any_errors_fatal: true
   tasks:
+    # without Mitogen Ansible 2.10 hangs on this play
+    - meta: end_play
+      when: not is_mitogen
+
     - custom_python_new_style_module:
         foo: true
       with_sequence: start=0 end={{end|default(1)}}
@@ -14,6 +18,7 @@
         # Random breaking interface change since 2.7.x
         #- "out.results[0].input[0].ANSIBLE_MODULE_ARGS.foo"
         - "out.results[0].msg == 'Here is my input'"
+        fail_msg: out={{out}}
 
     # Verify sys.argv is not Unicode.
     - custom_python_detect_environment:
@@ -22,3 +27,4 @@
     - assert:
         that:
           - out.argv_types_correct
+        fail_msg: out={{out}}

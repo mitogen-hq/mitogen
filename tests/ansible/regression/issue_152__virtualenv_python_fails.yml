@@ -1,5 +1,6 @@
 - name: regression/issue_152__virtualenv_python_fails.yml
   any_errors_fatal: true
+  gather_facts: true
   hosts: test-targets
   tasks:
     - custom_python_detect_environment:
@@ -9,6 +10,10 @@
     # directly.
     - shell: virtualenv /tmp/issue_152_virtualenv
       when: lout.python_version > '2.6'
+      environment:
+        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
+        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+        PATH: "{{ lookup('env', 'PATH') }}"
 
     - custom_python_detect_environment:
       vars:
@@ -19,6 +24,7 @@
     - assert:
         that:
           - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
+        fail_msg: out={{out}}
       when: lout.python_version > '2.6'
 
     - file:

@@ -74,7 +74,7 @@ else:
 
 
 @mitogen.core.takes_router
-def get_or_create_pool(size=None, router=None):
+def get_or_create_pool(size=None, router=None, context=None):
     global _pool
     global _pool_pid
 
@@ -84,6 +84,12 @@ def get_or_create_pool(size=None, router=None):
         _pool_lock.acquire()
         try:
             if _pool_pid != my_pid:
+                if router is None:
+                    # fallback to trying to get router from context if that exists
+                    if context is not None:
+                        router = context.router
+                    else:
+                        raise ValueError("Unable to create Pool! Missing router.")
                 _pool = Pool(
                     router,
                     services=[],
@@ -119,7 +125,7 @@ def call(service_name, method_name, call_context=None, **kwargs):
     if call_context:
         return call_context.call_service(service_name, method_name, **kwargs)
     else:
-        pool = get_or_create_pool()
+        pool = get_or_create_pool(context=kwargs.get('context'))
         invoker = pool.get_invoker(service_name, msg=None)
         return getattr(invoker.service, method_name)(**kwargs)
 
@@ -685,6 +691,7 @@ class PushFileService(Service):
         super(PushFileService, self).__init__(**kwargs)
         self._lock = threading.Lock()
         self._cache = {}
+        self._extra_sys_paths = set()
         self._waiters = {}
         self._sent_by_stream = {}
 
@@ -738,30 +745,57 @@ class PushFileService(Service):
     @arg_spec({
         'context': mitogen.core.Context,
         'paths': list,
-        'modules': list,
+        # 'modules': list, TODO, modules was passed into this func but it's not used yet
     })
-    def propagate_paths_and_modules(self, context, paths, modules):
+    def propagate_paths_and_modules(self, context, paths, overridden_sources=None, extra_sys_paths=None):
         """
         One size fits all method to ensure a target context has been preloaded
         with a set of small files and Python modules.
+
+        overridden_sources: optional dict containing source code to override path's source code
+        extra_sys_paths:    loads additional sys paths for use in finding modules; beneficial
+                            in situations like loading Ansible Collections because source code
+                            dependencies come from different file paths than where the source lives
         """
         for path in paths:
-            self.propagate_to(context, mitogen.core.to_text(path))
-        #self.router.responder.forward_modules(context, modules) TODO
+            overridden_source = None
+            if overridden_sources is not None and path in overridden_sources:
+                overridden_source = overridden_sources[path]
+            self.propagate_to(context, mitogen.core.to_text(path), overridden_source)
+        # self.router.responder.forward_modules(context, modules) TODO
+
+        # NOTE: could possibly be handled by the above TODO, but not sure how forward_modules works enough
+        #       to know for sure, so for now going to pass the sys paths themselves and have `propagate_to`
+        #       load them up in sys.path for later import
+        # ensure we don't add to sys.path the same path we've already seen
+        for extra_path in extra_sys_paths:
+            # store extra paths in cached set for O(1) lookup
+            if extra_path not in self._extra_sys_paths:
+                # not sure if it matters but we could prepend to sys.path instead if we need to
+                sys.path.append(extra_path)
+                self._extra_sys_paths.add(extra_path)
 
     @expose(policy=AllowParents())
     @arg_spec({
         'context': mitogen.core.Context,
         'path': mitogen.core.FsPathTypes,
     })
-    def propagate_to(self, context, path):
+    def propagate_to(self, context, path, overridden_source=None):
+        """
+        If the optional parameter 'overridden_source' is passed, use
+        that instead of the path's code as source code. This works around some bugs
+        of source modules such as relative imports on unsupported Python versions
+        """
         if path not in self._cache:
             LOG.debug('caching small file %s', path)
-            fp = open(path, 'rb')
-            try:
-                self._cache[path] = mitogen.core.Blob(fp.read())
-            finally:
-                fp.close()
+            if overridden_source is None:
+                fp = open(path, 'rb')
+                try:
+                    self._cache[path] = mitogen.core.Blob(fp.read())
+                finally:
+                    fp.close()
+            else:
+                self._cache[path] = mitogen.core.Blob(overridden_source)
         self._forward(context, path)
 
     @expose(policy=AllowParents())

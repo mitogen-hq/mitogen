@@ -103,6 +103,18 @@ if hasattr(subprocess.Popen, 'terminate'):
     Popen__terminate = subprocess.Popen.terminate
 
 
+def threading__thread_is_alive(thread):
+    """Return whether the thread is alive (Python version compatibility shim).
+
+    On Python >= 3.8 thread.isAlive() is deprecated (removed in Python 3.9).
+    On Python <= 2.5 thread.is_alive() isn't present (added in Python 2.6).
+    """
+    try:
+        return thread.is_alive()
+    except AttributeError:
+        return thread.isAlive()
+
+
 def wait_for_port(
         host,
         port,
@@ -334,7 +346,9 @@ class TestCase(unittest2.TestCase):
         for thread in threading.enumerate():
             name = thread.getName()
             # Python 2.4: enumerate() may return stopped threads.
-            assert (not thread.isAlive()) or name in self.ALLOWED_THREADS, \
+            assert \
+                not threading__thread_is_alive(thread) \
+                or name in self.ALLOWED_THREADS, \
                 'Found thread %r still running after tests.' % (name,)
             counts[name] = counts.get(name, 0) + 1
 
@@ -406,28 +420,13 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    mitogen_test_distro = os.environ.get('MITOGEN_TEST_DISTRO', 'debian')
-    if '-'  in mitogen_test_distro:
-        distro, _py3 = mitogen_test_distro.split('-')
-    else:
-        distro = mitogen_test_distro
-        _py3 = None
-
-    if _py3 == 'py3':
-        python_path = '/usr/bin/python3'
-    else:
-        python_path = '/usr/bin/python'
-
-    image = 'mitogen/%s-test' % (distro,)
-
-    # 22/tcp -> 0.0.0.0:32771
-    PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
-    port = None
-
     def _get_container_port(self):
         s = subprocess__check_output(['docker', 'port', self.container_name])
         for line in s.decode().splitlines():
-            dport, proto, baddr, bport = self.PORT_RE.match(line).groups()
+            m = self.PORT_RE.match(line)
+            if not m:
+                continue
+            dport, proto, _, bport = m.groups()
             if dport == '22' and proto == 'tcp':
                 self.port = int(bport)
 
@@ -454,7 +453,24 @@ class DockerizedSshDaemon(object):
         subprocess__check_output(args)
         self._get_container_port()
 
-    def __init__(self):
+    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
+        if '-'  in mitogen_test_distro:
+            distro, _py3 = mitogen_test_distro.split('-')
+        else:
+            distro = mitogen_test_distro
+            _py3 = None
+
+        if _py3 == 'py3':
+            self.python_path = '/usr/bin/python3'
+        else:
+            self.python_path = '/usr/bin/python'
+
+        self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
+
+        # 22/tcp -> 0.0.0.0:32771
+        self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
+        self.port = None
+
         self.start_container()
 
     def get_host(self):
@@ -521,7 +537,13 @@ class DockerMixin(RouterMixin):
         super(DockerMixin, cls).setUpClass()
         if os.environ.get('SKIP_DOCKER_TESTS'):
             raise unittest2.SkipTest('SKIP_DOCKER_TESTS is set')
-        cls.dockerized_ssh = DockerizedSshDaemon()
+
+        # we want to be able to override test distro for some tests that need a different container spun up
+        daemon_args = {}
+        if hasattr(cls, 'mitogen_test_distro'):
+            daemon_args['mitogen_test_distro'] = cls.mitogen_test_distro
+
+        cls.dockerized_ssh = DockerizedSshDaemon(**daemon_args)
         cls.dockerized_ssh.wait_for_sshd()
 
     @classmethod

@@ -8,24 +8,17 @@ steps:
 - script: "PYTHONVERSION=$(python.version) .ci/prep_azure.py"
   displayName: "Run prep_azure.py"
 
-# The VSTS-shipped Pythons available via UsePythonVErsion are pure garbage,
-# broken symlinks, incorrect permissions and missing codecs. So we use the
-# deadsnakes PPA to get sane Pythons, and setup a virtualenv to install our
-# stuff into. The virtualenv can probably be removed again, but this was a
-# hard-fought battle and for now I am tired of this crap.
 - script: |
-    sudo ln -fs /usr/bin/python$(python.version) /usr/bin/python
-    /usr/bin/python -m pip install -U virtualenv setuptools wheel
-    /usr/bin/python -m virtualenv /tmp/venv -p /usr/bin/python$(python.version)
     echo "##vso[task.prependpath]/tmp/venv/bin"
 
   displayName: activate venv
 
-- script: .ci/spawn_reverse_shell.py
-  displayName: "Spawn reverse shell"
-
 - script: .ci/$(MODE)_install.py
   displayName: "Run $(MODE)_install.py"
+  env:
+    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+    AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)
 
 - script: .ci/$(MODE)_tests.py
   displayName: "Run $(MODE)_tests.py"

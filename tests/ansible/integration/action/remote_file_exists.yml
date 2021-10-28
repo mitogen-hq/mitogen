@@ -15,6 +15,7 @@
 
     - assert:
         that: out.result == False
+        fail_msg: out={{out}}
 
     # ---
 
@@ -29,6 +30,7 @@
 
     - assert:
         that: out.result == True
+        fail_msg: out={{out}}
 
     - file:
         path: /tmp/does-exist

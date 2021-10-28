@@ -2,8 +2,8 @@
 # Each case is followed by mitogen_via= case to test hostvars method.
 
 
-# When no ansible_python_interpreter is set, executor/module_common.py chooses
-# "/usr/bin/python".
+# When no ansible_python_interpreter is set, ansible 2.8+ automatically
+# tries to detect the desired interpreter, falling back to "/usr/bin/python" if necessary
 - name: integration/transport_config/python_path.yml
   hosts: tc-python-path-unset
   tasks:
@@ -11,7 +11,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
 
 - hosts: tc-python-path-hostvar
   vars: {mitogen_via: tc-python-path-unset}
@@ -20,7 +20,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
       right: ["/hostvar/path/to/python"]
@@ -45,7 +45,7 @@
       right: ["/hostvar/path/to/python"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
 
 
 # Implicit localhost gets ansible_python_interpreter=virtualenv interpreter
@@ -67,7 +67,7 @@
       right: ["{{ansible_playbook_python}}"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
 
 
 # explicit local connections get the same treatment as everything else.
@@ -77,7 +77,8 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
+
 
 - hosts: localhost
   vars: {mitogen_via: tc-python-path-local-unset}
@@ -86,7 +87,7 @@
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].kwargs.python_path
-      right: ["/usr/bin/python"]
+      right: ["{{out.discovered_interpreter}}"]
   - assert_equal:
       left: out.result[1].kwargs.python_path
       right: ["{{ansible_playbook_python}}"]

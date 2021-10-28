@@ -1,18 +1,12 @@
 # Verify action plugins still set file modes correctly even though
 # fixup_perms2() avoids setting execute bit despite being asked to.
+# As of Ansible 2.10.0, default perms vary based on OS. On debian systems it's 0644 and on centos it's 0664 based on test output
+# regardless, we're testing that no execute bit is set here so either check is ok
 
 - name: integration/action/fixup_perms2__copy.yml
   hosts: test-targets
   any_errors_fatal: true
   tasks:
-    - name: Get default remote file mode
-      shell: python -c 'import os; print("%04o" % (int("0666", 8) & ~os.umask(0)))'
-      register: py_umask
-
-    - name: Set default file mode
-      set_fact:
-        mode: "{{py_umask.stdout}}"
-
     #
     # copy module (no mode).
     #
@@ -26,7 +20,8 @@
       register: out
     - assert:
         that:
-        -  out.stat.mode == mode
+        -  out.stat.mode in ("0644", "0664")
+        fail_msg: out={{out}}
 
     #
     # copy module (explicit mode).
@@ -43,6 +38,7 @@
     - assert:
         that:
         -  out.stat.mode == "0400"
+        fail_msg: out={{out}}
 
     #
     # copy module (existing disk files, no mode).
@@ -68,7 +64,8 @@
       register: out
     - assert:
         that:
-        - out.stat.mode == mode
+        - out.stat.mode in ("0644", "0664")
+        fail_msg: out={{out}}
 
     #
     # copy module (existing disk files, preserve mode).
@@ -85,6 +82,7 @@
     - assert:
         that:
         - out.stat.mode == "1462"
+        fail_msg: out={{out}}
 
     #
     # copy module (existing disk files, explicit mode).
@@ -102,6 +100,7 @@
     - assert:
         that:
         - out.stat.mode == "1461"
+        fail_msg: out={{out}}
 
     - file:
         state: absent
