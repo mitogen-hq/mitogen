@@ -423,7 +423,10 @@ class DockerizedSshDaemon(object):
     def _get_container_port(self):
         s = subprocess__check_output(['docker', 'port', self.container_name])
         for line in s.decode().splitlines():
-            dport, proto, baddr, bport = self.PORT_RE.match(line).groups()
+            m = self.PORT_RE.match(line)
+            if not m:
+                continue
+            dport, proto, _, bport = m.groups()
             if dport == '22' and proto == 'tcp':
                 self.port = int(bport)
 

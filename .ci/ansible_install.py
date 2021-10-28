@@ -12,12 +12,15 @@ batches = [
             '-r tests/requirements.txt '
             '-r tests/ansible/requirements.txt',
         'pip install -q ansible=={0}'.format(ci_lib.ANSIBLE_VERSION)
+    ],
+    [
+        'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',
     ]
 ]
 
-batches.extend(
-    ['docker pull %s' % (ci_lib.image_for_distro(distro),), 'sleep 1']
+batches[-1].extend([
+    'docker pull %s' % (ci_lib.image_for_distro(distro),)
     for distro in ci_lib.DISTROS
-)
+])
 
 ci_lib.run_batches(batches)
