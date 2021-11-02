@@ -21,3 +21,5 @@
       that:
       - out.env.THIS_IS_STUB_KUBECTL == '1'
       fail_msg: out={{out}}
+  tags:
+    - kubectl

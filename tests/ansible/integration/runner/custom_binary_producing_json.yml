@@ -25,3 +25,5 @@
           out.results[0].changed and
           out.results[0].msg == 'Hello, world.'
         fail_msg: out={{out}}
+  tags:
+    - custom_binary_producing_json

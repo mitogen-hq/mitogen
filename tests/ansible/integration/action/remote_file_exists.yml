@@ -35,4 +35,5 @@
     - file:
         path: /tmp/does-exist
         state: absent
-
+  tags:
+    - remote_file_exists

@@ -30,3 +30,5 @@
     - file:
         path: /tmp/issue_152_interpreter.sh
         state: absent
+  tags:
+    - issue_152

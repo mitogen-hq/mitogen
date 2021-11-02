@@ -65,3 +65,5 @@
       - result1.failed == False
       fail_msg: result1={{result1}}
     when: ansible_version.full is version('2.4', '>')
+  tags:
+    - runner_one_job

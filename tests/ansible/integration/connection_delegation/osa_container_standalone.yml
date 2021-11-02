@@ -27,3 +27,6 @@
           'method': 'setns',
         },
       ]
+  tags:
+    - osa
+    - osa_container_standalone

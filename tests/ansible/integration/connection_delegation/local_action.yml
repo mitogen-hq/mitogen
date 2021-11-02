@@ -33,3 +33,5 @@
             'method': 'sudo',
           }
         ]
+  tags:
+    - local_action

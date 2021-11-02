@@ -32,3 +32,5 @@
     - assert:
         that: result.rc == 0
         fail_msg: result={{result}}
+  tags:
+    - stns_lxc

@@ -19,6 +19,8 @@
         register: out_linux
       - set_fact: out={{out_linux}}
       when: ansible_system == "Linux"
+  tags:
+    - custom_binary_producing_junk
 
 
 - hosts: test-targets
@@ -31,3 +33,5 @@
         - out.results[0].msg.startswith('MODULE FAILURE')
         - out.results[0].rc == 0
         fail_msg: out={{out}}
+  tags:
+    - custom_binary_producing_junk

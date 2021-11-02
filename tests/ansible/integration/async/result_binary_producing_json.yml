@@ -55,3 +55,5 @@
       fail_msg: async_out={{async_out}}
     vars:
       async_out: "{{result.content|b64decode|from_json}}"
+  tags:
+    - result_binary_producing_json

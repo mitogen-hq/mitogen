@@ -22,3 +22,6 @@
             ("sudo: unrecognized option `--derps'" in out.module_stdout) or
             ("sudo: unrecognized option '--derps'" in out.module_stderr)
         fail_msg: out={{out}}
+  tags:
+    - sudo
+    - sudo_flags_failure

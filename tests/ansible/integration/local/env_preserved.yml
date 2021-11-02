@@ -6,3 +6,5 @@
   connection: local
   tasks:
     - shell: "env | grep EVIL_VARS_PLUGIN"
+  tags:
+    - env_preserved

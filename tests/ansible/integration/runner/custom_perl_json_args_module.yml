@@ -19,3 +19,5 @@
         - (not out.changed)
         - (not out.results[0].changed)
         fail_msg: out={{out}}
+  tags:
+    - custom_perl_json_args_module

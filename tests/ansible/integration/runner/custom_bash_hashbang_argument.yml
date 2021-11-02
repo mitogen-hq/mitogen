@@ -18,3 +18,5 @@
           out.results[0].msg == 'Here is my input' and
           out.results[0].run_via_env == "yes"
         fail_msg: out={{out}}
+  tags:
+    - custom_bash_hashbang_argument

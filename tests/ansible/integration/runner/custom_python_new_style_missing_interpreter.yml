@@ -16,3 +16,5 @@
         #- "out.results[0].input[0].ANSIBLE_MODULE_ARGS.foo"
         - "out.results[0].msg == 'Here is my input'"
         fail_msg: out={{out}}
+  tags:
+    - custom_python_new_style_module

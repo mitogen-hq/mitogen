@@ -41,3 +41,5 @@
             ["root"],
           )
         fail_msg: raw={{raw}}
+  tags:
+    - low_level_execute_command

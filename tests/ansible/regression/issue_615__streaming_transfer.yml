@@ -19,3 +19,5 @@
         path: /tmp/fetch-out
         state: absent
       delegate_to: localhost
+  tags:
+    - issue_615

@@ -31,3 +31,6 @@
         - ansible_facts.distribution not in ["MacOSX"]
           or ansible_version.full is version("2.11", ">=", strict=True)
           or is_mitogen
+  tags:
+    - sudo
+    - sudo_nonexistent

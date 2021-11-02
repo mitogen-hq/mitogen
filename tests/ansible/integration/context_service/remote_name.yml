@@ -30,4 +30,5 @@
       that:
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:ansible\)')
       fail_msg: out={{out}}
-
+  tags:
+    - remote_name

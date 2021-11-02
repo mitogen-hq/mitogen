@@ -28,3 +28,5 @@
         that:
           - out.argv_types_correct
         fail_msg: out={{out}}
+  tags:
+    - custom_python_new_style_module

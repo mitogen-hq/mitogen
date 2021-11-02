@@ -12,4 +12,5 @@
       that:
       - out.extmod_path == "ansible/lib/module_utils/externalpkg/extmod.py"
       fail_msg: out={{out}}
-
+  tags:
+    - from_config_path

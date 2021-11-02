@@ -11,3 +11,5 @@
       that:
       - "'id' in out.info"
       fail_msg: out={{out}}
+  tags:
+    - issue_590
