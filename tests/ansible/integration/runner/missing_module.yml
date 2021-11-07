@@ -18,3 +18,6 @@
         that: |
           'The module missing_module was not found in configured module paths' in out.stdout
         fail_msg: out={{out}}
+  tags:
+    - local
+    - missing_module

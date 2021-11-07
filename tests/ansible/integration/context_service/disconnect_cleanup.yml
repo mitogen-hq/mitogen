@@ -48,3 +48,5 @@
 
   # - assert:
   #     that: out.dump|length == play_hosts|length # just the ssh account
+  tags:
+    - disconnect_cleanup

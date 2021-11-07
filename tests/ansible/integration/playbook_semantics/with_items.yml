@@ -29,3 +29,5 @@
     #     - first_run.results[item|int].stdout == ("mitogen__user%d" % (item|int + 1))
     #     - first_run.results[item|int].stdout == second_run.results[item|int].stdout
     #   with_sequence: start=0 end=2
+  tags:
+    - custom_python_new_style_module

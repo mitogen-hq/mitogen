@@ -6,6 +6,8 @@
       with_sequence: start=1 end={{end|default(1)}}
       ignore_errors: true
       register: out
+  tags:
+    - custom_binary_single_null
 
 - hosts: test-targets
   any_errors_fatal: true
@@ -28,7 +30,8 @@
         ))
         or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '16.04')
       fail_msg: out={{out}}
-
+  tags:
+    - custom_binary_single_null
 
 # Can't test this: Mitogen returns 126, 2.5.x returns 126, 2.4.x discarded the
 # return value and always returned 0.

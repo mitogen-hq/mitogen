@@ -49,3 +49,5 @@
       that:
       - login_acct.pid != new_login_acct.pid
       fail_msg: login_acct={{login_acct}} new_login_acct={{new_login_acct}}
+  tags:
+    - reset_become

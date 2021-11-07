@@ -160,3 +160,5 @@
         - out.module_path.startswith(good_temp_path2)
         - out.module_tmpdir.startswith(good_temp_path2)
         fail_msg: out={{out}}
+  tags:
+    - make_tmp_path

@@ -1,4 +1,6 @@
 - include: setup/all.yml
+  tags: setup
 - include: regression/all.yml
+  tags: regression
 - include: integration/all.yml
-
+  tags: integration

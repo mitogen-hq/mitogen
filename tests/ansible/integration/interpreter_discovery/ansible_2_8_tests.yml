@@ -164,3 +164,5 @@
           always:
           - meta: clear_facts
       when: ansible_version.full is version_compare('2.8.0', '>=')
+  tags:
+    - ansible_2_8_tests

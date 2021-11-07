@@ -51,4 +51,5 @@
     - assert:
         that: not out.env.evil_key is defined
         fail_msg: out={{out}}
-
+  tags:
+    - environment_isolation

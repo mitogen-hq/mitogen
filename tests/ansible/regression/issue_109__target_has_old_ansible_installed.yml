@@ -30,3 +30,5 @@
     # Run some new-style modules that 'from ansible.module_utils...'
     - stat:
         path: /
+  tags:
+    - issue_109

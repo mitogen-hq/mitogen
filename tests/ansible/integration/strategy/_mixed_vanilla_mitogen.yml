@@ -16,6 +16,8 @@
     - assert:
         that: strategy == 'ansible.plugins.strategy.linear.StrategyModule'
         fail_msg: strategy={{strategy}}
+  tags:
+    - linear
 
 - name: integration/strategy/_mixed_vanilla_mitogen.yml (mitogen_linear)
   hosts: test-targets[0]
@@ -32,7 +34,8 @@
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
         fail_msg: strategy={{strategy}}
-
+  tags:
+    - mitogen_linear
 
 - name: integration/strategy/_mixed_vanilla_mitogen.yml (linear)
   hosts: test-targets[0]
@@ -49,3 +52,5 @@
     - assert:
         that: strategy == 'ansible.plugins.strategy.linear.StrategyModule'
         fail_msg: strategy={{strategy}}
+  tags:
+    - linear

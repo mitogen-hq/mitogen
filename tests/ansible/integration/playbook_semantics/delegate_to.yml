@@ -94,3 +94,5 @@
       become: true
       tags:
         - requires_local_sudo
+  tags:
+    - delegate_to

@@ -31,3 +31,5 @@
         path: /tmp/issue_152_virtualenv
         state: absent
       when: lout.python_version > '2.6'
+  tags:
+    - issue_152

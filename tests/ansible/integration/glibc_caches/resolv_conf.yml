@@ -48,3 +48,5 @@
       when: |
         ansible_virtualization_type == "docker" and
         ansible_python_version > "2.5"
+  tags:
+    - resolv_conf
