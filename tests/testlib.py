@@ -144,7 +144,7 @@ def wait_for_port(
 
         if not pattern:
             # Success: We connected & there's no banner check to perform.
-            sock.shutdown(socket.SHUTD_RDWR)
+            sock.shutdown(socket.SHUT_RDWR)
             sock.close()
             return
 
