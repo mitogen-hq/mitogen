@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import ast
 import os
 
 from setuptools import find_packages, setup
@@ -37,7 +38,8 @@ def grep_version():
         for line in fp:
             if line.startswith('__version__'):
                 _, _, s = line.partition('=')
-                return '%i.%i.%i%s%i' % eval(s)
+                parts = ast.literal_eval(s.strip())
+                return '.'.join(str(part) for part in parts)
 
 
 def long_description():

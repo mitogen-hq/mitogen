@@ -70,7 +70,7 @@ with ci_lib.Fold('job_setup'):
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
-        run('./run_ansible_playbook.py %s -i "%s" -vvv %s',
+        run('./run_ansible_playbook.py %s -i "%s" %s',
             playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
     except:
         pause_if_interactive()

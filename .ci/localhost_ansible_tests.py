@@ -46,11 +46,11 @@ with ci_lib.Fold('machine_prep'):
 
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':
         os.chdir(IMAGE_PREP_DIR)
-        run("ansible-playbook -c local -i localhost, _user_accounts.yml -vvv")
+        run("ansible-playbook -c local -i localhost, _user_accounts.yml")
 
 
 with ci_lib.Fold('ansible'):
     os.chdir(TESTS_DIR)
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
-    run('./run_ansible_playbook.py %s -l target %s -vvv',
+    run('./run_ansible_playbook.py %s -l target %s',
         playbook, ' '.join(sys.argv[1:]))

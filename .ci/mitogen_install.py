@@ -4,7 +4,6 @@ import ci_lib
 
 batches = [
     [
-        'pip install "pycparser<2.19" "idna<2.7"',
         'pip install -r tests/requirements.txt',
     ]
 ]

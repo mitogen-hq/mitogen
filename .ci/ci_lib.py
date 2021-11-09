@@ -167,7 +167,7 @@ def get_output(s, *args, **kwargs):
 
 def exists_in_path(progname):
     """
-    Return True if proganme exists in $PATH.
+    Return True if progname exists in $PATH.
 
     >>> exists_in_path('echo')
     True
