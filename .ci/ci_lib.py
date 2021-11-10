@@ -59,12 +59,6 @@ def have_docker():
     return proc.wait() == 0
 
 
-# -----------------
-
-# Force line buffering on stdout.
-sys.stdout = os.fdopen(1, 'w', 1)
-
-
 def _argv(s, *args):
     """Interpolate a command line using *args, return an argv style list.
 
@@ -195,13 +189,11 @@ class Fold(object):
 
 os.environ.setdefault('ANSIBLE_STRATEGY',
     os.environ.get('STRATEGY', 'mitogen_linear'))
-# Ignoreed when MODE=mitogen
-ANSIBLE_VERSION = os.environ.get('VER', '2.6.2')
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Used only when MODE=mitogen
-DISTRO = os.environ.get('DISTRO', 'debian')
+DISTRO = os.environ.get('DISTRO', 'debian9')
 # Used only when MODE=ansible
-DISTROS = os.environ.get('DISTROS', 'debian centos6 centos7').split()
+DISTROS = os.environ.get('DISTROS', 'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004').split()
 TARGET_COUNT = int(os.environ.get('TARGET_COUNT', '2'))
 BASE_PORT = 2200
 TMP = TempDir().path
@@ -254,11 +246,13 @@ def make_containers(name_prefix='', port_offset=0):
     >>> pprint.pprint(make_containers())
     [{'distro': 'debian',
       'hostname': 'localhost',
+      'image': 'public.ecr.aws/n5z0e8q9/debian-test',
       'name': 'target-debian-1',
       'port': 2201,
       'python_path': '/usr/bin/python'},
      {'distro': 'centos6',
       'hostname': 'localhost',
+      'image': 'public.ecr.aws/n5z0e8q9/centos6-test',
       'name': 'target-centos6-2',
       'port': 2202,
       'python_path': '/usr/bin/python'}]
@@ -280,6 +274,7 @@ def make_containers(name_prefix='', port_offset=0):
         for x in range(count):
             lst.append({
                 "distro": firstbit(distro),
+                "image": image_for_distro(distro),
                 "name": name_prefix + ("target-%s-%s" % (distro, i)),
                 "hostname": docker_hostname,
                 "port": BASE_PORT + i + port_offset,
@@ -358,7 +353,7 @@ def start_containers(containers):
                 "--publish 0.0.0.0:%(port)s:22/tcp "
                 "--hostname=%(name)s "
                 "--name=%(name)s "
-                "mitogen/%(distro)s-test "
+                "%(image)s"
             % container
         ]
         for container in containers

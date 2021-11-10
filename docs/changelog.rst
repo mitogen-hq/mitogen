@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 v0.3.1.dev0 (unreleased)
 ------------------------
 
+* :gh:issue:`869` Continuous Integration tests are now run with Tox
+* :gh:issue:`869` Continuous Integration tests now cover CentOS 6 & 8, Debian 9 & 11, Ubuntu 16.04 & 20.04
+
 
 v0.3.0 (2021-11-24)
 -------------------
