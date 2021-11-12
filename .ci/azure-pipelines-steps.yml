@@ -13,7 +13,7 @@ steps:
 - script: python -mpip install tox
   displayName: Install tooling
 
-- script: tox -e $(tox.env)
+- script: tox -e "$(tox.env)"
   displayName: "Run tests"
   env:
     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)

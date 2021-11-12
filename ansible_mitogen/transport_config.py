@@ -451,7 +451,7 @@ class PlayContextSpec(Spec):
         return self._play_context.private_key_file
 
     def ssh_executable(self):
-        return self._play_context.ssh_executable
+        return C.config.get_config_value("ssh_executable", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
 
     def timeout(self):
         return self._play_context.timeout
@@ -467,9 +467,9 @@ class PlayContextSpec(Spec):
         return [
             mitogen.core.to_text(term)
             for s in (
-                getattr(self._play_context, 'ssh_args', ''),
-                getattr(self._play_context, 'ssh_common_args', ''),
-                getattr(self._play_context, 'ssh_extra_args', '')
+                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
         ]
@@ -679,10 +679,7 @@ class MitogenViaSpec(Spec):
         )
 
     def ssh_executable(self):
-        return (
-            self._host_vars.get('ansible_ssh_executable') or
-            C.ANSIBLE_SSH_EXECUTABLE
-        )
+        return C.config.get_config_value("ssh_executable", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
 
     def timeout(self):
         # TODO: must come from PlayContext too.
@@ -699,22 +696,9 @@ class MitogenViaSpec(Spec):
         return [
             mitogen.core.to_text(term)
             for s in (
-                (
-                    self._host_vars.get('ansible_ssh_args') or
-                    getattr(C, 'ANSIBLE_SSH_ARGS', None) or
-                    os.environ.get('ANSIBLE_SSH_ARGS')
-                    # TODO: ini entry. older versions.
-                ),
-                (
-                    self._host_vars.get('ansible_ssh_common_args') or
-                    os.environ.get('ANSIBLE_SSH_COMMON_ARGS')
-                    # TODO: ini entry.
-                ),
-                (
-                    self._host_vars.get('ansible_ssh_extra_args') or
-                    os.environ.get('ANSIBLE_SSH_EXTRA_ARGS')
-                    # TODO: ini entry.
-                ),
+                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
             )
             for term in ansible.utils.shlex.shlex_split(s)
             if s

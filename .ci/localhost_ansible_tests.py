@@ -33,15 +33,19 @@ with ci_lib.Fold('job_setup'):
 
 with ci_lib.Fold('machine_prep'):
     # generate a new ssh key for localhost ssh
-    os.system("ssh-keygen -P '' -m pem -f ~/.ssh/id_rsa")
-    os.system("cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys")
+    if not os.path.exists(os.path.expanduser("~/.ssh/id_rsa")):
+        os.system("ssh-keygen -P '' -m pem -f ~/.ssh/id_rsa")
+        os.system("cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys")
+
     # also generate it for the sudo user
-    os.system("sudo ssh-keygen -P '' -m pem -f /var/root/.ssh/id_rsa")
-    os.system("sudo cat /var/root/.ssh/id_rsa.pub | sudo tee -a /var/root/.ssh/authorized_keys")
+    if os.system("sudo [ -f /var/root/.ssh/id_rsa ]") != 0:
+        os.system("sudo ssh-keygen -P '' -m pem -f /var/root/.ssh/id_rsa")
+        os.system("sudo cat /var/root/.ssh/id_rsa.pub | sudo tee -a /var/root/.ssh/authorized_keys")
+
     os.chmod(os.path.expanduser('~/.ssh'), int('0700', 8))
     os.chmod(os.path.expanduser('~/.ssh/authorized_keys'), int('0600', 8))
     # run chmod through sudo since it's owned by root
-    os.system('sudo chmod 600 /var/root/.ssh')
+    os.system('sudo chmod 700 /var/root/.ssh')
     os.system('sudo chmod 600 /var/root/.ssh/authorized_keys')
 
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':

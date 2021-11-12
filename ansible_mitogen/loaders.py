@@ -45,7 +45,7 @@ __all__ = [
 import ansible
 
 ANSIBLE_VERSION_MIN = (2, 10)
-ANSIBLE_VERSION_MAX = (2, 10)
+ANSIBLE_VERSION_MAX = (2, 11)
 
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
@@ -79,7 +79,7 @@ def assert_supported_release():
 
     if v[:2] > ANSIBLE_VERSION_MAX:
         raise ansible.errors.AnsibleError(
-            NEW_VERSION_MSG % (ansible.__version__, ANSIBLE_VERSION_MAX)
+            NEW_VERSION_MSG % (v, ANSIBLE_VERSION_MAX)
         )
 
 

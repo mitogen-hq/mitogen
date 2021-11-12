@@ -25,14 +25,14 @@ jobs:
         tox.env: py27-mode_mitogen
 
       # TODO: test python3, python3 tests are broken
-      Ans210_27:
+      Local_Py27:
         python.version: '2.7'
-        tox.env: py27-mode_localhost-ansible2.10
+        tox.env: py27-mode_localhost-ansible{2.10,3,4}
 
       # NOTE: this hangs when ran in Ubuntu 18.04
-      Vanilla_210_27:
+      Vanilla_Py27:
         python.version: '2.7'
-        tox.env: py27-mode_localhost-ansible2.10
+        tox.env: py27-mode_localhost-ansible{2.10,3,4}
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
 
@@ -45,22 +45,17 @@ jobs:
   - template: azure-pipelines-steps.yml
   strategy:
     matrix:
-      Mito27Debian_27:
+      Mito_Py27:
         python.version: '2.7'
-        tox.env: py27-mode_mitogen-distro_debian9
+        tox.env: py27-mode_mitogen-distro_{centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004}
 
-      Mito36CentOS6_26:
+      Mito_Py36:
         python.version: '3.6'
-        tox.env: py36-mode_mitogen-distro_centos6
+        tox.env: py36-mode_mitogen-distro_{centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004}
 
-      Mito39Debian_27:
+      Mito_Py39:
         python.version: '3.9'
-        tox.env: py39-mode_mitogen-distro_debian9
-
-      #Py26CentOS7:
-        #python.version: '2.7'
-        #MODE: mitogen
-        #DISTRO: centos6
+        tox.env: py39-mode_mitogen-distro_{centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004}
 
       #DebOps_2460_27_27:
         #python.version: '2.7'
@@ -99,14 +94,14 @@ jobs:
         #DISTROS: debian
         #STRATEGY: linear
 
-      Ansible_210_27:
+      Ansible_Py27:
         python.version: '2.7'
-        tox.env: py27-mode_ansible-ansible2.10
+        tox.env: py27-mode_ansible-ansible{2.10,3,4}
 
-      Ansible_210_36:
+      Ansible_Py36:
         python.version: '3.6'
-        tox.env: py36-mode_ansible-ansible2.10
+        tox.env: py36-mode_ansible-ansible{2.10,3,4}
 
-      Ansible_210_39:
+      Ansible_Py39:
         python.version: '3.9'
-        tox.env: py39-mode_ansible-ansible2.10
+        tox.env: py39-mode_ansible-ansible{2.10,3,4}

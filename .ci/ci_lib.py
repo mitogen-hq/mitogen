@@ -22,6 +22,14 @@ os.chdir(
     )
 )
 
+_print = print
+def print(*args, **kwargs):
+    file = kwargs.get('file', sys.stdout)
+    flush = kwargs.pop('flush', False)
+    _print(*args, **kwargs)
+    if flush:
+        file.flush()
+
 
 #
 # check_output() monkeypatch cutpasted from testlib.py
@@ -71,24 +79,22 @@ def _argv(s, *args):
 
 
 def run(s, *args, **kwargs):
-    """ Run a command, with arguments, and print timing information
+    """ Run a command, with arguments
 
     >>> rc = run('echo "%s %s"', 'foo', 'bar')
-    Running: ['/usr/bin/time', '--', 'echo', 'foo bar']
+    Running: ['echo', 'foo bar']
     foo bar
-    0.00user 0.00system 0:00.00elapsed ?%CPU (0avgtext+0avgdata 1964maxresident)k
-    0inputs+0outputs (0major+71minor)pagefaults 0swaps
-    Finished running: ['/usr/bin/time', '--', 'echo', 'foo bar']
+    Finished running: ['echo', 'foo bar']
     >>> rc
     0
     """
-    argv = ['/usr/bin/time', '--'] + _argv(s, *args)
-    print('Running: %s' % (argv,))
+    argv = _argv(s, *args)
+    print('Running: %s' % (argv,), flush=True)
     try:
         ret = subprocess.check_call(argv, **kwargs)
-        print('Finished running: %s' % (argv,))
+        print('Finished running: %s' % (argv,), flush=True)
     except Exception:
-        print('Exception occurred while running: %s' % (argv,))
+        print('Exception occurred while running: %s' % (argv,), file=sys.stderr, flush=True)
         raise
 
     return ret
@@ -155,7 +161,7 @@ def get_output(s, *args, **kwargs):
     'foo bar\n'
     """
     argv = _argv(s, *args)
-    print('Running: %s' % (argv,))
+    print('Running: %s' % (argv,), flush=True)
     return subprocess.check_output(argv, **kwargs)
 
 
@@ -368,12 +374,10 @@ def start_containers(containers):
 def verify_procs(hostname, old, new):
     oldpids = set(pid for pid, _ in old)
     if any(pid not in oldpids for pid, _ in new):
-        print('%r had stray processes running:' % (hostname,))
+        print('%r had stray processes running:' % (hostname,), file=sys.stderr, flush=True)
         for pid, line in new:
             if pid not in oldpids:
-                print('New process:', line)
-
-        print()
+                print('New process:', line, flush=True)
         return False
 
     return True
@@ -397,13 +401,10 @@ def check_stray_processes(old, containers=None):
 
 
 def dump_file(path):
-    print()
-    print('--- %s ---' % (path,))
-    print()
+    print('--- %s ---' % (path,), flush=True)
     with open(path, 'r') as fp:
-        print(fp.read().rstrip())
-    print('---')
-    print()
+        print(fp.read().rstrip(), flush=True)
+    print('---', flush=True)
 
 
 # SSH passes these through to the container when run interactively, causing

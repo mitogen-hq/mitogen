@@ -64,6 +64,7 @@ setup(
     zip_safe = False,
     classifiers = [
         'Environment :: Console',
+        'Frameworks :: Ansible',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: BSD License',
         'Operating System :: MacOS :: MacOS X',
