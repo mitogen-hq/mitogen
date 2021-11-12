@@ -1,5 +1,5 @@
 - name: integration/runner/custom_binary_producing_junk.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: true
   tasks:
     - block:
@@ -23,7 +23,7 @@
     - custom_binary_producing_junk
 
 
-- hosts: test-targets
+- hosts: test_targets
   any_errors_fatal: true
   tasks:
     - assert:

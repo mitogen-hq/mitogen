@@ -23,14 +23,14 @@ cd-newuser-normal-normal mitogen_via=cd-normal ansible_user=newuser-normal-norma
 cd-newuser-doas-normal mitogen_via=cd-normal ansible_connection=mitogen_doas ansible_user=newuser-doas-normal-user
 
 
-[connection-delegation-test]
+[connection_delegation_test]
 cd-bastion
 cd-rack11 mitogen_via=ssh-user@cd-bastion
 cd-rack11a mitogen_via=root@cd-rack11
 cd-rack11a-docker mitogen_via=docker-admin@cd-rack11a ansible_connection=docker
 
 
-[connection-delegation-cycle]
+[connection_delegation_cycle]
 # Create cycle with Docker container.
 cdc-bastion mitogen_via=cdc-rack11a-docker
 cdc-rack11 mitogen_via=ssh-user@cdc-bastion

@@ -4,7 +4,7 @@
 # regardless, we're testing that no execute bit is set here so either check is ok
 
 - name: integration/action/fixup_perms2__copy.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     #

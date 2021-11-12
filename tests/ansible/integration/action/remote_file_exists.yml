@@ -1,6 +1,6 @@
 
 - name: integration/action/remote_file_exists.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

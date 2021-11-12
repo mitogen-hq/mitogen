@@ -5,5 +5,5 @@
 # fixed ansible.cfg remote_user setting to test against.
 target ansible_host=localhost ansible_user="{{lookup('env', 'USER')}}"
 
-[test-targets]
+[test_targets]
 target

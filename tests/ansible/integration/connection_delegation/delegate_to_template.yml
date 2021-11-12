@@ -1,6 +1,6 @@
 # issue #340: Ensure templated delegate_to field works.
 #
-# Here we delegate from "test-targets" group to a templated "{{physical_host}}"
+# Here we delegate from "test_targets" group to a templated "{{physical_host}}"
 # variable, which contains "cd-normal-alias", which has a
 # "mitogen_via=cd-alias", which in turn has an "ansible_host="alias-host".
 #
@@ -12,7 +12,7 @@
   vars:
     physical_host: "cd-normal-alias"
     physical_hosts: ["cd-normal-alias", "cd-normal-normal"]
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: no
   any_errors_fatal: true
   tasks:

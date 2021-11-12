@@ -3,7 +3,7 @@
 #
 
 - name: integration/playbook_semantics/become_flags.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 
@@ -18,7 +18,7 @@
   tags:
     - become_flags
 
-- hosts: test-targets
+- hosts: test_targets
   any_errors_fatal: true
   become_flags: -E
   tasks:

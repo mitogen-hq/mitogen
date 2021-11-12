@@ -1,6 +1,6 @@
 # https://github.com/dw/mitogen/issues/291
 - name: integration/runner/custom_bash_hashbang_argument.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

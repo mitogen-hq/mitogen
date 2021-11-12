@@ -1,7 +1,7 @@
 - name: regression/issue_152__virtualenv_python_fails.yml
   any_errors_fatal: true
   gather_facts: true
-  hosts: test-targets
+  hosts: test_targets
   tasks:
     - custom_python_detect_environment:
       register: lout

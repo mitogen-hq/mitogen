@@ -1,5 +1,5 @@
 - name: Report runtime settings
-  hosts: localhost:test-targets
+  hosts: localhost:test_targets
   gather_facts: true
   tasks:
     - debug: {var: ansible_facts.distribution}

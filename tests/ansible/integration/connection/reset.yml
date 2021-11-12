@@ -4,7 +4,7 @@
 ---
 
 - name: integration/connection/reset.yml
-  hosts: test-targets
+  hosts: test_targets
   tasks:
     - meta: end_play
       when: not is_mitogen

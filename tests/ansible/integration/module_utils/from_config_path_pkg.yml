@@ -1,7 +1,7 @@
 # external1 and external2 are loaded from config path.
 
 - name: integration/module_utils/from_config_path.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

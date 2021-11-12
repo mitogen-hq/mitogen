@@ -47,7 +47,7 @@ with ci_lib.Fold('job_setup'):
 
     inventory_path = os.path.join(HOSTS_DIR, 'target')
     with open(inventory_path, 'w') as fp:
-        fp.write('[test-targets]\n')
+        fp.write('[test_targets]\n')
         fp.writelines(
             "%(name)s "
             "ansible_host=%(hostname)s "

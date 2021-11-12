@@ -1,7 +1,7 @@
 # Verify 'async: <timeout>' functions as desired.
 
 - name: integration/async/runner_with_polling_and_timeout.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

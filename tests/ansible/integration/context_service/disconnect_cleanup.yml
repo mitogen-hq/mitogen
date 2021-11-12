@@ -2,7 +2,7 @@
 # state of dependent contexts (e.g. sudo, connection delegation, ..).
 
 - name: integration/context_service/disconnect_cleanup.yml
-  hosts: test-targets[0]
+  hosts: test_targets[0]
   any_errors_fatal: true
   tasks:
   - meta: end_play
