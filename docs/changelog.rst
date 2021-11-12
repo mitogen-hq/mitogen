@@ -25,6 +25,7 @@ v0.3.1.dev0 (unreleased)
 * :gh:issue:`869` Continuous Integration tests are now run with Tox
 * :gh:issue:`869` Continuous Integration tests now cover CentOS 6 & 8, Debian 9 & 11, Ubuntu 16.04 & 20.04
 * :gh:issue:`860` Add initial support for podman connection (w/o Ansible support yet)
+* :gh:issue:`873` `python -c ...` first stage no longer uses :py:mod:`platform`` to detect the macOS release
 
 
 v0.3.0 (2021-11-24)

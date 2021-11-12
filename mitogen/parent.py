@@ -42,7 +42,6 @@ import heapq
 import inspect
 import logging
 import os
-import platform
 import re
 import signal
 import socket
@@ -1410,9 +1409,12 @@ class Connection(object):
     #     their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
-    #   * For Darwin, OS X installs a craptacular argv0-introspecting Python
-    #     version switcher as /usr/bin/python. Override attempts to call it
-    #     with an explicit call to python2.7
+    #   * macOS <= 10.14 (Darwin <= 18) install an unreliable Python version
+    #     switcher as /usr/bin/python, which introspects argv0. To workaround
+    #     it we redirect attempts to call /usr/bin/python with an explicit
+    #     call to /usr/bin/python2.7. macOS 10.15+ (Darwin 19+) removed it.
+    #     On these versions /usr/bin/python is a symlink to
+    #     /System/Library/Frameworks/Python.framework/Versions/2.7/.../Python
     #
     # Locals:
     #   R: read side of interpreter stdin.
@@ -1435,11 +1437,7 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            # this doesn't apply anymore to Mac OSX 10.15+ (Darwin 19+), new interpreter looks like this:
-            # /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
-            if sys.platform == 'darwin' and sys.executable == '/usr/bin/python' and \
-                    int(platform.release()[:2]) < 19:
-                sys.executable += sys.version[:3]
+            if sys.executable+sys.platform=='/usr/bin/pythondarwin'and os.uname()[2]<'19':sys.executable+='2.7'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
