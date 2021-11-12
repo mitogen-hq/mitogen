@@ -1254,6 +1254,7 @@ class Importer(object):
         'minify',
         'os_fork',
         'parent',
+        'podman',
         'select',
         'service',
         'setns',

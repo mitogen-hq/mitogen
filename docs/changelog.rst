@@ -23,6 +23,7 @@ v0.3.1.dev0 (unreleased)
 
 * :gh:issue:`869` Continuous Integration tests are now run with Tox
 * :gh:issue:`869` Continuous Integration tests now cover CentOS 6 & 8, Debian 9 & 11, Ubuntu 16.04 & 20.04
+* :gh:issue:`860` Add initial support for podman connection (w/o Ansible support yet)
 
 
 v0.3.0 (2021-11-24)

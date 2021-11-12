@@ -2505,6 +2505,9 @@ class Router(mitogen.core.Router):
     def ssh(self, **kwargs):
         return self.connect(u'ssh', **kwargs)
 
+    def podman(self, **kwargs):
+        return self.connect(u'podman', **kwargs)
+
 
 class Reaper(object):
     """
