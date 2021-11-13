@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+import sys
+
+import yaml
+
+def matrix():
+    for py in '2.7 3.6 3.9'.split():
+        pynodot = py.replace('.', '')
+        for mode in ['ansible', 'localhost']:
+            for ansible in '2.10 3 4'.split():
+                yield {
+                    "name": f"Py{pynodot}{mode.title()}{ansible}",
+                    "vars": {
+                        "python.version": py,
+                        "tox.env": f"py{pynodot}-mode_{mode}-ansible{ansible}",
+                    },
+                }
+                if mode in {'localhost'}:
+                    yield {
+                        "name": f"Py{pynodot}Vanilla{ansible}",
+                        "vars": {
+                            "ANSIBLE_SKIP_TAGS": "resource_intensive",
+                            "python.version": py,
+                            "tox.env": f"py{pynodot}-mode_{mode}-ansible{ansible}-strategy_linear",
+                        },
+                    }
+        for mode in ['mitogen']:
+            for distro in 'centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004'.split(','):
+                yield {
+                    "name": f"Py{pynodot}{mode.title()}{distro.title()}",
+                    "vars": {
+                        "python.version": py,
+                        "tox.env": f"py{pynodot}-mode_{mode}-distro_{distro}",
+                    },
+                }
+
+d = {x['name']: x['vars'] for x in matrix()}
+yaml.dump(d, stream=sys.stdout)

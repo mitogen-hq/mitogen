@@ -25,6 +25,7 @@
             'sudo: unknown user: slartibartfast' in out.module_stdout | default(out.msg)
             or 'sudo: unknown user: slartibartfast' in out.module_stderr | default(out.msg)
             or (ansible_facts.os_family == 'RedHat' and ansible_facts.distribution_version == '6.10')
+            or 'Failed to set permissions on the temporary files Ansible needs to create when becoming an unprivileged user (rc: 1, err: chmod: Invalid file mode: A+user:slartibartfast:rx:allow\n})' in out.msg
         fail_msg: out={{out}}
       when:
         # https://github.com/ansible/ansible/pull/70785

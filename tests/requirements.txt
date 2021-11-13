@@ -1,8 +1,8 @@
-psutil==5.4.8
 coverage==4.5.1
 Django==1.6.11  # Last version supporting 2.6.
 faulthandler==3.2; python_version < '3.3'
 mock==2.0.0
+psutil==5.8.0
 pytz==2018.5
 cffi==1.14.3  # Random pin to try and fix pyparser==2.18 not having effect
 pycparser==2.18  # Last version supporting 2.6.

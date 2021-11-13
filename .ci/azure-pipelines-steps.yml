@@ -10,7 +10,18 @@ steps:
   inputs:
     versionSpec: '$(python.version)'
 
-- script: python -mpip install tox
+- task: Cache@2
+  displayName: Cache pip packages
+  inputs:
+    key: python | "$(Agent.OS)" | tox.ini | tests/requirements.txt | tests/ansible/requirements.txt
+    restoreKeys: |
+      python | "$(Agent.OS)" | tox.ini | tests/requirements.txt
+      python | "$(Agent.OS)" | tox.ini
+      python | "$(Agent.OS)"
+      python
+    path: $(PIP_CACHE_DIR)
+
+- script: python -mpip --no-python-version-warning --disable-pip-version-check install tox==3.24.4
   displayName: Install tooling
 
 - script: tox -e "$(tox.env)"

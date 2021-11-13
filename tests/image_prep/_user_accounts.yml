@@ -108,7 +108,7 @@
       when: ansible_system == 'Linux' and out.stat.exists
       service:
         name: accounts-daemon
-        restarted: true
+        state: restarted
 
     - name: Readonly homedir for one account
       shell: "chown -R root: ~mitogen__readonly_homedir"
