@@ -1,5 +1,5 @@
 
-- hosts: test-targets[0]
+- hosts: test_targets[0]
   tasks:
   - mitogen_action_script:
       script: |
@@ -10,7 +10,7 @@
   - shell: >
       ANSIBLE_STRATEGY=mitogen_linear
       ANSIBLE_SSH_ARGS=""
-      ansible -m shell -c local -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+      ansible -m shell -c local -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test_targets
     args:
       chdir: ../..
     register: out

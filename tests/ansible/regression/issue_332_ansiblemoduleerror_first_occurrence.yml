@@ -2,7 +2,7 @@
 # AnsibleModuleError. Ensure file fails correctly.
 
 - name: regression/issue_332_ansiblemoduleerror_first_occurrence.yml
-  hosts: test-targets
+  hosts: test_targets
   tasks:
   - file: path=/usr/bin/does-not-exist mode='a-s' state=file follow=yes
     ignore_errors: true

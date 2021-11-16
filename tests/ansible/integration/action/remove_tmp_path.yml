@@ -3,7 +3,7 @@
 #
 #
 - name: integration/action/remove_tmp_path.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     #

@@ -4,7 +4,7 @@
 - name: integration/glibc_caches/resolv_conf.yml
   gather_facts: true
   become: true
-  hosts: test-targets
+  hosts: test_targets
   vars:
     ansible_become_pass: has_sudo_pubkey_password
   tasks:

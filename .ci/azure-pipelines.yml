@@ -5,8 +5,9 @@
 
 # User defined variables are also injected as environment variables
 # https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables#environment-variables
-#variables:
+variables:
   #ANSIBLE_VERBOSITY: 3
+  PIP_CACHE_DIR: $(Pipeline.Workspace)/.pip
 
 jobs:
 
@@ -20,22 +21,78 @@ jobs:
     vmImage: macOS-10.15
   strategy:
     matrix:
-      Mito27_27:
+      Py27Localhost2.10:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible2.10
+      Py27Localhost3:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible3
+      Py27Localhost4:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible4
+      Py27Mitogen:
         python.version: '2.7'
         tox.env: py27-mode_mitogen
-
-      # TODO: test python3, python3 tests are broken
-      Local_Py27:
-        python.version: '2.7'
-        tox.env: py27-mode_localhost-ansible{2.10,3,4}
-
-      # NOTE: this hangs when ran in Ubuntu 18.04
-      Vanilla_Py27:
-        python.version: '2.7'
-        tox.env: py27-mode_localhost-ansible{2.10,3,4}
-        STRATEGY: linear
+      Py27Vanilla2.10:
         ANSIBLE_SKIP_TAGS: resource_intensive
-
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible2.10-strategy_linear
+      Py27Vanilla3:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible3-strategy_linear
+      Py27Vanilla4:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible4-strategy_linear
+      Py36Localhost2.10:
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible2.10
+      Py36Localhost3:
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible3
+      Py36Localhost4:
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible4
+      Py36Mitogen:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen
+      Py36Vanilla2.10:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible2.10-strategy_linear
+      Py36Vanilla3:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible3-strategy_linear
+      Py36Vanilla4:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible4-strategy_linear
+      Py39Localhost2.10:
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible2.10
+      Py39Localhost3:
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible3
+      Py39Localhost4:
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible4
+      Py39Mitogen:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen
+      Py39Vanilla2.10:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible2.10-strategy_linear
+      Py39Vanilla3:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible3-strategy_linear
+      Py39Vanilla4:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible4-strategy_linear
 
 - job: Linux
   pool:
@@ -45,63 +102,204 @@ jobs:
   - template: azure-pipelines-steps.yml
   strategy:
     matrix:
-      Mito_Py27:
-        python.version: '2.7'
-        tox.env: py27-mode_mitogen-distro_{centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004}
-
-      Mito_Py36:
-        python.version: '3.6'
-        tox.env: py36-mode_mitogen-distro_{centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004}
-
-      Mito_Py39:
-        python.version: '3.9'
-        tox.env: py39-mode_mitogen-distro_{centos6,centos7,centos8,debian9,debian10,debian11,ubuntu1604,ubuntu1804,ubuntu2004}
-
       #DebOps_2460_27_27:
         #python.version: '2.7'
         #MODE: debops_common
         #VER: 2.4.6.0
-
       #DebOps_262_36_27:
         #python.version: '3.6'
         #MODE: debops_common
         #VER: 2.6.2
-
       #Ansible_2460_26:
         #python.version: '2.7'
         #MODE: ansible
         #VER: 2.4.6.0
-
       #Ansible_262_26:
         #python.version: '2.7'
         #MODE: ansible
         #VER: 2.6.2
-
       #Ansible_2460_36:
         #python.version: '3.6'
         #MODE: ansible
         #VER: 2.4.6.0
-
       #Ansible_262_36:
         #python.version: '3.6'
         #MODE: ansible
         #VER: 2.6.2
-
       #Vanilla_262_27:
         #python.version: '2.7'
         #MODE: ansible
         #VER: 2.6.2
         #DISTROS: debian
-        #STRATEGY: linear
-
-      Ansible_Py27:
+        #ANSIBLE_STRATEGY: linear
+      Py27Ansible2.10:
         python.version: '2.7'
-        tox.env: py27-mode_ansible-ansible{2.10,3,4}
-
-      Ansible_Py36:
+        tox.env: py27-mode_ansible-ansible2.10
+      Py27Ansible3:
+        python.version: '2.7'
+        tox.env: py27-mode_ansible-ansible3
+      Py27Ansible4:
+        python.version: '2.7'
+        tox.env: py27-mode_ansible-ansible4
+      Py27Localhost2.10:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible2.10
+      Py27Localhost3:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible3
+      Py27Localhost4:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible4
+      Py27MitogenCentos6:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_centos6
+      Py27MitogenCentos7:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_centos7
+      Py27MitogenCentos8:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_centos8
+      Py27MitogenDebian10:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_debian10
+      Py27MitogenDebian11:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_debian11
+      Py27MitogenDebian9:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_debian9
+      Py27MitogenUbuntu1604:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_ubuntu1604
+      Py27MitogenUbuntu1804:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_ubuntu1804
+      Py27MitogenUbuntu2004:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_ubuntu2004
+      Py27Vanilla2.10:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible2.10-strategy_linear
+      Py27Vanilla3:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible3-strategy_linear
+      Py27Vanilla4:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible4-strategy_linear
+      Py36Ansible2.10:
         python.version: '3.6'
-        tox.env: py36-mode_ansible-ansible{2.10,3,4}
-
-      Ansible_Py39:
+        tox.env: py36-mode_ansible-ansible2.10
+      Py36Ansible3:
+        python.version: '3.6'
+        tox.env: py36-mode_ansible-ansible3
+      Py36Ansible4:
+        python.version: '3.6'
+        tox.env: py36-mode_ansible-ansible4
+      Py36Localhost2.10:
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible2.10
+      Py36Localhost3:
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible3
+      Py36Localhost4:
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible4
+      Py36MitogenCentos6:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_centos6
+      Py36MitogenCentos7:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_centos7
+      Py36MitogenCentos8:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_centos8
+      Py36MitogenDebian10:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_debian10
+      Py36MitogenDebian11:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_debian11
+      Py36MitogenDebian9:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_debian9
+      Py36MitogenUbuntu1604:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_ubuntu1604
+      Py36MitogenUbuntu1804:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_ubuntu1804
+      Py36MitogenUbuntu2004:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_ubuntu2004
+      Py36Vanilla2.10:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible2.10-strategy_linear
+      Py36Vanilla3:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible3-strategy_linear
+      Py36Vanilla4:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.6'
+        tox.env: py36-mode_localhost-ansible4-strategy_linear
+      Py39Ansible2.10:
         python.version: '3.9'
-        tox.env: py39-mode_ansible-ansible{2.10,3,4}
+        tox.env: py39-mode_ansible-ansible2.10
+      Py39Ansible3:
+        python.version: '3.9'
+        tox.env: py39-mode_ansible-ansible3
+      Py39Ansible4:
+        python.version: '3.9'
+        tox.env: py39-mode_ansible-ansible4
+      Py39Localhost2.10:
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible2.10
+      Py39Localhost3:
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible3
+      Py39Localhost4:
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible4
+      Py39MitogenCentos6:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_centos6
+      Py39MitogenCentos7:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_centos7
+      Py39MitogenCentos8:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_centos8
+      Py39MitogenDebian10:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_debian10
+      Py39MitogenDebian11:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_debian11
+      Py39MitogenDebian9:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_debian9
+      Py39MitogenUbuntu1604:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_ubuntu1604
+      Py39MitogenUbuntu1804:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_ubuntu1804
+      Py39MitogenUbuntu2004:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_ubuntu2004
+      Py39Vanilla2.10:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible2.10-strategy_linear
+      Py39Vanilla3:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible3-strategy_linear
+      Py39Vanilla4:
+        ANSIBLE_SKIP_TAGS: resource_intensive
+        python.version: '3.9'
+        tox.env: py39-mode_localhost-ansible4-strategy_linear

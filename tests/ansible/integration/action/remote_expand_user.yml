@@ -2,7 +2,7 @@
 # $HOME expansion.
 
 - name: integration/action/remote_expand_user.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - name: "Find out root's homedir."

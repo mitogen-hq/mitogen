@@ -1,7 +1,7 @@
 # issue #633: Connection.reset() should ignore "become", and apply to the login
 # account.
 
-- hosts: test-targets
+- hosts: test_targets
   become: true
   gather_facts: false
   tasks:

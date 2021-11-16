@@ -1,7 +1,7 @@
 # Ensure environment: is preserved during call.
 
 - name: integration/playbook_semantics/environment.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
     - shell: echo $SOME_ENV

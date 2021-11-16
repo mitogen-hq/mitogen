@@ -11,6 +11,7 @@ import threading
 import time
 import traceback
 
+import psutil
 import unittest2
 
 import mitogen.core
@@ -67,7 +68,6 @@ def get_fd_count():
     """
     Return the number of FDs open by this process.
     """
-    import psutil
     return psutil.Process().num_fds()
 
 
@@ -386,7 +386,8 @@ class TestCase(unittest2.TestCase):
 
         print('')
         print('Children of unit test process:')
-        os.system('ps uww --ppid ' + str(os.getpid()))
+        child_pids = ','.join(str(p.pid) for p in psutil.Process().children())
+        subprocess.check_call(['ps', '-fww', '-p', child_pids])
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):

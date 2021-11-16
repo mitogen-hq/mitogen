@@ -1,5 +1,5 @@
 
-- hosts: test-targets
+- hosts: test_targets
   tasks:
   - meta: end_play
     when: ansible_version.full < '2.8'

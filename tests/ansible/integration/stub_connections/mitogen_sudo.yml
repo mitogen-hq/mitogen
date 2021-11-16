@@ -1,6 +1,6 @@
 
 - name: integration/stub_connections/mitogen_sudo.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: false
   any_errors_fatal: true
   tasks:

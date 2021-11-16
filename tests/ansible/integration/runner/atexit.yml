@@ -3,7 +3,7 @@
 # completion.
 
 - name: integration/runner/atexit.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: false
   any_errors_fatal: false
   vars:

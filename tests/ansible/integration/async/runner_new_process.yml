@@ -1,7 +1,7 @@
 # Verify async jobs run in a new process.
 
 - name: integration/async/runner_new_process.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   tasks:
 

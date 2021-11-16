@@ -1,7 +1,7 @@
 # issue #334: test expanduser() on key file during config generation.
 
 - name: integration/ssh/config.yml
-  hosts: test-targets
+  hosts: test_targets
   connection: ssh
   vars:
     ansible_private_key_file: ~/fakekey

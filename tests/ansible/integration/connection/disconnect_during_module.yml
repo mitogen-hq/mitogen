@@ -2,7 +2,7 @@
 ---
 
 - name: integration/connection/disconnect_during_module.yml
-  hosts: test-targets
+  hosts: test_targets
   gather_facts: no
   any_errors_fatal: false
   tasks:

@@ -1,7 +1,7 @@
 # Verify a maximum number of contexts are possible on one machine.
 
 - name: integration/context_service/lru_one_target.yml
-  hosts: test-targets
+  hosts: test_targets
   any_errors_fatal: true
   vars:
     max_interps: "{{lookup('env', 'MITOGEN_MAX_INTERPRETERS')}}"
