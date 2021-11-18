@@ -1467,7 +1467,7 @@ class Connection(object):
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
-        source = source.replace('    ', '\t')
+        source = source.replace('    ', ' ')
         source = source.replace('CONTEXT_NAME', self.options.remote_name)
         preamble_compressed = self.get_preamble()
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
