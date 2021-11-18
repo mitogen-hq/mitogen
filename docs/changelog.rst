@@ -27,6 +27,7 @@ v0.3.1.dev0 (unreleased)
 * :gh:issue:`860` Add initial support for podman connection (w/o Ansible support yet)
 * :gh:issue:`873` `python -c ...` first stage no longer uses :py:mod:`platform`` to detect the macOS release
 * :gh:issue:`876` `python -c ...` first stage no longer contains tab characters, to reduce size
+* :gh:issue:`878` Continuous Integration tests now correctly perform comparisons of 2 digit versions
 
 
 v0.3.0 (2021-11-24)
