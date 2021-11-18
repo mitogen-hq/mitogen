@@ -11,6 +11,7 @@ import threading
 import time
 import traceback
 
+import psutil
 import unittest2
 
 import mitogen.core
@@ -67,7 +68,6 @@ def get_fd_count():
     """
     Return the number of FDs open by this process.
     """
-    import psutil
     return psutil.Process().num_fds()
 
 
@@ -361,7 +361,10 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
         if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof +E -w -p %s | grep -vw mem' % (os.getpid(),))
+            if sys.platform == 'linux':
+                os.system('lsof +E -w -p %i | grep -vw mem' % (os.getpid(),))
+            else:
+                os.system('lsof -w -p %i | grep -vw mem' % (os.getpid(),))
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 self, self._fd_count_before, get_fd_count(),
             )
@@ -386,7 +389,8 @@ class TestCase(unittest2.TestCase):
 
         print('')
         print('Children of unit test process:')
-        os.system('ps uww --ppid ' + str(os.getpid()))
+        os.system('ps -o "user,pid,%%cpu,%%mem,vsz,rss,tty,stat,start,time,command" -ww -p %s'
+                  % (','.join(str(p.pid) for p in psutil.Process().children()),))
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):
