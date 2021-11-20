@@ -31,7 +31,8 @@ Stable names for PluginLoader instances across Ansible versions.
 """
 
 from __future__ import absolute_import
-import distutils.version
+
+import ansible_mitogen.utils
 
 __all__ = [
     'action_loader',
@@ -42,7 +43,6 @@ __all__ = [
     'strategy_loader',
 ]
 
-import ansible
 
 ANSIBLE_VERSION_MIN = (2, 10)
 ANSIBLE_VERSION_MAX = (2, 11)
@@ -68,10 +68,7 @@ def assert_supported_release():
     Throw AnsibleError with a descriptive message in case of being loaded into
     an unsupported Ansible release.
     """
-    v = ansible.__version__
-    if not isinstance(v, tuple):
-        v = tuple(distutils.version.LooseVersion(v).version)
-
+    v = ansible_mitogen.utils.ansible_version
     if v[:2] < ANSIBLE_VERSION_MIN:
         raise ansible.errors.AnsibleError(
             OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
