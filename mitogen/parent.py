@@ -1412,9 +1412,12 @@ class Connection(object):
     #   * macOS <= 10.14 (Darwin <= 18) install an unreliable Python version
     #     switcher as /usr/bin/python, which introspects argv0. To workaround
     #     it we redirect attempts to call /usr/bin/python with an explicit
-    #     call to /usr/bin/python2.7. macOS 10.15+ (Darwin 19+) removed it.
-    #     On these versions /usr/bin/python is a symlink to
-    #     /System/Library/Frameworks/Python.framework/Versions/2.7/.../Python
+    #     call to /usr/bin/python2.7. macOS 10.15 (Darwin 19) removed it.
+    #   * macOS 11.x (Darwin 20, Big Sur) and macOS 12.x (Darwin 21, Montery)
+    #     do something slightly different. The Python executable is patched to
+    #     perform an extra execvp(). I don't fully understand the details, but
+    #     setting PYTHON_LAUNCHED_FROM_WRAPPER=1 avoids it.
+    #   * macOS 13.x (Darwin 22?) may remove python 2.x entirely.
     #
     # Locals:
     #   R: read side of interpreter stdin.
@@ -1437,7 +1440,8 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            if sys.executable+sys.platform=='/usr/bin/pythondarwin'and os.uname()[2]<'19':sys.executable+='2.7'
+            if os.uname()[0]=='Darwin'and os.uname()[2][:2]<'19'and sys.executable=='/usr/bin/python':sys.executable='/usr/bin/python2.7'
+            if os.uname()[0]=='Darwin'and os.uname()[2][:2]in'2021'and sys.version[:3]=='2.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
