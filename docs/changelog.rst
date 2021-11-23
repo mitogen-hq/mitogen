@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 v0.3.1.dev0 (unreleased)
 ------------------------
 
+* :gh:issue:`774` Fix bootstrap failures on macOS 11.x and 12.x, involving Python 2.7 wrapper
 * :gh:issue:`834` Support for Ansible 3 and 4 (ansible-core 2.11)
 * :gh:issue:`869` Continuous Integration tests are now run with Tox
 * :gh:issue:`869` Continuous Integration tests now cover CentOS 6 & 8, Debian 9 & 11, Ubuntu 16.04 & 20.04

@@ -1438,6 +1438,7 @@ class Connection(object):
             os.close(W)
             os.close(w)
             if sys.executable+sys.platform=='/usr/bin/pythondarwin'and os.uname()[2]<'19':sys.executable+='2.7'
+            if sys.version_info[:2]==(2,7)and sys.platform=='darwin'and os.uname()[2]>='20':sys.executable='/System/Library/Frameworks/Python.framework/Versions/2.7/bin/unwrapped/python2.7'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
