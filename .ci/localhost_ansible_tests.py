@@ -13,6 +13,10 @@ IMAGE_PREP_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/image_prep')
 HOSTS_DIR = os.path.join(TESTS_DIR, 'hosts')
 KEY_PATH = os.path.join(TESTS_DIR, '../data/docker/mitogen__has_sudo_pubkey.key')
 
+print(sys.executable)
+print(sys.prefix)
+
+os.system('find /System/Library/Frameworks/Python.framework -not -type d -ls')
 
 with ci_lib.Fold('unit_tests'):
     os.environ['SKIP_MITOGEN'] = '1'
