@@ -135,7 +135,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         expect = mitogen.parent.Connection.eof_error_msg
-        self.assertTrue(expect in e.args[0])
+        self.assertIn(expect, e.args[0])
 
     def test_direct_enoent(self):
         e = self.assertRaises(mitogen.core.StreamError,
@@ -157,7 +157,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         s = 'Child start failed: [Errno 2] No such file or directory'
-        self.assertTrue(s in e.args[0])
+        self.assertIn(s, e.args[0])
 
 
 class ContextTest(testlib.RouterMixin, testlib.TestCase):
@@ -176,9 +176,9 @@ class OpenPtyTest(testlib.TestCase):
         master_fp, slave_fp = self.func()
         try:
             self.assertTrue(master_fp.isatty())
-            self.assertTrue(isinstance(master_fp, file))
+            self.assertIsInstance(master_fp, file)
             self.assertTrue(slave_fp.isatty())
-            self.assertTrue(isinstance(slave_fp, file))
+            self.assertIsInstance(slave_fp, file)
         finally:
             master_fp.close()
             slave_fp.close()

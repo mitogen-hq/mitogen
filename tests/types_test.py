@@ -91,8 +91,8 @@ class KwargsTest(testlib.TestCase):
         self.assertEquals({}, kw)
         self.assertEquals('Kwargs({})', repr(kw))
         klass, (dct,) = kw.__reduce__()
-        self.assertTrue(klass is self.klass)
-        self.assertTrue(type(dct) is dict)
+        self.assertIs(klass, self.klass)
+        self.assertIs(type(dct), dict)
         self.assertEquals({}, dct)
 
     @unittest2.skipIf(condition=(sys.version_info >= (2, 6)),
@@ -109,11 +109,11 @@ class KwargsTest(testlib.TestCase):
         self.assertEquals({u'key': 123}, kw)
         self.assertEquals("Kwargs({'key': 123})", repr(kw))
         klass, (dct,) = kw.__reduce__()
-        self.assertTrue(klass is self.klass)
-        self.assertTrue(type(dct) is dict)
+        self.assertIs(klass, self.klass)
+        self.assertIs(type(dct), dict)
         self.assertEquals({u'key': 123}, dct)
         key, = dct
-        self.assertTrue(type(key) is mitogen.core.UnicodeType)
+        self.assertIs(type(key), mitogen.core.UnicodeType)
 
 
 class AdornedUnicode(mitogen.core.UnicodeType):

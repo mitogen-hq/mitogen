@@ -17,8 +17,8 @@ def yield_stuff_then_die(sender):
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
     def test_handle(self):
         recv = mitogen.core.Receiver(self.router)
-        self.assertTrue(isinstance(recv.handle, int))
-        self.assertTrue(recv.handle > 100)
+        self.assertIsInstance(recv.handle, int)
+        self.assertGreater(recv.handle, 100)
         self.router.route(
             mitogen.core.Message.pickled(
                 'hi',

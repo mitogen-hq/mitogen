@@ -45,7 +45,7 @@ class WatcherTest(testlib.TestCase):
         self.tf.seek(0)
         self.tf.truncate(0)
         watcher.check()
-        self.assertTrue(b('SOMEKEY') not in environb)
+        self.assertNotIn(b('SOMEKEY'), environb)
 
     def test_key_added(self):
         watcher = klass(self.tf.name)

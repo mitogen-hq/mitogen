@@ -56,7 +56,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             s = capture.stop()
 
         expect = "%s: debug1: Reading configuration data" % (context.name,)
-        self.assertTrue(expect in s)
+        self.assertIn(expect, s)
 
     def test_bash_permission_denied(self):
         # issue #271: only match Permission Denied at start of line.
@@ -165,7 +165,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             fp.seek(0)
             # Lame test, but we're about to use enforce mode anyway, which
             # verifies the file contents.
-            self.assertTrue(len(fp.read()) > 0)
+            self.assertGreater(len(fp.read()), 0)
 
             context = self.docker_ssh(
                 username='mitogen__has_sudo',

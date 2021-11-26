@@ -207,8 +207,7 @@ class TtyCreateChildTest(testlib.TestCase):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stdin.fileno()))
 
         flags = fcntl.fcntl(proc.stdin.fileno(), fcntl.F_GETFL)
@@ -224,8 +223,7 @@ class TtyCreateChildTest(testlib.TestCase):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stdout.fileno()))
 
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
@@ -245,8 +243,7 @@ class TtyCreateChildTest(testlib.TestCase):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stdout.fileno()))
 
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
@@ -291,8 +288,7 @@ class StderrDiagTtyMixin(object):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stderr.fileno()))
 
         flags = fcntl.fcntl(proc.stderr.fileno(), fcntl.F_GETFL)

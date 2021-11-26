@@ -74,7 +74,7 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
 
         # Ensure error was logged.
         expect = 'bad auth_id: got %r via' % (self.child2_msg.auth_id,)
-        self.assertTrue(expect in log.stop())
+        self.assertIn(expect, log.stop())
 
     def test_parent_unaware_of_disconnect(self):
         # Parent -> Child A -> Child B. B disconnects concurrent to Parent
@@ -128,7 +128,7 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
 
         # Ensure error was lgoged.
         expect = 'bad src_id: got %d via' % (self.child1_msg.src_id,)
-        self.assertTrue(expect in log.stop())
+        self.assertIn(expect, log.stop())
 
 
 class PolicyTest(testlib.RouterMixin, testlib.TestCase):
@@ -168,7 +168,7 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         self.sync_with_broker()
 
         # Verify log.
-        self.assertTrue(self.router.refused_msg in log.stop())
+        self.assertIn(self.router.refused_msg, log.stop())
 
         # Verify message was not delivered.
         self.assertTrue(recv.empty())
@@ -205,7 +205,7 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
 
         # Ensure it was logged.
         expect = 'broker crashed'
-        self.assertTrue(expect in log.stop())
+        self.assertIn(expect, log.stop())
 
         self.broker.join()
 
@@ -267,7 +267,7 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         router.broker.defer_sync(lambda: None)
 
         expect = 'message too large (max 4096 bytes)'
-        self.assertTrue(expect in logs.stop())
+        self.assertIn(expect, logs.stop())
 
     def test_local_dead_message(self):
         # Local router should generate dead message when reply_to is set.
@@ -285,7 +285,7 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
             lambda: child.call(zlib.crc32, ' '*8192))
         self.assertEquals(e.args[0], expect)
 
-        self.assertTrue(expect in logs.stop())
+        self.assertIn(expect, logs.stop())
 
     def test_remote_dead_message(self):
         # Router should send dead message to original recipient when reply_to
@@ -328,7 +328,7 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         remote.call(send_n_sized_reply, recv.to_sender(), 128*1024)
 
         expect = 'message too large (max %d bytes)' % (64*1024,)
-        self.assertTrue(expect in logs.stop())
+        self.assertIn(expect, logs.stop())
 
 
 class NoRouteTest(testlib.RouterMixin, testlib.TestCase):

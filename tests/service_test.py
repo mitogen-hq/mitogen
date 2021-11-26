@@ -85,14 +85,14 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.local()
         counter, id_ = l1.call_service(MyService, 'get_id')
         self.assertEquals(1, counter)
-        self.assertTrue(isinstance(id_, int))
+        self.assertIsInstance(id_, int)
 
     def test_sibling_cannot_activate_framework(self):
         l1 = self.router.local(name='l1')
         l2 = self.router.local(name='l2')
         exc = self.assertRaises(mitogen.core.CallError,
             lambda: l2.call(call_service_in, l1, MyService2.name(), 'get_id'))
-        self.assertTrue(mitogen.core.Router.refused_msg in exc.args[0])
+        self.assertIn(mitogen.core.Router.refused_msg, exc.args[0])
 
     def test_sibling_cannot_activate_service(self):
         l1 = self.router.local()
@@ -106,7 +106,7 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         finally:
             capture.stop()
         msg = mitogen.service.Activator.not_active_msg % (MyService2.name(),)
-        self.assertTrue(msg in exc.args[0])
+        self.assertIn(msg, exc.args[0])
 
     def test_activates_only_once(self):
         l1 = self.router.local()
@@ -140,7 +140,7 @@ class PermissionTest(testlib.RouterMixin, testlib.TestCase):
             u'privileged_op',
             MyService.name(),
         )
-        self.assertTrue(msg in exc.args[0])
+        self.assertIn(msg, exc.args[0])
 
 
 class CloseTest(testlib.RouterMixin, testlib.TestCase):

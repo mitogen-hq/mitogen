@@ -28,7 +28,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
         self.assertEquals(argv[0], self.lxc_attach_path)
-        self.assertTrue('--clear-env' in argv)
+        self.assertIn('--clear-env', argv)
         self.assertTrue(has_subseq(argv, ['--name', 'container_name']))
 
     def test_eof(self):
