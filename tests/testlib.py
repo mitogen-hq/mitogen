@@ -1,4 +1,5 @@
 
+import errno
 import logging
 import os
 import random
@@ -334,6 +335,10 @@ class TestCase(unittest2.TestCase):
         # Broker() instantiations in setUp() etc.
         mitogen.fork.on_fork()
         cls._fd_count_before = get_fd_count()
+        # Ignore children started by external packages - in particular
+        # multiprocessing.resource_tracker.main()`, started when some Ansible
+        # versions instantiate a `multithreading.Lock()`.
+        cls._children_before = frozenset(psutil.Process().children())
         super(TestCase, cls).setUpClass()
 
     ALLOWED_THREADS = set([
@@ -377,20 +382,33 @@ class TestCase(unittest2.TestCase):
         if self.no_zombie_check:
             return
 
+        # pid=0: Wait for any child process in the same process group as us.
+        # WNOHANG: Don't block if no processes ready to report status.
         try:
             pid, status = os.waitpid(0, os.WNOHANG)
-        except OSError:
-            return  # ECHILD
+        except OSError as e:
+            # ECHILD: there are no child processes in our group.
+            if e.errno == errno.ECHILD:
+                return
+            raise
 
         if pid:
             assert 0, "%s failed to reap subprocess %d (status %d)." % (
                 self, pid, status
             )
 
-        print('')
-        print('Children of unit test process:')
+        children_after = frozenset(psutil.Process().children())
+        children_leaked = children_after.difference(self._children_before)
+        if not children_leaked:
+            return
+
+        print('Leaked children of unit test process:')
         os.system('ps -o "user,pid,%%cpu,%%mem,vsz,rss,tty,stat,start,time,command" -ww -p %s'
-                  % (','.join(str(p.pid) for p in psutil.Process().children()),))
+                  % (','.join(str(p.pid) for p in children_leaked),))
+        if self._children_before:
+            print('Pre-existing children of unit test process:')
+            os.system('ps -o "user,pid,%%cpu,%%mem,vsz,rss,tty,stat,start,time,command" -ww -p %s'
+                      % (','.join(str(p.pid) for p in self._children_before),))
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):
