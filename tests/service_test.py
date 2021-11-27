@@ -1,4 +1,3 @@
-import unittest2
 
 import mitogen.core
 import mitogen.service
@@ -157,4 +156,4 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

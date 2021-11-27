@@ -1,8 +1,6 @@
 
 import sys
 
-import unittest2
-
 import mitogen.service
 
 import testlib
@@ -151,4 +149,4 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

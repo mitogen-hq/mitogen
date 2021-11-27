@@ -1,8 +1,6 @@
 import pickle
 import sys
 
-import unittest2
-
 import mitogen.core
 
 import testlib
@@ -111,4 +109,4 @@ class PickleTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

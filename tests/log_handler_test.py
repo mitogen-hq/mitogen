@@ -3,7 +3,6 @@ import logging
 import mock
 import sys
 
-import unittest2
 import testlib
 import mitogen.core
 import mitogen.master
@@ -86,11 +85,11 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
         expect = 'Parent is context %s (%s)' % (c1.context_id, 'parent')
         self.assertIn(expect, logs)
 
-StartupTest = unittest2.skipIf(
+StartupTest = testlib.unittest.skipIf(
     condition=sys.version_info < (2, 7) or sys.version_info >= (3, 6),
     reason="Message log flaky on Python < 2.7 or >= 3.6"
 )(StartupTest)
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

@@ -3,7 +3,6 @@ import sys
 import tempfile
 
 import mock
-import unittest2
 import testlib
 
 from mitogen.core import b
@@ -71,4 +70,4 @@ class WatcherTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

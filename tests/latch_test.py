@@ -2,8 +2,6 @@
 import sys
 import threading
 
-import unittest2
-
 import mitogen.core
 
 import testlib
@@ -216,4 +214,4 @@ class ThreadedCloseTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

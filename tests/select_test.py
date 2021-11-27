@@ -1,6 +1,4 @@
 
-import unittest2
-
 import mitogen.select
 
 import testlib
@@ -479,4 +477,4 @@ class GetEventTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

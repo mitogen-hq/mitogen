@@ -1,6 +1,5 @@
 
 import pickle
-import unittest2
 
 import mitogen.core
 from mitogen.core import b
@@ -34,4 +33,4 @@ class PickleTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

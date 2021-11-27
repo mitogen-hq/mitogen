@@ -3,7 +3,6 @@ import time
 import threading
 
 import mock
-import unittest2
 
 import testlib
 
@@ -70,4 +69,4 @@ class DeferSyncTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

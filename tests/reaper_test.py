@@ -1,6 +1,5 @@
 
 import signal
-import unittest2
 import testlib
 import mock
 
@@ -51,4 +50,4 @@ class ReaperTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

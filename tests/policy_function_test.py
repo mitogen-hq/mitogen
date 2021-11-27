@@ -1,6 +1,5 @@
 
 import mock
-import unittest2
 
 import mitogen.core
 import mitogen.parent
@@ -37,4 +36,4 @@ class IsImmediateChildTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

@@ -21,7 +21,6 @@ except ImportError:
     ctypes = None
 
 import mitogen
-import unittest2
 
 import testlib
 import plain_old_module
@@ -78,7 +77,7 @@ def exercise_importer(n):
     return simple_pkg.a.subtract_one_add_two(n)
 
 
-skipIfUnsupported = unittest2.skipIf(
+skipIfUnsupported = testlib.unittest.skipIf(
     condition=(not mitogen.fork.FORK_SUPPORTED),
     reason="mitogen.fork unsupported on this platform"
 )
@@ -94,7 +93,7 @@ class ForkTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.fork()
         self.assertNotEqual(context.call(random_random), random_random())
 
-    @unittest2.skipIf(
+    @testlib.unittest.skipIf(
         condition=LIBSSL_PATH is None or ctypes is None,
         reason='cant test libssl on this platform',
     )
@@ -145,4 +144,4 @@ DoubleChildTest = skipIfUnsupported(DoubleChildTest)
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

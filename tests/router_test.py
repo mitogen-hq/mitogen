@@ -4,8 +4,6 @@ import sys
 import time
 import zlib
 
-import unittest2
-
 import testlib
 import mitogen.core
 import mitogen.master
@@ -586,4 +584,4 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

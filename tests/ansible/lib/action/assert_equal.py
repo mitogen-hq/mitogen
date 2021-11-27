@@ -7,7 +7,7 @@
 __metaclass__ = type
 
 import inspect
-import unittest2
+import unittest
 
 import ansible.template
 
@@ -23,7 +23,7 @@ if 'bare_deprecated' in _argspec.args:
     TEMPLATE_KWARGS['bare_deprecated'] = False
 
 
-class TestCase(unittest2.TestCase):
+class TestCase(unittest.TestCase):
     def runTest(self):
         pass
 

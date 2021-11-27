@@ -2,8 +2,6 @@
 import logging
 import time
 
-import unittest2
-
 import mitogen.core
 import mitogen.master
 
@@ -30,4 +28,4 @@ class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

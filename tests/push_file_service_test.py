@@ -1,7 +1,6 @@
 
 import os
 import tempfile
-import unittest2
 
 import mitogen.core
 import mitogen.service
@@ -53,4 +52,4 @@ class PropagateToTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

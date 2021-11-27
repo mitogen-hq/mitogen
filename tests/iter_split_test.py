@@ -1,6 +1,5 @@
 
 import mock
-import unittest2
 
 import mitogen.core
 
@@ -13,7 +12,7 @@ except NameError:
         return it.next()
 
 
-class IterSplitTest(unittest2.TestCase):
+class IterSplitTest(testlib.unittest.TestCase):
     func = staticmethod(mitogen.core.iter_split)
 
     def test_empty_buffer(self):
@@ -63,4 +62,4 @@ class IterSplitTest(unittest2.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

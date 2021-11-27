@@ -1,6 +1,5 @@
 
 import testlib
-import unittest2
 
 import mitogen.os_fork
 import mitogen.service
@@ -49,4 +48,4 @@ class CorkTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

@@ -1,6 +1,5 @@
 
 import testlib
-import unittest2
 
 import mitogen.core
 from mitogen.core import b
@@ -100,4 +99,4 @@ class StrRpartitionTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

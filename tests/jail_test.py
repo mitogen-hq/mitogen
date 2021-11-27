@@ -4,8 +4,6 @@ import os
 import mitogen
 import mitogen.parent
 
-import unittest2
-
 import testlib
 
 
@@ -30,4 +28,4 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

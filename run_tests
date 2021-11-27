@@ -28,8 +28,23 @@ NOCOVERAGE="${NOCOVERAGE:-}"
 NOCOVERAGE_ERASE="${NOCOVERAGE_ERASE:-$NOCOVERAGE}"
 NOCOVERAGE_REPORT="${NOCOVERAGE_REPORT:-$NOCOVERAGE}"
 
-if [ ! "$UNIT2" ]; then
-    UNIT2="$(which unit2)"
+# Need to align the test runner with the test library that is imported. Or
+# unittest treats unittest2.skipTest() as a test failure & vice versa.
+# https://github.com/testing-cabal/testtools/issues/272#issuecomment-522645715
+# Bash considers 0 exit status truthy, so the below test looks a bit backwards
+if python -c "import sys;sys.exit(int(sys.version_info[:2] < (3, 5)))"; then
+    if [ ! "$NOCOVERAGE" ]; then
+        discover_cmd="coverage run --append -m unittest discover"
+    else
+        discover_cmd="python -m unittest discover"
+    fi
+else
+    UNIT2="${UNIT2:-$(command -v unit2)}"
+    if [ ! "$NOCOVERAGE" ]; then
+        discover_cmd="coverage run --append $UNIT2 discover"
+    else
+        discover_cmd="$UNIT2 discover"
+    fi
 fi
 
 if [ ! "$NOCOVERAGE_ERASE" ]; then
@@ -38,17 +53,10 @@ fi
 
 # First run overwites coverage output.
 [ "$SKIP_MITOGEN" ] || {
-    if [ ! "$NOCOVERAGE" ]; then
-        coverage run -a "${UNIT2}" discover \
+    $discover_cmd \
             --start-directory "tests" \
             --pattern '*_test.py' \
             "$@"
-    else
-        "${UNIT2}" discover \
-            --start-directory "tests" \
-            --pattern '*_test.py' \
-            "$@"
-    fi
     MITOGEN_TEST_STATUS=$?
 }
 
@@ -59,17 +67,10 @@ fi
 # mess of Git history.
 [ "$SKIP_ANSIBLE" ] || {
     export PYTHONPATH=`pwd`/tests:$PYTHONPATH
-    if [ ! "$NOCOVERAGE" ]; then
-        coverage run -a "${UNIT2}" discover \
+    $discover_cmd \
             --start-directory "tests/ansible" \
             --pattern '*_test.py' \
             "$@"
-    else
-        "${UNIT2}" discover \
-            --start-directory "tests/ansible" \
-            --pattern '*_test.py' \
-            "$@"
-    fi
     ANSIBLE_TEST_STATUS=$?
 }
 

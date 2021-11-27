@@ -3,8 +3,6 @@ import glob
 import pprint
 import sys
 
-import unittest2
-
 import mitogen.minify
 import testlib
 
@@ -115,4 +113,4 @@ class MitogenCoreTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

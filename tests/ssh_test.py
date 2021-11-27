@@ -6,8 +6,6 @@ import mitogen
 import mitogen.ssh
 import mitogen.utils
 
-import unittest2
-
 import testlib
 import plain_old_module
 
@@ -227,4 +225,4 @@ class StubCheckHostKeysTest(StubSshMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

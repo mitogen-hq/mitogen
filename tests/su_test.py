@@ -4,8 +4,6 @@ import os
 import mitogen
 import mitogen.su
 
-import unittest2
-
 import testlib
 
 
@@ -70,4 +68,4 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

@@ -8,7 +8,6 @@ import tempfile
 import time
 
 import mock
-import unittest2
 import testlib
 from testlib import Popen__terminate
 
@@ -191,7 +190,7 @@ class OpenPtyTest(testlib.TestCase):
         msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
         self.assertEqual(e.args[0], msg)
 
-    @unittest2.skipIf(condition=(os.uname()[0] != 'Linux'),
+    @testlib.unittest.skipIf(condition=(os.uname()[0] != 'Linux'),
                       reason='Fallback only supported on Linux')
     @mock.patch('os.openpty')
     def test_broken_linux_fallback(self, openpty):
@@ -294,4 +293,4 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

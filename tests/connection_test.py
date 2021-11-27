@@ -6,7 +6,6 @@ import tempfile
 import threading
 import time
 
-import unittest2
 import testlib
 
 import mitogen.core
@@ -74,4 +73,4 @@ class DetachReapTest(testlib.RouterMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

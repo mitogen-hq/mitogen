@@ -6,8 +6,6 @@ import subprocess
 import tempfile
 import time
 
-import unittest2
-
 import mock
 import ansible.errors
 import ansible.playbook.play_context
@@ -186,4 +184,4 @@ class PutFileTest(ConnectionMixin, testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()

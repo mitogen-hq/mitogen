@@ -8,8 +8,6 @@ except ImportError:
     from StringIO import StringIO as StringIO
     from StringIO import StringIO as BytesIO
 
-import unittest2
-
 import mitogen.core
 from mitogen.core import b
 
@@ -95,14 +93,14 @@ class KwargsTest(testlib.TestCase):
         self.assertIs(type(dct), dict)
         self.assertEqual({}, dct)
 
-    @unittest2.skipIf(condition=(sys.version_info >= (2, 6)),
+    @testlib.unittest.skipIf(condition=(sys.version_info >= (2, 6)),
                       reason='py<2.6 only')
     def test_bytes_conversion(self):
         kw = self.klass({u'key': 123})
         self.assertEqual({'key': 123}, kw)
         self.assertEqual("Kwargs({'key': 123})", repr(kw))
 
-    @unittest2.skipIf(condition=not mitogen.core.PY3,
+    @testlib.unittest.skipIf(condition=not mitogen.core.PY3,
                       reason='py3 only')
     def test_unicode_conversion(self):
         kw = self.klass({mitogen.core.b('key'): 123})
@@ -145,4 +143,4 @@ class ToTextTest(testlib.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    testlib.unittest.main()
