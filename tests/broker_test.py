@@ -19,7 +19,7 @@ class ShutdownTest(testlib.TestCase):
         broker.poller.close = mock.Mock()
         broker.shutdown()
         broker.join()
-        self.assertEquals(1, len(broker.poller.close.mock_calls))
+        self.assertEqual(1, len(broker.poller.close.mock_calls))
         actual_close()
 
 
@@ -31,7 +31,7 @@ class DeferTest(testlib.TestCase):
         broker = self.klass()
         try:
             broker.defer(lambda: latch.put(123))
-            self.assertEquals(123, latch.get())
+            self.assertEqual(123, latch.get())
         finally:
             broker.shutdown()
             broker.join()
@@ -44,7 +44,7 @@ class DeferTest(testlib.TestCase):
 
         e = self.assertRaises(mitogen.core.Error,
             lambda: broker.defer(lambda: latch.put(123)))
-        self.assertEquals(e.args[0], mitogen.core.Waker.broker_shutdown_msg)
+        self.assertEqual(e.args[0], mitogen.core.Waker.broker_shutdown_msg)
 
 
 class DeferSyncTest(testlib.TestCase):
@@ -54,7 +54,7 @@ class DeferSyncTest(testlib.TestCase):
         broker = self.klass()
         try:
             th = broker.defer_sync(lambda: threading.currentThread())
-            self.assertEquals(th, broker._thread)
+            self.assertEqual(th, broker._thread)
         finally:
             broker.shutdown()
             broker.join()

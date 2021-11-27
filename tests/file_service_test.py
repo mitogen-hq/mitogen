@@ -52,8 +52,8 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
 
     def _validate_response(self, resp):
         self.assertIsInstance(resp, dict)
-        self.assertEquals('root', resp['owner'])
-        self.assertEquals(self.ROOT_GROUP, resp['group'])
+        self.assertEqual('root', resp['owner'])
+        self.assertEqual(self.ROOT_GROUP, resp['group'])
         self.assertIsInstance(resp['mode'], int)
         self.assertIsInstance(resp['mtime'], float)
         self.assertIsInstance(resp['atime'], float)

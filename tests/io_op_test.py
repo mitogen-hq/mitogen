@@ -31,10 +31,10 @@ class RestartTest(object):
             'yay',
         ]
         rc, disconnected = self.func(py24_mock_fix(m), 'input')
-        self.assertEquals(rc, 'yay')
+        self.assertEqual(rc, 'yay')
         self.assertFalse(disconnected)
-        self.assertEquals(4, m.call_count)
-        self.assertEquals(m.mock_calls, [
+        self.assertEqual(4, m.call_count)
+        self.assertEqual(m.mock_calls, [
             mock.call('input'),
             mock.call('input'),
             mock.call('input'),
@@ -59,10 +59,10 @@ class DisconnectTest(object):
         m = mock.Mock()
         m.side_effect = self.exception_class(self.errno)
         rc, disconnected = self.func(m, 'input')
-        self.assertEquals(rc, None)
+        self.assertEqual(rc, None)
         self.assertTrue(disconnected)
-        self.assertEquals(1, m.call_count)
-        self.assertEquals(m.mock_calls, [
+        self.assertEqual(1, m.call_count)
+        self.assertEqual(m.mock_calls, [
             mock.call('input'),
         ])
 
@@ -107,9 +107,9 @@ class ExceptionTest(object):
         m.side_effect = self.exception_class(self.errno)
         e = self.assertRaises(self.exception_class,
                               lambda: self.func(m, 'input'))
-        self.assertEquals(e, m.side_effect)
-        self.assertEquals(1, m.call_count)
-        self.assertEquals(m.mock_calls, [
+        self.assertEqual(e, m.side_effect)
+        self.assertEqual(1, m.call_count)
+        self.assertEqual(m.mock_calls, [
             mock.call('input'),
         ])
 

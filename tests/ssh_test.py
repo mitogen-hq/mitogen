@@ -38,7 +38,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         )
         #context.call(mitogen.utils.log_to_file, '/tmp/log')
         #context.call(mitogen.utils.disable_site_packages)
-        self.assertEquals(3, context.call(plain_old_module.add, 1, 2))
+        self.assertEqual(3, context.call(plain_old_module.add, 1, 2))
 
 
 class SshTest(testlib.DockerMixin, testlib.TestCase):
@@ -75,7 +75,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             self.dockerized_ssh.get_host(),
             self.dockerized_ssh.port,
         )
-        self.assertEquals(name, context.name)
+        self.assertEqual(name, context.name)
 
     def test_via_stream_name(self):
         context = self.docker_ssh(
@@ -88,7 +88,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             self.dockerized_ssh.host,
             self.dockerized_ssh.port,
         )
-        self.assertEquals(name, sudo.name)
+        self.assertEqual(name, sudo.name)
 
     def test_password_required(self):
         e = self.assertRaises(mitogen.ssh.PasswordError,
@@ -147,7 +147,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
                     check_host_keys='enforce',
                 )
             )
-            self.assertEquals(e.args[0], mitogen.ssh.hostkey_failed_msg)
+            self.assertEqual(e.args[0], mitogen.ssh.hostkey_failed_msg)
         finally:
             fp.close()
 
@@ -191,7 +191,7 @@ class BannerTest(testlib.DockerMixin, testlib.TestCase):
             self.dockerized_ssh.get_host(),
             self.dockerized_ssh.port,
         )
-        self.assertEquals(name, context.name)
+        self.assertEqual(name, context.name)
 
 
 class StubPermissionDeniedTest(StubSshMixin, testlib.TestCase):
@@ -208,22 +208,22 @@ class StubCheckHostKeysTest(StubSshMixin, testlib.TestCase):
     def test_check_host_keys_accept(self):
         # required=true, host_key_checking=accept
         context = self.stub_ssh(STUBSSH_MODE='ask', check_host_keys='accept')
-        self.assertEquals('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
+        self.assertEqual('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
 
     def test_check_host_keys_enforce(self):
         # required=false, host_key_checking=enforce
         context = self.stub_ssh(check_host_keys='enforce')
-        self.assertEquals(None, context.call(os.getenv, 'STDERR_WAS_TTY'))
+        self.assertEqual(None, context.call(os.getenv, 'STDERR_WAS_TTY'))
 
     def test_check_host_keys_ignore(self):
         # required=false, host_key_checking=ignore
         context = self.stub_ssh(check_host_keys='ignore')
-        self.assertEquals(None, context.call(os.getenv, 'STDERR_WAS_TTY'))
+        self.assertEqual(None, context.call(os.getenv, 'STDERR_WAS_TTY'))
 
     def test_password_present(self):
         # required=true, password is not None
         context = self.stub_ssh(check_host_keys='ignore', password='willick')
-        self.assertEquals('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
+        self.assertEqual('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
 
 
 if __name__ == '__main__':

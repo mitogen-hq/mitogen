@@ -19,10 +19,10 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         )
 
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
-        self.assertEquals(argv[0], self.kubectl_path)
-        self.assertEquals(argv[1], 'exec')
-        self.assertEquals(argv[2], '-it')
-        self.assertEquals(argv[3], 'pod_name')
+        self.assertEqual(argv[0], self.kubectl_path)
+        self.assertEqual(argv[1], 'exec')
+        self.assertEqual(argv[2], '-it')
+        self.assertEqual(argv[3], 'pod_name')
 
 
 if __name__ == '__main__':

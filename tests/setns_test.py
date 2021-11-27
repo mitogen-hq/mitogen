@@ -31,7 +31,7 @@ import testlib
 #             via=root,
 #         )
 
-#         self.assertEquals(
+#         self.assertEqual(
 #             via_ssh.call(socket.gethostname),
 #             via_setns.call(socket.gethostname),
 #         )

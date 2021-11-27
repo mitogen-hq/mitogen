@@ -79,7 +79,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def test_bad_return_value(self):
         exc = self.assertRaises(mitogen.core.StreamError,
             lambda: self.local.call(func_with_bad_return_value))
-        self.assertEquals(
+        self.assertEqual(
                 exc.args[0],
                 "cannot unpickle '%s'/'CrazyType'" % (__name__,),
         )
@@ -91,7 +91,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.broker.defer(stream.on_disconnect, self.broker)
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(exc.args[0], self.router.respondent_disconnect_msg)
+        self.assertEqual(exc.args[0], self.router.respondent_disconnect_msg)
 
     def test_aborted_on_local_broker_shutdown(self):
         stream = self.router._stream_by_id[self.local.context_id]
@@ -101,7 +101,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.broker_shutdown = True
         exc = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(exc.args[0], self.router.respondent_disconnect_msg)
+        self.assertEqual(exc.args[0], self.router.respondent_disconnect_msg)
 
     def test_accepts_returns_context(self):
         context = self.local.call(func_returns_arg, self.local)
@@ -114,10 +114,10 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         sender = recv.to_sender()
         sender2 = self.local.call(func_accepts_returns_sender, sender)
-        self.assertEquals(sender.context.context_id,
+        self.assertEqual(sender.context.context_id,
                           sender2.context.context_id)
-        self.assertEquals(sender.dst_handle, sender2.dst_handle)
-        self.assertEquals(123, recv.get().unpickle())
+        self.assertEqual(sender.dst_handle, sender2.dst_handle)
+        self.assertEqual(123, recv.get().unpickle())
         self.assertRaises(mitogen.core.ChannelError,
                           lambda: recv.get().unpickle())
 
@@ -132,19 +132,19 @@ class CallChainTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_subsequent_calls_produce_same_error(self):
         chain = self.klass(self.local, pipelined=True)
-        self.assertEquals('xx', chain.call(func_returns_arg, 'xx'))
+        self.assertEqual('xx', chain.call(func_returns_arg, 'xx'))
         chain.call_no_reply(function_that_fails, 'x1')
         e1 = self.assertRaises(mitogen.core.CallError,
             lambda: chain.call(function_that_fails, 'x2'))
         e2 = self.assertRaises(mitogen.core.CallError,
             lambda: chain.call(func_returns_arg, 'x3'))
-        self.assertEquals(str(e1), str(e2))
+        self.assertEqual(str(e1), str(e2))
 
     def test_unrelated_overlapping_failed_chains(self):
         c1 = self.klass(self.local, pipelined=True)
         c2 = self.klass(self.local, pipelined=True)
         c1.call_no_reply(function_that_fails, 'c1')
-        self.assertEquals('yes', c2.call(func_returns_arg, 'yes'))
+        self.assertEqual('yes', c2.call(func_returns_arg, 'yes'))
         self.assertRaises(mitogen.core.CallError,
             lambda: c1.call(func_returns_arg, 'yes'))
 
@@ -154,7 +154,7 @@ class CallChainTest(testlib.RouterMixin, testlib.TestCase):
         e1 = self.assertRaises(mitogen.core.CallError,
             lambda: c1.call(function_that_fails, 'x2'))
         c1.reset()
-        self.assertEquals('x3', c1.call(func_returns_arg, 'x3'))
+        self.assertEqual('x3', c1.call(func_returns_arg, 'x3'))
 
 
 class UnsupportedCallablesTest(testlib.RouterMixin, testlib.TestCase):
@@ -170,20 +170,20 @@ class UnsupportedCallablesTest(testlib.RouterMixin, testlib.TestCase):
         closure = lambda: a
         e = self.assertRaises(TypeError,
             lambda: self.local.call(closure))
-        self.assertEquals(e.args[0], self.klass.closures_msg)
+        self.assertEqual(e.args[0], self.klass.closures_msg)
 
     def test_lambda_unsupported(self):
         lam = lambda: None
         e = self.assertRaises(TypeError,
             lambda: self.local.call(lam))
-        self.assertEquals(e.args[0], self.klass.lambda_msg)
+        self.assertEqual(e.args[0], self.klass.lambda_msg)
 
     def test_instance_method_unsupported(self):
         class X:
             def x(): pass
         e = self.assertRaises(TypeError,
             lambda: self.local.call(X().x))
-        self.assertEquals(e.args[0], self.klass.method_msg)
+        self.assertEqual(e.args[0], self.klass.method_msg)
 
 
 if __name__ == '__main__':

@@ -25,7 +25,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             'container_name',
             stream.conn.options.python_path
         ]
-        self.assertEquals(argv[:len(expected_call)], expected_call)
+        self.assertEqual(argv[:len(expected_call)], expected_call)
 
         context = self.router.podman(
             container='container_name',
@@ -44,7 +44,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             'container_name',
             stream.conn.options.python_path
         ]
-        self.assertEquals(argv[:len(expected_call)], expected_call)
+        self.assertEqual(argv[:len(expected_call)], expected_call)
 
 
 

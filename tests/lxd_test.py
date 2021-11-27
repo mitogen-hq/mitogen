@@ -18,10 +18,10 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         )
 
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
-        self.assertEquals(argv[0], lxc_path)
-        self.assertEquals(argv[1], 'exec')
-        self.assertEquals(argv[2], '--mode=noninteractive')
-        self.assertEquals(argv[3], 'container_name')
+        self.assertEqual(argv[0], lxc_path)
+        self.assertEqual(argv[1], 'exec')
+        self.assertEqual(argv[2], '--mode=noninteractive')
+        self.assertEqual(argv[3], 'container_name')
 
     def test_eof(self):
         e = self.assertRaises(mitogen.parent.EofError,

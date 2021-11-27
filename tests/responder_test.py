@@ -25,7 +25,7 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
         args = [sys.executable, path]
         proc = subprocess.Popen(args, stderr=subprocess.PIPE)
         _, stderr = proc.communicate()
-        self.assertEquals(1, proc.returncode)
+        self.assertEqual(1, proc.returncode)
         expect = self.klass.main_guard_msg % (path,)
         self.assertIn(expect, stderr.decode())
 
@@ -44,7 +44,7 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_mitogen_main(self):
         untouched = self.call("derp.py", self.HAS_MITOGEN_MAIN)
-        self.assertEquals(untouched, self.HAS_MITOGEN_MAIN)
+        self.assertEqual(untouched, self.HAS_MITOGEN_MAIN)
 
     HAS_EXEC_GUARD = mitogen.core.b(
         textwrap.dedent("""
@@ -64,7 +64,7 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
     def test_exec_guard(self):
         touched = self.call("derp.py", self.HAS_EXEC_GUARD)
         bits = touched.decode().split()
-        self.assertEquals(bits[-3:], ['def', 'main():', 'pass'])
+        self.assertEqual(bits[-3:], ['def', 'main():', 'pass'])
 
 
 class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
@@ -73,22 +73,22 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # package machinery damage.
         context = self.router.local()
 
-        self.assertEquals(256, context.call(plain_old_module.pow, 2, 8))
+        self.assertEqual(256, context.call(plain_old_module.pow, 2, 8))
         os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
-        self.assertEquals(1+os_fork, self.router.responder.get_module_count)
-        self.assertEquals(1+os_fork, self.router.responder.good_load_module_count)
+        self.assertEqual(1+os_fork, self.router.responder.get_module_count)
+        self.assertEqual(1+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(300, self.router.responder.good_load_module_size)
 
     def test_simple_pkg(self):
         # Ensure success of a simple package containing two submodules, one of
         # which imports the other.
         context = self.router.local()
-        self.assertEquals(3,
+        self.assertEqual(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
         os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
-        self.assertEquals(2+os_fork, self.router.responder.get_module_count)
-        self.assertEquals(3+os_fork, self.router.responder.good_load_module_count)
-        self.assertEquals(0, self.router.responder.bad_load_module_count)
+        self.assertEqual(2+os_fork, self.router.responder.get_module_count)
+        self.assertEqual(3+os_fork, self.router.responder.good_load_module_count)
+        self.assertEqual(0, self.router.responder.bad_load_module_count)
         self.assertLess(450, self.router.responder.good_load_module_size)
 
     def test_self_contained_program(self):
@@ -96,7 +96,7 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # successfully.
         args = [sys.executable, testlib.data_path('self_contained_program.py')]
         output = testlib.subprocess__check_output(args).decode()
-        self.assertEquals(output, "['__main__', 50]\n")
+        self.assertEqual(output, "['__main__', 50]\n")
 
 
 class BrokenModulesTest(testlib.TestCase):
@@ -117,17 +117,17 @@ class BrokenModulesTest(testlib.TestCase):
 
         responder = mitogen.master.ModuleResponder(router)
         responder._on_get_module(msg)
-        self.assertEquals(1, len(router._async_route.mock_calls))
+        self.assertEqual(1, len(router._async_route.mock_calls))
 
-        self.assertEquals(1, responder.get_module_count)
-        self.assertEquals(0, responder.good_load_module_count)
-        self.assertEquals(0, responder.good_load_module_size)
-        self.assertEquals(1, responder.bad_load_module_count)
+        self.assertEqual(1, responder.get_module_count)
+        self.assertEqual(0, responder.good_load_module_count)
+        self.assertEqual(0, responder.good_load_module_size)
+        self.assertEqual(1, responder.bad_load_module_count)
 
         call = router._async_route.mock_calls[0]
         msg, = call[1]
-        self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
-        self.assertEquals(('non_existent_module', None, None, None, ()),
+        self.assertEqual(mitogen.core.LOAD_MODULE, msg.handle)
+        self.assertEqual(('non_existent_module', None, None, None, ()),
                           msg.unpickle())
 
     @unittest2.skipIf(
@@ -155,15 +155,15 @@ class BrokenModulesTest(testlib.TestCase):
 
         responder = mitogen.master.ModuleResponder(router)
         responder._on_get_module(msg)
-        self.assertEquals(1, len(router._async_route.mock_calls))
+        self.assertEqual(1, len(router._async_route.mock_calls))
 
-        self.assertEquals(1, responder.get_module_count)
-        self.assertEquals(1, responder.good_load_module_count)
-        self.assertEquals(0, responder.bad_load_module_count)
+        self.assertEqual(1, responder.get_module_count)
+        self.assertEqual(1, responder.good_load_module_count)
+        self.assertEqual(0, responder.bad_load_module_count)
 
         call = router._async_route.mock_calls[0]
         msg, = call[1]
-        self.assertEquals(mitogen.core.LOAD_MODULE, msg.handle)
+        self.assertEqual(mitogen.core.LOAD_MODULE, msg.handle)
 
         tup = msg.unpickle()
         self.assertIsInstance(tup, tuple)
@@ -189,9 +189,9 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         c2 = self.router.local(via=c1)
 
         os_fork = int(sys.version_info < (2, 6))
-        self.assertEquals(256, c2.call(plain_old_module.pow, 2, 8))
-        self.assertEquals(2+os_fork, self.router.responder.get_module_count)
-        self.assertEquals(2+os_fork, self.router.responder.good_load_module_count)
+        self.assertEqual(256, c2.call(plain_old_module.pow, 2, 8))
+        self.assertEqual(2+os_fork, self.router.responder.get_module_count)
+        self.assertEqual(2+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(10000, self.router.responder.good_load_module_size)
         self.assertGreater(40000, self.router.responder.good_load_module_size)
 

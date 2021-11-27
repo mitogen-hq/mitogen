@@ -10,22 +10,22 @@ class ConstructorTest(testlib.TestCase):
 
     def test_literal_no_format(self):
         e = self.klass('error')
-        self.assertEquals(e.args[0], 'error')
+        self.assertEqual(e.args[0], 'error')
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
 
     def test_literal_format_chars_present(self):
         e = self.klass('error%s')
-        self.assertEquals(e.args[0], 'error%s')
+        self.assertEqual(e.args[0], 'error%s')
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
 
     def test_format(self):
         e = self.klass('error%s', 123)
-        self.assertEquals(e.args[0], 'error123')
+        self.assertEqual(e.args[0], 'error123')
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
 
     def test_bytes_to_unicode(self):
         e = self.klass(mitogen.core.b('error'))
-        self.assertEquals(e.args[0], 'error')
+        self.assertEqual(e.args[0], 'error')
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
 
 

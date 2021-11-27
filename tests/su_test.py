@@ -22,8 +22,8 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_basic(self):
         context, argv = self.run_su()
-        self.assertEquals(argv[1], 'root')
-        self.assertEquals(argv[2], '-c')
+        self.assertEqual(argv[1], 'root')
+        self.assertEqual(argv[2], '-c')
 
 
 class SuTest(testlib.DockerMixin, testlib.TestCase):
@@ -66,7 +66,7 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
             password='has_sudo_password',
         )
         context = self.router.su(via=ssh, password='rootpassword')
-        self.assertEquals(0, context.call(os.getuid))
+        self.assertEqual(0, context.call(os.getuid))
 
 
 if __name__ == '__main__':

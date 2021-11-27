@@ -115,7 +115,7 @@ class ForkTest(testlib.RouterMixin, testlib.TestCase):
             sender = mitogen.core.Sender(econtext.parent, recv.handle)
             sender.send(123)
         context = self.router.fork(on_start=on_start)
-        self.assertEquals(123, recv.get().unpickle())
+        self.assertEqual(123, recv.get().unpickle())
 
 ForkTest = skipIfUnsupported(ForkTest)
 
@@ -134,7 +134,7 @@ class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
         # successfully. In future, we need lots more tests.
         c1 = self.router.fork()
         c2 = self.router.fork(via=c1)
-        self.assertEquals(123, c2.call(ping))
+        self.assertEqual(123, c2.call(ping))
 
     def test_importer(self):
         c1 = self.router.fork(name='c1')

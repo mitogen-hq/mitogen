@@ -38,8 +38,8 @@ class BufferingTest(testlib.TestCase):
         context, handler = self.build()
         rec = self.record()
         handler.emit(rec)
-        self.assertEquals(0, context.send.call_count)
-        self.assertEquals(1, len(handler._buffer))
+        self.assertEqual(0, context.send.call_count)
+        self.assertEqual(1, len(handler._buffer))
 
     def test_uncork(self):
         context, handler = self.build()
@@ -47,14 +47,14 @@ class BufferingTest(testlib.TestCase):
         handler.emit(rec)
         handler.uncork()
 
-        self.assertEquals(1, context.send.call_count)
-        self.assertEquals(None, handler._buffer)
+        self.assertEqual(1, context.send.call_count)
+        self.assertEqual(None, handler._buffer)
 
         _, args, _ = context.send.mock_calls[0]
         msg, = args
 
-        self.assertEquals(mitogen.core.FORWARD_LOG, msg.handle)
-        self.assertEquals(b('name\x0099\x00msg'), msg.data)
+        self.assertEqual(mitogen.core.FORWARD_LOG, msg.handle)
+        self.assertEqual(b('name\x0099\x00msg'), msg.data)
 
 
 class StartupTest(testlib.RouterMixin, testlib.TestCase):
