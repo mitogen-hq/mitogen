@@ -108,7 +108,7 @@ def _stdlib_paths():
     ]
     prefixes = (getattr(sys, a, None) for a in attr_candidates)
     version = 'python%s.%s' % sys.version_info[0:2]
-    s = set(os.path.abspath(os.path.join(p, 'lib', version))
+    s = set(os.path.realpath(os.path.join(p, 'lib', version))
             for p in prefixes if p is not None)
 
     # When running 'unit2 tests/module_finder_test.py' in a Py2 venv on Ubuntu

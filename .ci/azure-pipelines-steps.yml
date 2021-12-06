@@ -9,11 +9,12 @@ steps:
   displayName: Install python
   inputs:
     versionSpec: '$(python.version)'
+  condition: ne(variables['python.version'], '')
 
 - script: python -mpip install tox
   displayName: Install tooling
 
-- script: tox -e "$(tox.env)"
+- script: python -mtox -e "$(tox.env)"
   displayName: "Run tests"
   env:
     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)

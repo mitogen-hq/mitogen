@@ -9,8 +9,27 @@
   #ANSIBLE_VERBOSITY: 3
 
 jobs:
+- job: Mac1014
+  # vanilla Ansible is really slow
+  timeoutInMinutes: 120
+  steps:
+  - template: azure-pipelines-steps.yml
+  pool:
+    # https://github.com/actions/virtual-environments/blob/main/images/macos/
+    vmImage: macOS-10.14
+  strategy:
+    matrix:
+      Mito_27:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen
+      Mito_36:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen
+      Mito_39:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen
 
-- job: Mac
+- job: Mac1015
   # vanilla Ansible is really slow
   timeoutInMinutes: 120
   steps:
@@ -23,6 +42,12 @@ jobs:
       Mito_27:
         python.version: '2.7'
         tox.env: py27-mode_mitogen
+      Mito_36:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen
+      Mito_39:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen
 
       # TODO: test python3, python3 tests are broken
       Loc_27_210:
@@ -52,6 +77,46 @@ jobs:
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
 
+- job: MacLatest
+  # vanilla Ansible is really slow
+  timeoutInMinutes: 120
+  steps:
+  - template: azure-pipelines-steps.yml
+  pool:
+    # https://github.com/actions/virtual-environments/blob/main/images/macos/
+    vmImage: macOS-latest
+  strategy:
+    matrix:
+      Mito_27:
+        tox.env: py27-mode_mitogen
+      Mito_37:
+        python.version: '3.7'
+        tox.env: py37-mode_mitogen
+      Mito_39:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen
+
+      # TODO: test python3, python3 tests are broken
+      Loc_27_210:
+        tox.env: py27-mode_localhost-ansible2.10
+      Loc_27_3:
+        tox.env: py27-mode_localhost-ansible3
+      Loc_27_4:
+        tox.env: py27-mode_localhost-ansible4
+
+      # NOTE: this hangs when ran in Ubuntu 18.04
+      Van_27_210:
+        tox.env: py27-mode_localhost-ansible2.10
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
+      Van_27_3:
+        tox.env: py27-mode_localhost-ansible3
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
+      Van_27_4:
+        tox.env: py27-mode_localhost-ansible4
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
 
 - job: Linux
   pool:
