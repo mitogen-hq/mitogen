@@ -1,6 +1,6 @@
-- include: setup/all.yml
+- import_playbook: setup/all.yml
   tags: setup
-- include: regression/all.yml
+- import_playbook: regression/all.yml
   tags: regression
-- include: integration/all.yml
+- import_playbook: integration/all.yml
   tags: integration
