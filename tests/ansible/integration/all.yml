@@ -3,39 +3,39 @@
 # This playbook imports all tests that are known to work at present.
 #
 
-- import_playbook: action/all.yml
+- include: action/all.yml
   tags: action
-- import_playbook: async/all.yml
+- include: async/all.yml
   tags: async
-- import_playbook: become/all.yml
+- include: become/all.yml
   tags: become
-- import_playbook: connection/all.yml
+- include: connection/all.yml
   tags: connection
-- import_playbook: connection_delegation/all.yml
+- include: connection_delegation/all.yml
   tags: connection_delegation
-- import_playbook: connection_loader/all.yml
+- include: connection_loader/all.yml
   tags: connection_loader
-- import_playbook: context_service/all.yml
+- include: context_service/all.yml
   tags: context_service
-- import_playbook: glibc_caches/all.yml
+- include: glibc_caches/all.yml
   tags: glibc_caches
-- import_playbook: interpreter_discovery/all.yml
+- include: interpreter_discovery/all.yml
   tags: interpreter_discovery
-- import_playbook: local/all.yml
+- include: local/all.yml
   tags: local
-- import_playbook: module_utils/all.yml
+- include: module_utils/all.yml
   tags: module_utils
-- import_playbook: playbook_semantics/all.yml
+- include: playbook_semantics/all.yml
   tags: playbook_semantics
-- import_playbook: process/all.yml
+- include: process/all.yml
   tags: process
-- import_playbook: runner/all.yml
+- include: runner/all.yml
   tags: runner
-- import_playbook: ssh/all.yml
+- include: ssh/all.yml
   tags: ssh
-- import_playbook: strategy/all.yml
+- include: strategy/all.yml
   tags: strategy
-- import_playbook: stub_connections/all.yml
+- include: stub_connections/all.yml
   tags: stub_connections
-- import_playbook: transport_config/all.yml
+- include: transport_config/all.yml
   tags: transport_config
