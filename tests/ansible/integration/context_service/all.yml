@@ -1,4 +1,4 @@
-- import_playbook: disconnect_cleanup.yml
-- import_playbook: lru_one_target.yml
-- import_playbook: reconnection.yml
-- import_playbook: remote_name.yml
+- include: disconnect_cleanup.yml
+- include: lru_one_target.yml
+- include: reconnection.yml
+- include: remote_name.yml
