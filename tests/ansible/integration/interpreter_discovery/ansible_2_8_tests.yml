@@ -63,13 +63,13 @@
             ping:
             register: legacy
 
+          - name: check for dep warning (only on platforms where auto result is not /usr/bin/python and legacy is) for ansible 2.8-2.11
             # from ansible 2.12 on this changed
             #  - https://docs.ansible.com/ansible/devel/porting_guides/porting_guide_5.html#python-interpreter-discovery
             #  - https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html
-            # default discovery methot is now auto and will default to python3
+            # default discovery method is now auto and will default to python3
             # and the message changed from a deprecation warning to a real warning that can not be suppressed by
             # using deprecation_warnings=False
-          - name: check for dep warning (only on platforms where auto result is not /usr/bin/python and legacy is) for ansible 2.8-2.11
             assert:
               that:
               - legacy.deprecations | default([]) | length > 0
