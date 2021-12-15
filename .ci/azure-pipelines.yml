@@ -276,3 +276,6 @@ jobs:
       Ans_39_4:
         python.version: '3.9'
         tox.env: py39-mode_ansible-ansible4
+      Ans_39_5:
+        python.version: '3.9'
+        tox.env: py39-mode_ansible-ansible5

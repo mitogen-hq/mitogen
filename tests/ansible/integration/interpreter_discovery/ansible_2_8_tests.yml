@@ -63,15 +63,33 @@
             ping:
             register: legacy
 
-          - name: check for dep warning (only on platforms where auto result is not /usr/bin/python and legacy is)
+          - name: check for dep warning (only on platforms where auto result is not /usr/bin/python and legacy is) for ansible 2.8-2.11
+            # from ansible 2.12 on this changed
+            #  - https://docs.ansible.com/ansible/devel/porting_guides/porting_guide_5.html#python-interpreter-discovery
+            #  - https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html
+            # default discovery method is now auto and will default to python3
+            # and the message changed from a deprecation warning to a real warning that can not be suppressed by
+            # using deprecation_warnings=False
             assert:
               that:
               - legacy.deprecations | default([]) | length > 0
               fail_msg: legacy={{legacy}}
             # only check for a dep warning if legacy returned /usr/bin/python and auto didn't
-            when: legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python' and
-                  auto_out.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
+            when:
+              - legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
+              - auto_out.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
+              - ansible_version.full is version_compare('2.12.0', '<', strict=True)
 
+          - name: check for warning (only on platforms where auto result is not /usr/bin/python and legacy is) from ansible 2.12 on
+            assert:
+              that:
+              - legacy.warnings | default([]) | length > 0
+              fail_msg: legacy={{legacy}}
+            # only check for a warning if legacy returned /usr/bin/python and auto didn't
+            when:
+              - legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
+              -  auto_out.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
+              -  ansible_version.full is version_compare('2.12.0', '>=', strict=True)
 
         - name: test that auto_silent never warns and got the same answer as auto
           block:
