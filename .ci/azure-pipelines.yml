@@ -77,14 +77,14 @@ jobs:
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
 
-- job: MacLatest
+- job: Mac11
   # vanilla Ansible is really slow
   timeoutInMinutes: 120
   steps:
   - template: azure-pipelines-steps.yml
   pool:
     # https://github.com/actions/virtual-environments/blob/main/images/macos/
-    vmImage: macOS-latest
+    vmImage: macOS-11
   strategy:
     matrix:
       Mito_27:
