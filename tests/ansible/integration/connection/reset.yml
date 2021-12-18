@@ -10,10 +10,12 @@
       when: not is_mitogen
 
     - debug: msg="reset.yml skipped on Ansible<2.5.6"
-      when: ansible_version.full < '2.5.6'
+      when:
+        - ansible_version.full is version('2.5.6', '<', strict=True)
 
     - meta: end_play
-      when: ansible_version.full < '2.5.6'
+      when:
+        - ansible_version.full is version('2.5.6', '<', strict=True)
 
     - custom_python_detect_environment:
       register: out
@@ -44,3 +46,5 @@
         # sudo PID has changed.
         - out_become.ppid != out_become2.ppid
         fail_msg: out={{out}} out2={{out2}} out_become={{out_become}} out_become2={{out_become2}}
+  tags:
+    - reset

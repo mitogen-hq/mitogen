@@ -8,36 +8,35 @@
   vars:
     ansible_become_pass: has_sudo_pubkey_password
   tasks:
-
     - mitogen_test_gethostbyname:
         name: www.google.com
       register: out
-      when: |
-        ansible_virtualization_type == "docker" and
-        ansible_python_version > "2.5"
+      when:
+        - ansible_facts.virtualization_type == "docker"
+        - ansible_facts.python.version_info[:2] >= [2, 5]
 
     - shell: cp /etc/resolv.conf /tmp/resolv.conf
-      when: |
-        ansible_virtualization_type == "docker" and
-        ansible_python_version > "2.5"
+      when:
+        - ansible_facts.virtualization_type == "docker"
+        - ansible_facts.python.version_info[:2] >= [2, 5]
 
     - shell: echo > /etc/resolv.conf
-      when: |
-        ansible_virtualization_type == "docker" and
-        ansible_python_version > "2.5"
+      when:
+        - ansible_facts.virtualization_type == "docker"
+        - ansible_facts.python.version_info[:2] >= [2, 5]
 
     - mitogen_test_gethostbyname:
         name: www.google.com
       register: out
       ignore_errors: true
-      when: |
-        ansible_virtualization_type == "docker" and
-        ansible_python_version > "2.5"
+      when:
+        - ansible_facts.virtualization_type == "docker"
+        - ansible_facts.python.version_info[:2] >= [2, 5]
 
     - shell: cat /tmp/resolv.conf > /etc/resolv.conf
-      when: |
-        ansible_virtualization_type == "docker" and
-        ansible_python_version > "2.5"
+      when:
+        - ansible_facts.virtualization_type == "docker"
+        - ansible_facts.python.version_info[:2] >= [2, 5]
 
     - assert:
         that:
@@ -45,6 +44,8 @@
         - '"Name or service not known" in out.msg or
            "Temporary failure in name resolution" in out.msg'
         fail_msg: out={{out}}
-      when: |
-        ansible_virtualization_type == "docker" and
-        ansible_python_version > "2.5"
+      when:
+        - ansible_facts.virtualization_type == "docker"
+        - ansible_facts.python.version_info[:2] >= [2, 5]
+  tags:
+    - resolv_conf

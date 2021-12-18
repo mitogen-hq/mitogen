@@ -55,3 +55,5 @@
       - async_result1.pid != async_result2.pid
       fail_msg: async_result1={{async_result1}} async_result2={{async_result2}}
     when: is_mitogen
+  tags:
+    - runner_new_process

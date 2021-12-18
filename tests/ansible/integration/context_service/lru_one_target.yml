@@ -40,3 +40,5 @@
     #     that:
     #     - first_run.results[-1].pid != second_run.results[-1].pid
     #   when: is_mitogen
+  tags:
+    - lru_one_target

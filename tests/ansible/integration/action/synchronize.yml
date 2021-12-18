@@ -72,3 +72,5 @@
     #   - /tmp/synchronize-action-key
     #   - /tmp/sync-test
     #   - /tmp/sync-test.out
+  tags:
+    - synchronize

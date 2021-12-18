@@ -114,3 +114,5 @@
       - /tmp/copy-with-mode.out
 
     # end of cleaning out files
+  tags:
+    - fixup_perms2__copy

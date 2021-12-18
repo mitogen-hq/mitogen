@@ -9,25 +9,31 @@
     # Can't use pip module because it can't create virtualenvs, must call it
     # directly.
     - shell: virtualenv /tmp/issue_152_virtualenv
-      when: lout.python_version > '2.6'
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
+      when:
+        - lout.python.version.full is version('2.7', '>=', strict=True)
 
     - custom_python_detect_environment:
       vars:
         ansible_python_interpreter: /tmp/issue_152_virtualenv/bin/python
       register: out
-      when: lout.python_version > '2.6'
+      when:
+        - lout.python.version.full is version('2.7', '>=', strict=True)
 
     - assert:
         that:
           - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
         fail_msg: out={{out}}
-      when: lout.python_version > '2.6'
+      when:
+        - lout.python.version.full is version('2.7', '>=', strict=True)
 
     - file:
         path: /tmp/issue_152_virtualenv
         state: absent
-      when: lout.python_version > '2.6'
+      when:
+        - lout.python.version.full is version('2.7', '>=', strict=True)
+  tags:
+    - issue_152

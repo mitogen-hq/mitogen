@@ -17,3 +17,5 @@
           out.results[0].rc == 0 and
           (out.results[0].stdout == ansible_nodename)
         fail_msg: out={{out}}
+  tags:
+    - builtin_command_module

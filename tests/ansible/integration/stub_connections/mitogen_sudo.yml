@@ -23,3 +23,5 @@
   - assert_equal:
       left: (out.env.ORIGINAL_ARGV|from_json)[1:9]
       right: ['-u', 'root', '-H', '-r', 'somerole', '-t', 'sometype', '--']
+  tags:
+    - mitogen_sudo
