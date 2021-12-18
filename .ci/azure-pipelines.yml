@@ -9,26 +9,6 @@
   #ANSIBLE_VERBOSITY: 3
 
 jobs:
-- job: Mac1014
-  # vanilla Ansible is really slow
-  timeoutInMinutes: 120
-  steps:
-  - template: azure-pipelines-steps.yml
-  pool:
-    # https://github.com/actions/virtual-environments/blob/main/images/macos/
-    vmImage: macOS-10.14
-  strategy:
-    matrix:
-      Mito_27:
-        python.version: '2.7'
-        tox.env: py27-mode_mitogen
-      Mito_36:
-        python.version: '3.6'
-        tox.env: py36-mode_mitogen
-      Mito_39:
-        python.version: '3.9'
-        tox.env: py39-mode_mitogen
-
 - job: Mac1015
   # vanilla Ansible is really slow
   timeoutInMinutes: 120
@@ -77,14 +57,14 @@ jobs:
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
 
-- job: MacLatest
+- job: Mac11
   # vanilla Ansible is really slow
   timeoutInMinutes: 120
   steps:
   - template: azure-pipelines-steps.yml
   pool:
     # https://github.com/actions/virtual-environments/blob/main/images/macos/
-    vmImage: macOS-latest
+    vmImage: macOS-11
   strategy:
     matrix:
       Mito_27:
