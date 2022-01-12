@@ -83,3 +83,5 @@
 
         - name: remove test container
           shell: /usr/local/bin/docker stop testMitogen
+  tags:
+    - issue_655

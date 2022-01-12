@@ -18,3 +18,5 @@
       that:
       - out.env.THIS_IS_STUB_LXC == '1'
       fail_msg: out={{out}}
+  tags:
+    - lxd

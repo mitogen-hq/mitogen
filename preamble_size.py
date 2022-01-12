@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Print the size of a typical SSH command line and the bootstrap code sent to new
 contexts.

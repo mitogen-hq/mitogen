@@ -21,4 +21,5 @@
       fail_msg: sync_proc1={{sync_proc1}} sync_proc2={{sync_proc2}}
     when: is_mitogen
 
-
+  tags:
+    - forking_inactive

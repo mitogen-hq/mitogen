@@ -32,3 +32,5 @@
         that:
           - old_become_env.pid != new_become_env.pid
         fail_msg: old_become_env={{old_become_env}} new_become_env={{new_become_env}}
+  tags:
+    - reconnection

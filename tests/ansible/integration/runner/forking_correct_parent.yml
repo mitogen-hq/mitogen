@@ -44,3 +44,6 @@
       that: fork_proc.ppid == regular_proc.pid
       fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
     when: is_mitogen and not forkmode.uses_fork
+
+  tags:
+    - forking_correct_parent

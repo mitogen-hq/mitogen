@@ -30,3 +30,5 @@
         that:
         - not out.stat.exists
         fail_msg: out={{out}}
+  tags:
+    - atexit

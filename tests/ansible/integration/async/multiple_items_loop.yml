@@ -35,3 +35,5 @@
       - out.results[1].rc == 0
       - out.results[1].delta > '0:00:05'
       fail_msg: out={{out}}
+  tags:
+    - multiple_items_loop

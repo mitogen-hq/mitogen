@@ -7,7 +7,8 @@
   gather_facts: true
   tasks:
     - meta: end_play
-      when: ansible_version.full < '2.6'
+      when:
+        - ansible_version.full is version('2.6', '<', strict=True)
 
     # Copy the naughty 'ansible' into place.
     - copy:
@@ -30,3 +31,5 @@
     # Run some new-style modules that 'from ansible.module_utils...'
     - stat:
         path: /
+  tags:
+    - issue_109

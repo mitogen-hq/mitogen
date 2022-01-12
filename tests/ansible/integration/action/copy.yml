@@ -82,3 +82,5 @@
       - /tmp/copy-large-inline-file.out
 
     # end of cleaning out files (again)
+  tags:
+    - copy

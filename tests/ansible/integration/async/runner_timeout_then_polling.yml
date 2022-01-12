@@ -33,3 +33,5 @@
         - result.msg == "Job reached maximum time limit of 1 seconds."
       fail_msg: result={{result}}
     when: is_mitogen
+  tags:
+    - runner_timeout_then_polling

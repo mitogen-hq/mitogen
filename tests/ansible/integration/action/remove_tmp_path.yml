@@ -37,3 +37,5 @@
     - file:
         path: /tmp/remove_tmp_path_test
         state: absent
+  tags:
+    - remove_tmp_path

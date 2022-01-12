@@ -3,75 +3,192 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
-jobs:
+# User defined variables are also injected as environment variables
+# https://docs.microsoft.com/en-us/azure/devops/pipelines/process/variables#environment-variables
+#variables:
+  #ANSIBLE_VERBOSITY: 3
 
-- job: Mac
+jobs:
+- job: Mac1015
   # vanilla Ansible is really slow
   timeoutInMinutes: 120
   steps:
   - template: azure-pipelines-steps.yml
   pool:
+    # https://github.com/actions/virtual-environments/blob/main/images/macos/macos-10.15-Readme.md
     vmImage: macOS-10.15
   strategy:
     matrix:
-      Mito27_27:
+      Mito_27:
         python.version: '2.7'
-        MODE: mitogen
+        tox.env: py27-mode_mitogen
+      Mito_36:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen
+      Mito_39:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen
+
       # TODO: test python3, python3 tests are broken
-      Ans210_27:
+      Loc_27_210:
         python.version: '2.7'
-        MODE: localhost_ansible
-        VER: 2.10.0
+        tox.env: py27-mode_localhost-ansible2.10
+      Loc_27_3:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible3
+      Loc_27_4:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible4
 
       # NOTE: this hangs when ran in Ubuntu 18.04
-      Vanilla_210_27:
+      Van_27_210:
         python.version: '2.7'
-        MODE: localhost_ansible
-        VER: 2.10.0
+        tox.env: py27-mode_localhost-ansible2.10
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
+      Van_27_3:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible3
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
+      Van_27_4:
+        python.version: '2.7'
+        tox.env: py27-mode_localhost-ansible4
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
 
+- job: Mac11
+  # vanilla Ansible is really slow
+  timeoutInMinutes: 120
+  steps:
+  - template: azure-pipelines-steps.yml
+  pool:
+    # https://github.com/actions/virtual-environments/blob/main/images/macos/
+    vmImage: macOS-11
+  strategy:
+    matrix:
+      Mito_27:
+        tox.env: py27-mode_mitogen
+      Mito_37:
+        python.version: '3.7'
+        tox.env: py37-mode_mitogen
+      Mito_39:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen
+
+      # TODO: test python3, python3 tests are broken
+      Loc_27_210:
+        tox.env: py27-mode_localhost-ansible2.10
+      Loc_27_3:
+        tox.env: py27-mode_localhost-ansible3
+      Loc_27_4:
+        tox.env: py27-mode_localhost-ansible4
+
+      # NOTE: this hangs when ran in Ubuntu 18.04
+      Van_27_210:
+        tox.env: py27-mode_localhost-ansible2.10
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
+      Van_27_3:
+        tox.env: py27-mode_localhost-ansible3
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
+      Van_27_4:
+        tox.env: py27-mode_localhost-ansible4
+        STRATEGY: linear
+        ANSIBLE_SKIP_TAGS: resource_intensive
 
 - job: Linux
   pool:
+    # https://github.com/actions/virtual-environments/blob/main/images/linux/Ubuntu1804-README.md
     vmImage: "Ubuntu 18.04"
   steps:
   - template: azure-pipelines-steps.yml
   strategy:
     matrix:
-      #
-      # Confirmed working
-      #
-      Mito27Debian_27:
+      Mito_27_centos6:
         python.version: '2.7'
-        MODE: mitogen
-        DISTRO: debian9
+        tox.env: py27-mode_mitogen-distro_centos6
+      Mito_27_centos7:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_centos7
+      Mito_27_centos8:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_centos8
+      Mito_27_debian9:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_debian9
+      Mito_27_debian10:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_debian10
+      Mito_27_debian11:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_debian11
+      Mito_27_ubuntu1604:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_ubuntu1604
+      Mito_27_ubuntu1804:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_ubuntu1804
+      Mito_27_ubuntu2004:
+        python.version: '2.7'
+        tox.env: py27-mode_mitogen-distro_ubuntu2004
 
-      #MitoPy27CentOS6_26:
-        #python.version: '2.7'
-        #MODE: mitogen
-        #DISTRO: centos6
-
-      Mito36CentOS6_26:
+      Mito_36_centos6:
         python.version: '3.6'
-        MODE: mitogen
-        DISTRO: centos6
+        tox.env: py36-mode_mitogen-distro_centos6
+      Mito_36_centos7:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_centos7
+      Mito_36_centos8:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_centos8
+      Mito_36_debian9:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_debian9
+      Mito_36_debian10:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_debian10
+      Mito_36_debian11:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_debian11
+      Mito_36_ubuntu1604:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_ubuntu1604
+      Mito_36_ubuntu1804:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_ubuntu1804
+      Mito_36_ubuntu2004:
+        python.version: '3.6'
+        tox.env: py36-mode_mitogen-distro_ubuntu2004
 
-      Mito37Debian_27:
-        python.version: '3.7'
-        MODE: mitogen
-        DISTRO: debian9
-
-      Mito39Debian_27:
+      Mito_39_centos6:
         python.version: '3.9'
-        MODE: mitogen
-        DISTRO: debian9
-        VER: 2.10.0
-
-      #Py26CentOS7:
-        #python.version: '2.7'
-        #MODE: mitogen
-        #DISTRO: centos6
+        tox.env: py39-mode_mitogen-distro_centos6
+      Mito_39_centos7:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_centos7
+      Mito_39_centos8:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_centos8
+      Mito_39_debian9:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_debian9
+      Mito_39_debian10:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_debian10
+      Mito_39_debian11:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_debian11
+      Mito_39_ubuntu1604:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_ubuntu1604
+      Mito_39_ubuntu1804:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_ubuntu1804
+      Mito_39_ubuntu2004:
+        python.version: '3.9'
+        tox.env: py39-mode_mitogen-distro_ubuntu2004
 
       #DebOps_2460_27_27:
         #python.version: '2.7'
@@ -110,17 +227,35 @@ jobs:
         #DISTROS: debian
         #STRATEGY: linear
 
-      Ansible_210_27:
+      Ans_27_210:
         python.version: '2.7'
-        MODE: ansible
-        VER: 2.10.0
+        tox.env: py27-mode_ansible-ansible2.10
+      Ans_27_3:
+        python.version: '2.7'
+        tox.env: py27-mode_ansible-ansible3
+      Ans_27_4:
+        python.version: '2.7'
+        tox.env: py27-mode_ansible-ansible4
 
-      Ansible_210_35:
-        python.version: '3.5'
-        MODE: ansible
-        VER: 2.10.0
+      Ans_36_210:
+        python.version: '3.6'
+        tox.env: py36-mode_ansible-ansible2.10
+      Ans_36_3:
+        python.version: '3.6'
+        tox.env: py36-mode_ansible-ansible3
+      Ans_36_4:
+        python.version: '3.6'
+        tox.env: py36-mode_ansible-ansible4
 
-      Ansible_210_39:
+      Ans_39_210:
         python.version: '3.9'
-        MODE: ansible
-        VER: 2.10.0
+        tox.env: py39-mode_ansible-ansible2.10
+      Ans_39_3:
+        python.version: '3.9'
+        tox.env: py39-mode_ansible-ansible3
+      Ans_39_4:
+        python.version: '3.9'
+        tox.env: py39-mode_ansible-ansible4
+      Ans_39_5:
+        python.version: '3.9'
+        tox.env: py39-mode_ansible-ansible5

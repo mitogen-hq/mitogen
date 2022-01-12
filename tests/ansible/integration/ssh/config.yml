@@ -18,3 +18,5 @@
             lookup('env', 'HOME') + '/fakekey'
           )
         fail_msg: out={{out}}
+  tags:
+    - config

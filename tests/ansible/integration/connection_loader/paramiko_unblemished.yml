@@ -17,3 +17,6 @@
             that: not out.mitogen_loaded
             fail_msg: out={{out}}
       when: False
+  tags:
+    - paramiko
+    - paramiko_unblemished

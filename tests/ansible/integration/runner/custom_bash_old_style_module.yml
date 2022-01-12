@@ -14,3 +14,5 @@
           (not out.results[0].changed) and
           out.results[0].msg == 'Here is my input'
         fail_msg: out={{out}}
+  tags:
+    - custom_bash_old_style_module

@@ -30,3 +30,5 @@
       fail_msg: fork_proc1={{fork_proc1}} sync_proc1={{sync_proc1}} fork_proc2={{fork_proc2}}
     when: is_mitogen
 
+  tags:
+    - forking_active

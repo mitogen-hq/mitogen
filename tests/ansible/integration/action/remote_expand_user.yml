@@ -110,3 +110,5 @@
     - assert:
         that: out.result == '$HOME/foo'
         fail_msg: out={{out}}
+  tags:
+    - remote_expand_user

@@ -17,6 +17,22 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
+
+v0.3.1 (2021-01-12)
+-------------------
+
+* :gh:issue:`874` Support for Ansible 5 (ansible-core 2.12)
+* :gh:issue:`774` Fix bootstrap failures on macOS 11.x and 12.x, involving Python 2.7 wrapper
+* :gh:issue:`834` Support for Ansible 3 and 4 (ansible-core 2.11)
+* :gh:issue:`869` Continuous Integration tests are now run with Tox
+* :gh:issue:`869` Continuous Integration tests now cover CentOS 6 & 8, Debian 9 & 11, Ubuntu 16.04 & 20.04
+* :gh:issue:`860` Add initial support for podman connection (w/o Ansible support yet)
+* :gh:issue:`873` `python -c ...` first stage no longer uses :py:mod:`platform`` to detect the macOS release
+* :gh:issue:`876` `python -c ...` first stage no longer contains tab characters, to reduce size
+* :gh:issue:`878` Continuous Integration tests now correctly perform comparisons of 2 digit versions
+* :gh:issue:`878` Kubectl connector fixed with Ansible 2.10 and above
+
+
 v0.3.0 (2021-10-28)
 -------------------
 

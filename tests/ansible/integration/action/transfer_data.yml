@@ -46,3 +46,5 @@
     - file:
         path: /tmp/transfer-data
         state: absent
+  tags:
+    - transfer_data

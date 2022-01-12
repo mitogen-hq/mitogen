@@ -8,7 +8,8 @@
     when: not is_mitogen
 
   - meta: end_play
-    when: ansible_version.full < '2.5'
+    when:
+      - ansible_version.full is version('2.5', '<', strict=True)
 
   - custom_python_detect_environment:
     vars:
@@ -21,3 +22,5 @@
       that:
       - out.env.THIS_IS_STUB_KUBECTL == '1'
       fail_msg: out={{out}}
+  tags:
+    - kubectl

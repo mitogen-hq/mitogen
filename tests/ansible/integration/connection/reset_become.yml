@@ -6,10 +6,12 @@
   gather_facts: false
   tasks:
   - debug: msg="reset_become.yml skipped on Ansible<2.5.6"
-    when: ansible_version.full < '2.5.6'
+    when:
+      - ansible_version.full is version('2.5.6', '<', strict=True)
 
   - meta: end_play
-    when: ansible_version.full < '2.5.6'
+    when:
+      - ansible_version.full is version('2.5.6', '<', strict=True)
 
   - name: save pid of the become acct
     custom_python_detect_environment:
@@ -49,3 +51,5 @@
       that:
       - login_acct.pid != new_login_acct.pid
       fail_msg: login_acct={{login_acct}} new_login_acct={{new_login_acct}}
+  tags:
+    - reset_become

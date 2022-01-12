@@ -7,14 +7,10 @@ ci_lib.DISTROS = ['debian']
 
 ci_lib.run_batches([
     [
-        # Must be installed separately, as PyNACL indirect requirement causes
-        # newer version to be installed if done in a single pip run.
-        'pip install "pycparser<2.19"',
-        'pip install -qqq "debops[ansible]==2.1.2" "ansible-base<2.10.14" "ansible=={}"'.format(ci_lib.ANSIBLE_VERSION),
+        'pip install -qqq "debops[ansible]==2.1.2"',
     ],
     [
         'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',
-        'docker pull %s' % (ci_lib.image_for_distro('debian'),),
     ],
 ])
 
