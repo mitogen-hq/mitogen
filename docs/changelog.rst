@@ -18,8 +18,14 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
 
-v0.3.1.dev0 (unreleased)
-------------------------
+v0.3.2 (2022-01-12)
+-------------------
+
+* :gh:issue:`891` Correct `Framework :: Ansible` Trove classifier
+
+
+v0.3.1 (unreleased)
+-------------------
 
 * :gh:issue:`874` Support for Ansible 5 (ansible-core 2.12)
 * :gh:issue:`774` Fix bootstrap failures on macOS 11.x and 12.x, involving Python 2.7 wrapper
