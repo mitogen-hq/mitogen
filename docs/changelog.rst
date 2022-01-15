@@ -18,7 +18,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
 
-v0.3.1 (2021-01-12)
+v0.3.2 (2022-01-12)
+-------------------
+
+* :gh:issue:`891` Correct `Framework :: Ansible` Trove classifier
+
+
+v0.3.1 (unreleased)
 -------------------
 
 * :gh:issue:`874` Support for Ansible 5 (ansible-core 2.12)
