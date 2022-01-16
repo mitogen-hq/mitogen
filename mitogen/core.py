@@ -151,12 +151,14 @@ if PY3:
     FsPathTypes = (str,)
     BufferType = lambda buf, start: memoryview(buf)[start:]
     long = int
+    from types import SimpleNamespace
 else:
     b = str
     BytesType = str
     FsPathTypes = (str, unicode)
     BufferType = buffer
     UnicodeType = unicode
+    SimpleNamespace = None
 
 AnyTextType = (BytesType, UnicodeType)
 
@@ -864,6 +866,8 @@ class Message(object):
             return self._unpickle_bytes
         elif module == '__builtin__' and func == 'bytes':
             return BytesType
+        elif SimpleNamespace and module == 'types' and func == 'SimpleNamespace':
+            return SimpleNamespace
         raise StreamError('cannot unpickle %r/%r', module, func)
 
     @property
@@ -3132,7 +3136,7 @@ class Router(object):
         This can be used from any thread, but its output is only meaningful
         from the context of the :class:`Broker` thread, as disconnection or
         replacement could happen in parallel on the broker thread at any
-        moment. 
+        moment.
         """
         return (
             self._stream_by_id.get(dst_id) or
