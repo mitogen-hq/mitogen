@@ -464,12 +464,17 @@ class PlayContextSpec(Spec):
         )
 
     def ssh_args(self):
+        if 'ansible_delegated_vars' in self._task_vars and self._connection.delegate_to_hostname:
+            local_vars = self._task_vars['ansible_delegated_vars'][self._connection.delegate_to_hostname].get("vars", {})
+        else:
+            local_vars = self._task_vars.get("vars", {})
+
         return [
             mitogen.core.to_text(term)
             for s in (
-                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
-                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
-                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
+                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=local_vars),
+                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=local_vars),
+                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=local_vars)
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
         ]
