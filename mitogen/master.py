@@ -654,7 +654,7 @@ class ParentEnumerationMethod(FinderMethod):
 
             pkg = sys.modules.get(pkgname)
             path = getattr(pkg, '__path__', None)
-            if pkg and path:
+            if pkg and path and pkgname != 'ansible.module_utils.distro':
                 return pkgname.split('.'), path, modpath
 
             LOG.debug('%r: %r lacks __path__ attribute', self, pkgname)
