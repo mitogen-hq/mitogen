@@ -664,10 +664,24 @@ class ParentEnumerationMethod(FinderMethod):
     module object or any parent package's :data:`__path__`, since they have all
     been overwritten. Some men just want to watch the world burn.
     """
+
+    @staticmethod
+    def _iter_parents(fullname):
+        """
+        >>> list(ParentEnumerationMethod._iter_parents('a'))
+        [('', 'a')]
+        >>> list(ParentEnumerationMethod._iter_parents('a.b.c'))
+        [('a.b', 'c'), ('a', 'b'), ('', 'a')]
+        """
+        while fullname:
+            fullname, _, modname = str_rpartition(fullname, u'.')
+            yield fullname, modname
+
     def _find_sane_parent(self, fullname):
         """
         Iteratively search :data:`sys.modules` for the least indirect parent of
-        `fullname` that is loaded and contains a :data:`__path__` attribute.
+        `fullname` that's from the same package and has a :data:`__path__`
+        attribute.
 
         :return:
             `(parent_name, path, modpath)` tuple, where:
@@ -680,21 +694,40 @@ class ParentEnumerationMethod(FinderMethod):
                 * `modpath`: list of module name components leading from `path`
                    to the target module.
         """
-        path = None
         modpath = []
-        while True:
-            pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
+        for pkgname, modname in self._iter_parents(fullname):
             modpath.insert(0, modname)
             if not pkgname:
                 return [], None, modpath
 
-            pkg = sys.modules.get(pkgname)
-            path = getattr(pkg, '__path__', None)
-            if pkg and path:
-                return pkgname.split('.'), path, modpath
+            try:
+                pkg = sys.modules[pkgname]
+            except KeyError:
+                LOG.debug('%r: sys.modules[%r] absent, skipping', self, pkgname)
+                continue
 
-            LOG.debug('%r: %r lacks __path__ attribute', self, pkgname)
-            fullname = pkgname
+            try:
+                resolved_pkgname = pkg.__name__
+            except AttributeError:
+                LOG.debug('%r: %r has no __name__, skipping', self, pkg)
+                continue
+
+            if resolved_pkgname != pkgname:
+                LOG.debug('%r: %r.__name__ is %r, skipping',
+                          self, pkg, resolved_pkgname)
+                continue
+
+            try:
+                path = pkg.__path__
+            except AttributeError:
+                LOG.debug('%r: %r has no __path__, skipping', self, pkg)
+                continue
+
+            if not path:
+                LOG.debug('%r: %r.__path__ is %r, skipping', self, pkg, path)
+                continue
+
+            return pkgname.split('.'), path, modpath
 
     def _found_package(self, fullname, path):
         path = os.path.join(path, '__init__.py')
