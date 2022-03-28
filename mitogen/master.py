@@ -526,37 +526,50 @@ class PkgutilMethod(FinderMethod):
             loader = pkgutil.find_loader(fullname)
         except ImportError:
             e = sys.exc_info()[1]
-            LOG.debug('%r._get_module_via_pkgutil(%r): %s',
-                      self, fullname, e)
+            LOG.debug('%r: find_loader(%r) failed: %s', self, fullname, e)
             return None
 
-        IOLOG.debug('%r._get_module_via_pkgutil(%r) -> %r',
-                    self, fullname, loader)
         if not loader:
+            LOG.debug('%r: find_loader(%r) returned %r, aborting',
+                      self, fullname, loader)
             return
 
         try:
-            path, is_special = _py_filename(loader.get_filename(fullname))
-            source = loader.get_source(fullname)
-            is_pkg = loader.is_package(fullname)
-
-            # workaround for special python modules that might only exist in memory
-            if is_special and is_pkg and not source:
-                source = '\n'
+            path = loader.get_filename(fullname)
         except (AttributeError, ImportError):
-            # - Per PEP-302, get_source() and is_package() are optional,
-            #   calling them may throw AttributeError.
             # - get_filename() may throw ImportError if pkgutil.find_loader()
             #   picks a "parent" package's loader for some crap that's been
             #   stuffed in sys.modules, for example in the case of urllib3:
             #       "loader for urllib3.contrib.pyopenssl cannot handle
             #        requests.packages.urllib3.contrib.pyopenssl"
             e = sys.exc_info()[1]
-            LOG.debug('%r: loading %r using %r failed: %s',
-                      self, fullname, loader, e)
+            LOG.debug('%r: %r.get_file_name(%r) failed: %r', self, loader, fullname, e)
             return
 
+        path, is_special = _py_filename(path)
+
+        try:
+            source = loader.get_source(fullname)
+        except AttributeError:
+            # Per PEP-302, get_source() is optional,
+            e = sys.exc_info()[1]
+            LOG.debug('%r: %r.get_source() failed: %r', self, loader, fullname, e)
+            return
+
+        try:
+            is_pkg = loader.is_package(fullname)
+        except AttributeError:
+            # Per PEP-302, is_package() is optional,
+            e = sys.exc_info()[1]
+            LOG.debug('%r: %r.is_package(%r) failed: %r', self, loader, fullname, e)
+            return
+
+        # workaround for special python modules that might only exist in memory
+        if is_special and is_pkg and not source:
+            source = '\n'
+
         if path is None or source is None:
+            LOG.debug('%r: path=%r, source=%r, aborting', self, path, source)
             return
 
         if isinstance(source, mitogen.core.UnicodeType):
