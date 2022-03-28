@@ -589,23 +589,37 @@ class SysModulesMethod(FinderMethod):
         """
         Find `fullname` using its :data:`__file__` attribute.
         """
-        module = sys.modules.get(fullname)
+        try:
+            module = sys.modules[fullname]
+        except KeyError:
+            LOG.debug('%r: sys.modules[%r] absent, aborting', self, fullname)
+            return
+
         if not isinstance(module, types.ModuleType):
-            LOG.debug('%r: sys.modules[%r] absent or not a regular module',
-                      self, fullname)
+            LOG.debug('%r: sys.modules[%r] is %r, aborting',
+                      self, fullname, module)
             return
 
-        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
-        alleged_name = getattr(module, '__name__', None)
-        if alleged_name != fullname:
-            LOG.debug('sys.modules[%r].__name__ is incorrect, assuming '
-                      'this is a hacky module alias and ignoring it. '
-                      'Got %r, module object: %r',
-                      fullname, alleged_name, module)
+        try:
+            resolved_name = module.__name__
+        except AttributeError:
+            LOG.debug('%r: %r has no __name__, aborting', self, module)
             return
 
-        path, _ = _py_filename(getattr(module, '__file__', ''))
+        if resolved_name != fullname:
+            LOG.debug('%r: %r.__name__ is %r, aborting',
+                      self, module, resolved_name)
+            return
+
+        try:
+            path = module.__file__
+        except AttributeError:
+            LOG.debug('%r: %r has no __file__, aborting', self, module)
+            return
+
+        path, _ = _py_filename(path)
         if not path:
+            LOG.debug('%r: %r.__file__ is %r, aborting', self, module, path)
             return
 
         LOG.debug('%r: sys.modules[%r]: found %s', self, fullname, path)
