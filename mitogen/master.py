@@ -122,6 +122,13 @@ def is_stdlib_name(modname):
     """
     Return :data:`True` if `modname` appears to come from the standard library.
     """
+    # `imp.is_builtin()` isn't a documented as part of Python's stdlib API.
+    #
+    # """
+    # Main is a little special - imp.is_builtin("__main__") will return False,
+    # but BuiltinImporter is still the most appropriate initial setting for
+    # its __loader__ attribute.
+    # """ -- comment in CPython pylifecycle.c:add_main_module()
     if imp.is_builtin(modname) != 0:
         return True
 
@@ -512,6 +519,8 @@ class PkgutilMethod(FinderMethod):
         Find `fullname` using :func:`pkgutil.find_loader`.
         """
         try:
+            # If fullname refers to a submodule that's not already imported
+            # then the containing package is imported.
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
             loader = pkgutil.find_loader(fullname)
