@@ -6,7 +6,6 @@ import sys
 import time
 import tempfile
 
-import mock
 import unittest2
 
 import mitogen.core

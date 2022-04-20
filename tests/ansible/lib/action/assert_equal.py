@@ -11,9 +11,7 @@ import unittest2
 
 import ansible.template
 
-from ansible.errors import AnsibleError
 from ansible.plugins.action import ActionBase
-from ansible.module_utils.six import string_types
 
 
 TEMPLATE_KWARGS = {}
