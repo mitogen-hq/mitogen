@@ -1,6 +1,5 @@
 
 import pickle
-import unittest2
 
 import mitogen.core
 from mitogen.core import b
@@ -31,7 +30,3 @@ class PickleTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(None, c2.router)
         self.assertEquals(c.context_id, c2.context_id)
         self.assertEquals(c.name, c2.name)
-
-
-if __name__ == '__main__':
-    unittest2.main()

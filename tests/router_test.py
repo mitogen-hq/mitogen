@@ -4,8 +4,6 @@ import sys
 import time
 import zlib
 
-import unittest2
-
 import testlib
 import mitogen.core
 import mitogen.master
@@ -583,7 +581,3 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
                 ctx.context_id,
                 mitogen.context_id,
             ))
-
-
-if __name__ == '__main__':
-    unittest2.main()

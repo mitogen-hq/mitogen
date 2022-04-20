@@ -1,5 +1,3 @@
-import unittest2
-
 import mitogen.core
 import mitogen.service
 import testlib
@@ -154,7 +152,3 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: self.router.myself().call_service(MyService, 'foobar'))
         self.assertEquals(e.args[0], self.router.invalid_handle_msg)
-
-
-if __name__ == '__main__':
-    unittest2.main()

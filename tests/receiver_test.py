@@ -1,7 +1,7 @@
 
 import sys
 import threading
-import unittest2
+import unittest
 
 import mitogen.core
 import testlib
@@ -120,7 +120,7 @@ class OnReceiveTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.ChannelError, throw)
         self.assertEquals(e.args[0], sender.explicit_close_msg)
 
-    @unittest2.skip(reason=(
+    @unittest.skip(reason=(
         'Unclear if a asingle dead message received from remote should '
         'cause all threads to wake up.'
     ))
@@ -153,7 +153,3 @@ class ToSenderTest(testlib.RouterMixin, testlib.TestCase):
         myself = self.router.myself()
         recv = self.klass(self.router)
         self.assertEquals(myself, recv.to_sender().context)
-
-
-if __name__ == '__main__':
-    unittest2.main()

@@ -11,9 +11,9 @@ import sys
 import threading
 import time
 import traceback
+import unittest
 
 import psutil
-import unittest2
 
 import mitogen.core
 import mitogen.fork
@@ -328,7 +328,7 @@ class LogCapturer(object):
         return self.raw()
 
 
-class TestCase(unittest2.TestCase):
+class TestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # This is done in setUpClass() so we have a chance to run before any
@@ -460,7 +460,7 @@ class DockerizedSshDaemon(object):
         try:
             subprocess__check_output(['docker', '--version'])
         except Exception:
-            raise unittest2.SkipTest('Docker binary is unavailable')
+            raise unittest.SkipTest('Docker binary is unavailable')
 
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         args = [
@@ -558,7 +558,7 @@ class DockerMixin(RouterMixin):
     def setUpClass(cls):
         super(DockerMixin, cls).setUpClass()
         if os.environ.get('SKIP_DOCKER_TESTS'):
-            raise unittest2.SkipTest('SKIP_DOCKER_TESTS is set')
+            raise unittest.SkipTest('SKIP_DOCKER_TESTS is set')
 
         # we want to be able to override test distro for some tests that need a different container spun up
         daemon_args = {}

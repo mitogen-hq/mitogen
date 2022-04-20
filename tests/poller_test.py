@@ -4,9 +4,7 @@ import os
 import select
 import socket
 import sys
-import time
-
-import unittest2
+import unittest
 
 import mitogen.core
 import mitogen.parent
@@ -400,7 +398,7 @@ class AllMixin(ReceiveStateMixin,
 class SelectTest(AllMixin, testlib.TestCase):
     klass = mitogen.core.Poller
 
-SelectTest = unittest2.skipIf(
+SelectTest = unittest.skipIf(
     condition=(not SelectTest.klass.SUPPORTED),
     reason='select.select() not supported'
 )(SelectTest)
@@ -409,7 +407,7 @@ SelectTest = unittest2.skipIf(
 class PollTest(AllMixin, testlib.TestCase):
     klass = mitogen.parent.PollPoller
 
-PollTest = unittest2.skipIf(
+PollTest = unittest.skipIf(
     condition=(not PollTest.klass.SUPPORTED),
     reason='select.poll() not supported'
 )(PollTest)
@@ -418,7 +416,7 @@ PollTest = unittest2.skipIf(
 class KqueueTest(AllMixin, testlib.TestCase):
     klass = mitogen.parent.KqueuePoller
 
-KqueueTest = unittest2.skipIf(
+KqueueTest = unittest.skipIf(
     condition=(not KqueueTest.klass.SUPPORTED),
     reason='select.kqueue() not supported'
 )(KqueueTest)
@@ -427,11 +425,7 @@ KqueueTest = unittest2.skipIf(
 class EpollTest(AllMixin, testlib.TestCase):
     klass = mitogen.parent.EpollPoller
 
-EpollTest = unittest2.skipIf(
+EpollTest = unittest.skipIf(
     condition=(not EpollTest.klass.SUPPORTED),
     reason='select.epoll() not supported'
 )(EpollTest)
-
-
-if __name__ == '__main__':
-    unittest2.main()

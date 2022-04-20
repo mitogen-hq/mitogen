@@ -6,7 +6,6 @@ import tempfile
 import threading
 import time
 
-import unittest2
 import testlib
 
 import mitogen.core
@@ -71,7 +70,3 @@ class DetachReapTest(testlib.RouterMixin, testlib.TestCase):
         # now clean up
         os.kill(pid, signal.SIGTERM)
         os.waitpid(pid, 0)
-
-
-if __name__ == '__main__':
-    unittest2.main()

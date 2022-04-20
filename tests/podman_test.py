@@ -1,5 +1,4 @@
 import os
-import unittest2
 
 import mitogen
 
@@ -45,8 +44,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             stream.conn.options.python_path
         ]
         self.assertEquals(argv[:len(expected_call)], expected_call)
-
-
-
-if __name__ == '__main__':
-    unittest2.main()

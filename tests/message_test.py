@@ -1,9 +1,9 @@
 
 import sys
 import struct
+import unittest
 
 import mock
-import unittest2
 
 import mitogen.core
 import mitogen.master
@@ -170,7 +170,7 @@ class PickledTest(testlib.TestCase):
         for b in True, False:
             self.assertEquals(b, self.roundtrip(b))
 
-    @unittest2.skipIf(condition=sys.version_info < (2, 6),
+    @unittest.skipIf(condition=sys.version_info < (2, 6),
                       reason='bytearray missing on <2.6')
     def test_bytearray(self):
         ba = bytearray(b('123'))
@@ -201,7 +201,7 @@ class PickledTest(testlib.TestCase):
         for k in range(len(l)):
             self.assertTrue(isinstance(roundtrip[k], type(l[k])))
 
-    @unittest2.skipIf(condition=sys.version_info > (3, 0),
+    @unittest.skipIf(condition=sys.version_info > (3, 0),
                       reason='long missing in >3.x')
     def test_long(self):
         l = long(0xffffffffffff)
@@ -539,7 +539,3 @@ class ReprTest(testlib.TestCase):
     def test_repr(self):
         # doesn't crash
         repr(self.klass.pickled('test'))
-
-
-if __name__ == '__main__':
-    unittest2.main()

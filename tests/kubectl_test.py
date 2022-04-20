@@ -4,8 +4,6 @@ import os
 import mitogen
 import mitogen.parent
 
-import unittest2
-
 import testlib
 
 
@@ -23,7 +21,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEquals(argv[1], 'exec')
         self.assertEquals(argv[2], '-it')
         self.assertEquals(argv[3], 'pod_name')
-
-
-if __name__ == '__main__':
-    unittest2.main()

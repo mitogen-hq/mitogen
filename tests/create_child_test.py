@@ -6,8 +6,6 @@ import sys
 import time
 import tempfile
 
-import unittest2
-
 import mitogen.core
 import mitogen.parent
 from mitogen.core import b
@@ -338,7 +336,3 @@ if 0:
             self.assertFalse(flags & os.O_RDWR)
             self.assertTrue(info['flags'] & os.O_WRONLY)
             self.assertTrue(buf, 'TEST')
-
-
-if __name__ == '__main__':
-    unittest2.main()

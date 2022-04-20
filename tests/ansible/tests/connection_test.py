@@ -6,8 +6,6 @@ import subprocess
 import tempfile
 import time
 
-import unittest2
-
 import mock
 import ansible.errors
 import ansible.playbook.play_context
@@ -183,7 +181,3 @@ class PutFileTest(ConnectionMixin, testlib.TestCase):
         path = tempfile.mktemp(prefix='mitotest')
         self.assertRaises(ansible.errors.AnsibleFileNotFound,
             lambda: self.conn.put_file(in_path='/nonexistent', out_path=path))
-
-
-if __name__ == '__main__':
-    unittest2.main()

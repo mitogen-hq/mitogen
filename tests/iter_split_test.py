@@ -1,6 +1,7 @@
 
+import unittest
+
 import mock
-import unittest2
 
 import mitogen.core
 
@@ -13,7 +14,7 @@ except NameError:
         return it.next()
 
 
-class IterSplitTest(unittest2.TestCase):
+class IterSplitTest(unittest.TestCase):
     func = staticmethod(mitogen.core.iter_split)
 
     def test_empty_buffer(self):
@@ -60,7 +61,3 @@ class IterSplitTest(unittest2.TestCase):
         trailer, cont = self.func(buf=buf, delim='\n', func=func)
         self.assertFalse(cont)
         self.assertEquals('zz', trailer)
-
-
-if __name__ == '__main__':
-    unittest2.main()

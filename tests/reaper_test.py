@@ -1,6 +1,6 @@
 
 import signal
-import unittest2
+
 import testlib
 import mock
 
@@ -48,7 +48,3 @@ class ReaperTest(testlib.TestCase):
             mock.call(proc.pid, signal.SIGTERM),
             mock.call(proc.pid, signal.SIGKILL),
         ])
-
-
-if __name__ == '__main__':
-    unittest2.main()

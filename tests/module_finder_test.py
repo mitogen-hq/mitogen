@@ -1,8 +1,7 @@
 import inspect
 import os
 import sys
-
-import unittest2
+import unittest
 
 import mitogen.master
 from mitogen.core import b
@@ -395,7 +394,7 @@ if sys.version_info > (2, 6):
                 u'django.utils.six',
             ])
 
-        @unittest2.skipIf(
+        @unittest.skipIf(
             condition=(sys.version_info >= (3, 0)),
             reason='broken due to ancient vendored six.py'
         )
@@ -491,6 +490,3 @@ if sys.version_info > (2, 6):
                 u'pytz.tzfile',
                 u'pytz.tzinfo',
             ])
-
-if __name__ == '__main__':
-    unittest2.main()

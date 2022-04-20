@@ -2,11 +2,10 @@
 import os
 import socket
 import sys
+import unittest
 
 import mitogen
 import mitogen.parent
-
-import unittest2
 
 import testlib
 
@@ -18,7 +17,7 @@ import testlib
 #         try:
 #             root = self.router.sudo()
 #         except mitogen.core.StreamError:
-#             raise unittest2.SkipTest("requires sudo to localhost root")
+#             raise unittest.SkipTest("requires sudo to localhost root")
 
 #         via_ssh = self.docker_ssh(
 #             username='mitogen__has_sudo',
@@ -37,11 +36,7 @@ import testlib
 #         )
 
 
-# DockerTest = unittest2.skipIf(
+# DockerTest = unittest.skipIf(
 #     condition=sys.version_info < (2, 5),
 #     reason="mitogen.setns unsupported on Python <2.4"
 # )(DockerTest)
-
-
-# if __name__ == '__main__':
-#     unittest2.main()

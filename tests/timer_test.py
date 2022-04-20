@@ -2,7 +2,6 @@
 import time
 
 import mock
-import unittest2
 
 import mitogen.core
 import mitogen.parent
@@ -195,7 +194,3 @@ class BrokerTimerTest(testlib.TestCase):
         finally:
             router.broker.shutdown()
             router.broker.join()
-
-
-if __name__ == '__main__':
-    unittest2.main()

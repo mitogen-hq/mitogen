@@ -3,7 +3,6 @@ import errno
 import select
 
 import mock
-import unittest2
 
 import testlib
 import mitogen.core
@@ -122,7 +121,3 @@ class SelectExceptionTest(ExceptionTest, testlib.TestCase):
 class OsErrorExceptionTest(ExceptionTest, testlib.TestCase):
     errno = errno.EBADF
     exception_class = OSError
-
-
-if __name__ == '__main__':
-    unittest2.main()

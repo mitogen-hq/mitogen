@@ -5,7 +5,6 @@ import types
 import zlib
 
 import mock
-import unittest2
 
 import mitogen.core
 import mitogen.utils
@@ -221,7 +220,3 @@ class SelfReplacingModuleTest(testlib.RouterMixin, testlib.TestCase):
         c = self.router.local()
         self.assertEquals(0,
             c.call(simple_pkg.imports_replaces_self.subtract_one, 1))
-
-
-if __name__ == '__main__':
-    unittest2.main()

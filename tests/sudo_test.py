@@ -4,8 +4,6 @@ import os
 import mitogen
 import mitogen.sudo
 
-import unittest2
-
 import testlib
 
 
@@ -104,7 +102,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #             lambda: self.router.sudo(via=ssh, password='rootpassword')
 #         )
 #         self.assertTrue(mitogen.sudo.password_incorrect_msg in str(e))
-
-
-if __name__ == '__main__':
-    unittest2.main()

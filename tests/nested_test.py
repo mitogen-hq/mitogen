@@ -1,7 +1,5 @@
 import os
 
-import unittest2
-
 import testlib
 
 
@@ -13,7 +11,3 @@ class NestedTest(testlib.RouterMixin, testlib.TestCase):
 
         pid = context.call(os.getpid)
         self.assertIsInstance(pid, int)
-
-
-if __name__ == '__main__':
-    unittest2.main()

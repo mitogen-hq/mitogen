@@ -4,9 +4,9 @@ import os
 import signal
 import sys
 import time
+import unittest
 
 import mock
-import unittest2
 import testlib
 
 import mitogen.core
@@ -188,7 +188,7 @@ class OpenPtyTest(testlib.TestCase):
         msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
         self.assertEquals(e.args[0], msg)
 
-    @unittest2.skipIf(condition=(os.uname()[0] != 'Linux'),
+    @unittest.skipIf(condition=(os.uname()[0] != 'Linux'),
                       reason='Fallback only supported on Linux')
     @mock.patch('os.openpty')
     def test_broken_linux_fallback(self, openpty):
@@ -288,7 +288,3 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
             lambda: recv.get().unpickle())
         s = 'mitogen.core.ChannelError: ' + self.router.respondent_disconnect_msg
         self.assertTrue(e.args[0].startswith(s))
-
-
-if __name__ == '__main__':
-    unittest2.main()

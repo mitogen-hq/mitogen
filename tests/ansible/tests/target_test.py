@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import os.path
 import subprocess
 import tempfile
-import unittest2
+import unittest
 
 import mock
 
@@ -56,7 +56,7 @@ class FindGoodTempDirTest(testlib.TestCase):
 
 
 
-class ApplyModeSpecTest(unittest2.TestCase):
+class ApplyModeSpecTest(unittest.TestCase):
     func = staticmethod(ansible_mitogen.target.apply_mode_spec)
 
     def test_simple(self):
@@ -67,7 +67,7 @@ class ApplyModeSpecTest(unittest2.TestCase):
         self.assertEquals(int('0717', 8), self.func(spec, int('0777', 8)))
 
 
-class IsGoodTempDirTest(unittest2.TestCase):
+class IsGoodTempDirTest(unittest.TestCase):
     func = staticmethod(ansible_mitogen.target.is_good_temp_dir)
 
     def test_creates(self):
@@ -86,7 +86,7 @@ class IsGoodTempDirTest(unittest2.TestCase):
             self.assertFalse(self.func(bleh))
             self.assertEquals(open(bleh).read(), 'derp')
 
-    @unittest2.skipIf(
+    @unittest.skipIf(
         os.geteuid() == 0, 'writes by root ignore directory permissions')
     def test_unwriteable(self):
         with NamedTemporaryDirectory() as temp_path:
@@ -105,8 +105,3 @@ class IsGoodTempDirTest(unittest2.TestCase):
         os_access.return_value = False
         with NamedTemporaryDirectory() as temp_path:
             self.assertFalse(self.func(temp_path))
-
-
-
-if __name__ == '__main__':
-    unittest2.main()

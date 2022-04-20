@@ -1,6 +1,4 @@
 
-import unittest2
-
 import testlib
 import mitogen.core
 
@@ -39,7 +37,3 @@ class ListenFireTest(testlib.TestCase):
         self.assertEquals('event fired', latch2.get())
         self.assertTrue(latch.empty())
         self.assertTrue(latch2.empty())
-
-
-if __name__ == '__main__':
-    unittest2.main()

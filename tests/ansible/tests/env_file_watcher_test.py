@@ -2,8 +2,6 @@ import os
 import sys
 import tempfile
 
-import mock
-import unittest2
 import testlib
 
 from mitogen.core import b
@@ -68,7 +66,3 @@ class WatcherTest(testlib.TestCase):
         self.tf.flush()
         watcher.check()
         self.assertEqual(environb[b('SOMEKEY')], b('\xff\xff\xff'))
-
-
-if __name__ == '__main__':
-    unittest2.main()

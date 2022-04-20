@@ -3,7 +3,6 @@
 import os
 import tempfile
 
-import unittest2
 import mock
 
 import mitogen.core
@@ -98,7 +97,3 @@ class CastTest(testlib.TestCase):
     def test_unknown(self):
         self.assertRaises(TypeError, mitogen.utils.cast, set())
         self.assertRaises(TypeError, mitogen.utils.cast, 4j)
-
-
-if __name__ == '__main__':
-    unittest2.main()

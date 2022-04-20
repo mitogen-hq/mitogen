@@ -1,8 +1,6 @@
 
 import subprocess
 
-import unittest2
-
 import mitogen.parent
 from mitogen.core import b
 
@@ -45,7 +43,3 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             self.assertIn(b("Error -5 while decompressing data"), stderr)
         finally:
             fp.close()
-
-
-if __name__ == '__main__':
-    unittest2.main()

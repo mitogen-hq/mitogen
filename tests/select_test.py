@@ -1,6 +1,3 @@
-
-import unittest2
-
 import mitogen.select
 
 import testlib
@@ -476,7 +473,3 @@ class GetEventTest(testlib.RouterMixin, testlib.TestCase):
         event = select.get_event()
         self.assertEquals(recv, event.source)
         self.assertEquals('123', event.data.unpickle())
-
-
-if __name__ == '__main__':
-    unittest2.main()

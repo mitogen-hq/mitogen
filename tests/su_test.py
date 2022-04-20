@@ -4,8 +4,6 @@ import os
 import mitogen
 import mitogen.su
 
-import unittest2
-
 import testlib
 
 
@@ -67,7 +65,3 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         )
         context = self.router.su(via=ssh, password='rootpassword')
         self.assertEquals(0, context.call(os.getuid))
-
-
-if __name__ == '__main__':
-    unittest2.main()
