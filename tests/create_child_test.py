@@ -79,7 +79,7 @@ def close_proc(proc):
     proc.stdin.close()
     proc.stdout.close()
     if proc.stderr:
-        prco.stderr.close()
+        proc.stderr.close()
 
 
 def wait_read(fp, n):
