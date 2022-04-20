@@ -193,8 +193,6 @@ class Fold(object):
     def __exit__(self, _1, _2, _3): pass
 
 
-os.environ.setdefault('ANSIBLE_STRATEGY',
-    os.environ.get('STRATEGY', 'mitogen_linear'))
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Used only when MODE=mitogen
 DISTRO = os.environ.get('DISTRO', 'debian9')
