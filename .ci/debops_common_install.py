@@ -7,7 +7,7 @@ ci_lib.DISTROS = ['debian']
 
 ci_lib.run_batches([
     [
-        'pip install -qqq "debops[ansible]==2.1.2"',
+        'python -m pip --no-python-version-warning --disable-pip-version-check "debops[ansible]==2.1.2"',
     ],
     [
         'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',

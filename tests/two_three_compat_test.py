@@ -1,7 +1,3 @@
-
-import logging
-import time
-
 import unittest2
 
 import mitogen.core

@@ -25,7 +25,7 @@ def burn():
 
 mul = 1.5
 count = int(mul * multiprocessing.cpu_count())
-print count
+print(count)
 
 procs = [multiprocessing.Process(target=burn)
          for _ in range(count)]

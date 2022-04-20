@@ -2,15 +2,12 @@ import errno
 import fcntl
 import os
 import signal
-import subprocess
 import sys
-import tempfile
 import time
 
 import mock
 import unittest2
 import testlib
-from testlib import Popen__terminate
 
 import mitogen.core
 import mitogen.parent
