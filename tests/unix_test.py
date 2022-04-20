@@ -5,8 +5,6 @@ import subprocess
 import sys
 import time
 
-import unittest2
-
 import mitogen
 import mitogen.master
 import mitogen.service
@@ -148,5 +146,3 @@ class ClientTest(testlib.TestCase):
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'ClientTest_server':
         ClientTest._test_simple_server(path=sys.argv[2])
-    else:
-        unittest2.main()

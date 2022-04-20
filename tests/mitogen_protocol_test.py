@@ -1,5 +1,4 @@
 
-import unittest2
 import mock
 
 import mitogen.core
@@ -28,7 +27,3 @@ class ReceiveOneTest(testlib.TestCase):
         self.assertEquals(1, stream.on_disconnect.call_count)
         expect = self.klass.corrupt_msg % (stream.name, junk)
         self.assertTrue(expect in capture.raw())
-
-
-if __name__ == '__main__':
-    unittest2.main()

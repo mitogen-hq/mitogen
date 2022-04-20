@@ -6,8 +6,6 @@ import mitogen
 import mitogen.ssh
 import mitogen.utils
 
-import unittest2
-
 import testlib
 import plain_old_module
 
@@ -224,7 +222,3 @@ class StubCheckHostKeysTest(StubSshMixin, testlib.TestCase):
         # required=true, password is not None
         context = self.stub_ssh(check_host_keys='ignore', password='willick')
         self.assertEquals('1', context.call(os.getenv, 'STDERR_WAS_TTY'))
-
-
-if __name__ == '__main__':
-    unittest2.main()

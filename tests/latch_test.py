@@ -2,8 +2,6 @@
 import sys
 import threading
 
-import unittest2
-
 import mitogen.core
 
 import testlib
@@ -212,8 +210,3 @@ class ThreadedCloseTest(testlib.TestCase):
         self.assertEquals(self.results, [None]*5)
         for exc in self.excs:
             self.assertTrue(isinstance(exc, mitogen.core.LatchError))
-
-
-
-if __name__ == '__main__':
-    unittest2.main()

@@ -1,6 +1,5 @@
 
 import testlib
-import unittest2
 
 import mitogen.core
 from mitogen.core import b
@@ -97,7 +96,3 @@ class StrRpartitionTest(testlib.TestCase):
         self.assertEquals(left, u'davexdave')
         self.assertEquals(sep, u'x')
         self.assertEquals(right, u'dave')
-
-
-if __name__ == '__main__':
-    unittest2.main()

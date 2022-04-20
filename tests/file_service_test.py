@@ -1,8 +1,6 @@
 
 import sys
 
-import unittest2
-
 import mitogen.service
 
 import testlib
@@ -148,7 +146,3 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
 
         expect = service.unregistered_msg % (path,)
         self.assertTrue(expect in e.args[0])
-
-
-if __name__ == '__main__':
-    unittest2.main()

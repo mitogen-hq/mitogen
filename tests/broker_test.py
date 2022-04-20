@@ -3,7 +3,6 @@ import time
 import threading
 
 import mock
-import unittest2
 
 import testlib
 
@@ -67,7 +66,3 @@ class DeferSyncTest(testlib.TestCase):
         finally:
             broker.shutdown()
             broker.join()
-
-
-if __name__ == '__main__':
-    unittest2.main()

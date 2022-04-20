@@ -3,9 +3,8 @@ import multiprocessing
 import os
 import sys
 import tempfile
+import unittest
 
-import mock
-import unittest2
 import testlib
 
 import mitogen.parent
@@ -18,7 +17,7 @@ class NullFixedPolicy(ansible_mitogen.affinity.FixedPolicy):
         self.mask = mask
 
 
-@unittest2.skipIf(
+@unittest.skipIf(
     reason='Linux only',
     condition=(not os.uname()[0] == 'Linux')
 )
@@ -161,7 +160,7 @@ class FixedPolicyTest(testlib.TestCase):
         self.assertEquals(0x4 + 0x8, policy.mask)
 
 
-@unittest2.skipIf(
+@unittest.skipIf(
     reason='Linux/SMP only',
     condition=(not (
         os.uname()[0] == 'Linux' and
@@ -223,11 +222,7 @@ class MockLinuxPolicyTest(testlib.TestCase):
         for x in range(1, 4096, 32):
             policy.assign_subprocess()
 
-MockLinuxPolicyTest = unittest2.skipIf(
+MockLinuxPolicyTest = unittest.skipIf(
     condition=(not sys.platform.startswith('linuxPolicy')),
     reason='select.select() not supported'
 )(MockLinuxPolicyTest)
-
-
-if __name__ == '__main__':
-    unittest2.main()

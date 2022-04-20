@@ -1,8 +1,6 @@
 import logging
 import time
 
-import unittest2
-
 import mitogen.core
 import mitogen.parent
 import mitogen.master
@@ -184,7 +182,3 @@ class UnsupportedCallablesTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(TypeError,
             lambda: self.local.call(X().x))
         self.assertEquals(e.args[0], self.klass.method_msg)
-
-
-if __name__ == '__main__':
-    unittest2.main()

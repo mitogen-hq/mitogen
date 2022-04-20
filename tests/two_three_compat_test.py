@@ -1,5 +1,3 @@
-import unittest2
-
 import mitogen.core
 import mitogen.master
 
@@ -23,7 +21,3 @@ class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
         spare2, = target.call(simple_pkg.ping.ping, spare)
         self.assertEquals(spare.context_id, spare2.context_id)
         self.assertEquals(spare.name, spare2.name)
-
-
-if __name__ == '__main__':
-    unittest2.main()

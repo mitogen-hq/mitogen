@@ -4,8 +4,6 @@ import mitogen
 import mitogen.lxd
 import mitogen.parent
 
-import unittest2
-
 import testlib
 
 
@@ -31,7 +29,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         self.assertTrue(str(e).endswith(mitogen.lxd.Connection.eof_error_hint))
-
-
-if __name__ == '__main__':
-    unittest2.main()

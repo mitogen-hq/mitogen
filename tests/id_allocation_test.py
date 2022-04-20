@@ -1,6 +1,3 @@
-
-import unittest2
-
 import testlib
 
 import mitogen.core
@@ -30,7 +27,3 @@ class SlaveTest(testlib.RouterMixin, testlib.TestCase):
         # Subsequent master allocation does not collide
         c2 = self.router.local()
         self.assertEquals(1002, c2.context_id)
-
-
-if __name__ == '__main__':
-    unittest2.main()

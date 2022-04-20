@@ -1,8 +1,6 @@
 import pickle
 import sys
 
-import unittest2
-
 import mitogen.core
 
 import testlib
@@ -108,7 +106,3 @@ class PickleTest(testlib.TestCase):
         e2 = pickle.loads(pickle.dumps(e))
         self.assertTrue(e2.args[0].startswith('plain_old_module.MyError: eek'))
         self.assertTrue('test_from_exc_tb' in e2.args[0])
-
-
-if __name__ == '__main__':
-    unittest2.main()

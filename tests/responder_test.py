@@ -3,8 +3,7 @@ import mock
 import textwrap
 import subprocess
 import sys
-
-import unittest2
+import unittest
 
 import mitogen.master
 import testlib
@@ -130,7 +129,7 @@ class BrokenModulesTest(testlib.TestCase):
         self.assertEquals(('non_existent_module', None, None, None, ()),
                           msg.unpickle())
 
-    @unittest2.skipIf(
+    @unittest.skipIf(
         condition=sys.version_info < (2, 6),
         reason='Ancient Python lacked "from . import foo"',
     )
@@ -197,22 +196,18 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
 
 
 class BlacklistTest(testlib.TestCase):
-    @unittest2.skip('implement me')
+    @unittest.skip('implement me')
     def test_whitelist_no_blacklist(self):
         assert 0
 
-    @unittest2.skip('implement me')
+    @unittest.skip('implement me')
     def test_whitelist_has_blacklist(self):
         assert 0
 
-    @unittest2.skip('implement me')
+    @unittest.skip('implement me')
     def test_blacklist_no_whitelist(self):
         assert 0
 
-    @unittest2.skip('implement me')
+    @unittest.skip('implement me')
     def test_blacklist_has_whitelist(self):
         assert 0
-
-
-if __name__ == '__main__':
-    unittest2.main()

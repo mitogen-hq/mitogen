@@ -8,8 +8,6 @@ try:
 except NameError:
     from mitogen.core import any
 
-import unittest2
-
 import testlib
 
 
@@ -39,7 +37,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         self.assertTrue(str(e).endswith(mitogen.lxc.Connection.eof_error_hint))
-
-
-if __name__ == '__main__':
-    unittest2.main()

@@ -3,8 +3,6 @@ import glob
 import pprint
 import sys
 
-import unittest2
-
 import mitogen.minify
 import testlib
 
@@ -112,7 +110,3 @@ class MitogenCoreTest(testlib.TestCase):
             self._test_syntax_valid(minified, name)
             self._test_line_counts_match(original, minified)
             self._test_non_blank_lines_match(name, original, minified)
-
-
-if __name__ == '__main__':
-    unittest2.main()

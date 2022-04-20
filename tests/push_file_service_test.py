@@ -1,7 +1,6 @@
 
 import os
 import tempfile
-import unittest2
 
 import mitogen.core
 import mitogen.service
@@ -50,7 +49,3 @@ class PropagateToTest(testlib.RouterMixin, testlib.TestCase):
             self.assertEquals(b('test'), s)
         finally:
             tf.close()
-
-
-if __name__ == '__main__':
-    unittest2.main()

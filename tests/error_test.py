@@ -1,6 +1,3 @@
-
-import unittest2
-
 import testlib
 import mitogen.core
 
@@ -27,7 +24,3 @@ class ConstructorTest(testlib.TestCase):
         e = self.klass(mitogen.core.b('error'))
         self.assertEquals(e.args[0], 'error')
         self.assertTrue(isinstance(e.args[0], mitogen.core.UnicodeType))
-
-
-if __name__ == '__main__':
-    unittest2.main()

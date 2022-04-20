@@ -1,6 +1,4 @@
-
 import testlib
-import unittest2
 
 import mitogen.os_fork
 import mitogen.service
@@ -45,8 +43,3 @@ class CorkTest(testlib.RouterMixin, testlib.TestCase):
             self.assertEquals('pong', latch.get())
         finally:
             pool.stop(join=True)
-
-
-
-if __name__ == '__main__':
-    unittest2.main()
