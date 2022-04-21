@@ -84,7 +84,8 @@ class IsGoodTempDirTest(unittest.TestCase):
                 fp.write('derp')
             self.assertTrue(os.path.isfile(bleh))
             self.assertFalse(self.func(bleh))
-            self.assertEqual(open(bleh).read(), 'derp')
+            with open(bleh) as fp:
+                self.assertEqual(fp.read(), 'derp')
 
     @unittest.skipIf(
         os.geteuid() == 0, 'writes by root ignore directory permissions')

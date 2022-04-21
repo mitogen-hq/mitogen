@@ -120,7 +120,8 @@ class SysModulesMethodTest(testlib.TestCase):
         self.assertEqual(path, __main__.__file__)
 
         # linecache adds a line ending to the final line if one is missing.
-        actual_src = open(path, 'rb').read()
+        with open(path, 'rb') as f:
+            actual_src = f.read()
         if actual_src[-1:] != b('\n'):
             actual_src += b('\n')
 
@@ -167,7 +168,8 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         modpath = os.path.join(MODS_DIR, 'pkg_like_plumbum/colors.py')
         self.assertEqual(path, modpath)
 
-        self.assertEqual(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertFalse(is_pkg)
 
     def test_ansible_module_utils_distro_succeeds(self):
@@ -184,7 +186,8 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         modpath = os.path.join(MODS_DIR,
             'pkg_like_ansible/module_utils/distro/__init__.py')
         self.assertEqual(path, modpath)
-        self.assertEqual(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertEqual(is_pkg, True)
 
         # ensure we can resolve a child of the subpackage.
@@ -194,7 +197,8 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         modpath = os.path.join(MODS_DIR,
             'pkg_like_ansible/module_utils/distro/_distro.py')
         self.assertEqual(path, modpath)
-        self.assertEqual(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertEqual(is_pkg, False)
 
     def test_ansible_module_utils_system_distro_succeeds(self):
@@ -212,7 +216,8 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         modpath = os.path.join(MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/__init__.py')
         self.assertEqual(path, modpath)
-        self.assertEqual(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertEqual(is_pkg, True)
 
         # ensure we can resolve a child of the subpackage.
@@ -222,7 +227,8 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         modpath = os.path.join(MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/_distro.py')
         self.assertEqual(path, modpath)
-        self.assertEqual(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertEqual(is_pkg, False)
 
 

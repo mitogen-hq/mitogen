@@ -129,7 +129,8 @@ class PutDataTest(ConnectionMixin, testlib.TestCase):
 
         self.conn.put_data(path, contents)
         self.wait_for_completion()
-        self.assertEqual(contents, open(path, 'rb').read())
+        with open(path, 'rb') as f:
+            self.assertEqual(contents, f.read())
         os.unlink(path)
 
     def test_mode(self):
@@ -163,17 +164,18 @@ class PutFileTest(ConnectionMixin, testlib.TestCase):
         path = tempfile.mktemp(prefix='mitotest')
         self.conn.put_file(in_path=__file__, out_path=path)
         self.wait_for_completion()
-        self.assertEqual(open(path, 'rb').read(),
-                          open(__file__, 'rb').read())
-
+        with open(path, 'rb') as path_f:
+            with open(__file__, 'rb') as __file__f:
+                self.assertEqual(path_f.read(), __file__f.read())
         os.unlink(path)
 
     def test_out_path_big(self):
         path = tempfile.mktemp(prefix='mitotest')
         self.conn.put_file(in_path=self.big_path, out_path=path)
         self.wait_for_completion()
-        self.assertEqual(open(path, 'rb').read(),
-                          open(self.big_path, 'rb').read())
+        with open(path, 'rb') as path_f:
+            with open(self.big_path, 'rb') as big_path_f:
+                self.assertEqual(path_f.read(), big_path_f.read())
         #self._compare_times_modes(path, __file__)
         os.unlink(path)
 
