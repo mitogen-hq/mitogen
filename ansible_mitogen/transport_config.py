@@ -355,6 +355,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_podman_path(self):
+        """
+        The path to the "podman" program for the 'podman' transport.
+        """
+
+    @abc.abstractmethod
     def mitogen_ssh_keepalive_interval(self):
         """
         The SSH ServerAliveInterval.
@@ -526,6 +532,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._connection.get_task_var('mitogen_lxc_info_path')
+
+    def mitogen_podman_path(self):
+        return self._connection.get_task_var('mitogen_podman_path')
 
     def mitogen_ssh_keepalive_interval(self):
         return self._connection.get_task_var('mitogen_ssh_keepalive_interval')
@@ -746,6 +755,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._host_vars.get('mitogen_lxc_info_path')
+
+    def mitogen_podman_path(self):
+        return self._host_vars.get('mitogen_podman_path')
 
     def mitogen_ssh_keepalive_interval(self):
         return self._host_vars.get('mitogen_ssh_keepalive_interval')
