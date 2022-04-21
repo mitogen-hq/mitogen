@@ -1236,7 +1236,7 @@ class Broker(mitogen.core.Broker):
     def __init__(self, install_watcher=True):
         if install_watcher:
             self._watcher = ThreadWatcher.watch(
-                target=threading.currentThread(),
+                target=mitogen.core.threading__current_thread(),
                 on_join=self.shutdown,
             )
         super(Broker, self).__init__()

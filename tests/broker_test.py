@@ -1,7 +1,3 @@
-
-import time
-import threading
-
 import mock
 
 import testlib
@@ -52,7 +48,7 @@ class DeferSyncTest(testlib.TestCase):
     def test_okay(self):
         broker = self.klass()
         try:
-            th = broker.defer_sync(lambda: threading.currentThread())
+            th = broker.defer_sync(lambda: mitogen.core.threading__current_thread())
             self.assertEqual(th, broker._thread)
         finally:
             broker.shutdown()

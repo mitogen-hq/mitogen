@@ -116,6 +116,13 @@ def threading__thread_is_alive(thread):
         return thread.isAlive()
 
 
+def threading_thread_name(thread):
+    try:
+        return thread.name  # Available in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
+
+
 def wait_for_port(
         host,
         port,
@@ -349,7 +356,7 @@ class TestCase(unittest.TestCase):
     def _teardown_check_threads(self):
         counts = {}
         for thread in threading.enumerate():
-            name = thread.getName()
+            name = threading_thread_name(thread)
             # Python 2.4: enumerate() may return stopped threads.
             assert \
                 not threading__thread_is_alive(thread) \
