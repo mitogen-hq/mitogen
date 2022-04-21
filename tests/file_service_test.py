@@ -50,8 +50,8 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
 
     def _validate_response(self, resp):
         self.assertTrue(isinstance(resp, dict))
-        self.assertEquals('root', resp['owner'])
-        self.assertEquals(self.ROOT_GROUP, resp['group'])
+        self.assertEqual('root', resp['owner'])
+        self.assertEqual(self.ROOT_GROUP, resp['group'])
         self.assertTrue(isinstance(resp['mode'], int))
         self.assertTrue(isinstance(resp['mtime'], float))
         self.assertTrue(isinstance(resp['atime'], float))

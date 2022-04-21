@@ -23,4 +23,4 @@ class ScanCodeImportsTest(testlib.TestCase):
     def test_simple(self):
         source_path = inspect.getsourcefile(ScanCodeImportsTest)
         co = compile(open(source_path).read(), source_path, 'exec')
-        self.assertEquals(list(self.func(co)), self.SIMPLE_EXPECT)
+        self.assertEqual(list(self.func(co)), self.SIMPLE_EXPECT)

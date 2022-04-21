@@ -21,38 +21,38 @@ class IterSplitTest(unittest.TestCase):
         lst = []
         trailer, cont = self.func(buf='', delim='\n', func=lst.append)
         self.assertTrue(cont)
-        self.assertEquals('', trailer)
-        self.assertEquals([], lst)
+        self.assertEqual('', trailer)
+        self.assertEqual([], lst)
 
     def test_empty_line(self):
         lst = []
         trailer, cont = self.func(buf='\n', delim='\n', func=lst.append)
         self.assertTrue(cont)
-        self.assertEquals('', trailer)
-        self.assertEquals([''], lst)
+        self.assertEqual('', trailer)
+        self.assertEqual([''], lst)
 
     def test_one_line(self):
         buf = 'xxxx\n'
         lst = []
         trailer, cont = self.func(buf=buf, delim='\n', func=lst.append)
         self.assertTrue(cont)
-        self.assertEquals('', trailer)
-        self.assertEquals(lst, ['xxxx'])
+        self.assertEqual('', trailer)
+        self.assertEqual(lst, ['xxxx'])
 
     def test_one_incomplete(self):
         buf = 'xxxx\nyy'
         lst = []
         trailer, cont = self.func(buf=buf, delim='\n', func=lst.append)
         self.assertTrue(cont)
-        self.assertEquals('yy', trailer)
-        self.assertEquals(lst, ['xxxx'])
+        self.assertEqual('yy', trailer)
+        self.assertEqual(lst, ['xxxx'])
 
     def test_returns_false_immediately(self):
         buf = 'xxxx\nyy'
         func = lambda buf: False
         trailer, cont = self.func(buf=buf, delim='\n', func=func)
         self.assertFalse(cont)
-        self.assertEquals('yy', trailer)
+        self.assertEqual('yy', trailer)
 
     def test_returns_false_second_call(self):
         buf = 'xxxx\nyy\nzz'
@@ -60,4 +60,4 @@ class IterSplitTest(unittest.TestCase):
         func = lambda buf: next(it)
         trailer, cont = self.func(buf=buf, delim='\n', func=func)
         self.assertFalse(cont)
-        self.assertEquals('zz', trailer)
+        self.assertEqual('zz', trailer)

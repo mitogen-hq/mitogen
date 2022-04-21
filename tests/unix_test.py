@@ -96,12 +96,12 @@ class ClientTest(testlib.TestCase):
     def _test_simple_client(self, path):
         router, context = self._try_connect(path)
         try:
-            self.assertEquals(0, context.context_id)
-            self.assertEquals(1, mitogen.context_id)
-            self.assertEquals(0, mitogen.parent_id)
+            self.assertEqual(0, context.context_id)
+            self.assertEqual(1, mitogen.context_id)
+            self.assertEqual(0, mitogen.parent_id)
             resp = context.call_service(service_name=MyService, method_name='ping')
-            self.assertEquals(mitogen.context_id, resp['src_id'])
-            self.assertEquals(0, resp['auth_id'])
+            self.assertEqual(mitogen.context_id, resp['src_id'])
+            self.assertEqual(0, resp['auth_id'])
         finally:
             router.broker.shutdown()
             router.broker.join()

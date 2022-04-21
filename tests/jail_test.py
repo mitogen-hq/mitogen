@@ -18,10 +18,10 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         stream = self.router.stream_by_id(context.context_id)
 
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
-        self.assertEquals(argv[:4], [
+        self.assertEqual(argv[:4], [
             self.jexec_path,
             'somejail',
             stream.conn.options.python_path,
             '-c',
         ])
-        self.assertEquals('1', context.call(os.getenv, 'THIS_IS_STUB_JEXEC'))
+        self.assertEqual('1', context.call(os.getenv, 'THIS_IS_STUB_JEXEC'))

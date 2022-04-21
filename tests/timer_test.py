@@ -18,49 +18,49 @@ class TimerListMixin(object):
 
 class GetTimeoutTest(TimerListMixin, testlib.TestCase):
     def test_empty(self):
-        self.assertEquals(None, self.list.get_timeout())
+        self.assertEqual(None, self.list.get_timeout())
 
     def test_one_event(self):
         self.list.schedule(2, lambda: None)
         self.list._now = lambda: 1
-        self.assertEquals(1, self.list.get_timeout())
+        self.assertEqual(1, self.list.get_timeout())
 
     def test_two_events_same_moment(self):
         self.list.schedule(2, lambda: None)
         self.list.schedule(2, lambda: None)
         self.list._now = lambda: 1
-        self.assertEquals(1, self.list.get_timeout())
+        self.assertEqual(1, self.list.get_timeout())
 
     def test_two_events(self):
         self.list.schedule(2, lambda: None)
         self.list.schedule(3, lambda: None)
         self.list._now = lambda: 1
-        self.assertEquals(1, self.list.get_timeout())
+        self.assertEqual(1, self.list.get_timeout())
 
     def test_two_events_expired(self):
         self.list.schedule(2, lambda: None)
         self.list.schedule(3, lambda: None)
         self.list._now = lambda: 3
-        self.assertEquals(0, self.list.get_timeout())
+        self.assertEqual(0, self.list.get_timeout())
 
     def test_two_events_in_past(self):
         self.list.schedule(2, lambda: None)
         self.list.schedule(3, lambda: None)
         self.list._now = lambda: 30
-        self.assertEquals(0, self.list.get_timeout())
+        self.assertEqual(0, self.list.get_timeout())
 
     def test_two_events_in_past(self):
         self.list.schedule(2, lambda: None)
         self.list.schedule(3, lambda: None)
         self.list._now = lambda: 30
-        self.assertEquals(0, self.list.get_timeout())
+        self.assertEqual(0, self.list.get_timeout())
 
     def test_one_cancelled(self):
         t1 = self.list.schedule(2, lambda: None)
         t2 = self.list.schedule(3, lambda: None)
         self.list._now = lambda: 0
         t1.cancel()
-        self.assertEquals(3, self.list.get_timeout())
+        self.assertEqual(3, self.list.get_timeout())
 
     def test_two_cancelled(self):
         t1 = self.list.schedule(2, lambda: None)
@@ -68,30 +68,30 @@ class GetTimeoutTest(TimerListMixin, testlib.TestCase):
         self.list._now = lambda: 0
         t1.cancel()
         t2.cancel()
-        self.assertEquals(None, self.list.get_timeout())
+        self.assertEqual(None, self.list.get_timeout())
 
 
 class ScheduleTest(TimerListMixin, testlib.TestCase):
     def test_in_past(self):
         self.list._now = lambda: 30
         timer = self.list.schedule(29, lambda: None)
-        self.assertEquals(29, timer.when)
-        self.assertEquals(0, self.list.get_timeout())
+        self.assertEqual(29, timer.when)
+        self.assertEqual(0, self.list.get_timeout())
 
     def test_in_future(self):
         self.list._now = lambda: 30
         timer = self.list.schedule(31, lambda: None)
-        self.assertEquals(31, timer.when)
-        self.assertEquals(1, self.list.get_timeout())
+        self.assertEqual(31, timer.when)
+        self.assertEqual(1, self.list.get_timeout())
 
     def test_same_moment(self):
         self.list._now = lambda: 30
         timer = self.list.schedule(31, lambda: None)
         timer2 = self.list.schedule(31, lambda: None)
-        self.assertEquals(31, timer.when)
-        self.assertEquals(31, timer2.when)
+        self.assertEqual(31, timer.when)
+        self.assertEqual(31, timer2.when)
         self.assertTrue(timer is not timer2)
-        self.assertEquals(1, self.list.get_timeout())
+        self.assertEqual(1, self.list.get_timeout())
 
 
 class ExpireTest(TimerListMixin, testlib.TestCase):
@@ -100,7 +100,7 @@ class ExpireTest(TimerListMixin, testlib.TestCase):
         self.assertTrue(timer.active)
         self.list._now = lambda: 30
         self.list.expire()
-        self.assertEquals(1, len(timer.func.mock_calls))
+        self.assertEqual(1, len(timer.func.mock_calls))
         self.assertFalse(timer.active)
 
     def test_in_future(self):
@@ -108,7 +108,7 @@ class ExpireTest(TimerListMixin, testlib.TestCase):
         self.assertTrue(timer.active)
         self.list._now = lambda: 28
         self.list.expire()
-        self.assertEquals(0, len(timer.func.mock_calls))
+        self.assertEqual(0, len(timer.func.mock_calls))
         self.assertTrue(timer.active)
 
     def test_same_moment(self):
@@ -118,8 +118,8 @@ class ExpireTest(TimerListMixin, testlib.TestCase):
         self.assertTrue(timer2.active)
         self.list._now = lambda: 29
         self.list.expire()
-        self.assertEquals(1, len(timer.func.mock_calls))
-        self.assertEquals(1, len(timer2.func.mock_calls))
+        self.assertEqual(1, len(timer.func.mock_calls))
+        self.assertEqual(1, len(timer2.func.mock_calls))
         self.assertFalse(timer.active)
         self.assertFalse(timer2.active)
 
@@ -127,11 +127,11 @@ class ExpireTest(TimerListMixin, testlib.TestCase):
         self.list._now = lambda: 29
         timer = self.list.schedule(29, mock.Mock())
         timer.cancel()
-        self.assertEquals(None, self.list.get_timeout())
+        self.assertEqual(None, self.list.get_timeout())
         self.list._now = lambda: 29
         self.list.expire()
-        self.assertEquals(0, len(timer.func.mock_calls))
-        self.assertEquals(None, self.list.get_timeout())
+        self.assertEqual(0, len(timer.func.mock_calls))
+        self.assertEqual(None, self.list.get_timeout())
 
 
 class CancelTest(TimerListMixin, testlib.TestCase):
@@ -142,7 +142,7 @@ class CancelTest(TimerListMixin, testlib.TestCase):
         timer.cancel()
         self.assertFalse(timer.active)
         self.list.expire()
-        self.assertEquals(0, len(timer.func.mock_calls))
+        self.assertEqual(0, len(timer.func.mock_calls))
 
     def test_double_cancel(self):
         self.list._now = lambda: 29
@@ -152,7 +152,7 @@ class CancelTest(TimerListMixin, testlib.TestCase):
         timer.cancel()
         self.assertFalse(timer.active)
         self.list.expire()
-        self.assertEquals(0, len(timer.func.mock_calls))
+        self.assertEqual(0, len(timer.func.mock_calls))
 
 
 @mitogen.core.takes_econtext

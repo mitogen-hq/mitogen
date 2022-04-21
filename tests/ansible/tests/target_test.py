@@ -61,10 +61,10 @@ class ApplyModeSpecTest(unittest.TestCase):
 
     def test_simple(self):
         spec = 'u+rwx,go=x'
-        self.assertEquals(int('0711', 8), self.func(spec, 0))
+        self.assertEqual(int('0711', 8), self.func(spec, 0))
 
         spec = 'g-rw'
-        self.assertEquals(int('0717', 8), self.func(spec, int('0777', 8)))
+        self.assertEqual(int('0717', 8), self.func(spec, int('0777', 8)))
 
 
 class IsGoodTempDirTest(unittest.TestCase):
@@ -84,7 +84,7 @@ class IsGoodTempDirTest(unittest.TestCase):
                 fp.write('derp')
             self.assertTrue(os.path.isfile(bleh))
             self.assertFalse(self.func(bleh))
-            self.assertEquals(open(bleh).read(), 'derp')
+            self.assertEqual(open(bleh).read(), 'derp')
 
     @unittest.skipIf(
         os.geteuid() == 0, 'writes by root ignore directory permissions')

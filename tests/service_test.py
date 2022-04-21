@@ -43,7 +43,7 @@ def call_service_in(context, service_name, method_name):
 class CallTest(testlib.RouterMixin, testlib.TestCase):
     def test_local(self):
         pool = mitogen.service.get_or_create_pool(router=self.router)
-        self.assertEquals(
+        self.assertEqual(
             'privileged!',
             mitogen.service.call(MyService, 'privileged_op')
         )
@@ -63,7 +63,7 @@ class CallTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_local_unicode(self):
         pool = mitogen.service.get_or_create_pool(router=self.router)
-        self.assertEquals(
+        self.assertEqual(
             'privileged!',
             mitogen.service.call(MyService.name(), 'privileged_op')
         )
@@ -71,7 +71,7 @@ class CallTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_remote(self):
         c1 = self.router.local()
-        self.assertEquals(
+        self.assertEqual(
             'privileged!',
             mitogen.service.call(MyService, 'privileged_op',
                                  call_context=c1)
@@ -82,7 +82,7 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
     def test_parent_can_activate(self):
         l1 = self.router.local()
         counter, id_ = l1.call_service(MyService, 'get_id')
-        self.assertEquals(1, counter)
+        self.assertEqual(1, counter)
         self.assertTrue(isinstance(id_, int))
 
     def test_sibling_cannot_activate_framework(self):
@@ -110,9 +110,9 @@ class ActivationTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.local()
         counter, id_ = l1.call_service(MyService, 'get_id')
         counter2, id_2 = l1.call_service(MyService, 'get_id')
-        self.assertEquals(1, counter)
-        self.assertEquals(2, counter2)
-        self.assertEquals(id_, id_2)
+        self.assertEqual(1, counter)
+        self.assertEqual(2, counter2)
+        self.assertEqual(id_, id_2)
 
 
 class PermissionTest(testlib.RouterMixin, testlib.TestCase):
@@ -120,7 +120,7 @@ class PermissionTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.local()
         l1.call_service(MyService, 'get_id')
         l2 = self.router.local()
-        self.assertEquals('unprivileged!',
+        self.assertEqual('unprivileged!',
             l2.call(call_service_in, l1, MyService.name(), 'unprivileged_op'))
 
     def test_sibling_privileged_bad(self):
@@ -147,8 +147,8 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
     def test_receiver_closed(self):
         pool = self.klass(router=self.router, services=[])
         pool.stop()
-        self.assertEquals(None, pool._receiver.handle)
+        self.assertEqual(None, pool._receiver.handle)
 
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: self.router.myself().call_service(MyService, 'foobar'))
-        self.assertEquals(e.args[0], self.router.invalid_handle_msg)
+        self.assertEqual(e.args[0], self.router.invalid_handle_msg)

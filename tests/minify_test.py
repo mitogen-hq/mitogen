@@ -69,7 +69,7 @@ class MitogenCoreTest(testlib.TestCase):
         compile(minified, name, 'exec')
 
     def _test_line_counts_match(self, original, minified):
-        self.assertEquals(original.count('\n'),
+        self.assertEqual(original.count('\n'),
                           minified.count('\n'))
 
     def _test_non_blank_lines_match(self, name, original, minified):
