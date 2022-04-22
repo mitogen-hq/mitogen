@@ -262,6 +262,21 @@ def _connect_machinectl(spec):
     return _connect_setns(spec, kind='machinectl')
 
 
+def _connect_podman(spec):
+    """
+    Return ContextService arguments for a Docker connection.
+    """
+    return {
+        'method': 'podman',
+        'kwargs': {
+            'username': spec.remote_user(),
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(rediscover_python=True),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
+            'remote_name': get_remote_name(spec),
+        }
+    }
+
 def _connect_setns(spec, kind=None):
     """
     Return ContextService arguments for a mitogen_setns connection.
@@ -400,6 +415,7 @@ CONNECTION_METHOD = {
     'lxc': _connect_lxc,
     'lxd': _connect_lxd,
     'machinectl': _connect_machinectl,
+    'podman': _connect_podman,
     'setns': _connect_setns,
     'ssh': _connect_ssh,
     'smart': _connect_ssh,  # issue #548.

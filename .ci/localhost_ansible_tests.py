@@ -2,6 +2,7 @@
 # Run tests/ansible/all.yml under Ansible and Ansible-Mitogen
 
 import os
+import subprocess
 import sys
 
 import ci_lib
@@ -24,29 +25,30 @@ with ci_lib.Fold('job_setup'):
     # NOTE: sshpass v1.06 causes errors so pegging to 1.05 -> "msg": "Error when changing password","out": "passwd: DS error: eDSAuthFailed\n", 
     # there's a checksum error with "brew install http://git.io/sshpass.rb" though, so installing manually
     if not ci_lib.exists_in_path('sshpass'):
-        os.system("curl -O -L  https://sourceforge.net/projects/sshpass/files/sshpass/1.05/sshpass-1.05.tar.gz && \
+        subprocess.check_call(
+                "curl -O -L  https://sourceforge.net/projects/sshpass/files/sshpass/1.05/sshpass-1.05.tar.gz && \
                 tar xvf sshpass-1.05.tar.gz && \
                 cd sshpass-1.05 && \
                 ./configure && \
-                sudo make install")
+                sudo make install",
+                shell=True,
+        )
 
 
 with ci_lib.Fold('machine_prep'):
     # generate a new ssh key for localhost ssh
     if not os.path.exists(os.path.expanduser("~/.ssh/id_rsa")):
-        os.system("ssh-keygen -P '' -m pem -f ~/.ssh/id_rsa")
-        os.system("cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys")
+        subprocess.check_call("ssh-keygen -P '' -m pem -f ~/.ssh/id_rsa", shell=True)
+        subprocess.check_call("cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys", shell=True)
+        os.chmod(os.path.expanduser('~/.ssh'), int('0700', 8))
+        os.chmod(os.path.expanduser('~/.ssh/authorized_keys'), int('0600', 8))
 
     # also generate it for the sudo user
-    if os.system("sudo [ -f /var/root/.ssh/id_rsa ]") != 0:
-        os.system("sudo ssh-keygen -P '' -m pem -f /var/root/.ssh/id_rsa")
-        os.system("sudo cat /var/root/.ssh/id_rsa.pub | sudo tee -a /var/root/.ssh/authorized_keys")
-
-    os.chmod(os.path.expanduser('~/.ssh'), int('0700', 8))
-    os.chmod(os.path.expanduser('~/.ssh/authorized_keys'), int('0600', 8))
-    # run chmod through sudo since it's owned by root
-    os.system('sudo chmod 700 /var/root/.ssh')
-    os.system('sudo chmod 600 /var/root/.ssh/authorized_keys')
+    if os.system("sudo [ -f ~root/.ssh/id_rsa ]") != 0:
+        subprocess.check_call("sudo ssh-keygen -P '' -m pem -f ~root/.ssh/id_rsa", shell=True)
+        subprocess.check_call("sudo cat ~root/.ssh/id_rsa.pub | sudo tee -a ~root/.ssh/authorized_keys", shell=True)
+        subprocess.check_call('sudo chmod 700 ~root/.ssh', shell=True)
+        subprocess.check_call('sudo chmod 600 ~root/.ssh/authorized_keys', shell=True)
 
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':
         os.chdir(IMAGE_PREP_DIR)

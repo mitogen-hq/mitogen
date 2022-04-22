@@ -386,6 +386,20 @@ def _partition(s, sep, find):
         return left, sep, s[len(left)+len(sep):]
 
 
+def threading__current_thread():
+    try:
+        return threading.current_thread()  # Added in Python 2.6+
+    except AttributeError:
+        return threading.currentThread()  # Deprecated in Python 3.10+
+
+
+def threading__thread_name(thread):
+    try:
+        return thread.name  # Added in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
+
+
 if hasattr(UnicodeType, 'rpartition'):
     str_partition = UnicodeType.partition
     str_rpartition = UnicodeType.rpartition
@@ -2758,7 +2772,7 @@ class Latch(object):
         return 'Latch(%#x, size=%d, t=%r)' % (
             id(self),
             len(self._queue),
-            threading.currentThread().getName(),
+            threading__thread_name(threading__current_thread()),
         )
 
 

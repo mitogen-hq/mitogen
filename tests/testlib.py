@@ -116,6 +116,13 @@ def threading__thread_is_alive(thread):
         return thread.isAlive()
 
 
+def threading_thread_name(thread):
+    try:
+        return thread.name  # Available in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
+
+
 def wait_for_port(
         host,
         port,
@@ -349,7 +356,7 @@ class TestCase(unittest.TestCase):
     def _teardown_check_threads(self):
         counts = {}
         for thread in threading.enumerate():
-            name = thread.getName()
+            name = threading_thread_name(thread)
             # Python 2.4: enumerate() may return stopped threads.
             assert \
                 not threading__thread_is_alive(thread) \
@@ -367,9 +374,15 @@ class TestCase(unittest.TestCase):
         mitogen.core.Latch._on_fork()
         if get_fd_count() != self._fd_count_before:
             if sys.platform == 'linux':
-                os.system('lsof +E -w -p %i | grep -vw mem' % (os.getpid(),))
+                subprocess.check_call(
+                    'lsof +E -w -p %i | grep -vw mem' % (os.getpid(),),
+                    shell=True,
+                )
             else:
-                os.system('lsof -w -p %i | grep -vw mem' % (os.getpid(),))
+                subprocess.check_call(
+                    'lsof -w -p %i | grep -vw mem' % (os.getpid(),),
+                    shell=True,
+                )
             assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
                 self, self._fd_count_before, get_fd_count(),
             )
@@ -403,12 +416,18 @@ class TestCase(unittest.TestCase):
             return
 
         print('Leaked children of unit test process:')
-        os.system('ps -o "user,pid,%%cpu,%%mem,vsz,rss,tty,stat,start,time,command" -ww -p %s'
-                  % (','.join(str(p.pid) for p in children_leaked),))
+        subprocess.check_call(
+            ['ps', '-o', 'user,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command', '-ww', '-p',
+             ','.join(str(p.pid) for p in children_leaked),
+            ],
+        )
         if self._children_before:
             print('Pre-existing children of unit test process:')
-            os.system('ps -o "user,pid,%%cpu,%%mem,vsz,rss,tty,stat,start,time,command" -ww -p %s'
-                      % (','.join(str(p.pid) for p in self._children_before),))
+            subprocess.check_call(
+                ['ps', '-o', 'user,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command', '-ww', '-p',
+                 ','.join(str(p.pid) for p in self._children_before),
+                ],
+            )
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):

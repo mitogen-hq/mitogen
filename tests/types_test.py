@@ -29,26 +29,26 @@ class BlobTest(testlib.TestCase):
 
     def test_repr(self):
         blob = self.make()
-        self.assertEquals('[blob: 128 bytes]', repr(blob))
+        self.assertEqual('[blob: 128 bytes]', repr(blob))
 
     def test_decays_on_constructor(self):
         blob = self.make()
-        self.assertEquals(b('x') * 128, mitogen.core.BytesType(blob))
+        self.assertEqual(b('x') * 128, mitogen.core.BytesType(blob))
 
     def test_decays_on_write(self):
         blob = self.make()
         io = BytesIO()
         io.write(blob)
-        self.assertEquals(128, io.tell())
-        self.assertEquals(b('x') * 128, io.getvalue())
+        self.assertEqual(128, io.tell())
+        self.assertEqual(b('x') * 128, io.getvalue())
 
     def test_message_roundtrip(self):
         blob = self.make()
         msg = mitogen.core.Message.pickled(blob)
         blob2 = msg.unpickle()
-        self.assertEquals(type(blob), type(blob2))
-        self.assertEquals(repr(blob), repr(blob2))
-        self.assertEquals(mitogen.core.BytesType(blob),
+        self.assertEqual(type(blob), type(blob2))
+        self.assertEqual(repr(blob), repr(blob2))
+        self.assertEqual(mitogen.core.BytesType(blob),
                           mitogen.core.BytesType(blob2))
 
 
@@ -60,26 +60,26 @@ class SecretTest(testlib.TestCase):
 
     def test_repr(self):
         secret = self.make()
-        self.assertEquals('[secret]', repr(secret))
+        self.assertEqual('[secret]', repr(secret))
 
     def test_decays_on_constructor(self):
         secret = self.make()
-        self.assertEquals('password', mitogen.core.UnicodeType(secret))
+        self.assertEqual('password', mitogen.core.UnicodeType(secret))
 
     def test_decays_on_write(self):
         secret = self.make()
         io = StringIO()
         io.write(secret)
-        self.assertEquals(8, io.tell())
-        self.assertEquals('password', io.getvalue())
+        self.assertEqual(8, io.tell())
+        self.assertEqual('password', io.getvalue())
 
     def test_message_roundtrip(self):
         secret = self.make()
         msg = mitogen.core.Message.pickled(secret)
         secret2 = msg.unpickle()
-        self.assertEquals(type(secret), type(secret2))
-        self.assertEquals(repr(secret), repr(secret2))
-        self.assertEquals(mitogen.core.b(secret),
+        self.assertEqual(type(secret), type(secret2))
+        self.assertEqual(repr(secret), repr(secret2))
+        self.assertEqual(mitogen.core.b(secret),
                           mitogen.core.b(secret2))
 
 
@@ -88,30 +88,30 @@ class KwargsTest(testlib.TestCase):
 
     def test_empty(self):
         kw = self.klass({})
-        self.assertEquals({}, kw)
-        self.assertEquals('Kwargs({})', repr(kw))
+        self.assertEqual({}, kw)
+        self.assertEqual('Kwargs({})', repr(kw))
         klass, (dct,) = kw.__reduce__()
         self.assertTrue(klass is self.klass)
         self.assertTrue(type(dct) is dict)
-        self.assertEquals({}, dct)
+        self.assertEqual({}, dct)
 
     @unittest.skipIf(condition=(sys.version_info >= (2, 6)),
                       reason='py<2.6 only')
     def test_bytes_conversion(self):
         kw = self.klass({u'key': 123})
-        self.assertEquals({'key': 123}, kw)
-        self.assertEquals("Kwargs({'key': 123})", repr(kw))
+        self.assertEqual({'key': 123}, kw)
+        self.assertEqual("Kwargs({'key': 123})", repr(kw))
 
     @unittest.skipIf(condition=not mitogen.core.PY3,
                       reason='py3 only')
     def test_unicode_conversion(self):
         kw = self.klass({mitogen.core.b('key'): 123})
-        self.assertEquals({u'key': 123}, kw)
-        self.assertEquals("Kwargs({'key': 123})", repr(kw))
+        self.assertEqual({u'key': 123}, kw)
+        self.assertEqual("Kwargs({'key': 123})", repr(kw))
         klass, (dct,) = kw.__reduce__()
         self.assertTrue(klass is self.klass)
         self.assertTrue(type(dct) is dict)
-        self.assertEquals({u'key': 123}, dct)
+        self.assertEqual({u'key': 123}, dct)
         key, = dct
         self.assertTrue(type(key) is mitogen.core.UnicodeType)
 
@@ -125,20 +125,20 @@ class ToTextTest(testlib.TestCase):
 
     def test_bytes(self):
         s = self.func(mitogen.core.b('bytes'))
-        self.assertEquals(mitogen.core.UnicodeType, type(s))
-        self.assertEquals(s, u'bytes')
+        self.assertEqual(mitogen.core.UnicodeType, type(s))
+        self.assertEqual(s, u'bytes')
 
     def test_unicode(self):
         s = self.func(u'text')
-        self.assertEquals(mitogen.core.UnicodeType, type(s))
-        self.assertEquals(s, u'text')
+        self.assertEqual(mitogen.core.UnicodeType, type(s))
+        self.assertEqual(s, u'text')
 
     def test_adorned_unicode(self):
         s = self.func(AdornedUnicode(u'text'))
-        self.assertEquals(mitogen.core.UnicodeType, type(s))
-        self.assertEquals(s, u'text')
+        self.assertEqual(mitogen.core.UnicodeType, type(s))
+        self.assertEqual(s, u'text')
 
     def test_integer(self):
         s = self.func(123)
-        self.assertEquals(mitogen.core.UnicodeType, type(s))
-        self.assertEquals(s, u'123')
+        self.assertEqual(mitogen.core.UnicodeType, type(s))
+        self.assertEqual(s, u'123')

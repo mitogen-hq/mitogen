@@ -68,7 +68,7 @@ class LoadModuleTest(ImporterMixin, testlib.TestCase):
     def test_module_file_set(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__file__, 'master:' + self.path)
+        self.assertEqual(mod.__file__, 'master:' + self.path)
 
     def test_module_loader_set(self):
         self.set_get_module_response(self.response)
@@ -91,7 +91,7 @@ class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
     def test_module_package_unset(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__package__, 'mypkg')
+        self.assertEqual(mod.__package__, 'mypkg')
 
 
 class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
@@ -104,19 +104,19 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
     def test_module_file_set(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__file__, 'master:' + self.path)
+        self.assertEqual(mod.__file__, 'master:' + self.path)
 
     def test_get_filename(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
         filename = mod.__loader__.get_filename(self.modname)
-        self.assertEquals('master:fake_pkg/__init__.py', filename)
+        self.assertEqual('master:fake_pkg/__init__.py', filename)
 
     def test_get_source(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
         source = mod.__loader__.get_source(self.modname)
-        self.assertEquals(source,
+        self.assertEqual(source,
             mitogen.core.to_text(zlib.decompress(self.data)))
 
     def test_module_loader_set(self):
@@ -127,18 +127,18 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
     def test_module_path_present(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__path__, [])
+        self.assertEqual(mod.__path__, [])
 
     def test_module_package_set(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
-        self.assertEquals(mod.__package__, self.modname)
+        self.assertEqual(mod.__package__, self.modname)
 
     def test_module_data(self):
         self.set_get_module_response(self.response)
         mod = self.importer.load_module(self.modname)
         self.assertIsInstance(mod.func, types.FunctionType)
-        self.assertEquals(mod.func.__module__, self.modname)
+        self.assertEqual(mod.func.__module__, self.modname)
 
 
 class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
@@ -218,5 +218,5 @@ class SelfReplacingModuleTest(testlib.RouterMixin, testlib.TestCase):
     # issue #590
     def test_importer_handles_self_replacement(self):
         c = self.router.local()
-        self.assertEquals(0,
+        self.assertEqual(0,
             c.call(simple_pkg.imports_replaces_self.subtract_one, 1))

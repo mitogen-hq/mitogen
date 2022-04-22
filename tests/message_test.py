@@ -16,45 +16,45 @@ class ConstructorTest(testlib.TestCase):
     klass = mitogen.core.Message
 
     def test_dst_id_default(self):
-        self.assertEquals(self.klass().dst_id, None)
+        self.assertEqual(self.klass().dst_id, None)
 
     def test_dst_id_explicit(self):
-        self.assertEquals(self.klass(dst_id=1111).dst_id, 1111)
+        self.assertEqual(self.klass(dst_id=1111).dst_id, 1111)
 
     @mock.patch('mitogen.context_id', 1234)
     def test_src_id_default(self):
-        self.assertEquals(self.klass().src_id, 1234)
+        self.assertEqual(self.klass().src_id, 1234)
 
     def test_src_id_explicit(self):
-        self.assertEquals(self.klass(src_id=4321).src_id, 4321)
+        self.assertEqual(self.klass(src_id=4321).src_id, 4321)
 
     @mock.patch('mitogen.context_id', 5555)
     def test_auth_id_default(self):
-        self.assertEquals(self.klass().auth_id, 5555)
+        self.assertEqual(self.klass().auth_id, 5555)
 
     def test_auth_id_explicit(self):
-        self.assertEquals(self.klass(auth_id=2222).auth_id, 2222)
+        self.assertEqual(self.klass(auth_id=2222).auth_id, 2222)
 
     def test_handle_default(self):
-        self.assertEquals(self.klass().handle, None)
+        self.assertEqual(self.klass().handle, None)
 
     def test_handle_explicit(self):
-        self.assertEquals(self.klass(handle=1234).handle, 1234)
+        self.assertEqual(self.klass(handle=1234).handle, 1234)
 
     def test_reply_to_default(self):
-        self.assertEquals(self.klass().reply_to, None)
+        self.assertEqual(self.klass().reply_to, None)
 
     def test_reply_to_explicit(self):
-        self.assertEquals(self.klass(reply_to=8888).reply_to, 8888)
+        self.assertEqual(self.klass(reply_to=8888).reply_to, 8888)
 
     def test_data_default(self):
         m = self.klass()
-        self.assertEquals(m.data, b(''))
+        self.assertEqual(m.data, b(''))
         self.assertTrue(isinstance(m.data, mitogen.core.BytesType))
 
     def test_data_explicit(self):
         m = self.klass(data=b('asdf'))
-        self.assertEquals(m.data, b('asdf'))
+        self.assertEqual(m.data, b('asdf'))
         self.assertTrue(isinstance(m.data, mitogen.core.BytesType))
 
     def test_data_hates_unicode(self):
@@ -66,62 +66,62 @@ class PackTest(testlib.TestCase):
     klass = mitogen.core.Message
 
     def test_header_format_sanity(self):
-        self.assertEquals(self.klass.HEADER_LEN,
+        self.assertEqual(self.klass.HEADER_LEN,
                           struct.calcsize(self.klass.HEADER_FMT))
 
     def test_header_length_correct(self):
         s = self.klass(dst_id=123, handle=123).pack()
-        self.assertEquals(len(s), self.klass.HEADER_LEN)
+        self.assertEqual(len(s), self.klass.HEADER_LEN)
 
     def test_magic(self):
         s = self.klass(dst_id=123, handle=123).pack()
         magic, = struct.unpack('>h', s[:2])
-        self.assertEquals(self.klass.HEADER_MAGIC, magic)
+        self.assertEqual(self.klass.HEADER_MAGIC, magic)
 
     def test_dst_id(self):
         s = self.klass(dst_id=123, handle=123).pack()
         dst_id, = struct.unpack('>L', s[2:6])
-        self.assertEquals(123, dst_id)
+        self.assertEqual(123, dst_id)
 
     def test_src_id(self):
         s = self.klass(src_id=5432, dst_id=123, handle=123).pack()
         src_id, = struct.unpack('>L', s[6:10])
-        self.assertEquals(5432, src_id)
+        self.assertEqual(5432, src_id)
 
     def test_auth_id(self):
         s = self.klass(auth_id=1919, src_id=5432, dst_id=123, handle=123).pack()
         auth_id, = struct.unpack('>L', s[10:14])
-        self.assertEquals(1919, auth_id)
+        self.assertEqual(1919, auth_id)
 
     def test_handle(self):
         s = self.klass(dst_id=123, handle=9999).pack()
         handle, = struct.unpack('>L', s[14:18])
-        self.assertEquals(9999, handle)
+        self.assertEqual(9999, handle)
 
     def test_reply_to(self):
         s = self.klass(dst_id=1231, handle=7777, reply_to=9132).pack()
         reply_to, = struct.unpack('>L', s[18:22])
-        self.assertEquals(9132, reply_to)
+        self.assertEqual(9132, reply_to)
 
     def test_data_length_empty(self):
         s = self.klass(dst_id=1231, handle=7777).pack()
         data_length, = struct.unpack('>L', s[22:26])
-        self.assertEquals(0, data_length)
+        self.assertEqual(0, data_length)
 
     def test_data_length_present(self):
         s = self.klass(dst_id=1231, handle=7777, data=b('hello')).pack()
         data_length, = struct.unpack('>L', s[22:26])
-        self.assertEquals(5, data_length)
+        self.assertEqual(5, data_length)
 
     def test_data_empty(self):
         s = self.klass(dst_id=1231, handle=7777).pack()
         data = s[26:]
-        self.assertEquals(b(''), data)
+        self.assertEqual(b(''), data)
 
     def test_data_present(self):
         s = self.klass(dst_id=11, handle=77, data=b('hello')).pack()
         data = s[26:]
-        self.assertEquals(b('hello'), data)
+        self.assertEqual(b('hello'), data)
 
 
 class IsDeadTest(testlib.TestCase):
@@ -141,15 +141,15 @@ class DeadTest(testlib.TestCase):
 
     def test_no_reason(self):
         msg = self.klass.dead()
-        self.assertEquals(msg.reply_to, mitogen.core.IS_DEAD)
+        self.assertEqual(msg.reply_to, mitogen.core.IS_DEAD)
         self.assertTrue(msg.is_dead)
-        self.assertEquals(msg.data, b(''))
+        self.assertEqual(msg.data, b(''))
 
     def test_with_reason(self):
         msg = self.klass.dead(reason=u'oh no')
-        self.assertEquals(msg.reply_to, mitogen.core.IS_DEAD)
+        self.assertEqual(msg.reply_to, mitogen.core.IS_DEAD)
         self.assertTrue(msg.is_dead)
-        self.assertEquals(msg.data, b('oh no'))
+        self.assertEqual(msg.data, b('oh no'))
 
 
 class EvilObject(object):
@@ -168,7 +168,7 @@ class PickledTest(testlib.TestCase):
 
     def test_bool(self):
         for b in True, False:
-            self.assertEquals(b, self.roundtrip(b))
+            self.assertEqual(b, self.roundtrip(b))
 
     @unittest.skipIf(condition=sys.version_info < (2, 6),
                       reason='bytearray missing on <2.6')
@@ -180,24 +180,24 @@ class PickledTest(testlib.TestCase):
 
     def test_bytes(self):
         by = b('123')
-        self.assertEquals(by, self.roundtrip(by))
+        self.assertEqual(by, self.roundtrip(by))
 
     def test_dict(self):
         d = {1: 2, u'a': 3, b('b'): 4, 'c': {}}
         roundtrip = self.roundtrip(d)
-        self.assertEquals(d, roundtrip)
+        self.assertEqual(d, roundtrip)
         self.assertTrue(isinstance(roundtrip, dict))
         for k in d:
             self.assertTrue(isinstance(roundtrip[k], type(d[k])))
 
     def test_int(self):
-        self.assertEquals(123, self.klass.pickled(123).unpickle())
+        self.assertEqual(123, self.klass.pickled(123).unpickle())
 
     def test_list(self):
         l = [1, u'b', b('c')]
         roundtrip = self.roundtrip(l)
         self.assertTrue(isinstance(roundtrip, list))
-        self.assertEquals(l, roundtrip)
+        self.assertEqual(l, roundtrip)
         for k in range(len(l)):
             self.assertTrue(isinstance(roundtrip[k], type(l[k])))
 
@@ -206,13 +206,13 @@ class PickledTest(testlib.TestCase):
     def test_long(self):
         l = long(0xffffffffffff)
         roundtrip = self.roundtrip(l)
-        self.assertEquals(l, roundtrip)
+        self.assertEqual(l, roundtrip)
         self.assertTrue(isinstance(roundtrip, long))
 
     def test_tuple(self):
         l = (1, u'b', b('c'))
         roundtrip = self.roundtrip(l)
-        self.assertEquals(l, roundtrip)
+        self.assertEqual(l, roundtrip)
         self.assertTrue(isinstance(roundtrip, tuple))
         for k in range(len(l)):
             self.assertTrue(isinstance(roundtrip[k], type(l[k])))
@@ -220,7 +220,7 @@ class PickledTest(testlib.TestCase):
     def test_unicode(self):
         u = u'abcd'
         roundtrip = self.roundtrip(u)
-        self.assertEquals(u, roundtrip)
+        self.assertEqual(u, roundtrip)
         self.assertTrue(isinstance(roundtrip, mitogen.core.UnicodeType))
 
     #### custom types. see also: types_test.py, call_error_test.py
@@ -233,31 +233,31 @@ class PickledTest(testlib.TestCase):
         v = mitogen.core.Blob(b('dave'))
         roundtrip = self.roundtrip(v)
         self.assertTrue(isinstance(roundtrip, mitogen.core.Blob))
-        self.assertEquals(b('dave'), roundtrip)
+        self.assertEqual(b('dave'), roundtrip)
 
     def test_blob_empty(self):
         v = mitogen.core.Blob(b(''))
         roundtrip = self.roundtrip(v)
         self.assertTrue(isinstance(roundtrip, mitogen.core.Blob))
-        self.assertEquals(b(''), v)
+        self.assertEqual(b(''), v)
 
     def test_secret_nonempty(self):
         s = mitogen.core.Secret(u'dave')
         roundtrip = self.roundtrip(s)
         self.assertTrue(isinstance(roundtrip, mitogen.core.Secret))
-        self.assertEquals(u'dave', roundtrip)
+        self.assertEqual(u'dave', roundtrip)
 
     def test_secret_empty(self):
         s = mitogen.core.Secret(u'')
         roundtrip = self.roundtrip(s)
         self.assertTrue(isinstance(roundtrip, mitogen.core.Secret))
-        self.assertEquals(u'', roundtrip)
+        self.assertEqual(u'', roundtrip)
 
     def test_call_error(self):
         ce = mitogen.core.CallError('nope')
         ce2 = self.assertRaises(mitogen.core.CallError,
             lambda: self.roundtrip(ce))
-        self.assertEquals(ce.args[0], ce2.args[0])
+        self.assertEqual(ce.args[0], ce2.args[0])
 
     def test_context(self):
         router = mitogen.master.Router()
@@ -265,7 +265,7 @@ class PickledTest(testlib.TestCase):
             c = router.context_by_id(1234)
             roundtrip = self.roundtrip(c)
             self.assertTrue(isinstance(roundtrip, mitogen.core.Context))
-            self.assertEquals(c.context_id, 1234)
+            self.assertEqual(c.context_id, 1234)
         finally:
             router.broker.shutdown()
             router.broker.join()
@@ -277,8 +277,8 @@ class PickledTest(testlib.TestCase):
             sender = recv.to_sender()
             roundtrip = self.roundtrip(sender, router=router)
             self.assertTrue(isinstance(roundtrip, mitogen.core.Sender))
-            self.assertEquals(roundtrip.context.context_id, mitogen.context_id)
-            self.assertEquals(roundtrip.dst_handle, sender.dst_handle)
+            self.assertEqual(roundtrip.context.context_id, mitogen.context_id)
+            self.assertEqual(roundtrip.dst_handle, sender.dst_handle)
         finally:
             router.broker.shutdown()
             router.broker.join()
@@ -299,15 +299,15 @@ class ReplyTest(testlib.TestCase):
         msg = self.klass(src_id=1234, reply_to=9191)
         router = mock.Mock()
         msg.reply(123, router=router)
-        self.assertEquals(1, router.route.call_count)
+        self.assertEqual(1, router.route.call_count)
 
     def test_reply_pickles_object(self):
         msg = self.klass(src_id=1234, reply_to=9191)
         router = mock.Mock()
         msg.reply(123, router=router)
         _, (reply,), _ = router.route.mock_calls[0]
-        self.assertEquals(reply.dst_id, 1234)
-        self.assertEquals(reply.unpickle(), 123)
+        self.assertEqual(reply.dst_id, 1234)
+        self.assertEqual(reply.unpickle(), 123)
 
     def test_reply_uses_preformatted_message(self):
         msg = self.klass(src_id=1234, reply_to=9191)
@@ -316,22 +316,22 @@ class ReplyTest(testlib.TestCase):
         msg.reply(my_reply, router=router)
         _, (reply,), _ = router.route.mock_calls[0]
         self.assertTrue(my_reply is reply)
-        self.assertEquals(reply.dst_id, 1234)
-        self.assertEquals(reply.unpickle(), 4444)
+        self.assertEqual(reply.dst_id, 1234)
+        self.assertEqual(reply.unpickle(), 4444)
 
     def test_reply_sets_dst_id(self):
         msg = self.klass(src_id=1234, reply_to=9191)
         router = mock.Mock()
         msg.reply(123, router=router)
         _, (reply,), _ = router.route.mock_calls[0]
-        self.assertEquals(reply.dst_id, 1234)
+        self.assertEqual(reply.dst_id, 1234)
 
     def test_reply_sets_handle(self):
         msg = self.klass(src_id=1234, reply_to=9191)
         router = mock.Mock()
         msg.reply(123, router=router)
         _, (reply,), _ = router.route.mock_calls[0]
-        self.assertEquals(reply.handle, 9191)
+        self.assertEqual(reply.handle, 9191)
 
 
 class UnpickleTest(testlib.TestCase):
@@ -343,13 +343,13 @@ class UnpickleTest(testlib.TestCase):
         m = self.klass.pickled(ce)
         ce2 = self.assertRaises(mitogen.core.CallError,
             lambda: m.unpickle())
-        self.assertEquals(ce.args[0], ce2.args[0])
+        self.assertEqual(ce.args[0], ce2.args[0])
 
     def test_no_throw(self):
         ce = mitogen.core.CallError('nope')
         m = self.klass.pickled(ce)
         ce2 = m.unpickle(throw=False)
-        self.assertEquals(ce.args[0], ce2.args[0])
+        self.assertEqual(ce.args[0], ce2.args[0])
 
     def test_throw_dead(self):
         m = self.klass.pickled('derp', reply_to=mitogen.core.IS_DEAD)
@@ -358,7 +358,7 @@ class UnpickleTest(testlib.TestCase):
 
     def test_no_throw_dead(self):
         m = self.klass.pickled('derp', reply_to=mitogen.core.IS_DEAD)
-        self.assertEquals('derp', m.unpickle(throw_dead=False))
+        self.assertEqual('derp', m.unpickle(throw_dead=False))
 
 
 class UnpickleCompatTest(testlib.TestCase):

@@ -19,5 +19,5 @@ class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
         target = self.router.local(python_path=self.python_path)
 
         spare2, = target.call(simple_pkg.ping.ping, spare)
-        self.assertEquals(spare.context_id, spare2.context_id)
-        self.assertEquals(spare.name, spare2.name)
+        self.assertEqual(spare.context_id, spare2.context_id)
+        self.assertEqual(spare.name, spare2.name)

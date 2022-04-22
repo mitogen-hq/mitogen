@@ -652,7 +652,8 @@ def read_path(path):
     """
     Fetch the contents of a filesystem `path` as bytes.
     """
-    return open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        return f.read()
 
 
 def set_file_owner(path, owner, group=None, fd=None):
