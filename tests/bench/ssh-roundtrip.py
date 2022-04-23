@@ -3,9 +3,7 @@ Measure latency of SSH RPC.
 """
 
 import sys
-import time
 
-import mitogen
 import mitogen.core
 import mitogen.utils
 import ansible_mitogen.affinity

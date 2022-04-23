@@ -8,14 +8,14 @@ Usage:
 Where:
     <hostname>  Hostname to install to.
 """
-import os
+import subprocess
 import sys
 
 import mitogen
 
 
 def install_app():
-    os.system('tar zxvf my_app.tar.gz')
+    subprocess.check_call(['tar', 'zxvf', 'my_app.tar.gz'])
 
 
 @mitogen.main()

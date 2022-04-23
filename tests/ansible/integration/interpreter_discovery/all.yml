@@ -1,2 +1,2 @@
-- include: complex_args.yml
-- include: ansible_2_8_tests.yml
+- import_playbook: complex_args.yml
+- import_playbook: ansible_2_8_tests.yml

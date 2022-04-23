@@ -42,7 +42,6 @@ import heapq
 import inspect
 import logging
 import os
-import platform
 import re
 import signal
 import socket
@@ -1410,9 +1409,15 @@ class Connection(object):
     #     their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
-    #   * For Darwin, OS X installs a craptacular argv0-introspecting Python
-    #     version switcher as /usr/bin/python. Override attempts to call it
-    #     with an explicit call to python2.7
+    #   * macOS <= 10.14 (Darwin <= 18) install an unreliable Python version
+    #     switcher as /usr/bin/python, which introspects argv0. To workaround
+    #     it we redirect attempts to call /usr/bin/python with an explicit
+    #     call to /usr/bin/python2.7. macOS 10.15 (Darwin 19) removed it.
+    #   * macOS 11.x (Darwin 20, Big Sur) and macOS 12.x (Darwin 21, Montery)
+    #     do something slightly different. The Python executable is patched to
+    #     perform an extra execvp(). I don't fully understand the details, but
+    #     setting PYTHON_LAUNCHED_FROM_WRAPPER=1 avoids it.
+    #   * macOS 13.x (Darwin 22?) may remove python 2.x entirely.
     #
     # Locals:
     #   R: read side of interpreter stdin.
@@ -1435,11 +1440,8 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            # this doesn't apply anymore to Mac OSX 10.15+ (Darwin 19+), new interpreter looks like this:
-            # /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
-            if sys.platform == 'darwin' and sys.executable == '/usr/bin/python' and \
-                    int(platform.release()[:2]) < 19:
-                sys.executable += sys.version[:3]
+            if os.uname()[0]=='Darwin'and os.uname()[2][:2]<'19'and sys.executable=='/usr/bin/python':sys.executable='/usr/bin/python2.7'
+            if os.uname()[0]=='Darwin'and os.uname()[2][:2]in'2021'and sys.version[:3]=='2.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
@@ -1469,7 +1471,7 @@ class Connection(object):
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
-        source = source.replace('    ', '\t')
+        source = source.replace('    ', ' ')
         source = source.replace('CONTEXT_NAME', self.options.remote_name)
         preamble_compressed = self.get_preamble()
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
@@ -1506,7 +1508,7 @@ class Connection(object):
 
     def get_preamble(self):
         suffix = (
-            '\nExternalContext(%r).main()\n' %\
+            '\nExternalContext(%r).main()\n' %
             (self.get_econtext_config(),)
         )
         partial = get_core_source_partial()
@@ -2504,6 +2506,9 @@ class Router(mitogen.core.Router):
 
     def ssh(self, **kwargs):
         return self.connect(u'ssh', **kwargs)
+
+    def podman(self, **kwargs):
+        return self.connect(u'podman', **kwargs)
 
 
 class Reaper(object):

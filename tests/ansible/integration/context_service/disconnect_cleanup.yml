@@ -9,7 +9,8 @@
     when: not is_mitogen
 
   - meta: end_play
-    when: ansible_version.full < '2.5.6'
+    when:
+      - ansible_version.full is version('2.5.6', '<', strict=True)
 
   # Start with a clean slate.
   - mitogen_shutdown_all:
@@ -48,3 +49,5 @@
 
   # - assert:
   #     that: out.dump|length == play_hosts|length # just the ssh account
+  tags:
+    - disconnect_cleanup

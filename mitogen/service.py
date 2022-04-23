@@ -31,7 +31,6 @@
 import grp
 import logging
 import os
-import os.path
 import pprint
 import pwd
 import stat
@@ -109,7 +108,8 @@ def get_or_create_pool(size=None, router=None, context=None):
 
 
 def get_thread_name():
-    return threading.currentThread().getName()
+    thread = mitogen.core.threading__current_thread()
+    return mitogen.core.threading__thread_name(thread)
 
 
 def call(service_name, method_name, call_context=None, **kwargs):

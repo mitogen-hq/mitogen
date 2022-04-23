@@ -4,7 +4,6 @@
 
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.basic import get_module_path
-from ansible.module_utils import six
 
 import os
 import pwd
@@ -26,7 +25,15 @@ except NameError:
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
-        python_version=sys.version[:3],
+        python={
+            'version': {
+                'full': '%i.%i.%i' % sys.version_info[:3],
+                'info': list(sys.version_info),
+                'major': sys.version_info[0],
+                'minor': sys.version_info[1],
+                'patch': sys.version_info[2],
+            },
+        },
         argv=sys.argv,
         __file__=__file__,
         argv_types_correct=all(type(s) is str for s in sys.argv),

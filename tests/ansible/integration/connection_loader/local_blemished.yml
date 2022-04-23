@@ -12,3 +12,7 @@
 
     - assert:
         that: (not not out.mitogen_loaded) == (not not is_mitogen)
+        fail_msg: out={{out}}
+  tags:
+    - local
+    - local_blemished

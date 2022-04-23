@@ -813,7 +813,7 @@ executes under the runtime importer lock, ensuring :py:keyword:`import`
 statements executing in local threads are serialized.
 
 .. note::
-   
+
     In Python 2, :py:exc:`ImportError` is raised when :py:keyword:`import` is
     attempted while the runtime import lock is held by another thread,
     therefore imports must be serialized by only attempting them from the main

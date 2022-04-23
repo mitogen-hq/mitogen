@@ -1,8 +1,8 @@
 
 # `.ci`
 
-This directory contains scripts for Travis CI and (more or less) Azure
-Pipelines, but they will also happily run on any Debian-like machine.
+This directory contains scripts for Continuous Integration platforms. Currently
+Azure Pipelines, but they will also happily run on any Debian-like machine.
 
 The scripts are usually split into `_install` and `_test` steps. The `_install`
 step will damage your machine, the `_test` step will just run the tests the way
@@ -28,8 +28,6 @@ for doing `setup.py install` while pulling a Docker container, for example.
 
 ### Environment Variables
 
-* `VER`: Ansible version the `_install` script should install. Default changes
-  over time.
 * `TARGET_COUNT`: number of targets for `debops_` run. Defaults to 2.
 * `DISTRO`: the `mitogen_` tests need a target Docker container distro. This
   name comes from the Docker Hub `mitogen` user, i.e. `mitogen/$DISTRO-test`

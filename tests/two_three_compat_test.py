@@ -1,11 +1,4 @@
-
-import logging
-import time
-
-import unittest2
-
 import mitogen.core
-import mitogen.master
 
 import testlib
 import simple_pkg.ping
@@ -25,9 +18,5 @@ class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
         target = self.router.local(python_path=self.python_path)
 
         spare2, = target.call(simple_pkg.ping.ping, spare)
-        self.assertEquals(spare.context_id, spare2.context_id)
-        self.assertEquals(spare.name, spare2.name)
-
-
-if __name__ == '__main__':
-    unittest2.main()
+        self.assertEqual(spare.context_id, spare2.context_id)
+        self.assertEqual(spare.name, spare2.name)

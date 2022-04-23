@@ -386,6 +386,20 @@ def _partition(s, sep, find):
         return left, sep, s[len(left)+len(sep):]
 
 
+def threading__current_thread():
+    try:
+        return threading.current_thread()  # Added in Python 2.6+
+    except AttributeError:
+        return threading.currentThread()  # Deprecated in Python 3.10+
+
+
+def threading__thread_name(thread):
+    try:
+        return thread.name  # Added in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
+
+
 if hasattr(UnicodeType, 'rpartition'):
     str_partition = UnicodeType.partition
     str_rpartition = UnicodeType.rpartition
@@ -1254,6 +1268,7 @@ class Importer(object):
         'minify',
         'os_fork',
         'parent',
+        'podman',
         'select',
         'service',
         'setns',
@@ -1269,6 +1284,13 @@ class Importer(object):
         # a negative round-trip.
         'builtins',
         '__builtin__',
+
+        # On some Python releases (e.g. 3.8, 3.9) the subprocess module tries
+        # to import of this Windows-only builtin module.
+        'msvcrt',
+
+        # Python 2.x module that was renamed to _thread in 3.x.
+        # This entry avoids a roundtrip on 2.x -> 3.x.
         'thread',
 
         # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
@@ -1349,6 +1371,16 @@ class Importer(object):
             fp.close()
 
     def find_module(self, fullname, path=None):
+        """
+        Return a loader (ourself) or None, for the module with fullname.
+
+        Implements importlib.abc.MetaPathFinder.find_module().
+        Deprecrated in Python 3.4+, replaced by find_spec().
+        Raises ImportWarning in Python 3.10+.
+
+        fullname    A (fully qualified?) module name, e.g. "os.path".
+        path        __path__ of parent packge. None for a top level module.
+        """
         if hasattr(_tls, 'running'):
             return None
 
@@ -1470,6 +1502,12 @@ class Importer(object):
             callback()
 
     def load_module(self, fullname):
+        """
+        Return the loaded module specified by fullname.
+
+        Implements importlib.abc.Loader.load_module().
+        Deprecated in Python 3.4+, replaced by create_module() & exec_module().
+        """
         fullname = to_text(fullname)
         _v and self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
@@ -2679,7 +2717,7 @@ class Latch(object):
                 raise e
 
             assert cookie == got_cookie, (
-                "Cookie incorrect; got %r, expected %r" \
+                "Cookie incorrect; got %r, expected %r"
                 % (binascii.hexlify(got_cookie),
                    binascii.hexlify(cookie))
             )
@@ -2734,7 +2772,7 @@ class Latch(object):
         return 'Latch(%#x, size=%d, t=%r)' % (
             id(self),
             len(self._queue),
-            threading.currentThread().getName(),
+            threading__thread_name(threading__current_thread()),
         )
 
 
@@ -3634,7 +3672,6 @@ class Dispatcher(object):
             self._service_recv.notify = None
         self.recv.close()
 
-
     @classmethod
     @takes_econtext
     def forget_chain(cls, chain_id, econtext):
@@ -3860,7 +3897,7 @@ class ExternalContext(object):
         else:
             core_src_fd = self.config.get('core_src_fd', 101)
             if core_src_fd:
-                fp = os.fdopen(core_src_fd, 'rb', 1)
+                fp = os.fdopen(core_src_fd, 'rb', 0)
                 try:
                     core_src = fp.read()
                     # Strip "ExternalContext.main()" call from last line.

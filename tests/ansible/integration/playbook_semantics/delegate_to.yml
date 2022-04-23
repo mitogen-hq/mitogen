@@ -51,10 +51,14 @@
       shell: whoami > /tmp/delegate_to.yml.txt
       delegate_to: localhost
       become: true
+      tags:
+        - requires_local_sudo
 
     - name: "delegate_to, sudo"
       assert:
         that: "lookup('file', '/tmp/delegate_to.yml.txt') == 'root'"
+      tags:
+        - requires_local_sudo
 
     - name: "delegate_to, sudo"
       file:
@@ -62,6 +66,8 @@
         state: absent
       delegate_to: localhost
       become: true
+      tags:
+        - requires_local_sudo
 
 
     #
@@ -71,10 +77,14 @@
       shell: whoami > /tmp/delegate_to.yml.txt
       connection: local
       become: true
+      tags:
+        - requires_local_sudo
 
     - name: "connection:local, sudo"
       assert:
         that: "lookup('file', '/tmp/delegate_to.yml.txt') == 'root'"
+      tags:
+        - requires_local_sudo
 
     - name: "connection:local, sudo"
       file:
@@ -82,3 +92,7 @@
         state: absent
       connection: local
       become: true
+      tags:
+        - requires_local_sudo
+  tags:
+    - delegate_to

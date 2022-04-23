@@ -26,8 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
+__metaclass__ = type
 
 import errno
 import logging
@@ -40,10 +41,8 @@ import time
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
-import ansible.utils.shlex
 
 import mitogen.core
-import mitogen.fork
 import mitogen.utils
 
 import ansible_mitogen.mixins
@@ -262,6 +261,21 @@ def _connect_machinectl(spec):
     return _connect_setns(spec, kind='machinectl')
 
 
+def _connect_podman(spec):
+    """
+    Return ContextService arguments for a Docker connection.
+    """
+    return {
+        'method': 'podman',
+        'kwargs': {
+            'username': spec.remote_user(),
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(rediscover_python=True),
+            'connect_timeout': spec.ansible_ssh_timeout() or spec.timeout(),
+            'remote_name': get_remote_name(spec),
+        }
+    }
+
 def _connect_setns(spec, kind=None):
     """
     Return ContextService arguments for a mitogen_setns connection.
@@ -400,6 +414,7 @@ CONNECTION_METHOD = {
     'lxc': _connect_lxc,
     'lxd': _connect_lxd,
     'machinectl': _connect_machinectl,
+    'podman': _connect_podman,
     'setns': _connect_setns,
     'ssh': _connect_ssh,
     'smart': _connect_ssh,  # issue #548.
@@ -1082,7 +1097,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                     s = fp.read(self.SMALL_FILE_LIMIT + 1)
                 finally:
                     fp.close()
-            except OSError:
+            except OSError as e:
                 self._throw_io_error(e, in_path)
                 raise
 
