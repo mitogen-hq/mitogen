@@ -1,8 +1,5 @@
-
 import os
 import sys
-
-import mitogen
 
 import testlib
 

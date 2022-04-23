@@ -1,17 +1,12 @@
-
 from __future__ import absolute_import
 import os
-import os.path
-import subprocess
 import tempfile
-import time
 
 import mock
 import ansible.errors
 import ansible.playbook.play_context
 
 import mitogen.core
-import mitogen.utils
 
 import ansible_mitogen.connection
 import ansible_mitogen.plugins.connection.mitogen_local
@@ -25,7 +20,6 @@ class MuxProcessMixin(object):
 
     @classmethod
     def setUpClass(cls):
-        #mitogen.utils.log_to_file()
         cls.model = ansible_mitogen.process.get_classic_worker_model(
             _init_logging=False
         )

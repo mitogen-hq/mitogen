@@ -1,5 +1,4 @@
 import inspect
-import unittest
 
 import testlib
 import mitogen.master
@@ -15,7 +14,6 @@ class ScanCodeImportsTest(testlib.TestCase):
 
     SIMPLE_EXPECT = [
         (level, 'inspect', ()),
-        (level, 'unittest', ()),
         (level, 'testlib', ()),
         (level, 'mitogen.master', ()),
     ]

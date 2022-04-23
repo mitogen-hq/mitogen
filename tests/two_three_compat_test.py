@@ -1,5 +1,4 @@
 import mitogen.core
-import mitogen.master
 
 import testlib
 import simple_pkg.ping

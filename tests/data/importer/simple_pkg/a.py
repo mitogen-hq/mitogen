@@ -1,4 +1,3 @@
-
 import simple_pkg.b
 
 

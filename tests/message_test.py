@@ -1,4 +1,3 @@
-
 import sys
 import struct
 import unittest

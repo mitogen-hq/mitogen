@@ -7,7 +7,6 @@ import signal
 import sys
 
 import ci_lib
-from ci_lib import run
 
 
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
@@ -40,10 +39,10 @@ with ci_lib.Fold('job_setup'):
     os.chdir(TESTS_DIR)
     os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
 
-    run("mkdir %s", HOSTS_DIR)
+    ci_lib.run("mkdir %s", HOSTS_DIR)
     for path in glob.glob(TESTS_DIR + '/hosts/*'):
         if not path.endswith('default.hosts'):
-            run("ln -s %s %s", path, HOSTS_DIR)
+            ci_lib.run("ln -s %s %s", path, HOSTS_DIR)
 
     inventory_path = os.path.join(HOSTS_DIR, 'target')
     with open(inventory_path, 'w') as fp:
@@ -63,14 +62,14 @@ with ci_lib.Fold('job_setup'):
     ci_lib.dump_file(inventory_path)
 
     if not ci_lib.exists_in_path('sshpass'):
-        run("sudo apt-get update")
-        run("sudo apt-get install -y sshpass")
+        ci_lib.run("sudo apt-get update")
+        ci_lib.run("sudo apt-get install -y sshpass")
 
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
-        run('./run_ansible_playbook.py %s -i "%s" %s',
+        ci_lib.run('./run_ansible_playbook.py %s -i "%s" %s',
             playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
     except:
         pause_if_interactive()

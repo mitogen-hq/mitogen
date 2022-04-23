@@ -6,7 +6,6 @@ import subprocess
 import sys
 
 import ci_lib
-from ci_lib import run
 
 
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
@@ -52,11 +51,11 @@ with ci_lib.Fold('machine_prep'):
 
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':
         os.chdir(IMAGE_PREP_DIR)
-        run("ansible-playbook -c local -i localhost, _user_accounts.yml")
+        ci_lib.run("ansible-playbook -c local -i localhost, _user_accounts.yml")
 
 
 with ci_lib.Fold('ansible'):
     os.chdir(TESTS_DIR)
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
-    run('./run_ansible_playbook.py %s -l target %s',
+    ci_lib.run('./run_ansible_playbook.py %s -l target %s',
         playbook, ' '.join(sys.argv[1:]))

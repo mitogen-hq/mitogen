@@ -26,7 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import os
 import signal
 import threading
@@ -43,7 +45,7 @@ import ansible_mitogen.mixins
 import ansible_mitogen.process
 
 import ansible.executor.process.worker
-from ansible.utils.sentinel import Sentinel
+import ansible.utils.sentinel
 
 
 def _patch_awx_callback():
@@ -54,12 +56,11 @@ def _patch_awx_callback():
     # AWX uses sitecustomize.py to force-load this package. If it exists, we're
     # running under AWX.
     try:
-        from awx_display_callback.events import EventContext
-        from awx_display_callback.events import event_context
+        import awx_display_callback.events
     except ImportError:
         return
 
-    if hasattr(EventContext(), '_local'):
+    if hasattr(awx_display_callback.events.EventContext(), '_local'):
         # Patched version.
         return
 
@@ -68,8 +69,8 @@ def _patch_awx_callback():
         ctx = tls.setdefault('_ctx', {})
         ctx.update(kwargs)
 
-    EventContext._local = threading.local()
-    EventContext.add_local = patch_add_local
+    awx_display_callback.events.EventContext._local = threading.local()
+    awx_display_callback.events.EventContext.add_local = patch_add_local
 
 _patch_awx_callback()
 
@@ -279,7 +280,7 @@ class StrategyMixin(object):
             name=task.action,
             class_only=True,
         )
-        if play_context.connection is not Sentinel:
+        if play_context.connection is not ansible.utils.sentinel.Sentinel:
             # 2.8 appears to defer computing this until inside the worker.
             # TODO: figure out where it has moved.
             ansible_mitogen.loaders.connection_loader.get(

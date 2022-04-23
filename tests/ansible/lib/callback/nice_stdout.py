@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 import io
 import os
-import sys
 
 from ansible import constants as C
 from ansible.module_utils import six

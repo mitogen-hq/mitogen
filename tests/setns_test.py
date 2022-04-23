@@ -1,11 +1,8 @@
-
-import os
 import socket
 import sys
 import unittest
 
-import mitogen
-import mitogen.parent
+import mitogen.core
 
 import testlib
 

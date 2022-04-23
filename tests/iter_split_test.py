@@ -1,11 +1,6 @@
-
 import unittest
 
-import mock
-
 import mitogen.core
-
-import testlib
 
 try:
     next

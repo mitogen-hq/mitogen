@@ -26,8 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
+__metaclass__ = type
 
 import errno
 import logging
@@ -40,10 +41,8 @@ import time
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
-import ansible.utils.shlex
 
 import mitogen.core
-import mitogen.fork
 import mitogen.utils
 
 import ansible_mitogen.mixins
@@ -1097,7 +1096,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                     s = fp.read(self.SMALL_FILE_LIMIT + 1)
                 finally:
                     fp.close()
-            except OSError:
+            except OSError as e:
                 self._throw_io_error(e, in_path)
                 raise
 

@@ -1,9 +1,7 @@
-import logging
 import time
 
 import mitogen.core
 import mitogen.parent
-import mitogen.master
 from mitogen.core import str_partition
 
 import testlib

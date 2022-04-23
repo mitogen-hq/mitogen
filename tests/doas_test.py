@@ -1,9 +1,7 @@
-
 import os
 
-import mitogen
+import mitogen.core
 import mitogen.doas
-import mitogen.parent
 
 import testlib
 

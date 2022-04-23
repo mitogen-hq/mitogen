@@ -1,6 +1,3 @@
-
-import time
-
 import mock
 
 import mitogen.core

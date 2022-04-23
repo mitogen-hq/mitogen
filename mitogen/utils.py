@@ -33,10 +33,8 @@ import logging
 import os
 import sys
 
-import mitogen
 import mitogen.core
 import mitogen.master
-import mitogen.parent
 
 
 iteritems = getattr(dict, 'iteritems', dict.items)
