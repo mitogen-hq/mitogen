@@ -1,3 +1,4 @@
+import mitogen.core
 import mitogen.select
 
 import testlib

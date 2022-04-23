@@ -36,8 +36,8 @@ import mitogen.utils
 try:
     from __main__ import display
 except ImportError:
-    from ansible.utils.display import Display
-    display = Display()
+    import ansible.utils.display
+    display = ansible.utils.display.Display()
 
 
 #: The process name set via :func:`set_process_name`.

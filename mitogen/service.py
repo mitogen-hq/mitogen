@@ -31,7 +31,6 @@
 import grp
 import logging
 import os
-import os.path
 import pprint
 import pwd
 import stat

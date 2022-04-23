@@ -32,6 +32,8 @@ Stable names for PluginLoader instances across Ansible versions.
 
 from __future__ import absolute_import
 
+import ansible.errors
+
 import ansible_mitogen.utils
 
 __all__ = [

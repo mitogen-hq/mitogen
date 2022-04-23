@@ -1,12 +1,4 @@
-#!/usr/bin/env python
-
-import os
-import tempfile
-
-import mock
-
 import mitogen.core
-import mitogen.parent
 import mitogen.master
 import mitogen.utils
 from mitogen.core import b

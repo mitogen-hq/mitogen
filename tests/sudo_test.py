@@ -1,8 +1,4 @@
-
 import os
-
-import mitogen
-import mitogen.sudo
 
 import testlib
 

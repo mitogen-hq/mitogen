@@ -1,6 +1,5 @@
 import os
 
-import mitogen
 import mitogen.lxd
 import mitogen.parent
 

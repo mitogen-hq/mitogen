@@ -7,7 +7,6 @@ import mitogen.master
 from mitogen.core import b
 
 import testlib
-from testlib import MODS_DIR
 
 
 class ConstructorTest(testlib.TestCase):
@@ -87,14 +86,14 @@ class PkgutilMethodTest(testlib.TestCase):
     def test_empty_source_pkg(self):
         path, src, is_pkg = self.call('module_finder_testmod')
         self.assertEqual(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/__init__.py'))
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/__init__.py'))
         self.assertEqual(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
         path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
         self.assertEqual(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/empty_mod.py'))
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/empty_mod.py'))
         self.assertEqual(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
@@ -102,7 +101,7 @@ class PkgutilMethodTest(testlib.TestCase):
         from module_finder_testmod import regular_mod
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
         self.assertEqual(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/regular_mod.py'))
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/regular_mod.py'))
         self.assertEqual(mitogen.core.to_text(src),
                           inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
@@ -165,7 +164,7 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         # plumbum has been eating too many rainbow-colored pills
         import pkg_like_plumbum.colors
         path, src, is_pkg = self.call('pkg_like_plumbum.colors')
-        modpath = os.path.join(MODS_DIR, 'pkg_like_plumbum/colors.py')
+        modpath = os.path.join(testlib.MODS_DIR, 'pkg_like_plumbum/colors.py')
         self.assertEqual(path, modpath)
 
         with open(modpath, 'rb') as f:
@@ -183,7 +182,7 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
 
         # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.distro')
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/distro/__init__.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -194,7 +193,7 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         path, src, is_pkg = self.call(
             'pkg_like_ansible.module_utils.distro._distro'
         )
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/distro/_distro.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -213,7 +212,7 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
 
         # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.sys_distro')
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/__init__.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -224,7 +223,7 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         path, src, is_pkg = self.call(
             'pkg_like_ansible.module_utils.sys_distro._distro'
         )
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/_distro.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -268,7 +267,6 @@ class FakeSshTest(testlib.TestCase):
         self.assertEqual(related, [
             'mitogen',
             'mitogen.core',
-            'mitogen.master',
             'mitogen.parent',
         ])
 
@@ -282,8 +280,6 @@ class FindRelatedTest(testlib.TestCase):
     SIMPLE_EXPECT = set([
         u'mitogen',
         u'mitogen.core',
-        u'mitogen.master',
-        u'mitogen.minify',
         u'mitogen.parent',
     ])
 
@@ -302,7 +298,7 @@ class FindRelatedTest(testlib.TestCase):
 
 if sys.version_info > (2, 6):
     class DjangoMixin(object):
-        WEBPROJECT_PATH = os.path.join(MODS_DIR, 'webproject')
+        WEBPROJECT_PATH = os.path.join(testlib.MODS_DIR, 'webproject')
 
         # TODO: rip out Django and replace with a static tree of weird imports
         # that don't depend on .. Django! The hack below is because the version

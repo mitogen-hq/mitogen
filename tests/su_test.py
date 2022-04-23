@@ -1,7 +1,6 @@
-
 import os
 
-import mitogen
+import mitogen.core
 import mitogen.su
 
 import testlib

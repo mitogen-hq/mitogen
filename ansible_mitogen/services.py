@@ -44,13 +44,12 @@ from __future__ import unicode_literals
 
 import logging
 import os
-import os.path
 import sys
 import threading
 
 import ansible.constants
 
-import mitogen
+import mitogen.core
 import mitogen.service
 import mitogen.utils
 import ansible_mitogen.loaders

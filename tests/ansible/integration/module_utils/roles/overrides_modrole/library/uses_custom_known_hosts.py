@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
 import json
-from ansible.module_utils.basic import path
+import ansible.module_utils.basic
 
 def main():
     print(json.dumps({
-        'path': path()
+        'path': ansible.module_utils.basic.path()
     }))
 
 if __name__ == '__main__':

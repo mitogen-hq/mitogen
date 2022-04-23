@@ -40,10 +40,8 @@ import time
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
-import ansible.utils.shlex
 
 import mitogen.core
-import mitogen.fork
 import mitogen.utils
 
 import ansible_mitogen.mixins

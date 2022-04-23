@@ -51,7 +51,6 @@ import types
 logging = __import__('logging')
 
 import mitogen.core
-import mitogen.fork
 import mitogen.parent
 import mitogen.service
 from mitogen.core import b

@@ -103,7 +103,6 @@ import tempfile
 import threading
 
 import mitogen.core
-import mitogen.master
 import mitogen.parent
 
 from mitogen.core import LOG, IOLOG

@@ -31,8 +31,7 @@ from __future__ import absolute_import
 import os.path
 import sys
 
-from ansible.errors import AnsibleConnectionFailure
-from ansible.module_utils.six import iteritems
+import ansible.errors
 
 try:
     import ansible_mitogen
@@ -61,7 +60,7 @@ class Connection(ansible_mitogen.connection.Connection):
 
     def __init__(self, *args, **kwargs):
         if not _get_result:
-            raise AnsibleConnectionFailure(self.not_supported_msg)
+            raise ansible.errors.AnsibleConnectionFailure(self.not_supported_msg)
         super(Connection, self).__init__(*args, **kwargs)
 
     def get_extra_args(self):
@@ -72,8 +71,10 @@ class Connection(ansible_mitogen.connection.Connection):
             # Ansible >= 2.10, _get_result is a get_with_context_result
             connection_options = _get_result.object.connection_options
         parameters = []
-        for key, option in iteritems(connection_options):
-            if self.get_task_var('ansible_' + key) is not None:
-                parameters += [ option, self.get_task_var('ansible_' + key) ]
+        for key in connection_options:
+            task_var_name = 'ansible_%s' % key
+            task_var = self.get_task_var(task_var_name)
+            if task_var is not None:
+                parameters += [connection_options[key], task_var]
 
         return parameters

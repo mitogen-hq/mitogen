@@ -1,8 +1,6 @@
 import os
-import sys
 import tempfile
 
-import mitogen
 import mitogen.ssh
 import mitogen.utils
 

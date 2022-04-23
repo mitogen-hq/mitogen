@@ -1,7 +1,7 @@
 import os
 
-import mitogen
 import mitogen.lxc
+import mitogen.parent
 
 try:
     any

@@ -1,9 +1,7 @@
-
 import fcntl
 import os
 import stat
 import sys
-import time
 import tempfile
 
 import mitogen.core

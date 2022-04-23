@@ -43,11 +43,10 @@ import os
 import random
 import re
 
-from ansible.executor import module_common
-from ansible.collections.list import list_collection_dirs
+import ansible.collections.list
 import ansible.errors
-import ansible.module_utils
-import ansible.release
+import ansible.executor.module_common
+
 import mitogen.core
 import mitogen.select
 
@@ -192,7 +191,7 @@ class BinaryPlanner(Planner):
 
     @classmethod
     def detect(cls, path, source):
-        return module_common._is_binary(source)
+        return ansible.executor.module_common._is_binary(source)
 
     def get_push_files(self):
         return [mitogen.core.to_text(self._inv.module_path)]
@@ -269,7 +268,7 @@ class JsonArgsPlanner(ScriptPlanner):
 
     @classmethod
     def detect(cls, path, source):
-        return module_common.REPLACER_JSONARGS in source
+        return ansible.executor.module_common.REPLACER_JSONARGS in source
 
 
 class WantJsonPlanner(ScriptPlanner):
@@ -362,7 +361,7 @@ class NewStylePlanner(ScriptPlanner):
                 module_name='ansible_module_%s' % (self._inv.module_name,),
                 module_path=self._inv.module_path,
                 search_path=self.get_search_path(),
-                builtin_path=module_common._MODULE_UTILS_PATH,
+                builtin_path=ansible.executor.module_common._MODULE_UTILS_PATH,
                 context=self._inv.connection.context,
             )
         return self._module_map
@@ -405,7 +404,7 @@ class ReplacerPlanner(NewStylePlanner):
 
     @classmethod
     def detect(cls, path, source):
-        return module_common.REPLACER in source
+        return ansible.executor.module_common.REPLACER in source
 
 
 class OldStylePlanner(ScriptPlanner):
@@ -427,12 +426,6 @@ _planners = [
 ]
 
 
-try:
-    _get_ansible_module_fqn = module_common._get_ansible_module_fqn
-except AttributeError:
-    _get_ansible_module_fqn = None
-
-
 def py_modname_from_path(name, path):
     """
     Fetch the logical name of a new-style module as it might appear in
@@ -442,11 +435,12 @@ def py_modname_from_path(name, path):
       package hierarchy approximated on the target, enabling relative imports
       to function correctly. For example, "ansible.modules.system.setup".
     """
-    if _get_ansible_module_fqn:
-        try:
-            return _get_ansible_module_fqn(path)
-        except ValueError:
-            pass
+    try:
+        return ansible.executor.module_common._get_ansible_module_fqn(path)
+    except AttributeError:
+        pass
+    except ValueError:
+        pass
 
     return 'ansible.modules.' + name
 
@@ -564,7 +558,7 @@ def _load_collections(invocation):
     Goes through all collection path possibilities and stores paths to installed collections
     Stores them on the current invocation to later be passed to the master service
     """
-    for collection_path in list_collection_dirs():
+    for collection_path in ansible.collections.list.list_collection_dirs():
         invocation._extra_sys_paths.add(collection_path.decode('utf-8'))
 
 

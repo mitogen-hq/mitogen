@@ -1,7 +1,5 @@
-
 import os
 import random
-import struct
 import sys
 import unittest
 
