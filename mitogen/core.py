@@ -2717,7 +2717,7 @@ class Latch(object):
                 raise e
 
             assert cookie == got_cookie, (
-                "Cookie incorrect; got %r, expected %r" \
+                "Cookie incorrect; got %r, expected %r"
                 % (binascii.hexlify(got_cookie),
                    binascii.hexlify(cookie))
             )
@@ -3671,7 +3671,6 @@ class Dispatcher(object):
         if self._service_recv.notify == self._on_call_service:
             self._service_recv.notify = None
         self.recv.close()
-
 
     @classmethod
     @takes_econtext

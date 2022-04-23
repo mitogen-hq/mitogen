@@ -297,11 +297,11 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
-    MARKER = re.compile(b'from ansible(?:_collections|\.module_utils)\.')
+    MARKER = re.compile(br'from ansible(?:_collections|\.module_utils)\.')
 
     @classmethod
     def detect(cls, path, source):
-        return cls.MARKER.search(source) != None
+        return cls.MARKER.search(source) is not None
 
     def _get_interpreter(self):
         return None, None
@@ -522,12 +522,15 @@ def _invoke_isolated_task(invocation, planner):
         context.shutdown()
 
 
-def _get_planner(name, path, source):
+def _get_planner(invocation, source):
     for klass in _planners:
-        if klass.detect(path, source):
-            LOG.debug('%r accepted %r (filename %r)', klass, name, path)
+        if klass.detect(invocation.module_path, source):
+            LOG.debug(
+                '%r accepted %r (filename %r)',
+                klass, invocation.module_name, invocation.module_path,
+            )
             return klass
-        LOG.debug('%r rejected %r', klass, name)
+        LOG.debug('%r rejected %r', klass, invocation.module_name)
     raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
 
@@ -590,8 +593,7 @@ def invoke(invocation):
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
-            invocation.module_name,
-            invocation.module_path,
+            invocation,
             module_source
         )
 

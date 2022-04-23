@@ -1095,7 +1095,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                     s = fp.read(self.SMALL_FILE_LIMIT + 1)
                 finally:
                     fp.close()
-            except OSError:
+            except OSError as e:
                 self._throw_io_error(e, in_path)
                 raise
 
