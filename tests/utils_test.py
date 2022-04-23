@@ -12,6 +12,7 @@ def func0(router):
 
 @mitogen.utils.with_router
 def func(router):
+    "Docstring of func"
     return router
 
 
@@ -30,6 +31,10 @@ class WithRouterTest(testlib.TestCase):
         router = func()
         self.assertIsInstance(router, mitogen.master.Router)
         self.assertFalse(testlib.threading__thread_is_alive(router.broker._thread))
+
+    def test_with_broker_preserves_attributes(self):
+        self.assertEqual(func.__doc__, 'Docstring of func')
+        self.assertEqual(func.__name__, 'func')
 
 
 class Dict(dict): pass

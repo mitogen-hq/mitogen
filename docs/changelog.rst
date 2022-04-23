@@ -24,6 +24,7 @@ v0.3.3.dev0
 * :gh:issue:`906` Support packages dynamically inserted into sys.modules, e.g. `distro` >= 1.7.0 as `ansible.module_utils.distro`.
 * :gh:issue:`918` Support Python 3.10
 * :gh:issue:`920` Support Ansible :ans:conn:`~podman` connection plugin
+* :gh:issue:`836` :func:`mitogen.utils.with_router` decorator preserves the docstring in addition to the name.
 
 
 v0.3.2 (2022-01-12)
