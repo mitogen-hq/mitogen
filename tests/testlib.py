@@ -63,14 +63,6 @@ if faulthandler is not None:
 mitogen.core.LOG.propagate = True
 
 
-
-def get_fd_count():
-    """
-    Return the number of FDs open by this process.
-    """
-    return psutil.Process().num_fds()
-
-
 def data_path(suffix):
     path = os.path.join(DATA_DIR, suffix)
     if path.endswith('.key'):
@@ -340,7 +332,7 @@ class TestCase(unittest.TestCase):
         # This is done in setUpClass() so we have a chance to run before any
         # Broker() instantiations in setUp() etc.
         mitogen.fork.on_fork()
-        cls._fd_count_before = get_fd_count()
+        cls._fds_before = psutil.Process().open_files()
         # Ignore children started by external packages - in particular
         # multiprocessing.resource_tracker.main()`, started when some Ansible
         # versions instantiate a `multithreading.Lock()`.
@@ -371,7 +363,11 @@ class TestCase(unittest.TestCase):
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
-        if get_fd_count() != self._fd_count_before:
+        fds_after = psutil.Process().open_files()
+        fds_leaked = len(self._fds_before) != len(fds_after)
+        if not fds_leaked:
+            return
+        else:
             if sys.platform == 'linux':
                 subprocess.check_call(
                     'lsof +E -w -p %i | grep -vw mem' % (os.getpid(),),
@@ -382,8 +378,8 @@ class TestCase(unittest.TestCase):
                     'lsof -w -p %i | grep -vw mem' % (os.getpid(),),
                     shell=True,
                 )
-            assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
-                self, self._fd_count_before, get_fd_count(),
+            assert 0, "%s leaked FDs: %s\nBefore:\t%s\nAfter:\t%s" % (
+                self, fds_leaked, self._fds_before, fds_after,
             )
 
     # Some class fixtures (like Ansible MuxProcess) start persistent children
