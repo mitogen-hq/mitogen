@@ -34,8 +34,9 @@ files/modules known missing.
 [0] "Ansible Module Architecture", developing_program_flow_modules.html
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
+__metaclass__ = type
 
 import json
 import logging

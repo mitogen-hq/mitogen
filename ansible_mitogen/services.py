@@ -39,8 +39,9 @@ connections, grant access to files by children, and register for notification
 when a child has completed a job.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
+__metaclass__ = type
 
 import logging
 import os

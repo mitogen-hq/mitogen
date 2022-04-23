@@ -33,6 +33,9 @@ Helper functions intended to be executed on the target. These are entrypoints
 for file transfer, module execution and sundry bits like changing file modes.
 """
 
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import errno
 import grp
 import operator
