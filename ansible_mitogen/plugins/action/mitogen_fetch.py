@@ -132,7 +132,7 @@ class ActionModule(ActionBase):
                 makedirs_safe(os.path.dirname(dest))
 
                 # fetch the file and check for changes
-                self._connection.fetch_file(source, dest)
+                self._connection.fetch_file(source, dest, validate_checksum=validate_checksum)
                 new_checksum = secure_hash(dest)
                 # For backwards compatibility. We'll return None on FIPS enabled systems
                 try:

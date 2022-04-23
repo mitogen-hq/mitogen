@@ -1018,7 +1018,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         )
         return rc, stdout, stderr
 
-    def fetch_file(self, in_path, out_path):
+    def fetch_file(self, in_path, out_path, validate_checksum=True):
         """
         Implement fetch_file() by calling the corresponding
         ansible_mitogen.target function in the target.
@@ -1033,7 +1033,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             context=self.context,
             # in_path may be AnsibleUnicode
             in_path=mitogen.utils.cast(in_path),
-            out_path=out_path
+            out_path=out_path,
+            validate_checksum=validate_checksum,
         )
 
     def put_data(self, out_path, data, mode=None, utimes=None):
