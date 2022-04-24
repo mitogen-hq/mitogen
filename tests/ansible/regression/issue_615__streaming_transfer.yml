@@ -1,23 +1,32 @@
 # issue #615: 'fetch' with become: was internally using slurp.
 
-- hosts: target
+- hosts: test-targets
   any_errors_fatal: True
   gather_facts: no
+  # Without Mitogen this causes Ansible to use the slurp module, which is *slow*
   become: true
   vars:
     mitogen_ssh_compression: false
   tasks:
-    - shell: |
-        dd if=/dev/zero of=/tmp/512mb.zero bs=1048576 count=512;
-        chmod go= /tmp/512mb.zero
+    - block:
+        - shell: |
+            dd if=/dev/zero of=/tmp/512mb.zero bs=1048576 count=512;
+            chmod go= /tmp/512mb.zero
 
-    - fetch:
-        src: /tmp/512mb.zero
-        dest: /tmp/fetch-out
+        - fetch:
+            src: /tmp/512mb.zero
+            dest: /tmp/fetch-out
 
-    - file:
-        path: /tmp/fetch-out
-        state: absent
-      delegate_to: localhost
+        - file:
+            path: /tmp/512mb.zero
+            state: absent
+
+        - file:
+            path: /tmp/fetch-out
+            state: absent
+          delegate_to: localhost
+          run_once: true
+      when:
+        - is_mitogen
   tags:
     - issue_615
