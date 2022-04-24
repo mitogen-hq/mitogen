@@ -70,8 +70,8 @@ class ActionModule(ActionBase):
 
             remote_stat = {}
             remote_checksum = None
-            if not self._connection.become:
-                # Get checksum for the remote file. Don't bother if using become as slurp will be used.
+            if True:
+                # Get checksum for the remote file even using become. Mitogen doesn't need slurp.
                 # Follow symlinks because fetch always follows symlinks
                 try:
                     remote_stat = self._execute_remote_stat(source, all_vars=task_vars, follow=True)
