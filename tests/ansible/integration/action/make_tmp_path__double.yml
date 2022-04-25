@@ -18,3 +18,5 @@
       script: |
         assert not self._remote_file_exists("{{ out.t1 }}")
         assert not self._remote_file_exists("{{ out.t2 }}")
+  tags:
+    - make_tmp_path_double

@@ -1,6 +1,4 @@
-
 import testlib
-import unittest2
 
 import mitogen.os_fork
 import mitogen.service
@@ -15,7 +13,7 @@ class CorkTest(testlib.RouterMixin, testlib.TestCase):
     def test_cork_broker(self):
         latch = mitogen.core.Latch()
         self.broker.defer(self.ping, latch)
-        self.assertEquals('pong', latch.get())
+        self.assertEqual('pong', latch.get())
 
         corker = self.klass(brokers=(self.broker,))
         corker.cork()
@@ -25,14 +23,14 @@ class CorkTest(testlib.RouterMixin, testlib.TestCase):
         self.assertRaises(mitogen.core.TimeoutError,
             lambda: latch.get(timeout=0.5))
         corker.uncork()
-        self.assertEquals('pong', latch.get())
+        self.assertEqual('pong', latch.get())
 
     def test_cork_pool(self):
         pool = mitogen.service.Pool(self.router, services=(), size=4)
         try:
             latch = mitogen.core.Latch()
             pool.defer(self.ping, latch)
-            self.assertEquals('pong', latch.get())
+            self.assertEqual('pong', latch.get())
 
             corker = self.klass(pools=(pool,))
             corker.cork()
@@ -42,11 +40,6 @@ class CorkTest(testlib.RouterMixin, testlib.TestCase):
             self.assertRaises(mitogen.core.TimeoutError,
                 lambda: latch.get(timeout=0.5))
             corker.uncork()
-            self.assertEquals('pong', latch.get())
+            self.assertEqual('pong', latch.get())
         finally:
             pool.stop(join=True)
-
-
-
-if __name__ == '__main__':
-    unittest2.main()

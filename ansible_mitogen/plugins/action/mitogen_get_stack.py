@@ -26,13 +26,14 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 """
 Fetch the connection configuration stack that would be used to connect to a
 target, without actually connecting to it.
 """
+
+from __future__ import absolute_import, division, print_function
+from __future__ import unicode_literals
+__metaclass__ = type
 
 import ansible_mitogen.connection
 

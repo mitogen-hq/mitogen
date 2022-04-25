@@ -1,0 +1,10 @@
+bootstrap_packages: [python3]
+
+docker_base: centos:8
+
+packages:
+  - perl-JSON
+  - python2-virtualenv
+  - python3-virtualenv
+  - python36
+  - python38

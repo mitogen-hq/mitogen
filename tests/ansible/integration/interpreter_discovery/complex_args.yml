@@ -54,3 +54,5 @@
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+  tags:
+    - complex_args

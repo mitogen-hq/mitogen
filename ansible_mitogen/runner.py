@@ -36,6 +36,9 @@ Each class in here has a corresponding Planner class in planners.py that knows
 how to build arguments for it, preseed related data, etc.
 """
 
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import atexit
 import imp
 import os

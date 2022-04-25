@@ -1,10 +1,4 @@
-
 import os
-
-import mitogen
-import mitogen.sudo
-
-import unittest2
 
 import testlib
 
@@ -23,7 +17,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_basic(self):
         context, argv = self.run_sudo()
-        self.assertEquals(argv[:4], [
+        self.assertEqual(argv[:4], [
             self.sudo_path,
             '-u', 'root',
             '--'
@@ -34,7 +28,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             selinux_type='setype',
             selinux_role='serole',
         )
-        self.assertEquals(argv[:8], [
+        self.assertEqual(argv[:8], [
             self.sudo_path,
             '-u', 'root',
             '-r', 'serole',
@@ -46,7 +40,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         context, argv = self.run_sudo(
             sudo_args=['--type', 'setype', '--role', 'serole', '--user', 'user']
         )
-        self.assertEquals(argv[:8], [
+        self.assertEqual(argv[:8], [
             self.sudo_path,
             '-u', 'user',
             '-r', 'serole',
@@ -59,7 +53,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         os.environ['PREHISTORIC_SUDO'] = '1'
         try:
             context, argv = self.run_sudo()
-            self.assertEquals('1', context.call(os.getenv, 'PREHISTORIC_SUDO'))
+            self.assertEqual('1', context.call(os.getenv, 'PREHISTORIC_SUDO'))
         finally:
             del os.environ['PREHISTORIC_SUDO']
 
@@ -104,7 +98,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #             lambda: self.router.sudo(via=ssh, password='rootpassword')
 #         )
 #         self.assertTrue(mitogen.sudo.password_incorrect_msg in str(e))
-
-
-if __name__ == '__main__':
-    unittest2.main()

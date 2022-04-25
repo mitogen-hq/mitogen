@@ -11,3 +11,6 @@
   - assert:
       that:
         - out.msg == 'file (/usr/bin/does-not-exist) is absent, cannot continue'
+      fail_msg: out={{out}}
+  tags:
+    - issue_332

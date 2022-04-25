@@ -5,9 +5,6 @@
 from ansible.module_utils.basic import AnsibleModule
 
 import os
-import pwd
-import socket
-import sys
 
 
 def main():

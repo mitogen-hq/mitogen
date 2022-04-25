@@ -1,2 +1,2 @@
 
-- include: resolv_conf.yml
+- import_playbook: resolv_conf.yml

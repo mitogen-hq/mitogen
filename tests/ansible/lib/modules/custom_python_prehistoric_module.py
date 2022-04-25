@@ -2,13 +2,6 @@
 # issue #555: I'm a module that cutpastes an old hack.
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import get_module_path
-from ansible.module_utils import six
-
-import os
-import pwd
-import socket
-import sys
 
 import sys
 reload(sys)

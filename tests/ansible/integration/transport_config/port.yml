@@ -12,6 +12,7 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == None
+      fail_msg: out={{out}}
 
 # Not set, mitogen_via=
 - hosts: tc-port-explicit-ssh
@@ -26,6 +27,7 @@
       - out.result[0].kwargs.port == None
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == 4321
+      fail_msg: out={{out}}
 
 # ansible_ssh_port=
 - hosts: tc-port-explicit-ssh
@@ -37,6 +39,7 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 4321
+      fail_msg: out={{out}}
 
 - hosts: tc-port-explicit-unset
   vars: {mitogen_via: tc-port-explicit-ssh}
@@ -50,6 +53,7 @@
       - out.result[1].kwargs.port == 4321
       - out.result[1].method == "ssh"
       - out.result[0].kwargs.port == None
+      fail_msg: out={{out}}
 
 # ansible_port=
 - hosts: tc-port-explicit-port
@@ -61,6 +65,7 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1234
+      fail_msg: out={{out}}
 
 - hosts: tc-port-unset
   vars: {mitogen_via: tc-port-explicit-port}
@@ -74,6 +79,7 @@
       - out.result[0].kwargs.port == 1234
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == None
+      fail_msg: out={{out}}
 
 
 # both, ssh takes precedence
@@ -86,6 +92,7 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1532
+      fail_msg: out={{out}}
 
 - hosts: tc-port-unset
   vars: {mitogen_via: tc-port-both}
@@ -99,3 +106,4 @@
       - out.result[0].kwargs.port == 1532
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == None
+      fail_msg: out={{out}}

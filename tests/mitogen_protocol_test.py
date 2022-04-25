@@ -1,5 +1,3 @@
-
-import unittest2
 import mock
 
 import mitogen.core
@@ -25,10 +23,6 @@ class ReceiveOneTest(testlib.TestCase):
         protocol.on_receive(broker, junk)
         capture.stop()
 
-        self.assertEquals(1, stream.on_disconnect.call_count)
+        self.assertEqual(1, stream.on_disconnect.call_count)
         expect = self.klass.corrupt_msg % (stream.name, junk)
         self.assertTrue(expect in capture.raw())
-
-
-if __name__ == '__main__':
-    unittest2.main()

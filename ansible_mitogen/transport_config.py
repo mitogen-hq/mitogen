@@ -26,9 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 """
 Mitogen extends Ansible's target configuration mechanism in several ways that
 require some care:
@@ -59,6 +56,10 @@ That is what this file is for. It exports two spec classes, one that takes all
 information from PlayContext, and another that takes (almost) all information
 from HostVars.
 """
+
+from __future__ import absolute_import, division, print_function
+from __future__ import unicode_literals
+__metaclass__ = type
 
 import abc
 import os
@@ -355,6 +356,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_podman_path(self):
+        """
+        The path to the "podman" program for the 'podman' transport.
+        """
+
+    @abc.abstractmethod
     def mitogen_ssh_keepalive_interval(self):
         """
         The SSH ServerAliveInterval.
@@ -451,7 +458,7 @@ class PlayContextSpec(Spec):
         return self._play_context.private_key_file
 
     def ssh_executable(self):
-        return self._play_context.ssh_executable
+        return C.config.get_config_value("ssh_executable", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
 
     def timeout(self):
         return self._play_context.timeout
@@ -467,9 +474,9 @@ class PlayContextSpec(Spec):
         return [
             mitogen.core.to_text(term)
             for s in (
-                getattr(self._play_context, 'ssh_args', ''),
-                getattr(self._play_context, 'ssh_common_args', ''),
-                getattr(self._play_context, 'ssh_extra_args', '')
+                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
         ]
@@ -526,6 +533,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._connection.get_task_var('mitogen_lxc_info_path')
+
+    def mitogen_podman_path(self):
+        return self._connection.get_task_var('mitogen_podman_path')
 
     def mitogen_ssh_keepalive_interval(self):
         return self._connection.get_task_var('mitogen_ssh_keepalive_interval')
@@ -679,10 +689,7 @@ class MitogenViaSpec(Spec):
         )
 
     def ssh_executable(self):
-        return (
-            self._host_vars.get('ansible_ssh_executable') or
-            C.ANSIBLE_SSH_EXECUTABLE
-        )
+        return C.config.get_config_value("ssh_executable", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
 
     def timeout(self):
         # TODO: must come from PlayContext too.
@@ -699,22 +706,9 @@ class MitogenViaSpec(Spec):
         return [
             mitogen.core.to_text(term)
             for s in (
-                (
-                    self._host_vars.get('ansible_ssh_args') or
-                    getattr(C, 'ANSIBLE_SSH_ARGS', None) or
-                    os.environ.get('ANSIBLE_SSH_ARGS')
-                    # TODO: ini entry. older versions.
-                ),
-                (
-                    self._host_vars.get('ansible_ssh_common_args') or
-                    os.environ.get('ANSIBLE_SSH_COMMON_ARGS')
-                    # TODO: ini entry.
-                ),
-                (
-                    self._host_vars.get('ansible_ssh_extra_args') or
-                    os.environ.get('ANSIBLE_SSH_EXTRA_ARGS')
-                    # TODO: ini entry.
-                ),
+                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {})),
+                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
             )
             for term in ansible.utils.shlex.shlex_split(s)
             if s
@@ -762,6 +756,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._host_vars.get('mitogen_lxc_info_path')
+
+    def mitogen_podman_path(self):
+        return self._host_vars.get('mitogen_podman_path')
 
     def mitogen_ssh_keepalive_interval(self):
         return self._host_vars.get('mitogen_ssh_keepalive_interval')

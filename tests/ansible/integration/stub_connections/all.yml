@@ -1,7 +1,7 @@
-- include: kubectl.yml
-- include: lxc.yml
-- include: lxd.yml
-- include: mitogen_doas.yml
-- include: mitogen_sudo.yml
-- include: setns_lxc.yml
-- include: setns_lxd.yml
+- import_playbook: kubectl.yml
+- import_playbook: lxc.yml
+- import_playbook: lxd.yml
+- import_playbook: mitogen_doas.yml
+- import_playbook: mitogen_sudo.yml
+- import_playbook: setns_lxc.yml
+- import_playbook: setns_lxd.yml

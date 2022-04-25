@@ -15,8 +15,13 @@
       assert:
         that:
           - out.failed
-          - |
-            ('sudo: no such option: --derps' in out.msg) or
-            ("sudo: invalid option -- '-'" in out.module_stderr) or
-            ("sudo: unrecognized option `--derps'" in out.module_stderr) or
-            ("sudo: unrecognized option '--derps'" in out.module_stderr)
+          - >-
+            'sudo: no such option: --derps' in out.msg
+            or out.module_stdout is match("sudo: invalid option -- '-'")
+            or out.module_stderr is match("sudo: invalid option -- '-'")
+            or out.module_stdout is match("sudo: unrecognized option [`']--derps'")
+            or out.module_stderr is match("sudo: unrecognized option [`']--derps'")
+        fail_msg: out={{out}}
+  tags:
+    - sudo
+    - sudo_flags_failure

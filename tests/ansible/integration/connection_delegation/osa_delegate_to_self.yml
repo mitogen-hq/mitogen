@@ -30,3 +30,6 @@
           'method': 'setns',
         },
       ]
+  tags:
+    - osa
+    - osa_delegate_to_self

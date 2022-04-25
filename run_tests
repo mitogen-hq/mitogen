@@ -28,10 +28,6 @@ NOCOVERAGE="${NOCOVERAGE:-}"
 NOCOVERAGE_ERASE="${NOCOVERAGE_ERASE:-$NOCOVERAGE}"
 NOCOVERAGE_REPORT="${NOCOVERAGE_REPORT:-$NOCOVERAGE}"
 
-if [ ! "$UNIT2" ]; then
-    UNIT2="$(which unit2)"
-fi
-
 if [ ! "$NOCOVERAGE_ERASE" ]; then
     coverage erase
 fi
@@ -39,12 +35,12 @@ fi
 # First run overwites coverage output.
 [ "$SKIP_MITOGEN" ] || {
     if [ ! "$NOCOVERAGE" ]; then
-        coverage run -a "${UNIT2}" discover \
+        coverage run -a -m unittest discover \
             --start-directory "tests" \
             --pattern '*_test.py' \
             "$@"
     else
-        "${UNIT2}" discover \
+        python -m unittest discover \
             --start-directory "tests" \
             --pattern '*_test.py' \
             "$@"
@@ -60,12 +56,12 @@ fi
 [ "$SKIP_ANSIBLE" ] || {
     export PYTHONPATH=`pwd`/tests:$PYTHONPATH
     if [ ! "$NOCOVERAGE" ]; then
-        coverage run -a "${UNIT2}" discover \
+        coverage run -a -m unittest discover \
             --start-directory "tests/ansible" \
             --pattern '*_test.py' \
             "$@"
     else
-        "${UNIT2}" discover \
+        python -m unittest discover \
             --start-directory "tests/ansible" \
             --pattern '*_test.py' \
             "$@"

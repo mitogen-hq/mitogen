@@ -28,7 +28,6 @@
 
 # !mitogen: minify_safe
 
-import mitogen.core
 import mitogen.parent
 
 

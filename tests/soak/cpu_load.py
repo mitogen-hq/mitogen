@@ -7,7 +7,6 @@ weirdness. Useful for exposing otherwise difficult to hit races in the library.
 import ctypes
 import multiprocessing
 import os
-import time
 
 LIBC = ctypes.CDLL('libc.so.6')
 sched_yield = LIBC.sched_yield
@@ -25,7 +24,7 @@ def burn():
 
 mul = 1.5
 count = int(mul * multiprocessing.cpu_count())
-print count
+print(count)
 
 procs = [multiprocessing.Process(target=burn)
          for _ in range(count)]

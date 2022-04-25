@@ -1,0 +1,6 @@
+bootstrap_packages: [python-simplejson]
+
+docker_base: astj/centos5-vault
+
+packages:
+  - perl

@@ -23,6 +23,7 @@
     - assert:
         that:
         - not out2.stat.exists
+        fail_msg: out={{out}}
 
     - stat:
         path: "{{out.src|dirname}}"
@@ -31,7 +32,10 @@
     - assert:
         that:
         - not out2.stat.exists
+        fail_msg: out={{out}}
 
     - file:
         path: /tmp/remove_tmp_path_test
         state: absent
+  tags:
+    - remove_tmp_path

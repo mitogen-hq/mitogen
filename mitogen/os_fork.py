@@ -35,7 +35,6 @@ Support for operating in a mixed threading/forking environment.
 import os
 import socket
 import sys
-import threading
 import weakref
 
 import mitogen.core
@@ -158,7 +157,7 @@ class Corker(object):
         held. This will not return until each thread acknowledges it has ceased
         execution.
         """
-        current = threading.currentThread()
+        current = mitogen.core.threading__current_thread()
         s = mitogen.core.b('CORK') * ((128 // 4) * 1024)
         self._rsocks = []
 

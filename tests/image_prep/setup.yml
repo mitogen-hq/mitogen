@@ -1,3 +1,6 @@
+#!/usr/bin/env ansible-playbook
 
+- include: _container_create.yml
 - include: _container_setup.yml
 - include: _user_accounts.yml
+- include: _container_finalize.yml

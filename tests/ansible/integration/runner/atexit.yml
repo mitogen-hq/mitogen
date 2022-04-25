@@ -17,7 +17,7 @@
 
     - custom_python_run_script:
         script: |
-          import atexit, shutil
+          import atexit, os, shutil
           path = '{{path}}'
           os.mkdir(path, int('777', 8))
           atexit.register(shutil.rmtree, path)
@@ -29,3 +29,6 @@
     - assert:
         that:
         - not out.stat.exists
+        fail_msg: out={{out}}
+  tags:
+    - atexit

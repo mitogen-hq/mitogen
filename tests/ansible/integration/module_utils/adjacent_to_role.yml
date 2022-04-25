@@ -6,3 +6,5 @@
   any_errors_fatal: true
   roles:
   - modrole
+  tags:
+    - adjacent_to_playbook

@@ -1,3 +1,9 @@
+common_packages:
+  - openssh-server
+  - rsync
+  - strace
+  - sudo
+
 sudo_group:
   MacOSX: admin
   Debian: sudo

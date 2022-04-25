@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # I am a Python interpreter that sits idle until the connection times out.
 
 import time

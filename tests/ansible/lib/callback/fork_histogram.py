@@ -1,4 +1,3 @@
-
 # Monkey-patch os.fork() to produce a latency histogram on run completion.
 # Requires 'hdrhsitograms' PyPI module.
 

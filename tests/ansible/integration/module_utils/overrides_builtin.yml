@@ -4,3 +4,5 @@
   any_errors_fatal: true
   roles:
   - overrides_modrole
+  tags:
+    - overrides_builtin

@@ -14,6 +14,7 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == None
+      fail_msg: out={{out}}
 
 # Not set, unbecoming mitogen_via=
 - hosts: tc-become-pass-unset
@@ -29,6 +30,7 @@
       - out.result[1].method == "ssh"
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.password == None
+      fail_msg: out={{out}}
 
 # Not set, becoming mitogen_via=
 - hosts: tc-become-pass-unset
@@ -46,6 +48,7 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == None
+      fail_msg: out={{out}}
 
 
 # ansible_become_password= set.
@@ -60,6 +63,7 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "apassword"
+      fail_msg: out={{out}}
 
 
 # ansible_become_password=, via=
@@ -78,6 +82,7 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == "apassword"
+      fail_msg: out={{out}}
 
 
 # ansible_become_pass=
@@ -92,6 +97,7 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "apass"
+      fail_msg: out={{out}}
 
 
 # ansible_become_pass=, via=
@@ -110,6 +116,7 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == "apass"
+      fail_msg: out={{out}}
 
 
 
@@ -126,6 +133,7 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "c.b.a"
+      fail_msg: out={{out}}
 
 
 # both, mitogen_via
@@ -141,3 +149,4 @@
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "a.b.c"
       - out.result[2].method == "ssh"
+      fail_msg: out={{out}}

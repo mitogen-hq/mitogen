@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 import os
-import shutil
 import sys
 
 import ci_lib
@@ -60,11 +58,7 @@ with ci_lib.Fold('job_setup'):
             for container in containers
         )
 
-    print()
-    print(' echo --- ansible/inventory/hosts: ---')
-    ci_lib.run('cat ansible/inventory/hosts')
-    print('---')
-    print()
+    ci_lib.dump_file('ansible/inventory/hosts')
 
     # Now we have real host key checking, we need to turn it off
     os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'

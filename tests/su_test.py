@@ -1,10 +1,7 @@
-
 import os
 
-import mitogen
+import mitogen.core
 import mitogen.su
-
-import unittest2
 
 import testlib
 
@@ -22,8 +19,8 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_basic(self):
         context, argv = self.run_su()
-        self.assertEquals(argv[1], 'root')
-        self.assertEquals(argv[2], '-c')
+        self.assertEqual(argv[1], 'root')
+        self.assertEqual(argv[2], '-c')
 
 
 class SuTest(testlib.DockerMixin, testlib.TestCase):
@@ -66,8 +63,4 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
             password='has_sudo_password',
         )
         context = self.router.su(via=ssh, password='rootpassword')
-        self.assertEquals(0, context.call(os.getuid))
-
-
-if __name__ == '__main__':
-    unittest2.main()
+        self.assertEqual(0, context.call(os.getuid))

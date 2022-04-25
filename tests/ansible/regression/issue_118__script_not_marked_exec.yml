@@ -6,3 +6,5 @@
   tasks:
 
   - script: scripts/issue_118_saytrue
+  tags:
+    - issue_118

@@ -1,13 +1,4 @@
-#!/usr/bin/env python
-
-import os
-import tempfile
-
-import unittest2
-import mock
-
 import mitogen.core
-import mitogen.parent
 import mitogen.master
 import mitogen.utils
 from mitogen.core import b
@@ -21,6 +12,7 @@ def func0(router):
 
 @mitogen.utils.with_router
 def func(router):
+    "Docstring of func"
     return router
 
 
@@ -31,14 +23,18 @@ class RunWithRouterTest(testlib.TestCase):
     def test_run_with_broker(self):
         router = mitogen.utils.run_with_router(func0)
         self.assertIsInstance(router, mitogen.master.Router)
-        self.assertFalse(router.broker._thread.isAlive())
+        self.assertFalse(testlib.threading__thread_is_alive(router.broker._thread))
 
 
 class WithRouterTest(testlib.TestCase):
     def test_with_broker(self):
         router = func()
         self.assertIsInstance(router, mitogen.master.Router)
-        self.assertFalse(router.broker._thread.isAlive())
+        self.assertFalse(testlib.threading__thread_is_alive(router.broker._thread))
+
+    def test_with_broker_preserves_attributes(self):
+        self.assertEqual(func.__doc__, 'Docstring of func')
+        self.assertEqual(func.__name__, 'func')
 
 
 class Dict(dict): pass
@@ -98,7 +94,3 @@ class CastTest(testlib.TestCase):
     def test_unknown(self):
         self.assertRaises(TypeError, mitogen.utils.cast, set())
         self.assertRaises(TypeError, mitogen.utils.cast, 4j)
-
-
-if __name__ == '__main__':
-    unittest2.main()

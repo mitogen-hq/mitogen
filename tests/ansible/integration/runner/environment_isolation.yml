@@ -16,6 +16,7 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
+        fail_msg: out={{out}}
 
     - shell: echo 'hi'
       environment:
@@ -26,6 +27,7 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
+        fail_msg: out={{out}}
 
 
     # ---
@@ -37,6 +39,7 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
+        fail_msg: out={{out}}
 
     - custom_python_modify_environ:
         key: evil_key
@@ -47,4 +50,6 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
-
+        fail_msg: out={{out}}
+  tags:
+    - environment_isolation

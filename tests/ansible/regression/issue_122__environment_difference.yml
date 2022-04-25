@@ -12,3 +12,5 @@
   - script: scripts/print_env.py
     register: env
   - debug: msg={{env}}
+  tags:
+    - issue_122

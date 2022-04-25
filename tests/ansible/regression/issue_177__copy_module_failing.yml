@@ -17,3 +17,5 @@
     with_items:
       - passwd
       - hosts
+  tags:
+    - issue_177

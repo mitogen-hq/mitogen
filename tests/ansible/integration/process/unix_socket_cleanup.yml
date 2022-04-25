@@ -26,3 +26,5 @@
   - assert_equal:
       left: socks
       right: socks2
+  tags:
+    - custom_python_new_style_module

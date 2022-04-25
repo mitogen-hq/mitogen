@@ -45,3 +45,6 @@
         except AnsibleConnectionFailure:
           e = sys.exc_info()[1]
           assert str(e).startswith('Mitogen was disconnected')
+  tags:
+    - disconnect
+    - disconnect_resets_connection

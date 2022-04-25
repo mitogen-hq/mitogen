@@ -66,3 +66,6 @@
     copy:
       src: /tmp/bigbigfile.in
       dest: /tmp/bigbigfile.out
+
+  tags:
+  - resource_intensive

@@ -110,3 +110,5 @@
     - command: hostname
     - command: hostname
     - command: hostname
+  tags:
+    - resource_intensive

@@ -1,0 +1,11 @@
+bootstrap_packages: [python]
+
+docker_base: ubuntu:18.04
+
+packages:
+  - libjson-perl
+  - locales
+  - python-virtualenv
+  - python3
+  - python3-virtualenv
+  - virtualenv

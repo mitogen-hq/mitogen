@@ -10,3 +10,6 @@
     file_size: 512
   tasks:
   - include: _put_file.yml
+  tags:
+    - put_file
+    - put_large_file

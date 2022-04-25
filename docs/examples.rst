@@ -201,7 +201,7 @@ nested.py:
             print('Connect local%d via %s' % (x, context))
             context = router.local(via=context, name='local%d' % x)
 
-        context.call(os.system, 'pstree -s python -s mitogen')
+        context.call(subprocess.check_call, ['pstree', '-s', 'python', '-s', 'mitogen'])
 
 
 Output:

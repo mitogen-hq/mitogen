@@ -7,4 +7,8 @@
     - custom_python_prehistoric_module:
       register: out
 
-    - assert: that=out.ok
+    - assert:
+        that: out.ok
+        fail_msg: out={{out}}
+  tags:
+    - custom_python_prehistoric_module

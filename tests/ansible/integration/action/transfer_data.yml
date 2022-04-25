@@ -24,6 +24,7 @@
     - assert:
         that: |
           out.content|b64decode == '{"I am JSON": true}'
+        fail_msg: out={{out}}
 
 
     # Ensure it handles strings.
@@ -40,7 +41,10 @@
     - assert:
         that:
           out.content|b64decode == 'I am text.'
+        fail_msg: out={{out}}
 
     - file:
         path: /tmp/transfer-data
         state: absent
+  tags:
+    - transfer_data

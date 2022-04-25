@@ -14,10 +14,11 @@ See ../README.md for a (mostly) description of the accounts created.
 
 ## Building the containers
 
-``./build_docker_images.sh``
+No single version of Ansible supports every Linux distribution that we target.
+To workaround this [Tox](https://tox.readthedocs.io) is used, to install and
+run multiple versions of Ansible, in Python virtualenvs.
 
-Requires Ansible 2.3.x.x in order to target CentOS 5
-
+``tox``
 
 ## Preparing an OS X box
 

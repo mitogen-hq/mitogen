@@ -24,4 +24,7 @@
           '"unreachable": true' in out.stdout
         - |
           '"msg": "Connection timed out."' in out.stdout
+        fail_msg: out={{out}}
       when: is_mitogen
+  tags:
+    - timeouts

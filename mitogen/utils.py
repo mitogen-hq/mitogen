@@ -29,14 +29,13 @@
 # !mitogen: minify_safe
 
 import datetime
+import functools
 import logging
 import os
 import sys
 
-import mitogen
 import mitogen.core
 import mitogen.master
-import mitogen.parent
 
 
 iteritems = getattr(dict, 'iteritems', dict.items)
@@ -173,12 +172,9 @@ def with_router(func):
 
         do_stuff(blah, 123)
     """
+    @functools.wraps(func)
     def wrapper(*args, **kwargs):
         return run_with_router(func, *args, **kwargs)
-    if mitogen.core.PY3:
-        wrapper.func_name = func.__name__
-    else:
-        wrapper.func_name = func.func_name
     return wrapper
 
 

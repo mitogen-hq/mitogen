@@ -1,0 +1,20 @@
+- name: Start containers
+  hosts: all
+  strategy: mitogen_free
+  gather_facts: false
+  tasks:
+    - name: Fetch container images
+      docker_image:
+        name: "{{ docker_base }}"
+      delegate_to: localhost
+
+    - name: Start containers
+      docker_container:
+        name: "{{ inventory_hostname }}"
+        image: "{{ docker_base }}"
+        command: /bin/bash
+        hostname: "mitogen-{{ inventory_hostname }}"
+        detach: true
+        interactive: true
+        tty: true
+      delegate_to: localhost

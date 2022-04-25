@@ -1,4 +1,3 @@
-
 import logging
 import mitogen.master
 

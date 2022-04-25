@@ -5,19 +5,18 @@ parameters:
   sign: false
 
 steps:
-- script: "PYTHONVERSION=$(python.version) .ci/prep_azure.py"
-  displayName: "Run prep_azure.py"
+- task: UsePythonVersion@0
+  displayName: Install python
+  inputs:
+    versionSpec: '$(python.version)'
+  condition: ne(variables['python.version'], '')
 
-- script: |
-    echo "##vso[task.prependpath]/tmp/venv/bin"
+- script: python -mpip install tox
+  displayName: Install tooling
 
-  displayName: activate venv
-
-- script: .ci/spawn_reverse_shell.py
-  displayName: "Spawn reverse shell"
-
-- script: .ci/$(MODE)_install.py
-  displayName: "Run $(MODE)_install.py"
-
-- script: .ci/$(MODE)_tests.py
-  displayName: "Run $(MODE)_tests.py"
+- script: python -mtox -e "$(tox.env)"
+  displayName: "Run tests"
+  env:
+    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+    AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)

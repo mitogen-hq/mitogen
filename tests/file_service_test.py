@@ -1,7 +1,4 @@
-
 import sys
-
-import unittest2
 
 import mitogen.service
 
@@ -52,8 +49,8 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
 
     def _validate_response(self, resp):
         self.assertTrue(isinstance(resp, dict))
-        self.assertEquals('root', resp['owner'])
-        self.assertEquals(self.ROOT_GROUP, resp['group'])
+        self.assertEqual('root', resp['owner'])
+        self.assertEqual(self.ROOT_GROUP, resp['group'])
         self.assertTrue(isinstance(resp['mode'], int))
         self.assertTrue(isinstance(resp['mtime'], float))
         self.assertTrue(isinstance(resp['atime'], float))
@@ -148,7 +145,3 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
 
         expect = service.unregistered_msg % (path,)
         self.assertTrue(expect in e.args[0])
-
-
-if __name__ == '__main__':
-    unittest2.main()

@@ -1,1 +1,1 @@
-- include: "unix_socket_cleanup.yml"
+- import_playbook: "unix_socket_cleanup.yml"

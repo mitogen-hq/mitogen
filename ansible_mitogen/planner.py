@@ -34,19 +34,20 @@ files/modules known missing.
 [0] "Ansible Module Architecture", developing_program_flow_modules.html
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
+__metaclass__ = type
 
 import json
 import logging
 import os
 import random
+import re
 
-from ansible.executor import module_common
-from ansible.collections.list import list_collection_dirs
+import ansible.collections.list
 import ansible.errors
-import ansible.module_utils
-import ansible.release
+import ansible.executor.module_common
+
 import mitogen.core
 import mitogen.select
 
@@ -191,7 +192,7 @@ class BinaryPlanner(Planner):
 
     @classmethod
     def detect(cls, path, source):
-        return module_common._is_binary(source)
+        return ansible.executor.module_common._is_binary(source)
 
     def get_push_files(self):
         return [mitogen.core.to_text(self._inv.module_path)]
@@ -268,7 +269,7 @@ class JsonArgsPlanner(ScriptPlanner):
 
     @classmethod
     def detect(cls, path, source):
-        return module_common.REPLACER_JSONARGS in source
+        return ansible.executor.module_common.REPLACER_JSONARGS in source
 
 
 class WantJsonPlanner(ScriptPlanner):
@@ -297,11 +298,11 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
-    marker = b'from ansible.module_utils.'
+    MARKER = re.compile(br'from ansible(?:_collections|\.module_utils)\.')
 
     @classmethod
     def detect(cls, path, source):
-        return cls.marker in source
+        return cls.MARKER.search(source) is not None
 
     def _get_interpreter(self):
         return None, None
@@ -321,6 +322,7 @@ class NewStylePlanner(ScriptPlanner):
     ALWAYS_FORK_MODULES = frozenset([
         'dnf',  # issue #280; py-dnf/hawkey need therapy
         'firewalld',  # issue #570: ansible module_utils caches dbus conn
+        'ansible.legacy.dnf',  # issue #776
     ])
 
     def should_fork(self):
@@ -360,7 +362,7 @@ class NewStylePlanner(ScriptPlanner):
                 module_name='ansible_module_%s' % (self._inv.module_name,),
                 module_path=self._inv.module_path,
                 search_path=self.get_search_path(),
-                builtin_path=module_common._MODULE_UTILS_PATH,
+                builtin_path=ansible.executor.module_common._MODULE_UTILS_PATH,
                 context=self._inv.connection.context,
             )
         return self._module_map
@@ -403,7 +405,7 @@ class ReplacerPlanner(NewStylePlanner):
 
     @classmethod
     def detect(cls, path, source):
-        return module_common.REPLACER in source
+        return ansible.executor.module_common.REPLACER in source
 
 
 class OldStylePlanner(ScriptPlanner):
@@ -425,36 +427,21 @@ _planners = [
 ]
 
 
-try:
-    _get_ansible_module_fqn = module_common._get_ansible_module_fqn
-except AttributeError:
-    _get_ansible_module_fqn = None
-
-
 def py_modname_from_path(name, path):
     """
     Fetch the logical name of a new-style module as it might appear in
     :data:`sys.modules` of the target's Python interpreter.
 
-    * For Ansible <2.7, this is an unpackaged module named like
-      "ansible_module_%s".
-
-    * For Ansible <2.9, this is an unpackaged module named like
-      "ansible.modules.%s"
-
     * Since Ansible 2.9, modules appearing within a package have the original
       package hierarchy approximated on the target, enabling relative imports
       to function correctly. For example, "ansible.modules.system.setup".
     """
-    # 2.9+
-    if _get_ansible_module_fqn:
-        try:
-            return _get_ansible_module_fqn(path)
-        except ValueError:
-            pass
-
-    if ansible.__version__ < '2.7':
-        return 'ansible_module_' + name
+    try:
+        return ansible.executor.module_common._get_ansible_module_fqn(path)
+    except AttributeError:
+        pass
+    except ValueError:
+        pass
 
     return 'ansible.modules.' + name
 
@@ -536,12 +523,15 @@ def _invoke_isolated_task(invocation, planner):
         context.shutdown()
 
 
-def _get_planner(name, path, source):
+def _get_planner(invocation, source):
     for klass in _planners:
-        if klass.detect(path, source):
-            LOG.debug('%r accepted %r (filename %r)', klass, name, path)
+        if klass.detect(invocation.module_path, source):
+            LOG.debug(
+                '%r accepted %r (filename %r)',
+                klass, invocation.module_name, invocation.module_path,
+            )
             return klass
-        LOG.debug('%r rejected %r', klass, name)
+        LOG.debug('%r rejected %r', klass, invocation.module_name)
     raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
 
@@ -572,7 +562,7 @@ def _load_collections(invocation):
     Goes through all collection path possibilities and stores paths to installed collections
     Stores them on the current invocation to later be passed to the master service
     """
-    for collection_path in list_collection_dirs():
+    for collection_path in ansible.collections.list.list_collection_dirs():
         invocation._extra_sys_paths.add(collection_path.decode('utf-8'))
 
 
@@ -604,8 +594,7 @@ def invoke(invocation):
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
-            invocation.module_name,
-            invocation.module_path,
+            invocation,
             module_source
         )
 

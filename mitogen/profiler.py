@@ -90,7 +90,7 @@ def merge_stats(outpath, inpaths):
                     break
                 time.sleep(0.2)
 
-    stats.dump_stats(outpath)
+    pstats.dump_stats(outpath)
 
 
 def generate_stats(outpath, tmpdir):

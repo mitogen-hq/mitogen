@@ -1,11 +1,7 @@
 # Verify throughput over sudo and SSH at various compression levels.
 
 import os
-import random
-import socket
-import subprocess
 import tempfile
-import time
 
 import mitogen
 import mitogen.core

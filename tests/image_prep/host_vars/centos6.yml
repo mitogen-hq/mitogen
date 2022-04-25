@@ -1,0 +1,6 @@
+bootstrap_packages: [python]
+
+docker_base: moreati/centos6-vault
+
+packages:
+  - perl-JSON

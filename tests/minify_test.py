@@ -3,8 +3,6 @@ import glob
 import pprint
 import sys
 
-import unittest2
-
 import mitogen.minify
 import testlib
 
@@ -71,7 +69,7 @@ class MitogenCoreTest(testlib.TestCase):
         compile(minified, name, 'exec')
 
     def _test_line_counts_match(self, original, minified):
-        self.assertEquals(original.count('\n'),
+        self.assertEqual(original.count('\n'),
                           minified.count('\n'))
 
     def _test_non_blank_lines_match(self, name, original, minified):
@@ -112,7 +110,3 @@ class MitogenCoreTest(testlib.TestCase):
             self._test_syntax_valid(minified, name)
             self._test_line_counts_match(original, minified)
             self._test_non_blank_lines_match(name, original, minified)
-
-
-if __name__ == '__main__':
-    unittest2.main()

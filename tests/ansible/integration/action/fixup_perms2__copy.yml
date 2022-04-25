@@ -21,6 +21,7 @@
     - assert:
         that:
         -  out.stat.mode in ("0644", "0664")
+        fail_msg: out={{out}}
 
     #
     # copy module (explicit mode).
@@ -37,6 +38,7 @@
     - assert:
         that:
         -  out.stat.mode == "0400"
+        fail_msg: out={{out}}
 
     #
     # copy module (existing disk files, no mode).
@@ -63,6 +65,7 @@
     - assert:
         that:
         - out.stat.mode in ("0644", "0664")
+        fail_msg: out={{out}}
 
     #
     # copy module (existing disk files, preserve mode).
@@ -79,6 +82,7 @@
     - assert:
         that:
         - out.stat.mode == "1462"
+        fail_msg: out={{out}}
 
     #
     # copy module (existing disk files, explicit mode).
@@ -96,6 +100,7 @@
     - assert:
         that:
         - out.stat.mode == "1461"
+        fail_msg: out={{out}}
 
     - file:
         state: absent
@@ -109,3 +114,5 @@
       - /tmp/copy-with-mode.out
 
     # end of cleaning out files
+  tags:
+    - fixup_perms2__copy

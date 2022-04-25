@@ -1,9 +1,4 @@
-
 # Verify _receive_one() quadratic behaviour fixed.
-
-import subprocess
-import time
-import socket
 
 import mitogen
 import mitogen.core

@@ -22,3 +22,5 @@
       args:
         chdir: ../..
       register: out
+  tags:
+    - mixed_vanilla_mitogen

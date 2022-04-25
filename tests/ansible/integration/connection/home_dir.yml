@@ -37,3 +37,5 @@
             "homedir from facts": "{{root_facts.ansible_facts.ansible_user_dir}}"
           }
       when: is_mitogen
+  tags:
+    - home_dir

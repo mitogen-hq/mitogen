@@ -2,7 +2,6 @@
 
 import json
 import os
-import subprocess
 import sys
 
 os.environ['ORIGINAL_ARGV'] = json.dumps(sys.argv)

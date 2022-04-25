@@ -1,5 +1,3 @@
-import unittest2
-
 import mitogen.core
 import testlib
 
@@ -14,7 +12,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(chan.dst_handle, 123)
         self.assertIsNotNone(chan.handle)
         self.assertGreater(chan.handle, 0)
-
-
-if __name__ == '__main__':
-    unittest2.main()

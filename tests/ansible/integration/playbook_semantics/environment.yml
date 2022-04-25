@@ -11,3 +11,6 @@
 
     - assert:
         that: "result.stdout == '123'"
+        fail_msg: result={{result}}
+  tags:
+    - environment

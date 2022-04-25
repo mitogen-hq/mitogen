@@ -5,9 +5,7 @@ required for reliable LRU tests.
 
 import ansible_mitogen.connection
 import ansible_mitogen.services
-import mitogen.service
 
-from ansible.plugins.strategy import StrategyBase
 from ansible.plugins.action import ActionBase
 
 

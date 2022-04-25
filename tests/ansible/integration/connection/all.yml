@@ -1,11 +1,11 @@
 ---
 
-- include: become_same_user.yml
-- include: disconnect_during_module.yml
-- include: disconnect_resets_connection.yml
-- include: exec_command.yml
-- include: home_dir.yml
-- include: put_large_file.yml
-- include: put_small_file.yml
-- include: reset.yml
-- include: reset_become.yml
+- import_playbook: become_same_user.yml
+- import_playbook: disconnect_during_module.yml
+- import_playbook: disconnect_resets_connection.yml
+- import_playbook: exec_command.yml
+- import_playbook: home_dir.yml
+- import_playbook: put_large_file.yml
+- import_playbook: put_small_file.yml
+- import_playbook: reset.yml
+- import_playbook: reset_become.yml
