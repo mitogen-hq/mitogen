@@ -490,8 +490,13 @@ def run(dest, router, args, deadline=None, econtext=None):
     fakessh.name = u'fakessh.%d' % (context_id,)
 
     sock1, sock2 = socket.socketpair()
-    sock1.set_inheritable(True)
-    sock2.set_inheritable(True)
+    try:
+        # Python 3.x only
+        sock1.set_inheritable(True)
+        sock2.set_inheritable(True)
+    except AttributeError:
+        # Python 2.x socket objects are always inheritable
+        pass
 
     stream = mitogen.core.MitogenProtocol.build_stream(router, context_id, mitogen.context_id)
     stream.name = u'fakessh'
