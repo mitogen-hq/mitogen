@@ -1,11 +1,7 @@
-
 import os
 
-import mitogen
+import mitogen.core
 import mitogen.doas
-import mitogen.parent
-
-import unittest2
 
 import testlib
 
@@ -19,13 +15,13 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             username='someuser',
         )
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
-        self.assertEquals(argv[:4], [
+        self.assertEqual(argv[:4], [
             self.doas_path,
             '-u',
             'someuser',
             '--',
         ])
-        self.assertEquals('1', context.call(os.getenv, 'THIS_IS_STUB_DOAS'))
+        self.assertEqual('1', context.call(os.getenv, 'THIS_IS_STUB_DOAS'))
 
 
 # TODO: https://github.com/dw/mitogen/issues/694 they are flaky on python 2.6 MODE=mitogen DISTROS=centos7
@@ -59,8 +55,4 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #             password='has_sudo_password',
 #         )
 #         context = self.router.doas(via=ssh, password='has_sudo_password')
-#         self.assertEquals(0, context.call(os.getuid))
-
-
-if __name__ == '__main__':
-    unittest2.main()
+#         self.assertEqual(0, context.call(os.getuid))

@@ -1,4 +1,4 @@
-# Copyright 2019, David Wilson
+# Copyright 2022, Mitogen contributers
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -26,50 +26,21 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# !mitogen: minify_safe
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
 
-import mitogen.parent
+import os.path
+import sys
+
+try:
+    import ansible_mitogen
+except ImportError:
+    base_dir = os.path.dirname(__file__)
+    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
+    del base_dir
+
+import ansible_mitogen.connection
 
 
-class Options(mitogen.parent.Options):
-    container = None
-    lxc_path = 'lxc'
-    python_path = 'python'
-
-    def __init__(self, container, lxc_path=None, **kwargs):
-        super(Options, self).__init__(**kwargs)
-        self.container = container
-        if lxc_path:
-            self.lxc_path = lxc_path
-
-
-class Connection(mitogen.parent.Connection):
-    options_class = Options
-
-    child_is_immediate_subprocess = False
-    create_child_args = {
-        # If lxc finds any of stdin, stdout, stderr connected to a TTY, to
-        # prevent input injection it creates a proxy pty, forcing all IO to be
-        # buffered in <4KiB chunks. So ensure stderr is also routed to the
-        # socketpair.
-        'merge_stdio': True
-    }
-
-    eof_error_hint = (
-        'Note: many versions of LXC do not report program execution failure '
-        'meaningfully. Please check the host logs (/var/log) for more '
-        'information.'
-    )
-
-    def _get_name(self):
-        return u'lxd.' + self.options.container
-
-    def get_boot_command(self):
-        bits = [
-            self.options.lxc_path,
-            'exec',
-            '--mode=noninteractive',
-            self.options.container,
-            '--',
-        ]
-        return bits + super(Connection, self).get_boot_command()
+class Connection(ansible_mitogen.connection.Connection):
+    transport = 'podman'

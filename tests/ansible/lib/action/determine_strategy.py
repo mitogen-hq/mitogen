@@ -1,4 +1,3 @@
-
 import sys
 
 from ansible.plugins.strategy import StrategyBase

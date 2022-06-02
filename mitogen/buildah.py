@@ -30,7 +30,6 @@
 
 import logging
 
-import mitogen.core
 import mitogen.parent
 
 

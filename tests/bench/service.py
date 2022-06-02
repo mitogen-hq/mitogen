@@ -1,9 +1,6 @@
 """
 Measure latency of local service RPC.
 """
-
-import time
-
 import mitogen
 import mitogen.core
 import mitogen.service

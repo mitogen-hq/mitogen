@@ -1,8 +1,5 @@
-
 import traceback
-import sys
 
-from ansible.plugins.strategy import StrategyBase
 from ansible.plugins.action import ActionBase
 
 
