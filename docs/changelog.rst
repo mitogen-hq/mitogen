@@ -18,7 +18,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
 
-v0.3.3.dev0
+v0.3.3 (2022-06-03)
 -------------------
 
 * :gh:issue:`906` Support packages dynamically inserted into sys.modules, e.g. `distro` >= 1.7.0 as `ansible.module_utils.distro`.
