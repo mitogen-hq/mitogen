@@ -190,43 +190,6 @@ jobs:
         python.version: '3.10'
         tox.env: py310-mode_mitogen-distro_ubuntu2004
 
-      #DebOps_2460_27_27:
-        #python.version: '2.7'
-        #MODE: debops_common
-        #VER: 2.4.6.0
-
-      #DebOps_262_36_27:
-        #python.version: '3.6'
-        #MODE: debops_common
-        #VER: 2.6.2
-
-      #Ansible_2460_26:
-        #python.version: '2.7'
-        #MODE: ansible
-        #VER: 2.4.6.0
-
-      #Ansible_262_26:
-        #python.version: '2.7'
-        #MODE: ansible
-        #VER: 2.6.2
-
-      #Ansible_2460_36:
-        #python.version: '3.6'
-        #MODE: ansible
-        #VER: 2.4.6.0
-
-      #Ansible_262_36:
-        #python.version: '3.6'
-        #MODE: ansible
-        #VER: 2.6.2
-
-      #Vanilla_262_27:
-        #python.version: '2.7'
-        #MODE: ansible
-        #VER: 2.6.2
-        #DISTROS: debian
-        #STRATEGY: linear
-
       Ans_27_210:
         python.version: '2.7'
         tox.env: py27-mode_ansible-ansible2.10
