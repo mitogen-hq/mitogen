@@ -33,9 +33,6 @@ jobs:
       Loc_27_210:
         python.version: '2.7'
         tox.env: py27-mode_localhost-ansible2.10
-      Loc_27_3:
-        python.version: '2.7'
-        tox.env: py27-mode_localhost-ansible3
       Loc_27_4:
         python.version: '2.7'
         tox.env: py27-mode_localhost-ansible4
@@ -44,11 +41,6 @@ jobs:
       Van_27_210:
         python.version: '2.7'
         tox.env: py27-mode_localhost-ansible2.10
-        STRATEGY: linear
-        ANSIBLE_SKIP_TAGS: resource_intensive
-      Van_27_3:
-        python.version: '2.7'
-        tox.env: py27-mode_localhost-ansible3
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
       Van_27_4:
@@ -79,18 +71,12 @@ jobs:
       # TODO: test python3, python3 tests are broken
       Loc_27_210:
         tox.env: py27-mode_localhost-ansible2.10
-      Loc_27_3:
-        tox.env: py27-mode_localhost-ansible3
       Loc_27_4:
         tox.env: py27-mode_localhost-ansible4
 
       # NOTE: this hangs when ran in Ubuntu 18.04
       Van_27_210:
         tox.env: py27-mode_localhost-ansible2.10
-        STRATEGY: linear
-        ANSIBLE_SKIP_TAGS: resource_intensive
-      Van_27_3:
-        tox.env: py27-mode_localhost-ansible3
         STRATEGY: linear
         ANSIBLE_SKIP_TAGS: resource_intensive
       Van_27_4:
@@ -193,9 +179,6 @@ jobs:
       Ans_27_210:
         python.version: '2.7'
         tox.env: py27-mode_ansible-ansible2.10
-      Ans_27_3:
-        python.version: '2.7'
-        tox.env: py27-mode_ansible-ansible3
       Ans_27_4:
         python.version: '2.7'
         tox.env: py27-mode_ansible-ansible4
@@ -203,9 +186,6 @@ jobs:
       Ans_36_210:
         python.version: '3.6'
         tox.env: py36-mode_ansible-ansible2.10
-      Ans_36_3:
-        python.version: '3.6'
-        tox.env: py36-mode_ansible-ansible3
       Ans_36_4:
         python.version: '3.6'
         tox.env: py36-mode_ansible-ansible4
