@@ -1508,7 +1508,7 @@ class Connection(object):
 
     def get_preamble(self):
         suffix = (
-            '\nExternalContext(%r).main()\n' %\
+            '\nExternalContext(%r).main()\n' %
             (self.get_econtext_config(),)
         )
         partial = get_core_source_partial()

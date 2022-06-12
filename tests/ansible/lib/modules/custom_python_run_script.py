@@ -3,12 +3,7 @@
 # parameter.
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.basic import get_module_path
-from ansible.module_utils import six
 
-import os
-import pwd
-import socket
 import sys
 
 

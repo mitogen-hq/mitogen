@@ -73,7 +73,9 @@ necessarily involves preventing the scheduler from making load balancing
 decisions.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import ctypes
 import logging
 import mmap

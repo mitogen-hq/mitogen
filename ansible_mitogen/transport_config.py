@@ -26,9 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 """
 Mitogen extends Ansible's target configuration mechanism in several ways that
 require some care:
@@ -59,6 +56,10 @@ That is what this file is for. It exports two spec classes, one that takes all
 information from PlayContext, and another that takes (almost) all information
 from HostVars.
 """
+
+from __future__ import absolute_import, division, print_function
+from __future__ import unicode_literals
+__metaclass__ = type
 
 import abc
 import os
@@ -355,6 +356,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_podman_path(self):
+        """
+        The path to the "podman" program for the 'podman' transport.
+        """
+
+    @abc.abstractmethod
     def mitogen_ssh_keepalive_interval(self):
         """
         The SSH ServerAliveInterval.
@@ -526,6 +533,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._connection.get_task_var('mitogen_lxc_info_path')
+
+    def mitogen_podman_path(self):
+        return self._connection.get_task_var('mitogen_podman_path')
 
     def mitogen_ssh_keepalive_interval(self):
         return self._connection.get_task_var('mitogen_ssh_keepalive_interval')
@@ -746,6 +756,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_lxc_info_path(self):
         return self._host_vars.get('mitogen_lxc_info_path')
+
+    def mitogen_podman_path(self):
+        return self._host_vars.get('mitogen_podman_path')
 
     def mitogen_ssh_keepalive_interval(self):
         return self._host_vars.get('mitogen_ssh_keepalive_interval')

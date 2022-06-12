@@ -386,6 +386,20 @@ def _partition(s, sep, find):
         return left, sep, s[len(left)+len(sep):]
 
 
+def threading__current_thread():
+    try:
+        return threading.current_thread()  # Added in Python 2.6+
+    except AttributeError:
+        return threading.currentThread()  # Deprecated in Python 3.10+
+
+
+def threading__thread_name(thread):
+    try:
+        return thread.name  # Added in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
+
+
 if hasattr(UnicodeType, 'rpartition'):
     str_partition = UnicodeType.partition
     str_rpartition = UnicodeType.rpartition
@@ -1357,6 +1371,16 @@ class Importer(object):
             fp.close()
 
     def find_module(self, fullname, path=None):
+        """
+        Return a loader (ourself) or None, for the module with fullname.
+
+        Implements importlib.abc.MetaPathFinder.find_module().
+        Deprecrated in Python 3.4+, replaced by find_spec().
+        Raises ImportWarning in Python 3.10+.
+
+        fullname    A (fully qualified?) module name, e.g. "os.path".
+        path        __path__ of parent packge. None for a top level module.
+        """
         if hasattr(_tls, 'running'):
             return None
 
@@ -1478,6 +1502,12 @@ class Importer(object):
             callback()
 
     def load_module(self, fullname):
+        """
+        Return the loaded module specified by fullname.
+
+        Implements importlib.abc.Loader.load_module().
+        Deprecated in Python 3.4+, replaced by create_module() & exec_module().
+        """
         fullname = to_text(fullname)
         _v and self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
@@ -2687,7 +2717,7 @@ class Latch(object):
                 raise e
 
             assert cookie == got_cookie, (
-                "Cookie incorrect; got %r, expected %r" \
+                "Cookie incorrect; got %r, expected %r"
                 % (binascii.hexlify(got_cookie),
                    binascii.hexlify(cookie))
             )
@@ -2742,7 +2772,7 @@ class Latch(object):
         return 'Latch(%#x, size=%d, t=%r)' % (
             id(self),
             len(self._queue),
-            threading.currentThread().getName(),
+            threading__thread_name(threading__current_thread()),
         )
 
 
@@ -3641,7 +3671,6 @@ class Dispatcher(object):
         if self._service_recv.notify == self._on_call_service:
             self._service_recv.notify = None
         self.recv.close()
-
 
     @classmethod
     @takes_econtext

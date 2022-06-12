@@ -13,36 +13,33 @@
     - name: set up test container and run tests inside it
       block:
         - name: install deps
-          block:
-            - name: install docker
-              shell: |
-                # NOTE: for tracking purposes: https://github.com/docker/for-mac/issues/2359
-                # using docker for mac CI workaround: https://github.com/drud/ddev/pull/1748/files#diff-19288f650af2dabdf1dcc5b354d1f245
-                DOCKER_URL=https://download.docker.com/mac/stable/31259/Docker.dmg && 
-                curl -O -sSL $DOCKER_URL && 
-                open -W Docker.dmg && cp -r /Volumes/Docker/Docker.app /Applications
-                sudo /Applications/Docker.app/Contents/MacOS/Docker --quit-after-install --unattended && 
-                ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/docker && 
-                nohup /Applications/Docker.app/Contents/MacOS/Docker --unattended & 
-                # wait 2 min for docker to come up
-                counter=0 && 
-                  while ! /usr/local/bin/docker ps 2>/dev/null ; do
-                    if [ $counter -lt 24 ]; then
-                      let counter=counter+1
-                    else
-                      exit 1
-                    fi
-                    sleep 5
-                  done
+          homebrew:
+            name:
+              - podman
+            state: present
+
+        - name: start machine
+          command:
+            cmd: "{{ item.cmd }}"
+          loop:
+            - cmd: podman machine init
+            - cmd: podman machine start
+            - cmd: podman info
+          timeout: 300
+          register: podman_machine
+
+        - debug:
+            var: podman_machine
 
         # python bindings (docker_container) aren't working on this host, so gonna shell out
-        - name: create docker container
-          shell: /usr/local/bin/docker run --name testMitogen -d --rm centos:8 bash -c "sleep infinity & wait"
+        - name: create container
+          command:
+            cmd: podman run --name testMitogen -d --rm centos:8 bash -c "sleep infinity & wait"
 
         - name: add container to inventory
           add_host:
             name: testMitogen
-            ansible_connection: docker
+            ansible_connection: podman
             ansible_user: root
           changed_when: false
           environment:
@@ -82,6 +79,10 @@
             PATH: /usr/local/bin/:{{ ansible_env.PATH }}
 
         - name: remove test container
-          shell: /usr/local/bin/docker stop testMitogen
+          command:
+            cmd: "{{ item.cmd }}"
+          loop:
+            - cmd: podman stop testMitogen
+            - cmd: podman machine stop
   tags:
     - issue_655

@@ -1,14 +1,12 @@
 import os
 
-import mitogen
 import mitogen.lxc
+import mitogen.parent
 
 try:
     any
 except NameError:
     from mitogen.core import any
-
-import unittest2
 
 import testlib
 
@@ -27,7 +25,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         )
 
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
-        self.assertEquals(argv[0], self.lxc_attach_path)
+        self.assertEqual(argv[0], self.lxc_attach_path)
         self.assertTrue('--clear-env' in argv)
         self.assertTrue(has_subseq(argv, ['--name', 'container_name']))
 
@@ -39,7 +37,3 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         self.assertTrue(str(e).endswith(mitogen.lxc.Connection.eof_error_hint))
-
-
-if __name__ == '__main__':
-    unittest2.main()

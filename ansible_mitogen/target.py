@@ -33,6 +33,9 @@ Helper functions intended to be executed on the target. These are entrypoints
 for file transfer, module execution and sundry bits like changing file modes.
 """
 
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import errno
 import grp
 import operator
@@ -51,7 +54,6 @@ import types
 logging = __import__('logging')
 
 import mitogen.core
-import mitogen.fork
 import mitogen.parent
 import mitogen.service
 from mitogen.core import b
@@ -652,7 +654,8 @@ def read_path(path):
     """
     Fetch the contents of a filesystem `path` as bytes.
     """
-    return open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        return f.read()
 
 
 def set_file_owner(path, owner, group=None, fd=None):
