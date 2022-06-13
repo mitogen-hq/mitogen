@@ -1,5 +1,5 @@
-
-- hosts: test-targets
+- name: regression/iss590__sys_modules_crap.yml
+  hosts: test-targets
   tasks:
   - meta: end_play
     when:

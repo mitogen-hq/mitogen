@@ -2,7 +2,7 @@
 
 
 # No become-pass set, defaults to "root"
-- name: integration/transport_config/become-pass.yml
+- name: integration/transport_config/become_pass.yml
   hosts: tc-become-pass-unset
   become: true
   tasks:

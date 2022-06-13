@@ -2,7 +2,7 @@
 
 
 # No become-method set.
-- name: integration/transport_config/become-method.yml
+- name: integration/transport_config/become_method.yml
   hosts: tc-become-method-unset
   become: true
   tasks:
