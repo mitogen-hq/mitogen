@@ -1,5 +1,5 @@
-
-- hosts: all
+- name: bench/loop-20-templates.yml
+  hosts: all
   tasks:
   - file:
       dest: /tmp/templates

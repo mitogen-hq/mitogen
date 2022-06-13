@@ -4,7 +4,7 @@
 
 # When no ansible_connection= is set, transport comes via ansible.cfg ("smart"
 # is parsed away to either paramiko or ssh).
-- name: integration/transport_config/transport.yml
+- name: integration/transport_config/transport__smart.yml
   hosts: tc-transport-smart
   tasks:
   - include: ../_mitogen_only.yml

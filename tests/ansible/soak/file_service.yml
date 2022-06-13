@@ -1,4 +1,5 @@
-- hosts: all
+- name: soak/file_service.yml
+  hosts: all
   tasks:
   - set_fact:
       content: "{% for x in range(126977) %}x{% endfor %}"
