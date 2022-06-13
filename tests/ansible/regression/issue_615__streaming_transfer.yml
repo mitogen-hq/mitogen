@@ -1,6 +1,7 @@
 # issue #615: 'fetch' with become: was internally using slurp.
 
-- hosts: test-targets
+- name: regression/issue_615_streaming_transfer.yml
+  hosts: test-targets
   any_errors_fatal: True
   gather_facts: no
   # Without Mitogen this causes Ansible to use the slurp module, which is *slow*

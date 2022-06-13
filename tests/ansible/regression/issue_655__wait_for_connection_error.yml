@@ -5,7 +5,8 @@
 # TODO: do we want to install docker a different way to be able to do this for other tests too
 ---
 # this should only run on our Mac hosts
-- hosts: target
+- name: regression/issue_655_wait_for_connection_error.yml
+  hosts: target
   any_errors_fatal: True
   gather_facts: yes
   become: no

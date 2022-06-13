@@ -1,5 +1,5 @@
-
-- hosts: test-targets[0]
+- name: integration/process/unix_socket_cleanup.yml
+  hosts: test-targets[0]
   tasks:
   - mitogen_action_script:
       script: |
