@@ -25,6 +25,7 @@
         - file:
             path: /tmp/fetch-out
             state: absent
+          become: false
           delegate_to: localhost
           run_once: true
       when:
