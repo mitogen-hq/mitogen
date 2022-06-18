@@ -323,6 +323,7 @@ class NewStylePlanner(ScriptPlanner):
         'dnf',  # issue #280; py-dnf/hawkey need therapy
         'firewalld',  # issue #570: ansible module_utils caches dbus conn
         'ansible.legacy.dnf',  # issue #776
+        'ansible.builtin.dnf', # issue #832
     ])
 
     def should_fork(self):
