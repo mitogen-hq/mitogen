@@ -3,9 +3,7 @@ import logging
 import os
 import random
 import re
-import signal
 import socket
-import subprocess
 import sys
 import threading
 import time
@@ -13,6 +11,7 @@ import traceback
 import unittest
 
 import psutil
+import subprocess32 as subprocess
 
 import mitogen.core
 import mitogen.fork
@@ -69,30 +68,6 @@ def data_path(suffix):
         # SSH is funny about private key permissions.
         os.chmod(path, int('0600', 8))
     return path
-
-
-def subprocess__check_output(*popenargs, **kwargs):
-    # Missing from 2.6.
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd)
-    return output
-
-
-def Popen__terminate(proc):
-    os.kill(proc.pid, signal.SIGTERM)
-
-
-if hasattr(subprocess, 'check_output'):
-    subprocess__check_output = subprocess.check_output
-
-if hasattr(subprocess.Popen, 'terminate'):
-    Popen__terminate = subprocess.Popen.terminate
 
 
 def threading__thread_is_alive(thread):
@@ -457,7 +432,7 @@ def get_docker_host():
 
 class DockerizedSshDaemon(object):
     def _get_container_port(self):
-        s = subprocess__check_output(['docker', 'port', self.container_name])
+        s = subprocess.check_output(['docker', 'port', self.container_name])
         for line in s.decode().splitlines():
             m = self.PORT_RE.match(line)
             if not m:
@@ -472,7 +447,7 @@ class DockerizedSshDaemon(object):
 
     def start_container(self):
         try:
-            subprocess__check_output(['docker', '--version'])
+            subprocess.check_output(['docker', '--version'])
         except Exception:
             raise unittest.SkipTest('Docker binary is unavailable')
 
@@ -486,7 +461,7 @@ class DockerizedSshDaemon(object):
             '--name', self.container_name,
             self.image,
         ]
-        subprocess__check_output(args)
+        subprocess.check_output(args)
         self._get_container_port()
 
     def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
@@ -518,7 +493,7 @@ class DockerizedSshDaemon(object):
     def check_processes(self):
         args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
         counts = {}
-        for comm in subprocess__check_output(args).decode().splitlines():
+        for comm in subprocess.check_output(args).decode().splitlines():
             comm = comm.strip()
             counts[comm] = counts.get(comm, 0) + 1
 
@@ -533,7 +508,7 @@ class DockerizedSshDaemon(object):
 
     def close(self):
         args = ['docker', 'rm', '-f', self.container_name]
-        subprocess__check_output(args)
+        subprocess.check_output(args)
 
 
 class BrokerMixin(object):
