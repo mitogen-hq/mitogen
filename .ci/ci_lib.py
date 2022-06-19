@@ -2,12 +2,14 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import atexit
+import errno
 import os
 import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
+
+import subprocess32 as subprocess
 
 try:
     import urlparse
@@ -30,40 +32,30 @@ def print(*args, **kwargs):
         file.flush()
 
 
-#
-# check_output() monkeypatch cutpasted from testlib.py
-#
+def _have_cmd(args):
+    try:
+        subprocess.run(
+            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return False
+        raise
+    except subprocess.CallProcessError:
+        return False
+    return True
 
-def subprocess__check_output(*popenargs, **kwargs):
-    # Missing from 2.6.
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd)
-    return output
-
-if not hasattr(subprocess, 'check_output'):
-    subprocess.check_output = subprocess__check_output
-
-
-# ------------------
 
 def have_apt():
-    proc = subprocess.Popen('apt --help >/dev/null 2>/dev/null', shell=True)
-    return proc.wait() == 0
+    return _have_cmd(['apt', '--help'])
+
 
 def have_brew():
-    proc = subprocess.Popen('brew help >/dev/null 2>/dev/null', shell=True)
-    return proc.wait() == 0
+    return _have_cmd(['brew', 'help'])
 
 
 def have_docker():
-    proc = subprocess.Popen('docker info >/dev/null 2>/dev/null', shell=True)
-    return proc.wait() == 0
+    return _have_cmd(['docker', 'info'])
 
 
 def _argv(s, *args):
@@ -315,7 +307,7 @@ def get_interesting_procs(container_name=None):
         args = ['docker', 'exec', container_name] + args
 
     out = []
-    for line in subprocess__check_output(args).decode().splitlines():
+    for line in subprocess.check_output(args).decode().splitlines():
         ppid, pid, comm, rest = line.split(None, 3)
         if (
             (

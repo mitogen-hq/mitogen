@@ -1,5 +1,6 @@
 import os
 import random
+import subprocess
 import sys
 import unittest
 
@@ -26,15 +27,28 @@ import plain_old_module
 
 
 def _find_ssl_linux():
-    s = testlib.subprocess__check_output(['ldd', _ssl.__file__])
-    for line in s.decode().splitlines():
+    proc = subprocess.Popen(
+        ['ldd', _ssl.__file__],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    b_stdout, b_stderr = proc.communicate()
+    assert proc.returncode == 0
+    assert b_stderr.decode() == ''
+    for line in b_stdout.decode().splitlines():
         bits = line.split()
         if bits[0].startswith('libssl'):
             return bits[2]
 
+
 def _find_ssl_darwin():
-    s = testlib.subprocess__check_output(['otool', '-l', _ssl.__file__])
-    for line in s.decode().splitlines():
+    proc = subprocess.Popen(
+        ['otool', '-l', _ssl.__file__],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    b_stdout, b_stderr = proc.communicate()
+    assert proc.returncode == 0
+    assert b_stderr.decode() == ''
+    for line in b_stdout.decode().splitlines():
         bits = line.split()
         if bits[0] == 'name' and 'libssl' in bits[1]:
             return bits[1]

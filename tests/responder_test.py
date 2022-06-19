@@ -93,8 +93,10 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # Ensure a program composed of a single script can be imported
         # successfully.
         args = [sys.executable, testlib.data_path('self_contained_program.py')]
-        output = testlib.subprocess__check_output(args).decode()
-        self.assertEqual(output, "['__main__', 50]\n")
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        b_stdout, _ = proc.communicate()
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(b_stdout.decode(), "['__main__', 50]\n")
 
 
 class BrokenModulesTest(testlib.TestCase):
