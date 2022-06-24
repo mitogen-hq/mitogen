@@ -17,17 +17,52 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-v0.3.0 (unreleased)
---------------------
+
+v0.3.3.dev0
+-------------------
+
+* :gh:issue:`906` Support packages dynamically inserted into sys.modules, e.g. `distro` >= 1.7.0 as `ansible.module_utils.distro`.
+* :gh:issue:`918` Support Python 3.10
+* :gh:issue:`920` Support Ansible :ans:conn:`~podman` connection plugin
+* :gh:issue:`836` :func:`mitogen.utils.with_router` decorator preserves the docstring in addition to the name.
+* :gh:issue:`936` :ans:mod:`fetch` no longer emits `[DEPRECATION WARNING]: The '_remote_checksum()' method is deprecated.`
+
+
+v0.3.2 (2022-01-12)
+-------------------
+
+* :gh:issue:`891` Correct `Framework :: Ansible` Trove classifier
+
+
+v0.3.1 (unreleased)
+-------------------
+
+* :gh:issue:`874` Support for Ansible 5 (ansible-core 2.12)
+* :gh:issue:`774` Fix bootstrap failures on macOS 11.x and 12.x, involving Python 2.7 wrapper
+* :gh:issue:`834` Support for Ansible 3 and 4 (ansible-core 2.11)
+* :gh:issue:`869` Continuous Integration tests are now run with Tox
+* :gh:issue:`869` Continuous Integration tests now cover CentOS 6 & 8, Debian 9 & 11, Ubuntu 16.04 & 20.04
+* :gh:issue:`860` Add initial support for podman connection (w/o Ansible support yet)
+* :gh:issue:`873` `python -c ...` first stage no longer uses :py:mod:`platform`` to detect the macOS release
+* :gh:issue:`876` `python -c ...` first stage no longer contains tab characters, to reduce size
+* :gh:issue:`878` Continuous Integration tests now correctly perform comparisons of 2 digit versions
+* :gh:issue:`878` Kubectl connector fixed with Ansible 2.10 and above
+
+
+v0.3.0 (2021-11-24)
+-------------------
 
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
 `See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
 
+* :gh:issue:`827` NewStylePlanner: detect `ansible_collections` imports
+* :gh:issue:`770` better check for supported Ansible version
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
+* :gh:issue:`847` Removed historic Continuous Integration reverse shell
 
 
-v0.2.10 (unreleased)
+v0.2.10 (2021-11-24)
 --------------------
 
 * :gh:issue:`597` mitogen does not support Ansible 2.8 Python interpreter detection
@@ -40,6 +75,8 @@ v0.2.10 (unreleased)
   timeout, when using recent OpenSSH client versions.
 * :gh:issue:`758` fix initilialisation of callback plugins in test suite, to address a `KeyError` in
   :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+* :gh:issue:`775` Test with Python 3.9
+* :gh:issue:`775` Add msvcrt to the default module deny list
 
 
 v0.2.9 (2019-11-02)

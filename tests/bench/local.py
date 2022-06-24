@@ -2,8 +2,6 @@
 Measure latency of .local() setup.
 """
 
-import time
-
 import mitogen
 import mitogen.core
 import mitogen.utils

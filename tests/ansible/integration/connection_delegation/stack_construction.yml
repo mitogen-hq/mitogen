@@ -25,6 +25,8 @@
     # used later for local_action test.
     - local_action: custom_python_detect_environment
       register: local_env
+  tags:
+    - stack_construction
 
 
 - hosts: cd-normal
@@ -50,6 +52,8 @@
             "method": "doas",
           }
         ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-normal
@@ -94,6 +98,8 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-alias
@@ -137,6 +143,8 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-normal-normal
@@ -191,6 +199,8 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-normal-alias
@@ -264,6 +274,8 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-newuser-normal-normal
@@ -318,6 +330,8 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-newuser-normal-normal
@@ -362,6 +376,8 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-newuser-normal-normal
@@ -381,6 +397,8 @@
             'method': 'local',
           },
         ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-newuser-doas-normal
@@ -416,3 +434,5 @@
             'method': 'doas',
           },
       ]
+  tags:
+    - stack_construction

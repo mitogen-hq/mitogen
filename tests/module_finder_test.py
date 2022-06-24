@@ -1,14 +1,12 @@
 import inspect
 import os
 import sys
-
-import unittest2
+import unittest
 
 import mitogen.master
 from mitogen.core import b
 
 import testlib
-from testlib import MODS_DIR
 
 
 class ConstructorTest(testlib.TestCase):
@@ -22,7 +20,7 @@ class ReprTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def test_simple(self):
-        self.assertEquals('ModuleFinder()', repr(self.klass()))
+        self.assertEqual('ModuleFinder()', repr(self.klass()))
 
 
 class IsStdlibNameTest(testlib.TestCase):
@@ -59,10 +57,10 @@ class GetMainModuleDefectivePython3x(testlib.TestCase):
         return self.klass().find(fullname)
 
     def test_builtin(self):
-        self.assertEquals(None, self.call('sys'))
+        self.assertEqual(None, self.call('sys'))
 
     def test_not_main(self):
-        self.assertEquals(None, self.call('mitogen'))
+        self.assertEqual(None, self.call('mitogen'))
 
     def test_main(self):
         import __main__
@@ -70,10 +68,10 @@ class GetMainModuleDefectivePython3x(testlib.TestCase):
         path, source, is_pkg = self.call('__main__')
         self.assertTrue(path is not None)
         self.assertTrue(os.path.exists(path))
-        self.assertEquals(path, __main__.__file__)
+        self.assertEqual(path, __main__.__file__)
         fp = open(path, 'rb')
         try:
-            self.assertEquals(source, fp.read())
+            self.assertEqual(source, fp.read())
         finally:
             fp.close()
         self.assertFalse(is_pkg)
@@ -87,24 +85,24 @@ class PkgutilMethodTest(testlib.TestCase):
 
     def test_empty_source_pkg(self):
         path, src, is_pkg = self.call('module_finder_testmod')
-        self.assertEquals(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/__init__.py'))
-        self.assertEquals(mitogen.core.b(''), src)
+        self.assertEqual(path,
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/__init__.py'))
+        self.assertEqual(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
         path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
-        self.assertEquals(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/empty_mod.py'))
-        self.assertEquals(mitogen.core.b(''), src)
+        self.assertEqual(path,
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/empty_mod.py'))
+        self.assertEqual(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
     def test_regular_mod(self):
         from module_finder_testmod import regular_mod
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
-        self.assertEquals(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/regular_mod.py'))
-        self.assertEquals(mitogen.core.to_text(src),
+        self.assertEqual(path,
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/regular_mod.py'))
+        self.assertEqual(mitogen.core.to_text(src),
                           inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
 
@@ -118,14 +116,15 @@ class SysModulesMethodTest(testlib.TestCase):
     def test_main(self):
         import __main__
         path, src, is_pkg = self.call('__main__')
-        self.assertEquals(path, __main__.__file__)
+        self.assertEqual(path, __main__.__file__)
 
         # linecache adds a line ending to the final line if one is missing.
-        actual_src = open(path, 'rb').read()
+        with open(path, 'rb') as f:
+            actual_src = f.read()
         if actual_src[-1:] != b('\n'):
             actual_src += b('\n')
 
-        self.assertEquals(src, actual_src)
+        self.assertEqual(src, actual_src)
         self.assertFalse(is_pkg)
 
     def test_dylib_fails(self):
@@ -165,66 +164,71 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         # plumbum has been eating too many rainbow-colored pills
         import pkg_like_plumbum.colors
         path, src, is_pkg = self.call('pkg_like_plumbum.colors')
-        modpath = os.path.join(MODS_DIR, 'pkg_like_plumbum/colors.py')
-        self.assertEquals(path, modpath)
+        modpath = os.path.join(testlib.MODS_DIR, 'pkg_like_plumbum/colors.py')
+        self.assertEqual(path, modpath)
 
-        self.assertEquals(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertFalse(is_pkg)
 
     def test_ansible_module_utils_distro_succeeds(self):
         # #590: a package that turns itself into a module.
         import pkg_like_ansible.module_utils.distro as d
-        self.assertEquals(d.I_AM, "the module that replaced the package")
-        self.assertEquals(
+        self.assertEqual(d.I_AM, "the module that replaced the package")
+        self.assertEqual(
             sys.modules['pkg_like_ansible.module_utils.distro'].__name__,
             'pkg_like_ansible.module_utils.distro._distro'
         )
 
         # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.distro')
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/distro/__init__.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, True)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, True)
 
         # ensure we can resolve a child of the subpackage.
         path, src, is_pkg = self.call(
             'pkg_like_ansible.module_utils.distro._distro'
         )
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/distro/_distro.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, False)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, False)
 
     def test_ansible_module_utils_system_distro_succeeds(self):
         # #590: a package that turns itself into a module.
         # #590: a package that turns itself into a module.
         import pkg_like_ansible.module_utils.sys_distro as d
-        self.assertEquals(d.I_AM, "the system module that replaced the subpackage")
-        self.assertEquals(
+        self.assertEqual(d.I_AM, "the system module that replaced the subpackage")
+        self.assertEqual(
             sys.modules['pkg_like_ansible.module_utils.sys_distro'].__name__,
             'system_distro'
         )
 
         # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.sys_distro')
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/__init__.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, True)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, True)
 
         # ensure we can resolve a child of the subpackage.
         path, src, is_pkg = self.call(
             'pkg_like_ansible.module_utils.sys_distro._distro'
         )
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/_distro.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, False)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, False)
 
 
 class ResolveRelPathTest(testlib.TestCase):
@@ -234,21 +238,21 @@ class ResolveRelPathTest(testlib.TestCase):
         return self.klass().resolve_relpath(fullname, level)
 
     def test_empty(self):
-        self.assertEquals('', self.call('', 0))
-        self.assertEquals('', self.call('', 1))
-        self.assertEquals('', self.call('', 2))
+        self.assertEqual('', self.call('', 0))
+        self.assertEqual('', self.call('', 1))
+        self.assertEqual('', self.call('', 2))
 
     def test_absolute(self):
-        self.assertEquals('', self.call('email.utils', 0))
+        self.assertEqual('', self.call('email.utils', 0))
 
     def test_rel1(self):
-        self.assertEquals('email.', self.call('email.utils', 1))
+        self.assertEqual('email.', self.call('email.utils', 1))
 
     def test_rel2(self):
-        self.assertEquals('', self.call('email.utils', 2))
+        self.assertEqual('', self.call('email.utils', 2))
 
     def test_rel_overflow(self):
-        self.assertEquals('', self.call('email.utils', 3))
+        self.assertEqual('', self.call('email.utils', 3))
 
 
 class FakeSshTest(testlib.TestCase):
@@ -260,10 +264,9 @@ class FakeSshTest(testlib.TestCase):
     def test_simple(self):
         import mitogen.fakessh
         related = self.call('mitogen.fakessh')
-        self.assertEquals(related, [
+        self.assertEqual(related, [
             'mitogen',
             'mitogen.core',
-            'mitogen.master',
             'mitogen.parent',
         ])
 
@@ -277,8 +280,6 @@ class FindRelatedTest(testlib.TestCase):
     SIMPLE_EXPECT = set([
         u'mitogen',
         u'mitogen.core',
-        u'mitogen.master',
-        u'mitogen.minify',
         u'mitogen.parent',
     ])
 
@@ -292,12 +293,12 @@ class FindRelatedTest(testlib.TestCase):
     def test_simple(self):
         import mitogen.fakessh
         related = self.call('mitogen.fakessh')
-        self.assertEquals(set(related), self.SIMPLE_EXPECT)
+        self.assertEqual(set(related), self.SIMPLE_EXPECT)
 
 
 if sys.version_info > (2, 6):
     class DjangoMixin(object):
-        WEBPROJECT_PATH = os.path.join(MODS_DIR, 'webproject')
+        WEBPROJECT_PATH = os.path.join(testlib.MODS_DIR, 'webproject')
 
         # TODO: rip out Django and replace with a static tree of weird imports
         # that don't depend on .. Django! The hack below is because the version
@@ -333,7 +334,7 @@ if sys.version_info > (2, 6):
         def test_django_db(self):
             import django.db
             related = self.call('django.db')
-            self.assertEquals(related, [
+            self.assertEqual(related, [
                 'django',
                 'django.core',
                 'django.core.signals',
@@ -345,7 +346,7 @@ if sys.version_info > (2, 6):
             import django.db.models
             related = self.call('django.db.models')
             self.maxDiff=None
-            self.assertEquals(related, [
+            self.assertEqual(related, [
                 u'django',
                 u'django.core.exceptions',
                 u'django.db',
@@ -375,7 +376,7 @@ if sys.version_info > (2, 6):
         def test_django_db(self):
             import django.db
             related = self.call('django.db')
-            self.assertEquals(related, [
+            self.assertEqual(related, [
                 u'django',
                 u'django.conf',
                 u'django.conf.global_settings',
@@ -395,14 +396,14 @@ if sys.version_info > (2, 6):
                 u'django.utils.six',
             ])
 
-        @unittest2.skipIf(
+        @unittest.skipIf(
             condition=(sys.version_info >= (3, 0)),
             reason='broken due to ancient vendored six.py'
         )
         def test_django_db_models(self):
             import django.db.models
             related = self.call('django.db.models')
-            self.assertEquals(related, [
+            self.assertEqual(related, [
                 u'django',
                 u'django.conf',
                 u'django.conf.global_settings',
@@ -491,6 +492,3 @@ if sys.version_info > (2, 6):
                 u'pytz.tzfile',
                 u'pytz.tzinfo',
             ])
-
-if __name__ == '__main__':
-    unittest2.main()

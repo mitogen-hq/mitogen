@@ -30,7 +30,12 @@
 Stable names for PluginLoader instances across Ansible versions.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
+import ansible.errors
+
+import ansible_mitogen.utils
 
 __all__ = [
     'action_loader',
@@ -41,21 +46,55 @@ __all__ = [
     'strategy_loader',
 ]
 
-try:
-    from ansible.plugins.loader import action_loader
-    from ansible.plugins.loader import connection_loader
-    from ansible.plugins.loader import module_loader
-    from ansible.plugins.loader import module_utils_loader
-    from ansible.plugins.loader import shell_loader
-    from ansible.plugins.loader import strategy_loader
-except ImportError:  # Ansible <2.4
-    from ansible.plugins import action_loader
-    from ansible.plugins import connection_loader
-    from ansible.plugins import module_loader
-    from ansible.plugins import module_utils_loader
-    from ansible.plugins import shell_loader
-    from ansible.plugins import strategy_loader
 
+ANSIBLE_VERSION_MIN = (2, 10)
+ANSIBLE_VERSION_MAX = (2, 12)
+
+NEW_VERSION_MSG = (
+    "Your Ansible version (%s) is too recent. The most recent version\n"
+    "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
+    "release notes to see if a new version is available, otherwise\n"
+    "subscribe to the corresponding GitHub issue to be notified when\n"
+    "support becomes available.\n"
+    "\n"
+    "    https://mitogen.rtfd.io/en/latest/changelog.html\n"
+    "    https://github.com/mitogen-hq/mitogen/issues/\n"
+)
+OLD_VERSION_MSG = (
+    "Your version of Ansible (%s) is too old. The oldest version supported by "
+    "Mitogen for Ansible is %s."
+)
+
+
+def assert_supported_release():
+    """
+    Throw AnsibleError with a descriptive message in case of being loaded into
+    an unsupported Ansible release.
+    """
+    v = ansible_mitogen.utils.ansible_version
+    if v[:2] < ANSIBLE_VERSION_MIN:
+        raise ansible.errors.AnsibleError(
+            OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
+        )
+
+    if v[:2] > ANSIBLE_VERSION_MAX:
+        raise ansible.errors.AnsibleError(
+            NEW_VERSION_MSG % (v, ANSIBLE_VERSION_MAX)
+        )
+
+
+# this is the first file our strategy plugins import, so we need to check this here
+# in prior Ansible versions, connection_loader.get_with_context didn't exist, so if a user
+# is trying to load an old Ansible version, we'll fail and error gracefully
+assert_supported_release()
+
+
+from ansible.plugins.loader import action_loader
+from ansible.plugins.loader import connection_loader
+from ansible.plugins.loader import module_loader
+from ansible.plugins.loader import module_utils_loader
+from ansible.plugins.loader import shell_loader
+from ansible.plugins.loader import strategy_loader
 
 # These are original, unwrapped implementations
 action_loader__get = action_loader.get

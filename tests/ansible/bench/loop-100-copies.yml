@@ -24,3 +24,8 @@
       mode: 0644
     with_filetree: /tmp/filetree.in
     when: item.state == 'file'
+    loop_control:
+      label: "/tmp/filetree.out/{{ item.path }}"
+
+  tags:
+    - resource_intensive

@@ -60,6 +60,7 @@
 
         - assert:
             that: outout == "item!"
+            fail_msg: outout={{outout}}
       when: False
 
     # TODO: https://github.com/dw/mitogen/issues/692
@@ -71,3 +72,5 @@
     #   - /tmp/synchronize-action-key
     #   - /tmp/sync-test
     #   - /tmp/sync-test.out
+  tags:
+    - synchronize

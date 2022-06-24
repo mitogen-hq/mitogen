@@ -63,6 +63,7 @@
         - stat.results[1].stat.checksum == "62951f943c41cdd326e5ce2b53a779e7916a820d"
         - stat.results[2].stat.checksum == "b26dd6444595e2bdb342aa0a91721b57478b5029"
         - stat.results[3].stat.checksum == "d675f47e467eae19e49032a2cc39118e12a6ee72"
+        fail_msg: stat={{stat}}
 
     - file:
         state: absent
@@ -81,3 +82,5 @@
       - /tmp/copy-large-inline-file.out
 
     # end of cleaning out files (again)
+  tags:
+    - copy

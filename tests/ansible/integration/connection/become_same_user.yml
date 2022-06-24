@@ -19,6 +19,7 @@
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.username == "joe"
       - out.result|length == 1  # no sudo
+      fail_msg: out={{out}}
     when: is_mitogen
 
 
@@ -36,4 +37,7 @@
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "james"
       - out.result|length == 2  # no sudo
+      fail_msg: out={{out}}
     when: is_mitogen
+  tags:
+    - become_same_user

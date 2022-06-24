@@ -15,6 +15,7 @@
 
     - assert:
         that: out.result == False
+        fail_msg: out={{out}}
 
     # ---
 
@@ -29,8 +30,10 @@
 
     - assert:
         that: out.result == True
+        fail_msg: out={{out}}
 
     - file:
         path: /tmp/does-exist
         state: absent
-
+  tags:
+    - remote_file_exists

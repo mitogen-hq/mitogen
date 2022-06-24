@@ -6,6 +6,8 @@
       with_sequence: start=1 end={{end|default(1)}}
       ignore_errors: true
       register: out
+  tags:
+    - custom_binary_single_null
 
 - hosts: test-targets
   any_errors_fatal: true
@@ -15,11 +17,21 @@
       - "out.failed"
       - "out.results[0].failed"
       - "out.results[0].msg.startswith('MODULE FAILURE')"
-      - "out.results[0].module_stdout.startswith('/bin/sh: ')"
+      # On Ubuntu 16.04 /bin/sh is dash 0.5.8. It treats custom_binary_single_null
+      # as a valid executable. There's no error message, and rc == 0.
       - |
-        out.results[0].module_stdout.endswith('custom_binary_single_null: cannot execute binary file\r\n') or
-        out.results[0].module_stdout.endswith('custom_binary_single_null: Exec format error\r\n')
-
+        out.results[0].module_stdout.startswith('/bin/sh: ')
+        or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '16.04')
+      - |
+        out.results[0].module_stdout.endswith((
+          'custom_binary_single_null: cannot execute binary file\r\n',
+          'custom_binary_single_null: Exec format error\r\n',
+          'custom_binary_single_null: cannot execute binary file: Exec format error\r\n',
+        ))
+        or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '16.04')
+      fail_msg: out={{out}}
+  tags:
+    - custom_binary_single_null
 
 # Can't test this: Mitogen returns 126, 2.5.x returns 126, 2.4.x discarded the
 # return value and always returned 0.

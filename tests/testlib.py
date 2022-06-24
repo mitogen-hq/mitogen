@@ -1,4 +1,4 @@
-
+import errno
 import logging
 import os
 import random
@@ -10,8 +10,9 @@ import sys
 import threading
 import time
 import traceback
+import unittest
 
-import unittest2
+import psutil
 
 import mitogen.core
 import mitogen.fork
@@ -62,15 +63,6 @@ if faulthandler is not None:
 mitogen.core.LOG.propagate = True
 
 
-
-def get_fd_count():
-    """
-    Return the number of FDs open by this process.
-    """
-    import psutil
-    return psutil.Process().num_fds()
-
-
 def data_path(suffix):
     path = os.path.join(DATA_DIR, suffix)
     if path.endswith('.key'):
@@ -103,6 +95,25 @@ if hasattr(subprocess.Popen, 'terminate'):
     Popen__terminate = subprocess.Popen.terminate
 
 
+def threading__thread_is_alive(thread):
+    """Return whether the thread is alive (Python version compatibility shim).
+
+    On Python >= 3.8 thread.isAlive() is deprecated (removed in Python 3.9).
+    On Python <= 2.5 thread.is_alive() isn't present (added in Python 2.6).
+    """
+    try:
+        return thread.is_alive()
+    except AttributeError:
+        return thread.isAlive()
+
+
+def threading_thread_name(thread):
+    try:
+        return thread.name  # Available in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
+
+
 def wait_for_port(
         host,
         port,
@@ -132,7 +143,7 @@ def wait_for_port(
 
         if not pattern:
             # Success: We connected & there's no banner check to perform.
-            sock.shutdown(socket.SHUTD_RDWR)
+            sock.shutdown(socket.SHUT_RDWR)
             sock.close()
             return
 
@@ -315,13 +326,17 @@ class LogCapturer(object):
         return self.raw()
 
 
-class TestCase(unittest2.TestCase):
+class TestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # This is done in setUpClass() so we have a chance to run before any
         # Broker() instantiations in setUp() etc.
         mitogen.fork.on_fork()
-        cls._fd_count_before = get_fd_count()
+        cls._fds_before = psutil.Process().open_files()
+        # Ignore children started by external packages - in particular
+        # multiprocessing.resource_tracker.main()`, started when some Ansible
+        # versions instantiate a `multithreading.Lock()`.
+        cls._children_before = frozenset(psutil.Process().children())
         super(TestCase, cls).setUpClass()
 
     ALLOWED_THREADS = set([
@@ -332,9 +347,11 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_threads(self):
         counts = {}
         for thread in threading.enumerate():
-            name = thread.getName()
+            name = threading_thread_name(thread)
             # Python 2.4: enumerate() may return stopped threads.
-            assert (not thread.isAlive()) or name in self.ALLOWED_THREADS, \
+            assert \
+                not threading__thread_is_alive(thread) \
+                or name in self.ALLOWED_THREADS, \
                 'Found thread %r still running after tests.' % (name,)
             counts[name] = counts.get(name, 0) + 1
 
@@ -346,10 +363,23 @@ class TestCase(unittest2.TestCase):
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
-        if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof +E -w -p %s | grep -vw mem' % (os.getpid(),))
-            assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
-                self, self._fd_count_before, get_fd_count(),
+        fds_after = psutil.Process().open_files()
+        fds_leaked = len(self._fds_before) != len(fds_after)
+        if not fds_leaked:
+            return
+        else:
+            if sys.platform == 'linux':
+                subprocess.check_call(
+                    'lsof +E -w -p %i | grep -vw mem' % (os.getpid(),),
+                    shell=True,
+                )
+            else:
+                subprocess.check_call(
+                    'lsof -w -p %i | grep -vw mem' % (os.getpid(),),
+                    shell=True,
+                )
+            assert 0, "%s leaked FDs: %s\nBefore:\t%s\nAfter:\t%s" % (
+                self, fds_leaked, self._fds_before, fds_after,
             )
 
     # Some class fixtures (like Ansible MuxProcess) start persistent children
@@ -360,19 +390,39 @@ class TestCase(unittest2.TestCase):
         if self.no_zombie_check:
             return
 
+        # pid=0: Wait for any child process in the same process group as us.
+        # WNOHANG: Don't block if no processes ready to report status.
         try:
             pid, status = os.waitpid(0, os.WNOHANG)
-        except OSError:
-            return  # ECHILD
+        except OSError as e:
+            # ECHILD: there are no child processes in our group.
+            if e.errno == errno.ECHILD:
+                return
+            raise
 
         if pid:
             assert 0, "%s failed to reap subprocess %d (status %d)." % (
                 self, pid, status
             )
 
-        print('')
-        print('Children of unit test process:')
-        os.system('ps uww --ppid ' + str(os.getpid()))
+        children_after = frozenset(psutil.Process().children())
+        children_leaked = children_after.difference(self._children_before)
+        if not children_leaked:
+            return
+
+        print('Leaked children of unit test process:')
+        subprocess.check_call(
+            ['ps', '-o', 'user,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command', '-ww', '-p',
+             ','.join(str(p.pid) for p in children_leaked),
+            ],
+        )
+        if self._children_before:
+            print('Pre-existing children of unit test process:')
+            subprocess.check_call(
+                ['ps', '-o', 'user,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command', '-ww', '-p',
+                 ','.join(str(p.pid) for p in self._children_before),
+                ],
+            )
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):
@@ -409,7 +459,10 @@ class DockerizedSshDaemon(object):
     def _get_container_port(self):
         s = subprocess__check_output(['docker', 'port', self.container_name])
         for line in s.decode().splitlines():
-            dport, proto, baddr, bport = self.PORT_RE.match(line).groups()
+            m = self.PORT_RE.match(line)
+            if not m:
+                continue
+            dport, proto, _, bport = m.groups()
             if dport == '22' and proto == 'tcp':
                 self.port = int(bport)
 
@@ -421,7 +474,7 @@ class DockerizedSshDaemon(object):
         try:
             subprocess__check_output(['docker', '--version'])
         except Exception:
-            raise unittest2.SkipTest('Docker binary is unavailable')
+            raise unittest.SkipTest('Docker binary is unavailable')
 
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         args = [
@@ -436,7 +489,7 @@ class DockerizedSshDaemon(object):
         subprocess__check_output(args)
         self._get_container_port()
 
-    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian')):
+    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
         if '-'  in mitogen_test_distro:
             distro, _py3 = mitogen_test_distro.split('-')
         else:
@@ -448,7 +501,7 @@ class DockerizedSshDaemon(object):
         else:
             self.python_path = '/usr/bin/python'
 
-        self.image = 'mitogen/%s-test' % (distro,)
+        self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
 
         # 22/tcp -> 0.0.0.0:32771
         self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
@@ -519,7 +572,7 @@ class DockerMixin(RouterMixin):
     def setUpClass(cls):
         super(DockerMixin, cls).setUpClass()
         if os.environ.get('SKIP_DOCKER_TESTS'):
-            raise unittest2.SkipTest('SKIP_DOCKER_TESTS is set')
+            raise unittest.SkipTest('SKIP_DOCKER_TESTS is set')
 
         # we want to be able to override test distro for some tests that need a different container spun up
         daemon_args = {}

@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import ast
 import os
 
 from setuptools import find_packages, setup
@@ -37,29 +38,45 @@ def grep_version():
         for line in fp:
             if line.startswith('__version__'):
                 _, _, s = line.partition('=')
-                return '.'.join(map(str, eval(s)))
+                parts = ast.literal_eval(s.strip())
+                return '.'.join(str(part) for part in parts)
+
+
+def long_description():
+    here = os.path.dirname(__file__)
+    readme_path = os.path.join(here, 'README.md')
+    with open(readme_path) as fp:
+        readme = fp.read()
+    return readme
 
 
 setup(
     name = 'mitogen',
     version = grep_version(),
     description = 'Library for writing distributed self-replicating programs.',
+    long_description = long_description(),
+    long_description_content_type='text/markdown',
     author = 'David Wilson',
     license = 'New BSD',
-    url = 'https://github.com/dw/mitogen/',
+    url = 'https://github.com/mitogen-hq/mitogen/',
     packages = find_packages(exclude=['tests', 'examples']),
+    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*',
     zip_safe = False,
     classifiers = [
         'Environment :: Console',
+        'Framework :: Ansible',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: BSD License',
+        'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.4',
-        'Programming Language :: Python :: 2.5',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: System :: Distributed Computing',
         'Topic :: System :: Systems Administration',

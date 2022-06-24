@@ -145,9 +145,12 @@ Testimonials
 Noteworthy Differences
 ----------------------
 
-* Ansible 2.3-2.9 are supported along with Python 2.6, 2.7, 3.6 and 3.7. Verify
-  your installation is running one of these versions by checking ``ansible
-  --version`` output.
+* Mitogen 0.2.x supports Ansible 2.3-2.9; with Python 2.6, 2.7, or 3.6.
+  Mitogen 0.3.1+ supports
+    - Ansible 2.10, 3, and 4; with Python 2.7, or 3.6-3.10
+    - Ansible 5; with Python 3.8-3.10
+  Verify your installation is running one of these versions by checking
+  ``ansible --version`` output.
 
 * The ``raw`` action executes as a regular Mitogen connection, which requires
   Python on the target, precluding its use for installing Python. This will be
@@ -185,9 +188,9 @@ Noteworthy Differences
        your_ssh_username = (ALL) NOPASSWD:/usr/bin/python -c*
 
 * The :ans:conn:`~buildah`, :ans:conn:`~docker`, :ans:conn:`~jail`,
-  :ans:conn:`~kubectl`, :ans:conn:`~local`, :ans:conn:`~lxd`, and
-  :ans:conn:`~ssh` built-in connection types are supported, along with
-  Mitogen-specific :ref:`machinectl <machinectl>`, :ref:`mitogen_doas <doas>`,
+  :ans:conn:`~kubectl`, :ans:conn:`~local`, :ans:conn:`~lxd`,
+  :ans:conn:`~podman`, & :ans:conn:`~ssh` connection types are supported; also
+  Mitogen-specific :ref:`mitogen_doas <doas>`, :ref:`machinectl <machinectl>`,
   :ref:`mitogen_su <su>`, :ref:`mitogen_sudo <sudo>`, and :ref:`setns <setns>`
   types. File bugs to register interest in others.
 
@@ -814,6 +817,20 @@ Local
 Like the :ans:conn:`local` except connection delegation is supported.
 
 * ``ansible_python_interpreter``
+
+
+Podman
+~~~~~~
+
+Like :ans:conn:`podman` except connection delegation is supported.
+
+* ``ansible_host``: Name of container (default: inventory hostname).
+* ``ansible_user``: Name of user within the container to execute as.
+* ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
+  Ansible controller process on remote machines. To simplify diagnostics,
+  Mitogen produces remote processes named like
+  `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
+  some circumstances.
 
 
 Process Model

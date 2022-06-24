@@ -3,9 +3,7 @@ Measure latency of IPC between two local threads.
 """
 
 import threading
-import time
 
-import mitogen
 import mitogen.core
 import mitogen.utils
 import ansible_mitogen.affinity
