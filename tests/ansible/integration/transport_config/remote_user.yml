@@ -60,7 +60,7 @@
       left: out.result[0].kwargs.username
       right: "ansi-user"
 
-- hosts: tc-remote-user-explicit-host
+- hosts: tc-remote-user-explicit-user
   vars: {mitogen_via: tc-remote-user-unset}
   tasks:
   - include: ../_mitogen_only.yml

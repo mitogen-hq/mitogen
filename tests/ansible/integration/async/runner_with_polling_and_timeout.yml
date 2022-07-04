@@ -2,7 +2,6 @@
 
 - name: integration/async/runner_with_polling_and_timeout.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   # Verify async-with-polling-and-timeout behaviour.

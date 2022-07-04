@@ -4,10 +4,8 @@
 #   since things are ran on localhost; Azure DevOps loses connection and fails
 # TODO: do we want to install docker a different way to be able to do this for other tests too
 ---
-# this should only run on our Mac hosts
 - name: regression/issue_655_wait_for_connection_error.yml
-  hosts: targets
-  any_errors_fatal: True
+  hosts: localhost
   gather_facts: yes
   become: no
   tasks:
@@ -85,5 +83,7 @@
           loop:
             - cmd: podman stop testMitogen
             - cmd: podman machine stop
+      when:
+        - ansible_facts.pkg_mgr in ['homebrew']
   tags:
     - issue_655

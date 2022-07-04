@@ -3,7 +3,6 @@
 
 - name: integration/runner/environment_isolation.yml
   hosts: test-targets
-  any_errors_fatal: true
   gather_facts: true
   tasks:
 

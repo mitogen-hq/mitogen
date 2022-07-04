@@ -3,7 +3,6 @@
 
 - name: integration/context_service/reconnection.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - mitogen_shutdown_all:
 

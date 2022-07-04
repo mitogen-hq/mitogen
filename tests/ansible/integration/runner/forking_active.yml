@@ -1,6 +1,5 @@
 - name: integration/runner/forking_active.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   # Verify mitogen_task_isolation=fork triggers forking.

@@ -41,7 +41,7 @@
       - out.result[0].kwargs.port == 4321
       fail_msg: out={{out}}
 
-- hosts: tc-port-explicit-unset
+- hosts: tc-port-unset
   vars: {mitogen_via: tc-port-explicit-ssh}
   tasks:
   - include: ../_mitogen_only.yml
@@ -50,9 +50,9 @@
       that:
       - out.result|length == 2
       - out.result[0].method == "ssh"
-      - out.result[1].kwargs.port == 4321
+      - out.result[0].kwargs.port == 4321
       - out.result[1].method == "ssh"
-      - out.result[0].kwargs.port == None
+      - out.result[1].kwargs.port == None
       fail_msg: out={{out}}
 
 # ansible_port=

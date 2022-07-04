@@ -4,7 +4,6 @@
 - name: integration/connection/become_same_user.yml
   hosts: bsu-joe
   gather_facts: no
-  any_errors_fatal: true
   tasks:
 
   # bsu-joe's login user is joe, so become should be ignored.

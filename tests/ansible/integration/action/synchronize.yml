@@ -2,7 +2,6 @@
 
 - name: integration/action/synchronize.yml
   hosts: test-targets
-  any_errors_fatal: true
   vars:
     ansible_user: mitogen__has_sudo_pubkey
     ansible_become_pass: has_sudo_pubkey_password
