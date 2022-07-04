@@ -2,7 +2,6 @@
 # must be reinitialized or cleared out somehow on each invocation.
 
 - name: regression/issue_154__module_state_leaks.yml
-  any_errors_fatal: true
   hosts: test-targets
   tasks:
 

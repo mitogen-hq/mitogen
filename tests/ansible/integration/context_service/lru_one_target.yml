@@ -2,7 +2,6 @@
 
 - name: integration/context_service/lru_one_target.yml
   hosts: test-targets
-  any_errors_fatal: true
   vars:
     max_interps: "{{lookup('env', 'MITOGEN_MAX_INTERPRETERS')}}"
     ubound: "{{max_interps|int + 1}}"

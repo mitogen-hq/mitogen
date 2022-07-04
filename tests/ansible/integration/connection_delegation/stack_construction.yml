@@ -30,7 +30,6 @@
 
 
 - hosts: cd-normal
-  any_errors_fatal: true
   tasks:
     - meta: end_play
       when: not is_mitogen
@@ -433,6 +432,6 @@
             },
             'method': 'doas',
           },
-      ]
+        ]
   tags:
     - stack_construction

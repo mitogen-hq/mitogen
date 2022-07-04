@@ -2,7 +2,7 @@
 # they succeed and are cleaned up correctly.
 
 - name: integration/action/make_tmp_path__double.yml
-  hosts: targets
+  hosts: test-targets
   tasks:
   - mitogen_action_script:
       script: |

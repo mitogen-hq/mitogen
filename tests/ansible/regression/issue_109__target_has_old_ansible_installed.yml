@@ -3,7 +3,6 @@
 
 - name: regression/issue_109__target_has_old_ansible_installed.yml
   hosts: test-targets
-  any_errors_fatal: true
   gather_facts: true
   tasks:
     - meta: end_play

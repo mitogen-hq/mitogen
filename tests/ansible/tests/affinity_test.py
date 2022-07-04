@@ -205,7 +205,7 @@ class LinuxPolicyTest(testlib.TestCase):
             proc.wait()
 
             his_cpu = self._get_cpus(tf.name)
-            self.assertNotEquals(my_cpu, his_cpu)
+            self.assertNotEqual(my_cpu, his_cpu)
             self.policy._clear()
         finally:
             tf.close()

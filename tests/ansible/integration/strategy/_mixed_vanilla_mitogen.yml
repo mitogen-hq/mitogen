@@ -3,7 +3,6 @@
 
 - name: integration/strategy/_mixed_vanilla_mitogen.yml (linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   strategy: linear
   tasks:
     - custom_python_detect_environment:
@@ -21,7 +20,6 @@
 
 - name: integration/strategy/_mixed_vanilla_mitogen.yml (mitogen_linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   strategy: mitogen_linear
   tasks:
     - custom_python_detect_environment:
@@ -39,7 +37,6 @@
 
 - name: integration/strategy/_mixed_vanilla_mitogen.yml (linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   strategy: linear
   tasks:
     - custom_python_detect_environment:

@@ -4,7 +4,6 @@
 - name: integration/connection/put_small_file.yml
   hosts: test-targets
   gather_facts: no
-  any_errors_fatal: true
   vars:
     file_name: small-file
     file_size: 123

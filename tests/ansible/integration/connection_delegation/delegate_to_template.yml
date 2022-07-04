@@ -14,7 +14,6 @@
     physical_hosts: ["cd-normal-alias", "cd-normal-normal"]
   hosts: test-targets
   gather_facts: no
-  any_errors_fatal: true
   tasks:
     - meta: end_play
       when: not is_mitogen
