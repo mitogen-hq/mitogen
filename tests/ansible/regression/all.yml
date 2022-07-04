@@ -13,3 +13,4 @@
 - import_playbook: issue_591__setuptools_cwd_crash.yml
 - import_playbook: issue_615__streaming_transfer.yml
 - import_playbook: issue_655__wait_for_connection_error.yml
+- import_playbook: issue_776__load_plugins_called_twice.yml

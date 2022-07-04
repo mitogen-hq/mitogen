@@ -1,0 +1,46 @@
+# https://github.com/mitogen-hq/mitogen/issues/776
+---
+- name: regression/issue_776__load_plugins_called_twice.yml
+  hosts: test-targets
+  become: "{{ ansible_facts.pkg_mgr not in ['homebrew'] }}"
+  gather_facts: yes
+  tags:
+    - issue_776
+  vars:
+    ansible_python_interpreter: "{{ pkg_mgr_python_interpreter }}"
+    package: rsync  # Chosen to exist in all tested distros/package managers
+  tasks:
+    - name: Switch to centos-stream
+      command: dnf --assumeyes --disablerepo="*" --enablerepo=extras swap centos-linux-repos centos-stream-repos
+      when:
+        - ansible_facts.pkg_mgr in ["dnf"]
+
+    - name: Update package index
+      apt:
+        update_cache: true
+      when:
+        - ansible_facts.pkg_mgr in ["apt"]
+
+    - name: Test package module 1st call
+      package:
+        name: "{{ package }}"
+        state: present
+
+    - name: Test package module 2nd call
+      package:
+        name: "{{ package }}"
+        state: present
+
+    - name: Test dnf module 2nd call
+      dnf:
+        name: "{{ package }}"
+        state: present
+      when:
+        - ansible_facts.pkg_mgr == 'dnf'
+
+    - name: Test dnf module 2nd call
+      dnf:
+        name: "{{ package }}"
+        state: present
+      when:
+        - ansible_facts.pkg_mgr == 'dnf'

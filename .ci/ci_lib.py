@@ -4,6 +4,7 @@ from __future__ import print_function
 import atexit
 import errno
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -221,31 +222,20 @@ def get_docker_hostname():
     return parsed.netloc.partition(':')[0]
 
 
-def image_for_distro(distro):
-    """Return the container image name or path for a test distro name.
-
-    The returned value is suitable for use with `docker pull`.
-
-    >>> image_for_distro('centos5')
-    'public.ecr.aws/n5z0e8q9/centos5-test'
-    >>> image_for_distro('centos5-something_custom')
-    'public.ecr.aws/n5z0e8q9/centos5-test'
-    """
-    return 'public.ecr.aws/n5z0e8q9/%s-test' % (distro.partition('-')[0],)
-
-
 def make_containers(name_prefix='', port_offset=0):
     """
     >>> import pprint
-    >>> BASE_PORT=2200; DISTROS=['debian', 'centos6']
+    >>> BASE_PORT=2200; DISTROS=['debian11', 'centos6']
     >>> pprint.pprint(make_containers())
-    [{'distro': 'debian',
+    [{'distro': 'debian11',
+      'family': 'debian',
       'hostname': 'localhost',
-      'image': 'public.ecr.aws/n5z0e8q9/debian-test',
-      'name': 'target-debian-1',
+      'image': 'public.ecr.aws/n5z0e8q9/debian11-test',
+      'name': 'target-debian11-1',
       'port': 2201,
       'python_path': '/usr/bin/python'},
      {'distro': 'centos6',
+      'family': 'centos',
       'hostname': 'localhost',
       'image': 'public.ecr.aws/n5z0e8q9/centos6-test',
       'name': 'target-centos6-2',
@@ -253,31 +243,39 @@ def make_containers(name_prefix='', port_offset=0):
       'python_path': '/usr/bin/python'}]
     """
     docker_hostname = get_docker_hostname()
-    firstbit = lambda s: (s+'-').split('-')[0]
-    secondbit = lambda s: (s+'-').split('-')[1]
-
+    distro_pattern = re.compile(r'''
+        (?P<distro>(?P<family>[a-z]+)[0-9]+)
+        (?:-(?P<py>py3))?
+        (?:\*(?P<count>[0-9]+))?
+        ''',
+        re.VERBOSE,
+    )
     i = 1
     lst = []
 
     for distro in DISTROS:
-        distro, star, count = distro.partition('*')
-        if star:
+        d = distro_pattern.match(distro).groupdict(default=None)
+        distro = d['distro']
+        family = d['family']
+        image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
+
+        if d['py'] == 'py3':
+            python_path = '/usr/bin/python3'
+        else:
+            python_path = '/usr/bin/python'
+
+        if d['count']:
             count = int(count)
         else:
             count = 1
 
         for x in range(count):
             lst.append({
-                "distro": firstbit(distro),
-                "image": image_for_distro(distro),
+                "distro": distro, "family": family, "image": image,
                 "name": name_prefix + ("target-%s-%s" % (distro, i)),
                 "hostname": docker_hostname,
                 "port": BASE_PORT + i + port_offset,
-                "python_path": (
-                    '/usr/bin/python3'
-                    if secondbit(distro) == 'py3'
-                    else '/usr/bin/python'
-                )
+                "python_path": python_path,
             })
             i += 1
 
