@@ -39,6 +39,7 @@ import ansible_mitogen.utils
 
 __all__ = [
     'action_loader',
+    'become_loader',
     'connection_loader',
     'module_loader',
     'module_utils_loader',
@@ -90,6 +91,7 @@ assert_supported_release()
 
 
 from ansible.plugins.loader import action_loader
+from ansible.plugins.loader import become_loader
 from ansible.plugins.loader import connection_loader
 from ansible.plugins.loader import module_loader
 from ansible.plugins.loader import module_utils_loader

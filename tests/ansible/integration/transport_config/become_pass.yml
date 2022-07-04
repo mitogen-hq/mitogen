@@ -119,9 +119,6 @@
       fail_msg: out={{out}}
 
 
-
-# ansible_become_pass & ansible_become_password set, password used to take precedence
-# but it's possible since https://github.com/ansible/ansible/pull/69629/files#r428376864, now it doesn't
 - hosts: tc-become-pass-both
   become: true
   tasks:
@@ -132,7 +129,9 @@
       - out.result|length == 2
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
-      - out.result[1].kwargs.password == "c.b.a"
+      # Ansible >= 2.10 builtin become plugins (e.g. sudo, su) give priority
+      # to ansible_become_pass over ansible_become_password.
+      - out.result[1].kwargs.password == "bpass"
       fail_msg: out={{out}}
 
 
@@ -147,6 +146,6 @@
       - out.result|length == 3
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
-      - out.result[1].kwargs.password == "a.b.c"
+      - out.result[1].kwargs.password == "bpass"
       - out.result[2].method == "ssh"
       fail_msg: out={{out}}

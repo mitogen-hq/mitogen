@@ -47,7 +47,7 @@ tc-become-user-set ansible_become_user=ansi-become-user
 tc-become-pass-unset
 tc-become-pass-password ansible_become_password=apassword
 tc-become-pass-pass ansible_become_pass=apass
-tc-become-pass-both ansible_become_password=a.b.c ansible_become_pass=c.b.a
+tc-become-pass-both ansible_become_pass=bpass ansible_become_password=bpassword
 
 # port()
 tc-port-unset
