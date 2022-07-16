@@ -6,7 +6,7 @@
 ---
 # this should only run on our Mac hosts
 - name: regression/issue_655_wait_for_connection_error.yml
-  hosts: targets
+  hosts: localhost
   any_errors_fatal: True
   gather_facts: yes
   become: no
