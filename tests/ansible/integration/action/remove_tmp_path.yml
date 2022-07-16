@@ -4,7 +4,6 @@
 #
 - name: integration/action/remove_tmp_path.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     #
     # Use the copy module to cause a temporary directory to be created, and

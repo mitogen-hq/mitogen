@@ -2,7 +2,6 @@
 
 - name: integration/runner/custom_python_prehistoric_module.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - custom_python_prehistoric_module:
       register: out

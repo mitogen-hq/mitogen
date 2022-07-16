@@ -5,7 +5,6 @@
 
 - name: integration/action/fixup_perms2__copy.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     #
     # copy module (no mode).

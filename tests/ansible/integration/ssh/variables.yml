@@ -4,7 +4,6 @@
 
 - name: integration/ssh/variables.yml
   hosts: test-targets[0]
-  any_errors_fatal: true
   connection: local
   vars:
     # ControlMaster has the effect of caching the previous auth to the same

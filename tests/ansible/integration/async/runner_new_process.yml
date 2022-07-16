@@ -2,7 +2,6 @@
 
 - name: integration/async/runner_new_process.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - name: get process ID.
