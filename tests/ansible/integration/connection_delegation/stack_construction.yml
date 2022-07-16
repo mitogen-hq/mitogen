@@ -432,6 +432,6 @@
             },
             'method': 'doas',
           },
-      ]
+        ]
   tags:
     - stack_construction
