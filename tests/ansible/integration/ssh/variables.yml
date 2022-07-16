@@ -92,6 +92,7 @@
       when: is_mitogen
 
     - shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
