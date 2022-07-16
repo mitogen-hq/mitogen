@@ -4,6 +4,7 @@
 
 - name: integration/ssh/variables.yml
   hosts: test-targets[0]
+  any_errors_fatal: true
   connection: local
   vars:
     # ControlMaster has the effect of caching the previous auth to the same
@@ -16,6 +17,7 @@
     - name: ansible_ssh_user
       # Remaining tests just use "ansible_user".
       shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
@@ -27,6 +29,7 @@
       when: is_mitogen
 
     - shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
@@ -46,6 +49,7 @@
 
     - name: ansible_ssh_pass
       shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
@@ -57,6 +61,7 @@
       when: is_mitogen
 
     - shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
@@ -76,6 +81,7 @@
 
     - name: ansible_password
       shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
@@ -111,6 +117,7 @@
 
     - name: ansible_ssh_private_key_file
       shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
@@ -122,6 +129,7 @@
       when: is_mitogen
 
     - shell: >
+        ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS=""
         ansible -m shell -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
