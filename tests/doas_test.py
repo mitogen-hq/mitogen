@@ -37,7 +37,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #         e = self.assertRaises(mitogen.core.StreamError,
 #             lambda: self.router.doas(via=ssh)
 #         )
-#         self.assertTrue(mitogen.doas.password_required_msg in str(e))
+#         self.assertIn(mitogen.doas.password_required_msg, str(e))
 
 #     def test_password_incorrect(self):
 #         ssh = self.docker_ssh(
@@ -47,7 +47,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #         e = self.assertRaises(mitogen.core.StreamError,
 #             lambda: self.router.doas(via=ssh, password='x')
 #         )
-#         self.assertTrue(mitogen.doas.password_incorrect_msg in str(e))
+#         self.assertIn(mitogen.doas.password_incorrect_msg, str(e))
 
 #     def test_password_okay(self):
 #         ssh = self.docker_ssh(
