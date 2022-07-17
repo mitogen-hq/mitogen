@@ -39,7 +39,7 @@ class ConnectionTest(testlib.RouterMixin, testlib.TestCase):
         th.join()
 
         exc, = result
-        self.assertTrue(isinstance(exc, mitogen.parent.CancelledError))
+        self.assertIsInstance(exc, mitogen.parent.CancelledError)
         self.assertEqual(mitogen.parent.BROKER_SHUTDOWN_MSG, exc.args[0])
 
 

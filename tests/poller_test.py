@@ -163,12 +163,12 @@ class PollMixin(PollerMixin):
     def test_empty_zero_timeout(self):
         t0 = mitogen.core.now()
         self.assertEqual([], list(self.p.poll(0)))
-        self.assertTrue((mitogen.core.now() - t0) < .1)  # vaguely reasonable
+        self.assertLess((mitogen.core.now() - t0), .1)  # vaguely reasonable
 
     def test_empty_small_timeout(self):
         t0 = mitogen.core.now()
         self.assertEqual([], list(self.p.poll(.2)))
-        self.assertTrue((mitogen.core.now() - t0) >= .2)
+        self.assertGreaterEqual((mitogen.core.now() - t0), .2)
 
 
 class ReadableMixin(PollerMixin, SockMixin):

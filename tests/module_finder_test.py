@@ -66,7 +66,7 @@ class GetMainModuleDefectivePython3x(testlib.TestCase):
         import __main__
 
         path, source, is_pkg = self.call('__main__')
-        self.assertTrue(path is not None)
+        self.assertIsNotNone(path)
         self.assertTrue(os.path.exists(path))
         self.assertEqual(path, __main__.__file__)
         fp = open(path, 'rb')
