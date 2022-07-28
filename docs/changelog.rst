@@ -20,13 +20,14 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`947` Provide `ansible-core` extra which installs compatible version of ansible-core
 
 v0.3.4 (2023-07-02)
 -------------------
 
 * :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
 * :gh:issue:`832` Fix runtime error when using the ansible.builtin.dnf module multiple times
-* :gh:issue:`925` :class:`ansible_mitogen.connection.Connection` no longer tries to close the 
+* :gh:issue:`925` :class:`ansible_mitogen.connection.Connection` no longer tries to close the
   connection on destruction. This is expected to reduce cases of `mitogen.core.Error: An attempt
   was made to enqueue a message with a Broker that has already exitted`. However it may result in
   resource leaks.
