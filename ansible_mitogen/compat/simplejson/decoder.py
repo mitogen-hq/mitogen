@@ -145,7 +145,8 @@ scanstring = c_scanstring or py_scanstring
 WHITESPACE = re.compile(r'[ \t\n\r]*', FLAGS)
 WHITESPACE_STR = ' \t\n\r'
 
-def JSONObject((s, end), encoding, strict, scan_once, object_hook, _w=WHITESPACE.match, _ws=WHITESPACE_STR):
+def JSONObject(state, encoding, strict, scan_once, object_hook, _w=WHITESPACE.match, _ws=WHITESPACE_STR):
+    (s, end) = state
     pairs = {}
     # Use a slice to prevent IndexError from being raised, the following
     # check will raise a more specific ValueError if the string is empty
@@ -220,7 +221,8 @@ def JSONObject((s, end), encoding, strict, scan_once, object_hook, _w=WHITESPACE
         pairs = object_hook(pairs)
     return pairs, end
 
-def JSONArray((s, end), scan_once, _w=WHITESPACE.match, _ws=WHITESPACE_STR):
+def JSONArray(state, scan_once, _w=WHITESPACE.match, _ws=WHITESPACE_STR):
+    (s, end) = state
     values = []
     nextchar = s[end:end + 1]
     if nextchar in _ws:

@@ -20,6 +20,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 v0.3.4.dev0
 -------------------
 
+* :gh:issue:`659` Simplejson python2 only syntax generates errors with python3
 * :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
 * :gh:issue:`832` Fix runtime error when using the ansible.builtin.dnf module multiple times
 
