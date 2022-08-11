@@ -639,7 +639,7 @@ class TimerList(object):
     def get_timeout(self):
         """
         Return the floating point seconds until the next event is due.
-        
+
         :returns:
             Floating point delay, or 0.0, or :data:`None` if no events are
             scheduled.
@@ -1504,6 +1504,7 @@ class Connection(object):
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
+            'pickle_whitelist_patterns': mitogen.core._PICKLE_GLOBAL_WHITELIST,
         }
 
     def get_preamble(self):
