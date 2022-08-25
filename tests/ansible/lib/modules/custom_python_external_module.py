@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # I expect the quote from modules2/module_utils/joker.py.
 
 from ansible.module_utils.basic import AnsibleModule

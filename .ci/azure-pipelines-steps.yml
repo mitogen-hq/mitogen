@@ -1,15 +1,15 @@
-
-parameters:
-  name: ''
-  pool: ''
-  sign: false
-
 steps:
 - task: UsePythonVersion@0
   displayName: Install python
   inputs:
     versionSpec: '$(python.version)'
   condition: ne(variables['python.version'], '')
+
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y python2-dev
+  displayName: Install build deps
+  condition: and(eq(variables['python.version'], ''), eq(variables['Agent.OS'], 'Linux'))
 
 - script: python -mpip install tox
   displayName: Install tooling
