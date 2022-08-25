@@ -1,2 +1,2 @@
 ---
-pkg_mgr_python_interpreter: /usr/bin/python
+pkg_mgr_python_interpreter: python

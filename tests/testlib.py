@@ -1,14 +1,21 @@
 import errno
+import io
 import logging
 import os
 import random
 import re
 import socket
+import stat
 import sys
 import threading
 import time
 import traceback
 import unittest
+
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
 
 import psutil
 import subprocess32 as subprocess
@@ -60,6 +67,67 @@ if faulthandler is not None:
 #
 
 mitogen.core.LOG.propagate = True
+
+
+def base_executable(executable=None):
+    '''Return the path of the Python executable used to create the virtualenv.
+    '''
+    # https://docs.python.org/3/library/venv.html
+    # https://github.com/pypa/virtualenv/blob/main/src/virtualenv/discovery/py_info.py
+    # https://virtualenv.pypa.io/en/16.7.9/reference.html#compatibility-with-the-stdlib-venv-module
+    if executable is None:
+        executable = sys.executable
+
+    if not executable:
+        raise ValueError
+
+    try:
+        base_executable = sys._base_executable
+    except AttributeError:
+        base_executable = None
+
+    if base_executable and base_executable != executable:
+        return 'be', base_executable
+
+    # Python 2.x only has sys.base_prefix if running outside a virtualenv.
+    try:
+        sys.base_prefix
+    except AttributeError:
+        # Python 2.x outside a virtualenv
+        return executable
+
+    # Python 3.3+ has sys.base_prefix. In a virtualenv it differs to sys.prefix.
+    if sys.base_prefix == sys.prefix:
+        return executable
+
+    while executable.startswith(sys.prefix) and stat.S_ISLNK(os.lstat(executable).st_mode):
+        dirname = os.path.dirname(executable)
+        target = os.path.join(dirname, os.readlink(executable))
+        executable = os.path.abspath(os.path.normpath(target))
+        print(executable)
+
+    if executable.startswith(sys.base_prefix):
+        return executable
+
+    # Virtualenvs record details in pyvenv.cfg
+    parser = configparser.RawConfigParser()
+    with io.open(os.path.join(sys.prefix, 'pyvenv.cfg'), encoding='utf-8') as f:
+        content = u'[virtualenv]\n' + f.read()
+    try:
+        parser.read_string(content)
+    except AttributeError:
+        parser.readfp(io.StringIO(content))
+
+    # virtualenv style pyvenv.cfg includes the base executable.
+    # venv style pyvenv.cfg doesn't.
+    try:
+        return parser.get(u'virtualenv', u'base-executable')
+    except configparser.NoOptionError:
+        pass
+
+    basename = os.path.basename(executable)
+    home = parser.get(u'virtualenv', u'home')
+    return os.path.join(home, basename)
 
 
 def data_path(suffix):
