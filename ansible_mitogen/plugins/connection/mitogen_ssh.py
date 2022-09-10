@@ -42,6 +42,24 @@ DOCUMENTATION = """
           accepts.
     version_added: "2.5"
     options:
+        ssh_args:
+            type: str
+            vars:
+                - name: ssh_args
+                - name: ansible_ssh_args
+                - name: ansible_mitogen_ssh_args
+        ssh_common_args:
+            type: str
+            vars:
+                - name: ssh_args
+                - name: ansible_ssh_common_args
+                - name: ansible_mitogen_ssh_common_args
+        ssh_extra_args:
+            type: str
+            vars:
+                - name: ssh_args
+                - name: ansible_ssh_extra_args
+                - name: ansible_mitogen_ssh_extra_args
 """
 
 try:
