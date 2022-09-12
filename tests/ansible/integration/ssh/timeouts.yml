@@ -5,6 +5,8 @@
   tasks:
     - name: Cause Ansible connection timeout
       connection: local
+      environment:
+        ANSIBLE_SSH_TIMEOUT: 10
       command: |
         ansible -vvv
         -i "{{MITOGEN_INVENTORY_FILE}}"
