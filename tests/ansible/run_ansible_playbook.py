@@ -40,15 +40,6 @@ extra = {
     'git_basedir': GIT_BASEDIR,
 }
 
-if '-i' in sys.argv:
-    extra['MITOGEN_INVENTORY_FILE'] = (
-        os.path.abspath(sys.argv[1 + sys.argv.index('-i')])
-    )
-else:
-    extra['MITOGEN_INVENTORY_FILE'] = (
-        os.path.join(GIT_BASEDIR, 'tests/ansible/hosts')
-    )
-
 if 'ANSIBLE_ARGV' in os.environ:
     args = eval(os.environ['ANSIBLE_ARGV'])
 else:

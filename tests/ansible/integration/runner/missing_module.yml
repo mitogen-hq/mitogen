@@ -7,7 +7,9 @@
       connection: local
       command: |
         ansible -vvv
-        -i "{{MITOGEN_INVENTORY_FILE}}"
+        {% for inv in ansible_inventory_sources %}
+        -i "{{ inv }}"
+        {% endfor %}
         test-targets
         -m missing_module
       args:
