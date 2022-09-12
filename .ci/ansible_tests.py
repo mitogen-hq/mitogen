@@ -66,13 +66,15 @@ with ci_lib.Fold('job_setup'):
             for container in containers
         )
 
-        for distro, hostnames in distros.items():
+        for distro, hostnames in sorted(distros.items(), key=lambda t: t[0]):
             fp.write('\n[%s]\n' % distro)
             fp.writelines('%s\n' % name for name in hostnames)
 
-        for family, hostnames in families.items():
+        for family, hostnames in sorted(families.items(), key=lambda t: t[0]):
             fp.write('\n[%s]\n' % family)
             fp.writelines('%s\n' % name for name in hostnames)
+
+        fp.write('\n[linux:children]\ntest-targets\n')
 
     ci_lib.dump_file(inventory_path)
 
