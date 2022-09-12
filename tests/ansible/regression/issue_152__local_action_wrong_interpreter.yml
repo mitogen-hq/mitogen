@@ -8,7 +8,8 @@
   connection: local
   tasks:
 
-    - copy:
+    - name: Create /tmp/issue_152_interpreter.sh
+      copy:
         dest: /tmp/issue_152_interpreter.sh
         mode: u+x
         content: |
@@ -26,7 +27,8 @@
           - out.env.CUSTOM_INTERPRETER == "1"
         fail_msg: out={{out}}
 
-    - file:
+    - name: Cleanup /tmp/issue_152_interpreter.sh
+      file:
         path: /tmp/issue_152_interpreter.sh
         state: absent
   tags:

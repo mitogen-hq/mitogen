@@ -3,7 +3,8 @@
 - name: integration/ssh/timeouts.yml
   hosts: test-targets
   tasks:
-    - connection: local
+    - name: Cause Ansible connection timeout
+      connection: local
       command: |
         ansible -vvv
         -i "{{MITOGEN_INVENTORY_FILE}}"
@@ -16,7 +17,8 @@
       ignore_errors: true
       when: is_mitogen
 
-    - assert:
+    - name: Verify connection timeout occurred
+      assert:
         that:
         - |
           '"changed": false' in out.stdout

@@ -9,8 +9,8 @@
       when:
         - ansible_version.full is version('2.6', '<', strict=True)
 
-    # Copy the naughty 'ansible' into place.
-    - copy:
+    - name: Copy the naughty ansible into place
+      copy:
         dest: "{{ansible_user_dir}}/ansible.py"
         src: ansible.py
 
@@ -20,15 +20,15 @@
     - custom_python_detect_environment:
       register: env
 
-    # Verify interpreter config would actually trigger the bug.
-    - assert:
+    - name: Verify interpreter config would actually trigger the bug
+      assert:
         that:
           - env.cwd == ansible_user_dir
           - (not env.mitogen_loaded) or (env.python_path.count("") == 1)
         fail_msg: env={{env}}
 
-    # Run some new-style modules that 'from ansible.module_utils...'
-    - stat:
+    - name: Run some new-style from ansible.module_utils... modules
+      stat:
         path: /
   tags:
     - issue_109

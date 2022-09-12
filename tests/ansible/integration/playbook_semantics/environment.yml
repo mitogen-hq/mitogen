@@ -3,7 +3,8 @@
 - name: integration/playbook_semantics/environment.yml
   hosts: test-targets
   tasks:
-    - shell: echo $SOME_ENV
+    - name: Echo $SOME_ENV
+      shell: echo $SOME_ENV
       environment:
         SOME_ENV: 123
       register: result

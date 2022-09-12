@@ -10,7 +10,8 @@
   - meta: end_play
     when: ansible_system != 'Linux'
 
-  - shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
+  - name: Get cmdline
+    shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
     register: out
   - debug: var=out
 
@@ -19,7 +20,8 @@
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:[a-z]+@[^:]+:[0-9]+\)')
       fail_msg: out={{out}}
 
-  - shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
+  - name: Get cmdline, with mitogen_mask_remote_name
+    shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
     register: out
     vars:
       mitogen_mask_remote_name: true

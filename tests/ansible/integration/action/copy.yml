@@ -3,21 +3,22 @@
 - name: integration/action/copy.yml
   hosts: test-targets
   tasks:
-    - copy:
+    - name: Create tiny file
+      copy:
         dest: /tmp/copy-tiny-file
         content:
           this is a tiny file.
       delegate_to: localhost
 
-    - copy:
+    - name: Create large file
+      copy:
         dest: /tmp/copy-large-file
         # Must be larger than Connection.SMALL_SIZE_LIMIT.
         content: "{% for x in range(200000) %}x{% endfor %}"
       delegate_to: localhost
 
-    # end of making files
-
-    - file:
+    - name: Cleanup copied files
+      file:
         state: absent
         path: "{{item}}"
       with_items:
@@ -26,28 +27,31 @@
       - /tmp/copy-tiny-inline-file.out
       - /tmp/copy-large-inline-file.out
 
-    # end of cleaning out files
-
-    - copy:
+    - name: Copy large file
+      copy:
         dest: /tmp/copy-large-file.out
         src: /tmp/copy-large-file
 
-    - copy:
+    - name: Copy tiny file
+      copy:
         dest: /tmp/copy-tiny-file.out
         src: /tmp/copy-tiny-file
 
-    - copy:
+    - name: Copy tiny inline file
+      copy:
         dest: /tmp/copy-tiny-inline-file.out
         content: "tiny inline content"
 
-    - copy:
+    - name: Copy large inline file
+      copy:
         dest: /tmp/copy-large-inline-file.out
         content: |
           {% for x in range(200000) %}y{% endfor %}
 
     # stat results
 
-    - stat:
+    - name: Stat copied files
+      stat:
         path: "{{item}}"
       with_items:
       - /tmp/copy-tiny-file.out
@@ -64,7 +68,8 @@
         - stat.results[3].stat.checksum == "d675f47e467eae19e49032a2cc39118e12a6ee72"
         fail_msg: stat={{stat}}
 
-    - file:
+    - name: Cleanup files
+      file:
         state: absent
         path: "{{item}}"
       with_items:

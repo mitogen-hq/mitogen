@@ -15,12 +15,14 @@
         - ansible_facts.virtualization_type == "docker"
         - ansible_facts.python.version_info[:2] >= [2, 5]
 
-    - shell: cp /etc/resolv.conf /tmp/resolv.conf
+    - name: Backup resolv.conf
+      shell: cp /etc/resolv.conf /tmp/resolv.conf
       when:
         - ansible_facts.virtualization_type == "docker"
         - ansible_facts.python.version_info[:2] >= [2, 5]
 
-    - shell: echo > /etc/resolv.conf
+    - name: Truncate resolv.conf
+      shell: echo > /etc/resolv.conf
       when:
         - ansible_facts.virtualization_type == "docker"
         - ansible_facts.python.version_info[:2] >= [2, 5]
@@ -33,7 +35,8 @@
         - ansible_facts.virtualization_type == "docker"
         - ansible_facts.python.version_info[:2] >= [2, 5]
 
-    - shell: cat /tmp/resolv.conf > /etc/resolv.conf
+    - name: Restore resolv.conf
+      shell: cat /tmp/resolv.conf > /etc/resolv.conf
       when:
         - ansible_facts.virtualization_type == "docker"
         - ansible_facts.python.version_info[:2] >= [2, 5]

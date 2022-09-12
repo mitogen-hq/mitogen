@@ -7,7 +7,8 @@
 - name: integration/local/cwd_preserved.yml
   hosts: test-targets
   tasks:
-  - connection: local
+  - name: Get local cwd
+    connection: local
     command: pwd
     register: pwd
 

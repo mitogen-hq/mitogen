@@ -12,23 +12,27 @@
     ansible_password: ''
   tasks:
     # must copy git file to set proper file mode.
-    - copy:
+    - name: Copy synchronize-action-key
+      copy:
         dest: /tmp/synchronize-action-key
         src: ../../../data/docker/mitogen__has_sudo_pubkey.key
         mode: u=rw,go=
       delegate_to: localhost
 
-    - file:
+    - name: Cleanup sync-test
+      file:
         path: /tmp/sync-test
         state: absent
       delegate_to: localhost
 
-    - file:
+    - name: Create sync-test
+      file:
         path: /tmp/sync-test
         state: directory
       delegate_to: localhost
 
-    - copy:
+    - name: Create syn-test item
+      copy:
         dest: /tmp/sync-test/item
         content: "item!"
       delegate_to: localhost

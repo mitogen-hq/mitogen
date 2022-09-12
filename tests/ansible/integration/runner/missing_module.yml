@@ -3,7 +3,8 @@
   hosts: test-targets[0]
   connection: local
   tasks:
-    - connection: local
+    - name: Run missing_module
+      connection: local
       command: |
         ansible -vvv
         -i "{{MITOGEN_INVENTORY_FILE}}"

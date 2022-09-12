@@ -1,12 +1,14 @@
 - name: bench/loop-20-templates.yml
   hosts: all
   tasks:
-  - file:
+  - name: Create loop templates dir
+    file:
       dest: /tmp/templates
       state: "{{item}}"
     with_items: ["absent", "directory"]
 
-  - copy:
+  - name: Copy loop files
+    copy:
       dest: /tmp/templates/{{item}}
       mode: 0755
       content:

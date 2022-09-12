@@ -1,19 +1,23 @@
 ---
 
-- shell: dd if=/dev/urandom of=/tmp/{{file_name}} bs=1024 count={{file_size}}
+- name: Create {{ file_name }}
+  shell: dd if=/dev/urandom of=/tmp/{{ file_name }} bs=1024 count={{ file_size }}
   args:
     creates: /tmp/{{file_name}}
   delegate_to: localhost
 
-- copy:
+- name: Copy {{ file_name }}
+  copy:
     dest: /tmp/{{file_name}}.out
     src: /tmp/{{file_name}}
 
-- stat: path=/tmp/{{file_name}}
+- name: Stat created {{ file_name }}
+  stat: path=/tmp/{{ file_name }}
   register: original
   delegate_to: localhost
 
-- stat: path=/tmp/{{file_name}}.out
+- name: Stat copied {{ file_name }}
+  stat: path=/tmp/{{ file_name }}.out
   register: copied
 
 - assert:

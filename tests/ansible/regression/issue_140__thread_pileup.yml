@@ -17,7 +17,8 @@
   - name: Delete remote file tree
     file: path=/tmp/filetree.out state=absent
 
-  - file:
+  - name: Recreate file tree
+    file:
       state: directory
       path: /tmp/filetree.out
 

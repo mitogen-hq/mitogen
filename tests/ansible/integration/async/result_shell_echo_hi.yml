@@ -4,14 +4,17 @@
   hosts: test-targets
   tasks:
 
-  - shell: echo hi; echo there >&2
+  - name: Async shell
+    shell: echo hi; echo there >&2
     async: 100
     poll: 0
     register: job
 
-  - shell: sleep 1
+  - name: Sleepy shell
+    shell: sleep 1
 
-  - slurp:
+  - name: Slurp async shell
+    slurp:
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 

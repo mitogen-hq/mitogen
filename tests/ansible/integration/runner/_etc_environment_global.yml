@@ -1,18 +1,21 @@
 # /etc/environment
 
-- file:
+- name: Remove /etc/environment
+  file:
     path: /etc/environment
     state: absent
   become: true
 
-- shell: echo $MAGIC_ETC_ENV
+- name: Check MAGIC_ETC_ENV without
+  shell: echo $MAGIC_ETC_ENV
   register: echo
 
 - assert:
     that: echo.stdout == ""
     fail_msg: echo={{echo}}
 
-- copy:
+- name: Create /etc/environment
+  copy:
     dest: /etc/environment
     content: |
       MAGIC_ETC_ENV=555
@@ -23,14 +26,16 @@
 #- mitogen_shutdown_all:
   #when: not is_mitogen
 
-- shell: echo $MAGIC_ETC_ENV
+- name: Check MAGIC_ETC_ENV with
+  shell: echo $MAGIC_ETC_ENV
   register: echo
 
 - assert:
     that: echo.stdout == "555"
     fail_msg: echo={{echo}}
 
-- file:
+- name: Cleanup /etc/environment
+  file:
     path: /etc/environment
     state: absent
   become: true
@@ -40,7 +45,8 @@
 - mitogen_shutdown_all:
   when: not is_mitogen
 
-- shell: echo $MAGIC_ETC_ENV
+- name: Check MAGIC_ETC_ENV without+shutdown
+  shell: echo $MAGIC_ETC_ENV
   register: echo
 
 - assert:

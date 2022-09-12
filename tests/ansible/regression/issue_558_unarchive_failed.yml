@@ -4,9 +4,16 @@
 - name: regression/issue_558_unarchive_failed.yml
   hosts: test-targets
   tasks:
-  - file: state=absent path=/tmp/foo
-  - file: state=directory path=/tmp/foo
-  - unarchive:
+  - name: Cleanup /tmp/foo
+    file:
+      path: /tmp/foo
+      state: absent
+  - name: Create /tmp/foo
+    file:
+      path: /tmp/foo
+      state: directory
+  - name: Unarchive unarchive_test.tar
+    unarchive:
       src: "{{git_basedir}}/tests/data/unarchive_test.tar"
       dest: /tmp/foo
     # garbage doesn't work with BSD tar

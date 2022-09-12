@@ -4,7 +4,12 @@
 - name: regression/issue_332_ansiblemoduleerror_first_occurrence.yml
   hosts: test-targets
   tasks:
-  - file: path=/usr/bin/does-not-exist mode='a-s' state=file follow=yes
+  - name: Attempt to modify /usr/bin/does-not-exist
+    file:
+      path: /usr/bin/does-not-exist
+      mode: a-s
+      state: file
+      follow: true
     ignore_errors: true
     register: out
 

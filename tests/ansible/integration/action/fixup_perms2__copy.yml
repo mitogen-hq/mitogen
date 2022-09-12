@@ -6,10 +6,6 @@
 - name: integration/action/fixup_perms2__copy.yml
   hosts: test-targets
   tasks:
-    #
-    # copy module (no mode).
-    #
-
     - name: "Copy files (no mode)"
       copy:
         content: ""
@@ -21,10 +17,6 @@
         that:
         -  out.stat.mode in ("0644", "0664")
         fail_msg: out={{out}}
-
-    #
-    # copy module (explicit mode).
-    #
 
     - name: "Copy files from content: arg"
       copy:
@@ -39,22 +31,20 @@
         -  out.stat.mode == "0400"
         fail_msg: out={{out}}
 
-    #
-    # copy module (existing disk files, no mode).
-    #
-
-    - file:
+    - name: Cleanup local weird mode file
+      file:
         path: /tmp/weird-mode.out
         state: absent
 
-    - name: Create local test file.
+    - name: Create local weird mode file
       delegate_to: localhost
       copy:
         content: "weird mode"
         dest: "/tmp/weird-mode"
         mode: "1462"
 
-    - copy:
+    - name: Copy file with weird mode
+      copy:
         src: "/tmp/weird-mode"
         dest: "/tmp/weird-mode.out"
 
@@ -66,11 +56,8 @@
         - out.stat.mode in ("0644", "0664")
         fail_msg: out={{out}}
 
-    #
-    # copy module (existing disk files, preserve mode).
-    #
-
-    - copy:
+    - name: Copy file with weird mode, preserving mode
+      copy:
         src: "/tmp/weird-mode"
         dest: "/tmp/weird-mode"
         mode: preserve
@@ -83,11 +70,8 @@
         - out.stat.mode == "1462"
         fail_msg: out={{out}}
 
-    #
-    # copy module (existing disk files, explicit mode).
-    #
-
-    - copy:
+    - name: Copy file with weird mode, explicit mode
+      copy:
         src: "/tmp/weird-mode"
         dest: "/tmp/weird-mode"
         mode: "1461"
@@ -101,7 +85,8 @@
         - out.stat.mode == "1461"
         fail_msg: out={{out}}
 
-    - file:
+    - name: Cleanup
+      file:
         state: absent
         path: "{{item}}"
       with_items:
