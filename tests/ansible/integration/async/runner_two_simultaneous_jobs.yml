@@ -5,7 +5,8 @@
 
   # Start 2 duplicate jobs, verify they run concurrently.
 
-  - file:
+  - name: Cleanup semaphore file
+    file:
       path: /tmp/flurp
       state: absent
 

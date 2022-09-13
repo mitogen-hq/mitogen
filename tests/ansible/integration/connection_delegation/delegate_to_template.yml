@@ -33,7 +33,7 @@
             'kwargs': {
               'check_host_keys': 'ignore',
               'compression': True,
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'hostname': 'alias-host',
               'identities_only': False,
               'identity_file': null,
@@ -63,7 +63,7 @@
             'kwargs': {
               'check_host_keys': 'ignore',
               'compression': True,
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'hostname': 'cd-normal-alias',
               'identities_only': False,
               'identity_file': null,

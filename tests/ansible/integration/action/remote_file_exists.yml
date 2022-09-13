@@ -2,36 +2,32 @@
 - name: integration/action/remote_file_exists.yml
   hosts: test-targets
   tasks:
-
-    - file:
+    - name: Ensure does-not-exist doesnt
+      file:
         path: /tmp/does-not-exist
         state: absent
-
     - action_passthrough:
         method: _remote_file_exists
         args: ['/tmp/does-not-exist']
       register: out
-
     - assert:
         that: out.result == False
         fail_msg: out={{out}}
 
-    # ---
-
-    - copy:
+    - name: Ensure does-exist does
+      copy:
         dest: /tmp/does-exist
         content: "I think, therefore I am"
-
     - action_passthrough:
         method: _remote_file_exists
         args: ['/tmp/does-exist']
       register: out
-
     - assert:
         that: out.result == True
         fail_msg: out={{out}}
 
-    - file:
+    - name: Cleanup
+      file:
         path: /tmp/does-exist
         state: absent
   tags:

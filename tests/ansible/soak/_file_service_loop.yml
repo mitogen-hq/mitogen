@@ -1,6 +1,8 @@
-  - file:
+  - name: Delete existing /tmp/foo-<inventory_hostname>
+    file:
       path: /tmp/foo-{{inventory_hostname}}
       state: absent
-  - copy:
+  - name: Create /tmp/foo-<inventory_hostname>
+    copy:
       dest: /tmp/foo-{{inventory_hostname}}
       content: "{{content}}"

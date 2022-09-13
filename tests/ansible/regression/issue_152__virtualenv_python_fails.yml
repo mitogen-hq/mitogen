@@ -7,11 +7,12 @@
 
     # Can't use pip module because it can't create virtualenvs, must call it
     # directly.
-    - shell: virtualenv /tmp/issue_152_virtualenv
+    - name: Create /tmp/issue_152_virtualenv
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
+      shell: virtualenv /tmp/issue_152_virtualenv
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
@@ -29,7 +30,8 @@
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
-    - file:
+    - name: Cleanup /tmp/issue_152_virtualenv
+      file:
         path: /tmp/issue_152_virtualenv
         state: absent
       when:

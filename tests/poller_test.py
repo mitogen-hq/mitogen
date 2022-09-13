@@ -394,13 +394,8 @@ class AllMixin(ReceiveStateMixin,
     """
 
 
-class SelectTest(AllMixin, testlib.TestCase):
+class CorePollerTest(AllMixin, testlib.TestCase):
     klass = mitogen.core.Poller
-
-SelectTest = unittest.skipIf(
-    condition=(not SelectTest.klass.SUPPORTED),
-    reason='select.select() not supported'
-)(SelectTest)
 
 
 class PollTest(AllMixin, testlib.TestCase):
@@ -408,7 +403,7 @@ class PollTest(AllMixin, testlib.TestCase):
 
 PollTest = unittest.skipIf(
     condition=(not PollTest.klass.SUPPORTED),
-    reason='select.poll() not supported'
+    reason='select.poll() not available',
 )(PollTest)
 
 
@@ -417,7 +412,7 @@ class KqueueTest(AllMixin, testlib.TestCase):
 
 KqueueTest = unittest.skipIf(
     condition=(not KqueueTest.klass.SUPPORTED),
-    reason='select.kqueue() not supported'
+    reason='select.kqueue() not available',
 )(KqueueTest)
 
 
@@ -426,5 +421,5 @@ class EpollTest(AllMixin, testlib.TestCase):
 
 EpollTest = unittest.skipIf(
     condition=(not EpollTest.klass.SUPPORTED),
-    reason='select.epoll() not supported'
+    reason='select.epoll() not available',
 )(EpollTest)

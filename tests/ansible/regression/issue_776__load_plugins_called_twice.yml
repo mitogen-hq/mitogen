@@ -2,7 +2,7 @@
 ---
 - name: regression/issue_776__load_plugins_called_twice.yml
   hosts: test-targets
-  become: "{{ ansible_facts.pkg_mgr not in ['homebrew'] }}"
+  become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
   gather_facts: yes
   tags:
     - issue_776

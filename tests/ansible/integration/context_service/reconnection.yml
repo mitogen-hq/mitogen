@@ -13,7 +13,8 @@
       custom_python_detect_environment:
       register: old_become_env
 
-    - become: true
+    - name: Kill ssh process
+      become: true
       shell: |
         bash -c "( sleep 3; kill -9 {{ssh_account_env.pid}}; ) & disown"
 

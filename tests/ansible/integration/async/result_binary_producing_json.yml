@@ -37,7 +37,8 @@
     retries: 100000
     delay: 0
 
-  - slurp:
+  - name: Slurp async busy-poll
+    slurp:
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 

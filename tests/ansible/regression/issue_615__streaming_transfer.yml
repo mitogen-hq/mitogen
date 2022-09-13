@@ -9,19 +9,23 @@
     mitogen_ssh_compression: false
   tasks:
     - block:
-        - shell: |
+        - name: Create /tmp/512mb.zero
+          shell: |
             dd if=/dev/zero of=/tmp/512mb.zero bs=1048576 count=512;
             chmod go= /tmp/512mb.zero
 
-        - fetch:
+        - name: Fetch /tmp/512mb.zero
+          fetch:
             src: /tmp/512mb.zero
             dest: /tmp/fetch-out
 
-        - file:
+        - name: Cleanup /tmp/512mb.zero
+          file:
             path: /tmp/512mb.zero
             state: absent
 
-        - file:
+        - name: Cleanup fetched file
+          file:
             path: /tmp/fetch-out
             state: absent
           become: false

@@ -2,47 +2,45 @@
 - name: integration/action/transfer_data.yml
   hosts: test-targets
   tasks:
-
-    - file:
+    - name: Cleanup transfer data
+      file:
         path: /tmp/transfer-data
         state: absent
 
-    # Ensure it JSON-encodes dicts.
-    - action_passthrough:
+    - name: Create JSON transfer data
+      action_passthrough:
         method: _transfer_data
         kwargs:
           remote_path: /tmp/transfer-data
           data: {
             "I am JSON": true
           }
-
-    - slurp:
+    - name: Slurp JSON transfer data
+      slurp:
         src: /tmp/transfer-data
       register: out
-
     - assert:
         that: |
           out.content|b64decode == '{"I am JSON": true}'
         fail_msg: out={{out}}
 
-
-    # Ensure it handles strings.
-    - action_passthrough:
+    - name: Create text transfer data
+      action_passthrough:
         method: _transfer_data
         kwargs:
           remote_path: /tmp/transfer-data
           data: "I am text."
-
-    - slurp:
+    - name: Slurp text transfer data
+      slurp:
         src: /tmp/transfer-data
       register: out
-
     - assert:
         that:
           out.content|b64decode == 'I am text.'
         fail_msg: out={{out}}
 
-    - file:
+    - name: Cleanup transfer data
+      file:
         path: /tmp/transfer-data
         state: absent
   tags:
