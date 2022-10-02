@@ -148,6 +148,9 @@ LINUX_TIOCSPTLCK = _ioctl_cast(1074025521)
 
 IS_LINUX = os.uname()[0] == 'Linux'
 
+IS_SOLARIS = os.uname()[0] == 'SunOS'
+
+
 SIGNAL_BY_NUM = dict(
     (getattr(signal, name), name)
     for name in sorted(vars(signal), reverse=True)
@@ -411,7 +414,7 @@ def _acquire_controlling_tty():
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL:
+    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL and not IS_SOLARIS:
         # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
@@ -479,7 +482,10 @@ def openpty():
 
     master_fp = os.fdopen(master_fd, 'r+b', 0)
     slave_fp = os.fdopen(slave_fd, 'r+b', 0)
-    disable_echo(master_fd)
+    try:
+      disable_echo(master_fd)
+    except:
+      pass
     disable_echo(slave_fd)
     mitogen.core.set_block(slave_fd)
     return master_fp, slave_fp
