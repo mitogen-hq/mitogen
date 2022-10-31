@@ -484,6 +484,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     login_context = None
 
     #: Only sudo, su, and doas are supported for now.
+    # Ansible ConnectionBase attribute, removed in Ansible >= 2.8
     become_methods = ['sudo', 'su', 'doas']
 
     #: Dict containing init_child() return value as recorded at startup by
@@ -520,15 +521,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     # set by `_get_task_vars()` for interpreter discovery
     _action = None
-
-    def __del__(self):
-        """
-        Ansible cannot be trusted to always call close() e.g. the synchronize
-        action constructs a local connection like this. So provide a destructor
-        in the hopes of catching these cases.
-        """
-        # https://github.com/dw/mitogen/issues/140
-        self.close()
 
     def on_action_run(self, task_vars, delegate_to_hostname, loader_basedir):
         """
@@ -684,6 +676,9 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
     @property
     def connected(self):
+        """
+        Ansible connection plugin property. Used by ansible-connection command.
+        """
         return self.context is not None
 
     def _spec_from_via(self, proxied_inventory_name, via_spec):
@@ -842,7 +837,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         the _connect_*() service calls defined above to cause the master
         process to establish the real connection on our behalf, or return a
         reference to the existing one.
+
+        Ansible connection plugin method.
         """
+        # In some Ansible connection plugins this method returns self.
+        # However nothing I've found uses it, it's not even assigned.
         if self.connected:
             return
 
@@ -880,6 +879,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         Arrange for the mitogen.master.Router running in the worker to
         gracefully shut down, and wait for shutdown to complete. Safe to call
         multiple times.
+
+        Ansible connection plugin method.
         """
         self._put_connection()
         if self.binding:
@@ -896,6 +897,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         any local state we hold for the connection, returns the Connection to
         the 'disconnected' state, and informs ContextService the connection is
         bad somehow, and should be shut down and discarded.
+
+        Ansible connection plugin method.
         """
         if self._play_context.remote_addr is None:
             # <2.5.6 incorrectly populate PlayContext for reset_connection
@@ -1002,6 +1005,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Data to supply on ``stdin`` of the process.
         :returns:
             (return code, stdout bytes, stderr bytes)
+
+        Ansible connection plugin method.
         """
         emulate_tty = (not in_data and sudoable)
         rc, stdout, stderr = self.get_chain().call(
@@ -1027,6 +1032,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Remote filesystem path to read.
         :param str out_path:
             Local filesystem path to write.
+
+        Ansible connection plugin method.
         """
         self._connect()
         ansible_mitogen.target.transfer_file(
@@ -1076,6 +1083,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             Local filesystem path to read.
         :param str out_path:
             Remote filesystem path to write.
+
+        Ansible connection plugin method.
         """
         try:
             st = os.stat(in_path)
