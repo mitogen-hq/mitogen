@@ -300,6 +300,9 @@ def proc_is_docker(pid):
 
 
 def get_interesting_procs(container_name=None):
+    """
+    Return a list of (pid, line) tuples for processes considered interesting.
+    """
     args = ['ps', 'ax', '-oppid=', '-opid=', '-ocomm=', '-ocommand=']
     if container_name is not None:
         args = ['docker', 'exec', container_name] + args
@@ -311,6 +314,9 @@ def get_interesting_procs(container_name=None):
             (
                 any(comm.startswith(s) for s in INTERESTING_COMMS) or
                 'mitogen:' in rest
+            ) and
+            (
+                'WALinuxAgent' not in rest
             ) and
             (
                 container_name is not None or
