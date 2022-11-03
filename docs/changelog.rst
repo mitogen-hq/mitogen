@@ -17,6 +17,12 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
+v0.2.11dev0
+-----------
+
+* :gh:issue:`971` Fix ansible action plugin lookup when resolving fetch inside a collection
+
+
 v0.2.10 (2021-10-28)
 --------------------
 
