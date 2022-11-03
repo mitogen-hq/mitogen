@@ -22,6 +22,7 @@ v0.3.4.dev0
 
 * :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
 * :gh:issue:`832` Fix runtime error when using the ansible.builtin.dnf module multiple times
+* :gh:issue:`971` Fix ansible action plugin lookup when resolving fetch inside a collection
 
 v0.3.3 (2022-06-03)
 -------------------
