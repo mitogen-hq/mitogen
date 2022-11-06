@@ -22,6 +22,11 @@ v0.3.4.dev0
 
 * :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
 * :gh:issue:`832` Fix runtime error when using the ansible.builtin.dnf module multiple times
+* :gh:issue:`925` :class:`ansible_mitogen.connection.Connection` no longer tries to close the 
+  connection on destruction. This is expected to reduce cases of `mitogen.core.Error: An attempt
+  was made to enqueue a message with a Broker that has already exitted`. However it may result in
+  resource leaks.
+
 
 v0.3.3 (2022-06-03)
 -------------------
