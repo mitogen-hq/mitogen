@@ -27,15 +27,15 @@ jobs:
 
       Loc_27_210:
         tox.env: py27-mode_localhost-ansible2.10
-      Loc_312_6:
+      Loc_312_7:
         python.version: '3.12'
-        tox.env: py312-mode_localhost-ansible6
+        tox.env: py312-mode_localhost-ansible7
 
       Van_27_210:
         tox.env: py27-mode_localhost-ansible2.10-strategy_linear
-      Van_312_6:
+      Van_312_7:
         python.version: '3.12'
-        tox.env: py312-mode_localhost-ansible6-strategy_linear
+        tox.env: py312-mode_localhost-ansible7-strategy_linear
 
 - job: Linux
   pool:
@@ -147,3 +147,6 @@ jobs:
       Ans_312_6:
         python.version: '3.12'
         tox.env: py312-mode_ansible-ansible6
+      Ans_312_7:
+        python.version: '3.12'
+        tox.env: py312-mode_ansible-ansible7
