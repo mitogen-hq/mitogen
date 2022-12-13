@@ -130,6 +130,7 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li>luto</li>
     <li><a href="https://mayeu.me/">Mayeu a.k.a Matthieu Maury</a></li>
     <li><a href="https://twitter.com/nathanhruby">@nathanhruby</a></li>
+    <li><a href="https://github.com/opoplawski">Orion Poplawski</a></li>
     <li><a href="http://pageflows.com/">Ramy</a></li>
     <li>Scott Vokes</li>
     <li><a href="https://twitter.com/sirtux">Tom Eichhorn</a></li>

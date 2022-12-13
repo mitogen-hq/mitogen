@@ -150,7 +150,7 @@ Noteworthy Differences
 
     - Ansible 2.10, 3, and 4; with Python 2.7, or 3.6-3.11
     - Ansible 5; with Python 3.8-3.11
-    - Ansible 6; with Python 3.8-3.12
+    - Ansible 6 and 7; with Python 3.8-3.12
 
   Verify your installation is running one of these versions by checking
   ``ansible --version`` output.
