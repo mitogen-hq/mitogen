@@ -20,6 +20,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`974` Support Ansible 7
+
 
 v0.3.5 (2024-03-17)
 -------------------
