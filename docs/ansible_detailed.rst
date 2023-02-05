@@ -1248,18 +1248,17 @@ with ``-vvv``.
 
 However, certain controller hangs may render ``MITOGEN_DUMP_THREAD_STACKS``
 ineffective, or occur too infrequently for interactive reproduction. In these
-cases `faulthandler <https://faulthandler.readthedocs.io/>`_ may be used:
+cases :py:mod:`faulthandler` may be used with Python >= 3.3:
 
-1. For Python 2, ``pip install faulthandler``. This is unnecessary on Python 3.
-2. Once the hang occurs, observe the process tree using ``pstree`` or ``ps
+1. Once the hang occurs, observe the process tree using ``pstree`` or ``ps
    --forest``.
-3. The most likely process to be hung is the connection multiplexer, which can
+2. The most likely process to be hung is the connection multiplexer, which can
    easily be identified as the parent of all SSH client processes.
-4. Send ``kill -SEGV <pid>`` to the multiplexer PID, causing it to print all
+3. Send ``kill -SEGV <pid>`` to the multiplexer PID, causing it to print all
    thread stacks.
-5. `File a bug <https://github.com/dw/mitogen/issues/new/>`_ including a copy
-   of the stacks, along with a description of the last task executing prior to
-   the hang.
+4. `File a bug <https://github.com/mitogen-hq/mitogen/issues/new/>`_
+   including a copy of the stacks and a description of the last task executing
+   before the hang
 
 It is possible the hang occurred in a process on a target. If ``strace`` is
 available, look for the host name not listed in Ansible output as reporting a

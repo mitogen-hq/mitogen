@@ -27,6 +27,7 @@ v0.3.4.dev0
   was made to enqueue a message with a Broker that has already exitted`. However it may result in
   resource leaks.
 * :gh:issue:`659` Removed :mod:`mitogen.compat.simplejson`, not needed with Python 2.7+, contained Python 3.x syntax errors
+* :gh:issue:`983` CI: Removed PyPI faulthandler requirement from tests
 
 v0.3.3 (2022-06-03)
 -------------------
