@@ -753,7 +753,7 @@ class MitogenViaSpec(Spec):
         return self._host_vars.get('mitogen_kubectl_path')
 
     def mitogen_lxc_path(self):
-        return self.host_vars.get('mitogen_lxc_path')
+        return self._host_vars.get('mitogen_lxc_path')
 
     def mitogen_lxc_attach_path(self):
         return self._host_vars.get('mitogen_lxc_attach_path')
