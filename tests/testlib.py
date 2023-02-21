@@ -90,7 +90,7 @@ def base_executable(executable=None):
         base_executable = None
 
     if base_executable and base_executable != executable:
-        return 'be', base_executable
+        return base_executable
 
     # Python 2.x only has sys.base_prefix if running outside a virtualenv.
     try:

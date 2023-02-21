@@ -21,9 +21,9 @@ jobs:
     matrix:
       Mito_27:
         tox.env: py27-mode_mitogen
-      Mito_310:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen
+      Mito_311:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen
 
       # TODO: test python3, python3 tests are broken
       Loc_27_210:
@@ -96,33 +96,33 @@ jobs:
         python.version: '3.6'
         tox.env: py36-mode_mitogen-distro_ubuntu2004
 
-      Mito_310_centos6:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_centos6
-      Mito_310_centos7:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_centos7
-      Mito_310_centos8:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_centos8
-      Mito_310_debian9:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_debian9
-      Mito_310_debian10:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_debian10
-      Mito_310_debian11:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_debian11
-      Mito_310_ubuntu1604:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_ubuntu1604
-      Mito_310_ubuntu1804:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_ubuntu1804
-      Mito_310_ubuntu2004:
-        python.version: '3.10'
-        tox.env: py310-mode_mitogen-distro_ubuntu2004
+      Mito_311_centos6:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_centos6
+      Mito_311_centos7:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_centos7
+      Mito_311_centos8:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_centos8
+      Mito_311_debian9:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_debian9
+      Mito_311_debian10:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_debian10
+      Mito_311_debian11:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_debian11
+      Mito_311_ubuntu1604:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_ubuntu1604
+      Mito_311_ubuntu1804:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_ubuntu1804
+      Mito_311_ubuntu2004:
+        python.version: '3.11'
+        tox.env: py311-mode_mitogen-distro_ubuntu2004
 
       Ans_27_210:
         tox.env: py27-mode_ansible-ansible2.10
@@ -136,18 +136,18 @@ jobs:
         python.version: '3.6'
         tox.env: py36-mode_ansible-ansible4
 
-      Ans_310_210:
-        python.version: '3.10'
-        tox.env: py310-mode_ansible-ansible2.10
-      Ans_310_3:
-        python.version: '3.10'
-        tox.env: py310-mode_ansible-ansible3
-      Ans_310_4:
-        python.version: '3.10'
-        tox.env: py310-mode_ansible-ansible4
-      Ans_310_5:
-        python.version: '3.10'
-        tox.env: py310-mode_ansible-ansible5
-      Ans_310_6:
-        python.version: '3.10'
-        tox.env: py310-mode_ansible-ansible6
+      Ans_311_210:
+        python.version: '3.11'
+        tox.env: py311-mode_ansible-ansible2.10
+      Ans_311_3:
+        python.version: '3.11'
+        tox.env: py311-mode_ansible-ansible3
+      Ans_311_4:
+        python.version: '3.11'
+        tox.env: py311-mode_ansible-ansible4
+      Ans_311_5:
+        python.version: '3.11'
+        tox.env: py311-mode_ansible-ansible5
+      Ans_311_6:
+        python.version: '3.11'
+        tox.env: py311-mode_ansible-ansible6
