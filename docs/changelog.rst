@@ -28,6 +28,7 @@ v0.3.4.dev0
   resource leaks.
 * :gh:issue:`659` Removed :mod:`mitogen.compat.simplejson`, not needed with Python 2.7+, contained Python 3.x syntax errors
 * :gh:issue:`983` CI: Removed PyPI faulthandler requirement from tests
+* :gh:issue:`967` Broker: Do not reset poller_class to mitogen.core.Poller to avoid 'filedescriptor out of range in select()'
 
 v0.3.3 (2022-06-03)
 -------------------
