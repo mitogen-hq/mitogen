@@ -66,8 +66,12 @@ hostkey_failed_msg = (
 )
 
 # sshpass uses 'assword' because it doesn't lowercase the input.
+# 'password': standard password prompt
+# 'verification code': TOTP prompt(as used by e.g. google-authenticator-libpam)
+# These should also match 'password & verification code' for password and TOTP
+# prompt (as used by e.g. google-authenticator-libpam)
 PASSWORD_PROMPT_PATTERN = re.compile(
-    b('password'),
+    b('(password|verification code)'),
     re.I
 )
 
