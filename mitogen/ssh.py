@@ -66,8 +66,16 @@ hostkey_failed_msg = (
 )
 
 # sshpass uses 'assword' because it doesn't lowercase the input.
+#
+# When using google-authenticator's PAM plugin for TOTP challenge,
+# the prompt is not asking for password but "verification code"
+# instead. Allowing this in the pattern will enable the user to
+# pass ansible_password containing a token.
+#
+# Phrase is hardcoded in:
+# https://github.com/google/google-authenticator-libpam/src/pam_google_authenticator.c
 PASSWORD_PROMPT_PATTERN = re.compile(
-    b('password'),
+    b('(password|verification code)'),
     re.I
 )
 
