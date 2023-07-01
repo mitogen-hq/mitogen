@@ -13,8 +13,13 @@ steps:
   condition: ne(variables['python.version'], '')
 
 - script: |
+    type python
+    python --version
+  displayName: Show python version
+
+- script: |
     sudo apt-get update
-    sudo apt-get install -y python2-dev
+    sudo apt-get install -y python2-dev python3-pip virtualenv
   displayName: Install build deps
   condition: and(eq(variables['python.version'], ''), eq(variables['Agent.OS'], 'Linux'))
 
