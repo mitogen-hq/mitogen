@@ -15,6 +15,30 @@
       when:
         - ansible_facts.pkg_mgr in ["dnf"]
 
+    - name: Switch to archive.debian.org
+      # Debian 9 has been archived https://lists.debian.org/debian-devel-announce/2023/03/msg00006.html
+      copy:
+        content: |
+          deb http://archive.debian.org/debian stretch main contrib non-free
+        dest: /etc/apt/sources.list
+        mode: u=rw,go=r
+      when:
+        - ansible_facts.distribution == "Debian"
+        - ansible_facts.distribution_major_version == "9"
+
+    - name: Add signing keys
+      copy:
+        src: "{{ item.src }}"
+        dest: "/etc/apt/trusted.gpg.d/{{ item.src | basename }}"
+        mode: u=rw,go=r
+      loop:
+        - src: debian-archive-bullseye-automatic.gpg  # Debian 11
+        - src: debian-archive-bookworm-automatic.gpg  # Debian 12
+      when:
+        # Ideally this would check for Debian 11, but distribution_major_version
+        # is unpopulated sometimes.
+        - ansible_facts.distribution == "Debian"
+
     - name: Update package index
       apt:
         update_cache: true
