@@ -17,6 +17,18 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
+v0.3.4 (2023-07-02)
+-------------------
+
+* :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
+* :gh:issue:`832` Fix runtime error when using the ansible.builtin.dnf module multiple times
+* :gh:issue:`925` :class:`ansible_mitogen.connection.Connection` no longer tries to close the 
+  connection on destruction. This is expected to reduce cases of `mitogen.core.Error: An attempt
+  was made to enqueue a message with a Broker that has already exitted`. However it may result in
+  resource leaks.
+* :gh:issue:`659` Removed :mod:`mitogen.compat.simplejson`, not needed with Python 2.7+, contained Python 3.x syntax errors
+* :gh:issue:`983` CI: Removed PyPI faulthandler requirement from tests
+* :gh:issue:`1001` CI: Fixed Debian 9 & 11 tests
 
 v0.3.3 (2022-06-03)
 -------------------
@@ -53,7 +65,7 @@ v0.3.0 (2021-10-28)
 -------------------
 
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
-`See here for details <https://github.com/dw/mitogen pull/715#issuecomment-750697248>`_.
+`See here for details <https://github.com/dw/mitogen/pull/715#issuecomment-750697248>`_.
 
 * :gh:issue:`827` NewStylePlanner: detect `ansible_collections` imports
 * :gh:issue:`770` better check for supported Ansible version

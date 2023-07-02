@@ -1,7 +1,6 @@
 
 - name: bench/file_transfer.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - name: Make 32MiB file
@@ -52,6 +51,8 @@
     with_items:
     - /tmp/bigfile.out
     - /tmp/bigbigfile.out
+    tags:
+      - requires_local_sudo
 
   - name: Copy 32MiB file via localhost sudo
     delegate_to: localhost
@@ -59,6 +60,8 @@
     copy:
       src: /tmp/bigfile.in
       dest: /tmp/bigfile.out
+    tags:
+      - requires_local_sudo
 
   - name: Copy 320MiB file via localhost sudo
     delegate_to: localhost
@@ -66,6 +69,8 @@
     copy:
       src: /tmp/bigbigfile.in
       dest: /tmp/bigbigfile.out
+    tags:
+      - requires_local_sudo
 
   tags:
   - resource_intensive

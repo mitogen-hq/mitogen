@@ -3,7 +3,6 @@
 
 - name: integration/module_utils/adjacent_to_playbook.yml
   hosts: test-targets
-  any_errors_fatal: true
   roles:
   - modrole
   tags:

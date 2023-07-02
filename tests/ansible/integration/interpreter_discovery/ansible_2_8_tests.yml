@@ -3,7 +3,6 @@
 
 - name: integration/interpreter_discovery/ansible_2_8_tests.yml
   hosts: test-targets
-  any_errors_fatal: true
   gather_facts: true
   tasks:
     - name: can only run these tests on ansible >= 2.8.0

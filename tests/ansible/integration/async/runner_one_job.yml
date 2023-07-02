@@ -3,7 +3,6 @@
 
 - name: integration/async/runner_one_job.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   # Verify output of a single async job.

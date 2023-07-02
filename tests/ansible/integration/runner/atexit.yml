@@ -9,20 +9,16 @@
   vars:
     path: /tmp/atexit-should-delete-this
   tasks:
-
-    #
-    # Verify a run with a healthy atexit handler. Broken handlers cause an
-    # exception to be raised.
-    #
-
-    - custom_python_run_script:
+    - name: Verify a run with a healthy atexit handler
+      custom_python_run_script:
         script: |
           import atexit, os, shutil
           path = '{{path}}'
           os.mkdir(path, int('777', 8))
           atexit.register(shutil.rmtree, path)
 
-    - stat:
+    - name: Stat atexit file
+      stat:
         path: "{{path}}"
       register: out
 

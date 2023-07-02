@@ -1,6 +1,5 @@
 - name: integration/runner/custom_script_interpreter.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
     - custom_bash_old_style_module:

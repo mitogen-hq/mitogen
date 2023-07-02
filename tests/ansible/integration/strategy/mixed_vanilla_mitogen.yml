@@ -1,12 +1,13 @@
 
 - name: integration/strategy/mixed_vanilla_mitogen.yml (linear->mitogen->linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   tasks:
     - connection: local
       command: |
         ansible-playbook
-        -i "{{MITOGEN_INVENTORY_FILE}}"
+        {% for inv in ansible_inventory_sources %}
+        -i "{{ inv }}"
+        {% endfor %}
         -vvv
         integration/strategy/_mixed_mitogen_vanilla.yml
       args:
@@ -16,7 +17,9 @@
     - connection: local
       command: |
         ansible-playbook
-        -i "{{MITOGEN_INVENTORY_FILE}}"
+        {% for inv in ansible_inventory_sources %}
+        -i "{{ inv }}"
+        {% endfor %}
         -vvv
         integration/strategy/_mixed_vanilla_mitogen.yml
       args:

@@ -1,6 +1,5 @@
 - name: integration/become/sudo_nonexistent.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
     - name: Verify behaviour for non-existent accounts.

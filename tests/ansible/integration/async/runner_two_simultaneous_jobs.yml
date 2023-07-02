@@ -1,12 +1,12 @@
 
 - name: integration/async/runner_two_simultaneous_jobs.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   # Start 2 duplicate jobs, verify they run concurrently.
 
-  - file:
+  - name: Cleanup semaphore file
+    file:
       path: /tmp/flurp
       state: absent
 

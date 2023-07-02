@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # I am a module that indirectly depends on glibc cached /etc/resolv.conf state.
 

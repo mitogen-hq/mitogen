@@ -87,7 +87,7 @@ class ScheduleTest(TimerListMixin, testlib.TestCase):
         timer2 = self.list.schedule(31, lambda: None)
         self.assertEqual(31, timer.when)
         self.assertEqual(31, timer2.when)
-        self.assertTrue(timer is not timer2)
+        self.assertIsNot(timer, timer2)
         self.assertEqual(1, self.list.get_timeout())
 
 

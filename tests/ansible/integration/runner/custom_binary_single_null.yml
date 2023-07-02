@@ -10,7 +10,6 @@
     - custom_binary_single_null
 
 - hosts: test-targets
-  any_errors_fatal: true
   tasks:
   - assert:
       that:

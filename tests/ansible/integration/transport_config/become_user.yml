@@ -2,7 +2,7 @@
 
 
 # No become-user set, defaults to "root"
-- name: integration/transport_config/become-user.yml
+- name: integration/transport_config/become_user.yml
   hosts: tc-become-user-unset
   become: true
   tasks:
