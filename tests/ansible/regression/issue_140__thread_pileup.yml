@@ -4,7 +4,6 @@
 
 - name: regression/issue_140__thread_pileup.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - name: Create file tree
@@ -18,7 +17,8 @@
   - name: Delete remote file tree
     file: path=/tmp/filetree.out state=absent
 
-  - file:
+  - name: Recreate file tree
+    file:
       state: directory
       path: /tmp/filetree.out
 

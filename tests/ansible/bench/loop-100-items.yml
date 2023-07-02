@@ -4,7 +4,8 @@
 #
 # See also: loop-100-tasks.yml
 #
-- hosts: all
+- name: bench/loop-100-items.yml
+  hosts: all
   tasks:
     - command: hostname
       with_sequence: start=1 end="{{end|default(100)}}"

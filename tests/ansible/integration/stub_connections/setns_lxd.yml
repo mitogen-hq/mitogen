@@ -13,7 +13,8 @@
 
     - include: _end_play_if_not_sudo_linux.yml
 
-    - command: |
+    - name: Run ansible stub-lxc.py
+      command: |
         sudo -nE "{{lookup('env', 'VIRTUAL_ENV')}}/bin/ansible"
         -i localhost,
         -c setns

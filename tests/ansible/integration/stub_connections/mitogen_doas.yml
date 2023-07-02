@@ -2,7 +2,6 @@
 - name: integration/stub_connections/mitogen_doas.yml
   hosts: test-targets
   gather_facts: false
-  any_errors_fatal: true
   tasks:
   - meta: end_play
     when: not is_mitogen

@@ -1,9 +1,9 @@
 - name: regression/issue_177__copy_module_failing.yml
-  any_errors_fatal: true
   hosts: test-targets
   tasks:
 
-  - copy:
+  - name: Copy files
+    copy:
       src: /etc/{{item}}
       dest: /tmp/{{item}}
       mode: 0644
@@ -11,7 +11,8 @@
       - passwd
       - hosts
 
-  - file:
+  - name: Cleanup files
+    file:
       path: /tmp/{{item}}
       state: absent
     with_items:

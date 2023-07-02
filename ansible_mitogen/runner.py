@@ -41,6 +41,7 @@ __metaclass__ = type
 
 import atexit
 import imp
+import json
 import os
 import re
 import shlex
@@ -62,12 +63,6 @@ try:
 except ImportError:
     # Python 2.4
     ctypes = None
-
-try:
-    import json
-except ImportError:
-    # Python 2.4
-    import simplejson as json
 
 try:
     # Cannot use cStringIO as it does not support Unicode.

@@ -2,7 +2,6 @@
 
 - name: integration/action/low_level_execute_command.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
     # "echo -en" to test we actually hit bash shell too.

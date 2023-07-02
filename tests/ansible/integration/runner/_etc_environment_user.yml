@@ -1,6 +1,7 @@
 # ~/.pam_environment
 
-- file:
+- name: Remove pam_environment
+  file:
     path: ~/.pam_environment
     state: absent
 
@@ -11,7 +12,8 @@
     that: echo.stdout == ""
     fail_msg: echo={{echo}}
 
-- copy:
+- name: Copy pam_environment
+  copy:
     dest: ~/.pam_environment
     content: |
       MAGIC_PAM_ENV=321
@@ -23,7 +25,8 @@
     that: echo.stdout == "321"
     fail_msg: echo={{echo}}
 
-- file:
+- name: Cleanup pam_environment
+  file:
     path: ~/.pam_environment
     state: absent
 

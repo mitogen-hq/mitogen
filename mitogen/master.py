@@ -536,7 +536,7 @@ class PkgutilMethod(FinderMethod):
 
         try:
             path = loader.get_filename(fullname)
-        except (AttributeError, ImportError):
+        except (AttributeError, ImportError, ValueError):
             # - get_filename() may throw ImportError if pkgutil.find_loader()
             #   picks a "parent" package's loader for some crap that's been
             #   stuffed in sys.modules, for example in the case of urllib3:

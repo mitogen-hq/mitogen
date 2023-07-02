@@ -1,7 +1,8 @@
 # issue #633: Connection.reset() should ignore "become", and apply to the login
 # account.
 
-- hosts: test-targets
+- name: integration/connection/reset_become.yml
+  hosts: test-targets
   become: true
   gather_facts: false
   tasks:

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # I am an Ansible new-style Python module. I run the script provided in the
 # parameter.
 

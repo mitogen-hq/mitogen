@@ -2,7 +2,6 @@
 
 - name: integration/connection/home_dir.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - name: "Find out root's homedir."
       # Runs first because it blats regular Ansible facts with junk, so

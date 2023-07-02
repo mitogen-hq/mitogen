@@ -1,6 +1,5 @@
-
-- hosts: all
-  any_errors_fatal: true
+- name: bench/loop-100-copies.yml
+  hosts: all
   tasks:
 
   - name: Create file tree

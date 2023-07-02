@@ -2,7 +2,6 @@
 - name: integration/async/result_binary_producing_json.yml
   gather_facts: true
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - block:
@@ -38,7 +37,8 @@
     retries: 100000
     delay: 0
 
-  - slurp:
+  - name: Slurp async busy-poll
+    slurp:
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 

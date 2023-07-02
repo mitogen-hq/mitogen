@@ -130,7 +130,8 @@ class ClientTest(testlib.TestCase):
     def test_simple(self):
         path = mitogen.unix.make_socket_path()
         proc = subprocess.Popen(
-            [sys.executable, __file__, 'ClientTest_server', path]
+            [sys.executable, __file__, 'ClientTest_server', path],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         try:
             self._test_simple_client(path)
@@ -139,7 +140,9 @@ class ClientTest(testlib.TestCase):
             mitogen.context_id = 0
             mitogen.parent_id = None
             mitogen.parent_ids = []
-        proc.wait()
+        b_stdout, _ = proc.communicate()
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(b_stdout.decode(), '')
 
 
 if __name__ == '__main__':

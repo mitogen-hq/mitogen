@@ -198,7 +198,7 @@ class ThreadedCloseTest(testlib.TestCase):
         self.join()
         self.assertEqual(self.results, [None])
         for exc in self.excs:
-            self.assertTrue(isinstance(exc, mitogen.core.LatchError))
+            self.assertIsInstance(exc, mitogen.core.LatchError)
 
     def test_five_threads(self):
         latch = self.klass()
@@ -208,4 +208,4 @@ class ThreadedCloseTest(testlib.TestCase):
         self.join()
         self.assertEqual(self.results, [None]*5)
         for exc in self.excs:
-            self.assertTrue(isinstance(exc, mitogen.core.LatchError))
+            self.assertIsInstance(exc, mitogen.core.LatchError)

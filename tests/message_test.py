@@ -49,12 +49,12 @@ class ConstructorTest(testlib.TestCase):
     def test_data_default(self):
         m = self.klass()
         self.assertEqual(m.data, b(''))
-        self.assertTrue(isinstance(m.data, mitogen.core.BytesType))
+        self.assertIsInstance(m.data, mitogen.core.BytesType)
 
     def test_data_explicit(self):
         m = self.klass(data=b('asdf'))
         self.assertEqual(m.data, b('asdf'))
-        self.assertTrue(isinstance(m.data, mitogen.core.BytesType))
+        self.assertIsInstance(m.data, mitogen.core.BytesType)
 
     def test_data_hates_unicode(self):
         self.assertRaises(Exception,
@@ -185,9 +185,9 @@ class PickledTest(testlib.TestCase):
         d = {1: 2, u'a': 3, b('b'): 4, 'c': {}}
         roundtrip = self.roundtrip(d)
         self.assertEqual(d, roundtrip)
-        self.assertTrue(isinstance(roundtrip, dict))
+        self.assertIsInstance(roundtrip, dict)
         for k in d:
-            self.assertTrue(isinstance(roundtrip[k], type(d[k])))
+            self.assertIsInstance(roundtrip[k], type(d[k]))
 
     def test_int(self):
         self.assertEqual(123, self.klass.pickled(123).unpickle())
@@ -195,10 +195,10 @@ class PickledTest(testlib.TestCase):
     def test_list(self):
         l = [1, u'b', b('c')]
         roundtrip = self.roundtrip(l)
-        self.assertTrue(isinstance(roundtrip, list))
+        self.assertIsInstance(roundtrip, list)
         self.assertEqual(l, roundtrip)
         for k in range(len(l)):
-            self.assertTrue(isinstance(roundtrip[k], type(l[k])))
+            self.assertIsInstance(roundtrip[k], type(l[k]))
 
     @unittest.skipIf(condition=sys.version_info > (3, 0),
                       reason='long missing in >3.x')
@@ -206,21 +206,21 @@ class PickledTest(testlib.TestCase):
         l = long(0xffffffffffff)
         roundtrip = self.roundtrip(l)
         self.assertEqual(l, roundtrip)
-        self.assertTrue(isinstance(roundtrip, long))
+        self.assertIsInstance(roundtrip, long)
 
     def test_tuple(self):
         l = (1, u'b', b('c'))
         roundtrip = self.roundtrip(l)
         self.assertEqual(l, roundtrip)
-        self.assertTrue(isinstance(roundtrip, tuple))
+        self.assertIsInstance(roundtrip, tuple)
         for k in range(len(l)):
-            self.assertTrue(isinstance(roundtrip[k], type(l[k])))
+            self.assertIsInstance(roundtrip[k], type(l[k]))
 
     def test_unicode(self):
         u = u'abcd'
         roundtrip = self.roundtrip(u)
         self.assertEqual(u, roundtrip)
-        self.assertTrue(isinstance(roundtrip, mitogen.core.UnicodeType))
+        self.assertIsInstance(roundtrip, mitogen.core.UnicodeType)
 
     #### custom types. see also: types_test.py, call_error_test.py
 
@@ -231,25 +231,25 @@ class PickledTest(testlib.TestCase):
     def test_blob_nonempty(self):
         v = mitogen.core.Blob(b('dave'))
         roundtrip = self.roundtrip(v)
-        self.assertTrue(isinstance(roundtrip, mitogen.core.Blob))
+        self.assertIsInstance(roundtrip, mitogen.core.Blob)
         self.assertEqual(b('dave'), roundtrip)
 
     def test_blob_empty(self):
         v = mitogen.core.Blob(b(''))
         roundtrip = self.roundtrip(v)
-        self.assertTrue(isinstance(roundtrip, mitogen.core.Blob))
+        self.assertIsInstance(roundtrip, mitogen.core.Blob)
         self.assertEqual(b(''), v)
 
     def test_secret_nonempty(self):
         s = mitogen.core.Secret(u'dave')
         roundtrip = self.roundtrip(s)
-        self.assertTrue(isinstance(roundtrip, mitogen.core.Secret))
+        self.assertIsInstance(roundtrip, mitogen.core.Secret)
         self.assertEqual(u'dave', roundtrip)
 
     def test_secret_empty(self):
         s = mitogen.core.Secret(u'')
         roundtrip = self.roundtrip(s)
-        self.assertTrue(isinstance(roundtrip, mitogen.core.Secret))
+        self.assertIsInstance(roundtrip, mitogen.core.Secret)
         self.assertEqual(u'', roundtrip)
 
     def test_call_error(self):
@@ -263,7 +263,7 @@ class PickledTest(testlib.TestCase):
         try:
             c = router.context_by_id(1234)
             roundtrip = self.roundtrip(c)
-            self.assertTrue(isinstance(roundtrip, mitogen.core.Context))
+            self.assertIsInstance(roundtrip, mitogen.core.Context)
             self.assertEqual(c.context_id, 1234)
         finally:
             router.broker.shutdown()
@@ -275,7 +275,7 @@ class PickledTest(testlib.TestCase):
             recv = mitogen.core.Receiver(router)
             sender = recv.to_sender()
             roundtrip = self.roundtrip(sender, router=router)
-            self.assertTrue(isinstance(roundtrip, mitogen.core.Sender))
+            self.assertIsInstance(roundtrip, mitogen.core.Sender)
             self.assertEqual(roundtrip.context.context_id, mitogen.context_id)
             self.assertEqual(roundtrip.dst_handle, sender.dst_handle)
         finally:
@@ -314,7 +314,7 @@ class ReplyTest(testlib.TestCase):
         my_reply = mitogen.core.Message.pickled(4444)
         msg.reply(my_reply, router=router)
         _, (reply,), _ = router.route.mock_calls[0]
-        self.assertTrue(my_reply is reply)
+        self.assertIs(my_reply, reply)
         self.assertEqual(reply.dst_id, 1234)
         self.assertEqual(reply.unpickle(), 4444)
 

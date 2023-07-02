@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # I am an Ansible new-style Python module. I should receive an encoding string.
 
 import sys
