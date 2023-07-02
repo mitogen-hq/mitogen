@@ -17,6 +17,10 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
+Unreleased
+----------
+
+
 v0.3.4 (2023-07-02)
 -------------------
 
