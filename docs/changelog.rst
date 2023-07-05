@@ -17,7 +17,11 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/dw/mitogen/>`_.
 
-v0.3.4.dev0
+Unreleased
+----------
+
+
+v0.3.4 (2023-07-02)
 -------------------
 
 * :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
@@ -28,6 +32,7 @@ v0.3.4.dev0
   resource leaks.
 * :gh:issue:`659` Removed :mod:`mitogen.compat.simplejson`, not needed with Python 2.7+, contained Python 3.x syntax errors
 * :gh:issue:`983` CI: Removed PyPI faulthandler requirement from tests
+* :gh:issue:`1001` CI: Fixed Debian 9 & 11 tests
 
 v0.3.3 (2022-06-03)
 -------------------
