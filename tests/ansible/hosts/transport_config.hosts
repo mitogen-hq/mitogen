@@ -21,7 +21,7 @@ tc_transport
 # That causes approx 10 seconds timeout per task - there's no host to connect to.
 # This optimisation should not be relied in any test.
 # Note: tc-python-path-* are intentionally not included.
-ansible_python_interpreter = python3000  # Not expected to exist
+ansible_python_interpreter = python3000
 
 [tc_transport]
 tc-transport-unset

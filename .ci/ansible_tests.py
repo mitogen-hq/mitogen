@@ -6,6 +6,7 @@ import glob
 import os
 import signal
 import sys
+import textwrap
 
 import ci_lib
 
@@ -74,7 +75,15 @@ with ci_lib.Fold('job_setup'):
             fp.write('\n[%s]\n' % family)
             fp.writelines('%s\n' % name for name in hostnames)
 
-        fp.write('\n[linux:children]\ntest-targets\n')
+        fp.write(textwrap.dedent(
+            '''
+            [linux:children]
+            test-targets
+
+            [linux_containers:children]
+            test-targets
+            '''
+        ))
 
     ci_lib.dump_file(inventory_path)
 

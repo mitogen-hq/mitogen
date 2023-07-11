@@ -1,0 +1,9 @@
+- name: regression/become_test.yml
+  hosts: test-targets:&linux_containers
+  become: true
+  become_user: mitogen__pw_required
+  strategy: mitogen_linear
+  tasks:
+    - command: whoami
+      changed_when: false
+      check_mode: false

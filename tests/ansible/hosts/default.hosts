@@ -7,3 +7,5 @@ target ansible_host=localhost ansible_user="{{lookup('env', 'USER')}}"
 
 [test-targets]
 target
+
+[linux_containers]
