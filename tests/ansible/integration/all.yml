@@ -29,6 +29,8 @@
   tags: playbook_semantics
 - import_playbook: process/all.yml
   tags: process
+- import_playbook: responder/all.yml
+  tags: responder
 - import_playbook: runner/all.yml
   tags: runner
 - import_playbook: ssh/all.yml

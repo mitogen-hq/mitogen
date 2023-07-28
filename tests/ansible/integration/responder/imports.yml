@@ -1,0 +1,23 @@
+- name: integration/responder/imports.yml
+  hosts: test-targets
+  tasks:
+    - meta: end_play
+      when: not is_mitogen
+
+    - name: Import pure Python module via Ansible module
+      mitogen_plain_old_add:
+        x: 2
+        y: 2
+      register: mitogen_plain_old_add_result
+
+    - name: Import binary module via Responder
+      custom_python_run_script:
+        script: |
+          import lxml
+      register: binary_module_result
+
+    - name: Import missing module via Responder
+      custom_python_run_script:
+        script: |
+          import does_not_exist
+      register: missing_module_result

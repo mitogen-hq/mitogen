@@ -33,13 +33,9 @@ jobs:
 
       # NOTE: this hangs when ran in Ubuntu 18.04
       Van_27_210:
-        tox.env: py27-mode_localhost-ansible2.10
-        STRATEGY: linear
-        ANSIBLE_SKIP_TAGS: resource_intensive
+        tox.env: py27-mode_localhost-ansible2.10-strategy_linear
       Van_27_4:
-        tox.env: py27-mode_localhost-ansible4
-        STRATEGY: linear
-        ANSIBLE_SKIP_TAGS: resource_intensive
+        tox.env: py27-mode_localhost-ansible4-strategy_linear
 
 - job: Linux
   pool:
