@@ -981,7 +981,7 @@ class FileService(Service):
     # The IO loop pumps 128KiB chunks. An ideal message is a multiple of this,
     # odd-sized messages waste one tiny write() per message on the trailer.
     # Therefore subtract 10 bytes pickle overhead + 24 bytes header.
-    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.Message.HEADER_LEN + (
+    IO_SIZE = mitogen.core.CHUNK_SIZE - (mitogen.core.MessageHeader.SIZE + (
         len(
             mitogen.core.Message.pickled(
                 mitogen.core.Blob(b(' ') * mitogen.core.CHUNK_SIZE)
