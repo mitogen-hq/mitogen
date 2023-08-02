@@ -9,7 +9,8 @@
 
 - command: sudo -n whoami
   args:
-    warn: false
+    # warn was deprecated in Ansible 4 (ansible-core 2.11), removed in Ansible 7 (2.14)
+    warn: '{{ false if ansible_version.full is version("2.11", "<", strict=True) else omit }}'
   ignore_errors: true
   register: sudo_available
 
