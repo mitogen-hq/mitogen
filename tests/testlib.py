@@ -631,12 +631,33 @@ class DockerMixin(RouterMixin):
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 
+    @property
+    def docker_ssh_default_kwargs(self):
+        return {
+            'hostname': self.dockerized_ssh.host,
+            'port': self.dockerized_ssh.port,
+            'check_host_keys': 'ignore',
+            'ssh_debug_level': 3,
+            # https://www.openssh.com/legacy.html
+            # ssh-rsa uses SHA1. Least worst available with CentOS 7 sshd.
+            # Rejected by default in newer ssh clients (e.g. Ubuntu 22.04).
+            # Duplicated cases in
+            #   - tests/ansible/ansible.cfg
+            #   - tests/ansible/integration/connection_delegation/delegate_to_template.yml
+            #   - tests/ansible/integration/connection_delegation/stack_construction.yml
+            #   - tests/ansible/integration/process/unix_socket_cleanup.yml
+            #   - tests/ansible/integration/ssh/variables.yml
+            #   - tests/testlib.py
+            'ssh_args': [
+                '-o', 'HostKeyAlgorithms +ssh-rsa',
+                '-o', 'PubkeyAcceptedKeyTypes +ssh-rsa',
+            ],
+            'python_path': self.dockerized_ssh.python_path,
+        }
+
     def docker_ssh(self, **kwargs):
-        kwargs.setdefault('hostname', self.dockerized_ssh.host)
-        kwargs.setdefault('port', self.dockerized_ssh.port)
-        kwargs.setdefault('check_host_keys', 'ignore')
-        kwargs.setdefault('ssh_debug_level', 3)
-        kwargs.setdefault('python_path', self.dockerized_ssh.python_path)
+        for k, v in self.docker_ssh_default_kwargs.items():
+            kwargs.setdefault(k, v)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):
