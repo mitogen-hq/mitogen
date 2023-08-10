@@ -18,7 +18,10 @@ except ImportError:
     import ConfigParser as configparser
 
 import psutil
-import subprocess32 as subprocess
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 import mitogen.core
 import mitogen.fork
@@ -499,19 +502,18 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    def _get_container_port(self):
-        s = subprocess.check_output(['docker', 'port', self.container_name])
-        for line in s.decode().splitlines():
-            m = self.PORT_RE.match(line)
-            if not m:
-                continue
-            dport, proto, _, bport = m.groups()
-            if dport == '22' and proto == 'tcp':
-                self.port = int(bport)
+    PORT_RE = re.compile(
+        # e.g. 0.0.0.0:32771, :::32771, [::]:32771'
+        r'(?P<addr>[0-9.]+|::|\[[a-f0-9:.]+\]):(?P<port>[0-9]+)',
+    )
 
-        self.host = self.get_host()
-        if self.port is None:
+    @classmethod
+    def get_port(cls, container):
+        s = subprocess.check_output(['docker', 'port', container, '22/tcp'])
+        m = cls.PORT_RE.search(s.decode())
+        if not m:
             raise ValueError('could not find SSH port in: %r' % (s,))
+        return int(m.group('port'))
 
     def start_container(self):
         try:
@@ -530,7 +532,6 @@ class DockerizedSshDaemon(object):
             self.image,
         ]
         subprocess.check_output(args)
-        self._get_container_port()
 
     def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
         if '-'  in mitogen_test_distro:
@@ -545,12 +546,9 @@ class DockerizedSshDaemon(object):
             self.python_path = '/usr/bin/python'
 
         self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
-
-        # 22/tcp -> 0.0.0.0:32771
-        self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
-        self.port = None
-
         self.start_container()
+        self.host = self.get_host()
+        self.port = self.get_port(self.container_name)
 
     def get_host(self):
         return get_docker_host()
