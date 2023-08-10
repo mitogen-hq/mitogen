@@ -8,7 +8,7 @@ cffi==1.14.3  # Random pin to try and fix pyparser==2.18 not having effect
 pycparser==2.18  # Last version supporting 2.6.
 pytest-catchlog==1.2.2
 pytest==3.1.2
-subprocess32==3.5.4
+subprocess32==3.5.4; python_version < '3.0'
 timeoutcontext==1.2.0
 # Fix InsecurePlatformWarning while creating py26 tox environment
 # https://urllib3.readthedocs.io/en/latest/advanced-usage.html#ssl-warnings

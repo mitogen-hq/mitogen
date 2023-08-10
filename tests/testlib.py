@@ -18,7 +18,10 @@ except ImportError:
     import ConfigParser as configparser
 
 import psutil
-import subprocess32 as subprocess
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 import mitogen.core
 import mitogen.fork
