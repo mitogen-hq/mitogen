@@ -1,8 +1,7 @@
 import os
 import sys
 
-sys.path.append('..')
-sys.path.append('.')
+sys.path.extend(['..', '.'])
 import mitogen
 VERSION = '%s.%s.%s' % mitogen.__version__
 
