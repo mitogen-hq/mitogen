@@ -201,8 +201,7 @@
       "pytz.exceptions",
       "pytz.lazy",
       "pytz.tzfile",
-      "pytz.tzinfo",
-      "zipimport"
+      "pytz.tzinfo"
     ]
   }
 }
