@@ -10,7 +10,10 @@ import shutil
 import sys
 import tempfile
 
-import subprocess32 as subprocess
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 try:
     import urlparse

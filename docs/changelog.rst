@@ -20,6 +20,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`987` Support Python 3.11
+
 
 v0.3.4 (2023-07-02)
 -------------------

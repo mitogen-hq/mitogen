@@ -1,4 +1,5 @@
 import inspect
+import json
 import os
 import sys
 import unittest
@@ -296,199 +297,65 @@ class FindRelatedTest(testlib.TestCase):
         self.assertEqual(set(related), self.SIMPLE_EXPECT)
 
 
-if sys.version_info > (2, 6):
-    class DjangoMixin(object):
-        WEBPROJECT_PATH = os.path.join(testlib.MODS_DIR, 'webproject')
+class DjangoMixin(object):
+    WEBPROJECT_PATH = os.path.join(testlib.MODS_DIR, 'webproject')
 
-        # TODO: rip out Django and replace with a static tree of weird imports
-        # that don't depend on .. Django! The hack below is because the version
-        # of Django we need to test against 2.6 doesn't actually run on 3.6.
-        # But we don't care, we just need to be able to import it.
-        #
-        #   File "django/utils/html_parser.py", line 12, in <module>
-        #   AttributeError: module 'html.parser' has no attribute
-        #   'HTMLParseError'
-        #
-        from django.utils.six.moves import html_parser as _html_parser
-        _html_parser.HTMLParseError = Exception
+    @classmethod
+    def modules_expected_path(cls):
+        if sys.version_info[0:2] < (3, 0):
+            modules_expected_filename = 'modules_expected_py2x.json'
+        elif sys.version_info[0:2] <= (3, 6):
+            modules_expected_filename = 'modules_expected_py3x-legacy.json'
+        elif sys.version_info[0:2] >= (3, 10):
+            modules_expected_filename = 'modules_expected_py3x-new.json'
+        return os.path.join(cls.WEBPROJECT_PATH, modules_expected_filename)
 
-        @classmethod
-        def setUpClass(cls):
-            super(DjangoMixin, cls).setUpClass()
-            sys.path.append(cls.WEBPROJECT_PATH)
-            os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
+    @classmethod
+    def setUpClass(cls):
+        super(DjangoMixin, cls).setUpClass()
+        sys.path.append(cls.WEBPROJECT_PATH)
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
+        with open(cls.modules_expected_path(), 'rb') as f:
+            cls.MODULES_EXPECTED = json.load(f)
 
-        @classmethod
-        def tearDownClass(cls):
-            sys.path.remove(cls.WEBPROJECT_PATH)
-            del os.environ['DJANGO_SETTINGS_MODULE']
-            super(DjangoMixin, cls).tearDownClass()
-
-
-    class FindRelatedImportsTest(DjangoMixin, testlib.TestCase):
-        klass = mitogen.master.ModuleFinder
-
-        def call(self, fullname):
-            return self.klass().find_related_imports(fullname)
-
-        def test_django_db(self):
-            import django.db
-            related = self.call('django.db')
-            self.assertEqual(related, [
-                'django',
-                'django.core',
-                'django.core.signals',
-                'django.db.utils',
-                'django.utils.functional',
-            ])
-
-        def test_django_db_models(self):
-            import django.db.models
-            related = self.call('django.db.models')
-            self.maxDiff=None
-            self.assertEqual(related, [
-                u'django',
-                u'django.core.exceptions',
-                u'django.db',
-                u'django.db.models',
-                u'django.db.models.aggregates',
-                u'django.db.models.base',
-                u'django.db.models.deletion',
-                u'django.db.models.expressions',
-                u'django.db.models.fields',
-                u'django.db.models.fields.files',
-                u'django.db.models.fields.related',
-                u'django.db.models.fields.subclassing',
-                u'django.db.models.loading',
-                u'django.db.models.manager',
-                u'django.db.models.query',
-                u'django.db.models.signals',
-            ])
+    @classmethod
+    def tearDownClass(cls):
+        sys.path.remove(cls.WEBPROJECT_PATH)
+        del os.environ['DJANGO_SETTINGS_MODULE']
+        super(DjangoMixin, cls).tearDownClass()
 
 
-    class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
-        klass = mitogen.master.ModuleFinder
-        maxDiff = None
+class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
+    maxDiff = None
 
-        def call(self, fullname):
-            return self.klass().find_related(fullname)
+    def test_django_db(self):
+        import django.db
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related('django.db')
+        expected = self.MODULES_EXPECTED['find_related']['django.db']
+        self.assertEqual(related, expected)
 
-        def test_django_db(self):
-            import django.db
-            related = self.call('django.db')
-            self.assertEqual(related, [
-                u'django',
-                u'django.conf',
-                u'django.conf.global_settings',
-                u'django.core',
-                u'django.core.exceptions',
-                u'django.core.signals',
-                u'django.db.utils',
-                u'django.dispatch',
-                u'django.dispatch.dispatcher',
-                u'django.dispatch.saferef',
-                u'django.utils',
-                u'django.utils._os',
-                u'django.utils.encoding',
-                u'django.utils.functional',
-                u'django.utils.importlib',
-                u'django.utils.module_loading',
-                u'django.utils.six',
-            ])
+    def test_django_db_models(self):
+        import django.db.models
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related('django.db.models')
+        expected = self.MODULES_EXPECTED['find_related']['django.db.models']
+        self.assertEqual(related, expected)
 
-        @unittest.skipIf(
-            condition=(sys.version_info >= (3, 0)),
-            reason='broken due to ancient vendored six.py'
-        )
-        def test_django_db_models(self):
-            import django.db.models
-            related = self.call('django.db.models')
-            self.assertEqual(related, [
-                u'django',
-                u'django.conf',
-                u'django.conf.global_settings',
-                u'django.core',
-                u'django.core.exceptions',
-                u'django.core.files',
-                u'django.core.files.base',
-                u'django.core.files.images',
-                u'django.core.files.locks',
-                u'django.core.files.move',
-                u'django.core.files.storage',
-                u'django.core.files.utils',
-                u'django.core.signals',
-                u'django.core.validators',
-                u'django.db',
-                u'django.db.backends',
-                u'django.db.backends.signals',
-                u'django.db.backends.util',
-                u'django.db.models.aggregates',
-                u'django.db.models.base',
-                u'django.db.models.constants',
-                u'django.db.models.deletion',
-                u'django.db.models.expressions',
-                u'django.db.models.fields',
-                u'django.db.models.fields.files',
-                u'django.db.models.fields.proxy',
-                u'django.db.models.fields.related',
-                u'django.db.models.fields.subclassing',
-                u'django.db.models.loading',
-                u'django.db.models.manager',
-                u'django.db.models.options',
-                u'django.db.models.query',
-                u'django.db.models.query_utils',
-                u'django.db.models.related',
-                u'django.db.models.signals',
-                u'django.db.models.sql',
-                u'django.db.models.sql.aggregates',
-                u'django.db.models.sql.constants',
-                u'django.db.models.sql.datastructures',
-                u'django.db.models.sql.expressions',
-                u'django.db.models.sql.query',
-                u'django.db.models.sql.subqueries',
-                u'django.db.models.sql.where',
-                u'django.db.transaction',
-                u'django.db.utils',
-                u'django.dispatch',
-                u'django.dispatch.dispatcher',
-                u'django.dispatch.saferef',
-                u'django.forms',
-                u'django.forms.fields',
-                u'django.forms.forms',
-                u'django.forms.formsets',
-                u'django.forms.models',
-                u'django.forms.util',
-                u'django.forms.widgets',
-                u'django.utils',
-                u'django.utils._os',
-                u'django.utils.crypto',
-                u'django.utils.datastructures',
-                u'django.utils.dateformat',
-                u'django.utils.dateparse',
-                u'django.utils.dates',
-                u'django.utils.datetime_safe',
-                u'django.utils.decorators',
-                u'django.utils.deprecation',
-                u'django.utils.encoding',
-                u'django.utils.formats',
-                u'django.utils.functional',
-                u'django.utils.html',
-                u'django.utils.html_parser',
-                u'django.utils.importlib',
-                u'django.utils.ipv6',
-                u'django.utils.itercompat',
-                u'django.utils.module_loading',
-                u'django.utils.numberformat',
-                u'django.utils.safestring',
-                u'django.utils.six',
-                u'django.utils.text',
-                u'django.utils.timezone',
-                u'django.utils.translation',
-                u'django.utils.tree',
-                u'django.utils.tzinfo',
-                u'pytz',
-                u'pytz.exceptions',
-                u'pytz.lazy',
-                u'pytz.tzfile',
-                u'pytz.tzinfo',
-            ])
+
+class DjangoFindRelatedImportsTest(DjangoMixin, testlib.TestCase):
+    maxDiff = None
+
+    def test_django_db(self):
+        import django.db
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related_imports('django.db')
+        expected = self.MODULES_EXPECTED['find_related_imports']['django.db']
+        self.assertEqual(related, expected)
+
+    def test_django_db_models(self):
+        import django.db.models
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related_imports('django.db.models')
+        expected = self.MODULES_EXPECTED['find_related_imports']['django.db.models']
+        self.assertEqual(related, expected)

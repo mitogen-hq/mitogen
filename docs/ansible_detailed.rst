@@ -147,8 +147,8 @@ Noteworthy Differences
 
 * Mitogen 0.2.x supports Ansible 2.3-2.9; with Python 2.6, 2.7, or 3.6.
   Mitogen 0.3.1+ supports
-    - Ansible 2.10, 3, and 4; with Python 2.7, or 3.6-3.10
-    - Ansible 5 and 6; with Python 3.8-3.10
+    - Ansible 2.10, 3, and 4; with Python 2.7, or 3.6-3.11
+    - Ansible 5 and 6; with Python 3.8-3.11
   Verify your installation is running one of these versions by checking
   ``ansible --version`` output.
 
