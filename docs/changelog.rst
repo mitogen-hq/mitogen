@@ -92,7 +92,7 @@ v0.2.10 (2021-11-24)
 * :gh:issue:`756` ssh connections with `check_host_keys='accept'` would
   timeout, when using recent OpenSSH client versions.
 * :gh:issue:`758` fix initilialisation of callback plugins in test suite, to address a `KeyError` in
-  :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+  :py:meth:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
 * :gh:issue:`775` Test with Python 3.9
 * :gh:issue:`775` Add msvcrt to the default module deny list
 
