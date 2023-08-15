@@ -18,7 +18,7 @@ The extension is considered stable and real-world use is encouraged.
 
 .. _Ansible: https://www.ansible.com/
 
-.. _Bug reports: https://goo.gl/yLKZiJ
+.. _Bug reports: https://github.com/mitogen-hq/mitogen/issues/new/choose
 
 
 Overview
@@ -1293,7 +1293,7 @@ Sample Profiles
 ---------------
 
 The summaries below may be reproduced using data and scripts maintained in the
-`pcaps branch <https://github.com/dw/mitogen/tree/pcaps/>`_. Traces were
+`pcaps branch <https://github.com/mitogen-hq/mitogen/tree/pcaps/>`_. Traces were
 recorded using Ansible 2.5.14.
 
 
@@ -1302,7 +1302,7 @@ Trivial Loop: Local Host
 
 This demonstrates Mitogen vs. SSH pipelining to the local machine running
 `bench/loop-100-items.yml
-<https://github.com/dw/mitogen/blob/master/tests/ansible/bench/loop-100-items.yml>`_,
+<https://github.com/mitogen-hq/mitogen/blob/master/tests/ansible/bench/loop-100-items.yml>`_,
 executing a simple command 100 times. Most Ansible controller overhead is
 isolated, characterizing just module executor and connection layer performance.
 Mitogen requires **63x less bandwidth and 5.9x less time**.
@@ -1330,7 +1330,7 @@ File Transfer: UK to France
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 `This playbook
-<https://github.com/dw/mitogen/blob/master/tests/ansible/regression/issue_140__thread_pileup.yml>`_
+<https://github.com/mitogen-hq/mitogen/blob/master/tests/ansible/regression/issue_140__thread_pileup.yml>`_
 was used to compare file transfer performance over a ~26 ms link. It uses the
 ``with_filetree`` loop syntax to copy a directory of 1,000 0-byte files to the
 target.
