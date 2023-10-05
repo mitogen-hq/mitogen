@@ -15,7 +15,7 @@ Release Notes
     </style>
 
 To avail of fixes in an unreleased version, please download a ZIP file
-`directly from GitHub <https://github.com/dw/mitogen/>`_.
+`directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 Unreleased
 ----------
@@ -71,7 +71,7 @@ v0.3.0 (2021-11-24)
 -------------------
 
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
-`See here for details <https://github.com/dw/mitogen/pull/715#issuecomment-750697248>`_.
+`See here for details <https://github.com/mitogen-hq/mitogen/pull/715#issuecomment-750697248>`_.
 
 * :gh:issue:`827` NewStylePlanner: detect `ansible_collections` imports
 * :gh:issue:`770` better check for supported Ansible version
@@ -92,7 +92,7 @@ v0.2.10 (2021-11-24)
 * :gh:issue:`756` ssh connections with `check_host_keys='accept'` would
   timeout, when using recent OpenSSH client versions.
 * :gh:issue:`758` fix initilialisation of callback plugins in test suite, to address a `KeyError` in
-  :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+  :py:meth:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
 * :gh:issue:`775` Test with Python 3.9
 * :gh:issue:`775` Add msvcrt to the default module deny list
 
@@ -178,7 +178,7 @@ Mitogen for Ansible
   :linux:man7:`unix` sockets across privilege domains.
 
 * :gh:issue:`467`: an incompatibility running Mitogen under `Molecule
-  <https://molecule.readthedocs.io/en/stable/>`_ was resolved.
+  <https://ansible.readthedocs.io/projects/molecule/>`_ was resolved.
 
 * :gh:issue:`547`, :gh:issue:`598`: fix a deadlock during initialization of
   connections, ``async`` tasks, tasks using custom :mod:`module_utils`,
@@ -1230,9 +1230,8 @@ Core Library
   parameter may specify an argument vector prefix rather than a string program
   path.
 
-* :gh:issue:`300`: the broker could crash on
-  OS X during shutdown due to scheduled `kqueue
-  <https://www.freebsd.org/cgi/man.cgi?query=kqueue>`_ filter changes for
+* :gh:issue:`300`: the broker could crash on OS X during shutdown due to
+  scheduled :freebsd:man2:`kqueue` filter changes for
   descriptors that were closed before the IO loop resumes. As a temporary
   workaround, kqueue's bulk change feature is not used.
 

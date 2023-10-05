@@ -26,7 +26,7 @@ and efficient low-level API on which tools like `Salt`_, `Ansible`_, or
 `Fabric`_ can be built, and while the API is quite friendly and comparable to
 `Fabric`_, ultimately it is not intended for direct use by consumer software.
 
-.. _Salt: https://docs.saltstack.com/en/latest/
+.. _Salt: https://docs.saltproject.io/en/latest/
 .. _Ansible: https://docs.ansible.com/
 .. _Fabric: https://www.fabfile.org/
 
