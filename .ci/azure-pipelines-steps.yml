@@ -9,6 +9,7 @@ steps:
 - task: UsePythonVersion@0
   displayName: Install python
   inputs:
+    githubToken: '$(GITHUB_PYVER_TOKEN)'
     versionSpec: '$(python.version)'
   condition: ne(variables['python.version'], '')
 
