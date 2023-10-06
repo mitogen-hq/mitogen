@@ -39,6 +39,7 @@ import ansible_mitogen.utils
 
 __all__ = [
     'action_loader',
+    'become_loader',
     'connection_loader',
     'module_loader',
     'module_utils_loader',
@@ -48,7 +49,7 @@ __all__ = [
 
 
 ANSIBLE_VERSION_MIN = (2, 10)
-ANSIBLE_VERSION_MAX = (2, 12)
+ANSIBLE_VERSION_MAX = (2, 13)
 
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
@@ -90,6 +91,7 @@ assert_supported_release()
 
 
 from ansible.plugins.loader import action_loader
+from ansible.plugins.loader import become_loader
 from ansible.plugins.loader import connection_loader
 from ansible.plugins.loader import module_loader
 from ansible.plugins.loader import module_utils_loader

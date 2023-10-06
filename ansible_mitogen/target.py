@@ -38,6 +38,7 @@ __metaclass__ = type
 
 import errno
 import grp
+import json
 import operator
 import os
 import pwd
@@ -57,11 +58,6 @@ import mitogen.core
 import mitogen.parent
 import mitogen.service
 from mitogen.core import b
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 try:
     reduce
@@ -370,11 +366,6 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     # the connection multiplexer process in the master.
     LOG.setLevel(log_level)
     logging.getLogger('ansible_mitogen').setLevel(log_level)
-
-    # issue #536: if the json module is available, remove simplejson from the
-    # importer whitelist to avoid confusing certain Ansible modules.
-    if json.__name__ == 'json':
-        econtext.importer.whitelist.remove('simplejson')
 
     global _fork_parent
     if FORK_SUPPORTED:

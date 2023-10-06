@@ -30,7 +30,6 @@
 
 
 - hosts: cd-normal
-  any_errors_fatal: true
   tasks:
     - meta: end_play
       when: not is_mitogen
@@ -42,7 +41,7 @@
         right: [
           {
             "kwargs": {
-              "connect_timeout": 10,
+              "connect_timeout": 30,
               "doas_path": null,
               "password": null,
               "python_path": ["/usr/bin/python"],
@@ -71,7 +70,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
@@ -82,14 +81,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -116,7 +113,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
@@ -127,14 +124,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -159,7 +154,7 @@
         right: [
               {
                   'kwargs': {
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'doas_path': null,
                       'password': null,
                       "python_path": ["/usr/bin/python"],
@@ -172,7 +167,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'cd-normal-normal',
                       'identities_only': False,
                       'identity_file': null,
@@ -183,14 +178,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -217,7 +210,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
@@ -228,14 +221,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -247,7 +238,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'cd-normal-alias',
                       'identities_only': False,
                       'identity_file': null,
@@ -258,14 +249,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -290,7 +279,7 @@
         right: [
               {
                   'kwargs': {
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'doas_path': null,
                       'password': null,
                       "python_path": ["/usr/bin/python"],
@@ -303,7 +292,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'cd-newuser-normal-normal',
                       'identities_only': False,
                       'identity_file': null,
@@ -314,14 +303,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -349,7 +336,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
@@ -360,14 +347,12 @@
                       "python_path": ["/usr/bin/python"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -413,7 +398,7 @@
         right: [
           {
             'kwargs': {
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'doas_path': null,
               'password': null,
               'python_path': ["/usr/bin/python"],
@@ -424,7 +409,7 @@
           },
           {
             'kwargs': {
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'doas_path': null,
               'password': null,
               'python_path': ["/usr/bin/python"],
@@ -433,6 +418,6 @@
             },
             'method': 'doas',
           },
-      ]
+        ]
   tags:
     - stack_construction

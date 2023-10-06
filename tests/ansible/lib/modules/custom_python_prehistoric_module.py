@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # issue #555: I'm a module that cutpastes an old hack.
 
 from ansible.module_utils.basic import AnsibleModule

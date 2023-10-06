@@ -79,6 +79,7 @@ try:
 except ImportError:
     from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 
+import ansible_mitogen.loaders
 import mitogen.core
 
 
@@ -435,7 +436,10 @@ class PlayContextSpec(Spec):
         return self._play_context.become_user
 
     def become_pass(self):
-        return optional_secret(self._play_context.become_pass)
+        become_method = self.become_method()
+        become_plugin = ansible_mitogen.loaders.become_loader.get(become_method)
+        become_pass = become_plugin.get_option('become_pass', hostvars=self._task_vars)
+        return optional_secret(become_pass)
 
     def password(self):
         return optional_secret(self._play_context.password)
@@ -652,8 +656,8 @@ class MitogenViaSpec(Spec):
 
     def become_pass(self):
         return optional_secret(
-            self._host_vars.get('ansible_become_password') or
-            self._host_vars.get('ansible_become_pass')
+            self._host_vars.get('ansible_become_pass') or
+            self._host_vars.get('ansible_become_password')
         )
 
     def password(self):
@@ -749,7 +753,7 @@ class MitogenViaSpec(Spec):
         return self._host_vars.get('mitogen_kubectl_path')
 
     def mitogen_lxc_path(self):
-        return self.host_vars.get('mitogen_lxc_path')
+        return self._host_vars.get('mitogen_lxc_path')
 
     def mitogen_lxc_attach_path(self):
         return self._host_vars.get('mitogen_lxc_attach_path')

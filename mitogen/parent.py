@@ -1027,7 +1027,7 @@ class KqueuePoller(mitogen.core.Poller):
 
 class EpollPoller(mitogen.core.Poller):
     """
-    Poller based on the Linux :linux:man2:`epoll` interface.
+    Poller based on the Linux :linux:man7:`epoll` interface.
     """
     SUPPORTED = hasattr(select, 'epoll')
     _repr = 'EpollPoller()'

@@ -9,7 +9,6 @@
 
 - name: integration/action/make_tmp_path.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - meta: end_play
       when: not is_mitogen

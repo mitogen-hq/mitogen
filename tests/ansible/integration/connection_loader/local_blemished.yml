@@ -2,7 +2,6 @@
 
 - name: integration/connection_loader/local_blemished.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - determine_strategy:
 

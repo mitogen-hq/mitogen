@@ -3,7 +3,6 @@
 
 - name: integration/playbook_semantics/with_items.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
     # TODO: https://github.com/dw/mitogen/issues/692

@@ -2,7 +2,6 @@
 
 - name: integration/module_utils/from_config_path.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - custom_python_external_pkg:

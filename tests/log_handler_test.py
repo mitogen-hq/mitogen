@@ -65,8 +65,8 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
         c1.shutdown(wait=True)
 
         logs = log.stop()
-        self.assertTrue('Python version is' in logs)
-        self.assertTrue('Parent is context 0 (master)' in logs)
+        self.assertIn('Python version is', logs)
+        self.assertIn('Parent is context 0 (master)', logs)
 
     def test_earliest_messages_logged_via(self):
         c1 = self.router.local(name='c1')
@@ -80,10 +80,10 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
         c2.shutdown(wait=True)
 
         logs = log.stop()
-        self.assertTrue('Python version is' in logs)
+        self.assertIn('Python version is', logs)
 
         expect = 'Parent is context %s (%s)' % (c1.context_id, 'parent')
-        self.assertTrue(expect in logs)
+        self.assertIn(expect, logs)
 
 StartupTest = unittest.skipIf(
     condition=sys.version_info < (2, 7) or sys.version_info >= (3, 6),

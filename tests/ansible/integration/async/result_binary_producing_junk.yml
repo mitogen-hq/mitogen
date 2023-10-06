@@ -2,7 +2,6 @@
 - name: integration/async/result_binary_producing_junk.yml
   gather_facts: true
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - block:

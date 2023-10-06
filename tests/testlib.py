@@ -1,18 +1,27 @@
 import errno
+import io
 import logging
 import os
 import random
 import re
-import signal
 import socket
-import subprocess
+import stat
 import sys
 import threading
 import time
 import traceback
 import unittest
 
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
 import psutil
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 import mitogen.core
 import mitogen.fork
@@ -63,36 +72,73 @@ if faulthandler is not None:
 mitogen.core.LOG.propagate = True
 
 
+def base_executable(executable=None):
+    '''Return the path of the Python executable used to create the virtualenv.
+    '''
+    # https://docs.python.org/3/library/venv.html
+    # https://github.com/pypa/virtualenv/blob/main/src/virtualenv/discovery/py_info.py
+    # https://virtualenv.pypa.io/en/16.7.9/reference.html#compatibility-with-the-stdlib-venv-module
+    if executable is None:
+        executable = sys.executable
+
+    if not executable:
+        raise ValueError
+
+    try:
+        base_executable = sys._base_executable
+    except AttributeError:
+        base_executable = None
+
+    if base_executable and base_executable != executable:
+        return base_executable
+
+    # Python 2.x only has sys.base_prefix if running outside a virtualenv.
+    try:
+        sys.base_prefix
+    except AttributeError:
+        # Python 2.x outside a virtualenv
+        return executable
+
+    # Python 3.3+ has sys.base_prefix. In a virtualenv it differs to sys.prefix.
+    if sys.base_prefix == sys.prefix:
+        return executable
+
+    while executable.startswith(sys.prefix) and stat.S_ISLNK(os.lstat(executable).st_mode):
+        dirname = os.path.dirname(executable)
+        target = os.path.join(dirname, os.readlink(executable))
+        executable = os.path.abspath(os.path.normpath(target))
+        print(executable)
+
+    if executable.startswith(sys.base_prefix):
+        return executable
+
+    # Virtualenvs record details in pyvenv.cfg
+    parser = configparser.RawConfigParser()
+    with io.open(os.path.join(sys.prefix, 'pyvenv.cfg'), encoding='utf-8') as f:
+        content = u'[virtualenv]\n' + f.read()
+    try:
+        parser.read_string(content)
+    except AttributeError:
+        parser.readfp(io.StringIO(content))
+
+    # virtualenv style pyvenv.cfg includes the base executable.
+    # venv style pyvenv.cfg doesn't.
+    try:
+        return parser.get(u'virtualenv', u'base-executable')
+    except configparser.NoOptionError:
+        pass
+
+    basename = os.path.basename(executable)
+    home = parser.get(u'virtualenv', u'home')
+    return os.path.join(home, basename)
+
+
 def data_path(suffix):
     path = os.path.join(DATA_DIR, suffix)
     if path.endswith('.key'):
         # SSH is funny about private key permissions.
         os.chmod(path, int('0600', 8))
     return path
-
-
-def subprocess__check_output(*popenargs, **kwargs):
-    # Missing from 2.6.
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd)
-    return output
-
-
-def Popen__terminate(proc):
-    os.kill(proc.pid, signal.SIGTERM)
-
-
-if hasattr(subprocess, 'check_output'):
-    subprocess__check_output = subprocess.check_output
-
-if hasattr(subprocess.Popen, 'terminate'):
-    Popen__terminate = subprocess.Popen.terminate
 
 
 def threading__thread_is_alive(thread):
@@ -456,23 +502,22 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    def _get_container_port(self):
-        s = subprocess__check_output(['docker', 'port', self.container_name])
-        for line in s.decode().splitlines():
-            m = self.PORT_RE.match(line)
-            if not m:
-                continue
-            dport, proto, _, bport = m.groups()
-            if dport == '22' and proto == 'tcp':
-                self.port = int(bport)
+    PORT_RE = re.compile(
+        # e.g. 0.0.0.0:32771, :::32771, [::]:32771'
+        r'(?P<addr>[0-9.]+|::|\[[a-f0-9:.]+\]):(?P<port>[0-9]+)',
+    )
 
-        self.host = self.get_host()
-        if self.port is None:
+    @classmethod
+    def get_port(cls, container):
+        s = subprocess.check_output(['docker', 'port', container, '22/tcp'])
+        m = cls.PORT_RE.search(s.decode())
+        if not m:
             raise ValueError('could not find SSH port in: %r' % (s,))
+        return int(m.group('port'))
 
     def start_container(self):
         try:
-            subprocess__check_output(['docker', '--version'])
+            subprocess.check_output(['docker', '--version'])
         except Exception:
             raise unittest.SkipTest('Docker binary is unavailable')
 
@@ -486,8 +531,7 @@ class DockerizedSshDaemon(object):
             '--name', self.container_name,
             self.image,
         ]
-        subprocess__check_output(args)
-        self._get_container_port()
+        subprocess.check_output(args)
 
     def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
         if '-'  in mitogen_test_distro:
@@ -502,12 +546,9 @@ class DockerizedSshDaemon(object):
             self.python_path = '/usr/bin/python'
 
         self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
-
-        # 22/tcp -> 0.0.0.0:32771
-        self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
-        self.port = None
-
         self.start_container()
+        self.host = self.get_host()
+        self.port = self.get_port(self.container_name)
 
     def get_host(self):
         return get_docker_host()
@@ -518,7 +559,7 @@ class DockerizedSshDaemon(object):
     def check_processes(self):
         args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
         counts = {}
-        for comm in subprocess__check_output(args).decode().splitlines():
+        for comm in subprocess.check_output(args).decode().splitlines():
             comm = comm.strip()
             counts[comm] = counts.get(comm, 0) + 1
 
@@ -533,7 +574,7 @@ class DockerizedSshDaemon(object):
 
     def close(self):
         args = ['docker', 'rm', '-f', self.container_name]
-        subprocess__check_output(args)
+        subprocess.check_output(args)
 
 
 class BrokerMixin(object):
@@ -588,12 +629,33 @@ class DockerMixin(RouterMixin):
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 
+    @property
+    def docker_ssh_default_kwargs(self):
+        return {
+            'hostname': self.dockerized_ssh.host,
+            'port': self.dockerized_ssh.port,
+            'check_host_keys': 'ignore',
+            'ssh_debug_level': 3,
+            # https://www.openssh.com/legacy.html
+            # ssh-rsa uses SHA1. Least worst available with CentOS 7 sshd.
+            # Rejected by default in newer ssh clients (e.g. Ubuntu 22.04).
+            # Duplicated cases in
+            #   - tests/ansible/ansible.cfg
+            #   - tests/ansible/integration/connection_delegation/delegate_to_template.yml
+            #   - tests/ansible/integration/connection_delegation/stack_construction.yml
+            #   - tests/ansible/integration/process/unix_socket_cleanup.yml
+            #   - tests/ansible/integration/ssh/variables.yml
+            #   - tests/testlib.py
+            'ssh_args': [
+                '-o', 'HostKeyAlgorithms +ssh-rsa',
+                '-o', 'PubkeyAcceptedKeyTypes +ssh-rsa',
+            ],
+            'python_path': self.dockerized_ssh.python_path,
+        }
+
     def docker_ssh(self, **kwargs):
-        kwargs.setdefault('hostname', self.dockerized_ssh.host)
-        kwargs.setdefault('port', self.dockerized_ssh.port)
-        kwargs.setdefault('check_host_keys', 'ignore')
-        kwargs.setdefault('ssh_debug_level', 3)
-        kwargs.setdefault('python_path', self.dockerized_ssh.python_path)
+        for k, v in self.docker_ssh_default_kwargs.items():
+            kwargs.setdefault(k, v)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):

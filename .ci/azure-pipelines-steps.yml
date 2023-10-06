@@ -1,17 +1,30 @@
+# Each step entry runs a task (Azure Pipelines analog of an Ansible module).
+# https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/?view=azure-pipelines&viewFallbackFrom=azure-devops#tool
 
-parameters:
-  name: ''
-  pool: ''
-  sign: false
+# `{script: ...}` is shorthand for `{task: CmdLine@<mumble>, inputs: {script: ...}}`.
+# https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/steps-script?view=azure-pipelines
+# https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/cmd-line-v2?view=azure-pipelines
 
 steps:
 - task: UsePythonVersion@0
   displayName: Install python
   inputs:
+    githubToken: '$(GITHUB_PYVER_TOKEN)'
     versionSpec: '$(python.version)'
   condition: ne(variables['python.version'], '')
 
-- script: python -mpip install tox
+- script: |
+    type python
+    python --version
+  displayName: Show python version
+
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y python2-dev python3-pip virtualenv
+  displayName: Install build deps
+  condition: and(eq(variables['python.version'], ''), eq(variables['Agent.OS'], 'Linux'))
+
+- script: python -mpip install "tox<4.0"
   displayName: Install tooling
 
 - script: python -mtox -e "$(tox.env)"

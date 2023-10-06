@@ -25,7 +25,7 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
         _, stderr = proc.communicate()
         self.assertEqual(1, proc.returncode)
         expect = self.klass.main_guard_msg % (path,)
-        self.assertTrue(expect in stderr.decode())
+        self.assertIn(expect, stderr.decode())
 
     HAS_MITOGEN_MAIN = mitogen.core.b(
         textwrap.dedent("""
@@ -93,8 +93,10 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # Ensure a program composed of a single script can be imported
         # successfully.
         args = [sys.executable, testlib.data_path('self_contained_program.py')]
-        output = testlib.subprocess__check_output(args).decode()
-        self.assertEqual(output, "['__main__', 50]\n")
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        b_stdout, _ = proc.communicate()
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(b_stdout.decode(), "['__main__', 50]\n")
 
 
 class BrokenModulesTest(testlib.TestCase):
@@ -179,7 +181,7 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         s = capture.stop()
-        self.assertTrue('dropping forward of' in s)
+        self.assertIn('dropping forward of', s)
 
     def test_stats(self):
         # Forwarding stats broken because forwarding is broken. See #469.

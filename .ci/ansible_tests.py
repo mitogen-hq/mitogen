@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # Run tests/ansible/all.yml under Ansible and Ansible-Mitogen
 
+import collections
 import glob
 import os
 import signal
@@ -44,6 +45,12 @@ with ci_lib.Fold('job_setup'):
         if not path.endswith('default.hosts'):
             ci_lib.run("ln -s %s %s", path, HOSTS_DIR)
 
+    distros = collections.defaultdict(list)
+    families = collections.defaultdict(list)
+    for container in containers:
+        distros[container['distro']].append(container['name'])
+        families[container['family']].append(container['name'])
+
     inventory_path = os.path.join(HOSTS_DIR, 'target')
     with open(inventory_path, 'w') as fp:
         fp.write('[test-targets]\n')
@@ -58,6 +65,16 @@ with ci_lib.Fold('job_setup'):
             % container
             for container in containers
         )
+
+        for distro, hostnames in sorted(distros.items(), key=lambda t: t[0]):
+            fp.write('\n[%s]\n' % distro)
+            fp.writelines('%s\n' % name for name in hostnames)
+
+        for family, hostnames in sorted(families.items(), key=lambda t: t[0]):
+            fp.write('\n[%s]\n' % family)
+            fp.writelines('%s\n' % name for name in hostnames)
+
+        fp.write('\n[linux:children]\ntest-targets\n')
 
     ci_lib.dump_file(inventory_path)
 
