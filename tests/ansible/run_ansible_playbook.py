@@ -35,6 +35,8 @@ os.environ['PATH'] = '%s%s%s' % (
     os.environ['PATH'],
 )
 
+os.environ['PYTHONPATH'] = os.path.join(GIT_BASEDIR, 'tests', 'data')
+
 extra = {
     'is_mitogen': os.environ.get('ANSIBLE_STRATEGY', '').startswith('mitogen'),
     'git_basedir': GIT_BASEDIR,
