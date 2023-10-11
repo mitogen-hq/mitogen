@@ -42,6 +42,11 @@ class ImporterMixin(testlib.RouterMixin):
         super(ImporterMixin, self).tearDown()
 
 
+class ReprTest(ImporterMixin, testlib.TestCase):
+    def test_repr(self):
+        self.assertEqual('mitogen.core.Importer()', repr(self.importer))
+
+
 class LoadModuleTest(ImporterMixin, testlib.TestCase):
     data = zlib.compress(b("data = 1\n\n"))
     path = 'fake_module.py'

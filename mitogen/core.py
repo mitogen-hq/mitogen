@@ -294,7 +294,7 @@ class Kwargs(dict):
                 self[k] = v
 
     def __repr__(self):
-        return 'Kwargs(%s)' % (dict.__repr__(self),)
+        return '%s(%s)' % (self.__class__.__name__, dict.__repr__(self),)
 
     def __reduce__(self):
         return (Kwargs, (dict(self),))
@@ -979,7 +979,8 @@ class Message(object):
         return obj
 
     def __repr__(self):
-        return 'Message(%r, %r, %r, %r, %r, %r..%d)' % (
+        return '%s.%s(dst_id=%r, src_id=%r, auth_id=%r, handle=%r, reply_to=%r, data=%r..%d)' % (
+            __name__, self.__class__.__name__,
             self.dst_id, self.src_id, self.auth_id, self.handle,
             self.reply_to, (self.data or '')[:50], len(self.data)
         )
@@ -1025,7 +1026,10 @@ class Sender(object):
         )
 
     def __repr__(self):
-        return 'Sender(%r, %r)' % (self.context, self.dst_handle)
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.context, self.dst_handle,
+        )
 
     def __reduce__(self):
         return _unpickle_sender, (self.context.context_id, self.dst_handle)
@@ -1087,7 +1091,10 @@ class Receiver(object):
         )
 
     def __repr__(self):
-        return 'Receiver(%r, %r)' % (self.router, self.handle)
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.router, self.handle,
+        )
 
     def __enter__(self):
         return self
@@ -1237,7 +1244,8 @@ class Channel(Sender, Receiver):
         Sender.close(self)
 
     def __repr__(self):
-        return 'Channel(%s, %s)' % (
+        return '%s.%s(%s, %s)' % (
+            __name__, self.__class__.__name__,
             Sender.__repr__(self),
             Receiver.__repr__(self)
         )
@@ -1351,7 +1359,7 @@ class Importer(object):
         )
 
     def __repr__(self):
-        return 'Importer'
+        return '%s.%s()' % (__name__, self.__class__.__name__)
 
     def builtin_find_module(self, fullname):
         # imp.find_module() will always succeed for __main__, because it is a
@@ -1719,7 +1727,10 @@ class Stream(object):
         self.transmit_side = Side(self, wfp)
 
     def __repr__(self):
-        return "<Stream %s #%04x>" % (self.name, id(self) & 0xffff,)
+        return "<%s.%s %r #%04x>" % (
+            __name__, self.__class__.__name__,
+            self.name, id(self) & 0xffff,
+        )
 
     def on_receive(self, broker):
         """
@@ -1812,8 +1823,8 @@ class Protocol(object):
         return stream
 
     def __repr__(self):
-        return '%s(%s)' % (
-            self.__class__.__name__,
+        return '%s.%s(%r)' % (
+            __name__, self.__class__.__name__,
             self.stream and self.stream.name,
         )
 
@@ -2008,8 +2019,9 @@ class Side(object):
             set_nonblock(self.fd)
 
     def __repr__(self):
-        return '<Side of %s fd %s>' % (
-            self.stream.name or repr(self.stream),
+        return '<%s.%s of %r fd %r>' % (
+            __name__, self.__class__.__name__,
+            self.stream.name or self.stream,
             self.fd
         )
 
@@ -2334,7 +2346,10 @@ class Context(object):
         return data
 
     def __repr__(self):
-        return 'Context(%s, %r)' % (self.context_id, self.name)
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.context_id, self.name,
+        )
 
 
 def _unpickle_context(context_id, name, router=None):
@@ -2397,7 +2412,10 @@ class Poller(object):
         self._wfds = {}
 
     def __repr__(self):
-        return '%s' % (type(self).__name__,)
+        return '<%s.%s with %d readers %d writers>' % (
+            __name__, self.__class__.__name__,
+            len(self._rfds), len(self._wfds),
+        )
 
     def _update(self, fd):
         """
@@ -2769,7 +2787,8 @@ class Latch(object):
         assert written == len(cookie) and not disconnected
 
     def __repr__(self):
-        return 'Latch(%#x, size=%d, t=%r)' % (
+        return '%s.%s(%#x, size=%d, thread=%r)' % (
+            __name__, self.__class__.__name__,
             id(self),
             len(self._queue),
             threading__thread_name(threading__current_thread()),
@@ -2798,9 +2817,9 @@ class Waker(Protocol):
         self._deferred = collections.deque()
 
     def __repr__(self):
-        return 'Waker(fd=%r/%r)' % (
-            self.stream.receive_side and self.stream.receive_side.fd,
-            self.stream.transmit_side and self.stream.transmit_side.fd,
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.stream.receive_side, self.stream.transmit_side,
         )
 
     @property
@@ -2990,7 +3009,7 @@ class Router(object):
         self.add_handler(self._on_del_route, DEL_ROUTE)
 
     def __repr__(self):
-        return 'Router(%r)' % (self.broker,)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.broker)
 
     def _setup_logging(self):
         """
@@ -3626,7 +3645,7 @@ class Broker(object):
         self._thread.join()
 
     def __repr__(self):
-        return 'Broker(%04x)' % (id(self) & 0xffff,)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.poller)
 
 
 class Dispatcher(object):
@@ -3643,7 +3662,7 @@ class Dispatcher(object):
     _service_recv = None
 
     def __repr__(self):
-        return 'Dispatcher'
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.econtext)
 
     def __init__(self, econtext):
         self.econtext = econtext

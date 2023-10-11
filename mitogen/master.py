@@ -451,7 +451,7 @@ class LogForwarder(object):
         logger.handle(record)
 
     def __repr__(self):
-        return 'LogForwarder(%r)' % (self._router,)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self._router)
 
 
 class FinderMethod(object):
@@ -461,7 +461,7 @@ class FinderMethod(object):
     simple task, right? Naive young fellow, welcome to the real world.
     """
     def __repr__(self):
-        return '%s()' % (type(self).__name__,)
+        return '%s.%s()' % (__name__, self.__class__.__name__)
 
     def find(self, fullname):
         """
@@ -813,7 +813,7 @@ class ModuleFinder(object):
         self._related_cache = {}
 
     def __repr__(self):
-        return 'ModuleFinder()'
+        return '%s.%s()' % (__name__, self.__class__.__name__)
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
@@ -995,7 +995,7 @@ class ModuleResponder(object):
         )
 
     def __repr__(self):
-        return 'ModuleResponder'
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self._router)
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
@@ -1412,7 +1412,7 @@ class IdAllocator(object):
         )
 
     def __repr__(self):
-        return 'IdAllocator(%r)' % (self.router,)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.router)
 
     def allocate(self):
         """
