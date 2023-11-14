@@ -83,10 +83,16 @@ domainrefs = {
     },
 }
 
+# > ## Official guidance
+# > Query PyPI’s JSON API to determine where to download files from.
+# > ## Predictable URLs
+# > You can use our conveyor service to fetch this file, which exists for
+# > cases where using the API is impractical or impossible.
+# > -- https://warehouse.pypa.io/api-reference/integration-guide.html#predictable-urls
 rst_epilog = """
 
 .. |mitogen_version| replace:: %(VERSION)s
 
-.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://networkgenomics.com/try/mitogen-%(VERSION)s.tar.gz>`__
+.. |mitogen_url| replace:: `mitogen-%(VERSION)s.tar.gz <https://files.pythonhosted.org/packages/source/m/mitogen/mitogen-%(VERSION)s.tar.gz>`__
 
 """ % locals()
