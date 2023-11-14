@@ -1,9 +1,8 @@
 import sys
 
-sys.path.append('..')
 sys.path.append('.')
-import mitogen
-VERSION = '.'.join(str(part) for part in mitogen.__version__)
+
+VERSION = '0.3.4'
 
 author = u'Network Genomics'
 copyright = u'2021, the Mitogen authors'
