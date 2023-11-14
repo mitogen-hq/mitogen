@@ -14,20 +14,32 @@ steps:
   condition: ne(variables['python.version'], '')
 
 - script: |
-    type python
-    python --version
-  displayName: Show python version
-
-- script: |
     sudo apt-get update
     sudo apt-get install -y python2-dev python3-pip virtualenv
   displayName: Install build deps
   condition: and(eq(variables['python.version'], ''), eq(variables['Agent.OS'], 'Linux'))
 
-- script: python -mpip install "tox<4.0"
+- script: |
+    type python && python --version
+    type python2 && python2 --version
+    type python3 && python3 --version
+  displayName: Show python versions
+
+- script: |
+    if [[ $(uname) == "Darwin" ]]; then
+        python2 -m ensurepip --user --altinstall --no-default-pip
+        python2 -m pip install --user "tox<4.0"
+    else
+        python -m pip install "tox<4.0"
+    fi
   displayName: Install tooling
 
-- script: python -mtox -e "$(tox.env)"
+- script: |
+    if [[ $(uname) == "Darwin" ]]; then
+        python2 -m tox -e "$(tox.env)"
+    else
+        python -m tox -e "$(tox.env)"
+    fi
   displayName: "Run tests"
   env:
     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
