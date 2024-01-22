@@ -842,9 +842,6 @@ class Message(object):
         s, n = LATIN1_CODEC.encode(s)
         return s
 
-    def _unpickle_ansible_unsafe_text(self, serialized_obj):
-        return serialized_obj
-
     def _find_global(self, module, func):
         """
         Return the class implementing `module_name.class_name` or raise
@@ -863,8 +860,6 @@ class Message(object):
                 return Secret
             elif func == 'Kwargs':
                 return Kwargs
-        elif module == 'ansible.utils.unsafe_proxy' and func == 'AnsibleUnsafeText':
-            return self._unpickle_ansible_unsafe_text
         elif module == '_codecs' and func == 'encode':
             return self._unpickle_bytes
         elif module == '__builtin__' and func == 'bytes':
