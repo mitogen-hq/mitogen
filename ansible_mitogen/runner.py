@@ -521,6 +521,7 @@ class ModuleUtilsImporter(object):
         path, is_pkg = self._by_fullname[fullname]
         source = ansible_mitogen.target.get_small_file(self._context, path)
         code = compile(source, path, 'exec', 0, 1)
+        # FIXME Python 3.12 removed `imp`
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = "master:%s" % (path,)
         mod.__loader__ = self

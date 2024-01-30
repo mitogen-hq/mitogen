@@ -40,6 +40,13 @@ import mitogen.master
 PREFIX = 'ansible.module_utils.'
 
 
+# Analog of `importlib.machinery.ModuleSpec` or `pkgutil.ModuleInfo`.
+#   name    Unqualified name of the module.
+#   path    Filesystem path of the module.
+#   kind    One of the constants in `imp`, as returned in `imp.find_module()`
+#   parent  `ansible_mitogen.module_finder.Module` of parent package (if any).
+#
+# FIXME Python 3.12 removed `imp`, leaving no constants for `Module.kind`.
 Module = collections.namedtuple('Module', 'name path kind parent')
 
 

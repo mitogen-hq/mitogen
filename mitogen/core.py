@@ -1360,12 +1360,20 @@ class Importer(object):
         if fullname == '__main__':
             raise ModuleNotFoundError()
 
+        # For a module inside a package (e.g. pkg_a.mod_b) use the search path
+        # of that package (e.g. ['/usr/lib/python3.11/site-packages/pkg_a']).
         parent, _, modname = str_rpartition(fullname, '.')
         if parent:
             path = sys.modules[parent].__path__
         else:
             path = None
 
+        # For a top-level module search builtin modules, frozen modules,
+        # system specific locations (e.g. Windows registry, site-packages).
+        # Otherwise use search path of the parent package.
+        # Works for both stdlib modules & third-party modules.
+        # If the search is unsuccessful then raises ImportError.
+        # FIXME Python 3.12 removed `imp`.
         fp, pathname, description = imp.find_module(modname, path)
         if fp:
             fp.close()
@@ -1377,8 +1385,9 @@ class Importer(object):
         Implements importlib.abc.MetaPathFinder.find_module().
         Deprecrated in Python 3.4+, replaced by find_spec().
         Raises ImportWarning in Python 3.10+.
+        Removed in Python 3.12.
 
-        fullname    A (fully qualified?) module name, e.g. "os.path".
+        fullname    Fully qualified module name, e.g. "os.path".
         path        __path__ of parent packge. None for a top level module.
         """
         if hasattr(_tls, 'running'):
@@ -1521,6 +1530,7 @@ class Importer(object):
             raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
         pkg_present = ret[1]
+        # FIXME Python 3.12 removed `imp`
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = self.get_filename(fullname)
         mod.__loader__ = self
@@ -3921,6 +3931,7 @@ class ExternalContext(object):
 
     def _setup_package(self):
         global mitogen
+        # FIXME Python 3.12 removed `imp`
         mitogen = imp.new_module('mitogen')
         mitogen.__package__ = 'mitogen'
         mitogen.__path__ = []

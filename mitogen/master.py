@@ -123,6 +123,10 @@ def is_stdlib_name(modname):
     Return :data:`True` if `modname` appears to come from the standard library.
     """
     # `imp.is_builtin()` isn't a documented as part of Python's stdlib API.
+    # Returns 1 if modname names a module that is "builtin" to the the Python
+    # interpreter (e.g. '_sre'). Otherwise 0 (e.g. 're', 'netifaces').
+    # FIXME Python 3.12 removed `imp`, but `_imp.is_builtin()` remains.
+    #       `sys.builtin_module_names` (Python 2.2+) may be an alternative.
     #
     # """
     # Main is a little special - imp.is_builtin("__main__") will return False,
@@ -759,6 +763,7 @@ class ParentEnumerationMethod(FinderMethod):
     def _find_one_component(self, modname, search_path):
         try:
             #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
+            # FIXME The imp module was removed in Python 3.12.
             return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
@@ -787,11 +792,13 @@ class ParentEnumerationMethod(FinderMethod):
                 # Still more components to descent. Result must be a package
                 if fp:
                     fp.close()
+                # FIXME The imp module was removed in Python 3.12.
                 if kind != imp.PKG_DIRECTORY:
                     LOG.debug('%r: %r appears to be child of non-package %r',
                               self, fullname, path)
                     return None
                 search_path = [path]
+            # FIXME The imp module was removed in Python 3.12.
             elif kind == imp.PKG_DIRECTORY:
                 return self._found_package(fullname, path)
             else:
