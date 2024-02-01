@@ -6,6 +6,7 @@ venvs/**
 *.pyc
 *.pyd
 *.pyo
+*.retry
 MANIFEST
 build/
 dist/
