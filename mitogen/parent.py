@@ -1409,6 +1409,9 @@ class Connection(object):
     #     their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
+    #
+    # macOS tweaks for Python 2.7 must be kept in sync with the the Ansible
+    # module test_echo_module, used by the integration tests.
     #   * macOS <= 10.14 (Darwin <= 18) install an unreliable Python version
     #     switcher as /usr/bin/python, which introspects argv0. To workaround
     #     it we redirect attempts to call /usr/bin/python with an explicit
@@ -1417,7 +1420,8 @@ class Connection(object):
     #     do something slightly different. The Python executable is patched to
     #     perform an extra execvp(). I don't fully understand the details, but
     #     setting PYTHON_LAUNCHED_FROM_WRAPPER=1 avoids it.
-    #   * macOS 13.x (Darwin 22?) may remove python 2.x entirely.
+    #   * macOS 12.3+ (Darwin 21.4+, Monterey) doesn't ship Python.
+    #     https://developer.apple.com/documentation/macos-release-notes/macos-12_3-release-notes#Python
     #
     # Locals:
     #   R: read side of interpreter stdin.

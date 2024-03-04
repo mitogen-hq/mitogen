@@ -9,28 +9,51 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
+import os
 import platform
 import sys
 from ansible.module_utils.basic import AnsibleModule
 
 
 def main():
-    result = dict(changed=False)
-
     module = AnsibleModule(argument_spec=dict(
-        facts=dict(type=dict, default={})
+        facts_copy=dict(type=dict, default={}),
+        facts_to_override=dict(type=dict, default={})
     ))
 
-    result['ansible_facts'] = module.params['facts']
     # revert the Mitogen OSX tweak since discover_interpreter() doesn't return this info
-    if sys.platform == 'darwin' and sys.executable != '/usr/bin/python':
-        if int(platform.release()[:2]) < 19:
-            sys.executable = sys.executable[:-3]
-        else:
+    # NB This must be synced with mitogen.parent.Connection.get_boot_command()
+    if sys.modules.get('mitogen') and sys.platform == 'darwin':
+        darwin_major = int(platform.release().partition('.')[0])
+        if darwin_major < 19 and sys.executable == '/usr/bin/python2.7':
+            sys.executable = '/usr/bin/python'
+        if darwin_major in (20, 21) and sys.version_info[:2] == (2, 7):
             # only for tests to check version of running interpreter -- Mac 10.15+ changed python2
             # so it looks like it's /usr/bin/python but actually it's /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
             sys.executable = "/usr/bin/python"
-    result['running_python_interpreter'] = sys.executable
+
+    facts_copy = module.params['facts_copy']
+    discovered_interpreter_python = facts_copy['discovered_interpreter_python']
+    result = {
+        'changed': False,
+        'ansible_facts': module.params['facts_to_override'],
+        'discovered_and_running_samefile': os.path.samefile(
+            os.path.realpath(discovered_interpreter_python),
+            os.path.realpath(sys.executable),
+        ),
+        'discovered_python': {
+            'as_seen': discovered_interpreter_python,
+            'resolved': os.path.realpath(discovered_interpreter_python),
+        },
+        'running_python': {
+            'sys': {
+                'executable': {
+                    'as_seen': sys.executable,
+                    'resolved': os.path.realpath(sys.executable),
+                },
+            },
+        },
+    }
 
     module.exit_json(**result)
 
