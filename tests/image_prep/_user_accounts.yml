@@ -4,6 +4,8 @@
 # WARNING: this creates non-privilged accounts with pre-set passwords!
 #
 
+- import_playbook: ../ansible/setup/report_controller.yml
+
 - hosts: all
   gather_facts: true
   strategy: mitogen_free

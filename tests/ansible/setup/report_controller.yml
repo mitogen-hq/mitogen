@@ -1,0 +1,17 @@
+- name: Report controller parameters
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - debug:
+        msg:
+          - ${ANSIBLE_STRATEGY}:      "{{ lookup('env', 'ANSIBLE_STRATEGY') | default('<unset>') }}"
+          - ${USER}:                  "{{ lookup('env', 'USER') | default('<unset>') }}"
+          - $(groups):                "{{ lookup('pipe', 'groups') }}"
+          - $(pwd):                   "{{ lookup('pipe', 'pwd') }}"
+          - $(whoami):                "{{ lookup('pipe', 'whoami') }}"
+          - ansible_run_tags:         "{{ ansible_run_tags | default('<unset>') }}"
+          - ansible_playbook_python:  "{{ ansible_playbook_python | default('<unset>') }}"
+          - ansible_skip_tags:        "{{ ansible_skip_tags | default('<unset>') }}"
+          - ansible_version.full:     "{{ ansible_version.full | default('<unset>') }}"
+          - is_mitogen:               "{{ is_mitogen | default('<unset>') }}"
+          - playbook_dir:             "{{ playbook_dir | default('<unset>') }}"
