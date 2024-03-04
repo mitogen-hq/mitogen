@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # I am an Ansible new-style Python module. I leak state from each invocation
 # into a class variable and a global variable.
 
