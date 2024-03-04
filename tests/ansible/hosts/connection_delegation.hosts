@@ -1,3 +1,4 @@
+# code: language=ini
 # vim: syntax=dosini
 
 # Connection delegation scenarios. It's impossible to connect to them, but their would-be

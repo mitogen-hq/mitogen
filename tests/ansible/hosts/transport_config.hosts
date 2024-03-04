@@ -1,3 +1,6 @@
+# code: language=ini
+# vim: syntax=dosini
+
 # integration/transport_config
 # Hosts with twiddled configs that need to be checked somehow.
 
