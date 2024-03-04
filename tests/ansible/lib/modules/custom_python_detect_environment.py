@@ -25,6 +25,11 @@ except NameError:
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(
+        fs={
+            '/tmp': {
+                'resolved': os.path.realpath('/tmp'),
+            },
+        },
         python={
             'version': {
                 'full': '%i.%i.%i' % sys.version_info[:3],
