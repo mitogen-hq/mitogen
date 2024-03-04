@@ -34,6 +34,34 @@ non-essential code in order to reduce its size, since it is also serves as the
 bootstrap implementation sent to every new slave context.
 """
 
+import sys
+try:
+    import _frozen_importlib_external
+except ImportError:
+    pass
+else:
+    class MonkeyPatchedPathFinder(_frozen_importlib_external.PathFinder):
+        """
+        Meta path finder for sys.path and package __path__ attributes.
+
+        Patched for https://github.com/python/cpython/issues/115911.
+        """
+        @classmethod
+        def _path_importer_cache(cls, path):
+            if path == '':
+                try:
+                    path = _frozen_importlib_external._os.getcwd()
+                except (FileNotFoundError, PermissionError):
+                    return None
+            return super()._path_importer_cache(path)
+
+    if sys.version_info[:2] <= (3, 12):
+        for i, mpf in enumerate(sys.meta_path):
+            if mpf is _frozen_importlib_external.PathFinder:
+                sys.meta_path[i] = MonkeyPatchedPathFinder
+        del i, mpf
+
+
 import binascii
 import collections
 import encodings.latin_1
@@ -49,7 +77,6 @@ import pstats
 import signal
 import socket
 import struct
-import sys
 import syslog
 import threading
 import time

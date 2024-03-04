@@ -21,6 +21,8 @@ Unreleased
 ----------
 
 * :gh:issue:`987` Support Python 3.11
+* :gh:issue:`885` Fix :py:exc:`PermissionError` in :py:mod:`importlib` when
+  becoming an unprivileged user with Python 3.x
 
 
 v0.3.4 (2023-07-02)
