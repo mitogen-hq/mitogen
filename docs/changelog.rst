@@ -25,6 +25,7 @@ Unreleased
   becoming an unprivileged user with Python 3.x
 * :gh:issue:`1033` Support `PEP 451 <https://peps.python.org/pep-0451/>,
   required by Python 3.12
+* :gh:issue:`1033` Support Python 3.12
 
 
 v0.3.4 (2023-07-02)
