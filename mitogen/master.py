@@ -137,7 +137,11 @@ def is_stdlib_name(modname):
         return False
 
     # six installs crap with no __file__
-    modpath = os.path.abspath(getattr(module, '__file__', ''))
+    path = getattr(module, '__file__', '')
+    if path is None:
+        path = ''
+
+    modpath = os.path.abspath(path)
     return is_stdlib_path(modpath)
 
 
