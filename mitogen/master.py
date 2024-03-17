@@ -37,7 +37,6 @@ contexts.
 
 import dis
 import errno
-import imp
 import inspect
 import itertools
 import logging
@@ -49,6 +48,16 @@ import sys
 import threading
 import types
 import zlib
+
+try:
+    # Python >= 3.4, PEP 451 ModuleSpec API
+    import importlib.machinery
+    import importlib.util
+    from _imp import is_builtin as _is_builtin
+except ImportError:
+    # Python < 3.4, PEP 302 Import Hooks
+    import imp
+    from imp import is_builtin as _is_builtin
 
 try:
     import sysconfig
@@ -122,14 +131,16 @@ def is_stdlib_name(modname):
     """
     Return :data:`True` if `modname` appears to come from the standard library.
     """
-    # `imp.is_builtin()` isn't a documented as part of Python's stdlib API.
+    # `(_imp|imp).is_builtin()` isn't a documented part of Python's stdlib.
+    # Returns 1 if modname names a module that is "builtin" to the the Python
+    # interpreter (e.g. '_sre'). Otherwise 0 (e.g. 're', 'netifaces').
     #
     # """
     # Main is a little special - imp.is_builtin("__main__") will return False,
     # but BuiltinImporter is still the most appropriate initial setting for
     # its __loader__ attribute.
     # """ -- comment in CPython pylifecycle.c:add_main_module()
-    if imp.is_builtin(modname) != 0:
+    if _is_builtin(modname) != 0:
         return True
 
     module = sys.modules.get(modname)
@@ -460,6 +471,9 @@ class FinderMethod(object):
     name according to the running Python interpreter. You'd think this was a
     simple task, right? Naive young fellow, welcome to the real world.
     """
+    def __init__(self):
+        self.log = LOG.getChild(self.__class__.__name__)
+
     def __repr__(self):
         return '%s()' % (type(self).__name__,)
 
@@ -641,7 +655,7 @@ class SysModulesMethod(FinderMethod):
         return path, source, is_pkg
 
 
-class ParentEnumerationMethod(FinderMethod):
+class ParentImpEnumerationMethod(FinderMethod):
     """
     Attempt to fetch source code by examining the module's (hopefully less
     insane) parent package, and if no insane parents exist, simply use
@@ -759,6 +773,7 @@ class ParentEnumerationMethod(FinderMethod):
     def _find_one_component(self, modname, search_path):
         try:
             #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
+            # FIXME The imp module was removed in Python 3.12.
             return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
@@ -770,6 +785,9 @@ class ParentEnumerationMethod(FinderMethod):
         """
         See implementation for a description of how this works.
         """
+        if sys.version_info >= (3, 4):
+            return None
+
         #if fullname not in sys.modules:
             # Don't attempt this unless a module really exists in sys.modules,
             # else we could return junk.
@@ -796,6 +814,99 @@ class ParentEnumerationMethod(FinderMethod):
                 return self._found_package(fullname, path)
             else:
                 return self._found_module(fullname, path, fp)
+
+
+class ParentSpecEnumerationMethod(ParentImpEnumerationMethod):
+    def _find_parent_spec(self, fullname):
+        #history = []
+        debug = self.log.debug
+        children = []
+        for parent_name, child_name in self._iter_parents(fullname):
+            children.insert(0, child_name)
+            if not parent_name:
+                debug('abandoning %r, reached top-level', fullname)
+                return None, children
+
+            try:
+                parent = sys.modules[parent_name]
+            except KeyError:
+                debug('skipping %r, not in sys.modules', parent_name)
+                continue
+
+            try:
+                spec = parent.__spec__
+            except AttributeError:
+                debug('skipping %r: %r.__spec__ is absent',
+                      parent_name, parent)
+                continue
+
+            if not spec:
+                debug('skipping %r: %r.__spec__=%r',
+                      parent_name, parent, spec)
+                continue
+
+            if spec.name != parent_name:
+                debug('skipping %r: %r.__spec__.name=%r does not match',
+                      parent_name, parent, spec.name)
+                continue
+
+            if not spec.submodule_search_locations:
+                debug('skipping %r: %r.__spec__.submodule_search_locations=%r',
+                      parent_name, parent, spec.submodule_search_locations)
+                continue
+
+            return spec, children
+
+        raise ValueError('%s._find_parent_spec(%r) unexpectedly reached bottom'
+                         % (self.__class__.__name__, fullname))
+
+    def find(self, fullname):
+        # Returns absolute path, ParentImpEnumerationMethod returns relative
+        # >>> spec_pem.find('six_brokenpkg._six')[::2]
+        # ('/Users/alex/src/mitogen/tests/data/importer/six_brokenpkg/_six.py', False)
+
+        if sys.version_info < (3, 4):
+            return None
+
+        fullname = to_text(fullname)
+        spec, children = self._find_parent_spec(fullname)
+        for child_name in children:
+            if spec:
+                name = '%s.%s' % (spec.name, child_name)
+                submodule_search_locations = spec.submodule_search_locations
+            else:
+                name = child_name
+                submodule_search_locations = None
+            spec = importlib.util._find_spec(name, submodule_search_locations)
+            if spec is None:
+                self.log.debug('%r spec unavailable from %s', fullname, spec)
+                return None
+
+            is_package = spec.submodule_search_locations is not None
+            if name != fullname:
+                if not is_package:
+                    self.log.debug('%r appears to be child of non-package %r',
+                                   fullname, spec)
+                    return None
+                continue
+
+            if not spec.has_location:
+                self.log.debug('%r.origin cannot be read as a file', spec)
+                return None
+
+            if os.path.splitext(spec.origin)[1] != '.py':
+                self.log.debug('%r.origin does not contain Python source code',
+                               spec)
+                return None
+
+            # FIXME This should use loader.get_source()
+            with open(spec.origin, 'rb') as f:
+                source = f.read()
+
+            return spec.origin, source, is_package
+
+        raise ValueError('%s.find(%r) unexpectedly reached bottom'
+                         % (self.__class__.__name__, fullname))
 
 
 class ModuleFinder(object):
@@ -838,7 +949,8 @@ class ModuleFinder(object):
         DefectivePython3xMainMethod(),
         PkgutilMethod(),
         SysModulesMethod(),
-        ParentEnumerationMethod(),
+        ParentSpecEnumerationMethod(),
+        ParentImpEnumerationMethod(),
     ]
 
     def get_module_source(self, fullname):

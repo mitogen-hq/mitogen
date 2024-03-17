@@ -34,7 +34,7 @@ sent to any child context that is due to become a parent, due to recursive
 connection.
 """
 
-import codecs
+import binascii
 import errno
 import fcntl
 import getpass
@@ -1405,10 +1405,14 @@ class Connection(object):
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
     # with a custom argv.
     #   * Optimized for minimum byte count after minification & compression.
+    #     The script preamble_size.py measures this.
     #   * 'CONTEXT_NAME' and 'PREAMBLE_COMPRESSED_LEN' are substituted with
     #     their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
+    #
+    # macOS tweaks for Python 2.7 must be kept in sync with the the Ansible
+    # module test_echo_module, used by the integration tests.
     #   * macOS <= 10.14 (Darwin <= 18) install an unreliable Python version
     #     switcher as /usr/bin/python, which introspects argv0. To workaround
     #     it we redirect attempts to call /usr/bin/python with an explicit
@@ -1417,7 +1421,8 @@ class Connection(object):
     #     do something slightly different. The Python executable is patched to
     #     perform an extra execvp(). I don't fully understand the details, but
     #     setting PYTHON_LAUNCHED_FROM_WRAPPER=1 avoids it.
-    #   * macOS 13.x (Darwin 22?) may remove python 2.x entirely.
+    #   * macOS 12.3+ (Darwin 21.4+, Monterey) doesn't ship Python.
+    #     https://developer.apple.com/documentation/macos-release-notes/macos-12_3-release-notes#Python
     #
     # Locals:
     #   R: read side of interpreter stdin.
@@ -1445,7 +1450,7 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
-        C=_(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN),'zip')
+        C=zlib.decompress(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN))
         fp=os.fdopen(W,'wb',0)
         fp.write(C)
         fp.close()
@@ -1477,16 +1482,16 @@ class Connection(object):
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
                                 str(len(preamble_compressed)))
         compressed = zlib.compress(source.encode(), 9)
-        encoded = codecs.encode(compressed, 'base64').replace(b('\n'), b(''))
-        # We can't use bytes.decode() in 3.x since it was restricted to always
-        # return unicode, so codecs.decode() is used instead. In 3.x
-        # codecs.decode() requires a bytes object. Since we must be compatible
-        # with 2.4 (no bytes literal), an extra .encode() either returns the
-        # same str (2.x) or an equivalent bytes (3.x).
+        encoded = binascii.b2a_base64(compressed).replace(b('\n'), b(''))
+
+        # Just enough to decode, decompress, and exec the first stage.
+        # Priorities: wider compatibility, faster startup, shorter length.
+        # `import os` here, instead of stage 1, to save a few bytes.
+        # `sys.path=...` for https://github.com/python/cpython/issues/115911.
         return self.get_python_argv() + [
             '-c',
-            'import codecs,os,sys;_=codecs.decode;'
-            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
+            'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
+            'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
         ]
 
     def get_econtext_config(self):

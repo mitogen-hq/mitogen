@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # Run tests/ansible/all.yml under Ansible and Ansible-Mitogen
 
+from __future__ import print_function
+
+import getpass
+import io
 import os
 import subprocess
 import sys
@@ -52,6 +56,38 @@ with ci_lib.Fold('machine_prep'):
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':
         os.chdir(IMAGE_PREP_DIR)
         ci_lib.run("ansible-playbook -c local -i localhost, _user_accounts.yml")
+
+    # FIXME Don't hardcode https://github.com/mitogen-hq/mitogen/issues/1022
+    #       and os.environ['USER'] is not populated on Azure macOS runners.
+    os.chdir(HOSTS_DIR)
+    with io.open('default.hosts', 'r+', encoding='utf-8') as f:
+        user = getpass.getuser()
+        content = f.read()
+        content = content.replace("{{ lookup('pipe', 'whoami') }}", user)
+        f.seek(0)
+        f.write(content)
+        f.truncate()
+    ci_lib.dump_file('default.hosts')
+
+    cmd = ';'.join([
+        'from __future__ import print_function',
+        'import os, sys',
+        'print(sys.executable, os.path.realpath(sys.executable))',
+    ])
+    for interpreter in ['/usr/bin/python', '/usr/bin/python2', '/usr/bin/python2.7']:
+        print(interpreter)
+        try:
+            subprocess.call([interpreter, '-c', cmd])
+        except OSError as exc:
+            print(exc)
+
+        print(interpreter, 'with PYTHON_LAUNCHED_FROM_WRAPPER=1')
+        environ = os.environ.copy()
+        environ['PYTHON_LAUNCHED_FROM_WRAPPER'] = '1'
+        try:
+            subprocess.call([interpreter, '-c', cmd], env=environ)
+        except OSError as exc:
+            print(exc)
 
 
 with ci_lib.Fold('ansible'):
