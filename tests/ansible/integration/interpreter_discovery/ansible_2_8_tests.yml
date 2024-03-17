@@ -54,6 +54,15 @@
               fail_msg:
                 - "auto_out: {{ auto_out }}"
                 - "echoout: {{ echoout }}"
+            when:
+              # On macOS 11 (Darwin 20) CI runners the Python 2.7 binary always
+              # reports the same path. I can't reach via symlinks.
+              # >>> sys.executable
+              # /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
+              - is_mitogen
+                or echoout.running_python.sys.version_info.major != 2
+                or not (echoout.running_python.sys.platform == "darwin"
+                        and echoout.running_python.platform.release.major == 20)
 
 
         - name: test that auto_legacy gives a dep warning when /usr/bin/python present but != auto result
