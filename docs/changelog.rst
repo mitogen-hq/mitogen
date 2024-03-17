@@ -20,6 +20,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+
+v0.3.5 (2024-03-17)
+-------------------
+
 * :gh:issue:`987` Support Python 3.11
 * :gh:issue:`885` Fix :py:exc:`PermissionError` in :py:mod:`importlib` when
   becoming an unprivileged user with Python 3.x
