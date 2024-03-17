@@ -1,3 +1,4 @@
+# code: language=ini
 # vim: syntax=dosini
 
 # issue #511, #536: we must not define an explicit localhost, as some

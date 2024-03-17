@@ -1,12 +1,24 @@
-cffi==1.15.1
-coverage==5.5;      python_version < '3.7'
-coverage==6.4.4;    python_version >= '3.7'
+cffi==1.15.1;               python_version < '3.8'
+cffi==1.16;                 python_version >= '3.8'
+
+coverage==5.5;              python_version == '2.7'
+coverage==6.2;              python_version == '3.6'
+coverage==7.2.7;            python_version == '3.7'
+coverage==7.4.3;            python_version >= '3.8'
+
 Django==1.11.29;    python_version < '3.0'
 Django==3.2.20;     python_version >= '3.6'
-mock==2.0.0
-psutil==5.9.5
-pytest-catchlog==1.2.2
-pytest==3.1.2
+
+mock==3.0.5;                python_version == '2.7'
+mock==5.1.0;                python_version >= '3.6'
+
+psutil==5.9.8
+
+pytest==4.6.11;             python_version == '2.7'
+pytest==7.0.1;              python_version == '3.6'
+pytest==7.4.4;              python_version == '3.7'
+pytest==8.0.2;              python_version >= '3.8'
+
 subprocess32==3.5.4; python_version < '3.0'
 timeoutcontext==1.2.0
 # Fix InsecurePlatformWarning while creating py26 tox environment
@@ -15,4 +27,7 @@ urllib3[secure]==1.23; python_version < '2.7'
 urllib3[secure]==1.26; python_version > '2.6' and python_version < '2.7.9'
 # Last idna compatible with Python 2.6 was idna 2.7.
 idna==2.7; python_version < '2.7'
-virtualenv==20.10.0
+
+virtualenv==20.15.1;        python_version == '2.7'
+virtualenv==20.17.1;        python_version == '3.6'
+virtualenv==20.25.1;        python_version >= '3.7'

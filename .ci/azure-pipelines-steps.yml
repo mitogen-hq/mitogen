@@ -2,6 +2,7 @@
 # https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/?view=azure-pipelines&viewFallbackFrom=azure-devops#tool
 
 # `{script: ...}` is shorthand for `{task: CmdLine@<mumble>, inputs: {script: ...}}`.
+# The shell is bash.
 # https://learn.microsoft.com/en-us/azure/devops/pipelines/yaml-schema/steps-script?view=azure-pipelines
 # https://learn.microsoft.com/en-us/azure/devops/pipelines/tasks/reference/cmd-line-v2?view=azure-pipelines
 
@@ -14,20 +15,80 @@ steps:
   condition: ne(variables['python.version'], '')
 
 - script: |
-    type python
-    python --version
-  displayName: Show python version
+    set -o errexit
+    set -o nounset
+    set -o pipefail
 
-- script: |
     sudo apt-get update
     sudo apt-get install -y python2-dev python3-pip virtualenv
   displayName: Install build deps
   condition: and(eq(variables['python.version'], ''), eq(variables['Agent.OS'], 'Linux'))
 
-- script: python -mpip install "tox<4.0"
+- script: |
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    # macOS builders lack a realpath command
+    type python  && python  -c"import os.path;print(os.path.realpath('$(type -p python)'))" &&  python --version
+    type python2 && python2 -c"import os.path;print(os.path.realpath('$(type -p python2)'))" && python2 --version
+    type python3 && python3 -c"import os.path;print(os.path.realpath('$(type -p python3)'))" && python3 --version
+    echo
+
+    if [ -e /usr/bin/python ]; then
+        echo "/usr/bin/python:    sys.executable: $(/usr/bin/python -c 'import sys; print(sys.executable)')"
+    fi
+
+    if [ -e /usr/bin/python2 ]; then
+        echo "/usr/bin/python2:   sys.executable: $(/usr/bin/python2 -c 'import sys; print(sys.executable)')"
+    fi
+
+    if [ -e /usr/bin/python2.7 ]; then
+        echo "/usr/bin/python2.7: sys.executable: $(/usr/bin/python2.7 -c 'import sys; print(sys.executable)')"
+    fi
+  displayName: Show python versions
+
+- script: |
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+    PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "$(tox.env)"))')
+
+    if [[ -z $PYTHON ]]; then
+        echo 1>&2 "Python interpreter could not be determined"
+        exit 1
+    fi
+
+    if [[ $PYTHON == "python2.7" && $(uname) == "Darwin" ]]; then
+        "$PYTHON" -m ensurepip --user --altinstall --no-default-pip
+        "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
+    elif [[ $PYTHON == "python2.7" ]]; then
+        curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
+        "$PYTHON" get-pip.py --user --no-python-version-warning
+        # Avoid Python 2.x pip masking system pip
+        rm -f ~/.local/bin/{easy_install,pip,wheel}
+        "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
+    else
+        "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+    fi
   displayName: Install tooling
 
-- script: python -mtox -e "$(tox.env)"
+- script: |
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
+    # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+    PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "$(tox.env)"))')
+
+    if [[ -z $PYTHON ]]; then
+        echo 1>&2 "Python interpreter could not be determined"
+        exit 1
+    fi
+
+    "$PYTHON" -m tox -e "$(tox.env)"
   displayName: "Run tests"
   env:
     AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)

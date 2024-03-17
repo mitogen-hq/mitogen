@@ -1,4 +1,4 @@
-- name: Report runtime settings
+- name: Report target facts
   hosts: localhost:test-targets
   gather_facts: true
   tasks:
@@ -13,8 +13,3 @@
     - debug: {var: ansible_facts.osversion}
     - debug: {var: ansible_facts.python}
     - debug: {var: ansible_facts.system}
-    - debug: {var: ansible_forks}
-    - debug: {var: ansible_run_tags}
-    - debug: {var: ansible_skip_tags}
-    - debug: {var: ansible_version.full}
-    - debug: {var: is_mitogen}

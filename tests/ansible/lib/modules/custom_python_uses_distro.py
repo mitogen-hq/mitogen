@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # issue #590: I am an Ansible new-style Python module that tries to use
 # ansible.module_utils.distro.
 

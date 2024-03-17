@@ -1,7 +1,8 @@
 - name: integration/runner/custom_python_new_style_module.yml
   hosts: test-targets
   tasks:
-    # without Mitogen Ansible 2.10 hangs on this play
+    # FIXME Without Mitogen Ansible often reads stdin before the module.
+    #       Either don't read directly from stdin, or figure out the cause.
     - meta: end_play
       when: not is_mitogen
 

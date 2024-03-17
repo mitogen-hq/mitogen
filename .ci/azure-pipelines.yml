@@ -21,25 +21,21 @@ jobs:
     matrix:
       Mito_27:
         tox.env: py27-mode_mitogen
-      Mito_311:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen
+      Mito_312:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen
 
-      # TODO: test python3, python3 tests are broken
       Loc_27_210:
         tox.env: py27-mode_localhost-ansible2.10
-      Loc_27_4:
-        tox.env: py27-mode_localhost-ansible4
+      Loc_312_6:
+        python.version: '3.12'
+        tox.env: py312-mode_localhost-ansible6
 
-      # NOTE: this hangs when ran in Ubuntu 18.04
       Van_27_210:
-        tox.env: py27-mode_localhost-ansible2.10
-        STRATEGY: linear
-        ANSIBLE_SKIP_TAGS: resource_intensive
-      Van_27_4:
-        tox.env: py27-mode_localhost-ansible4
-        STRATEGY: linear
-        ANSIBLE_SKIP_TAGS: resource_intensive
+        tox.env: py27-mode_localhost-ansible2.10-strategy_linear
+      Van_312_6:
+        python.version: '3.12'
+        tox.env: py312-mode_localhost-ansible6-strategy_linear
 
 - job: Linux
   pool:
@@ -96,33 +92,33 @@ jobs:
         python.version: '3.6'
         tox.env: py36-mode_mitogen-distro_ubuntu2004
 
-      Mito_311_centos6:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_centos6
-      Mito_311_centos7:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_centos7
-      Mito_311_centos8:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_centos8
-      Mito_311_debian9:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_debian9
-      Mito_311_debian10:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_debian10
-      Mito_311_debian11:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_debian11
-      Mito_311_ubuntu1604:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_ubuntu1604
-      Mito_311_ubuntu1804:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_ubuntu1804
-      Mito_311_ubuntu2004:
-        python.version: '3.11'
-        tox.env: py311-mode_mitogen-distro_ubuntu2004
+      Mito_312_centos6:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_centos6
+      Mito_312_centos7:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_centos7
+      Mito_312_centos8:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_centos8
+      Mito_312_debian9:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_debian9
+      Mito_312_debian10:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_debian10
+      Mito_312_debian11:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_debian11
+      Mito_312_ubuntu1604:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_ubuntu1604
+      Mito_312_ubuntu1804:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_ubuntu1804
+      Mito_312_ubuntu2004:
+        python.version: '3.12'
+        tox.env: py312-mode_mitogen-distro_ubuntu2004
 
       Ans_27_210:
         tox.env: py27-mode_ansible-ansible2.10
@@ -148,6 +144,6 @@ jobs:
       Ans_311_5:
         python.version: '3.11'
         tox.env: py311-mode_ansible-ansible5
-      Ans_311_6:
-        python.version: '3.11'
-        tox.env: py311-mode_ansible-ansible6
+      Ans_312_6:
+        python.version: '3.12'
+        tox.env: py312-mode_ansible-ansible6
