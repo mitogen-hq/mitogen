@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# Show permissions and identities that impact the current working directory.
+# On macOS libc cwd() can return EACCES after su or sudo.
+# See also
+#   - https://github.com/ansible/ansible/pull/7078
+#   - https://github.com/python/cpython/issues/115911
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+whoami
+groups
+pwd
+
+d=$(pwd)
+while [[ "$d" != "/" && -n "$d" ]]; do
+    ls -ld "$d"
+    d=$(dirname "$d")
+done
+ls -ld /

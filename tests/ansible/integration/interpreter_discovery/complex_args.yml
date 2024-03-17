@@ -4,6 +4,10 @@
 - name: integration/interpreter_discovery/complex_args.yml
   hosts: test-targets
   gather_facts: true
+  environment:
+      http_proxy: "{{ lookup('env', 'http_proxy') | default(omit) }}"
+      https_proxy: "{{ lookup('env', 'https_proxy') | default(omit) }}"
+      no_proxy: "{{ lookup('env', 'no_proxy') | default(omit) }}"
   tasks:
     - name: create temp file to source
       file:
@@ -21,28 +25,24 @@
     #     special_python: source /tmp/fake && python
     - name: set python using sourced file
       set_fact:
-        special_python: source /tmp/fake || true && python
+        # Avoid 2.x vs 3.x cross-compatiblity issues (that I can't remember the exact details of).
+        special_python: "source /tmp/fake || true && python{{ ansible_facts.python.version.major }}"
 
     - name: run get_url with specially-sourced python
       get_url:
-        url: https://google.com
+        # Plain http for wider Ansible & Python version compatibility
+        url: http://httpbin.org/get
         dest: "/tmp/"
         mode: 0644
-        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
-        validate_certs: no
       vars:
         ansible_python_interpreter: "{{ special_python }}"
-      environment:
-        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
 
     - name: run get_url with specially-sourced python including jinja
       get_url:
-        url: https://google.com
+        # Plain http for wider Ansible & Python version compatibility
+        url: http://httpbin.org/get
         dest: "/tmp/"
         mode: 0644
-        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
-        validate_certs: no
       vars:
         ansible_python_interpreter: >
           {% if "1" == "1" %}
@@ -50,8 +50,5 @@
           {% else %}
             python 
           {% endif %}
-      environment:
-        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
   tags:
     - complex_args

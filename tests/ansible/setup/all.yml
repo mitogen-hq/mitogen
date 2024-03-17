@@ -1,1 +1,2 @@
-- import_playbook: report.yml
+- import_playbook: report_controller.yml
+- import_playbook: report_targets.yml

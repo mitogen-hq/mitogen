@@ -4,6 +4,8 @@
 # WARNING: this creates non-privilged accounts with pre-set passwords!
 #
 
+- import_playbook: ../ansible/setup/report_controller.yml
+
 - hosts: all
   gather_facts: true
   strategy: mitogen_free
@@ -37,12 +39,12 @@
 
     normal_users: "{{
       lookup('sequence', 'start=1 end=5 format=user%d', wantlist=True)
-    }}"
+      }}"
 
     all_users: "{{
       special_users +
       normal_users
-    }}"
+      }}"
   tasks:
     - name: Disable non-localhost SSH for Mitogen users
       when: false
@@ -100,6 +102,7 @@
       with_items: "{{all_users}}"
       copy:
         dest: /var/lib/AccountsService/users/mitogen__{{item}}
+        mode: u=rw,go=
         content: |
           [User]
           SystemAccount=true
@@ -108,7 +111,7 @@
       when: ansible_system == 'Linux' and out.stat.exists
       service:
         name: accounts-daemon
-        restarted: true
+        state: restarted
 
     - name: Readonly homedir for one account
       shell: "chown -R root: ~mitogen__readonly_homedir"
@@ -117,6 +120,9 @@
       copy:
         dest: ~mitogen__slow_user/.{{item}}
         src: ../data/docker/mitogen__slow_user.profile
+        owner: mitogen__slow_user
+        group: mitogen__group
+        mode: u=rw,go=r
       with_items:
       - bashrc
       - profile
@@ -125,6 +131,9 @@
       copy:
         dest: ~mitogen__permdenied/.{{item}}
         src: ../data/docker/mitogen__permdenied.profile
+        owner: mitogen__permdenied
+        group: mitogen__group
+        mode: u=rw,go=r
       with_items:
       - bashrc
       - profile
@@ -136,20 +145,13 @@
             state: directory
             mode: go=
             owner: mitogen__has_sudo_pubkey
+            group: mitogen__group
         - copy:
             dest: ~mitogen__has_sudo_pubkey/.ssh/authorized_keys
             src: ../data/docker/mitogen__has_sudo_pubkey.key.pub
             mode: go=
             owner: mitogen__has_sudo_pubkey
-
-    - name: Install slow profile for one account
-      block:
-        - copy:
-            dest: ~mitogen__slow_user/.profile
-            src: ../data/docker/mitogen__slow_user.profile
-        - copy:
-            dest: ~mitogen__slow_user/.bashrc
-            src: ../data/docker/mitogen__slow_user.profile
+            group: mitogen__group
 
     - name: Require a TTY for two accounts
       lineinfile:

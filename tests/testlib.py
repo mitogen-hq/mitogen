@@ -18,7 +18,10 @@ except ImportError:
     import ConfigParser as configparser
 
 import psutil
-import subprocess32 as subprocess
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 import mitogen.core
 import mitogen.fork
@@ -47,8 +50,13 @@ except NameError:
 
 
 LOG = logging.getLogger(__name__)
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-MODS_DIR = os.path.join(DATA_DIR, 'importer')
+
+TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
+ANSIBLE_LIB_DIR =               os.path.join(TESTS_DIR, 'ansible', 'lib')
+ANSIBLE_MODULE_UTILS_DIR =      os.path.join(TESTS_DIR, 'ansible', 'lib', 'module_utils')
+ANSIBLE_MODULES_DIR =           os.path.join(TESTS_DIR, 'ansible', 'lib', 'modules')
+DATA_DIR =                      os.path.join(TESTS_DIR, 'data')
+MODS_DIR =                      os.path.join(TESTS_DIR, 'data', 'importer')
 
 sys.path.append(DATA_DIR)
 sys.path.append(MODS_DIR)
@@ -87,7 +95,7 @@ def base_executable(executable=None):
         base_executable = None
 
     if base_executable and base_executable != executable:
-        return 'be', base_executable
+        return base_executable
 
     # Python 2.x only has sys.base_prefix if running outside a virtualenv.
     try:
@@ -499,19 +507,18 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    def _get_container_port(self):
-        s = subprocess.check_output(['docker', 'port', self.container_name])
-        for line in s.decode().splitlines():
-            m = self.PORT_RE.match(line)
-            if not m:
-                continue
-            dport, proto, _, bport = m.groups()
-            if dport == '22' and proto == 'tcp':
-                self.port = int(bport)
+    PORT_RE = re.compile(
+        # e.g. 0.0.0.0:32771, :::32771, [::]:32771'
+        r'(?P<addr>[0-9.]+|::|\[[a-f0-9:.]+\]):(?P<port>[0-9]+)',
+    )
 
-        self.host = self.get_host()
-        if self.port is None:
+    @classmethod
+    def get_port(cls, container):
+        s = subprocess.check_output(['docker', 'port', container, '22/tcp'])
+        m = cls.PORT_RE.search(s.decode())
+        if not m:
             raise ValueError('could not find SSH port in: %r' % (s,))
+        return int(m.group('port'))
 
     def start_container(self):
         try:
@@ -530,7 +537,6 @@ class DockerizedSshDaemon(object):
             self.image,
         ]
         subprocess.check_output(args)
-        self._get_container_port()
 
     def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
         if '-'  in mitogen_test_distro:
@@ -545,12 +551,9 @@ class DockerizedSshDaemon(object):
             self.python_path = '/usr/bin/python'
 
         self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
-
-        # 22/tcp -> 0.0.0.0:32771
-        self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
-        self.port = None
-
         self.start_container()
+        self.host = self.get_host()
+        self.port = self.get_port(self.container_name)
 
     def get_host(self):
         return get_docker_host()
@@ -631,12 +634,33 @@ class DockerMixin(RouterMixin):
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 
+    @property
+    def docker_ssh_default_kwargs(self):
+        return {
+            'hostname': self.dockerized_ssh.host,
+            'port': self.dockerized_ssh.port,
+            'check_host_keys': 'ignore',
+            'ssh_debug_level': 3,
+            # https://www.openssh.com/legacy.html
+            # ssh-rsa uses SHA1. Least worst available with CentOS 7 sshd.
+            # Rejected by default in newer ssh clients (e.g. Ubuntu 22.04).
+            # Duplicated cases in
+            #   - tests/ansible/ansible.cfg
+            #   - tests/ansible/integration/connection_delegation/delegate_to_template.yml
+            #   - tests/ansible/integration/connection_delegation/stack_construction.yml
+            #   - tests/ansible/integration/process/unix_socket_cleanup.yml
+            #   - tests/ansible/integration/ssh/variables.yml
+            #   - tests/testlib.py
+            'ssh_args': [
+                '-o', 'HostKeyAlgorithms +ssh-rsa',
+                '-o', 'PubkeyAcceptedKeyTypes +ssh-rsa',
+            ],
+            'python_path': self.dockerized_ssh.python_path,
+        }
+
     def docker_ssh(self, **kwargs):
-        kwargs.setdefault('hostname', self.dockerized_ssh.host)
-        kwargs.setdefault('port', self.dockerized_ssh.port)
-        kwargs.setdefault('check_host_keys', 'ignore')
-        kwargs.setdefault('ssh_debug_level', 3)
-        kwargs.setdefault('python_path', self.dockerized_ssh.python_path)
+        for k, v in self.docker_ssh_default_kwargs.items():
+            kwargs.setdefault(k, v)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):

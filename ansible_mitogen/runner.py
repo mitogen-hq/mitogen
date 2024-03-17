@@ -40,7 +40,6 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import atexit
-import imp
 import json
 import os
 import re
@@ -63,6 +62,14 @@ try:
 except ImportError:
     # Python 2.4
     ctypes = None
+
+try:
+    # Python >= 3.4, PEP 451 ModuleSpec API
+    import importlib.machinery
+    import importlib.util
+except ImportError:
+    # Python < 3.4, PEP 302 Import Hooks
+    import imp
 
 try:
     # Cannot use cStringIO as it does not support Unicode.
@@ -514,10 +521,71 @@ class ModuleUtilsImporter(object):
             sys.modules.pop(fullname, None)
 
     def find_module(self, fullname, path=None):
+        """
+        Return a loader for the module with fullname, if we will load it.
+
+        Implements importlib.abc.MetaPathFinder.find_module().
+        Deprecrated in Python 3.4+, replaced by find_spec().
+        Raises ImportWarning in Python 3.10+. Removed in Python 3.12.
+        """
         if fullname in self._by_fullname:
             return self
 
+    def find_spec(self, fullname, path, target=None):
+        """
+        Return a `ModuleSpec` for module with `fullname` if we will load it.
+        Otherwise return `None`.
+
+        Implements importlib.abc.MetaPathFinder.find_spec(). Python 3.4+.
+        """
+        if fullname.endswith('.'):
+            return None
+
+        try:
+            module_path, is_package = self._by_fullname[fullname]
+        except KeyError:
+            LOG.debug('Skipping %s: not present', fullname)
+            return None
+
+        LOG.debug('Handling %s', fullname)
+        origin = 'master:%s' % (module_path,)
+        return importlib.machinery.ModuleSpec(
+            fullname, loader=self, origin=origin, is_package=is_package,
+        )
+
+    def create_module(self, spec):
+        """
+        Return a module object for the given ModuleSpec.
+
+        Implements PEP-451 importlib.abc.Loader API introduced in Python 3.4.
+        Unlike Loader.load_module() this shouldn't populate sys.modules or
+        set module attributes. Both are done by Python.
+        """
+        module = types.ModuleType(spec.name)
+        # FIXME create_module() shouldn't initialise module attributes
+        module.__file__ = spec.origin
+        return module
+
+    def exec_module(self, module):
+        """
+        Execute the module to initialise it. Don't return anything.
+
+        Implements PEP-451 importlib.abc.Loader API, introduced in Python 3.4.
+        """
+        spec = module.__spec__
+        path, _ = self._by_fullname[spec.name]
+        source = ansible_mitogen.target.get_small_file(self._context, path)
+        code = compile(source, path, 'exec', 0, 1)
+        exec(code, module.__dict__)
+        self._loaded.add(spec.name)
+
     def load_module(self, fullname):
+        """
+        Return the loaded module specified by fullname.
+
+        Implements PEP 302 importlib.abc.Loader.load_module().
+        Deprecated in Python 3.4+, replaced by create_module() & exec_module().
+        """
         path, is_pkg = self._by_fullname[fullname]
         source = ansible_mitogen.target.get_small_file(self._context, path)
         code = compile(source, path, 'exec', 0, 1)
@@ -818,12 +886,17 @@ class NewStyleRunner(ScriptRunner):
         synchronization mechanism by importing everything the module will need
         prior to detaching.
         """
+        # I think "custom" means "found in custom module_utils search path",
+        # e.g. playbook relative dir, ~/.ansible/..., Ansible collection.
         for fullname, _, _ in self.module_map['custom']:
             mitogen.core.import_module(fullname)
+
+        # I think "builtin" means "part of ansible/ansible-base/ansible-core",
+        # as opposed to Python builtin modules such as sys.
         for fullname in self.module_map['builtin']:
             try:
                 mitogen.core.import_module(fullname)
-            except ImportError:
+            except ImportError as exc:
                 # #590: Ansible 2.8 module_utils.distro is a package that
                 # replaces itself in sys.modules with a non-package during
                 # import. Prior to replacement, it is a real package containing
@@ -834,8 +907,18 @@ class NewStyleRunner(ScriptRunner):
                 # loop progresses to the next entry and attempts to preload
                 # 'distro._distro', the import mechanism will fail. So here we
                 # silently ignore any failure for it.
-                if fullname != 'ansible.module_utils.distro._distro':
-                    raise
+                if fullname == 'ansible.module_utils.distro._distro':
+                    continue
+
+                # ansible.module_utils.compat.selinux raises ImportError if it
+                # can't load libselinux.so. The importer would usually catch
+                # this & skip selinux operations. We don't care about selinux,
+                # we're using import to get a copy of the module.
+                if (fullname == 'ansible.module_utils.compat.selinux'
+                    and exc.msg == 'unable to load libselinux.so'):
+                    continue
+
+                raise
 
     def _setup_excepthook(self):
         """

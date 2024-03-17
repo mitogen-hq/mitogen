@@ -31,15 +31,31 @@ from __future__ import unicode_literals
 __metaclass__ = type
 
 import collections
-import imp
+import logging
 import os
+import re
+import sys
+
+try:
+    # Python >= 3.4, PEP 451 ModuleSpec API
+    import importlib.machinery
+    import importlib.util
+except ImportError:
+    # Python < 3.4, PEP 302 Import Hooks
+    import imp
 
 import mitogen.master
 
 
+LOG = logging.getLogger(__name__)
 PREFIX = 'ansible.module_utils.'
 
 
+# Analog of `importlib.machinery.ModuleSpec` or `pkgutil.ModuleInfo`.
+#   name    Unqualified name of the module.
+#   path    Filesystem path of the module.
+#   kind    One of the constants in `imp`, as returned in `imp.find_module()`
+#   parent  `ansible_mitogen.module_finder.Module` of parent package (if any).
 Module = collections.namedtuple('Module', 'name path kind parent')
 
 
@@ -119,14 +135,121 @@ def find_relative(parent, name, path=()):
 
 
 def scan_fromlist(code):
+    """Return an iterator of (level, name) for explicit imports in a code
+    object.
+
+    Not all names identify a module. `from os import name, path` generates
+    `(0, 'os.name'), (0, 'os.path')`, but `os.name` is usually a string.
+
+    >>> src = 'import a; import b.c; from d.e import f; from g import h, i\\n'
+    >>> code = compile(src, '<str>', 'exec')
+    >>> list(scan_fromlist(code))
+    [(0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i')]
+    """
     for level, modname_s, fromlist in mitogen.master.scan_code_imports(code):
         for name in fromlist:
-            yield level, '%s.%s' % (modname_s, name)
+            yield level, str('%s.%s' % (modname_s, name))
         if not fromlist:
             yield level, modname_s
 
 
+def walk_imports(code, prefix=None):
+    """Return an iterator of names for implicit parent imports & explicit
+    imports in a code object.
+
+    If a prefix is provided, then only children of that prefix are included.
+    Not all names identify a module. `from os import name, path` generates
+    `'os', 'os.name', 'os.path'`, but `os.name` is usually a string.
+
+    >>> source = 'import a; import b; import b.c; from b.d import e, f\\n'
+    >>> code = compile(source, '<str>', 'exec')
+    >>> list(walk_imports(code))
+    ['a', 'b', 'b', 'b.c', 'b', 'b.d', 'b.d.e', 'b.d.f']
+    >>> list(walk_imports(code, prefix='b'))
+    ['b.c', 'b.d', 'b.d.e', 'b.d.f']
+    """
+    if prefix is None:
+        prefix = ''
+    pattern = re.compile(r'(^|\.)(\w+)')
+    start = len(prefix)
+    for _, name, fromlist in mitogen.master.scan_code_imports(code):
+        if not name.startswith(prefix):
+            continue
+        for match in pattern.finditer(name, start):
+            yield name[:match.end()]
+        for leaf in fromlist:
+            yield str('%s.%s' % (name, leaf))
+
+
 def scan(module_name, module_path, search_path):
+    # type: (str, str, list[str]) -> list[(str, str, bool)]
+    """Return a list of (name, path, is_package) for ansible.module_utils
+    imports used by an Ansible module.
+    """
+    log = LOG.getChild('scan')
+    log.debug('%r, %r, %r', module_name, module_path, search_path)
+
+    if sys.version_info >= (3, 4):
+        result = _scan_importlib_find_spec(
+            module_name, module_path, search_path,
+        )
+        log.debug('_scan_importlib_find_spec %r', result)
+    else:
+        result = _scan_imp_find_module(module_name, module_path, search_path)
+        log.debug('_scan_imp_find_module %r', result)
+    return result
+
+
+def _scan_importlib_find_spec(module_name, module_path, search_path):
+    # type: (str, str, list[str]) -> list[(str, str, bool)]
+    module = importlib.machinery.ModuleSpec(
+        module_name, loader=None, origin=module_path,
+    )
+    prefix = importlib.machinery.ModuleSpec(
+        PREFIX.rstrip('.'), loader=None,
+    )
+    prefix.submodule_search_locations = search_path
+    queue = collections.deque([module])
+    specs = {prefix.name: prefix}
+    while queue:
+        spec = queue.popleft()
+        if spec.origin is None:
+            continue
+        try:
+            with open(spec.origin, 'rb') as f:
+                code = compile(f.read(), spec.name, 'exec')
+        except Exception as exc:
+            raise ValueError((exc, module, spec, specs))
+
+        for name in walk_imports(code, prefix.name):
+            if name in specs:
+                continue
+
+            parent_name = name.rpartition('.')[0]
+            parent = specs[parent_name]
+            if parent is None or not parent.submodule_search_locations:
+                specs[name] = None
+                continue
+
+            child = importlib.util._find_spec(
+                name, parent.submodule_search_locations,
+            )
+            if child is None or child.origin is None:
+                specs[name] = None
+                continue
+
+            specs[name] = child
+            queue.append(child)
+
+    del specs[prefix.name]
+    return sorted(
+        (spec.name, spec.origin, spec.submodule_search_locations is not None)
+        for spec in specs.values() if spec is not None
+    )
+
+
+def _scan_imp_find_module(module_name, module_path, search_path):
+    # type: (str, str, list[str]) -> list[(str, str, bool)]
     module = Module(module_name, module_path, imp.PY_SOURCE, None)
     stack = [module]
     seen = set()

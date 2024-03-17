@@ -23,9 +23,16 @@
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
-    - assert:
+    - name: Check virtualenv was used
+      # On macOS runners a symlink /tmp -> /private/tmp has been seen
+      vars:
+        requested_executable: /tmp/issue_152_virtualenv/bin/python
+        expected_executables:
+          - "{{ requested_executable }}"
+          - "{{ requested_executable.replace('/tmp', out.fs['/tmp'].resolved) }}"
+      assert:
         that:
-          - out.sys_executable == "/tmp/issue_152_virtualenv/bin/python"
+          - out.sys_executable in expected_executables
         fail_msg: out={{out}}
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
