@@ -81,13 +81,18 @@ import syslog
 import threading
 import time
 import traceback
+import types
 import warnings
 import weakref
 import zlib
 
-# Python >3.7 deprecated the imp module.
-warnings.filterwarnings('ignore', message='the imp module is deprecated')
-import imp
+try:
+    # Python >= 3.4, PEP 451 ModuleSpec API
+    import importlib.machinery
+    import importlib.util
+except ImportError:
+    # Python < 3.4, PEP 302 Import Hooks
+    import imp
 
 # Absolute imports for <2.5.
 select = __import__('select')
@@ -1380,6 +1385,19 @@ class Importer(object):
     def __repr__(self):
         return 'Importer'
 
+    @staticmethod
+    def _loader_from_module(module, default=None):
+        """Return the loader for a module object."""
+        try:
+            return module.__spec__.loader
+        except AttributeError:
+            pass
+        try:
+            return module.__loader__
+        except AttributeError:
+            pass
+        return default
+
     def builtin_find_module(self, fullname):
         # imp.find_module() will always succeed for __main__, because it is a
         # built-in module. That means it exists on a special linked list deep
@@ -1400,7 +1418,6 @@ class Importer(object):
         # Otherwise use search path of the parent package.
         # Works for both stdlib modules & third-party modules.
         # If the search is unsuccessful then raises ImportError.
-        # FIXME Python 3.12 removed `imp`.
         fp, pathname, description = imp.find_module(modname, path)
         if fp:
             fp.close()
@@ -1424,14 +1441,13 @@ class Importer(object):
         try:
             #_v and self._log.debug('Python requested %r', fullname)
             fullname = to_text(fullname)
-            pkgname, dot, _ = str_rpartition(fullname, '.')
+            pkgname, _, suffix = str_rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
                 self._log.debug('%s is submodule of a locally loaded package',
                                 fullname)
                 return None
 
-            suffix = fullname[len(pkgname+dot):]
             if pkgname and suffix not in self._present.get(pkgname, ()):
                 self._log.debug('%s has no submodule %s', pkgname, suffix)
                 return None
@@ -1450,6 +1466,66 @@ class Importer(object):
                 return self
         finally:
             del _tls.running
+
+    def find_spec(self, fullname, path, target=None):
+        """
+        Return a `ModuleSpec` for module with `fullname` if we will load it.
+        Otherwise return `None`, allowing other finders to try.
+
+        fullname    Fully qualified name of the module (e.g. foo.bar.baz)
+        path        Path entries to search. None for a top-level module.
+        target      Existing module to be reloaded (if any).
+
+        Implements importlib.abc.MetaPathFinder.find_spec()
+        Python 3.4+.
+        """
+        # Presence of _tls.running indicates we've re-invoked importlib.
+        # Abort early to prevent infinite recursion. See below.
+        if hasattr(_tls, 'running'):
+            return None
+
+        log = self._log.getChild('find_spec')
+
+        if fullname.endswith('.'):
+            return None
+
+        pkgname, _, modname = fullname.rpartition('.')
+        if pkgname and modname not in self._present.get(pkgname, ()):
+            log.debug('Skipping %s. Parent %s has no submodule %s',
+                      fullname, pkgname, modname)
+            return None
+
+        pkg = sys.modules.get(pkgname)
+        pkg_loader = self._loader_from_module(pkg)
+        if pkgname and pkg_loader is not self:
+            log.debug('Skipping %s. Parent %s was loaded by %r',
+                      fullname, pkgname, pkg_loader)
+            return None
+
+        # #114: whitelisted prefixes override any system-installed package.
+        if self.whitelist != ['']:
+            if any(s and fullname.startswith(s) for s in self.whitelist):
+                log.debug('Handling %s. It is whitelisted', fullname)
+                return importlib.machinery.ModuleSpec(fullname, loader=self)
+
+        if fullname == '__main__':
+            log.debug('Handling %s. A special case', fullname)
+            return importlib.machinery.ModuleSpec(fullname, loader=self)
+
+        # Re-invoke the import machinery to allow other finders to try.
+        # Set a guard, so we don't infinitely recurse. See top of this method.
+        _tls.running = True
+        try:
+            spec = importlib.util._find_spec(fullname, path, target)
+        finally:
+            del _tls.running
+
+        if spec:
+            log.debug('Skipping %s. Available as %r', fullname, spec)
+            return spec
+
+        log.debug('Handling %s. Unavailable locally', fullname)
+        return importlib.machinery.ModuleSpec(fullname, loader=self)
 
     blacklisted_msg = (
         '%r is present in the Mitogen importer blacklist, therefore this '
@@ -1537,6 +1613,64 @@ class Importer(object):
         if present:
             callback()
 
+    def create_module(self, spec):
+        """
+        Return a module object for the given ModuleSpec.
+
+        Implements PEP-451 importlib.abc.Loader API introduced in Python 3.4.
+        Unlike Loader.load_module() this shouldn't populate sys.modules or
+        set module attributes. Both are done by Python.
+        """
+        self._log.debug('Creating module for %r', spec)
+
+        # FIXME Should this be done in find_spec()? Can it?
+        self._refuse_imports(spec.name)
+
+        # FIXME "create_module() should properly handle the case where it is
+        #       called more than once for the same spec/module." -- PEP-451
+        event = threading.Event()
+        self._request_module(spec.name, callback=event.set)
+        event.wait()
+
+        # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
+        _, pkg_present, path, _, _ = self._cache[spec.name]
+
+        if path is None:
+            raise ImportError(self.absent_msg % (spec.name))
+
+        spec.origin = self.get_filename(spec.name)
+        if pkg_present is not None:
+            # TODO Namespace packages
+            spec.submodule_search_locations = []
+            self._present[spec.name] = pkg_present
+
+        module = types.ModuleType(spec.name)
+        # FIXME create_module() shouldn't initialise module attributes
+        module.__file__ = spec.origin
+        return module
+
+    def exec_module(self, module):
+        """
+        Execute the module to initialise it. Don't return anything.
+
+        Implements PEP-451 importlib.abc.Loader API, introduced in Python 3.4.
+        """
+        name = module.__spec__.name
+        origin = module.__spec__.origin
+        self._log.debug('Executing %s from %s', name, origin)
+        source = self.get_source(name)
+        try:
+            # Compile the source into a code object. Don't add any __future__
+            # flags and don't inherit any from this module.
+            # FIXME Should probably be exposed as get_code()
+            code = compile(source, origin, 'exec', flags=0, dont_inherit=True)
+        except SyntaxError:
+            # FIXME Why is this LOG, rather than self._log?
+            LOG.exception('while importing %r', name)
+            raise
+
+        exec(code, module.__dict__)
+
     def load_module(self, fullname):
         """
         Return the loaded module specified by fullname.
@@ -1552,12 +1686,11 @@ class Importer(object):
         self._request_module(fullname, event.set)
         event.wait()
 
-        ret = self._cache[fullname]
-        if ret[2] is None:
+        # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
+        _, pkg_present, path, _, _ = self._cache[fullname]
+        if path is None:
             raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
-        pkg_present = ret[1]
-        # FIXME Python 3.12 removed `imp`
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = self.get_filename(fullname)
         mod.__loader__ = self
@@ -3958,8 +4091,7 @@ class ExternalContext(object):
 
     def _setup_package(self):
         global mitogen
-        # FIXME Python 3.12 removed `imp`
-        mitogen = imp.new_module('mitogen')
+        mitogen = types.ModuleType('mitogen')
         mitogen.__package__ = 'mitogen'
         mitogen.__path__ = []
         mitogen.__loader__ = self.importer

@@ -51,6 +51,7 @@ def main():
                     'as_seen': sys.executable,
                     'resolved': os.path.realpath(sys.executable),
                 },
+                'platform': sys.platform,
             },
         },
     }

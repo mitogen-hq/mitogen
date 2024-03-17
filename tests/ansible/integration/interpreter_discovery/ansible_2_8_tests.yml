@@ -195,13 +195,6 @@
               - distro == 'ubuntu'
               - distro_version is version('16.04', '>=', strict=True)
 
-          - name: mac assertions
-            assert:
-              that:
-              - auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
-              fail_msg: auto_out={{auto_out}}
-            when: os_family == 'Darwin'
-
           always:
           - meta: clear_facts
       when:

@@ -50,8 +50,13 @@ except NameError:
 
 
 LOG = logging.getLogger(__name__)
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-MODS_DIR = os.path.join(DATA_DIR, 'importer')
+
+TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
+ANSIBLE_LIB_DIR =               os.path.join(TESTS_DIR, 'ansible', 'lib')
+ANSIBLE_MODULE_UTILS_DIR =      os.path.join(TESTS_DIR, 'ansible', 'lib', 'module_utils')
+ANSIBLE_MODULES_DIR =           os.path.join(TESTS_DIR, 'ansible', 'lib', 'modules')
+DATA_DIR =                      os.path.join(TESTS_DIR, 'data')
+MODS_DIR =                      os.path.join(TESTS_DIR, 'data', 'importer')
 
 sys.path.append(DATA_DIR)
 sys.path.append(MODS_DIR)
