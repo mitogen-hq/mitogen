@@ -20,6 +20,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`682`: mitogen did not deploy class level imports.
 
 v0.3.5 (2024-03-17)
 -------------------
