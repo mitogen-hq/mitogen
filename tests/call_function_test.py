@@ -75,10 +75,8 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
     def test_bad_return_value(self):
         exc = self.assertRaises(mitogen.core.StreamError,
             lambda: self.local.call(func_with_bad_return_value))
-        self.assertEqual(
-                exc.args[0],
-                "cannot unpickle '%s'/'CrazyType'" % (__name__,),
-        )
+        expected_start = 'Refusing to unpickle %s.CrazyType' % (__name__,)
+        self.assertEqual(exc.args[0][:len(expected_start)], expected_start)
 
     def test_aborted_on_local_context_disconnect(self):
         stream = self.router._stream_by_id[self.local.context_id]

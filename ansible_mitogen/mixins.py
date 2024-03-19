@@ -40,40 +40,23 @@ try:
 except ImportError:
     from pipes import quote as shlex_quote
 
-from ansible.module_utils._text import to_bytes
-from ansible.parsing.utils.jsonify import jsonify
-
 import ansible
 import ansible.constants
+import ansible.parsing.utils.jsonify
 import ansible.plugins
 import ansible.plugins.action
+import ansible.utils.unsafe_proxy
+
+from ansible.module_utils.common.text.converters import to_bytes, to_text
 
 import mitogen.core
 import mitogen.select
-import mitogen.utils
 
 import ansible_mitogen.connection
 import ansible_mitogen.planner
 import ansible_mitogen.target
 import ansible_mitogen.utils
-
-from ansible.module_utils._text import to_text
-
-try:
-    from ansible.utils.unsafe_proxy import wrap_var
-except ImportError:
-    from ansible.vars.unsafe_proxy import wrap_var
-
-try:
-    # ansible 2.8 moved remove_internal_keys to the clean module
-    from ansible.vars.clean import remove_internal_keys
-except ImportError:
-    try:
-        from ansible.vars.manager import remove_internal_keys
-    except ImportError:
-        # ansible 2.3.3 has remove_internal_keys as a protected func on the action class
-        # we'll fallback to calling self._remove_internal_keys in this case
-        remove_internal_keys = lambda a: "Not found"
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -187,7 +170,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_remote_file_exists(%r)', path)
         return self._connection.get_chain().call(
             ansible_mitogen.target.file_exists,
-            mitogen.utils.cast(path)
+            ansible_mitogen.utils.unsafe.unwrap_var(path)
         )
 
     def _configure_module(self, module_name, module_args, task_vars=None):
@@ -245,7 +228,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         action module, and probably others.
         """
         if isinstance(data, dict):
-            data = jsonify(data)
+            data = ansible.parsing.utils.jsonify.jsonify(data)
         if not isinstance(data, bytes):
             data = to_bytes(data, errors='surrogate_or_strict')
 
@@ -324,7 +307,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # ~root/.ansible -> /root/.ansible
         return self._connection.get_chain(use_login=(not sudoable)).call(
             os.path.expanduser,
-            mitogen.utils.cast(path),
+            ansible_mitogen.utils.unsafe.unwrap_var(path),
         )
 
     def get_task_timeout_secs(self):
@@ -387,11 +370,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             ansible_mitogen.planner.Invocation(
                 action=self,
                 connection=self._connection,
-                module_name=mitogen.core.to_text(module_name),
-                module_args=mitogen.utils.cast(module_args),
+                module_name=ansible_mitogen.utils.unsafe.unwrap_var(mitogen.core.to_text(module_name)),
+                module_args=ansible_mitogen.utils.unsafe.unwrap_var(module_args),
                 task_vars=task_vars,
                 templar=self._templar,
-                env=mitogen.utils.cast(env),
+                env=ansible_mitogen.utils.unsafe.unwrap_var(env),
                 wrap_async=wrap_async,
                 timeout_secs=self.get_task_timeout_secs(),
             )
@@ -404,7 +387,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
         # handle ansible 2.3.3 that has remove_internal_keys in a different place
-        check = remove_internal_keys(result)
+        check = ansible.vars.clean.remove_internal_keys(result)
         if check == 'Not found':
             self._remove_internal_keys(result)
 
@@ -430,7 +413,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 result['deprecations'] = []
             result['deprecations'].extend(self._discovery_deprecation_warnings)
 
-        return wrap_var(result)
+        return ansible.utils.unsafe_proxy.wrap_var(result)
 
     def _postprocess_response(self, result):
         """

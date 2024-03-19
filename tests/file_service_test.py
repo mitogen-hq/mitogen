@@ -57,7 +57,6 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
         self.assertIsInstance(resp['size'], int)
 
     def test_path_authorized(self):
-        recv = mitogen.core.Receiver(self.router)
         service = self.klass(self.router)
         service.register('/etc/passwd')
         recv, msg = self.replyable_msg()
@@ -66,10 +65,11 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
             sender=recv.to_sender(),
             msg=msg,
         )
-        self._validate_response(recv.get().unpickle())
+        reply = recv.get()
+        #self.assertEqual(self.router, reply.router)
+        self._validate_response(reply.unpickle())
 
     def test_root_authorized(self):
-        recv = mitogen.core.Receiver(self.router)
         service = self.klass(self.router)
         service.register_prefix('/')
         recv, msg = self.replyable_msg()
@@ -78,10 +78,11 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
             sender=recv.to_sender(),
             msg=msg,
         )
-        self._validate_response(recv.get().unpickle())
+        reply = recv.get()
+        #self.assertEqual(self.router, reply.router)
+        self._validate_response(reply.unpickle())
 
     def test_prefix_authorized(self):
-        recv = mitogen.core.Receiver(self.router)
         service = self.klass(self.router)
         service.register_prefix('/etc')
         recv, msg = self.replyable_msg()
@@ -90,7 +91,9 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
             sender=recv.to_sender(),
             msg=msg,
         )
-        self._validate_response(recv.get().unpickle())
+        reply = recv.get()
+        #self.assertEqual(self.router, reply.router)
+        self._validate_response(reply.unpickle())
 
     def test_prefix_authorized_abspath_bad(self):
         l1 = self.router.local()

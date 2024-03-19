@@ -190,16 +190,17 @@ PASSTHROUGH = (
 
 def cast(obj):
     """
-    Many tools love to subclass built-in types in order to implement useful
-    functionality, such as annotating the safety of a Unicode string, or adding
-    additional methods to a dict. However, cPickle loves to preserve those
-    subtypes during serialization, resulting in CallError during :meth:`call
-    <mitogen.parent.Context.call>` in the target when it tries to deserialize
-    the data.
+    Return a copy of obj, recursively attempting to cast subtypes of common
+    builtins back to their base type.
 
-    This function walks the object graph `obj`, producing a copy with any
-    custom sub-types removed. The functionality is not default since the
-    resulting walk may be computationally expensive given a large enough graph.
+    Many libraries and frameworks subclass built-in types to add functionality
+    e.g. annotate the safety/unsafety of a value, add serialisation methods.
+    However `:py:mod:pickle` preserves these subtypes exactly, resulting in
+    :exc:`mitogen.CallError` during :meth:`call <mitogen.parent.Context.call>`
+    when the remote context tries to unpickle the data.
+
+    The functionality is not default because the walk can be computationally
+    expensive given a large enough graph.
 
     See :ref:`serialization-rules` for a list of supported types.
 
@@ -215,8 +216,16 @@ def cast(obj):
     if isinstance(obj, PASSTHROUGH):
         return obj
     if isinstance(obj, mitogen.core.UnicodeType):
-        return mitogen.core.UnicodeType(obj)
+        ret = mitogen.core.UnicodeType(obj)
+        if type(ret) is not mitogen.core.UnicodeType:
+            raise TypeError("Failed casting %s to %s, got %s"
+                            % (type(obj), mitogen.core.UnicodeType), type(ret))
+        return ret
     if isinstance(obj, mitogen.core.BytesType):
-        return mitogen.core.BytesType(obj)
+        ret = mitogen.core.BytesType(obj)
+        if type(ret) is not mitogen.core.BytesType:
+            raise TypeError("Failed casting %s to %s, got %s"
+                            % (type(obj), mitogen.core.BytesType), type(ret))
+        return ret
 
     raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))

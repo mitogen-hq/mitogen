@@ -2326,7 +2326,7 @@ class Router(mitogen.core.Router):
             return
         LOG.debug('%r: marking as detached', stream)
         stream.conn.detached = True
-        msg.reply(None)
+        msg.reply(None) #, router=self)
 
     def get_streams(self):
         """

@@ -1569,4 +1569,4 @@ class IdAllocator(object):
         requestee = self.router.context_by_id(msg.src_id)
         LOG.debug('%r: allocating [%r..%r) to %r',
                   self, id_, last_id, requestee)
-        msg.reply((id_, last_id))
+        msg.reply((id_, last_id))  #, router=self.router)
