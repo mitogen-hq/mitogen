@@ -77,8 +77,12 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
             lambda: self.local.call(func_with_bad_return_value))
         self.assertEqual(
                 exc.args[0],
-                "cannot unpickle '%s'/'CrazyType'" % (__name__,),
+                "cannot unpickle '%s'/'CrazyType' - try using `set_pickle_whitelist`" % (__name__,),
         )
+
+        mitogen.core.set_pickle_whitelist(r'.*CrazyType')
+        self.assertIsInstance(self.local.call(func_with_bad_return_value), CrazyType)
+        mitogen.core.set_pickle_whitelist([])
 
     def test_aborted_on_local_context_disconnect(self):
         stream = self.router._stream_by_id[self.local.context_id]
