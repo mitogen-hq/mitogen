@@ -11,6 +11,57 @@ import testlib
 from mitogen.core import b
 
 
+class MessageHeaderTest(testlib.TestCase):
+    def test_attributes(self):
+        hdr = mitogen.core.MessageHeader(1, 2, 3, 4, 5, 6, 7)
+        self.assertEqual(hdr.magic, 1)
+        self.assertEqual(hdr.dst, 2)
+        self.assertEqual(hdr.src, 3)
+        self.assertEqual(hdr.auth, 4)
+        self.assertEqual(hdr.handle, 5)
+        self.assertEqual(hdr.reply_to, 6)
+        self.assertEqual(hdr.data_size, 7)
+
+    def test_unpack(self):
+        hdr1 = mitogen.core.MessageHeader(0x4d49, 2, 3, 4, 5, 6, 7)
+        hdr2 = mitogen.core.MessageHeader.unpack(
+            b'MI\0\0\0\x02\0\0\0\x03\0\0\0\x04\0\0\0\x05\0\0\0\x06\0\0\0\x07',
+            max_message_size=100,
+        )
+        self.assertEqual(hdr1, hdr2)
+
+        self.assertRaises(
+            mitogen.core.MessageMagicError,
+            mitogen.core.MessageHeader.unpack,
+            b'AB\0\0\0\x02\0\0\0\x03\0\0\0\x04\0\0\0\x05\0\0\0\x06\0\0\0\x07',
+            max_message_size=100,
+        )
+
+        self.assertRaises(
+            mitogen.core.MessageSizeError,
+            mitogen.core.MessageHeader.unpack,
+            b'MI\0\0\0\x02\0\0\0\x03\0\0\0\x04\0\0\0\x05\0\0\0\x06\0\0\0\x07',
+            max_message_size=6,
+        )
+
+    def test_pack(self):
+        hdr = mitogen.core.MessageHeader(
+            mitogen.core.MessageHeader.MAGIC, 2, 3, 4, 5, 6, 7,
+        )
+        self.assertEqual(
+            hdr.pack(),
+            b'MI\0\0\0\x02\0\0\0\x03\0\0\0\x04\0\0\0\x05\0\0\0\x06\0\0\0\x07',
+        )
+        self.assertEqual(len(hdr.pack()), mitogen.core.MessageHeader.SIZE)
+
+    def test_repr(self):
+        hdr = mitogen.core.MessageHeader(1, 2, 3, 4, 5, 6, 7)
+        self.assertEqual(
+            repr(hdr),
+            'mitogen.core.MessageHeader(magic=1, dst=2, src=3, auth=4, handle=5, reply_to=6, data_size=7)',
+        )
+
+
 class ConstructorTest(testlib.TestCase):
     klass = mitogen.core.Message
 
@@ -64,18 +115,9 @@ class ConstructorTest(testlib.TestCase):
 class PackTest(testlib.TestCase):
     klass = mitogen.core.Message
 
-    def test_header_format_sanity(self):
-        self.assertEqual(self.klass.HEADER_LEN,
-                          struct.calcsize(self.klass.HEADER_FMT))
-
     def test_header_length_correct(self):
         s = self.klass(dst_id=123, handle=123).pack()
-        self.assertEqual(len(s), self.klass.HEADER_LEN)
-
-    def test_magic(self):
-        s = self.klass(dst_id=123, handle=123).pack()
-        magic, = struct.unpack('>h', s[:2])
-        self.assertEqual(self.klass.HEADER_MAGIC, magic)
+        self.assertEqual(len(s), mitogen.core.MessageHeader.SIZE)
 
     def test_dst_id(self):
         s = self.klass(dst_id=123, handle=123).pack()
