@@ -4,7 +4,10 @@ import subprocess
 import tempfile
 import unittest
 
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import ansible_mitogen.target
 import testlib

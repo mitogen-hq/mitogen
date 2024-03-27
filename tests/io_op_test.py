@@ -1,7 +1,10 @@
 import errno
 import select
 
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import testlib
 import mitogen.core
