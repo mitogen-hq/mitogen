@@ -1,0 +1,4 @@
+tox==3.28;                  python_version == '2.7'
+tox==3.28;                  python_version == '3.6'
+tox==4.8.0;                 python_version == '3.7'
+tox>=4.13.0,~=4.0;          python_version >= '3.8'

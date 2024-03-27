@@ -134,12 +134,13 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
 
     def test_enforce_unknown_host_key(self):
         fp = tempfile.NamedTemporaryFile()
+        ssh_args = self.docker_ssh_default_kwargs.get('ssh_args', [])
         try:
             e = self.assertRaises(mitogen.ssh.HostKeyError,
                 lambda: self.docker_ssh(
                     username='mitogen__has_sudo_pubkey',
                     password='has_sudo_password',
-                    ssh_args=['-o', 'UserKnownHostsFile ' + fp.name],
+                    ssh_args=ssh_args + ['-o', 'UserKnownHostsFile %s' % fp.name],
                     check_host_keys='enforce',
                 )
             )
@@ -149,11 +150,12 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
 
     def test_accept_enforce_host_keys(self):
         fp = tempfile.NamedTemporaryFile()
+        ssh_args = self.docker_ssh_default_kwargs.get('ssh_args', [])
         try:
             context = self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='has_sudo_password',
-                ssh_args=['-o', 'UserKnownHostsFile ' + fp.name],
+                ssh_args=ssh_args + ['-o', 'UserKnownHostsFile %s' % fp.name],
                 check_host_keys='accept',
             )
             context.shutdown(wait=True)
@@ -166,7 +168,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             context = self.docker_ssh(
                 username='mitogen__has_sudo',
                 password='has_sudo_password',
-                ssh_args=['-o', 'UserKnownHostsFile ' + fp.name],
+                ssh_args=ssh_args + ['-o', 'UserKnownHostsFile %s' % fp.name],
                 check_host_keys='enforce',
             )
             context.shutdown(wait=True)

@@ -138,4 +138,5 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li>randy &mdash; <em>desperate for automation</em></li>
     <li>Michael & Vicky Twomey-Lee</li>
     <li><a href="http://www.wezm.net/">Wesley Moore</a></li>
+    <li><a href="https://github.com/baryluk">Witold Baryluk</a></li>
     </ul>
