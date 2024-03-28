@@ -24,6 +24,8 @@ Unreleased
 * :gh:issue:`1046` Raise :py:exc:`TypeError` in :func:`<mitogen.util.cast()>`
   when casting a string subtype to `bytes()` or `str()` fails. This is
   potentially an API breaking change. Failures previously passed silently.
+* :gh:issue:`1046` Add :func:`<ansible_mitogen.util.cast()>`, to cast
+  :class:`ansible.utils.unsafe_proxy.AnsibleUnsafe` objects in Ansible 7+.
 
 
 v0.3.5 (2024-03-17)
