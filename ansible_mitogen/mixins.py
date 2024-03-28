@@ -50,12 +50,12 @@ import ansible.plugins.action
 
 import mitogen.core
 import mitogen.select
-import mitogen.utils
 
 import ansible_mitogen.connection
 import ansible_mitogen.planner
 import ansible_mitogen.target
 import ansible_mitogen.utils
+import ansible_mitogen.utils.unsafe
 
 from ansible.module_utils._text import to_text
 
@@ -187,7 +187,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_remote_file_exists(%r)', path)
         return self._connection.get_chain().call(
             ansible_mitogen.target.file_exists,
-            mitogen.utils.cast(path)
+            ansible_mitogen.utils.unsafe.cast(path)
         )
 
     def _configure_module(self, module_name, module_args, task_vars=None):
@@ -324,7 +324,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # ~root/.ansible -> /root/.ansible
         return self._connection.get_chain(use_login=(not sudoable)).call(
             os.path.expanduser,
-            mitogen.utils.cast(path),
+            ansible_mitogen.utils.unsafe.cast(path),
         )
 
     def get_task_timeout_secs(self):
@@ -387,11 +387,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             ansible_mitogen.planner.Invocation(
                 action=self,
                 connection=self._connection,
-                module_name=mitogen.core.to_text(module_name),
-                module_args=mitogen.utils.cast(module_args),
+                module_name=ansible_mitogen.utils.unsafe.cast(mitogen.core.to_text(module_name)),
+                module_args=ansible_mitogen.utils.unsafe.cast(module_args),
                 task_vars=task_vars,
                 templar=self._templar,
-                env=mitogen.utils.cast(env),
+                env=ansible_mitogen.utils.unsafe.cast(env),
                 wrap_async=wrap_async,
                 timeout_secs=self.get_task_timeout_secs(),
             )

@@ -9,7 +9,7 @@
 
 - command: sudo -n whoami
   args:
-    warn: false
+    warn: "{{ False if ansible_version.full is version('2.10', '<=', strict=True) else omit }}"
   ignore_errors: true
   register: sudo_available
 
