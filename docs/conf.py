@@ -2,7 +2,7 @@ import sys
 
 sys.path.append('.')
 
-VERSION = '0.3.4'
+VERSION = '0.3.5'
 
 author = u'Network Genomics'
 copyright = u'2021, the Mitogen authors'
