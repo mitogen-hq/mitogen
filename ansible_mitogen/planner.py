@@ -54,6 +54,7 @@ import mitogen.select
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
 import ansible_mitogen.target
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ class Planner(object):
         new.setdefault('extra_env', self._inv.connection.get_default_env())
         new.setdefault('emulate_tty', True)
         new.setdefault('service_context', binding.get_child_service_context())
-        return new
+        return ansible_mitogen.utils.unsafe.unwrap_var(new)
 
     def __repr__(self):
         return '%s()' % (type(self).__name__,)
@@ -234,7 +235,8 @@ class ScriptPlanner(BinaryPlanner):
         except KeyError:
             return path
 
-        return mitogen.utils.cast(self._inv.templar.template(template))
+        templated = self._inv.templar.template(template)
+        return ansible_mitogen.utils.unsafe.unwrap_var(templated)
 
     def _get_interpreter(self):
         path, arg = ansible_mitogen.parsing.parse_hashbang(

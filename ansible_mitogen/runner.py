@@ -378,6 +378,7 @@ class Runner(object):
         """
         self._setup_cwd()
         self._setup_environ()
+        #self._setup_pickling_registry(mitogen.core._PicklingRegistry)
 
     def _setup_cwd(self):
         """
@@ -400,6 +401,18 @@ class Runner(object):
             env.update(self.env)
         self._env = TemporaryEnvironment(env)
 
+    @staticmethod
+    def _setup_pickling_registry(registry):
+        # See also :func:`ansible_mitogen.process._setup_pickling_registry`
+        registry.register(
+            'ansible.utils.unsafe_proxy', 'AnsibleUnsafeBytes',
+            ansible.utils.unsafe_proxy.AnsibleUnsafeBytes,
+        )
+        registry.register(
+            'ansible.utils.unsafe_proxy', 'AnsibleUnsafeText',
+            ansible.utils.unsafe_proxy.AnsibleUnsafeText,
+        )
+
     def _revert_cwd(self):
         """
         #591: make a best-effort attempt to return to :attr:`good_temp_dir`.
@@ -417,12 +430,19 @@ class Runner(object):
         """
         self._revert_cwd()
         self._env.revert()
+        #self._revert_pickling_registry(mitogen.core._PicklingRegistry)
         self.revert_temp_dir()
+
+    @staticmethod
+    def _revert_pickling_registry(registry):
+        registry.unregister('ansible.utils.unsafe_proxy', 'AnsibleUnsafeBytes')
+        registry.unregister('ansible.utils.unsafe_proxy', 'AnsibleUnsafeText')
 
     def _run(self):
         """
         The _run() method is expected to return a dictionary in the form of
-        ActionBase._low_level_execute_command() output, i.e. having::
+        :meth:`ansible.plugins.action.ActionBase._low_level_execute_command()`
+        output, i.e. having::
 
             {
                 "rc": int,

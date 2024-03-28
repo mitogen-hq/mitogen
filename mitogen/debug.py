@@ -230,7 +230,9 @@ class ContextDebugger(object):
     def _handle_debug_msg(self, msg):
         try:
             method, args, kwargs = msg.unpickle()
-            msg.reply(getattr(self, method)(*args, **kwargs))
+            method = getattr(self, method)
+            result = method(*args, **kwargs)
+            msg.reply(result)  #, router=self.router)
         except Exception:
             e = sys.exc_info()[1]
-            msg.reply(mitogen.core.CallError(e))
+            msg.reply(mitogen.core.CallError(e))  #, router=self.router)

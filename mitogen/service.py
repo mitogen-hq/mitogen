@@ -28,7 +28,9 @@
 
 # !mitogen: minify_safe
 
+import collections
 import grp
+import inspect
 import logging
 import os
 import pprint
@@ -65,11 +67,23 @@ if mitogen.core.PY3:
         return func.__code__
     def func_name(func):
         return func.__name__
+    _FullArgSpec = inspect.FullArgSpec
+    _getfullargspec = inspect.getfullargspec
+    _isboundmethod = inspect.ismethod
 else:
     def func_code(func):
         return func.func_code
     def func_name(func):
         return func.func_name
+    _FullArgSpec = collections.namedtuple(
+        '_FullArgSpec',
+        'args varargs varkw defaults kwonlyargs kwonlydefaults annotations',
+    )
+    def _getfullargspec(func):
+        args, varargs, varkw, defaults = inspect.getargspec(func)
+        return _FullArgSpec(args, varargs, varkw, defaults, [], {}, {})
+    def _isboundmethod(func):
+        return inspect.ismethod(func) and func.__self__ is not None
 
 
 @mitogen.core.takes_router
@@ -167,6 +181,13 @@ def arg_spec(spec):
         Mapping from argument name to expected type.
     """
     def wrapper(func):
+        fullargspec = _getfullargspec(func)
+        # Remove self argument. Assumes func is a bound or unbound method.
+        args = fullargspec.args[1:]
+        # Remove arguments with default values
+        if fullargspec.defaults is not None:
+            args = args[:-len(fullargspec.defaults)]
+        #assert set(spec) == set(args), "Expected args=%r, got spec=%r, fullargspec=%r" % (args, spec, fullargspec)
         func.mitogen_service__arg_spec = spec
         return func
     return wrapper
@@ -312,7 +333,8 @@ class Invoker(object):
         self._validate(method_name, kwargs, msg)
         response = self._invoke(method_name, kwargs, msg)
         if response is not Service.NO_REPLY:
-            msg.reply(response)
+            assert msg.router == self.service.router
+            msg.reply(response)  #, router=self.service.router)
 
 
 class SerializedInvoker(Invoker):
@@ -343,10 +365,10 @@ class SerializedInvoker(Invoker):
             except mitogen.core.CallError:
                 e = sys.exc_info()[1]
                 LOG.warning('%r: call error: %s: %s', self, msg, e)
-                msg.reply(e)
+                msg.reply(e)  #, router=self.service.router)
             except Exception:
                 LOG.exception('%r: while invoking %s()', self, method_name)
-                msg.reply(mitogen.core.Message.dead())
+                msg.reply(mitogen.core.Message.dead())  #, router=self.service.router)
 
     def invoke(self, method_name, kwargs, msg):
         self._lock.acquire()
@@ -398,7 +420,8 @@ class DeduplicatingInvoker(Invoker):
             assert key in self._waiters
             self._responses[key] = response
             for msg in self._waiters.pop(key):
-                msg.reply(response)
+                assert msg.router == self.service.router
+                msg.reply(response)  #, router=self.service.router)
         finally:
             self._lock.release()
 
@@ -628,12 +651,12 @@ class Pool(object):
         except mitogen.core.CallError:
             e = sys.exc_info()[1]
             LOG.warning('%r: call error: %s: %s', self, msg, e)
-            msg.reply(e)
+            msg.reply(e) ##, router=self.router)
         except Exception:
             LOG.exception('%r: while invoking %r of %r',
                           self, method_name, service_name)
             e = sys.exc_info()[1]
-            msg.reply(mitogen.core.CallError(e))
+            msg.reply(mitogen.core.CallError(e))  #, router=self.router)
 
     def _worker_run(self):
         while not self.closed:
@@ -1036,6 +1059,7 @@ class FileService(Service):
     @arg_spec({
         'path': mitogen.core.FsPathTypes,
         'sender': mitogen.core.Sender,
+        # FIXME Why isn't msg mentioned? Why isn't that causing an error?
     })
     def fetch(self, path, sender, msg):
         """
@@ -1063,13 +1087,15 @@ class FileService(Service):
             (not mitogen.core._has_parent_authority(msg.auth_id))
         ):
             msg.reply(mitogen.core.CallError(
-                Error(self.unregistered_msg % (path,))
+                Error(self.unregistered_msg % (path,)),
+                #router=self.router,
             ))
             return
 
         if msg.src_id != sender.context.context_id:
             msg.reply(mitogen.core.CallError(
-                Error(self.context_mismatch_msg)
+                Error(self.context_mismatch_msg),
+                #router=self.router,
             ))
             return
 
@@ -1081,11 +1107,11 @@ class FileService(Service):
         # ~10Mbit/sec over a 100ms link.
         try:
             fp = open(path, 'rb', self.IO_SIZE)
-            msg.reply(self._generate_stat(path))
+            assert msg.router == self.router
+            msg.reply(self._generate_stat(path))  #, router=self.router)
         except IOError:
-            msg.reply(mitogen.core.CallError(
-                sys.exc_info()[1]
-            ))
+            exc = sys.exc_info()[1]
+            msg.reply(mitogen.core.CallError(exc))  #, router=self.router))
             return
 
         stream = self.router.stream_by_id(sender.context.context_id)

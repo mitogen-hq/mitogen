@@ -63,16 +63,14 @@ else:
 
 
 import binascii
+import codecs
 import collections
-import encodings.latin_1
-import encodings.utf_8
 import errno
 import fcntl
 import itertools
 import linecache
 import logging
 import os
-import pickle as py_pickle
 import pstats
 import signal
 import socket
@@ -108,11 +106,6 @@ except ImportError:
     import threading as thread
 
 try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
     from cStringIO import StringIO as BytesIO
 except ImportError:
     from io import BytesIO
@@ -136,13 +129,10 @@ LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
-# str.encode() may take import lock. Deadlock possible if broker calls
-# .encode() on behalf of thread currently waiting for module.
-LATIN1_CODEC = encodings.latin_1.Codec()
-
 _v = False
 _vv = False
 
+# :ref:`standard-handles` for known operations, in the reserved range 1-999.
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
@@ -177,20 +167,72 @@ except NameError:
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if PY3:
+    import pickle
+
+    # 3.x: Subclass pickle.Unpickler to customise find_class() behaviour.
+    class _Unpickler(pickle.Unpickler):
+        def __init__(self, file):
+            super().__init__(file, encoding='bytes')
+
+        def find_class(self, module, func):
+            return self.find_global(module, func)
+
     b = str.encode
     BytesType = bytes
     UnicodeType = str
     FsPathTypes = (str,)
+    IntegerTypes = (int,)
     BufferType = lambda buf, start: memoryview(buf)[start:]
     long = int
 else:
+    import cPickle as pickle
+
+    # 2.x: Assign to cPickle.Unpickler().find_global() to customise behaviour.
+    _Unpickler = pickle.Unpickler
+
     b = str
+    long = long
     BytesType = str
     FsPathTypes = (str, unicode)
+    IntegerTypes = (int, long)
     BufferType = buffer
     UnicodeType = unicode
 
 AnyTextType = (BytesType, UnicodeType)
+
+if PY24:
+    import pickle as py_pickle
+    class Py24Pickler(py_pickle.Pickler):
+        """
+        Exceptions were classic classes until Python 2.5. Sadly for 2.4,
+        cPickle offers little control over how a classic instance is pickled.
+        Therefore 2.4 uses a pure-Python pickler, so CallError can be made to
+        look as it does on newer Pythons.
+
+        This mess will go away once proper serialization exists.
+        """
+        @classmethod
+        def dumps(cls, obj, protocol):
+            bio = BytesIO()
+            self = cls(bio, protocol=protocol)
+            self.dump(obj)
+            return bio.getvalue()
+
+        def save_exc_inst(self, obj):
+            if isinstance(obj, CallError):
+                func, args = obj.__reduce__()
+                self.save(func)
+                self.save(args)
+                self.write(py_pickle.REDUCE)
+            else:
+                py_pickle.Pickler.save_inst(self, obj)
+
+        dispatch = py_pickle.Pickler.dispatch.copy()
+        dispatch[py_pickle.InstanceType] = save_exc_inst
+
+    pickle__dumps = Py24Pickler.dumps
+else:
+    pickle__dumps = pickle.dumps
 
 try:
     next
@@ -322,7 +364,7 @@ class Kwargs(dict):
         def __init__(self, dct):
             for k, v in dct.iteritems():
                 if type(k) is unicode:
-                    k, _ = encodings.utf_8.encode(k)
+                    k, _ = codecs.utf_8_encode(k)
                 self[k] = v
 
     def __repr__(self):
@@ -381,6 +423,83 @@ class TimeoutError(Error):
     Raised when a timeout occurs on a stream.
     """
     pass
+
+
+class BoundedInt(int):
+    def __new__(cls, x):
+        cls.validate(x)
+        return super(BoundedInt, cls).__new__(cls, x)
+
+    @classmethod
+    def validate(cls, x):
+        if not isinstance(x, IntegerTypes):
+            raise TypeError(
+                '%s must be an integer, not %r' % (cls.__name__, type(x)),
+            )
+        if not (cls.MIN <= x <= cls.MAX):
+            raise ValueError(
+                '%s must be in %d..%d' % (cls.__name__, cls.MIN, cls.MAX),
+                x,
+            )
+
+    def __repr__(self): return '%s(%d)' % (self.__class__.__name__, self)
+    def __str__(self): return '%d' % (self,)
+
+
+class ContextID(BoundedInt):
+    MIN = 0
+    MAX = 2**32-1
+
+
+class ContextName(UnicodeType):
+    MAX_LEN = 100
+
+    @classmethod
+    def validate(cls, s):
+        if s is None:
+            return
+        if not isinstance(s, UnicodeType):
+            raise TypeError(
+                '%s must be %s, not %r' % (cls.__name__, UnicodeType, type(s)),
+            )
+        if len(s) > cls.MAX_LEN:
+            raise ValueError(
+                '%s maximum length %d exceeded' % (cls.__name__, cls.MAX_LEN,),
+                s,
+            )
+
+
+class Handle(BoundedInt):
+    MIN = 1
+    MAX = 2**32-1
+
+
+class StandardHandle(BoundedInt):
+    MIN = Handle.MIN
+    MAX = 999
+
+
+class DynamicHandle(BoundedInt):
+    MIN = 1000
+    MAX = Handle.MAX
+
+
+def _unpickle_bytes_empty():
+    "Limited `bytes()` proxy, to unpickle an empty byte string."
+    # Python 3 pickles `b''` as `__builtins__.bytes()`, if protocol <= 2.
+    # Intentionally accepts no arguments, to reduce attack surface.
+    return BytesType()
+
+
+def _unpickle_bytes_nonempty(obj, encoding='latin1'):
+    "Limited `_codecs.encode()` proxy, to unpickle a non-empty byte string."
+    # Python 3 pickles `b'...'` as `_codecs.encode('...', 'latin1')`, if
+    # protocol <= 2. Allows only this encoding, to reduce attack surface.
+    # The 'special' encodings (e.g. gzip, string_escape) feel most risky.
+    if encoding != 'latin1':
+        raise LookupError('Encoding not permitted: %r', encoding)
+    encoded, _ = codecs.latin_1_encode(obj)
+    return encoded
 
 
 def to_text(o):
@@ -751,54 +870,6 @@ def iter_split(buf, delim, func):
     return buf[start:], cont
 
 
-class Py24Pickler(py_pickle.Pickler):
-    """
-    Exceptions were classic classes until Python 2.5. Sadly for 2.4, cPickle
-    offers little control over how a classic instance is pickled. Therefore 2.4
-    uses a pure-Python pickler, so CallError can be made to look as it does on
-    newer Pythons.
-
-    This mess will go away once proper serialization exists.
-    """
-    @classmethod
-    def dumps(cls, obj, protocol):
-        bio = BytesIO()
-        self = cls(bio, protocol=protocol)
-        self.dump(obj)
-        return bio.getvalue()
-
-    def save_exc_inst(self, obj):
-        if isinstance(obj, CallError):
-            func, args = obj.__reduce__()
-            self.save(func)
-            self.save(args)
-            self.write(py_pickle.REDUCE)
-        else:
-            py_pickle.Pickler.save_inst(self, obj)
-
-    if PY24:
-        dispatch = py_pickle.Pickler.dispatch.copy()
-        dispatch[py_pickle.InstanceType] = save_exc_inst
-
-
-if PY3:
-    # In 3.x Unpickler is a class exposing find_class as an overridable, but it
-    # cannot be overridden without subclassing.
-    class _Unpickler(pickle.Unpickler):
-        def find_class(self, module, func):
-            return self.find_global(module, func)
-    pickle__dumps = pickle.dumps
-elif PY24:
-    # On Python 2.4, we must use a pure-Python pickler.
-    pickle__dumps = Py24Pickler.dumps
-    _Unpickler = pickle.Unpickler
-else:
-    pickle__dumps = pickle.dumps
-    # In 2.x Unpickler is a function exposing a writeable find_global
-    # attribute.
-    _Unpickler = pickle.Unpickler
-
-
 class Message(object):
     """
     Messages are the fundamental unit of communication, comprising fields from
@@ -842,6 +913,8 @@ class Message(object):
     #: the :class:`mitogen.select.Select` interface. Defaults to :data:`None`.
     receiver = None
 
+    # HEADER_MAGIC, dst_id, src_id, auth_id, handle, reply_to, data_len
+    # L is uint32 - context IDs, handles, and data length must be 0 - 2**32-1
     HEADER_FMT = '>hLLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
     HEADER_MAGIC = 0x4d49  # 'MI'
@@ -870,33 +943,22 @@ class Message(object):
     def _unpickle_sender(self, context_id, dst_handle):
         return _unpickle_sender(self.router, context_id, dst_handle)
 
-    def _unpickle_bytes(self, s, encoding):
-        s, n = LATIN1_CODEC.encode(s)
-        return s
-
     def _find_global(self, module, func):
         """
-        Return the class implementing `module_name.class_name` or raise
-        `StreamError` if the module is not whitelisted.
+        Return a callable to handle `module_name.callable_name`, in a pickle
+        or raise :exc:`StreamError` if this is not allowed to be unpickled.
         """
-        if module == __name__:
-            if func == '_unpickle_call_error' or func == 'CallError':
-                return _unpickle_call_error
-            elif func == '_unpickle_sender':
-                return self._unpickle_sender
-            elif func == '_unpickle_context':
-                return self._unpickle_context
-            elif func == 'Blob':
-                return Blob
-            elif func == 'Secret':
-                return Secret
-            elif func == 'Kwargs':
-                return Kwargs
-        elif module == '_codecs' and func == 'encode':
-            return self._unpickle_bytes
-        elif module == '__builtin__' and func == 'bytes':
-            return BytesType
-        raise StreamError('cannot unpickle %r/%r', module, func)
+        # TODO Ideally the registered callers won't change for each message.
+        #      However it's proven difficult to extracate `msg.router`.
+        callables = _PicklingRegistry._callables.copy()
+        callables.update({
+            ('mitogen.core', '_unpickle_context'): self._unpickle_context,
+            ('mitogen.core', '_unpickle_sender'): self._unpickle_sender,
+        })
+        try:
+            return callables[(module, func)]
+        except KeyError:
+            raise StreamError('Refusing to unpickle %s.%s, registered %r', module, func, callables)
 
     @property
     def is_dead(self):
@@ -913,7 +975,7 @@ class Message(object):
         """
         Syntax helper to construct a dead message.
         """
-        kwargs['data'], _ = encodings.utf_8.encode(reason or u'')
+        kwargs['data'], _ = codecs.utf_8_encode(reason or u'')
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
@@ -933,12 +995,32 @@ class Message(object):
             self.data = pickle__dumps(CallError(e), protocol=2)
         return self
 
+    def make_reply(self, msg, **kwargs):
+        """
+        Return a reply to this message.
+
+        :param msg:
+            Either a :class:`Message`, or an object to be serialized in order
+            to construct a new message.
+        :param kwargs:
+            Optional keyword parameters overriding message fields in the reply.
+
+        :returns:
+            :class:`Message` that was created.
+        """
+        if not isinstance(msg, Message):
+            msg = Message.pickled(msg)
+        msg.dst_id = self.src_id
+        msg.handle = self.reply_to
+        vars(msg).update(kwargs)
+        return msg
+
     def reply(self, msg, router=None, **kwargs):
         """
         Compose a reply to this message and send it using :attr:`router`, or
         `router` is :attr:`router` is :data:`None`.
 
-        :param obj:
+        :param msg:
             Either a :class:`Message`, or an object to be serialized in order
             to construct a new message.
         :param router:
@@ -946,21 +1028,12 @@ class Message(object):
         :param kwargs:
             Optional keyword parameters overriding message fields in the reply.
         """
-        if not isinstance(msg, Message):
-            msg = Message.pickled(msg)
-        msg.dst_id = self.src_id
-        msg.handle = self.reply_to
-        vars(msg).update(kwargs)
+        msg = self.make_reply(msg, **kwargs)
         if msg.handle:
             (self.router or router).route(msg)
         else:
             LOG.debug('dropping reply to message with no return address: %r',
                       msg)
-
-    if PY3:
-        UNPICKLER_KWARGS = {'encoding': 'bytes'}
-    else:
-        UNPICKLER_KWARGS = {}
 
     def _throw_dead(self):
         if len(self.data):
@@ -990,7 +1063,7 @@ class Message(object):
         obj = self._unpickled
         if obj is Message._unpickled:
             fp = BytesIO(self.data)
-            unpickler = _Unpickler(fp, **self.UNPICKLER_KWARGS)
+            unpickler = _Unpickler(fp)
             unpickler.find_global = self._find_global
             try:
                 # Must occur off the broker thread.
@@ -1015,6 +1088,35 @@ class Message(object):
             self.dst_id, self.src_id, self.auth_id, self.handle,
             self.reply_to, (self.data or '')[:50], len(self.data)
         )
+
+
+class _PicklingRegistry(object):
+    # FIXME Should probably be a normal instantiable class, not a singleton
+    # FIXME better name than callables? globals? handlers?
+    _callables = {
+        ('__builtin__', 'bytes'): _unpickle_bytes_empty,
+        ('_codecs', 'encode'): _unpickle_bytes_nonempty,
+        ('mitogen.core', '_unpickle_call_error'): _unpickle_call_error,
+        #('mitogen.core', '_unpickle_context'): self._unpickle_context,
+        #('mitogen.core', '_unpickle_sender'): self._unpickle_sender,
+        ('mitogen.core', 'Blob'): Blob,
+        ('mitogen.core', 'CallError'): _unpickle_call_error,
+        ('mitogen.core', 'Kwargs'): Kwargs,
+        ('mitogen.core', 'Secret'): Secret,
+    }
+
+    @classmethod
+    def lookup(cls, module, name):
+        return cls._callables[(module, name)]
+
+    @classmethod
+    def register(cls, module, name, callable):
+        # TODO What about repeated attempts? Overwrite? Raise exception?
+        cls._callables[(module, name)] = callable
+
+    @classmethod
+    def unregister(cls, module, name):
+        del cls._callables[(module, name)]
 
 
 class Sender(object):
@@ -1064,10 +1166,10 @@ class Sender(object):
 
 
 def _unpickle_sender(router, context_id, dst_handle):
-    if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id >= 0 and
-            isinstance(dst_handle, (int, long)) and dst_handle > 0):
-        raise TypeError('cannot unpickle Sender: bad input or missing router')
+    if not isinstance(router, Router):
+        raise TypeError('Cannot unpickle Sender, bad router: %r' % (router,))
+    ContextID.validate(context_id)
+    Handle.validate(dst_handle)
     return Sender(Context(router, context_id), dst_handle)
 
 
@@ -1703,7 +1805,7 @@ class Importer(object):
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
-            mod.__package__, _ = encodings.utf_8.encode(mod.__package__)
+            mod.__package__, _ = codecs.utf_8_encode(mod.__package__)
 
         source = self.get_source(fullname)
         try:
@@ -2312,7 +2414,7 @@ class MitogenProtocol(Protocol):
             return False
 
         msg = Message()
-        msg.router = self._router
+        msg.router = self._router  # <--
         (magic, msg.dst_id, msg.src_id, msg.auth_id,
          msg.handle, msg.reply_to, msg_len) = struct.unpack(
             Message.HEADER_FMT,
@@ -2418,6 +2520,13 @@ class Context(object):
     name = None
     remote_name = None
 
+    @classmethod
+    def _validate_name(cls, name):
+        if name is None:
+            return
+        if not isinstance(name, UnicodeType):
+            raise TypeError('%s.name must be None or %s' % (cls.__name__, UnicodeType),)
+
     def __init__(self, router, context_id, name=None):
         self.router = router
         self.context_id = context_id
@@ -2508,12 +2617,8 @@ class Context(object):
 
 
 def _unpickle_context(context_id, name, router=None):
-    if not (isinstance(context_id, (int, long)) and context_id >= 0 and (
-        (name is None) or
-        (isinstance(name, UnicodeType) and len(name) < 100))
-    ):
-        raise TypeError('cannot unpickle Context: bad input')
-
+    ContextID.validate(context_id)
+    ContextName.validate(name)
     if isinstance(router, Router):
         return router.context_by_id(context_id, name=name)
     return Context(None, context_id, name)  # For plain Jane pickle.
@@ -3152,7 +3257,8 @@ class Router(object):
         self._stream_by_id = {}
         #: List of contexts to notify of shutdown; must hold _write_lock
         self._context_by_id = {}
-        self._last_handle = itertools.count(1000)
+        # Dynamically allocated handles. Unique per router, I think.
+        self._last_handle = itertools.count(DynamicHandle.MIN)
         #: handle -> (persistent?, func(msg))
         self._handle_map = {}
         #: Context -> set { handle, .. }
@@ -3422,7 +3528,7 @@ class Router(object):
             reason %= args
         LOG.debug('%r: %r is dead: %r', self, msg, reason)
         if msg.reply_to and not msg.is_dead:
-            msg.reply(Message.dead(reason=reason), router=self)
+            msg.reply(Message.dead(reason=reason), router=self)  # <--
         elif not unreachable:
             self._async_route(
                 Message.dead(
@@ -3922,7 +4028,7 @@ class Dispatcher(object):
             chain_id, ret = self._dispatch_one(msg)
             _v and LOG.debug('%r: %r -> %r', self, msg, ret)
             if msg.reply_to:
-                msg.reply(ret)
+                msg.reply(ret)  #, router=self.econtext.router)
             elif isinstance(ret, CallError) and chain_id is None:
                 LOG.error('No-reply function call failed: %s', ret)
 

@@ -61,6 +61,8 @@ import mitogen.utils
 import ansible
 import ansible.constants as C
 import ansible.errors
+import ansible.utils.unsafe_proxy
+
 import ansible_mitogen.logging
 import ansible_mitogen.services
 
@@ -178,6 +180,18 @@ def setup_pool(pool):
     pool.add(ansible_mitogen.services.ContextService(router=pool.router))
     pool.add(ansible_mitogen.services.ModuleDepService(pool.router))
     LOG.debug('Service pool configured: size=%d', pool.size)
+
+
+def _setup_pickling_registry(registry):
+    # See also :meth:`ansible_mitogen.runner.Runner._setup_pickling_registry`
+    registry.register(
+        'ansible.utils.unsafe_proxy', 'AnsibleUnsafeBytes',
+        ansible.utils.unsafe_proxy.AnsibleUnsafeBytes,
+    )
+    registry.register(
+        'ansible.utils.unsafe_proxy', 'AnsibleUnsafeText',
+        ansible.utils.unsafe_proxy.AnsibleUnsafeText,
+    )
 
 
 def _setup_responder(responder):
@@ -669,6 +683,7 @@ class MuxProcess(object):
             broker=self.broker,
             max_message_size=MAX_MESSAGE_SIZE,
         )
+        _setup_pickling_registry(mitogen.core._PicklingRegistry)
         _setup_responder(self.router.responder)
         mitogen.core.listen(self.broker, 'shutdown', self._on_broker_shutdown)
         mitogen.core.listen(self.broker, 'exit', self._on_broker_exit)
