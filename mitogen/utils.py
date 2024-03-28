@@ -190,16 +190,22 @@ PASSTHROUGH = (
 
 def cast(obj):
     """
+    Return obj (or a copy) with subtypes of builtins cast to their supertype.
+    Subtypes of those in :data:`PASSTHROUGH` are not modified.
+
     Many tools love to subclass built-in types in order to implement useful
     functionality, such as annotating the safety of a Unicode string, or adding
-    additional methods to a dict. However, cPickle loves to preserve those
-    subtypes during serialization, resulting in CallError during :meth:`call
+    additional methods to a dict. However :py:mod:`pickle` serializes these
+    exactly, leading to :exc:`mitogen.CallError` during :meth:`Context.call
     <mitogen.parent.Context.call>` in the target when it tries to deserialize
     the data.
 
     This function walks the object graph `obj`, producing a copy with any
     custom sub-types removed. The functionality is not default since the
     resulting walk may be computationally expensive given a large enough graph.
+
+    Raises :py:exc:`TypeError` if an unknown subtype is encountered, or
+    casting does not return the desired supertype.
 
     See :ref:`serialization-rules` for a list of supported types.
 
@@ -215,8 +221,16 @@ def cast(obj):
     if isinstance(obj, PASSTHROUGH):
         return obj
     if isinstance(obj, mitogen.core.UnicodeType):
-        return mitogen.core.UnicodeType(obj)
+        return _cast(obj, mitogen.core.UnicodeType)
     if isinstance(obj, mitogen.core.BytesType):
-        return mitogen.core.BytesType(obj)
+        return _cast(obj, mitogen.core.BytesType)
 
     raise TypeError("Cannot serialize: %r: %r" % (type(obj), obj))
+
+
+def _cast(obj, desired_type):
+    result = desired_type(obj)
+    if type(result) is not desired_type:
+        raise TypeError("Cast of %r to %r failed, got %r"
+                        % (type(obj), desired_type, type(result)))
+    return result

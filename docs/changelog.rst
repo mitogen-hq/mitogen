@@ -21,6 +21,9 @@ Unreleased
 ----------
 
 * :gh:issue:`974` Support Ansible 7
+* :gh:issue:`1046` Raise :py:exc:`TypeError` in :func:`<mitogen.util.cast()>`
+  when casting a string subtype to `bytes()` or `str()` fails. This is
+  potentially an API breaking change. Failures previously passed silently.
 
 
 v0.3.5 (2024-03-17)
