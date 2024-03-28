@@ -43,7 +43,6 @@ import ansible.errors
 import ansible.plugins.connection
 
 import mitogen.core
-import mitogen.utils
 
 import ansible_mitogen.mixins
 import ansible_mitogen.parsing
@@ -51,6 +50,7 @@ import ansible_mitogen.process
 import ansible_mitogen.services
 import ansible_mitogen.target
 import ansible_mitogen.transport_config
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -797,7 +797,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 call_context=self.binding.get_service_context(),
                 service_name='ansible_mitogen.services.ContextService',
                 method_name='get',
-                stack=mitogen.utils.cast(list(stack)),
+                stack=ansible_mitogen.utils.unsafe.cast(list(stack)),
             )
         except mitogen.core.CallError:
             LOG.warning('Connection failed; stack configuration was:\n%s',
@@ -848,7 +848,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         inventory_name, stack = self._build_stack()
         worker_model = ansible_mitogen.process.get_worker_model()
         self.binding = worker_model.get_binding(
-            mitogen.utils.cast(inventory_name)
+            ansible_mitogen.utils.unsafe.cast(inventory_name)
         )
         self._connect_stack(stack)
 
@@ -933,7 +933,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 call_context=binding.get_service_context(),
                 service_name='ansible_mitogen.services.ContextService',
                 method_name='reset',
-                stack=mitogen.utils.cast(list(stack)),
+                stack=ansible_mitogen.utils.unsafe.cast(list(stack)),
             )
         finally:
             binding.close()
@@ -1011,8 +1011,8 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         emulate_tty = (not in_data and sudoable)
         rc, stdout, stderr = self.get_chain().call(
             ansible_mitogen.target.exec_command,
-            cmd=mitogen.utils.cast(cmd),
-            in_data=mitogen.utils.cast(in_data),
+            cmd=ansible_mitogen.utils.unsafe.cast(cmd),
+            in_data=ansible_mitogen.utils.unsafe.cast(in_data),
             chdir=mitogen_chdir or self.get_default_cwd(),
             emulate_tty=emulate_tty,
         )
@@ -1039,7 +1039,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         ansible_mitogen.target.transfer_file(
             context=self.context,
             # in_path may be AnsibleUnicode
-            in_path=mitogen.utils.cast(in_path),
+            in_path=ansible_mitogen.utils.unsafe.cast(in_path),
             out_path=out_path
         )
 
@@ -1057,7 +1057,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         self.get_chain().call_no_reply(
             ansible_mitogen.target.write_path,
-            mitogen.utils.cast(out_path),
+            ansible_mitogen.utils.unsafe.cast(out_path),
             mitogen.core.Blob(data),
             mode=mode,
             utimes=utimes,
@@ -1119,7 +1119,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             call_context=self.binding.get_service_context(),
             service_name='mitogen.service.FileService',
             method_name='register',
-            path=mitogen.utils.cast(in_path)
+            path=ansible_mitogen.utils.unsafe.cast(in_path)
         )
 
         # For now this must remain synchronous, as the action plug-in may have
