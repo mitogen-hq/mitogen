@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # I am an Ansible new-style Python module. I modify the process environment and
 # don't clean up after myself.
 

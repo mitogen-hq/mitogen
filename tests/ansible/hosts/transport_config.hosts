@@ -1,3 +1,6 @@
+# code: language=ini
+# vim: syntax=dosini
+
 # integration/transport_config
 # Hosts with twiddled configs that need to be checked somehow.
 
@@ -17,11 +20,12 @@ tc_remote_user
 tc_transport
 
 [transport_config_undiscover:vars]
-# If python interpreter path is unset, Ansible tries to connect & discover it.
-# That causes approx 10 seconds timeout per task - there's no host to connect to.
+# If ansible_*_interpreter isn't set Ansible tries to connect & discover it.
+# If that target doesn't exist we must wait $timeout seconds for each attempt.
+# Setting a known (invalid) interpreter skips discovery & the many timeouts.
 # This optimisation should not be relied in any test.
 # Note: tc-python-path-* are intentionally not included.
-ansible_python_interpreter = python3000  # Not expected to exist
+ansible_python_interpreter = python3000
 
 [tc_transport]
 tc-transport-unset
