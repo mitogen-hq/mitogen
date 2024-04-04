@@ -17,8 +17,20 @@ Release Notes
 To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
+
 Unreleased
 ----------
+
+
+v0.3.6 (2024-04-04)
+-------------------
+
+* :gh:issue:`974` Support Ansible 7
+* :gh:issue:`1046` Raise :py:exc:`TypeError` in :func:`<mitogen.util.cast()>`
+  when casting a string subtype to `bytes()` or `str()` fails. This is
+  potentially an API breaking change. Failures previously passed silently.
+* :gh:issue:`1046` Add :func:`<ansible_mitogen.util.cast()>`, to cast
+  :class:`ansible.utils.unsafe_proxy.AnsibleUnsafe` objects in Ansible 7+.
 
 
 v0.3.5 (2024-03-17)
