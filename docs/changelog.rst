@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1021` Support for Ansible 8 (ansible-core 2.15)
+
 
 v0.3.6 (2024-04-04)
 -------------------
