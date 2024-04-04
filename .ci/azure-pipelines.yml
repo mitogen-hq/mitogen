@@ -8,6 +8,13 @@
 #variables:
   #ANSIBLE_VERBOSITY: 3
 
+trigger:
+  branches:
+    include:
+      - "*"
+    exclude:
+      - docs-master
+
 jobs:
 - job: mac11
   # vanilla Ansible is really slow
