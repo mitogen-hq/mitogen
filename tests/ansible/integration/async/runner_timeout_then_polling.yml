@@ -3,6 +3,7 @@
 - name: integration/async/runner_timeout_then_polling.yml
   hosts: test-targets
   tasks:
+  - include_tasks: ../_mitogen_only.yml
 
   # Verify async-with-timeout-then-poll behaviour.
   # This is semi-broken in upstream Ansible, it does not bother to update the
@@ -13,7 +14,6 @@
     async: 1
     poll: 0
     register: job
-    when: is_mitogen
 
   - name: busy-poll up to 500 times
     async_status:
@@ -22,7 +22,6 @@
     until: result.finished
     retries: 500
     delay: 0
-    when: is_mitogen
     ignore_errors: true
 
   - assert:
@@ -31,6 +30,6 @@
         - result.finished == 1
         - result.msg == "Job reached maximum time limit of 1 seconds."
       fail_msg: result={{result}}
-    when: is_mitogen
   tags:
+    - mitogen_only
     - runner_timeout_then_polling

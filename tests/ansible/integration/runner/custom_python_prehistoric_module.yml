@@ -7,13 +7,14 @@
 - name: integration/runner/custom_python_prehistoric_module.yml
   hosts: test-targets
   tasks:
+    - include_tasks: ../_mitogen_only.yml
+
     - custom_python_prehistoric_module:
       register: out
-      when: is_mitogen
 
     - assert:
         that: out.ok
         fail_msg: out={{out}}
-      when: is_mitogen
   tags:
     - custom_python_prehistoric_module
+    - mitogen_only

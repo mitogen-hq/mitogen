@@ -8,6 +8,7 @@
   vars:
     mitogen_ssh_compression: false
   tasks:
+    - include_tasks: _mitogen_only.yml
     - block:
         - name: Create /tmp/512mb.zero
           shell: |
@@ -31,7 +32,6 @@
           become: false
           delegate_to: localhost
           run_once: true
-      when:
-        - is_mitogen
   tags:
     - issue_615
+    - mitogen_only
