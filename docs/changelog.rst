@@ -23,6 +23,7 @@ Unreleased
 
 * :gh:issue:`1021` Support for Ansible 8 (ansible-core 2.15)
 * tests: Replace uses of ``include:`` & ``import:``, unsupported in Ansible 9
+* :gh:issue:`1053` Support for Ansible 9 (ansible-core 2.16)
 
 
 v0.3.6 (2024-04-04)
