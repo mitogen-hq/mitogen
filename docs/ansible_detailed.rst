@@ -165,6 +165,8 @@ Noteworthy Differences
   +-----------------+-----------------+
   | 8               | 3.9 - 3.12      |
   +-----------------+-----------------+
+  | 9               | 3.10 - 3.12     |
+  +-----------------+-----------------+
 
   Verify your installation is running one of these versions by checking
   ``ansible --version`` output.
