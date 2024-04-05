@@ -10,8 +10,7 @@
 - name: integration/action/make_tmp_path.yml
   hosts: test-targets
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
 
     #
     # non-root
@@ -161,3 +160,4 @@
         fail_msg: out={{out}}
   tags:
     - make_tmp_path
+    - mitogen_only
