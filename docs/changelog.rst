@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-Unreleased
-----------
+v0.3.7 (2024-04-08)
+-------------------
 
 * :gh:issue:`1021` Support for Ansible 8 (ansible-core 2.15)
 * tests: Replace uses of ``include:`` & ``import:``, unsupported in Ansible 9
