@@ -15,8 +15,7 @@
   hosts: test-targets
   gather_facts: no
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
 
     - meta: end_play
       when:
@@ -88,3 +87,4 @@
         ]
   tags:
     - delegate_to_template
+    - mitogen_only

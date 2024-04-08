@@ -3,8 +3,7 @@
   hosts: test-targets
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - custom_python_detect_environment:
     vars:
@@ -22,3 +21,4 @@
       fail_msg: out={{out}}
   tags:
     - mitogen_doas
+    - mitogen_only

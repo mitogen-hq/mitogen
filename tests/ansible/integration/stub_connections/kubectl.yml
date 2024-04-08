@@ -3,8 +3,7 @@
   hosts: test-targets
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - meta: end_play
     when:
@@ -23,3 +22,4 @@
       fail_msg: out={{out}}
   tags:
     - kubectl
+    - mitogen_only

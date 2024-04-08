@@ -1,7 +1,11 @@
 import logging
-import mock
 import sys
 import unittest
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import testlib
 import mitogen.core

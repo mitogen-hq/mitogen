@@ -6,8 +6,7 @@
 - name: regression/issue_591__setuptools_cwd_crash.yml
   hosts: test-targets
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: _mitogen_only.yml
 
   - custom_python_run_script:
       script: |
@@ -25,3 +24,4 @@
         self._connection.get_chain().call(os.getcwd)
   tags:
     - issue_591
+    - mitogen_only

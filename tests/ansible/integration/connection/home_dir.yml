@@ -3,18 +3,18 @@
 - name: integration/connection/home_dir.yml
   hosts: test-targets
   tasks:
+    - include_tasks: ../_mitogen_only.yml
+
     - name: "Find out root's homedir."
       # Runs first because it blats regular Ansible facts with junk, so
       # non-become run fixes that up.
       setup:
       become: true
       register: root_facts
-      when: is_mitogen
 
     - name: "Find regular homedir"
       setup:
       register: user_facts
-      when: is_mitogen
 
     - name: "Verify Connection.homedir correct when become:false"
       mitogen_action_script:
@@ -24,7 +24,6 @@
             "connection homedir": self._connection.homedir,
             "homedir from facts": "{{user_facts.ansible_facts.ansible_user_dir}}"
           }
-      when: is_mitogen
 
     - name: "Verify Connection.homedir correct when become:true"
       become: true
@@ -35,6 +34,6 @@
             "connection homedir": self._connection.homedir,
             "homedir from facts": "{{root_facts.ansible_facts.ansible_user_dir}}"
           }
-      when: is_mitogen
   tags:
     - home_dir
+    - mitogen_only

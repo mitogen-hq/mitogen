@@ -1,6 +1,7 @@
 - name: integration/runner/forking_active.yml
   hosts: test-targets
   tasks:
+  - include_tasks: ../_mitogen_only.yml
 
   # Verify mitogen_task_isolation=fork triggers forking.
 
@@ -13,21 +14,19 @@
     register: fork_proc1
     vars:
       mitogen_task_isolation: fork
-    when: is_mitogen
 
   - name: get force-forked process ID again.
     custom_python_detect_environment:
     register: fork_proc2
     vars:
       mitogen_task_isolation: fork
-    when: is_mitogen
 
   - assert:
       that:
       - fork_proc1.pid != sync_proc1.pid
       - fork_proc1.pid != fork_proc2.pid
       fail_msg: fork_proc1={{fork_proc1}} sync_proc1={{sync_proc1}} fork_proc2={{fork_proc2}}
-    when: is_mitogen
 
   tags:
     - forking_active
+    - mitogen_only
