@@ -3,8 +3,7 @@
   hosts: test-targets
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - custom_python_detect_environment:
     vars:
@@ -23,4 +22,5 @@
       left: (out.env.ORIGINAL_ARGV|from_json)[1:9]
       right: ['-u', 'root', '-H', '-r', 'somerole', '-t', 'sometype', '--']
   tags:
+    - mitogen_only
     - mitogen_sudo

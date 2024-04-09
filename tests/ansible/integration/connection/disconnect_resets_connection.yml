@@ -13,8 +13,7 @@
   hosts: test-targets
   gather_facts: no
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - mitogen_action_script:
       script: |
@@ -47,3 +46,4 @@
   tags:
     - disconnect
     - disconnect_resets_connection
+    - mitogen_only

@@ -6,7 +6,7 @@
   hosts: tc-become-user-unset
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -15,13 +15,15 @@
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "root"
       fail_msg: out={{out}}
+  tags:
+    - mitogen_only
 
 # Not set, unbecoming mitogen_via=
 - hosts: tc-become-user-unset
   become: true
   vars: {mitogen_via: tc-become-user-set}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -31,13 +33,15 @@
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.username == "root"
       fail_msg: out={{out}}
+  tags:
+    - mitogen_only
 
 # Not set, becoming mitogen_via=
 - hosts: tc-become-user-unset
   become: true
   vars: {mitogen_via: viauser@tc-become-user-set}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -49,13 +53,15 @@
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.username == "root"
       fail_msg: out={{out}}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_user= set.
 - hosts: tc-become-user-set
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -64,6 +70,8 @@
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.username == "ansi-become-user"
       fail_msg: out={{out}}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_user=, unbecoming via=
@@ -71,7 +79,7 @@
   vars: {mitogen_via: tc-become-user-unset}
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -85,6 +93,8 @@
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.username == "ansi-become-user"
       fail_msg: out={{out}}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_user=, becoming via=
@@ -92,7 +102,7 @@
   vars: {mitogen_via: "doas:doasuser@tc-become-user-unset"}
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -109,4 +119,6 @@
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.username == "ansi-become-user"
       fail_msg: out={{out}}
+  tags:
+    - mitogen_only
 

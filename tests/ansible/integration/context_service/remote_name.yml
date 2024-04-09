@@ -3,8 +3,7 @@
 - name: integration/context_service/remote_name.yml
   hosts: test-targets[0]
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   # Too much hassle to make this work for OSX
   - meta: end_play
@@ -32,4 +31,5 @@
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:ansible\)')
       fail_msg: out={{out}}
   tags:
+    - mitogen_only
     - remote_name

@@ -3,8 +3,7 @@
 - name: integration/connection_delegation/local_action.yml
   hosts: cd-newuser-normal-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
 
     - local_action: mitogen_get_stack
       become: true
@@ -35,3 +34,4 @@
         ]
   tags:
     - local_action
+    - mitogen_only
