@@ -6,8 +6,7 @@
   vars:
     ansible_private_key_file: ~/fakekey
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
 
     - mitogen_get_stack:
       register: out
@@ -20,3 +19,4 @@
         fail_msg: out={{out}}
   tags:
     - config
+    - mitogen_only

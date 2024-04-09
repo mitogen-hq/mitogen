@@ -3,6 +3,7 @@
 - name: integration/become/sudo_requiretty.yml
   hosts: test-targets
   tasks:
+    # - include_tasks: ../_mitogen_only.yml
 
     # TODO: https://github.com/dw/mitogen/issues/692
     # - name: Verify we can login to a non-passworded requiretty account
@@ -10,12 +11,10 @@
     #   become: true
     #   become_user: mitogen__require_tty
     #   register: out
-    #   when: is_mitogen
 
     # - assert:
     #     that:
     #       - out.stdout == 'mitogen__require_tty'
-    #   when: is_mitogen
 
 
     # ---------------
@@ -28,12 +27,11 @@
     #   vars:
     #     ansible_become_pass: require_tty_pw_required_password
     #   register: out
-    #   when: is_mitogen
 
     # - assert:
     #     that:
     #       - out.stdout == 'mitogen__require_tty_pw_required'
-    #   when: is_mitogen
   tags:
+    - mitogen_only
     - sudo
     - sudo_requiretty

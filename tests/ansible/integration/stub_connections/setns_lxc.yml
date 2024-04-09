@@ -8,10 +8,8 @@
   any_errors_fatal: false
   connection: local
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
-    - include: _end_play_if_not_sudo_linux.yml
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: _end_play_if_not_sudo_linux.yml
 
     - name: Run stub-lxc-info.py
       command: |
@@ -35,3 +33,4 @@
         fail_msg: result={{result}}
   tags:
     - stns_lxc
+    - mitogen_only

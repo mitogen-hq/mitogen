@@ -4,8 +4,7 @@
   hosts: dtc-container-1
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - mitogen_get_stack:
     register: out
@@ -28,5 +27,6 @@
         },
       ]
   tags:
+    - mitogen_only
     - osa
     - osa_container_standalone
