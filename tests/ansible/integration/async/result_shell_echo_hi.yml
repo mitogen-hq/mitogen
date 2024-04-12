@@ -32,10 +32,12 @@
         - async_out.invocation.module_args.creates == None
         - async_out.invocation.module_args.executable == None
         - async_out.invocation.module_args.removes == None
-        # In Ansible 4 (ansible-core 2.11) the warn parameter is deprecated and defaults to false.
-        # It's scheduled for removal in ansible-core 2.13.
-        - (ansible_version.full is version("2.11", "<", strict=True) and async_out.invocation.module_args.warn == True)
+        # | Ansible <= 3  | ansible-core <= 2.10      | present     | True  |
+        # | Ansible 4 - 6 | ansible-core 2.11 - 2.13  | deprecated  | False |
+        # | Ansible >= 7  | ansible-core >= 2.14      | absent      | n/a   |
+        - (ansible_version.full is version("2.14", ">=", strict=True) and async_out.invocation.module_args.warn is not defined)
           or (ansible_version.full is version("2.11", ">=", strict=True) and async_out.invocation.module_args.warn == False)
+          or (async_out.invocation.module_args.warn == True)
         - async_out.rc == 0
         - async_out.start.startswith("20")
         - async_out.stderr == "there"

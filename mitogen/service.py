@@ -752,10 +752,12 @@ class PushFileService(Service):
         One size fits all method to ensure a target context has been preloaded
         with a set of small files and Python modules.
 
-        overridden_sources: optional dict containing source code to override path's source code
-        extra_sys_paths:    loads additional sys paths for use in finding modules; beneficial
-                            in situations like loading Ansible Collections because source code
-                            dependencies come from different file paths than where the source lives
+        :param dict overridden_sources:
+            Optional dict containing source code to override path's source code
+        :param extra_sys_paths:
+            Loads additional sys paths for use in finding modules; beneficial
+            in situations like loading Ansible Collections because source code
+            dependencies come from different file paths than where the source lives
         """
         for path in paths:
             overridden_source = None

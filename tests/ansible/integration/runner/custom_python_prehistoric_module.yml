@@ -1,8 +1,14 @@
+# Test functionality of ansible_mitogen.runner.PREHISTORIC_HACK_RE, which
+# removes `reload(sys); sys.setdefaultencoding(...)` from an Ansible module
+# as it is sent to a target. There are probably very few modules in the wild
+# that still do this, if any - reload() is a Python 2.x builtin function.
 # issue #555
 
 - name: integration/runner/custom_python_prehistoric_module.yml
   hosts: test-targets
   tasks:
+    - include_tasks: ../_mitogen_only.yml
+
     - custom_python_prehistoric_module:
       register: out
 
@@ -11,3 +17,4 @@
         fail_msg: out={{out}}
   tags:
     - custom_python_prehistoric_module
+    - mitogen_only

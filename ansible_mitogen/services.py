@@ -52,10 +52,10 @@ import ansible.constants
 
 import mitogen.core
 import mitogen.service
-import mitogen.utils
 import ansible_mitogen.loaders
 import ansible_mitogen.module_finder
 import ansible_mitogen.target
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ def _get_candidate_temp_dirs():
         remote_tmp = ansible.constants.DEFAULT_REMOTE_TMP
         system_tmpdirs = ('/var/tmp', '/tmp')
 
-    return mitogen.utils.cast([remote_tmp] + list(system_tmpdirs))
+    return ansible_mitogen.utils.unsafe.cast([remote_tmp] + list(system_tmpdirs))
 
 
 def key_from_dict(**kwargs):

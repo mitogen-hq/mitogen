@@ -15,12 +15,42 @@ Release Notes
     </style>
 
 To avail of fixes in an unreleased version, please download a ZIP file
-`directly from GitHub <https://github.com/dw/mitogen/>`_.
+`directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
+
 
 Unreleased
 ----------
 
+
+
+v0.3.7 (2024-04-08)
+-------------------
+
+* :gh:issue:`1021` Support for Ansible 8 (ansible-core 2.15)
+* tests: Replace uses of ``include:`` & ``import:``, unsupported in Ansible 9
+* :gh:issue:`1053` Support for Ansible 9 (ansible-core 2.16)
+
+
+v0.3.6 (2024-04-04)
+-------------------
+
+* :gh:issue:`974` Support Ansible 7
+* :gh:issue:`1046` Raise :py:exc:`TypeError` in :func:`<mitogen.util.cast()>`
+  when casting a string subtype to `bytes()` or `str()` fails. This is
+  potentially an API breaking change. Failures previously passed silently.
+* :gh:issue:`1046` Add :func:`<ansible_mitogen.util.cast()>`, to cast
+  :class:`ansible.utils.unsafe_proxy.AnsibleUnsafe` objects in Ansible 7+.
+
+
+v0.3.5 (2024-03-17)
+-------------------
+
 * :gh:issue:`987` Support Python 3.11
+* :gh:issue:`885` Fix :py:exc:`PermissionError` in :py:mod:`importlib` when
+  becoming an unprivileged user with Python 3.x
+* :gh:issue:`1033` Support `PEP 451 <https://peps.python.org/pep-0451/>`_,
+  required by Python 3.12
+* :gh:issue:`1033` Support Python 3.12
 
 
 v0.3.4 (2023-07-02)
@@ -71,7 +101,7 @@ v0.3.0 (2021-11-24)
 -------------------
 
 This release separates itself from the v0.2.X releases. Ansible's API changed too much to support backwards compatibility so from now on, v0.2.X releases will be for Ansible < 2.10 and v0.3.X will be for Ansible 2.10+.
-`See here for details <https://github.com/dw/mitogen/pull/715#issuecomment-750697248>`_.
+`See here for details <https://github.com/mitogen-hq/mitogen/pull/715#issuecomment-750697248>`_.
 
 * :gh:issue:`827` NewStylePlanner: detect `ansible_collections` imports
 * :gh:issue:`770` better check for supported Ansible version
@@ -92,7 +122,7 @@ v0.2.10 (2021-11-24)
 * :gh:issue:`756` ssh connections with `check_host_keys='accept'` would
   timeout, when using recent OpenSSH client versions.
 * :gh:issue:`758` fix initilialisation of callback plugins in test suite, to address a `KeyError` in
-  :method:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
+  :py:meth:`ansible.plugins.callback.CallbackBase.v2_runner_on_start`
 * :gh:issue:`775` Test with Python 3.9
 * :gh:issue:`775` Add msvcrt to the default module deny list
 
@@ -178,7 +208,7 @@ Mitogen for Ansible
   :linux:man7:`unix` sockets across privilege domains.
 
 * :gh:issue:`467`: an incompatibility running Mitogen under `Molecule
-  <https://molecule.readthedocs.io/en/stable/>`_ was resolved.
+  <https://ansible.readthedocs.io/projects/molecule/>`_ was resolved.
 
 * :gh:issue:`547`, :gh:issue:`598`: fix a deadlock during initialization of
   connections, ``async`` tasks, tasks using custom :mod:`module_utils`,
@@ -1230,9 +1260,8 @@ Core Library
   parameter may specify an argument vector prefix rather than a string program
   path.
 
-* :gh:issue:`300`: the broker could crash on
-  OS X during shutdown due to scheduled `kqueue
-  <https://www.freebsd.org/cgi/man.cgi?query=kqueue>`_ filter changes for
+* :gh:issue:`300`: the broker could crash on OS X during shutdown due to
+  scheduled :freebsd:man2:`kqueue` filter changes for
   descriptors that were closed before the IO loop resumes. As a temporary
   workaround, kqueue's bulk change feature is not used.
 

@@ -6,8 +6,7 @@
     target: osa-container-1
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - mitogen_get_stack:
     delegate_to: "{{target}}"
@@ -31,5 +30,6 @@
         },
       ]
   tags:
+    - mitogen_only
     - osa
     - osa_delegate_to_self

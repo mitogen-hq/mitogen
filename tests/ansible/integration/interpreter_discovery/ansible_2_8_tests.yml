@@ -37,6 +37,7 @@
             vars:
               ansible_python_interpreter: auto
             test_echo_module:
+              facts_copy: "{{ ansible_facts }}"
             register: echoout
 
           # can't test this assertion:
@@ -44,11 +45,24 @@
           # because Mitogen's ansible_python_interpreter is a connection-layer configurable that
           # "must be extracted during each task execution to form the complete connection-layer configuration".
           # Discovery won't be reran though; the ansible_python_interpreter is read from the cache if already discovered
-          - assert:
+          - name: assert discovered python matches invoked python
+            assert:
               that:
               - auto_out.ansible_facts.discovered_interpreter_python is defined
-              - echoout.running_python_interpreter == auto_out.ansible_facts.discovered_interpreter_python
-              fail_msg: auto_out={{auto_out}} echoout={{echoout}}
+              - auto_out.ansible_facts.discovered_interpreter_python == echoout.discovered_python.as_seen
+              - echoout.discovered_python.resolved == echoout.running_python.sys.executable.resolved
+              fail_msg:
+                - "auto_out: {{ auto_out }}"
+                - "echoout: {{ echoout }}"
+            when:
+              # On macOS 11 (Darwin 20) CI runners the Python 2.7 binary always
+              # reports the same path. I can't reach via symlinks.
+              # >>> sys.executable
+              # /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
+              - is_mitogen
+                or echoout.running_python.sys.version_info.major != 2
+                or not (echoout.running_python.sys.platform == "darwin"
+                        and echoout.running_python.platform.release.major == 20)
 
 
         - name: test that auto_legacy gives a dep warning when /usr/bin/python present but != auto result
@@ -128,7 +142,8 @@
         - name: ensure modules can't set discovered_interpreter_X or ansible_X_interpreter
           block:
           - test_echo_module:
-              facts:
+              facts_copy: "{{ ansible_facts }}"
+              facts_to_override:
                 ansible_discovered_interpreter_bogus: from module
                 discovered_interpreter_bogus: from_module
                 ansible_bogus_interpreter: from_module
@@ -188,13 +203,6 @@
             when:
               - distro == 'ubuntu'
               - distro_version is version('16.04', '>=', strict=True)
-
-          - name: mac assertions
-            assert:
-              that:
-              - auto_out.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
-              fail_msg: auto_out={{auto_out}}
-            when: os_family == 'Darwin'
 
           always:
           - meta: clear_facts

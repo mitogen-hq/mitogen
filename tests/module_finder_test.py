@@ -140,9 +140,7 @@ class SysModulesMethodTest(testlib.TestCase):
         self.assertIsNone(tup)
 
 
-class GetModuleViaParentEnumerationTest(testlib.TestCase):
-    klass = mitogen.master.ParentEnumerationMethod
-
+class ParentEnumerationMixin(object):
     def call(self, fullname):
         return self.klass().find(fullname)
 
@@ -230,6 +228,16 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         with open(modpath, 'rb') as f:
             self.assertEqual(src, f.read())
         self.assertEqual(is_pkg, False)
+
+
+@unittest.skipIf(sys.version_info >= (3, 4), 'Superceded in Python >= 3.4')
+class ParentImpEnumerationMethodTest(ParentEnumerationMixin, testlib.TestCase):
+    klass = mitogen.master.ParentImpEnumerationMethod
+
+
+@unittest.skipIf(sys.version_info < (3, 4), 'Requires ModuleSpec, Python 3.4+')
+class ParentSpecEnumerationMethodTest(ParentEnumerationMixin, testlib.TestCase):
+    klass = mitogen.master.ParentSpecEnumerationMethod
 
 
 class ResolveRelPathTest(testlib.TestCase):

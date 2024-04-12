@@ -8,7 +8,7 @@
     file_name: small-file
     file_size: 123
   tasks:
-  - include: _put_file.yml
+    - include_tasks: _put_file.yml
   tags:
     - put_file
     - put_small_file

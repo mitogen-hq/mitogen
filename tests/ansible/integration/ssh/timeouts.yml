@@ -3,6 +3,8 @@
 - name: integration/ssh/timeouts.yml
   hosts: test-targets
   tasks:
+    - include_tasks: ../_mitogen_only.yml
+
     - name: Cause Ansible connection timeout
       connection: local
       environment:
@@ -19,7 +21,6 @@
         chdir: ../..
       register: out
       ignore_errors: true
-      when: is_mitogen
 
     - name: Verify connection timeout occurred
       assert:
@@ -31,6 +32,6 @@
         - |
           '"msg": "Connection timed out."' in out.stdout
         fail_msg: out={{out}}
-      when: is_mitogen
   tags:
+    - mitogen_only
     - timeouts

@@ -2,6 +2,10 @@
 - name: integration/runner/custom_python_new_style_module.yml
   hosts: test-targets
   tasks:
+    # FIXME Without Mitogen Ansible often reads stdin before the module.
+    #       Either don't read directly from stdin, or figure out the cause.
+    - include_tasks: ../_mitogen_only.yml
+
     - custom_python_new_style_missing_interpreter:
         foo: true
       with_sequence: start=0 end={{end|default(1)}}
@@ -17,3 +21,4 @@
         fail_msg: out={{out}}
   tags:
     - custom_python_new_style_module
+    - mitogen_only

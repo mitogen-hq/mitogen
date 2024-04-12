@@ -1,9 +1,12 @@
+# code: language=ini
 # vim: syntax=dosini
 
 # When running the tests outside CI, make a single 'target' host which is the
 # local machine. The ansible_user override is necessary since some tests want a
 # fixed ansible.cfg remote_user setting to test against.
-target ansible_host=localhost ansible_user="{{lookup('env', 'USER')}}"
+# FIXME Hardcoded by replacement in some CI runs https://github.com/mitogen-hq/mitogen/issues/1022
+#       and os.environ['USER'] is not populated on Azure macOS runners.
+target ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
 
 [test-targets]
 target

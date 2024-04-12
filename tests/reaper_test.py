@@ -1,7 +1,10 @@
 import signal
 
 import testlib
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import mitogen.parent
 

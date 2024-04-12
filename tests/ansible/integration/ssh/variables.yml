@@ -13,6 +13,8 @@
       -o "ControlPath /tmp/mitogen-ansible-test-{{18446744073709551615|random}}"
 
   tasks:
+    - include_tasks: ../_mitogen_only.yml
+
     - name: ansible_ssh_user, ansible_ssh_pass
       shell: >
         ANSIBLE_ANY_ERRORS_FATAL=false
@@ -28,7 +30,6 @@
       args:
         chdir: ../..
       register: out
-      when: is_mitogen
 
     - name: ansible_ssh_user, wrong ansible_ssh_pass
       shell: >
@@ -46,13 +47,11 @@
         chdir: ../..
       register: out
       ignore_errors: true
-      when: is_mitogen
 
     - assert:
         that:
           - out.rc == 4  # ansible.executor.task_queue_manager.TaskQueueManager.RUN_UNREACHABLE_HOSTS
         fail_msg: out={{out}}
-      when: is_mitogen
 
 
     - name: ansible_user, ansible_ssh_pass
@@ -70,7 +69,6 @@
       args:
         chdir: ../..
       register: out
-      when: is_mitogen
 
     - name: ansible_user, wrong ansible_ssh_pass
       shell: >
@@ -88,13 +86,11 @@
         chdir: ../..
       register: out
       ignore_errors: true
-      when: is_mitogen
 
     - assert:
         that:
           - out.rc == 4  # ansible.executor.task_queue_manager.TaskQueueManager.RUN_UNREACHABLE_HOSTS
         fail_msg: out={{out}}
-      when: is_mitogen
 
 
     - name: ansible_user, ansible_password
@@ -112,7 +108,6 @@
       args:
         chdir: ../..
       register: out
-      when: is_mitogen
 
     - name: ansible_user, wrong ansible_password
       shell: >
@@ -130,13 +125,11 @@
         chdir: ../..
       register: out
       ignore_errors: true
-      when: is_mitogen
 
     - assert:
         that:
           - out.rc == 4  # ansible.executor.task_queue_manager.TaskQueueManager.RUN_UNREACHABLE_HOSTS
         fail_msg: out={{out}}
-      when: is_mitogen
 
 
     - name: setup ansible_ssh_private_key_file
@@ -159,7 +152,6 @@
       args:
         chdir: ../..
       register: out
-      when: is_mitogen
 
     - name: ansible_user, wrong ansible_ssh_private_key_file
       shell: >
@@ -177,10 +169,10 @@
         chdir: ../..
       register: out
       ignore_errors: true
-      when: is_mitogen
 
     - assert:
         that:
           - out.rc == 4  # ansible.executor.task_queue_manager.TaskQueueManager.RUN_UNREACHABLE_HOSTS
         fail_msg: out={{out}}
-      when: is_mitogen
+  tags:
+    - mitogen_only

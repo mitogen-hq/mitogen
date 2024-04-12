@@ -15,8 +15,7 @@
   hosts: test-targets
   gather_facts: no
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
 
     - meta: end_play
       when:
@@ -41,7 +40,7 @@
               'keepalive_count': 10,
               'password': null,
               'port': null,
-              'python_path': ["/usr/bin/python"],
+              'python_path': ["{{ ansible_facts.discovered_interpreter_python | default('/usr/bin/python') }}"],
               'remote_name': null,
               'ssh_args': [
                 -o, ControlMaster=auto,
@@ -69,7 +68,7 @@
               'keepalive_count': 10,
               'password': null,
               'port': null,
-              'python_path': ["/usr/bin/python"],
+              'python_path': ["{{ ansible_facts.discovered_interpreter_python | default('/usr/bin/python') }}"],
               'remote_name': null,
               'ssh_args': [
                 -o, ControlMaster=auto,
@@ -88,3 +87,4 @@
         ]
   tags:
     - delegate_to_template
+    - mitogen_only
