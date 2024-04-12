@@ -358,6 +358,9 @@ class Runner(object):
             return path
 
         if self._temp_dir is None:
+            # Ensure that the temp directory is 'good' before we try to use it
+            ansible_mitogen.target.is_good_temp_dir(self.good_temp_dir)
+
             self._temp_dir = tempfile.mkdtemp(
                 prefix='ansible_mitogen_runner_',
                 dir=self.good_temp_dir,
