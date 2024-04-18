@@ -2523,8 +2523,7 @@ class Poller(object):
     """
     A poller manages OS file descriptors the user is waiting to become
     available for IO. The :meth:`poll` method blocks the calling thread
-    until one or more become ready. The default implementation is based on
-    :func:`select.poll`.
+    until one or more become ready.
 
     Each descriptor has an associated `data` element, which is unique for each
     readiness type, and defaults to being the same as the file descriptor. The
@@ -2546,18 +2545,12 @@ class Poller(object):
     a resource leak.
 
     Pollers may only be used by one thread at a time.
+
+    This implementation uses :func:`select.select` for wider platform support.
+    That is considered an implementation detail. Previous versions have used
+    :func:`select.poll`. Future versions may decide at runtime.
     """
     SUPPORTED = True
-
-    # This changed from select() to poll() in Mitogen 0.2.4. Since poll() has
-    # no upper FD limit, it is suitable for use with Latch, which must handle
-    # FDs larger than select's limit during many-host runs. We want this
-    # because poll() requires no setup and teardown: just a single system call,
-    # which is important because Latch.get() creates a Poller on each
-    # invocation. In a microbenchmark, poll() vs. epoll_ctl() is 30% faster in
-    # this scenario. If select() must return in future, it is important
-    # Latch.poller_class is set from parent.py to point to the industrial
-    # strength poller for the OS, otherwise Latch will fail randomly.
 
     #: Increments on every poll(). Used to version _rfds and _wfds.
     _generation = 1
@@ -2681,11 +2674,10 @@ class Latch(object):
 
     See :ref:`waking-sleeping-threads` for further discussion.
     """
-    #: The :class:`Poller` implementation to use for waiting. Since the poller
-    #: will be very short-lived, we prefer :class:`mitogen.parent.PollPoller`
-    #: if it is available, or :class:`mitogen.core.Poller` otherwise, since
-    #: these implementations require no system calls to create, configure or
-    #: destroy.
+    #: The :class:`Poller` implementation to use. Instances are short lived so
+    #: prefer :class:`mitogen.parent.PollPoller` if it's available, otherwise
+    #: :class:`mitogen.core.Poller`. They don't need syscalls to create,
+    #: configure, or destroy. Replaced during import of :mod:`mitogen.parent`.
     poller_class = Poller
 
     #: If not :data:`None`, a function invoked as `notify(latch)` after a
