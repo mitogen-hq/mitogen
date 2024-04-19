@@ -29,20 +29,18 @@
         special_python: "source /tmp/fake || true && python{{ ansible_facts.python.version.major }}"
 
     - name: run get_url with specially-sourced python
-      get_url:
+      uri:
         # Plain http for wider Ansible & Python version compatibility
-        url: http://httpbin.org/get
-        dest: "/tmp/"
-        mode: 0644
+        url: http://www.gstatic.com/generate_204
+        status_code: [204]
       vars:
         ansible_python_interpreter: "{{ special_python }}"
 
     - name: run get_url with specially-sourced python including jinja
-      get_url:
+      uri:
         # Plain http for wider Ansible & Python version compatibility
-        url: http://httpbin.org/get
-        dest: "/tmp/"
-        mode: 0644
+        url: http://www.gstatic.com/generate_204
+        status_code: [204]
       vars:
         ansible_python_interpreter: >
           {% if "1" == "1" %}

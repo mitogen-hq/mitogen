@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 * :gh:issue:`1061` Fix recreating temp directory if it has been removed mid-play
+* :gh:issue:`952` Fix Ansible `--ask-become-pass`, add test coverage
 
 v0.3.7 (2024-04-08)
 -------------------
