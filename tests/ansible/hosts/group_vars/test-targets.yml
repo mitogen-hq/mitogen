@@ -1,0 +1,3 @@
+# See also
+#   - regression/issue_1066__add_host__host_key_checking.yml
+host_key_checking: false

@@ -1,0 +1,36 @@
+- name: regression/issue_1066__add_host__host_key_checking.yml
+  hosts: test-targets[0]
+  gather_facts: false
+  become: false
+  vars:
+    issue_1066_ansible_host: "{{ hostvars[groups['test-targets'][0]].ansible_host }}"
+  tasks:
+    # The host key might be in ~/.ssh/known_hosts. If it's removed then no
+    # problem - test-targets hosts have host_key_checking=false.
+    # See also:
+    #   - hosts/group_vars/test-targets.yml
+    - name: Remove existing host keys
+      known_hosts:
+        name: "{{ issue_1066_ansible_host }}"
+        state: absent
+      delegate_to: localhost
+
+    - name: Add host dynamically
+      add_host:
+        name: issue-1066-host
+        ansible_host_key_checking: false
+        ansible_host: "{{ issue_1066_ansible_host }}"
+      delegate_to: localhost
+
+  tags:
+    - issue_1066
+
+- name: regression/issue_1066__add_host__host_key_checking.yml
+  hosts: issue-1066-host
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Confirm new host can be reached
+      ping:
+  tags:
+    - issue_1066

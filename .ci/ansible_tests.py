@@ -62,6 +62,8 @@ with ci_lib.Fold('job_setup'):
             "ansible_python_interpreter=%(python_path)s "
             "ansible_user=mitogen__has_sudo_nopw "
             "ansible_password=has_sudo_nopw_password"
+            " ansible_host_key_checking=false"
+            " ansible_ssh_host_key_checking=false"
             "\n"
             % container
             for container in containers

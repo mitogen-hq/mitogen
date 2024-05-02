@@ -9,6 +9,7 @@
           - $(groups):                "{{ lookup('pipe', 'groups') }}"
           - $(pwd):                   "{{ lookup('pipe', 'pwd') }}"
           - $(whoami):                "{{ lookup('pipe', 'whoami') }}"
+          - ansible_inventory_sources:        "{{ ansible_inventory_sources | default('<unset>') }}"
           - ansible_run_tags:         "{{ ansible_run_tags | default('<unset>') }}"
           - ansible_playbook_python:  "{{ ansible_playbook_python | default('<unset>') }}"
           - ansible_skip_tags:        "{{ ansible_skip_tags | default('<unset>') }}"
