@@ -281,11 +281,11 @@ def get_cpu_count(default=None):
 
 class Broker(mitogen.master.Broker):
     """
-    WorkerProcess maintains at most 2 file descriptors, therefore does not need
+    WorkerProcess maintains fewer file descriptors, therefore does not need
     the exuberant syscall expense of EpollPoller, so override it and restore
     the poll() poller.
     """
-    poller_class = mitogen.core.Poller
+    poller_class = mitogen.parent.POLLER_LIGHTWEIGHT
 
 
 class Binding(object):
