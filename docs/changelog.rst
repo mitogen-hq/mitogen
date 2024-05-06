@@ -24,6 +24,8 @@ Unreleased
 * :gh:issue:`952` Fix Ansible `--ask-become-pass`, add test coverage
 * :gh:issue:`957` Fix Ansible exception when executing against 10s of hosts
   "ValueError: filedescriptor out of range in select()"
+* :gh:issue:`1066` Allow Ansible host key checking to be overridden by
+   `ansible_host_key_checking` & `ansible_ssh_host_key_checking`
 
 
 v0.3.7 (2024-04-08)

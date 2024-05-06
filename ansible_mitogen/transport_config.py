@@ -63,6 +63,8 @@ __metaclass__ = type
 
 import abc
 import os
+
+import ansible.module_utils.parsing.convert_bool
 import ansible.utils.shlex
 import ansible.constants as C
 
@@ -243,6 +245,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
     def python_path(self):
         """
         Path to the Python interpreter on the target machine.
+        """
+
+    @abc.abstractmethod
+    def host_key_checking(self):
+        """
+        Whether or not to check the keys of the target machine
         """
 
     @abc.abstractmethod
@@ -465,6 +473,14 @@ class PlayContextSpec(Spec):
             task_vars=self._task_vars,
             action=self._action,
             rediscover_python=rediscover_python)
+
+    def host_key_checking(self):
+        def candidates():
+            yield self._connection.get_task_var('ansible_ssh_host_key_checking')
+            yield self._connection.get_task_var('ansible_host_key_checking')
+            yield C.HOST_KEY_CHECKING
+        val = next(v for v in candidates() if v is not None)
+        return ansible.module_utils.parsing.convert_bool.boolean(val)
 
     def private_key_file(self):
         return self._play_context.private_key_file
@@ -691,6 +707,14 @@ class MitogenViaSpec(Spec):
             task_vars=self._task_vars,
             action=self._action,
             rediscover_python=rediscover_python)
+
+    def host_key_checking(self):
+        def candidates():
+            yield self._host_vars.get('ansible_ssh_host_key_checking')
+            yield self._host_vars.get('ansible_host_key_checking')
+            yield C.HOST_KEY_CHECKING
+        val = next(v for v in candidates() if v is not None)
+        return ansible.module_utils.parsing.convert_bool.boolean(val)
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.
