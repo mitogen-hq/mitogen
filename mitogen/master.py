@@ -250,7 +250,9 @@ if mitogen.is_master:
     mitogen.parent._get_core_source = _get_core_source
 
 
+BUILD_TUPLE = dis.opname.index('BUILD_TUPLE')
 LOAD_CONST = dis.opname.index('LOAD_CONST')
+LOAD_NAME = dis.opname.index('LOAD_NAME')
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 
 
@@ -284,7 +286,8 @@ def scan_code_imports(co):
     """
     Given a code object `co`, scan its bytecode yielding any ``IMPORT_NAME``
     and associated prior ``LOAD_CONST`` instructions representing an `Import`
-    statement or `ImportFrom` statement.
+    statement or `ImportFrom` statement.  Also scan class definitions for
+    imports.
 
     :return:
         Generator producing `(level, modname, namelist)` tuples, where:
@@ -307,11 +310,12 @@ def scan_code_imports(co):
         return
 
     if sys.version_info >= (2, 5):
-        for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
-            if op3 == IMPORT_NAME:
-                op2, arg2 = oparg2
-                op1, arg1 = oparg1
-                if op1 == op2 == LOAD_CONST:
+        for (op1, arg1), (op2, arg2), (op3, arg3) in izip(opit, opit2, opit3):
+            # Scan defined classes for imports
+            if op1 == LOAD_NAME and op2 == BUILD_TUPLE and op3 == LOAD_CONST and isinstance(co.co_consts[arg3],types.CodeType):
+                for level, modname, namelist in scan_code_imports(co.co_consts[arg3]):
+                    yield (level, modname, namelist)
+            if op3 == IMPORT_NAME and op1 == op2 == LOAD_CONST:
                     yield (co.co_consts[arg1],
                            co.co_names[arg3],
                            co.co_consts[arg2] or ())
