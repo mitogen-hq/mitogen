@@ -119,7 +119,7 @@ def _connect_ssh(spec):
     """
     Return ContextService arguments for an SSH connection.
     """
-    if C.HOST_KEY_CHECKING:
+    if spec.host_key_checking():
         check_host_keys = 'enforce'
     else:
         check_host_keys = 'ignore'
