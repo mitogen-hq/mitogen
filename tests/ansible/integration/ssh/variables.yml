@@ -43,6 +43,7 @@
         test-targets
         -e ansible_ssh_user=mitogen__has_sudo
         -e ansible_ssh_pass=wrong_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
@@ -82,6 +83,7 @@
         test-targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_pass=wrong_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
@@ -121,6 +123,7 @@
         test-targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_password=wrong_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
@@ -165,6 +168,7 @@
         test-targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_private_key_file=/dev/null
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
