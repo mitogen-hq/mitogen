@@ -14,8 +14,9 @@
       connection: local
       environment:
         ANSIBLE_SSH_TIMEOUT: 10
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
-        ansible -vvv
+        ansible
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}

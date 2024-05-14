@@ -5,8 +5,10 @@
   tasks:
     - name: Run missing_module
       connection: local
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
-        ansible -vvv
+        ansible
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}

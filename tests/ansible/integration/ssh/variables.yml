@@ -20,6 +20,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -36,6 +37,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -60,6 +62,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -76,6 +79,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -100,6 +104,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -116,6 +121,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -145,6 +151,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -161,6 +168,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
