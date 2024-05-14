@@ -20,13 +20,15 @@
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}
-        test-targets
-        -m custom_python_detect_environment
+        "{{ inventory_hostname }}"
+        -m ping
         -e ansible_user=mitogen__slow_user -e ansible_password=slow_user_password
         -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
+      changed_when: false
+      check_mode: false
       ignore_errors: true
 
     - name: Verify connection timeout occurred

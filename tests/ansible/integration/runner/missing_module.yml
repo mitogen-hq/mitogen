@@ -1,4 +1,3 @@
-
 - name: integration/runner/missing_module.yml
   hosts: test-targets[0]
   connection: local
@@ -17,6 +16,8 @@
       args:
         chdir: ../..
       register: out
+      changed_when: false
+      check_mode: false
       ignore_errors: true
 
     - assert:
