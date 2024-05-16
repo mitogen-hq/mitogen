@@ -6,6 +6,8 @@
   tasks:
     - name: Test --ask-become-pass
       delegate_to: localhost
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       expect:
         command: >
           ansible-playbook
