@@ -3,8 +3,6 @@
 - name: integration/context_service/remote_tmp.yml
   hosts: test-targets
   gather_facts: false
-  vars:
-    ansible_remote_tmp: ~/.ansible/remote_tmp_test
   tasks:
     - name: Exercise ansible_remote_tmp
       copy:
@@ -13,9 +11,20 @@
         content: |
           Created by integration/context_service/remote_tmp.yml
 
+    - debug:
+        msg: ANSIBLE_REMOTE_TMP={{ lookup('env', 'ANSIBLE_REMOTE_TMP') }}
+
+    - command:
+        ls -l "{{ lookup('env', 'ANSIBLE_REMOTE_TMP') }}"
+      changed_when: false
+      register: out
+
+    - debug:
+        var: out
+
     - name: Delete ansible_remote_tmp
       raw: |
-        rm -rf "{{ ansible_remote_tmp }}"
+        rm -rf "{{ lookup('env', 'ANSIBLE_REMOTE_TMP') }}"
 
     - name: Do something else that requires ansible_remote_tmp
       file:
