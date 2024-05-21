@@ -28,21 +28,24 @@ jobs:
     matrix:
       Mito_27:
         tox.env: py27-mode_mitogen
-      Mito_312:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen
+      Mito_313:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen
 
       Loc_27_210:
         tox.env: py27-mode_localhost-ansible2.10
-      Loc_312_9:
-        python.version: '3.12'
-        tox.env: py312-mode_localhost-ansible9
+      Loc_313_9:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_localhost-ansible9
 
       Van_27_210:
         tox.env: py27-mode_localhost-ansible2.10-strategy_linear
-      Van_312_9:
-        python.version: '3.12'
-        tox.env: py312-mode_localhost-ansible9-strategy_linear
+      Van_313_9:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_localhost-ansible9-strategy_linear
 
 - job: Linux
   pool:
@@ -99,33 +102,42 @@ jobs:
         python.version: '3.6'
         tox.env: py36-mode_mitogen-distro_ubuntu2004
 
-      Mito_312_centos6:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_centos6
-      Mito_312_centos7:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_centos7
-      Mito_312_centos8:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_centos8
-      Mito_312_debian9:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_debian9
-      Mito_312_debian10:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_debian10
-      Mito_312_debian11:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_debian11
-      Mito_312_ubuntu1604:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_ubuntu1604
-      Mito_312_ubuntu1804:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_ubuntu1804
-      Mito_312_ubuntu2004:
-        python.version: '3.12'
-        tox.env: py312-mode_mitogen-distro_ubuntu2004
+      Mito_313_centos6:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_centos6
+      Mito_313_centos7:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_centos7
+      Mito_313_centos8:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_centos8
+      Mito_313_debian9:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_debian9
+      Mito_313_debian10:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_debian10
+      Mito_313_debian11:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_debian11
+      Mito_313_ubuntu1604:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_ubuntu1604
+      Mito_313_ubuntu1804:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_ubuntu1804
+      Mito_313_ubuntu2004:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_mitogen-distro_ubuntu2004
 
       Ans_27_210:
         tox.env: py27-mode_ansible-ansible2.10
@@ -151,15 +163,19 @@ jobs:
       Ans_311_5:
         python.version: '3.11'
         tox.env: py311-mode_ansible-ansible5
-      Ans_312_6:
-        python.version: '3.12'
-        tox.env: py312-mode_ansible-ansible6
-      Ans_312_7:
-        python.version: '3.12'
-        tox.env: py312-mode_ansible-ansible7
-      Ans_312_8:
-        python.version: '3.12'
-        tox.env: py312-mode_ansible-ansible8
-      Ans_312_9:
-        python.version: '3.12'
-        tox.env: py312-mode_ansible-ansible9
+      Ans_313_6:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_ansible-ansible6
+      Ans_313_7:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_ansible-ansible7
+      Ans_313_8:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_ansible-ansible8
+      Ans_313_9:
+        python.version: '3.13.0-beta.1'
+        python.allUnstable: true
+        tox.env: py313-mode_ansible-ansible9

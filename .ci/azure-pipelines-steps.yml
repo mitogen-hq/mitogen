@@ -12,6 +12,7 @@ steps:
   inputs:
     githubToken: '$(GITHUB_PYVER_TOKEN)'
     versionSpec: '$(python.version)'
+    allowUnstable: $(python.allowUnstable)'
   condition: ne(variables['python.version'], '')
 
 - script: |
