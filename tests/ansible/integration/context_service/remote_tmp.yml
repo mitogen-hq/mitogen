@@ -1,0 +1,26 @@
+# issue #1061: ensure remote temporary directory is recreated
+
+- name: integration/context_service/remote_tmp.yml
+  hosts: test-targets
+  gather_facts: false
+  vars:
+    ansible_remote_tmp: ~/.ansible/remote_tmp_test
+  tasks:
+    - name: Exercise ansible_remote_tmp
+      copy:
+        dest: canary
+        mode: u=rw,go=
+        content: |
+          Created by integration/context_service/remote_tmp.yml
+
+    - name: Delete ansible_remote_tmp
+      raw: |
+        rm -rf "{{ ansible_remote_tmp }}"
+
+    - name: Do something else that requires ansible_remote_tmp
+      file:
+        path: canary
+        state: absent
+  tags:
+    - issue_1061
+    - remote_tmp
