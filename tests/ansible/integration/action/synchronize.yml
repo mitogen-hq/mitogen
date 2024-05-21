@@ -24,18 +24,21 @@
         path: /tmp/sync-test
         state: absent
       delegate_to: localhost
+      run_once: true
 
     - name: Create sync-test
       file:
         path: /tmp/sync-test
         state: directory
       delegate_to: localhost
+      run_once: true
 
     - name: Create syn-test item
       copy:
         dest: /tmp/sync-test/item
         content: "item!"
       delegate_to: localhost
+      run_once: true
 
     # TODO: https://github.com/dw/mitogen/issues/692
     # - file:

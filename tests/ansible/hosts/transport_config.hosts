@@ -13,6 +13,7 @@ tc_become
 tc_become_method
 tc_become_pass
 tc_become_user
+tc_host_key_checking
 tc_password
 tc_port
 tc_remote_addr
@@ -73,6 +74,11 @@ tc-become-pass-unset
 tc-become-pass-password ansible_become_password=apassword
 tc-become-pass-pass ansible_become_pass=apass
 tc-become-pass-both ansible_become_pass=bpass ansible_become_password=bpassword
+
+[tc_host_key_checking]
+tc-hkc-unset
+tc-hkc-host-key-checking ansible_host_key_checking=true
+tc-hkc-ssh-host-key-checking ansible_ssh_host_key_checking=true
 
 [tc_port]
 tc-port-unset

@@ -12,6 +12,8 @@
     - include_tasks: _end_play_if_not_sudo_linux.yml
 
     - name: Run stub-lxc-info.py
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
         sudo -nE "{{lookup('env', 'VIRTUAL_ENV')}}/bin/ansible"
         -i localhost,

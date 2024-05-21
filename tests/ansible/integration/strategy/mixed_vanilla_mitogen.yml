@@ -3,24 +3,26 @@
   hosts: test-targets[0]
   tasks:
     - connection: local
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
         ansible-playbook
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}
-        -vvv
         integration/strategy/_mixed_mitogen_vanilla.yml
       args:
         chdir: ../..
       register: out
 
     - connection: local
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
         ansible-playbook
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}
-        -vvv
         integration/strategy/_mixed_vanilla_mitogen.yml
       args:
         chdir: ../..

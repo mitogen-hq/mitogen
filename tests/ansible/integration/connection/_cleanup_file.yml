@@ -1,0 +1,17 @@
+- name: Cleanup local file
+  file:
+    path: /tmp/{{ file_name }}
+    state: absent
+  delegate_to: localhost
+  run_once: true
+  tags:
+    - cleanup_local
+    - cleanup
+
+- name: Cleanup target file
+  file:
+    path: /tmp/{{ file_name }}.out
+    state: absent
+  tags:
+    - cleanup_target
+    - cleanup

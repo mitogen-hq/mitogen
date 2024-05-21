@@ -2,6 +2,7 @@
 - import_playbook: become_pass.yml
 - import_playbook: become_user.yml
 - import_playbook: become.yml
+- import_playbook: host_key_checking.yml
 - import_playbook: password.yml
 - import_playbook: port.yml
 - import_playbook: python_path.yml

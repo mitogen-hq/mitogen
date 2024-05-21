@@ -247,6 +247,15 @@ Noteworthy Differences
   part of the core library, and should therefore be straightforward to fix as
   part of 0.2.x.
 
+* Connection and become timeouts are applied differently. Mitogen may consider
+  a connection to have timed out, when Ansible would have waited longer or
+  indefinately. For example if SSH authentication completes within the
+  timeout, but execution of login scripts exceeds it - then Mitogen will
+  consider the task to have timed out and that host to have failed.
+
+..
+    tests/ansible/integration/ssh/timeouts.yml covers (some of) this behaviour.
+
 ..
     * SSH and ``become`` are treated distinctly when applying timeouts, and
     timeouts apply up to the point when the new interpreter is ready to accept

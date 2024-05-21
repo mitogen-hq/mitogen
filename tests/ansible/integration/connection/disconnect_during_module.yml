@@ -10,6 +10,8 @@
 
   - name: Run _disconnect_during_module.yml
     delegate_to: localhost
+    environment:
+      ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
     command: |
       ansible-playbook
       {% for inv in ansible_inventory_sources %}

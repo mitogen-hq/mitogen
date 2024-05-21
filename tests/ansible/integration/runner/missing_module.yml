@@ -1,12 +1,13 @@
-
 - name: integration/runner/missing_module.yml
   hosts: test-targets[0]
   connection: local
   tasks:
     - name: Run missing_module
       connection: local
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
-        ansible -vvv
+        ansible
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}
@@ -15,6 +16,8 @@
       args:
         chdir: ../..
       register: out
+      changed_when: false
+      check_mode: false
       ignore_errors: true
 
     - assert:

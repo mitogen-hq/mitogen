@@ -1,7 +1,12 @@
 # Ensure 'ssh' connections time out correctly.
+# mitogen__slow_user performs a long sleep in ~/.profile.
+# Mitogen counts this time towards the connection timeout. Ansible doesn't.
+# ansible_python_interpreter=python3000 is an optimisation, to avoid waiting
+# on the timeout multiple times (e.g. interpreter discovery).
 
 - name: integration/ssh/timeouts.yml
   hosts: test-targets
+  gather_facts: false
   tasks:
     - include_tasks: ../_mitogen_only.yml
 
@@ -9,17 +14,21 @@
       connection: local
       environment:
         ANSIBLE_SSH_TIMEOUT: 10
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
-        ansible -vvv
+        ansible
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
         {% endfor %}
-        test-targets
-        -m custom_python_detect_environment
+        "{{ inventory_hostname }}"
+        -m ping
         -e ansible_user=mitogen__slow_user -e ansible_password=slow_user_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
+      changed_when: false
+      check_mode: false
       ignore_errors: true
 
     - name: Verify connection timeout occurred
