@@ -357,7 +357,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
-                        delete_remote_tmp=True, wrap_async=False):
+                        delete_remote_tmp=True, wrap_async=False, ignore_unknown_opts=True):
         """
         Collect up a module's execution environment then use it to invoke
         target.run_module() or helpers.run_module_async() in the target
@@ -370,7 +370,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if task_vars is None:
             task_vars = {}
 
-        self._update_module_args(module_name, module_args, task_vars)
+        # Ansible>=2.17 introduces a new ignore_unknown_opts argument.
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 17):
+            self._update_module_args(module_name, module_args, task_vars, ignore_unknown_opts=ignore_unknown_opts)
+        else:
+            self._update_module_args(module_name, module_args, task_vars)
         env = {}
         self._compute_environment_string(env)
         self._set_temp_file_args(module_args, wrap_async)
