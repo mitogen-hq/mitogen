@@ -19,7 +19,7 @@ class ReceiveOneTest(testlib.TestCase):
         protocol = self.klass(router, 1)
         protocol.stream = stream
 
-        junk = mitogen.core.b('x') * mitogen.core.Message.HEADER_LEN
+        junk = mitogen.core.b('x') * mitogen.core.MessageHeader.SIZE
 
         capture = testlib.LogCapturer()
         capture.start()
