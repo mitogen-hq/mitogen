@@ -41,7 +41,7 @@
         # python bindings (docker_container) aren't working on this host, so gonna shell out
         - name: create container
           command:
-            cmd: podman run --name testMitogen -d --rm centos:8 bash -c "sleep infinity & wait"
+            cmd: podman run --name testMitogen -d --rm centos:9 bash -c "sleep infinity & wait"
 
         - name: add container to inventory
           add_host:

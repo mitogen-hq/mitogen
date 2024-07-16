@@ -66,12 +66,6 @@
       - /var/lib/apt/lists
       when: ansible_pkg_mgr == 'apt'
 
-    - name: Configure /usr/bin/python
-      command: alternatives --set python /usr/bin/python3.8
-      args:
-        creates: /usr/bin/python
-      when: inventory_hostname in ["centos8"]
-
     - name: Enable UTF-8 locale on Debian
       copy:
         dest: /etc/locale.gen
