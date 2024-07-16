@@ -280,7 +280,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                   paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.select.Select.all(
             self._connection.get_chain().call_async(
-                ansible_mitogen.target.set_file_mode, path, mode
+                ansible_mitogen.target.set_file_mode,
+                ansible_mitogen.utils.unsafe.cast(path),
+                mode,
             )
             for path in paths
         ))
