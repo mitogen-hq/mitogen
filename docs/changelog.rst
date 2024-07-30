@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`950` Fix Solaris/Illumos/SmartOS compatibility with become
 * :gh:issue:`952` Fix Ansible `--ask-become-pass`, add test coverage
 * :gh:issue:`957` Fix Ansible exception when executing against 10s of hosts
   "ValueError: filedescriptor out of range in select()"
