@@ -9,6 +9,7 @@
         content:
           this is a tiny file.
       delegate_to: localhost
+      run_once: true
 
     - name: Create large file
       copy:
@@ -16,6 +17,7 @@
         # Must be larger than Connection.SMALL_SIZE_LIMIT.
         content: "{% for x in range(200000) %}x{% endfor %}"
       delegate_to: localhost
+      run_once: true
 
     - name: Cleanup copied files
       file:

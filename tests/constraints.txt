@@ -1,0 +1,3 @@
+# Setuptools 72 removed `setup.py test`. hdrhistogram 0.6.1 still depends on it.
+# TODO Bump dependencies and unconstrain Pip.
+setuptools<72

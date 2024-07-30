@@ -21,8 +21,7 @@
           # sudo-1.8.6p3-29.el6_10.3 on RHEL & CentOS 6.10 (final release)
           # removed user/group error messages, as defence against CVE-2019-14287.
           - >-
-            'sudo: unknown user: slartibartfast' in out.module_stdout | default(out.msg)
-            or 'sudo: unknown user: slartibartfast' in out.module_stderr | default(out.msg)
+            (out.module_stderr | default(out.module_stdout, true) | default(out.msg, true)) is search('sudo: unknown user:? slartibartfast')
             or (ansible_facts.os_family == 'RedHat' and ansible_facts.distribution_version == '6.10')
         fail_msg: out={{out}}
       when:

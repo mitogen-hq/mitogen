@@ -745,8 +745,7 @@ def _upgrade_broker(broker):
     broker.timers = TimerList()
     LOG.debug('upgraded %r with %r (new: %d readers, %d writers; '
               'old: %d readers, %d writers)', old, new,
-              len(new.readers), len(new.writers),
-              len(old.readers), len(old.writers))
+              len(new._rfds), len(new._wfds), len(old._rfds), len(old._wfds))
 
 
 @mitogen.core.takes_econtext
@@ -902,22 +901,18 @@ class CallSpec(object):
 class PollPoller(mitogen.core.Poller):
     """
     Poller based on the POSIX :linux:man2:`poll` interface. Not available on
-    some versions of OS X, otherwise it is the preferred poller for small FD
-    counts, as there is no setup/teardown/configuration system call overhead.
+    some Python/OS X combinations. Otherwise the preferred poller for small
+    FD counts; or if many pollers are created, used once, then closed.
+    There there is no setup/teardown/configuration system call overhead.
     """
     SUPPORTED = hasattr(select, 'poll')
-    _repr = 'PollPoller()'
+    _readmask = SUPPORTED and select.POLLIN | select.POLLHUP
 
     def __init__(self):
         super(PollPoller, self).__init__()
         self._pollobj = select.poll()
 
     # TODO: no proof we dont need writemask too
-    _readmask = (
-        getattr(select, 'POLLIN', 0) |
-        getattr(select, 'POLLHUP', 0)
-    )
-
     def _update(self, fd):
         mask = (((fd in self._rfds) and self._readmask) |
                 ((fd in self._wfds) and select.POLLOUT))
@@ -952,7 +947,6 @@ class KqueuePoller(mitogen.core.Poller):
     Poller based on the FreeBSD/Darwin :freebsd:man2:`kqueue` interface.
     """
     SUPPORTED = hasattr(select, 'kqueue')
-    _repr = 'KqueuePoller()'
 
     def __init__(self):
         super(KqueuePoller, self).__init__()
@@ -1030,7 +1024,7 @@ class EpollPoller(mitogen.core.Poller):
     Poller based on the Linux :linux:man7:`epoll` interface.
     """
     SUPPORTED = hasattr(select, 'epoll')
-    _repr = 'EpollPoller()'
+    _inmask = SUPPORTED and select.EPOLLIN | select.EPOLLHUP
 
     def __init__(self):
         super(EpollPoller, self).__init__()
@@ -1077,9 +1071,6 @@ class EpollPoller(mitogen.core.Poller):
         self._wfds.pop(fd, None)
         self._control(fd)
 
-    _inmask = (getattr(select, 'EPOLLIN', 0) |
-               getattr(select, 'EPOLLHUP', 0))
-
     def _poll(self, timeout):
         the_timeout = -1
         if timeout is not None:
@@ -1100,18 +1091,14 @@ class EpollPoller(mitogen.core.Poller):
                     yield data
 
 
-# 2.4 and 2.5 only had select.select() and select.poll().
-for _klass in mitogen.core.Poller, PollPoller, KqueuePoller, EpollPoller:
-    if _klass.SUPPORTED:
-        PREFERRED_POLLER = _klass
+POLLERS = (EpollPoller, KqueuePoller, PollPoller, mitogen.core.Poller)
+PREFERRED_POLLER = next(cls for cls in POLLERS if cls.SUPPORTED)
+
 
 # For processes that start many threads or connections, it's possible Latch
 # will also get high-numbered FDs, and so select() becomes useless there too.
-# So swap in our favourite poller.
-if PollPoller.SUPPORTED:
-    mitogen.core.Latch.poller_class = PollPoller
-else:
-    mitogen.core.Latch.poller_class = PREFERRED_POLLER
+POLLER_LIGHTWEIGHT = PollPoller.SUPPORTED and PollPoller or PREFERRED_POLLER
+mitogen.core.Latch.poller_class = POLLER_LIGHTWEIGHT
 
 
 class LineLoggingProtocolMixin(object):

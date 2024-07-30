@@ -4,11 +4,18 @@
 #   since things are ran on localhost; Azure DevOps loses connection and fails
 # TODO: do we want to install docker a different way to be able to do this for other tests too
 ---
-- name: regression/issue_655_wait_for_connection_error.yml
+- name: regression/issue_655__wait_for_connection_error.yml
   hosts: localhost
   gather_facts: yes
   become: no
   tasks:
+    - meta: end_play
+      when:
+        # TODO CI currently runs on macOS 12 & which isn't supported by Podman
+        #      version available in Homebrew.
+        - ansible_facts.system == 'Darwin'
+        - ansible_facts.distribution_version is version('13.0', '<', strict=True)
+
     - name: set up test container and run tests inside it
       block:
         - name: install deps

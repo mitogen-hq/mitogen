@@ -1,23 +1,27 @@
 - name: integration/playbook_semantics/delegate_to.yml
   hosts: test-targets
+  vars:
+    local_path: "/tmp/delegate_to.{{ inventory_hostname }}.txt"
   tasks:
     #
     # delegate_to, no sudo
     #
     - name: "delegate_to, no sudo"
       copy:
-        dest: /tmp/delegate_to.yml.txt
+        dest: "{{ local_path }}"
         content: "Hello, world."
-      register: out
+        mode: u=rw,go=r
       delegate_to: localhost
 
     - name: "delegate_to, no sudo"
       assert:
-        that: "lookup('file', '/tmp/delegate_to.yml.txt') == 'Hello, world.'"
+        that:
+          - lookup('file', local_path) == 'Hello, world.'
+        fail_msg: "{{ lookup('file', local_path) }}"
 
     - name: "delegate_to, no sudo"
       file:
-        path: /tmp/delegate_to.yml.txt
+        path: "{{ local_path }}"
         state: absent
       delegate_to: localhost
 
@@ -27,18 +31,20 @@
     #
     - name: "connection:local, no sudo"
       copy:
-        dest: /tmp/delegate_to.yml.txt
+        dest: "{{ local_path }}"
         content: "Hello, world."
-      register: out
+        mode: u=rw,go=r
       connection: local
 
     - name: "connection:local, no sudo"
       assert:
-        that: "lookup('file', '/tmp/delegate_to.yml.txt') == 'Hello, world.'"
+        that:
+          - lookup('file', local_path) == 'Hello, world.'
+        fail_msg: "{{ lookup('file', local_path) }}"
 
     - name: "connection:local, no sudo"
       file:
-        path: /tmp/delegate_to.yml.txt
+        path: "{{ local_path }}"
         state: absent
       connection: local
 
@@ -47,7 +53,10 @@
     # delegate_to, sudo
     #
     - name: "delegate_to, sudo"
-      shell: whoami > /tmp/delegate_to.yml.txt
+      shell: |
+        whoami > "{{ local_path }}"
+      args:
+        creates: "{{ local_path }}"
       delegate_to: localhost
       become: true
       tags:
@@ -55,13 +64,15 @@
 
     - name: "delegate_to, sudo"
       assert:
-        that: "lookup('file', '/tmp/delegate_to.yml.txt') == 'root'"
+        that:
+          - lookup('file', local_path) == 'root'
+        fail_msg: "{{ lookup('file', local_path) }}"
       tags:
         - requires_local_sudo
 
     - name: "delegate_to, sudo"
       file:
-        path: /tmp/delegate_to.yml.txt
+        path: "{{ local_path }}"
         state: absent
       delegate_to: localhost
       become: true
@@ -73,7 +84,10 @@
     # connection:local, sudo
     #
     - name: "connection:local, sudo"
-      shell: whoami > /tmp/delegate_to.yml.txt
+      shell: |
+        whoami > "{{ local_path }}"
+      args:
+        creates: "{{ local_path }}"
       connection: local
       become: true
       tags:
@@ -81,13 +95,15 @@
 
     - name: "connection:local, sudo"
       assert:
-        that: "lookup('file', '/tmp/delegate_to.yml.txt') == 'root'"
+        that:
+          - lookup('file', local_path) == 'root'
+        fail_msg: "{{ lookup('file', local_path) }}"
       tags:
         - requires_local_sudo
 
     - name: "connection:local, sudo"
       file:
-        path: /tmp/delegate_to.yml.txt
+        path: "{{ local_path }}"
         state: absent
       connection: local
       become: true
