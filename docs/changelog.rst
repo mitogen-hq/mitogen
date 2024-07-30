@@ -21,6 +21,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+
+
+v0.3.8 (2024-07-30)
+-------------------
+
 * :gh:issue:`952` Fix Ansible `--ask-become-pass`, add test coverage
 * :gh:issue:`957` Fix Ansible exception when executing against 10s of hosts
   "ValueError: filedescriptor out of range in select()"
