@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1074` Support Ansible 10
 
 
 v0.3.8 (2024-07-30)
