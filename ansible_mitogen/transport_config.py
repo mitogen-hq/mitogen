@@ -67,6 +67,7 @@ import ansible.utils.shlex
 import ansible.constants as C
 
 from ansible.module_utils.six import with_metaclass
+from ansible.module_utils.parsing.convert_bool import boolean
 
 # this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
 try:
@@ -79,7 +80,6 @@ try:
 except ImportError:
     from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 
-import ansible_mitogen.loaders
 import mitogen.core
 
 
@@ -244,6 +244,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
     def python_path(self):
         """
         Path to the Python interpreter on the target machine.
+        """
+
+    @abc.abstractmethod
+    def host_key_checking(self):
+        """
+        Whether or not to check the keys of the target machine
         """
 
     @abc.abstractmethod
@@ -436,9 +442,18 @@ class PlayContextSpec(Spec):
         return self._play_context.become_user
 
     def become_pass(self):
-        become_method = self.become_method()
-        become_plugin = ansible_mitogen.loaders.become_loader.get(become_method)
-        become_pass = become_plugin.get_option('become_pass', hostvars=self._task_vars)
+        # become_pass is owned/provided by the active become plugin. However
+        # PlayContext is intertwined with it. Known complications
+        # - ansible_become_password is higher priority than ansible_become_pass,
+        #   `play_context.become_pass` doesn't obey this (atleast with Mitgeon).
+        # - `meta: reset_connection` runs `connection.reset()` but
+        #   `ansible_mitogen.connection.Connection.reset()` recreates the
+        #   connection object, setting `connection.become = None`.
+        become_plugin = self._connection.become
+        try:
+            become_pass = become_plugin.get_option('become_pass', playcontext=self._play_context)
+        except AttributeError:
+            become_pass = self._play_context.become_pass
         return optional_secret(become_pass)
 
     def password(self):
@@ -457,6 +472,14 @@ class PlayContextSpec(Spec):
             task_vars=self._task_vars,
             action=self._action,
             rediscover_python=rediscover_python)
+
+    def host_key_checking(self):
+        def candidates():
+            yield self._connection.get_task_var('ansible_ssh_host_key_checking')
+            yield self._connection.get_task_var('ansible_host_key_checking')
+            yield C.HOST_KEY_CHECKING
+        val = next((v for v in candidates() if v is not None), True)
+        return boolean(val)
 
     def private_key_file(self):
         return self._play_context.private_key_file
@@ -683,6 +706,14 @@ class MitogenViaSpec(Spec):
             task_vars=self._task_vars,
             action=self._action,
             rediscover_python=rediscover_python)
+
+    def host_key_checking(self):
+        def candidates():
+            yield self._host_vars.get('ansible_ssh_host_key_checking')
+            yield self._host_vars.get('ansible_host_key_checking')
+            yield C.HOST_KEY_CHECKING
+        val = next((v for v in candidates() if v is not None), True)
+        return boolean(val)
 
     def private_key_file(self):
         # TODO: must come from PlayContext too.

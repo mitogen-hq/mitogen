@@ -143,8 +143,9 @@
       - out.result|length == 2
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
-      # Ansible >= 2.10 builtin become plugins (e.g. sudo, su) give priority
-      # to ansible_become_pass over ansible_become_password.
+      # Ansible <= 2.9.1 prioritises ansible_become_password.
+      # Ansible >= 2.9.2 prioritises ansible_become_pass.
+      # https://github.com/ansible/ansible/commit/480b106d6535978ae6ecab68b40942ca4fa914a0
       - out.result[1].kwargs.password == "bpass"
       fail_msg: out={{out}}
   tags:

@@ -16,32 +16,21 @@ trigger:
       - docs-master
 
 jobs:
-- job: mac11
+- job: mac12
   # vanilla Ansible is really slow
   timeoutInMinutes: 120
   steps:
   - template: azure-pipelines-steps.yml
   pool:
-    # https://github.com/actions/runner-images/blob/main/images/macos/macos-11-Readme.md
-    vmImage: macOS-11
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md
+    vmImage: macOS-12
   strategy:
     matrix:
-      Mito_27:
-        tox.env: py27-mode_mitogen
       Mito_312:
-        python.version: '3.12'
         tox.env: py312-mode_mitogen
-
-      Loc_27_210:
-        tox.env: py27-mode_localhost-ansible2.10
       Loc_312_9:
-        python.version: '3.12'
         tox.env: py312-mode_localhost-ansible9
-
-      Van_27_210:
-        tox.env: py27-mode_localhost-ansible2.10-strategy_linear
       Van_312_9:
-        python.version: '3.12'
         tox.env: py312-mode_localhost-ansible9-strategy_linear
 
 - job: Linux

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # #591: call os.getcwd() before AnsibleModule ever gets a chance to fix up the
 # process environment.
 

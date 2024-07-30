@@ -10,6 +10,7 @@
   - shell: >
       ANSIBLE_STRATEGY=mitogen_linear
       ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+      ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
       ansible -m shell -c local -a whoami
       {% for inv in ansible_inventory_sources %}
       -i "{{ inv }}"

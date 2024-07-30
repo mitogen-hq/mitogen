@@ -6,9 +6,11 @@
   gather_facts: no
   vars:
     file_name: large-file
-    file_size: 512
+    file_size_kib: 512
+    file_mode: u=rw,go=
   tasks:
     - include_tasks: _put_file.yml
+    - include_tasks: _cleanup_file.yml
   tags:
     - put_file
     - put_large_file

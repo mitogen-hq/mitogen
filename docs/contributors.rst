@@ -126,11 +126,13 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li>jgadling</li>
     <li>John F Wall &mdash; <em>Making Ansible Great with Massive Parallelism</em></li>
     <li>KennethC</li>
+    <li><a href="https://github.com/lberruti">Luca Berruti</li>
     <li>Lewis Bellwood &mdash; <em>Happy to be apart of a great project.</em></li>
     <li>luto</li>
     <li><a href="https://mayeu.me/">Mayeu a.k.a Matthieu Maury</a></li>
     <li><a href="https://twitter.com/nathanhruby">@nathanhruby</a></li>
     <li><a href="https://github.com/opoplawski">Orion Poplawski</a></li>
+    <li><a href="https://github.com/philfry">Philippe Kueck</a></li>
     <li><a href="http://pageflows.com/">Ramy</a></li>
     <li>Scott Vokes</li>
     <li><a href="https://twitter.com/sirtux">Tom Eichhorn</a></li>

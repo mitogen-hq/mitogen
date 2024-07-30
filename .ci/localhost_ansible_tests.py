@@ -93,5 +93,5 @@ with ci_lib.Fold('machine_prep'):
 with ci_lib.Fold('ansible'):
     os.chdir(TESTS_DIR)
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
-    ci_lib.run('./run_ansible_playbook.py %s -l target %s',
+    ci_lib.run('./run_ansible_playbook.py %s %s',
         playbook, ' '.join(sys.argv[1:]))
