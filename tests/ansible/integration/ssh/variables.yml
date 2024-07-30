@@ -20,6 +20,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -36,6 +37,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -43,6 +45,7 @@
         test-targets
         -e ansible_ssh_user=mitogen__has_sudo
         -e ansible_ssh_pass=wrong_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
@@ -59,6 +62,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -75,6 +79,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -82,6 +87,7 @@
         test-targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_pass=wrong_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
@@ -98,6 +104,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -114,6 +121,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -121,6 +129,7 @@
         test-targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_password=wrong_password
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out
@@ -142,6 +151,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -158,6 +168,7 @@
         ANSIBLE_ANY_ERRORS_FATAL=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
         -i "{{ inv }}"
@@ -165,6 +176,7 @@
         test-targets
         -e ansible_user=mitogen__has_sudo
         -e ansible_ssh_private_key_file=/dev/null
+        -e ansible_python_interpreter=python3000
       args:
         chdir: ../..
       register: out

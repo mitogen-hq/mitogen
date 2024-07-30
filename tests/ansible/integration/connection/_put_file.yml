@@ -1,20 +1,21 @@
----
-
 - name: Create {{ file_name }}
-  shell: dd if=/dev/urandom of=/tmp/{{ file_name }} bs=1024 count={{ file_size }}
-  args:
+  command:
+    cmd: dd if=/dev/urandom of=/tmp/{{ file_name }} bs=1024 count={{ file_size_kib }}
     creates: /tmp/{{file_name}}
   delegate_to: localhost
+  run_once: true
 
 - name: Copy {{ file_name }}
   copy:
     dest: /tmp/{{file_name}}.out
     src: /tmp/{{file_name}}
+    mode: "{{ file_mode }}"
 
 - name: Stat created {{ file_name }}
   stat: path=/tmp/{{ file_name }}
   register: original
   delegate_to: localhost
+  run_once: true
 
 - name: Stat copied {{ file_name }}
   stat: path=/tmp/{{ file_name }}.out

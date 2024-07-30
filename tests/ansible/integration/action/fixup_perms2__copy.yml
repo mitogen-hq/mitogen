@@ -38,6 +38,7 @@
 
     - name: Create local weird mode file
       delegate_to: localhost
+      run_once: true
       copy:
         content: "weird mode"
         dest: "/tmp/weird-mode"

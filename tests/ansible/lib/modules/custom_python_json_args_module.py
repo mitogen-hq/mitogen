@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # I am an Ansible Python JSONARGS module. I should receive an encoding string.
 
 json_arguments = """<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>"""

@@ -23,6 +23,16 @@ Unreleased
 
 
 
+v0.3.8 (2024-07-30)
+-------------------
+
+* :gh:issue:`952` Fix Ansible `--ask-become-pass`, add test coverage
+* :gh:issue:`957` Fix Ansible exception when executing against 10s of hosts
+  "ValueError: filedescriptor out of range in select()"
+* :gh:issue:`1066` Support Ansible `ansible_host_key_checking` & `ansible_ssh_host_key_checking`
+* :gh:issue:`1090` CI: Migrate macOS integration tests to macOS 12, drop Python 2.7 jobs
+
+
 v0.3.7 (2024-04-08)
 -------------------
 
