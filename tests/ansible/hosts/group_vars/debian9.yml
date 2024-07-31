@@ -1,0 +1,4 @@
+pkg_repos_overrides:
+  - dest: /etc/apt/sources.list
+    content: |
+      deb http://archive.debian.org/debian stretch main contrib non-free
