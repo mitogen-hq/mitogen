@@ -41,6 +41,7 @@ import time
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
+from ansible.plugins.action.normal import ActionModule
 
 import mitogen.core
 
@@ -585,7 +586,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             if f.f_code.co_name == 'run':
                 f_locals = f.f_locals
                 f_self = f_locals.get('self')
-                if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin):
+                if isinstance(f_self, ansible_mitogen.mixins.ActionModuleMixin) or (self._play_context.connection == 'httpapi' and isinstance(f_self, ActionModule)):
                     # backref for python interpreter discovery, should be safe because _get_task_vars
                     # is always called before running interpreter discovery
                     self._action = f_self
