@@ -75,34 +75,6 @@ Installation
    ``mitogen_host_pinned`` strategies exists to mimic the ``free`` and
    ``host_pinned`` strategies.
 
-4.
-
-   .. raw:: html
-
-    <form action="https://networkgenomics.com/save-email/" method="post" id="emailform">
-        <input type=hidden name="list_name" value="mitogen-announce">
-
-        Get notified of new releases and important fixes.
-
-        <p>
-        <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;"><br>
-        <input name="captcha_1" placeholder="Captcha" style="width: 10ex;">
-        <img class="captcha-image">
-        <a class="captcha-refresh" href="#">&#x21bb</a>
-
-        <button type="submit" style="font-size: 105%;">
-            Subscribe
-        </button>
-
-        </p>
-
-        <div id="emailthanks" style="display:none">
-            Thanks!
-        </div>
-
-        <p>
-    </form>
-
 
 Demo
 ~~~~
@@ -1419,20 +1391,3 @@ Despite the small margin for optimization, Mitogen still manages **6.2x less
 bandwidth and 1.8x less time**.
 
 .. image:: images/ansible/pcaps/costapp-uk-india.svg
-
-
-.. raw:: html
-
-    <script src="https://networkgenomics.com/static/js/public_all.js?92d49a3a"></script>
-    <script>
-        NetGen = {
-            public: {
-                page_id: "operon",
-                urls: {
-                    save_email: "https://networkgenomics.com/save-email/",
-                    save_email_captcha: "https://networkgenomics.com/save-email/captcha/",
-                }
-            }
-        };
-        setupEmailForm();
-    </script>
