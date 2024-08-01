@@ -487,8 +487,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # which is required by Ansible's discover_interpreter function
         if self._finding_python_interpreter:
             possible_pythons = [
-                '/usr/bin/python',
-                'python3',
+                'python3.12',
+                'python3.11',
+                'python3.10',
+                'python3.9',
+                'python3.8',
                 'python3.7',
                 'python3.6',
                 'python3.5',
@@ -496,6 +499,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 'python2.6',
                 '/usr/libexec/platform-python',
                 '/usr/bin/python3',
+                '/usr/bin/python',
+                'python3',
                 'python'
             ]
         else:

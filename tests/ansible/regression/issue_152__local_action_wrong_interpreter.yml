@@ -14,7 +14,7 @@
         content: |
           #!/bin/bash
           export CUSTOM_INTERPRETER=1
-          exec {{ ansible_python_interpreter }} "$@"
+          exec python "$@"
 
     - custom_python_detect_environment:
       vars:

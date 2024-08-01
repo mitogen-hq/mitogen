@@ -2,6 +2,12 @@
 - name: integration/runner/custom_bash_hashbang_argument.yml
   hosts: test-targets
   tasks:
+    # Ansible releases after June 2024 quote ansible_python_interpreter
+    # https://github.com/ansible/ansible/pull/83365
+    - meta: end_play
+      when:
+        - not is_mitogen
+        - ansible_version.full is version('2.17.1', '>=', strict=True)
 
     - custom_bash_old_style_module:
         foo: true

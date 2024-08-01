@@ -19,7 +19,7 @@
             'kind': 'lxc',
             'lxc_info_path': null,
             'machinectl_path': null,
-            'python_path': ['/usr/bin/python'],
+            'python_path': ['python3000'],
             'remote_name': null,
             'username': null,
           },
