@@ -852,8 +852,11 @@ class ScriptRunner(ProgramRunner):
         # While Ansible rewrites the #! using ansible_*_interpreter, it is
         # never actually used to execute the script, instead it is a shell
         # fragment consumed by shell/__init__.py::build_module_command().
+        LOG.warning('%r: Inserting interpreter_fragment=%r', self, self.interpreter_fragment)
         new = [b('#!') + utf8(self.interpreter_fragment)]
+        LOG.warning('%r: is_python=%r', self, self.is_python)
         if self.is_python:
+            LOG.warning('%r: Inserting encoding string', self)
             new.append(self.b_ENCODING_STRING)
 
         _, _, rest = bytes_partition(s, b('\n'))

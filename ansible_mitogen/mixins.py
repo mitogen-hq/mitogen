@@ -357,7 +357,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
-                        delete_remote_tmp=True, wrap_async=False):
+                        delete_remote_tmp=True, wrap_async=False,
+                        ignore_unknown_opts=False,
+                        ):
         """
         Collect up a module's execution environment then use it to invoke
         target.run_module() or helpers.run_module_async() in the target
@@ -370,7 +372,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if task_vars is None:
             task_vars = {}
 
-        self._update_module_args(module_name, module_args, task_vars)
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 17):
+            self._update_module_args(
+                module_name, module_args, task_vars,
+                ignore_unknown_opts=ignore_unknown_opts,
+            )
+        else:
+            self._update_module_args(module_name, module_args, task_vars)
         env = {}
         self._compute_environment_string(env)
         self._set_temp_file_args(module_args, wrap_async)
@@ -479,8 +487,11 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # which is required by Ansible's discover_interpreter function
         if self._finding_python_interpreter:
             possible_pythons = [
-                '/usr/bin/python',
-                'python3',
+                'python3.12',
+                'python3.11',
+                'python3.10',
+                'python3.9',
+                'python3.8',
                 'python3.7',
                 'python3.6',
                 'python3.5',
@@ -488,6 +499,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 'python2.6',
                 '/usr/libexec/platform-python',
                 '/usr/bin/python3',
+                '/usr/bin/python',
+                'python3',
                 'python'
             ]
         else:

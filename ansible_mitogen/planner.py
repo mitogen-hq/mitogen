@@ -54,6 +54,7 @@ import mitogen.select
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
 import ansible_mitogen.target
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -228,18 +229,29 @@ class ScriptPlanner(BinaryPlanner):
             involved here, the vanilla implementation uses it and that use is
             exploited in common playbooks.
         """
-        key = u'ansible_%s_interpreter' % os.path.basename(path).strip()
+        interpreter_name = os.path.basename(path).strip()
+        key = u'ansible_%s_interpreter' % interpreter_name
         try:
             template = self._inv.task_vars[key]
         except KeyError:
-            return path
+            pass
+        else:
+            configured_interpreter = self._inv.templar.template(template)
+            return ansible_mitogen.utils.unsafe.cast(configured_interpreter)
 
-        return mitogen.utils.cast(self._inv.templar.template(template))
+        key = u'discovered_interpreter_%s' % interpreter_name
+        try:
+            discovered_interpreter = self._inv.task_vars['ansible_facts'][key]
+        except KeyError:
+            return path
+        else:
+            return ansible_mitogen.utils.unsafe.cast(discovered_interpreter)
 
     def _get_interpreter(self):
         path, arg = ansible_mitogen.parsing.parse_hashbang(
             self._inv.get_module_source()
         )
+        LOG.warning('%r: path=%r arg=%r', self, path, arg)
         if path is None:
             raise ansible.errors.AnsibleError(NO_INTERPRETER_MSG % (
                 self._inv.module_name,
@@ -249,7 +261,9 @@ class ScriptPlanner(BinaryPlanner):
         if arg:
             fragment += ' ' + arg
 
-        return fragment, path.startswith('python')
+        is_python = path.startswith('python')
+        LOG.warning('%r: fragment=%r is_python=%r', self, fragment, is_python)
+        return fragment, is_python
 
     def get_kwargs(self, **kwargs):
         interpreter_fragment, is_python = self._get_interpreter()
@@ -305,6 +319,19 @@ class NewStylePlanner(ScriptPlanner):
         return cls.MARKER.search(source) is not None
 
     def _get_interpreter(self):
+        path, arg = ansible_mitogen.parsing.parse_hashbang(
+            self._inv.get_module_source()
+        )
+        if path is None and arg is None:
+            return None, None
+
+        LOG.warning('%r: discarding path=%r arg=%r', self, path, arg)
+        fragment = self._rewrite_interpreter(path)
+        if arg:
+            fragment += ' ' + arg
+
+        is_python = path.startswith('python')
+        LOG.warning('%r: discarding fragment=%r is_python=%r', self, fragment, is_python)
         return None, None
 
     def get_push_files(self):

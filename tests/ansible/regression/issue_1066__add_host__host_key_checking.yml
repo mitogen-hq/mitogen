@@ -28,6 +28,10 @@
   become: false
   serial: 1
   tasks:
+    # FIXME https://github.com/mitogen-hq/mitogen/issues/1096
+    - meta: end_play
+      when:
+        - ansible_version.full is version('2.17', '>=', strict=True)
     - meta: reset_connection
 
     # The host key might be in ~/.ssh/known_hosts. If it's removed then no

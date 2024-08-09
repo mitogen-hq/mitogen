@@ -32,10 +32,14 @@ jobs:
         tox.env: py312-mode_localhost-ansible9
       Van_312_9:
         tox.env: py312-mode_localhost-ansible9-strategy_linear
+      Loc_312_10:
+        tox.env: py312-mode_localhost-ansible10
+      Van_312_10:
+        tox.env: py312-mode_localhost-ansible10-strategy_linear
 
 - job: Linux
   pool:
-    # https://github.com/actions/runner-images/blob/main/images/linux/Ubuntu2004-Readme.md
+    # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2004-Readme.md
     vmImage: ubuntu-20.04
   steps:
   - template: azure-pipelines-steps.yml
@@ -152,3 +156,6 @@ jobs:
       Ans_312_9:
         python.version: '3.12'
         tox.env: py312-mode_ansible-ansible9
+      Ans_312_10:
+        python.version: '3.12'
+        tox.env: py312-mode_ansible-ansible10

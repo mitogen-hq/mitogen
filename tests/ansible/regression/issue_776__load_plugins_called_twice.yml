@@ -10,6 +10,10 @@
     ansible_python_interpreter: "{{ pkg_mgr_python_interpreter }}"
     package: rsync  # Chosen to exist in all tested distros/package managers
   tasks:
+    - meta: end_play
+      when:
+        - ansible_version.full is version('2.17', '>=', strict=True)
+
     - name: Switch to archived package repositories
       copy:
         dest: "{{ item.dest }}"

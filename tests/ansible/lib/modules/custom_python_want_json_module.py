@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # I am an Ansible Python WANT_JSON module. I should receive a JSON-encoded file.
 
 import json
