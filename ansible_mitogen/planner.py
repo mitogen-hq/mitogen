@@ -54,6 +54,7 @@ import mitogen.select
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
 import ansible_mitogen.target
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -220,7 +221,7 @@ class ScriptPlanner(BinaryPlanner):
         variable, render it and return it.
 
         :param str path:
-            Absolute UNIX path to original interpreter.
+            Absolute path to original interpreter (e.g. '/usr/bin/python').
 
         :returns:
             Shell fragment prefix used to execute the script via "/bin/sh -c".
@@ -232,9 +233,12 @@ class ScriptPlanner(BinaryPlanner):
         try:
             template = self._inv.task_vars[key]
         except KeyError:
-            return path
+            pass
+        else:
+            configured_interpreter = self._inv.templar.template(template)
+            return ansible_mitogen.utils.unsafe.cast(configured_interpreter)
 
-        return mitogen.utils.cast(self._inv.templar.template(template))
+        return path
 
     def _get_interpreter(self):
         path, arg = ansible_mitogen.parsing.parse_hashbang(
