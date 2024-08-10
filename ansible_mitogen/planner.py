@@ -216,9 +216,12 @@ class ScriptPlanner(BinaryPlanner):
     """
     def _rewrite_interpreter(self, path):
         """
-        Given the original interpreter binary extracted from the script's
-        interpreter line, look up the associated `ansible_*_interpreter`
-        variable, render it and return it.
+        Given the interpreter path (from the script's hashbang line), return
+        the desired interpreter path. This tries, in order
+
+        1. Look up & render the `ansible_*_interpreter` variable, if set
+        2. Look up the `discovered_interpreter_*` fact, if present
+        3. The unmodified path from the hashbang line.
 
         :param str path:
             Absolute path to original interpreter (e.g. '/usr/bin/python').
@@ -229,7 +232,8 @@ class ScriptPlanner(BinaryPlanner):
             involved here, the vanilla implementation uses it and that use is
             exploited in common playbooks.
         """
-        key = u'ansible_%s_interpreter' % os.path.basename(path).strip()
+        interpreter_name = os.path.basename(path).strip()
+        key = u'ansible_%s_interpreter' % interpreter_name
         try:
             template = self._inv.task_vars[key]
         except KeyError:
@@ -237,6 +241,14 @@ class ScriptPlanner(BinaryPlanner):
         else:
             configured_interpreter = self._inv.templar.template(template)
             return ansible_mitogen.utils.unsafe.cast(configured_interpreter)
+
+        key = u'discovered_interpreter_%s' % interpreter_name
+        try:
+            discovered_interpreter = self._inv.task_vars['ansible_facts'][key]
+        except KeyError:
+            pass
+        else:
+            return ansible_mitogen.utils.unsafe.cast(discovered_interpreter)
 
         return path
 
@@ -253,7 +265,8 @@ class ScriptPlanner(BinaryPlanner):
         if arg:
             fragment += ' ' + arg
 
-        return fragment, path.startswith('python')
+        is_python = path.startswith('python')
+        return fragment, is_python
 
     def get_kwargs(self, **kwargs):
         interpreter_fragment, is_python = self._get_interpreter()
