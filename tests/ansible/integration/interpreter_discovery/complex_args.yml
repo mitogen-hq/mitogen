@@ -25,8 +25,7 @@
     #     special_python: source /tmp/fake && python
     - name: set python using sourced file
       set_fact:
-        # Avoid 2.x vs 3.x cross-compatiblity issues (that I can't remember the exact details of).
-        special_python: "source /tmp/fake || true && python{{ ansible_facts.python.version.major }}"
+        special_python: "source /tmp/fake || true && {{ ansible_facts.python.executable }}"
 
     - name: run get_url with specially-sourced python
       uri:
