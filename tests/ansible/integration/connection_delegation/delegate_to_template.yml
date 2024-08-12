@@ -40,7 +40,7 @@
               'keepalive_count': 10,
               'password': null,
               'port': null,
-              'python_path': ["{{ ansible_facts.discovered_interpreter_python | default('/usr/bin/python') }}"],
+              'python_path': ['python3000'],
               'remote_name': null,
               'ssh_args': [
                 -o, ControlMaster=auto,
@@ -68,7 +68,7 @@
               'keepalive_count': 10,
               'password': null,
               'port': null,
-              'python_path': ["{{ ansible_facts.discovered_interpreter_python | default('/usr/bin/python') }}"],
+              'python_path': ['python3000'],
               'remote_name': null,
               'ssh_args': [
                 -o, ControlMaster=auto,

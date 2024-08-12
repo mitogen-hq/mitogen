@@ -4,7 +4,7 @@ import ci_lib
 
 batches = [
     [
-        'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',
+        'if [ "${TF_BUILD:-false}" = "True" ]; then aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws; fi',
     ]
 ]
 
