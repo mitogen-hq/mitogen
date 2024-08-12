@@ -7,7 +7,7 @@ batches = [
 
 if ci_lib.have_docker():
     batches.append([
-        'aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws',
+        'if [ "${TF_BUILD:-false}" = "True" ]; then aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws; fi',
     ])
 
 
