@@ -2,7 +2,7 @@ import sys
 
 sys.path.append('.')
 
-VERSION = '0.3.8'
+VERSION = '0.3.9'
 
 author = u'Network Genomics'
 copyright = u'2021, the Mitogen authors'
@@ -16,7 +16,6 @@ html_show_copyright = False
 html_show_sourcelink = False
 html_show_sphinx = False
 html_sidebars = {'**': ['globaltoc.html', 'github.html']}
-html_additional_pages = {'ansible': 'ansible.html'}
 html_static_path = ['_static']
 html_theme = 'alabaster'
 html_theme_options = {
