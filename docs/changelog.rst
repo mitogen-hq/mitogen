@@ -21,6 +21,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+
+
+v0.3.9 (2024-08-13)
+-------------------
+
 * :gh:issue:`1097` Respect `ansible_facts.discovered_interpreter_python` when
   executing non new-style modules (e.g. JSONARGS style, WANT_JSON style).
 * :gh:issue:`1074` Support Ansible 10 (ansible-core 2.17)
