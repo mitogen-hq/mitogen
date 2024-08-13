@@ -12,7 +12,9 @@
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
-      shell: virtualenv /tmp/issue_152_virtualenv
+      command:
+        cmd: virtualenv -p "{{ ansible_facts.python.executable }}" /tmp/issue_152_virtualenv
+        creates: /tmp/issue_152_virtualenv
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
