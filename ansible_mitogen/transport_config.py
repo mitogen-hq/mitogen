@@ -678,6 +678,7 @@ class MitogenViaSpec(Spec):
 
     def password(self):
         return optional_secret(
+            self._host_vars.get('ansible_ssh_password') or
             self._host_vars.get('ansible_ssh_pass') or
             self._host_vars.get('ansible_password')
         )
