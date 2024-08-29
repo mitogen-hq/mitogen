@@ -125,6 +125,7 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li><a href="https://www.channable.com">rkrzr</a></li>
     <li>jgadling</li>
     <li>John F Wall &mdash; <em>Making Ansible Great with Massive Parallelism</em></li>
+    <li><a href="https://github.com/jrosser">Jonathan Rosser</a></li>
     <li>KennethC</li>
     <li><a href="https://github.com/lberruti">Luca Berruti</li>
     <li>Lewis Bellwood &mdash; <em>Happy to be apart of a great project.</em></li>
