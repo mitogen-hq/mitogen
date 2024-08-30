@@ -1,4 +1,6 @@
 # Verify copy module for small and large files, and inline content.
+# To exercise https://github.com/mitogen-hq/mitogen/pull/1110 destination
+# files must have extensions and loops must use `with_items:`.
 
 - name: integration/action/copy.yml
   hosts: test-targets
@@ -29,7 +31,7 @@
         dest: "{{ item.src }}"
         content: "{{ item.content }}"
         mode: u=rw,go=r
-      loop: "{{ sourced_files }}"
+      with_items: "{{ sourced_files }}"
       loop_control:
         label: "{{ item.src }}"
       delegate_to: localhost
@@ -39,7 +41,7 @@
       file:
         path: "{{ item.dest }}"
         state: absent
-      loop: "{{ files }}"
+      with_items: "{{ files }}"
       loop_control:
         label: "{{ item.dest }}"
 
@@ -48,7 +50,7 @@
         src: "{{ item.src }}"
         dest: "{{ item.dest }}"
         mode: u=rw,go=r
-      loop: "{{ sourced_files }}"
+      with_items: "{{ sourced_files }}"
       loop_control:
         label: "{{ item.dest }}"
 
@@ -57,7 +59,7 @@
         dest: "{{ item.dest }}"
         content: "{{ item.content }}"
         mode: u=rw,go=r
-      loop: "{{ inline_files }}"
+      with_items: "{{ inline_files }}"
       loop_control:
         label: "{{ item.dest }}"
 
@@ -66,7 +68,7 @@
     - name: Stat copied files
       stat:
         path: "{{ item.dest }}"
-      loop: "{{ files }}"
+      with_items: "{{ files }}"
       loop_control:
         label: "{{ item.dest }}"
       register: stat
@@ -76,7 +78,7 @@
           - item.stat.checksum == item.item.expected_checksum
         quiet: true  # Avoid spamming stdout with 400 kB of item.item.content
         fail_msg: item={{ item }}
-      loop: "{{ stat.results }}"
+      with_items: "{{ stat.results }}"
       loop_control:
         label: "{{ item.stat.path }}"
 
@@ -84,8 +86,9 @@
       file:
         path: "{{ item.dest }}"
         state: absent
-      loop: "{{ files }}"
+      with_items: "{{ files }}"
       loop_control:
         label: "{{ item.dest }}"
   tags:
     - copy
+    - issue_1110

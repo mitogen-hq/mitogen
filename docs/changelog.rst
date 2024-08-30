@@ -23,6 +23,9 @@ Unreleased
 
 * :gh:issue:`1087` Fix :exc:`mitogen.core.StreamError` when Ansible template
   module is called with a ``dest:`` filename that has an extension
+* :gh:issue:`1110` Fix :exc:`mitogen.core.StreamError` when Ansible copy
+  module is called with a file larger than 124 kibibytes
+  (:data:`ansible_mitogen.connection.Connection.SMALL_FILE_LIMIT`)
 
 
 v0.3.9 (2024-08-13)
