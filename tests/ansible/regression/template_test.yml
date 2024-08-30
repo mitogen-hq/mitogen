@@ -1,0 +1,28 @@
+- name: regression/template_test.yml
+  # Ansible's template module has been seen to raise mitogen.core.StreamError
+  # iif  there is a with_items loop and the destination path has an extension
+  hosts: test-targets
+  gather_facts: false
+  become: false
+  vars:
+    foos:
+      - dest: /tmp/foo
+      - dest: /tmp/foo.txt
+    foo: Foo
+    bar: Bar
+  tasks:
+    - block:
+        - name: Template files
+          template:
+            src: foo.bar.j2
+            dest: "{{ item.dest }}"
+            mode: u=rw,go=r
+          # This has to be with_items, loop: doesn't trigger the bug
+          with_items: "{{ foos }}"
+
+      always:
+        - name: Cleanup
+          file:
+            path: "{{ item.dest }}"
+            state: absent
+          with_items: "{{ foos }}"
