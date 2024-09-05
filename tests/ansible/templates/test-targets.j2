@@ -1,0 +1,28 @@
+[test-targets]
+{% for c in containers %}
+{{ c.name }} ansible_host={{ c.hostname }} ansible_port={{ c.port }} ansible_python_interpreter={{ c.python_path }}
+{% endfor %}
+
+[test-targets:vars]
+ansible_user=mitogen__has_sudo_nopw
+ansible_password=has_sudo_nopw_password
+
+{% for distro, hostnames in distros | dictsort %}
+[{{ distro }}]
+{% for hostname in hostnames %}
+{{ hostname }}
+{% endfor %}
+{% endfor %}
+
+{% for family, hostnames in families | dictsort %}
+[{{ family }}]
+{% for hostname in hostnames %}
+{{ hostname }}
+{% endfor %}
+{% endfor %}
+
+[linux:children]
+test-targets
+
+[linux_containers:children]
+test-targets
