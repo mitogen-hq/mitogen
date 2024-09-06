@@ -28,10 +28,6 @@ jobs:
     matrix:
       Mito_312:
         tox.env: py312-mode_mitogen
-      Loc_312_9:
-        tox.env: py312-mode_localhost-ansible9
-      Van_312_9:
-        tox.env: py312-mode_localhost-ansible9-strategy_linear
       Loc_312_10:
         tox.env: py312-mode_localhost-ansible10
       Van_312_10:
