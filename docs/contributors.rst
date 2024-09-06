@@ -116,6 +116,7 @@ sponsorship and outstanding future-thinking of its early adopters.
 
     <ul>
     <li>Alex Willmer</li>
+    <li><a href="https://github.com/momiji">Christian Bourgeois </a></li>
     <li><a href="https://underwhelm.net/">Dan Dorman</a> &mdash; - <em>When I truly understand my enemy … then in that very moment I also love him.</em></li>
     <li>Daniel Foerster</li>
     <li><a href="https://www.deps.co/">Deps</a> &mdash; <em>Private Maven Repository Hosting for Java, Scala, Groovy, Clojure</em></li>

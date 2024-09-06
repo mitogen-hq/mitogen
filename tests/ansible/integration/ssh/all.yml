@@ -1,3 +1,4 @@
+- import_playbook: args.yml
 - import_playbook: config.yml
 - import_playbook: password.yml
 - import_playbook: timeouts.yml
