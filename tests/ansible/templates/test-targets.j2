@@ -26,3 +26,14 @@ test-targets
 
 [linux_containers:children]
 test-targets
+
+[issue905]
+{% for c in containers[:1] %}
+ssh-common-args ansible_host={{ c.hostname }} ansible_port={{ c.port }} ansible_python_interpreter={{ c.python_path }}
+{% endfor %}
+
+[issue905:vars]
+ansible_user=mitogen__has_sudo_nopw
+ansible_password=has_sudo_nopw_password
+ansible_ssh_common_args=-o PermitLocalCommand=yes -o LocalCommand="touch {{ '{{' }} ssh_args_canary_file {{ '}}' }}"
+ssh_args_canary_file=/tmp/ssh_args_{{ '{{' }} inventory_hostname {{ '}}' }}

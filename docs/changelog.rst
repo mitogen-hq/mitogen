@@ -26,6 +26,9 @@ Unreleased
 * :gh:issue:`1110` Fix :exc:`mitogen.core.StreamError` when Ansible copy
   module is called with a file larger than 124 kibibytes
   (:data:`ansible_mitogen.connection.Connection.SMALL_FILE_LIMIT`)
+* :gh:issue:`905` Initial support for templated ``ansible_ssh_args``,
+  ``ansible_ssh_common_args``, and ``ansible_ssh_extra_args`` variables.
+  NB: play or task scoped variables will probably still fail.
 
 
 v0.3.9 (2024-08-13)
