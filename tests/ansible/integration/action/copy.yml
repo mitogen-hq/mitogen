@@ -77,7 +77,8 @@
         that:
           - item.stat.checksum == item.item.expected_checksum
         quiet: true  # Avoid spamming stdout with 400 kB of item.item.content
-        fail_msg: item={{ item }}
+        fail_msg: |
+          item={{ item }}
       with_items: "{{ stat.results }}"
       loop_control:
         label: "{{ item.stat.path }}"

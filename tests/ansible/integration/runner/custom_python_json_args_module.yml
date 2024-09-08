@@ -12,6 +12,7 @@
           (not out.results[0].changed) and
           out.results[0].input[0].foo and
           out.results[0].msg == 'Here is my input'
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - custom_python_json_args_module

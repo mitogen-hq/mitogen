@@ -24,7 +24,8 @@
     - assert:
         that:
           - out.env.CUSTOM_INTERPRETER == "1"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Cleanup /tmp/issue_152_interpreter.sh
       file:

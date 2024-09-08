@@ -23,7 +23,8 @@
         (job1.started == 1) and
         (job1.changed == True) and
         (job1.finished == 0)
-      fail_msg: job1={{job1}}
+      fail_msg: |
+        job1={{ job1 }}
 
   - name: busy-poll up to 100000 times
     async_status:
@@ -48,7 +49,8 @@
       - result1.start|length == 26
       - result1.finished == 1
       - result1.rc == 0
-      fail_msg: result1={{result1}}
+      fail_msg: |
+        result1={{ result1 }}
 
   - assert:
       that:
@@ -56,14 +58,16 @@
       - result1.stderr_lines == []
       - result1.stdout == "alldone"
       - result1.stdout_lines == ["alldone"]
-      fail_msg: result1={{result1}}
+      fail_msg: |
+        result1={{ result1 }}
     when:
       - ansible_version.full is version('2.8', '>', strict=True)  # ansible#51393
 
   - assert:
       that:
       - result1.failed == False
-      fail_msg: result1={{result1}}
+      fail_msg: |
+        result1={{ result1 }}
     when:
       - ansible_version.full is version('2.4', '>', strict=True)
   tags:

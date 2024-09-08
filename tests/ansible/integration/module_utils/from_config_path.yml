@@ -11,6 +11,7 @@
       that:
       - out.external1_path == "ansible/lib/module_utils/external1.py"
       - out.external2_path == "ansible/lib/module_utils/external2.py"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - from_config_path

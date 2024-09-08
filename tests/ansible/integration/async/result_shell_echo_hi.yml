@@ -42,14 +42,16 @@
         - async_out.start.startswith("20")
         - async_out.stderr == "there"
         - async_out.stdout == "hi"
-      fail_msg: async_out={{async_out}}
+      fail_msg: |
+        async_out={{ async_out }}
     vars:
       async_out: "{{result.content|b64decode|from_json}}"
 
   - assert:
       that:
         - async_out.invocation.module_args.stdin == None
-      fail_msg: async_out={{async_out}}
+      fail_msg: |
+        async_out={{ async_out }}
     when:
       - ansible_version.full is version('2.4', '>=', strict=True)
     vars:

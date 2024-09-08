@@ -12,7 +12,8 @@
 
 - assert:
     that: echo.stdout == ""
-    fail_msg: echo={{echo}}
+    fail_msg: |
+      echo={{ echo }}
 
 - name: Create /etc/environment
   copy:
@@ -32,7 +33,8 @@
 
 - assert:
     that: echo.stdout == "555"
-    fail_msg: echo={{echo}}
+    fail_msg: |
+      echo={{ echo }}
 
 - name: Cleanup /etc/environment
   file:
@@ -51,4 +53,5 @@
 
 - assert:
     that: echo.stdout == ""
-    fail_msg: echo={{echo}}
+    fail_msg: |
+      echo={{ echo }}

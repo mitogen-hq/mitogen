@@ -16,6 +16,7 @@
       - out.result[0] == 0
       - out.result[1].decode() == "hello, world\r\n"
       - out.result[2].decode().startswith("Shared connection to ")
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - exec_command

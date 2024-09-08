@@ -18,7 +18,8 @@
         # Random breaking interface change since 2.7.x
         #- "out.results[0].input[0].ANSIBLE_MODULE_ARGS.foo"
         - "out.results[0].msg == 'Here is my input'"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - custom_python_new_style_module
     - mitogen_only

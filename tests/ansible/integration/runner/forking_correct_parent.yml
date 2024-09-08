@@ -29,17 +29,23 @@
   - assert:
       that:
       - fork_proc.pid != regular_proc.pid
-      fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
+      fail_msg: |
+        fork_proc={{ fork_proc }}
+        regular_proc={{ regular_proc }}
 
   - assert:
       that: fork_proc.ppid != regular_proc.pid
-      fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
+      fail_msg: |
+        fork_proc={{ fork_proc }}
+        regular_proc={{ regular_proc }}
     when:
       - forkmode.uses_fork
 
   - assert:
       that: fork_proc.ppid == regular_proc.pid
-      fail_msg: fork_proc={{fork_proc}} regular_proc={{regular_proc}}
+      fail_msg: |
+        fork_proc={{ fork_proc }}
+        regular_proc={{ regular_proc }}
     when:
       - not forkmode.uses_fork
 

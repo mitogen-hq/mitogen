@@ -11,6 +11,7 @@
   - assert:
       that:
       - "'id' in out.info"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - issue_590

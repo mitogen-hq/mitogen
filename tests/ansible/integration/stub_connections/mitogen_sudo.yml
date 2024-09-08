@@ -15,7 +15,8 @@
 
   - assert:
       that: out.env.THIS_IS_STUB_SUDO == '1'
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
 
   - assert_equal:
       left: (out.env.ORIGINAL_ARGV|from_json)[1:9]

@@ -35,7 +35,8 @@
       assert:
         that:
           - out.sys_executable in expected_executables
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
