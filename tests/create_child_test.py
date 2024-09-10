@@ -76,6 +76,7 @@ def close_proc(proc):
     proc.stdout.close()
     if proc.stderr:
         proc.stderr.close()
+    proc.proc.wait()
 
 
 def wait_read(fp, n):
