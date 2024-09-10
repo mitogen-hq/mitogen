@@ -143,19 +143,23 @@ class Listener(mitogen.core.Protocol):
     def on_accept_client(self, sock):
         sock.setblocking(True)
         try:
-            pid, = struct.unpack('>L', sock.recv(4))
+            data = sock.recv(4)
+            pid, = struct.unpack('>L', data)
         except (struct.error, socket.error):
-            LOG.error('listener: failed to read remote identity: %s',
-                      sys.exc_info()[1])
+            LOG.error('listener: failed to read remote identity, got %d bytes: %s',
+                      len(data), sys.exc_info()[1])
+            sock.close()
             return
 
         context_id = self._router.id_allocator.allocate()
         try:
+            # FIXME #1109 send() returns number of bytes sent, check it
             sock.send(struct.pack('>LLL', context_id, mitogen.context_id,
                                   os.getpid()))
         except socket.error:
             LOG.error('listener: failed to assign identity to PID %d: %s',
                       pid, sys.exc_info()[1])
+            sock.close()
             return
 
         context = mitogen.parent.Context(self._router, context_id)
