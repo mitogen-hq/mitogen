@@ -29,6 +29,8 @@ Unreleased
 * :gh:issue:`905` Initial support for templated ``ansible_ssh_args``,
   ``ansible_ssh_common_args``, and ``ansible_ssh_extra_args`` variables.
   NB: play or task scoped variables will probably still fail.
+* :gh:issue:`694` CI: Fixed a race condition and some resource leaks causing
+  some of intermittent failures when running the test suite.
 
 
 v0.3.9 (2024-08-13)
