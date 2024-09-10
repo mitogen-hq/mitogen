@@ -190,6 +190,7 @@ class BannerTest(testlib.DockerMixin, testlib.TestCase):
             self.dockerized_ssh.port,
         )
         self.assertEqual(name, context.name)
+        context.shutdown(wait=True)
 
 
 class StubPermissionDeniedTest(StubSshMixin, testlib.TestCase):
