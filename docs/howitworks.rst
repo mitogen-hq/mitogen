@@ -505,15 +505,23 @@ The primary reason for using :py:mod:`cPickle` is that it is computationally
 efficient, and avoids including a potentially large body of serialization code
 in the bootstrap.
 
-The pickler will instantiate only built-in types and one of 3 constructor
-functions, to support unpickling :py:class:`CallError
+The pickler will, by default, instantiate only built-in types and one of 3
+constructor functions, to support unpickling :py:class:`CallError
 <mitogen.core.CallError>`, :py:class:`mitogen.core.Sender`,and
-:py:class:`Context <mitogen.core.Context>`.
+:py:class:`Context <mitogen.core.Context>`. If you want to allow the deserialization
+of arbitrary types to, for example, allow passing remote function call arguments of an
+arbitrary type, you can use :py:func:`mitogen.core.set_pickle_whitelist` to set a
+list of allowable patterns that match against a global's 
+:code:`[module].[func]` string.
 
 The choice of Pickle is one area to be revisited later. All accounts suggest it
 cannot be used securely, however few of those accounts appear to be expert, and
 none mention any additional attacks that would not be prevented by using a
 restrictive class whitelist.
+
+In the future, pickled data could include an HMAC that is based upon a
+preshared key (specified by the parent during child boot) to reduce the risk
+of malicioius tampering.
 
 
 The IO Multiplexer
