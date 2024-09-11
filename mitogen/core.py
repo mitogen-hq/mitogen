@@ -72,6 +72,7 @@ import itertools
 import linecache
 import logging
 import os
+import operator
 import pickle as py_pickle
 import pstats
 import signal
@@ -799,6 +800,54 @@ else:
     _Unpickler = pickle.Unpickler
 
 
+class MessageError(Error): pass
+class MessageMagicError(MessageError): pass
+class MessageSizeError(MessageError): pass
+
+
+class MessageHeader(tuple):
+    __slots__ = ()
+    _struct = struct.Struct('>hLLLLLL')
+    MAGIC = 0x4d49  # b'MI'
+    SIZE = _struct.size
+
+    def __new__(cls, magic, dst, src, auth, handle, reply_to, data_size):
+        args = (magic, dst, src, auth, handle, reply_to, data_size)
+        return tuple.__new__(cls, args)
+
+    magic = property(operator.itemgetter(0))
+    dst = property(operator.itemgetter(1))
+    src = property(operator.itemgetter(2))
+    auth = property(operator.itemgetter(3))
+    handle = property(operator.itemgetter(4))
+    reply_to = property(operator.itemgetter(5))
+    data_size = property(operator.itemgetter(6))
+
+    @classmethod
+    def unpack(cls, buffer, max_message_size):
+        self = cls(*cls._struct.unpack(buffer))
+        if self.magic != cls.MAGIC:
+            raise MessageMagicError(
+                'Expected magic %x, got %x' % (cls.MAGIC, self.magic),
+            )
+        if self.data_size > max_message_size:
+            raise MessageSizeError(
+                'Maximum size exceeded (got %d, max %d)'
+                % (self.data_size, max_message_size),
+            )
+        return self
+
+    def pack(self):
+        return self._struct.pack(*self)
+
+    def __repr__(self):
+        return '%s.%s(magic=%d, dst=%d, src=%d, auth=%d, handle=%d, reply_to=%d, data_size=%d)' % (
+            self.__class__.__module__, self.__class__.__name__,
+            self.magic, self.dst, self.src, self.auth, self.handle,
+            self.reply_to, self.data_size,
+        )
+
+
 class Message(object):
     """
     Messages are the fundamental unit of communication, comprising fields from
@@ -842,10 +891,6 @@ class Message(object):
     #: the :class:`mitogen.select.Select` interface. Defaults to :data:`None`.
     receiver = None
 
-    HEADER_FMT = '>hLLLLLL'
-    HEADER_LEN = struct.calcsize(HEADER_FMT)
-    HEADER_MAGIC = 0x4d49  # 'MI'
-
     def __init__(self, **kwargs):
         """
         Construct a message from from the supplied `kwargs`. :attr:`src_id` and
@@ -857,12 +902,11 @@ class Message(object):
         assert isinstance(self.data, BytesType), 'Message data is not Bytes'
 
     def pack(self):
-        return (
-            struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, self.dst_id,
-                        self.src_id, self.auth_id, self.handle,
-                        self.reply_to or 0, len(self.data))
-            + self.data
+        hdr = MessageHeader(
+            MessageHeader.MAGIC, self.dst_id, self.src_id, self.auth_id,
+            self.handle, self.reply_to or 0, len(self.data),
         )
+        return hdr.pack() + self.data
 
     def _unpickle_context(self, context_id, name):
         return _unpickle_context(context_id, name, router=self.router)
@@ -2308,37 +2352,32 @@ class MitogenProtocol(Protocol):
     )
 
     def _receive_one(self, broker):
-        if self._input_buf_len < Message.HEADER_LEN:
+        if self._input_buf_len < MessageHeader.SIZE:
             return False
 
-        msg = Message()
-        msg.router = self._router
-        (magic, msg.dst_id, msg.src_id, msg.auth_id,
-         msg.handle, msg.reply_to, msg_len) = struct.unpack(
-            Message.HEADER_FMT,
-            self._input_buf[0][:Message.HEADER_LEN],
-        )
-
-        if magic != Message.HEADER_MAGIC:
+        try:
+            hdr = MessageHeader.unpack(
+                self._input_buf[0][:MessageHeader.SIZE],
+                self._router.max_message_size,
+            )
+        except MessageMagicError:
             LOG.error(self.corrupt_msg, self.stream.name, self._input_buf[0][:2048])
             self.stream.on_disconnect(broker)
             return False
-
-        if msg_len > self._router.max_message_size:
-            LOG.error('%r: Maximum message size exceeded (got %d, max %d)',
-                      self, msg_len, self._router.max_message_size)
+        except MessageSizeError as exc:
+            LOG.error('%r: %s', self, exc)
             self.stream.on_disconnect(broker)
             return False
 
-        total_len = msg_len + Message.HEADER_LEN
+        total_len = MessageHeader.SIZE + hdr.data_size
         if self._input_buf_len < total_len:
             _vv and IOLOG.debug(
                 '%r: Input too short (want %d, got %d)',
-                self, msg_len, self._input_buf_len - Message.HEADER_LEN
+                self, hdr.data_size, self._input_buf_len - MessageHeader.SIZE
             )
             return False
 
-        start = Message.HEADER_LEN
+        start = MessageHeader.SIZE
         prev_start = start
         remain = total_len
         bits = []
@@ -2350,6 +2389,11 @@ class MitogenProtocol(Protocol):
             prev_start = start
             start = 0
 
+        msg = Message(
+            dst_id=hdr.dst, src_id=hdr.src, auth_id=hdr.auth,
+            handle=hdr.handle, reply_to=hdr.reply_to,
+        )
+        msg.router = self._router
         msg.data = b('').join(bits)
         self._input_buf.appendleft(buf[prev_start+len(bit):])
         self._input_buf_len -= total_len
