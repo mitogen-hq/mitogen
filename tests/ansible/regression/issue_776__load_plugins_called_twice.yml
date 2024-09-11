@@ -3,28 +3,33 @@
 - name: regression/issue_776__load_plugins_called_twice.yml
   hosts: test-targets
   become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
-  gather_facts: yes
+  # Delayed until after the end_play, due to Python version requirements
+  gather_facts: false
   tags:
     - issue_776
   vars:
     ansible_python_interpreter: "{{ pkg_mgr_python_interpreter }}"
     package: rsync  # Chosen to exist in all tested distros/package managers
   tasks:
-    - name: Switch to centos-stream
-      command: dnf --assumeyes --disablerepo="*" --enablerepo=extras swap centos-linux-repos centos-stream-repos
+    # The package management modules require using the same Python version
+    # as the target's package manager libraries. This is sometimes in conflict
+    # with Ansible requirements, e.g. Ansible 10 (ansible-core 2.17) does not
+    # support Python 2.x on targets.
+    - meta: end_play
       when:
-        - ansible_facts.pkg_mgr in ["dnf"]
+        - ansible_version.full is version('2.17', '>=', strict=True)
 
-    - name: Switch to archive.debian.org
-      # Debian 9 has been archived https://lists.debian.org/debian-devel-announce/2023/03/msg00006.html
+    - name: Gather facts manually
+      setup:
+
+    - name: Switch to archived package repositories
       copy:
-        content: |
-          deb http://archive.debian.org/debian stretch main contrib non-free
-        dest: /etc/apt/sources.list
+        dest: "{{ item.dest }}"
+        content: "{{ item.content }}"
         mode: u=rw,go=r
-      when:
-        - ansible_facts.distribution == "Debian"
-        - ansible_facts.distribution_major_version == "9"
+      loop: "{{ pkg_repos_overrides }}"
+      loop_control:
+        label: "{{ item.dest }}"
 
     - name: Add signing keys
       copy:

@@ -11,11 +11,10 @@
   tasks:
     - meta: end_play
       when:
-        # TODO CI currently runs on macOS 11 images in Azure DevOps. MacOS 11
-        #      is no longer supported by homebrew, so the following install
-        #      task fails.
+        # TODO CI currently runs on macOS 12 & which isn't supported by Podman
+        #      version available in Homebrew.
         - ansible_facts.system == 'Darwin'
-        - ansible_facts.distribution_major_version == '11'
+        - ansible_facts.distribution_version is version('13.0', '<', strict=True)
 
     - name: set up test container and run tests inside it
       block:

@@ -2546,7 +2546,7 @@ class Reaper(object):
         # because it is setuid, so this is best-effort only.
         LOG.debug('%r: sending %s', self.proc, SIGNAL_BY_NUM[signum])
         try:
-            os.kill(self.proc.pid, signum)
+            self.proc.send_signal(signum)
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] != errno.EPERM:
@@ -2666,6 +2666,17 @@ class Process(object):
         """
         raise NotImplementedError()
 
+    def send_signal(self, sig):
+        os.kill(self.pid, sig)
+
+    def terminate(self):
+        "Ask the process to gracefully shutdown."
+        self.send_signal(signal.SIGTERM)
+
+    def kill(self):
+        "Ask the operating system to forcefully destroy the process."
+        self.send_signal(signal.SIGKILL)
+
 
 class PopenProcess(Process):
     """
@@ -2681,6 +2692,9 @@ class PopenProcess(Process):
 
     def poll(self):
         return self.proc.poll()
+
+    def send_signal(self, sig):
+        self.proc.send_signal(sig)
 
 
 class ModuleForwarder(object):
