@@ -147,7 +147,6 @@ LINUX_TIOCGPTN = _ioctl_cast(2147767344)
 LINUX_TIOCSPTLCK = _ioctl_cast(1074025521)
 
 IS_LINUX = os.uname()[0] == 'Linux'
-
 IS_SOLARIS = os.uname()[0] == 'SunOS'
 
 
@@ -483,7 +482,7 @@ def openpty():
     master_fp = os.fdopen(master_fd, 'r+b', 0)
     slave_fp = os.fdopen(slave_fd, 'r+b', 0)
     if not IS_SOLARIS:
-      disable_echo(master_fd)
+        disable_echo(master_fd)
     disable_echo(slave_fd)
     mitogen.core.set_block(slave_fd)
     return master_fp, slave_fp
