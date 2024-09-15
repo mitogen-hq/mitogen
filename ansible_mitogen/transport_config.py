@@ -62,6 +62,7 @@ from __future__ import unicode_literals
 __metaclass__ = type
 
 import abc
+import logging
 import os
 import ansible.utils.shlex
 import ansible.constants as C
@@ -72,6 +73,9 @@ from ansible.module_utils.six import with_metaclass
 from ansible.module_utils.parsing.convert_bool import boolean
 
 import mitogen.core
+
+
+LOG = logging.getLogger(__name__)
 
 
 def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python):
@@ -412,6 +416,13 @@ class PlayContextSpec(Spec):
         # used to run interpreter discovery
         self._action = connection._action
 
+    def _connection_option(self, name):
+        try:
+            return self._connection.get_option(name, hostvars=self._task_vars)
+        except KeyError:
+            LOG.debug('Used PlayContext fallback for option=%r', name)
+            return getattr(self._play_context, name)
+
     def transport(self):
         return self._transport
 
@@ -449,7 +460,7 @@ class PlayContextSpec(Spec):
         return optional_secret(become_pass)
 
     def password(self):
-        return optional_secret(self._play_context.password)
+        return optional_secret(self._connection_option('password'))
 
     def port(self):
         return self._play_context.port
