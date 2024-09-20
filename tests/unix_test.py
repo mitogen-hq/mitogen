@@ -65,17 +65,13 @@ class ListenerTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_constructor_basic(self):
         listener = self.klass.build_stream(router=self.router)
-        capture = testlib.LogCapturer()
-        capture.start()
-        try:
-            self.assertFalse(mitogen.unix.is_path_dead(listener.protocol.path))
-            os.unlink(listener.protocol.path)
-            # ensure we catch 0 byte read error log message
-            self.broker.shutdown()
-            self.broker.join()
-            self.broker_shutdown = True
-        finally:
-            capture.stop()
+        self.assertFalse(mitogen.unix.is_path_dead(listener.protocol.path))
+        os.unlink(listener.protocol.path)
+
+        # ensure we catch 0 byte read error log message
+        self.broker.shutdown()
+        self.broker.join()
+        self.broker_shutdown = True
 
 
 class ClientTest(testlib.TestCase):

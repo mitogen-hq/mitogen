@@ -1,92 +1,94 @@
 # Verify copy module for small and large files, and inline content.
+# To exercise https://github.com/mitogen-hq/mitogen/pull/1110 destination
+# files must have extensions and loops must use `with_items:`.
 
 - name: integration/action/copy.yml
   hosts: test-targets
-  tasks:
-    - name: Create tiny file
-      copy:
-        dest: /tmp/copy-tiny-file
-        content:
-          this is a tiny file.
-      delegate_to: localhost
-      run_once: true
-
-    - name: Create large file
-      copy:
-        dest: /tmp/copy-large-file
-        # Must be larger than Connection.SMALL_SIZE_LIMIT.
-        content: "{% for x in range(200000) %}x{% endfor %}"
-      delegate_to: localhost
-      run_once: true
-
-    - name: Cleanup copied files
-      file:
-        state: absent
-        path: "{{item}}"
-      with_items:
-      - /tmp/copy-tiny-file.out
-      - /tmp/copy-large-file.out
-      - /tmp/copy-tiny-inline-file.out
-      - /tmp/copy-large-inline-file.out
-
-    - name: Copy large file
-      copy:
-        dest: /tmp/copy-large-file.out
-        src: /tmp/copy-large-file
-
-    - name: Copy tiny file
-      copy:
+  vars:
+    sourced_files:
+      - src: /tmp/copy-tiny-file
         dest: /tmp/copy-tiny-file.out
-        src: /tmp/copy-tiny-file
+        content: this is a tiny file.
+        expected_checksum: f29faa9a6f19a700a941bf2aa5b281643c4ec8a0
+      - src: /tmp/copy-large-file
+        dest: /tmp/copy-large-file.out
+        content: "{{ 'x' * 200000 }}"
+        expected_checksum: 62951f943c41cdd326e5ce2b53a779e7916a820d
 
-    - name: Copy tiny inline file
-      copy:
-        dest: /tmp/copy-tiny-inline-file.out
-        content: "tiny inline content"
-
-    - name: Copy large inline file
-      copy:
-        dest: /tmp/copy-large-inline-file.out
+    inline_files:
+      - dest: /tmp/copy-tiny-inline-file.out
+        content: tiny inline content
+        expected_checksum: b26dd6444595e2bdb342aa0a91721b57478b5029
+      - dest: /tmp/copy-large-inline-file.out
         content: |
-          {% for x in range(200000) %}y{% endfor %}
+          {{ 'y' * 200000 }}
+        expected_checksum: d675f47e467eae19e49032a2cc39118e12a6ee72
+
+    files: "{{ sourced_files + inline_files }}"
+  tasks:
+    - name: Create sourced files
+      copy:
+        dest: "{{ item.src }}"
+        content: "{{ item.content }}"
+        mode: u=rw,go=r
+      with_items: "{{ sourced_files }}"
+      loop_control:
+        label: "{{ item.src }}"
+      delegate_to: localhost
+      run_once: true
+
+    - name: Cleanup lingering destination files
+      file:
+        path: "{{ item.dest }}"
+        state: absent
+      with_items: "{{ files }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: Copy sourced files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: u=rw,go=r
+      with_items: "{{ sourced_files }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: Copy inline files
+      copy:
+        dest: "{{ item.dest }}"
+        content: "{{ item.content }}"
+        mode: u=rw,go=r
+      with_items: "{{ inline_files }}"
+      loop_control:
+        label: "{{ item.dest }}"
 
     # stat results
 
     - name: Stat copied files
       stat:
-        path: "{{item}}"
-      with_items:
-      - /tmp/copy-tiny-file.out
-      - /tmp/copy-large-file.out
-      - /tmp/copy-tiny-inline-file.out
-      - /tmp/copy-large-inline-file.out
+        path: "{{ item.dest }}"
+      with_items: "{{ files }}"
+      loop_control:
+        label: "{{ item.dest }}"
       register: stat
 
     - assert:
         that:
-        - stat.results[0].stat.checksum == "f29faa9a6f19a700a941bf2aa5b281643c4ec8a0"
-        - stat.results[1].stat.checksum == "62951f943c41cdd326e5ce2b53a779e7916a820d"
-        - stat.results[2].stat.checksum == "b26dd6444595e2bdb342aa0a91721b57478b5029"
-        - stat.results[3].stat.checksum == "d675f47e467eae19e49032a2cc39118e12a6ee72"
-        fail_msg: stat={{stat}}
+          - item.stat.checksum == item.item.expected_checksum
+        quiet: true  # Avoid spamming stdout with 400 kB of item.item.content
+        fail_msg: item={{ item }}
+      with_items: "{{ stat.results }}"
+      loop_control:
+        label: "{{ item.stat.path }}"
 
-    - name: Cleanup files
+    - name: Cleanup destination files
       file:
+        path: "{{ item.dest }}"
         state: absent
-        path: "{{item}}"
-      with_items:
-      - /tmp/copy-tiny-file
-      - /tmp/copy-tiny-file.out
-      - /tmp/copy-no-mode
-      - /tmp/copy-no-mode.out
-      - /tmp/copy-with-mode
-      - /tmp/copy-with-mode.out
-      - /tmp/copy-large-file
-      - /tmp/copy-large-file.out
-      - /tmp/copy-tiny-inline-file.out
-      - /tmp/copy-large-inline-file
-      - /tmp/copy-large-inline-file.out
-
-    # end of cleaning out files (again)
+      with_items: "{{ files }}"
+      loop_control:
+        label: "{{ item.dest }}"
   tags:
     - copy
+    - issue_1110
