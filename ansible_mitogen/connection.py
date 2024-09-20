@@ -1129,6 +1129,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.get_chain().call(
             ansible_mitogen.target.transfer_file,
             context=self.binding.get_child_service_context(),
-            in_path=in_path,
-            out_path=out_path
+            in_path=ansible_mitogen.utils.unsafe.cast(in_path),
+            out_path=ansible_mitogen.utils.unsafe.cast(out_path)
         )

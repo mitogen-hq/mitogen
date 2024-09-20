@@ -146,6 +146,17 @@ def data_path(suffix):
     return path
 
 
+def retry(fn, on, max_attempts, delay):
+    for i in range(max_attempts):
+        try:
+            return fn()
+        except on:
+            if i >= max_attempts - 1:
+                raise
+            else:
+                time.sleep(delay)
+
+
 def threading__thread_is_alive(thread):
     """Return whether the thread is alive (Python version compatibility shim).
 
@@ -562,18 +573,24 @@ class DockerizedSshDaemon(object):
         wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
 
     def check_processes(self):
-        args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
+        # Get Accounting name (ucomm) & command line (args) of each process
+        # in the container. No truncation (-ww). No column headers (foo=).
+        ps_output = subprocess.check_output([
+            'docker', 'exec', self.container_name,
+            'ps', '-w', '-w', '-o', 'ucomm=', '-o', 'args=',
+        ])
+        ps_lines = ps_output.decode().splitlines()
+        processes = [tuple(line.split(None, 1)) for line in ps_lines]
         counts = {}
-        for comm in subprocess.check_output(args).decode().splitlines():
-            comm = comm.strip()
-            counts[comm] = counts.get(comm, 0) + 1
+        for ucomm, _ in processes:
+            counts[ucomm] = counts.get(ucomm, 0) + 1
 
         if counts != {'ps': 1, 'sshd': 1}:
             assert 0, (
                 'Docker container %r contained extra running processes '
                 'after test completed: %r' % (
                     self.container_name,
-                    counts
+                    processes,
                 )
             )
 
@@ -630,7 +647,12 @@ class DockerMixin(RouterMixin):
 
     @classmethod
     def tearDownClass(cls):
-        cls.dockerized_ssh.check_processes()
+        retry(
+            cls.dockerized_ssh.check_processes,
+            on=AssertionError,
+            max_attempts=5,
+            delay=0.1,
+        )
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 
