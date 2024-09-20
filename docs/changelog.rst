@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`950` Fix Solaris/Illumos/SmartOS compatibility with become
 * :gh:issue:`1087` Fix :exc:`mitogen.core.StreamError` when Ansible template
   module is called with a ``dest:`` filename that has an extension
 * :gh:issue:`1110` Fix :exc:`mitogen.core.StreamError` when Ansible copy
