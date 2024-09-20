@@ -6,11 +6,13 @@ import glob
 import os
 import signal
 import sys
-import textwrap
+
+import jinja2
 
 import ci_lib
 
 
+TEMPLATES_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible/templates')
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
 HOSTS_DIR = os.path.join(ci_lib.TMP, 'hosts')
 
@@ -52,37 +54,19 @@ with ci_lib.Fold('job_setup'):
         distros[container['distro']].append(container['name'])
         families[container['family']].append(container['name'])
 
+    jinja_env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(searchpath=TEMPLATES_DIR),
+        lstrip_blocks=True,  # Remove spaces and tabs from before a block
+        trim_blocks=True,  # Remove first newline after a block
+    )
+    inventory_template = jinja_env.get_template('test-targets.j2')
     inventory_path = os.path.join(HOSTS_DIR, 'target')
+
     with open(inventory_path, 'w') as fp:
-        fp.write('[test-targets]\n')
-        fp.writelines(
-            "%(name)s "
-            "ansible_host=%(hostname)s "
-            "ansible_port=%(port)s "
-            "ansible_python_interpreter=%(python_path)s "
-            "ansible_user=mitogen__has_sudo_nopw "
-            "ansible_password=has_sudo_nopw_password"
-            "\n"
-            % container
-            for container in containers
-        )
-
-        for distro, hostnames in sorted(distros.items(), key=lambda t: t[0]):
-            fp.write('\n[%s]\n' % distro)
-            fp.writelines('%s\n' % name for name in hostnames)
-
-        for family, hostnames in sorted(families.items(), key=lambda t: t[0]):
-            fp.write('\n[%s]\n' % family)
-            fp.writelines('%s\n' % name for name in hostnames)
-
-        fp.write(textwrap.dedent(
-            '''
-            [linux:children]
-            test-targets
-
-            [linux_containers:children]
-            test-targets
-            '''
+        fp.write(inventory_template.render(
+            containers=containers,
+            distros=distros,
+            families=families,
         ))
 
     ci_lib.dump_file(inventory_path)

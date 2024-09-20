@@ -18,6 +18,22 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.10 (2024-09-20)
+--------------------
+
+* :gh:issue:`950` Fix Solaris/Illumos/SmartOS compatibility with become
+* :gh:issue:`1087` Fix :exc:`mitogen.core.StreamError` when Ansible template
+  module is called with a ``dest:`` filename that has an extension
+* :gh:issue:`1110` Fix :exc:`mitogen.core.StreamError` when Ansible copy
+  module is called with a file larger than 124 kibibytes
+  (:data:`ansible_mitogen.connection.Connection.SMALL_FILE_LIMIT`)
+* :gh:issue:`905` Initial support for templated ``ansible_ssh_args``,
+  ``ansible_ssh_common_args``, and ``ansible_ssh_extra_args`` variables.
+  NB: play or task scoped variables will probably still fail.
+* :gh:issue:`694` CI: Fixed a race condition and some resource leaks causing
+  some of intermittent failures when running the test suite.
+
+
 v0.3.9 (2024-08-13)
 -------------------
 
