@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-Unreleased
-----------
+v0.3.10 (2024-09-20)
+--------------------
 
 * :gh:issue:`950` Fix Solaris/Illumos/SmartOS compatibility with become
 * :gh:issue:`1087` Fix :exc:`mitogen.core.StreamError` when Ansible template
