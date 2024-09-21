@@ -258,7 +258,7 @@ jobs:
               exit 1
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   macos:
     name: macos ${{ matrix.tox_env }}
@@ -345,7 +345,7 @@ jobs:
               exit 1
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   # https://github.com/marketplace/actions/alls-green
   check:

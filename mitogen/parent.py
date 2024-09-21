@@ -1478,7 +1478,7 @@ class Connection(object):
         # `import os` here, instead of stage 1, to save a few bytes.
         # `sys.path=...` for https://github.com/python/cpython/issues/115911.
         return self.get_python_argv() + [
-            '-c',
+            '-b', '-c',
             'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
             'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
         ]

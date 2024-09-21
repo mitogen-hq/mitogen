@@ -45,7 +45,8 @@ extra = {
 if 'ANSIBLE_ARGV' in os.environ:
     args = eval(os.environ['ANSIBLE_ARGV'])
 else:
-    args = ['ansible-playbook']
+    bin_dir = os.path.dirname(sys.executable)
+    args = ['python', '-b', os.path.join(bin_dir, 'ansible-playbook')]
 
 args += ['-e', json.dumps(extra)]
 args += sys.argv[1:]
