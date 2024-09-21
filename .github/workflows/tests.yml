@@ -157,7 +157,7 @@ jobs:
               exit 1
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   macos:
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
@@ -255,7 +255,7 @@ jobs:
               PYTHON="/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7"
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   # https://github.com/marketplace/actions/alls-green
   check:

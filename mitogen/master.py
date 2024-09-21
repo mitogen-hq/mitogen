@@ -169,8 +169,8 @@ def is_stdlib_path(path):
 
 def get_child_modules(path, fullname):
     """
-    Return the suffixes of submodules directly neated beneath of the package
-    directory at `path`.
+    Return the suffixes for any direct submodules in package named fullname,
+    located at path.
 
     :param str path:
         Path to the module's source code on disk, or some PEP-302-recognized
@@ -1051,6 +1051,7 @@ class ModuleFinder(object):
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
                 and u'six.moves' not in name  # TODO: crap
+                and name != u'__main__'
             )
         ))
 
