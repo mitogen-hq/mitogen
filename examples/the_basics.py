@@ -18,7 +18,6 @@ import mitogen.service
 import mitogen.utils
 
 
-
 def get_file_contents(path):
     """
     Get the contents of a file.
@@ -77,7 +76,6 @@ def md5sum(path):
     Return the MD5 checksum for a file.
     """
     return hashlib.md5(get_file_contents(path)).hexdigest()
-
 
 
 def work_on_machine(context):

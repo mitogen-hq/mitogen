@@ -35,18 +35,9 @@ Construct new children via the OpenSSH client.
 import logging
 import re
 
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    from pipes import quote as shlex_quote
-
 import mitogen.parent
+from mitogen.compat import shlex_quote
 from mitogen.core import b
-
-try:
-    any
-except NameError:
-    from mitogen.core import any
 
 
 LOG = logging.getLogger(__name__)

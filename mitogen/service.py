@@ -39,17 +39,9 @@ import threading
 
 import mitogen.core
 import mitogen.select
+from mitogen.core import all
 from mitogen.core import b
 from mitogen.core import str_rpartition
-
-try:
-    all
-except NameError:
-    def all(it):
-        for elem in it:
-            if not elem:
-                return False
-        return True
 
 
 LOG = logging.getLogger(__name__)
