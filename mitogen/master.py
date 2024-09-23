@@ -74,26 +74,17 @@ import mitogen.core
 import mitogen.minify
 import mitogen.parent
 
+from mitogen.core import any
 from mitogen.core import b
 from mitogen.core import IOLOG
 from mitogen.core import LOG
+from mitogen.core import next
 from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
-
-try:
-    any
-except NameError:
-    from mitogen.core import any
-
-try:
-    next
-except NameError:
-    from mitogen.core import next
-
 
 RLOG = logging.getLogger('mitogen.ctx')
 
@@ -166,8 +157,8 @@ def is_stdlib_path(path):
 
 def get_child_modules(path, fullname):
     """
-    Return the suffixes of submodules directly neated beneath of the package
-    directory at `path`.
+    Return the suffixes for any direct submodules in package named fullname,
+    located at path.
 
     :param str path:
         Path to the module's source code on disk, or some PEP-302-recognized
@@ -1003,6 +994,7 @@ class ModuleFinder(object):
             fullname, _, _ = str_rpartition(to_text(fullname), u'.')
             yield fullname
 
+    def _
     def find_related_imports(self, fullname):
         """
         Return a list of non-stdlib modules that are directly imported by
@@ -1048,6 +1040,7 @@ class ModuleFinder(object):
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
                 and u'six.moves' not in name  # TODO: crap
+                and name != u'__main__'
             )
         ))
 
@@ -1063,12 +1056,14 @@ class ModuleFinder(object):
             for which source code can be retrieved
         :type fullname: str
         """
+        #LOG.info('find_related(%r)', fullname)
         stack = [fullname]
         found = set()
 
         while stack:
             name = stack.pop(0)
             names = self.find_related_imports(name)
+            #LOG.info('find_related(%r) -> %r -> %r', fullname, name, names)
             stack.extend(set(names).difference(set(found).union(stack)))
             found.update(names)
 

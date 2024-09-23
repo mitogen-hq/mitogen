@@ -103,19 +103,9 @@ except ImportError:
     cProfile = None
 
 try:
-    import thread
-except ImportError:
-    import threading as thread
-
-try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
-try:
-    from cStringIO import StringIO as BytesIO
-except ImportError:
-    from io import BytesIO
 
 try:
     BaseException
@@ -169,31 +159,32 @@ STUB_CALL_SERVICE = 111
 #:    :meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 IS_DEAD = 999
 
-try:
-    BaseException
-except NameError:
-    BaseException = Exception
-
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if PY3:
+    import _thread as thread
+    from io import BytesIO
     b = str.encode
     BytesType = bytes
     UnicodeType = str
     FsPathTypes = (str,)
     BufferType = lambda buf, start: memoryview(buf)[start:]
+    iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
     long = int
 else:
+    import thread
+    from cStringIO import StringIO as BytesIO
     b = str
     BytesType = str
     FsPathTypes = (str, unicode)
     BufferType = buffer
     UnicodeType = unicode
+    iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
 
 AnyTextType = (BytesType, UnicodeType)
 
 try:
-    next
+    next = next
 except NameError:
     next = lambda it: it.next()
 
@@ -313,14 +304,14 @@ class Kwargs(dict):
     """
     if PY3:
         def __init__(self, dct):
-            for k, v in dct.items():
+            for k, v in iteritems(dct):
                 if type(k) is bytes:
                     self[k.decode()] = v
                 else:
                     self[k] = v
     elif sys.version_info < (2, 6, 5):
         def __init__(self, dct):
-            for k, v in dct.iteritems():
+            for k, v in iteritems(dct):
                 if type(k) is unicode:
                     k, _ = encodings.utf_8.encode(k)
                 self[k] = v
@@ -400,12 +391,19 @@ now = getattr(time, 'monotonic', time.time)
 
 # Python 2.4
 try:
-    any
+    all, any = all, any
 except NameError:
+    def all(it):
+        for elem in it:
+            if not elem:
+                return False
+        return True
+
     def any(it):
         for elem in it:
             if elem:
                 return True
+        return False
 
 
 def _partition(s, sep, find):
