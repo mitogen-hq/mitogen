@@ -52,6 +52,8 @@ import tempfile
 import traceback
 import types
 
+from ansible.module_utils.six.moves import shlex_quote
+
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import to_text
@@ -70,12 +72,6 @@ try:
 except ImportError:
     from io import StringIO
 
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    from pipes import quote as shlex_quote
-
-
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
@@ -92,7 +88,6 @@ for symbol in 'res_init', '__res_init':
     except AttributeError:
         pass
 
-iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
 
@@ -600,7 +595,7 @@ class TemporaryEnvironment(object):
     def __init__(self, env=None):
         self.original = dict(os.environ)
         self.env = env or {}
-        for key, value in iteritems(self.env):
+        for key, value in mitogen.core.iteritems(self.env):
             key = mitogen.core.to_text(key)
             value = mitogen.core.to_text(value)
             if value is None:

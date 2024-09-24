@@ -55,12 +55,6 @@ import types
 import mitogen.core
 import mitogen.parent
 import mitogen.service
-try:
-    reduce
-except NameError:
-    # Python 3.x.
-    from functools import reduce
-
 
 # Ansible since PR #41749 inserts "import __main__" into
 # ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
@@ -70,6 +64,9 @@ if not sys.modules.get(str('__main__')):
     sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
 
 import ansible.module_utils.json_utils
+
+from ansible.module_utils.six.moves import reduce
+
 import ansible_mitogen.runner
 
 

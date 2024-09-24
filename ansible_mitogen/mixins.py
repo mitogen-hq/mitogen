@@ -35,11 +35,6 @@ import pwd
 import random
 import traceback
 
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    from pipes import quote as shlex_quote
-
 import ansible
 import ansible.constants
 import ansible.plugins
@@ -48,6 +43,7 @@ import ansible.utils.unsafe_proxy
 import ansible.vars.clean
 
 from ansible.module_utils.common.text.converters import to_bytes, to_text
+from ansible.module_utils.six.moves import shlex_quote
 from ansible.parsing.utils.jsonify import jsonify
 
 import mitogen.core
