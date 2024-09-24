@@ -65,20 +65,11 @@ import abc
 import os
 import ansible.utils.shlex
 import ansible.constants as C
+import ansible.executor.interpreter_discovery
+import ansible.utils.unsafe_proxy
 
 from ansible.module_utils.six import with_metaclass
 from ansible.module_utils.parsing.convert_bool import boolean
-
-# this was added in Ansible >= 2.8.0; fallback to the default interpreter if necessary
-try:
-    from ansible.executor.interpreter_discovery import discover_interpreter
-except ImportError:
-    discover_interpreter = lambda action,interpreter_name,discovery_mode,task_vars: '/usr/bin/python'
-
-try:
-    from ansible.utils.unsafe_proxy import AnsibleUnsafeText
-except ImportError:
-    from ansible.vars.unsafe_proxy import AnsibleUnsafeText
 
 import mitogen.core
 
@@ -115,12 +106,13 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
             action._finding_python_interpreter = True
             # fake pipelining so discover_interpreter can be happy
             action._connection.has_pipelining = True
-            s = AnsibleUnsafeText(discover_interpreter(
+            s = ansible.executor.interpreter_discovery.discover_interpreter(
                 action=action,
                 interpreter_name=interpreter_name,
                 discovery_mode=s,
-                task_vars=task_vars))
-
+                task_vars=task_vars,
+            )
+            s = ansible.utils.unsafe_proxy.AnsibleUnsafeText(s)
             # cache discovered interpreter
             task_vars['ansible_facts'][discovered_interpreter_config] = s
             action._connection.has_pipelining = False
