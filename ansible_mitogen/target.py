@@ -39,6 +39,7 @@ __metaclass__ = type
 import errno
 import grp
 import json
+import logging
 import operator
 import os
 import pwd
@@ -51,25 +52,14 @@ import tempfile
 import traceback
 import types
 
-# Absolute imports for <2.5.
-logging = __import__('logging')
-
 import mitogen.core
 import mitogen.parent
 import mitogen.service
-from mitogen.core import b
-
 try:
     reduce
 except NameError:
     # Python 3.x.
     from functools import reduce
-
-try:
-    BaseException
-except NameError:
-    # Python 2.4
-    BaseException = Exception
 
 
 # Ansible since PR #41749 inserts "import __main__" into
@@ -615,8 +605,8 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     stdout, stderr = proc.communicate(in_data)
 
     if emulate_tty:
-        stdout = stdout.replace(b('\n'), b('\r\n'))
-    return proc.returncode, stdout, stderr or b('')
+        stdout = stdout.replace(b'\n', b'\r\n')
+    return proc.returncode, stdout, stderr or b''
 
 
 def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
