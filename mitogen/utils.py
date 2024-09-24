@@ -37,13 +37,7 @@ import sys
 import mitogen.core
 import mitogen.master
 
-
-iteritems = getattr(dict, 'iteritems', dict.items)
-
-if mitogen.core.PY3:
-    iteritems = dict.items
-else:
-    iteritems = dict.iteritems
+from mitogen.core import iteritems
 
 
 def setup_gil():

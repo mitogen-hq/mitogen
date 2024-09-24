@@ -746,9 +746,7 @@ def set_file_mode(path, spec, fd=None):
     """
     Update the permissions of a file using the same syntax as chmod(1).
     """
-    if isinstance(spec, int):
-        new_mode = spec
-    elif not mitogen.core.PY3 and isinstance(spec, long):
+    if isinstance(spec, mitogen.core.integer_types):
         new_mode = spec
     elif spec.isdigit():
         new_mode = int(spec, 8)

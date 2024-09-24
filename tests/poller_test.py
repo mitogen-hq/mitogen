@@ -8,13 +8,9 @@ import unittest
 import mitogen.core
 import mitogen.parent
 
-import testlib
+from mitogen.core import next
 
-try:
-    next
-except NameError:
-    # Python 2.4
-    from mitogen.core import next
+import testlib
 
 
 class SockMixin(object):

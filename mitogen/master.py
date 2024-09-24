@@ -74,26 +74,17 @@ import mitogen.core
 import mitogen.minify
 import mitogen.parent
 
+from mitogen.core import any
 from mitogen.core import b
 from mitogen.core import IOLOG
 from mitogen.core import LOG
+from mitogen.core import next
 from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
-
-try:
-    any
-except NameError:
-    from mitogen.core import any
-
-try:
-    next
-except NameError:
-    from mitogen.core import next
-
 
 RLOG = logging.getLogger('mitogen.ctx')
 
