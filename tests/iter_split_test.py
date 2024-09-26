@@ -2,11 +2,7 @@ import unittest
 
 import mitogen.core
 
-try:
-    next
-except NameError:
-    def next(it):
-        return it.next()
+from mitogen.core import next
 
 
 class IterSplitTest(unittest.TestCase):
