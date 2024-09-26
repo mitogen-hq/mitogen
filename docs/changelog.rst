@@ -29,6 +29,7 @@ Unreleased
   releases before 2.10
 * :gh:issue:`1127` :mod:`ansible_mitogen`: Consolidate Python 2 & 3
   compatibility
+* :gh:issue:`1128` CI: Start migration from Azure DevOps to GitHub Actions
 
 
 v0.3.10 (2024-09-20)
