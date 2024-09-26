@@ -56,15 +56,13 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
-try:
-    import thread
-except ImportError:
-    import threading as thread
-
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import bytes_partition
 from mitogen.core import IOLOG
+from mitogen.core import itervalues
+from mitogen.core import next
+from mitogen.core import thread
 
 
 LOG = logging.getLogger(__name__)
@@ -79,15 +77,6 @@ try:
 except IOError:
     SELINUX_ENABLED = False
 
-
-try:
-    next
-except NameError:
-    # Python 2.4/2.5
-    from mitogen.core import next
-
-
-itervalues = getattr(dict, 'itervalues', dict.values)
 
 if mitogen.core.PY3:
     xrange = range
