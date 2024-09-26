@@ -27,3 +27,6 @@ class SlaveTest(testlib.RouterMixin, testlib.TestCase):
         # Subsequent master allocation does not collide
         c2 = self.router.local()
         self.assertEqual(1002, c2.context_id)
+
+        context.shutdown()
+        c2.shutdown()

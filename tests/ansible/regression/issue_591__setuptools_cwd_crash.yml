@@ -19,9 +19,6 @@
 
   # Will crash if process has a nonexistent CWD.
   - custom_python_os_getcwd:
-      script: |
-        import os
-        self._connection.get_chain().call(os.getcwd)
   tags:
     - issue_591
     - mitogen_only

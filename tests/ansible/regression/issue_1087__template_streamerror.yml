@@ -1,0 +1,43 @@
+- name: regression/issue_1087__template_streamerror.yml
+  # Ansible's template module has been seen to raise mitogen.core.StreamError
+  # iif  there is a with_items loop and the destination path has an extension.
+  # This printed an error message and left file permissions incorrect,
+  # but did not cause the task/playbook to fail.
+  hosts: test-targets
+  gather_facts: false
+  become: false
+  vars:
+    foos:
+      - dest: /tmp/foo
+      - dest: /tmp/foo.txt
+    foo: Foo
+    bar: Bar
+  tasks:
+    - block:
+        - name: Test template does not cause StreamError
+          delegate_to: localhost
+          run_once: true
+          environment:
+            ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+          command:
+            cmd: >
+              ansible-playbook
+              {% for inv in ansible_inventory_sources %}
+              -i "{{ inv }}"
+              {% endfor %}
+              regression/template_test.yml
+            chdir: ../
+          register: issue_1087_cmd
+          failed_when:
+            - issue_1087_cmd is failed
+              or issue_1087_cmd.stdout is search('ERROR|mitogen\.core\.CallError')
+              or issue_1087_cmd.stderr is search('ERROR|mitogen\.core\.CallError')
+
+      always:
+        - name: Cleanup
+          file:
+            path: "{{ item.dest }}"
+            state: absent
+          with_items: "{{ foos }}"
+  tags:
+    - issue_1087

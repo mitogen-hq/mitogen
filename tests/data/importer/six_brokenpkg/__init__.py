@@ -53,4 +53,4 @@ if _system_six:
 else:
     from . import _six as six
 six_py_file = '{0}.py'.format(os.path.splitext(six.__file__)[0])
-exec(open(six_py_file, 'rb').read())
+with open(six_py_file, 'rb') as f: exec(f.read())

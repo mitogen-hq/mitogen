@@ -51,6 +51,12 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 
+DISTRO = os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')
+IMAGE_TEMPLATE = os.environ.get(
+    'MITOGEN_TEST_IMAGE_TEMPLATE',
+    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+)
+
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
 ANSIBLE_LIB_DIR =               os.path.join(TESTS_DIR, 'ansible', 'lib')
 ANSIBLE_MODULE_UTILS_DIR =      os.path.join(TESTS_DIR, 'ansible', 'lib', 'module_utils')
@@ -144,6 +150,17 @@ def data_path(suffix):
         # SSH is funny about private key permissions.
         os.chmod(path, int('0600', 8))
     return path
+
+
+def retry(fn, on, max_attempts, delay):
+    for i in range(max_attempts):
+        try:
+            return fn()
+        except on:
+            if i >= max_attempts - 1:
+                raise
+            else:
+                time.sleep(delay)
 
 
 def threading__thread_is_alive(thread):
@@ -498,6 +515,7 @@ class TestCase(unittest.TestCase):
 
 
 def get_docker_host():
+    # Duplicated in ci_lib
     url = os.environ.get('DOCKER_HOST')
     if url in (None, 'http+docker://localunixsocket'):
         return 'localhost'
@@ -538,19 +556,23 @@ class DockerizedSshDaemon(object):
         ]
         subprocess.check_output(args)
 
-    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
-        if '-'  in mitogen_test_distro:
-            distro, _py3 = mitogen_test_distro.split('-')
-        else:
-            distro = mitogen_test_distro
-            _py3 = None
+    def __init__(self, distro=DISTRO, image_template=IMAGE_TEMPLATE):
+        # Code duplicated in ci_lib.py, both should be updated together
+        distro_pattern = re.compile(r'''
+            (?P<distro>(?P<family>[a-z]+)[0-9]+)
+            (?:-(?P<py>py3))?
+            (?:\*(?P<count>[0-9]+))?
+            ''',
+            re.VERBOSE,
+        )
+        d = distro_pattern.match(distro).groupdict(default=None)
 
-        if _py3 == 'py3':
+        if d.pop('py') == 'py3':
             self.python_path = '/usr/bin/python3'
         else:
             self.python_path = '/usr/bin/python'
 
-        self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
+        self.image = image_template % d
         self.start_container()
         self.host = self.get_host()
         self.port = self.get_port(self.container_name)
@@ -562,18 +584,24 @@ class DockerizedSshDaemon(object):
         wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
 
     def check_processes(self):
-        args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
+        # Get Accounting name (ucomm) & command line (args) of each process
+        # in the container. No truncation (-ww). No column headers (foo=).
+        ps_output = subprocess.check_output([
+            'docker', 'exec', self.container_name,
+            'ps', '-w', '-w', '-o', 'ucomm=', '-o', 'args=',
+        ])
+        ps_lines = ps_output.decode().splitlines()
+        processes = [tuple(line.split(None, 1)) for line in ps_lines]
         counts = {}
-        for comm in subprocess.check_output(args).decode().splitlines():
-            comm = comm.strip()
-            counts[comm] = counts.get(comm, 0) + 1
+        for ucomm, _ in processes:
+            counts[ucomm] = counts.get(ucomm, 0) + 1
 
         if counts != {'ps': 1, 'sshd': 1}:
             assert 0, (
                 'Docker container %r contained extra running processes '
                 'after test completed: %r' % (
                     self.container_name,
-                    counts
+                    processes,
                 )
             )
 
@@ -584,6 +612,9 @@ class DockerizedSshDaemon(object):
 
 class BrokerMixin(object):
     broker_class = mitogen.master.Broker
+
+    # Flag for tests that shutdown the broker themself
+    # e.g. unix_test.ListenerTest
     broker_shutdown = False
 
     def setUp(self):
@@ -630,7 +661,12 @@ class DockerMixin(RouterMixin):
 
     @classmethod
     def tearDownClass(cls):
-        cls.dockerized_ssh.check_processes()
+        retry(
+            cls.dockerized_ssh.check_processes,
+            on=AssertionError,
+            max_attempts=5,
+            delay=0.1,
+        )
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 

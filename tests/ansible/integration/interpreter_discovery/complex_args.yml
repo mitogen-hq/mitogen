@@ -9,6 +9,13 @@
       https_proxy: "{{ lookup('env', 'https_proxy') | default(omit) }}"
       no_proxy: "{{ lookup('env', 'no_proxy') | default(omit) }}"
   tasks:
+    # Ansible releases after June 2024 quote ansible_python_interpreter
+    # https://github.com/ansible/ansible/pull/83365
+    - meta: end_play
+      when:
+        - not is_mitogen
+        - ansible_version.full is version('2.17.1', '>=', strict=True)
+
     - name: create temp file to source
       file:
         path: /tmp/fake
@@ -25,8 +32,7 @@
     #     special_python: source /tmp/fake && python
     - name: set python using sourced file
       set_fact:
-        # Avoid 2.x vs 3.x cross-compatiblity issues (that I can't remember the exact details of).
-        special_python: "source /tmp/fake || true && python{{ ansible_facts.python.version.major }}"
+        special_python: "source /tmp/fake || true && {{ ansible_facts.python.executable }}"
 
     - name: run get_url with specially-sourced python
       uri:

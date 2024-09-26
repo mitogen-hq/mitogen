@@ -1,5 +1,5 @@
+import logging
 import os
-import signal
 import sys
 import tempfile
 import threading
@@ -54,7 +54,9 @@ def do_detach(econtext):
 class DetachReapTest(testlib.RouterMixin, testlib.TestCase):
     def test_subprocess_preserved_on_shutdown(self):
         c1 = self.router.local()
+        c1_stream = self.router.stream_by_id(c1.context_id)
         pid = c1.call(os.getpid)
+        self.assertEqual(pid, c1_stream.conn.proc.pid)
 
         l = mitogen.core.Latch()
         mitogen.core.listen(c1, 'disconnect', l.put)
@@ -64,8 +66,8 @@ class DetachReapTest(testlib.RouterMixin, testlib.TestCase):
         self.broker.shutdown()
         self.broker.join()
 
-        os.kill(pid, 0)  # succeeds if process still alive
+        self.assertIsNone(os.kill(pid, 0))  # succeeds if process still alive
 
         # now clean up
-        os.kill(pid, signal.SIGTERM)
-        os.waitpid(pid, 0)
+        c1_stream.conn.proc.terminate()
+        c1_stream.conn.proc.proc.wait()

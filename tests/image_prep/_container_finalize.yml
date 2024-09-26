@@ -9,7 +9,7 @@
         --change 'EXPOSE 22'
         --change 'CMD ["/usr/sbin/sshd", "-D"]'
         {{ inventory_hostname }}
-        public.ecr.aws/n5z0e8q9/{{ inventory_hostname }}-test
+        {{ container_image_name }}
       delegate_to: localhost
 
     - name: Stop containers

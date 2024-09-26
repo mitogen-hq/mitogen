@@ -75,34 +75,6 @@ Installation
    ``mitogen_host_pinned`` strategies exists to mimic the ``free`` and
    ``host_pinned`` strategies.
 
-4.
-
-   .. raw:: html
-
-    <form action="https://networkgenomics.com/save-email/" method="post" id="emailform">
-        <input type=hidden name="list_name" value="mitogen-announce">
-
-        Get notified of new releases and important fixes.
-
-        <p>
-        <input type="email" placeholder="E-mail Address" name="email" style="font-size: 105%;"><br>
-        <input name="captcha_1" placeholder="Captcha" style="width: 10ex;">
-        <img class="captcha-image">
-        <a class="captcha-refresh" href="#">&#x21bb</a>
-
-        <button type="submit" style="font-size: 105%;">
-            Subscribe
-        </button>
-
-        </p>
-
-        <div id="emailthanks" style="display:none">
-            Thanks!
-        </div>
-
-        <p>
-    </form>
-
 
 Demo
 ~~~~
@@ -165,7 +137,9 @@ Noteworthy Differences
   +-----------------+-----------------+
   | 8               | 3.9 - 3.12      |
   +-----------------+-----------------+
-  | 9               | 3.10 - 3.12     |
+  | 9               |                 |
+  +-----------------+ 3.10 - 3.12     |
+  | 10              |                 |
   +-----------------+-----------------+
 
   Verify your installation is running one of these versions by checking
@@ -271,15 +245,14 @@ Noteworthy Differences
     * "Module Replacer" style modules are not supported. These rarely appear in
     practice, and light web searches failed to reveal many examples of them.
 
-..
-    * The ``ansible_python_interpreter`` variable is parsed using a restrictive
-      :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
-      FOO=bar python`` or ``source /opt/rh/rh-python36/enable && python``, which
-      occur in practice. Jinja2 templating is also supported for complex task-level
-      interpreter settings. Ansible `documents this
-      <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
-      as an absolute path, however the implementation passes it unquoted through
-      the shell, permitting arbitrary code to be injected.
+* The ``ansible_python_interpreter`` variable is parsed using a restrictive
+  :mod:`shell-like <shlex>` syntax, permitting values such as ``/usr/bin/env
+  FOO=bar python`` or ``source /opt/rh/rh-python36/enable && python``.
+  Jinja2 templating is also supported for complex task-level
+  interpreter settings. Ansible documents `ansible_python_interpreter
+  <https://docs.ansible.com/ansible/latest/user_guide/intro_inventory.html#ansible-python-interpreter>`_
+  as an absolute path and releases since June 2024 (e.g. Ansible 10.1)
+  reflect this. Older Ansible releases passed it to the shell unquoted.
 
 ..
     * Configurations will break that rely on the `hashbang argument splitting
@@ -1418,20 +1391,3 @@ Despite the small margin for optimization, Mitogen still manages **6.2x less
 bandwidth and 1.8x less time**.
 
 .. image:: images/ansible/pcaps/costapp-uk-india.svg
-
-
-.. raw:: html
-
-    <script src="https://networkgenomics.com/static/js/public_all.js?92d49a3a"></script>
-    <script>
-        NetGen = {
-            public: {
-                page_id: "operon",
-                urls: {
-                    save_email: "https://networkgenomics.com/save-email/",
-                    save_email_captcha: "https://networkgenomics.com/save-email/captcha/",
-                }
-            }
-        };
-        setupEmailForm();
-    </script>

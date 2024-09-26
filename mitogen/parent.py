@@ -56,15 +56,13 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
-try:
-    import thread
-except ImportError:
-    import threading as thread
-
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import bytes_partition
 from mitogen.core import IOLOG
+from mitogen.core import itervalues
+from mitogen.core import next
+from mitogen.core import thread
 
 
 LOG = logging.getLogger(__name__)
@@ -79,15 +77,6 @@ try:
 except IOError:
     SELINUX_ENABLED = False
 
-
-try:
-    next
-except NameError:
-    # Python 2.4/2.5
-    from mitogen.core import next
-
-
-itervalues = getattr(dict, 'itervalues', dict.values)
 
 if mitogen.core.PY3:
     xrange = range
@@ -147,6 +136,8 @@ LINUX_TIOCGPTN = _ioctl_cast(2147767344)
 LINUX_TIOCSPTLCK = _ioctl_cast(1074025521)
 
 IS_LINUX = os.uname()[0] == 'Linux'
+IS_SOLARIS = os.uname()[0] == 'SunOS'
+
 
 SIGNAL_BY_NUM = dict(
     (getattr(signal, name), name)
@@ -411,7 +402,7 @@ def _acquire_controlling_tty():
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL:
+    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL and not IS_SOLARIS:
         # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
@@ -479,7 +470,8 @@ def openpty():
 
     master_fp = os.fdopen(master_fd, 'r+b', 0)
     slave_fp = os.fdopen(slave_fd, 'r+b', 0)
-    disable_echo(master_fd)
+    if not IS_SOLARIS:
+        disable_echo(master_fd)
     disable_echo(slave_fd)
     mitogen.core.set_block(slave_fd)
     return master_fp, slave_fp
@@ -2542,7 +2534,7 @@ class Reaper(object):
         # because it is setuid, so this is best-effort only.
         LOG.debug('%r: sending %s', self.proc, SIGNAL_BY_NUM[signum])
         try:
-            os.kill(self.proc.pid, signum)
+            self.proc.send_signal(signum)
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] != errno.EPERM:
@@ -2662,6 +2654,17 @@ class Process(object):
         """
         raise NotImplementedError()
 
+    def send_signal(self, sig):
+        os.kill(self.pid, sig)
+
+    def terminate(self):
+        "Ask the process to gracefully shutdown."
+        self.send_signal(signal.SIGTERM)
+
+    def kill(self):
+        "Ask the operating system to forcefully destroy the process."
+        self.send_signal(signal.SIGKILL)
+
 
 class PopenProcess(Process):
     """
@@ -2677,6 +2680,9 @@ class PopenProcess(Process):
 
     def poll(self):
         return self.proc.poll()
+
+    def send_signal(self, sig):
+        self.proc.send_signal(sig)
 
 
 class ModuleForwarder(object):

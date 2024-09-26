@@ -6,9 +6,6 @@ import sys
 import ci_lib
 
 
-# DebOps only supports Debian.
-ci_lib.DISTROS = ['debian'] * ci_lib.TARGET_COUNT
-
 project_dir = os.path.join(ci_lib.TMP, 'project')
 vars_path = 'ansible/inventory/group_vars/debops_all_hosts.yml'
 inventory_path = 'ansible/inventory/hosts'
@@ -16,7 +13,11 @@ docker_hostname = ci_lib.get_docker_hostname()
 
 
 with ci_lib.Fold('docker_setup'):
-    containers = ci_lib.make_containers(port_offset=500, name_prefix='debops-')
+    containers = ci_lib.container_specs(
+        ['debian*2'],
+        base_port=2700,
+        name_template='debops-target-%(distro)s-%(index)d',
+    )
     ci_lib.start_containers(containers)
 
 

@@ -32,15 +32,13 @@ __metaclass__ = type
 import logging
 import os
 
+import ansible.utils.display
+
 import mitogen.core
 import mitogen.utils
 
-try:
-    from __main__ import display
-except ImportError:
-    import ansible.utils.display
-    display = ansible.utils.display.Display()
 
+display = ansible.utils.display.Display()
 
 #: The process name set via :func:`set_process_name`.
 _process_name = None

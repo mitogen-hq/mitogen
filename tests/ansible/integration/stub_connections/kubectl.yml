@@ -12,7 +12,6 @@
   - custom_python_detect_environment:
     vars:
       ansible_connection: kubectl
-      ansible_python_interpreter: python  # avoid Travis virtualenv breakage
       mitogen_kubectl_path: stub-kubectl.py
     register: out
 

@@ -103,21 +103,6 @@ except ImportError:
     cProfile = None
 
 try:
-    import thread
-except ImportError:
-    import threading as thread
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
-    from cStringIO import StringIO as BytesIO
-except ImportError:
-    from io import BytesIO
-
-try:
     BaseException
 except NameError:
     BaseException = Exception
@@ -169,31 +154,35 @@ STUB_CALL_SERVICE = 111
 #:    :meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 IS_DEAD = 999
 
-try:
-    BaseException
-except NameError:
-    BaseException = Exception
-
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if PY3:
+    import pickle
+    import _thread as thread
+    from io import BytesIO
     b = str.encode
     BytesType = bytes
     UnicodeType = str
     FsPathTypes = (str,)
     BufferType = lambda buf, start: memoryview(buf)[start:]
-    long = int
+    integer_types = (int,)
+    iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
 else:
+    import cPickle as pickle
+    import thread
+    from cStringIO import StringIO as BytesIO
     b = str
     BytesType = str
     FsPathTypes = (str, unicode)
     BufferType = buffer
     UnicodeType = unicode
+    integer_types = (int, long)
+    iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
 
 AnyTextType = (BytesType, UnicodeType)
 
 try:
-    next
+    next = next
 except NameError:
     next = lambda it: it.next()
 
@@ -400,12 +389,19 @@ now = getattr(time, 'monotonic', time.time)
 
 # Python 2.4
 try:
-    any
+    all, any = all, any
 except NameError:
+    def all(it):
+        for elem in it:
+            if not elem:
+                return False
+        return True
+
     def any(it):
         for elem in it:
             if elem:
                 return True
+        return False
 
 
 def _partition(s, sep, find):
@@ -1065,8 +1061,8 @@ class Sender(object):
 
 def _unpickle_sender(router, context_id, dst_handle):
     if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id >= 0 and
-            isinstance(dst_handle, (int, long)) and dst_handle > 0):
+            isinstance(context_id, integer_types) and context_id >= 0 and
+            isinstance(dst_handle, integer_types) and dst_handle > 0):
         raise TypeError('cannot unpickle Sender: bad input or missing router')
     return Sender(Context(router, context_id), dst_handle)
 
@@ -2508,7 +2504,7 @@ class Context(object):
 
 
 def _unpickle_context(context_id, name, router=None):
-    if not (isinstance(context_id, (int, long)) and context_id >= 0 and (
+    if not (isinstance(context_id, integer_types) and context_id >= 0 and (
         (name is None) or
         (isinstance(name, UnicodeType) and len(name) < 100))
     ):

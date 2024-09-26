@@ -10,8 +10,7 @@ import mitogen.parent
 
 
 class ReaperTest(testlib.TestCase):
-    @mock.patch('os.kill')
-    def test_calc_delay(self, kill):
+    def test_calc_delay(self):
         broker = mock.Mock()
         proc = mock.Mock()
         proc.poll.return_value = None
@@ -24,8 +23,7 @@ class ReaperTest(testlib.TestCase):
         self.assertEqual(752, int(1000 * reaper._calc_delay(5)))
         self.assertEqual(1294, int(1000 * reaper._calc_delay(6)))
 
-    @mock.patch('os.kill')
-    def test_reap_calls(self, kill):
+    def test_reap_calls(self):
         broker = mock.Mock()
         proc = mock.Mock()
         proc.poll.return_value = None
@@ -33,20 +31,20 @@ class ReaperTest(testlib.TestCase):
         reaper = mitogen.parent.Reaper(broker, proc, True, True)
 
         reaper.reap()
-        self.assertEqual(0, kill.call_count)
+        self.assertEqual(0, proc.send_signal.call_count)
 
         reaper.reap()
-        self.assertEqual(1, kill.call_count)
+        self.assertEqual(1, proc.send_signal.call_count)
 
         reaper.reap()
         reaper.reap()
         reaper.reap()
-        self.assertEqual(1, kill.call_count)
+        self.assertEqual(1, proc.send_signal.call_count)
 
         reaper.reap()
-        self.assertEqual(2, kill.call_count)
+        self.assertEqual(2, proc.send_signal.call_count)
 
-        self.assertEqual(kill.mock_calls, [
-            mock.call(proc.pid, signal.SIGTERM),
-            mock.call(proc.pid, signal.SIGKILL),
+        self.assertEqual(proc.send_signal.mock_calls, [
+            mock.call(signal.SIGTERM),
+            mock.call(signal.SIGKILL),
         ])

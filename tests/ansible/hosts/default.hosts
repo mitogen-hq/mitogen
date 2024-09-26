@@ -12,3 +12,10 @@ target ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
 target
 
 [linux_containers]
+
+[issue905]
+ssh-common-args ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
+
+[issue905:vars]
+ansible_ssh_common_args=-o PermitLocalCommand=yes -o LocalCommand="touch {{ ssh_args_canary_file }}"
+ssh_args_canary_file=/tmp/ssh_args_{{ inventory_hostname }}

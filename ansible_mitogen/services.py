@@ -50,6 +50,8 @@ import threading
 
 import ansible.constants
 
+from ansible.module_utils.six import reraise
+
 import mitogen.core
 import mitogen.service
 import ansible_mitogen.loaders
@@ -64,20 +66,6 @@ LOG = logging.getLogger(__name__)
 # during module import to ensure a single-threaded environment; PluginLoader
 # is not thread-safe.
 ansible_mitogen.loaders.shell_loader.get('sh')
-
-
-if sys.version_info[0] == 3:
-    def reraise(tp, value, tb):
-        if value is None:
-            value = tp()
-        if value.__traceback__ is not tb:
-            raise value.with_traceback(tb)
-        raise value
-else:
-    exec(
-        "def reraise(tp, value, tb=None):\n"
-        "    raise tp, value, tb\n"
-     )
 
 
 def _get_candidate_temp_dirs():
