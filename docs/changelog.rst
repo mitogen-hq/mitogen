@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`636` os.chdir fails if the sudo/become user lacks adequate permissions to chdir prior to task
 * :gh:issue:`1127` :mod:`mitogen`: Consolidate mitogen backward compatibility
   fallbacks and polyfills into :mod:`mitogen.core`
 * :gh:issue:`1127` :mod:`ansible_mitogen`: Remove backward compatibility
