@@ -35,18 +35,16 @@ import pwd
 import random
 import traceback
 
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    from pipes import quote as shlex_quote
-
-from ansible.module_utils._text import to_bytes
-from ansible.parsing.utils.jsonify import jsonify
-
 import ansible
 import ansible.constants
 import ansible.plugins
 import ansible.plugins.action
+import ansible.utils.unsafe_proxy
+import ansible.vars.clean
+
+from ansible.module_utils.common.text.converters import to_bytes, to_text
+from ansible.module_utils.six.moves import shlex_quote
+from ansible.parsing.utils.jsonify import jsonify
 
 import mitogen.core
 import mitogen.select
@@ -56,24 +54,6 @@ import ansible_mitogen.planner
 import ansible_mitogen.target
 import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
-
-from ansible.module_utils._text import to_text
-
-try:
-    from ansible.utils.unsafe_proxy import wrap_var
-except ImportError:
-    from ansible.vars.unsafe_proxy import wrap_var
-
-try:
-    # ansible 2.8 moved remove_internal_keys to the clean module
-    from ansible.vars.clean import remove_internal_keys
-except ImportError:
-    try:
-        from ansible.vars.manager import remove_internal_keys
-    except ImportError:
-        # ansible 2.3.3 has remove_internal_keys as a protected func on the action class
-        # we'll fallback to calling self._remove_internal_keys in this case
-        remove_internal_keys = lambda a: "Not found"
 
 
 LOG = logging.getLogger(__name__)
@@ -413,10 +393,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             self._remove_tmp_path(tmp)
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
-        # handle ansible 2.3.3 that has remove_internal_keys in a different place
-        check = remove_internal_keys(result)
-        if check == 'Not found':
-            self._remove_internal_keys(result)
+        ansible.vars.clean.remove_internal_keys(result)
 
         # taken from _execute_module of ansible 2.8.6
         # propagate interpreter discovery results back to the controller
@@ -440,7 +417,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 result['deprecations'] = []
             result['deprecations'].extend(self._discovery_deprecation_warnings)
 
-        return wrap_var(result)
+        return ansible.utils.unsafe_proxy.wrap_var(result)
 
     def _postprocess_response(self, result):
         """

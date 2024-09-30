@@ -11,17 +11,6 @@ import socket
 import sys
 
 
-try:
-    all
-except NameError:
-    # Python 2.4
-    def all(it):
-        for elem in it:
-            if not elem:
-                return False
-        return True
-
-
 def main():
     module = AnsibleModule(argument_spec={})
     module.exit_json(

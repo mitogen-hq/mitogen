@@ -40,7 +40,9 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 import atexit
+import ctypes
 import json
+import logging
 import os
 import re
 import shlex
@@ -50,18 +52,11 @@ import tempfile
 import traceback
 import types
 
+from ansible.module_utils.six.moves import shlex_quote
+
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
-from mitogen.core import b
-from mitogen.core import bytes_partition
-from mitogen.core import str_rpartition
 from mitogen.core import to_text
-
-try:
-    import ctypes
-except ImportError:
-    # Python 2.4
-    ctypes = None
 
 try:
     # Python >= 3.4, PEP 451 ModuleSpec API
@@ -77,15 +72,6 @@ try:
 except ImportError:
     from io import StringIO
 
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    from pipes import quote as shlex_quote
-
-# Absolute imports for <2.5.
-logging = __import__('logging')
-
-
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
@@ -95,15 +81,13 @@ ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 # explicit call to res_init() on each task invocation. BSD-alikes export it
 # directly, Linux #defines it as "__res_init".
 libc__res_init = None
-if ctypes:
-    libc = ctypes.CDLL(None)
-    for symbol in 'res_init', '__res_init':
-        try:
-            libc__res_init = getattr(libc, symbol)
-        except AttributeError:
-            pass
+libc = ctypes.CDLL(None)
+for symbol in 'res_init', '__res_init':
+    try:
+        libc__res_init = getattr(libc, symbol)
+    except AttributeError:
+        pass
 
-iteritems = getattr(dict, 'iteritems', dict.items)
 LOG = logging.getLogger(__name__)
 
 
@@ -217,13 +201,13 @@ class EnvironmentFileWatcher(object):
         for line in fp:
             # '   #export foo=some var  ' -> ['#export', 'foo=some var  ']
             bits = shlex_split_b(line)
-            if (not bits) or bits[0].startswith(b('#')):
+            if (not bits) or bits[0].startswith(b'#'):
                 continue
 
-            if bits[0] == b('export'):
+            if bits[0] == b'export':
                 bits.pop(0)
 
-            key, sep, value = bytes_partition(b(' ').join(bits), b('='))
+            key, sep, value = b' '.join(bits).partition(b'=')
             if key and sep:
                 yield key, value
 
@@ -596,7 +580,7 @@ class ModuleUtilsImporter(object):
             mod.__path__ = []
             mod.__package__ = str(fullname)
         else:
-            mod.__package__ = str(str_rpartition(to_text(fullname), '.')[0])
+            mod.__package__ = str(to_text(fullname).rpartition('.')[0])
         exec(code, mod.__dict__)
         self._loaded.add(fullname)
         return mod
@@ -611,7 +595,7 @@ class TemporaryEnvironment(object):
     def __init__(self, env=None):
         self.original = dict(os.environ)
         self.env = env or {}
-        for key, value in iteritems(self.env):
+        for key, value in mitogen.core.iteritems(self.env):
             key = mitogen.core.to_text(key)
             value = mitogen.core.to_text(value)
             if value is None:
@@ -819,7 +803,7 @@ class ScriptRunner(ProgramRunner):
         self.interpreter_fragment = interpreter_fragment
         self.is_python = is_python
 
-    b_ENCODING_STRING = b('# -*- coding: utf-8 -*-')
+    b_ENCODING_STRING = b'# -*- coding: utf-8 -*-'
 
     def _get_program(self):
         return self._rewrite_source(
@@ -852,13 +836,13 @@ class ScriptRunner(ProgramRunner):
         # While Ansible rewrites the #! using ansible_*_interpreter, it is
         # never actually used to execute the script, instead it is a shell
         # fragment consumed by shell/__init__.py::build_module_command().
-        new = [b('#!') + utf8(self.interpreter_fragment)]
+        new = [b'#!' + utf8(self.interpreter_fragment)]
         if self.is_python:
             new.append(self.b_ENCODING_STRING)
 
-        _, _, rest = bytes_partition(s, b('\n'))
+        _, _, rest = s.partition(b'\n')
         new.append(rest)
-        return b('\n').join(new)
+        return b'\n'.join(new)
 
 
 class NewStyleRunner(ScriptRunner):
@@ -971,8 +955,7 @@ class NewStyleRunner(ScriptRunner):
     # change the default encoding. This hack was removed from Ansible long ago,
     # but not before permeating into many third party modules.
     PREHISTORIC_HACK_RE = re.compile(
-        b(r'reload\s*\(\s*sys\s*\)\s*'
-          r'sys\s*\.\s*setdefaultencoding\([^)]+\)')
+        br'reload\s*\(\s*sys\s*\)\s*sys\s*\.\s*setdefaultencoding\([^)]+\)',
     )
 
     def _setup_program(self):
@@ -980,7 +963,7 @@ class NewStyleRunner(ScriptRunner):
             context=self.service_context,
             path=self.path,
         )
-        self.source = self.PREHISTORIC_HACK_RE.sub(b(''), source)
+        self.source = self.PREHISTORIC_HACK_RE.sub(b'', source)
 
     def _get_code(self):
         try:
@@ -998,7 +981,7 @@ class NewStyleRunner(ScriptRunner):
     if mitogen.core.PY3:
         main_module_name = '__main__'
     else:
-        main_module_name = b('__main__')
+        main_module_name = b'__main__'
 
     def _handle_magic_exception(self, mod, exc):
         """
@@ -1030,7 +1013,7 @@ class NewStyleRunner(ScriptRunner):
         approximation of the original package hierarchy, so that relative
         imports function correctly.
         """
-        pkg, sep, modname = str_rpartition(self.py_module_name, '.')
+        pkg, sep, _ = self.py_module_name.rpartition('.')
         if not sep:
             return None
         if mitogen.core.PY3:
@@ -1073,7 +1056,7 @@ class NewStyleRunner(ScriptRunner):
 
 
 class JsonArgsRunner(ScriptRunner):
-    JSON_ARGS = b('<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>')
+    JSON_ARGS = b'<<INCLUDE_ANSIBLE_MODULE_JSON_ARGS>>'
 
     def _get_args_contents(self):
         return json.dumps(self.args).encode()

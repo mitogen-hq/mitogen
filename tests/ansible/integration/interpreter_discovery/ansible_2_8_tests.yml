@@ -99,7 +99,7 @@
               that:
               - auto_out.ansible_facts.discovered_interpreter_python is defined
               - auto_out.ansible_facts.discovered_interpreter_python == echoout.discovered_python.as_seen
-              - echoout.discovered_python.resolved == echoout.running_python.sys.executable.resolved
+              - echoout.discovered_python.sys.executable.as_seen == echoout.running_python.sys.executable.as_seen
               fail_msg:
                 - "auto_out: {{ auto_out }}"
                 - "echoout: {{ echoout }}"

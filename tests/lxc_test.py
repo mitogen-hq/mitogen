@@ -3,10 +3,7 @@ import os
 import mitogen.lxc
 import mitogen.parent
 
-try:
-    any
-except NameError:
-    from mitogen.core import any
+from mitogen.core import any
 
 import testlib
 

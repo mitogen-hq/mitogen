@@ -1,6 +1,5 @@
 import logging
 import os
-import signal
 import sys
 import tempfile
 import threading

@@ -477,7 +477,7 @@ def read_file(path):
     finally:
         os.close(fd)
 
-    return mitogen.core.b('').join(bits)
+    return b''.join(bits)
 
 
 def _propagate_deps(invocation, planner, context):
