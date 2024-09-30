@@ -51,6 +51,12 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 
+DISTRO = os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')
+IMAGE_TEMPLATE = os.environ.get(
+    'MITOGEN_TEST_IMAGE_TEMPLATE',
+    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+)
+
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
 ANSIBLE_LIB_DIR =               os.path.join(TESTS_DIR, 'ansible', 'lib')
 ANSIBLE_MODULE_UTILS_DIR =      os.path.join(TESTS_DIR, 'ansible', 'lib', 'module_utils')
@@ -509,6 +515,7 @@ class TestCase(unittest.TestCase):
 
 
 def get_docker_host():
+    # Duplicated in ci_lib
     url = os.environ.get('DOCKER_HOST')
     if url in (None, 'http+docker://localunixsocket'):
         return 'localhost'
@@ -549,19 +556,23 @@ class DockerizedSshDaemon(object):
         ]
         subprocess.check_output(args)
 
-    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
-        if '-'  in mitogen_test_distro:
-            distro, _py3 = mitogen_test_distro.split('-')
-        else:
-            distro = mitogen_test_distro
-            _py3 = None
+    def __init__(self, distro=DISTRO, image_template=IMAGE_TEMPLATE):
+        # Code duplicated in ci_lib.py, both should be updated together
+        distro_pattern = re.compile(r'''
+            (?P<distro>(?P<family>[a-z]+)[0-9]+)
+            (?:-(?P<py>py3))?
+            (?:\*(?P<count>[0-9]+))?
+            ''',
+            re.VERBOSE,
+        )
+        d = distro_pattern.match(distro).groupdict(default=None)
 
-        if _py3 == 'py3':
+        if d.pop('py') == 'py3':
             self.python_path = '/usr/bin/python3'
         else:
             self.python_path = '/usr/bin/python'
 
-        self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
+        self.image = image_template % d
         self.start_container()
         self.host = self.get_host()
         self.port = self.get_port(self.container_name)
@@ -601,6 +612,9 @@ class DockerizedSshDaemon(object):
 
 class BrokerMixin(object):
     broker_class = mitogen.master.Broker
+
+    # Flag for tests that shutdown the broker themself
+    # e.g. unix_test.ListenerTest
     broker_shutdown = False
 
     def setUp(self):

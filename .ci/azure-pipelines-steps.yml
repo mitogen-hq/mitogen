@@ -19,6 +19,19 @@ steps:
     set -o nounset
     set -o pipefail
 
+    aws ecr-public get-login-password | docker login --username AWS --password-stdin public.ecr.aws
+  displayName: Authenticate to container registry
+  condition: eq(variables['Agent.OS'], 'Linux')
+  env:
+    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
+    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+    AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)
+
+- script: |
+    set -o errexit
+    set -o nounset
+    set -o pipefail
+
     sudo apt-get update
     sudo apt-get install -y python2-dev python3-pip virtualenv
   displayName: Install build deps
@@ -90,7 +103,3 @@ steps:
 
     "$PYTHON" -m tox -e "$(tox.env)"
   displayName: "Run tests"
-  env:
-    AWS_ACCESS_KEY_ID: $(AWS_ACCESS_KEY_ID)
-    AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-    AWS_DEFAULT_REGION: $(AWS_DEFAULT_REGION)
