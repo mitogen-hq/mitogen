@@ -28,7 +28,6 @@ for doing `setup.py install` while pulling a Docker container, for example.
 
 ### Environment Variables
 
-* `TARGET_COUNT`: number of targets for `debops_` run. Defaults to 2.
 * `DISTRO`: the `mitogen_` tests need a target Docker container distro. This
   name comes from the Docker Hub `mitogen` user, i.e. `mitogen/$DISTRO-test`
 * `DISTROS`: the `ansible_` tests can run against multiple targets
