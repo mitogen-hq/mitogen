@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-Unreleased
-----------
+v0.3.11 (2024-10-30)
+--------------------
 
 * :gh:issue:`1127` :mod:`mitogen`: Consolidate mitogen backward compatibility
   fallbacks and polyfills into :mod:`mitogen.core`
