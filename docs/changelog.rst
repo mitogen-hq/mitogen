@@ -25,6 +25,8 @@ Unreleased
   connection variable, and templated SSH connection password.
 * :gh:issue:`1136` tests: Improve Ansible fail_msg formatting.
 * :gh:issue:`1137` tests: Ignore inventory files of inactive tests & benchmarks
+* :gh:issue:`1138` CI: Add re-actors/alls-green GitHub Actions job to simplify
+  branch protections configuration.
 
 
 v0.3.11 (2024-10-30)
