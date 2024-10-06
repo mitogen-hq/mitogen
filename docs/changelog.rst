@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1106` :mod:`ansible_mitogen`: Support for `ansible_ssh_password`
+  connection variable, and templated SSH connection password.
 
 
 v0.3.11 (2024-10-30)

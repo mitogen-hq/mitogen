@@ -1,0 +1,7 @@
+- name: integration/ssh/templated_by_inv.yml
+  hosts: tt_targets_inventory
+  gather_facts: false
+  tasks:
+    - meta: reset_connection
+    - name: Templated variables in inventory
+      ping:
