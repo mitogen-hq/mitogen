@@ -29,7 +29,8 @@
       that:
       - out.rc == 4
       - "'Mitogen was disconnected from the remote environment while a call was in-progress.' in out.stdout"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - disconnect
     - disconnect_during_module

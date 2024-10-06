@@ -9,7 +9,8 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
     - name: Verify custom env setting is cleared, with evil_key
       shell: echo 'hi'
       environment:
@@ -19,14 +20,16 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Verify non-explicit module env mutations are cleared, control
       custom_python_detect_environment:
       register: out
     - assert:
         that: not out.env.evil_key is defined
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
     - name: Verify non-explicit module env mutations are cleared, mutate evil_key
       custom_python_modify_environ:
         key: evil_key
@@ -36,6 +39,7 @@
       register: out
     - assert:
         that: not out.env.evil_key is defined
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - environment_isolation

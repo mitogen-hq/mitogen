@@ -13,7 +13,8 @@
       - out.result|length == 2
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -30,7 +31,8 @@
       - out.result[1].kwargs.username == "becomeuser"
       - out.result[2].method == "ssh"
       - out.result[2].kwargs.hostname == "tc-become-method-unset"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -48,7 +50,8 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "su"
       - out.result[1].kwargs.username == "becomeuser"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -70,7 +73,8 @@
 
       - out.result[2].method == "su"
       - out.result[2].kwargs.username == "becomeuser"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -93,6 +97,7 @@
 
       - out.result[2].method == "ssh"
       - out.result[2].kwargs.hostname == "tc-become-method-unset"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only

@@ -16,7 +16,9 @@
   - assert:
       that:
       - sync_proc1.pid == sync_proc2.pid
-      fail_msg: sync_proc1={{sync_proc1}} sync_proc2={{sync_proc2}}
+      fail_msg: |
+        sync_proc1={{ sync_proc1 }}
+        sync_proc2={{ sync_proc2 }}
 
   tags:
     - forking_inactive

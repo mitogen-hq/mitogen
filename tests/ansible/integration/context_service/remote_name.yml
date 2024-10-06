@@ -17,7 +17,8 @@
   - assert:
       that:
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:[a-z]+@[^:]+:[0-9]+\)')
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
 
   - name: Get cmdline, with mitogen_mask_remote_name
     shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'
@@ -29,7 +30,8 @@
   - assert:
       that:
       - out.stdout is match('.*python([0-9.]+)?\(mitogen:ansible\)')
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
     - remote_name

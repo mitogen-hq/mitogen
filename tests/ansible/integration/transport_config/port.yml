@@ -12,7 +12,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -29,7 +30,8 @@
       - out.result[0].kwargs.port == None
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == 4321
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -43,7 +45,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 4321
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -59,7 +62,8 @@
       - out.result[0].kwargs.port == 4321
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -73,7 +77,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1234
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -89,7 +94,8 @@
       - out.result[0].kwargs.port == 1234
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -104,7 +110,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1532
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -120,6 +127,7 @@
       - out.result[0].kwargs.port == 1532
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only

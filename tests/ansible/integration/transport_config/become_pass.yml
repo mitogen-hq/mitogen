@@ -14,7 +14,8 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -32,7 +33,8 @@
       - out.result[1].method == "ssh"
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.password == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -52,7 +54,8 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == None
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -69,7 +72,8 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "apassword"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -90,7 +94,8 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == "apassword"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -107,7 +112,8 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "apass"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -128,7 +134,8 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == "apass"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -147,7 +154,8 @@
       # Ansible >= 2.9.2 prioritises ansible_become_pass.
       # https://github.com/ansible/ansible/commit/480b106d6535978ae6ecab68b40942ca4fa914a0
       - out.result[1].kwargs.password == "bpass"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -165,6 +173,7 @@
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "bpass"
       - out.result[2].method == "ssh"
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
