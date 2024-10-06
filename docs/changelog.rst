@@ -29,7 +29,7 @@ Unreleased
   branch protections configuration.
 
 
-v0.3.11 (2024-10-30)
+v0.3.11 (2024-09-30)
 --------------------
 
 * :gh:issue:`1127` :mod:`mitogen`: Consolidate mitogen backward compatibility
