@@ -22,7 +22,8 @@
     - assert:
         that: |
           out.content|b64decode == '{"I am JSON": true}'
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Create text transfer data
       action_passthrough:
@@ -37,7 +38,8 @@
     - assert:
         that:
           out.content|b64decode == 'I am text.'
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Cleanup transfer data
       file:

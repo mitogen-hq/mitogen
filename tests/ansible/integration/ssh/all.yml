@@ -2,4 +2,6 @@
 - import_playbook: config.yml
 - import_playbook: password.yml
 - import_playbook: timeouts.yml
+- import_playbook: templated_by_inv.yml
+- import_playbook: templated_by_play_taskvar.yml
 - import_playbook: variables.yml

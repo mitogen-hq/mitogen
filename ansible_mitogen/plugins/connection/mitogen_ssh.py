@@ -32,35 +32,20 @@ __metaclass__ = type
 import os.path
 import sys
 
+from ansible.plugins.connection.ssh import (
+    DOCUMENTATION as _ansible_ssh_DOCUMENTATION,
+)
+
 DOCUMENTATION = """
+    name: mitogen_ssh
     author: David Wilson <dw@botanicus.net>
-    connection: mitogen_ssh
     short_description: Connect over SSH via Mitogen
     description:
         - This connects using an OpenSSH client controlled by the Mitogen for
           Ansible extension. It accepts every option the vanilla ssh plugin
           accepts.
-    version_added: "2.5"
     options:
-        ssh_args:
-            type: str
-            vars:
-                - name: ssh_args
-                - name: ansible_ssh_args
-                - name: ansible_mitogen_ssh_args
-        ssh_common_args:
-            type: str
-            vars:
-                - name: ssh_args
-                - name: ansible_ssh_common_args
-                - name: ansible_mitogen_ssh_common_args
-        ssh_extra_args:
-            type: str
-            vars:
-                - name: ssh_args
-                - name: ansible_ssh_extra_args
-                - name: ansible_mitogen_ssh_extra_args
-"""
+""" + _ansible_ssh_DOCUMENTATION.partition('options:\n')[2]
 
 try:
     import ansible_mitogen

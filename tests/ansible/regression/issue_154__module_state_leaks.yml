@@ -14,7 +14,8 @@
       that:
         - out.results[item|int].leak1 == ["David"]
         - out.results[item|int].leak2 == ["David"]
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
     with_sequence: start=0 end=3
   tags:
     - issue_154

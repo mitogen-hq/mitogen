@@ -28,7 +28,8 @@
           'custom_binary_single_null: cannot execute binary file: Exec format error\r\n',
         ))
         or (ansible_facts.distribution == 'Ubuntu' and ansible_facts.distribution_version == '16.04')
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - custom_binary_single_null
 

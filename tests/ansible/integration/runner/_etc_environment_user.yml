@@ -10,7 +10,8 @@
 
 - assert:
     that: echo.stdout == ""
-    fail_msg: echo={{echo}}
+    fail_msg: |
+      echo={{ echo }}
 
 - name: Copy pam_environment
   copy:
@@ -23,7 +24,8 @@
 
 - assert:
     that: echo.stdout == "321"
-    fail_msg: echo={{echo}}
+    fail_msg: |
+      echo={{ echo }}
 
 - name: Cleanup pam_environment
   file:
@@ -35,4 +37,5 @@
 
 - assert:
     that: echo.stdout == ""
-    fail_msg: echo={{echo}}
+    fail_msg: |
+      echo={{ echo }}

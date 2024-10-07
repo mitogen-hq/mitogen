@@ -57,6 +57,7 @@
     - assert:
         that:
           - out.rc == 4  # ansible.executor.task_queue_manager.TaskQueueManager.RUN_UNREACHABLE_HOSTS
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only

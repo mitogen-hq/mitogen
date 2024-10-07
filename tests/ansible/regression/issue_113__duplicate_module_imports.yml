@@ -20,7 +20,8 @@
       that:
         - out.status == -1
         - out.url == 'http://127.0.0.1:14321/post'
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - issue_113
 

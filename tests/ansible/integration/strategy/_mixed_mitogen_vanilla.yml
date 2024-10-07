@@ -10,12 +10,14 @@
       register: out
     - assert:
         that: out.mitogen_loaded
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
-        fail_msg: strategy={{strategy}}
+        fail_msg: |
+          strategy={{ strategy }}
   tags:
     - mitogen_linear
 
@@ -27,12 +29,14 @@
       register: out
     - assert:
         that: not out.mitogen_loaded
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.linear.StrategyModule'
-        fail_msg: strategy={{strategy}}
+        fail_msg: |
+          strategy={{ strategy }}
   tags:
     - linear
 
@@ -44,11 +48,13 @@
       register: out
     - assert:
         that: out.mitogen_loaded
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
-        fail_msg: strategy={{strategy}}
+        fail_msg: |
+          strategy={{ strategy }}
   tags:
     - mitogen_linear

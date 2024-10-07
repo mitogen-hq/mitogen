@@ -135,7 +135,8 @@
             assert:
               that:
               - legacy.deprecations | default([]) | length > 0
-              fail_msg: legacy={{legacy}}
+              fail_msg: |
+                legacy={{ legacy }}
             # only check for a dep warning if legacy returned /usr/bin/python and auto didn't
             when:
               - legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
@@ -146,7 +147,8 @@
             assert:
               that:
               - legacy.warnings | default([]) | length > 0
-              fail_msg: legacy={{legacy}}
+              fail_msg: |
+                legacy={{ legacy }}
             # only check for a warning if legacy returned /usr/bin/python and auto didn't
             when:
               - legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
@@ -168,7 +170,8 @@
               that:
               - auto_silent_out.warnings is not defined
               - auto_silent_out.ansible_facts.discovered_interpreter_python == auto_out.ansible_facts.discovered_interpreter_python
-              fail_msg: auto_silent_out={{auto_silent_out}}
+              fail_msg: |
+                auto_silent_out={{ auto_silent_out }}
 
 
         - name: test that auto_legacy_silent never warns and got the same answer as auto_legacy
@@ -186,7 +189,8 @@
               that:
                 - legacy_silent.warnings is not defined
                 - legacy_silent.ansible_facts.discovered_interpreter_python == legacy.ansible_facts.discovered_interpreter_python
-              fail_msg: legacy_silent={{legacy_silent}}
+              fail_msg: |
+                legacy_silent={{ legacy_silent }}
 
         - name: ensure modules can't set discovered_interpreter_X or ansible_X_interpreter
           block:
@@ -212,7 +216,7 @@
             assert:
               that:
                 - auto_out.ansible_facts.discovered_interpreter_python == discovered_interpreter_expected
-              fail_msg: >-
+              fail_msg: |
                 distro={{ distro }}
                 distro_major= {{ distro_major }}
                 system={{ system }}

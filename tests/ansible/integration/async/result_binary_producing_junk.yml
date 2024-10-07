@@ -38,7 +38,8 @@
         - async_out.msg.startswith("Traceback")
         - '"ValueError: No start of json char found\n" in async_out.msg'
         - 'async_out.stderr == "binary_producing_junk: oh noes\n"'
-      fail_msg: async_out={{async_out}}
+      fail_msg: |
+        async_out={{ async_out }}
     vars:
       async_out: "{{result.content|b64decode|from_json}}"
   tags:
