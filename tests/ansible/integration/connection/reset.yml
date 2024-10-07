@@ -44,7 +44,11 @@
 
         # sudo PID has changed.
         - out_become.ppid != out_become2.ppid
-        fail_msg: out={{out}} out2={{out2}} out_become={{out_become}} out_become2={{out_become2}}
+        fail_msg: |
+          out={{ out }}
+          out2={{ out2 }}
+          out_become={{ out_become }}
+          out_become2={{ out_become2 }}
   tags:
     - mitogen_only
     - reset

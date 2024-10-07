@@ -27,7 +27,9 @@
     assert:
       that:
       - become_acct.pid != login_acct.pid
-      fail_msg: become_acct={{become_acct}} login_acct={{login_acct}}
+      fail_msg: |
+        become_acct={{ become_acct }}
+        login_acct={{ login_acct }}
 
   - name: reset the connection
     meta: reset_connection
@@ -40,7 +42,9 @@
     assert:
       that:
       - become_acct.pid != new_become_acct.pid
-      fail_msg: become_acct={{become_acct}} new_become_acct={{new_become_acct}}
+      fail_msg: |
+        become_acct={{ become_acct }}
+        new_become_acct={{ new_become_acct }}
 
   - name: save new pid of login acct
     become: false
@@ -51,6 +55,8 @@
     assert:
       that:
       - login_acct.pid != new_login_acct.pid
-      fail_msg: login_acct={{login_acct}} new_login_acct={{new_login_acct}}
+      fail_msg: |
+        login_acct={{ login_acct }}
+        new_login_acct={{ new_login_acct }}
   tags:
     - reset_become

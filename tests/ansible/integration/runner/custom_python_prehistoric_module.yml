@@ -14,7 +14,8 @@
 
     - assert:
         that: out.ok
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - custom_python_prehistoric_module
     - mitogen_only
