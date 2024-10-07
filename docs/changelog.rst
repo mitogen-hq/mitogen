@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In Progress (unreleased)
 ------------------------
 
+* :gh:issue:`1138` CI: Complete migration from Azure DevOps Pipelines to
+  GitHub Actions
 
 
 v0.3.11 (2024-10-07)
