@@ -1,0 +1,10 @@
+- name: integration/ssh/templated_by_play_taskvar.yml
+  hosts: tt_targets_bare
+  gather_facts: false
+  vars:
+    ansible_password: "{{ 'has_sudo_nopw_password' | trim }}"
+
+  tasks:
+    - meta: reset_connection
+    - name: Templated variables in play
+      ping:

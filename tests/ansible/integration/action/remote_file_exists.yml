@@ -12,7 +12,8 @@
       register: out
     - assert:
         that: out.result == False
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Ensure does-exist does
       copy:
@@ -24,7 +25,8 @@
       register: out
     - assert:
         that: out.result == True
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Cleanup
       file:

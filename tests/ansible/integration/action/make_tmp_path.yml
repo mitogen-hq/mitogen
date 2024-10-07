@@ -42,13 +42,17 @@
       assert:
         that:
         - good_temp_path == good_temp_path2
-        fail_msg: good_temp_path={{good_temp_path}} good_temp_path2={{good_temp_path2}}
+        fail_msg: |
+          good_temp_path={{ good_temp_path }}
+          good_temp_path2={{ good_temp_path2 }}
 
     - name: "Verify different subdir for both tasks"
       assert:
         that:
         - tmp_path.path != tmp_path2.path
-        fail_msg: tmp_path={{tmp_path}} tmp_path2={{tmp_path2}}
+        fail_msg: |
+          tmp_path={{ tmp_path }}
+          tmp_path2={{ tmp_path2 }}
 
     #
     # Verify subdirectory removal.
@@ -69,7 +73,9 @@
         that:
         - not stat1.stat.exists
         - not stat2.stat.exists
-        fail_msg: stat1={{stat1}} stat2={{stat2}}
+        fail_msg: |
+          stat1={{ stat1 }}
+          stat2={{ stat2 }}
 
     #
     # Verify good directory persistence.
@@ -84,7 +90,8 @@
       assert:
         that:
         - stat.stat.exists
-        fail_msg: stat={{stat}}
+        fail_msg: |
+          stat={{ stat }}
 
     #
     # Write some junk into the temp path.
@@ -107,7 +114,8 @@
     - assert:
         that:
         - not out.stat.exists
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     #
     # root
@@ -126,7 +134,9 @@
         that:
         - tmp_path2.path != tmp_path_root.path
         - tmp_path2.path|dirname != tmp_path_root.path|dirname
-        fail_msg: tmp_path_root={{tmp_path_root}} tmp_path2={{tmp_path2}}
+        fail_msg: |
+          tmp_path_root={{ tmp_path_root }}
+          tmp_path2={{ tmp_path2 }}
 
     #
     # readonly homedir
@@ -157,7 +167,8 @@
         that:
         - out.module_path.startswith(good_temp_path2)
         - out.module_tmpdir.startswith(good_temp_path2)
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - make_tmp_path
     - mitogen_only

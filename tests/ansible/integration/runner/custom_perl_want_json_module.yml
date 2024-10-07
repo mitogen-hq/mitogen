@@ -10,13 +10,15 @@
         that:
         - out.results[0].input.foo
         - out.results[0].message == 'I am a want JSON perl script! Here is my input.'
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - assert:
         that:
         - (not out.changed)
         - (not out.results[0].changed)
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
       when:
         - ansible_version.full is version('2.4', '>=', strict=True)
   tags:

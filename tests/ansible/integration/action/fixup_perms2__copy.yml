@@ -16,7 +16,8 @@
     - assert:
         that:
         -  out.stat.mode in ("0644", "0664")
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: "Copy files from content: arg"
       copy:
@@ -29,7 +30,8 @@
     - assert:
         that:
         -  out.stat.mode == "0400"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Cleanup local weird mode file
       file:
@@ -55,7 +57,8 @@
     - assert:
         that:
         - out.stat.mode in ("0644", "0664")
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Copy file with weird mode, preserving mode
       copy:
@@ -69,7 +72,8 @@
     - assert:
         that:
         - out.stat.mode == "1462"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Copy file with weird mode, explicit mode
       copy:
@@ -84,7 +88,8 @@
     - assert:
         that:
         - out.stat.mode == "1461"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
 
     - name: Cleanup
       file:

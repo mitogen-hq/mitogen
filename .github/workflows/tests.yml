@@ -324,3 +324,15 @@ jobs:
           fi
 
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+
+  # https://github.com/marketplace/actions/alls-green
+  check:
+    if: always()
+    needs:
+      - linux
+      - macos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

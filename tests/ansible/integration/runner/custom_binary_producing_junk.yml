@@ -31,6 +31,7 @@
         - out.results[0].failed
         - out.results[0].msg.startswith('MODULE FAILURE')
         - out.results[0].rc == 0
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - custom_binary_producing_junk

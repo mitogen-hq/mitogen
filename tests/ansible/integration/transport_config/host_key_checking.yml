@@ -10,7 +10,8 @@
           - out.result | length == 1
           - out.result[0].method == "ssh"
           - out.result[0].kwargs.check_host_keys == "ignore"
-        fail_msg: out={{ out }}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only
 
@@ -27,7 +28,8 @@
           - out.result[0].kwargs.check_host_keys == "enforce"
           - out.result[1].method == "ssh"
           - out.result[1].kwargs.check_host_keys == "ignore"
-        fail_msg: out={{ out }}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only
 
@@ -41,7 +43,8 @@
           - out.result | length == 1
           - out.result[0].method == "ssh"
           - out.result[0].kwargs.check_host_keys == "enforce"
-        fail_msg: out={{ out }}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only
 
@@ -58,7 +61,8 @@
           - out.result[0].kwargs.check_host_keys == "ignore"
           - out.result[1].method == "ssh"
           - out.result[1].kwargs.check_host_keys == "enforce"
-        fail_msg: out={{ out }}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only
 
@@ -72,7 +76,8 @@
           - out.result | length == 1
           - out.result[0].method == "ssh"
           - out.result[0].kwargs.check_host_keys == "enforce"
-        fail_msg: out={{ out }}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only
 
@@ -89,6 +94,7 @@
           - out.result[0].kwargs.check_host_keys == "ignore"
           - out.result[1].method == "ssh"
           - out.result[1].kwargs.check_host_keys == "enforce"
-        fail_msg: out={{ out }}
+        fail_msg: |
+          out={{ out }}
   tags:
     - mitogen_only

@@ -19,6 +19,7 @@
 
   - assert:
       that: stat.stat.exists
-      fail_msg: stat={{stat}}
+      fail_msg: |
+        stat={{ stat }}
   tags:
     - cwd_prseserved

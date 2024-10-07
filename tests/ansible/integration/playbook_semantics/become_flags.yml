@@ -13,7 +13,8 @@
 
     - assert:
         that: "out.stdout == ''"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - become_flags
 
@@ -29,6 +30,7 @@
 
     - assert:
         that: "out2.stdout == '2'"
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - become_flags

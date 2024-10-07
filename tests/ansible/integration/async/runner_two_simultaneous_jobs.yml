@@ -56,12 +56,15 @@
       that:
         - result1.rc == 0
         - result2.rc == 0
-      fail_msg: result1={{result1}} result2={{result2}}
+      fail_msg: |
+        result1={{ result1 }}
+        result2={{ result2 }}
 
   - assert:
       that:
         - result2.stdout == 'im_alive'
-      fail_msg: result2={{result2}}
+      fail_msg: |
+        result2={{ result2 }}
     when:
       - ansible_version.full is version('2.8', '>=', strict=True)  # ansible#51393
   tags:

@@ -25,7 +25,10 @@
       that:
       - fork_proc1.pid != sync_proc1.pid
       - fork_proc1.pid != fork_proc2.pid
-      fail_msg: fork_proc1={{fork_proc1}} sync_proc1={{sync_proc1}} fork_proc2={{fork_proc2}}
+      fail_msg: |
+        fork_proc1={{ fork_proc1 }}
+        sync_proc1={{ sync_proc1 }}
+        fork_proc2={{ fork_proc2 }}
 
   tags:
     - forking_active
