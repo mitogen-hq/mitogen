@@ -64,6 +64,7 @@ __metaclass__ = type
 import abc
 import logging
 import os
+
 import ansible.utils.shlex
 import ansible.constants as C
 import ansible.executor.interpreter_discovery
@@ -88,12 +89,12 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
     # keep trying different interpreters until we don't error
     if action._finding_python_interpreter:
         return action._possible_python_interpreter
-    
+
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
         # python is the only supported interpreter_name as of Ansible 2.8.8
         interpreter_name = 'python'
         discovered_interpreter_config = u'discovered_interpreter_%s' % interpreter_name
-        
+
         if task_vars.get('ansible_facts') is None:
            task_vars['ansible_facts'] = {}
 
@@ -134,7 +135,7 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
 def parse_python_path(s, task_vars, action, rediscover_python):
     """
     Given the string set for ansible_python_interpeter, parse it using shell
-    syntax and return an appropriate argument vector. If the value detected is 
+    syntax and return an appropriate argument vector. If the value detected is
     one of interpreter discovery then run that first. Caches python interpreter
     discovery value in `facts_from_task_vars` like how Ansible handles this.
     """

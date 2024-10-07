@@ -61,7 +61,7 @@ def child_main(sender, delay):
     Executed on the main thread of the Python interpreter running on each
     target machine, Context.call() from the master. It simply sends the output
     of the UNIX 'ps' command at regular intervals toward a Receiver on master.
-    
+
     :param mitogen.core.Sender sender:
         The Sender to use for delivering our result. This could target
         anywhere, but the sender supplied by the master simply causes results

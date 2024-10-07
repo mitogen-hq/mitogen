@@ -119,7 +119,7 @@ def _chroot(path):
     os.chroot(path)
 
 
-class Operations(fuse.Operations):  # fuse.LoggingMixIn, 
+class Operations(fuse.Operations):  # fuse.LoggingMixIn,
     def __init__(self, host, path='.'):
         self.host = host
         self.root = path

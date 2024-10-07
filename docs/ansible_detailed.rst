@@ -1275,7 +1275,7 @@ on each process whose name begins with ``mitogen:``::
     [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
     ^C
 
-    $ 
+    $
 
 This shows one thread waiting on IO (``poll``) and two more waiting on the same
 lock. It is taken from a real example of a deadlock due to a forking bug.
