@@ -18,8 +18,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-Unreleased
-----------
+In Progress (unreleased)
+------------------------
+
+
+
+v0.3.11 (2024-10-07)
+--------------------
 
 * :gh:issue:`1106` :mod:`ansible_mitogen`: Support for `ansible_ssh_password`
   connection variable, and templated SSH connection password.
@@ -29,7 +34,7 @@ Unreleased
   branch protections configuration.
 
 
-v0.3.11 (2024-10-30)
+v0.3.11 (2024-09-30)
 --------------------
 
 * :gh:issue:`1127` :mod:`mitogen`: Consolidate mitogen backward compatibility
