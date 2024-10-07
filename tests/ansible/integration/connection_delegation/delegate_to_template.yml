@@ -11,7 +11,6 @@
 - name: integration/connection_delegation/delegate_to_template.yml
   vars:
     physical_host: "cd-normal-alias"
-    physical_hosts: ["cd-normal-alias", "cd-normal-normal"]
   hosts: test-targets
   gather_facts: no
   tasks:
