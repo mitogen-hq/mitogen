@@ -55,6 +55,7 @@
 - hosts: cd-normal
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
@@ -72,7 +73,7 @@
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
+                      'port': '{{ expected_ssh_port }}',
                       "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
@@ -98,6 +99,7 @@
 - hosts: cd-alias
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -114,7 +116,7 @@
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
+                      'port': '{{ expected_ssh_port }}',
                       "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
@@ -140,6 +142,7 @@
 - hosts: cd-normal-normal
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -167,7 +170,7 @@
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
+                      'port': '{{ expected_ssh_port }}',
                       "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
@@ -193,6 +196,7 @@
 - hosts: cd-normal-alias
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -237,7 +241,7 @@
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
+                      'port': '{{ expected_ssh_port }}',
                       "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
@@ -262,6 +266,7 @@
 - hosts: cd-newuser-normal-normal
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -289,7 +294,7 @@
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
+                      'port': '{{ expected_ssh_port }}',
                       "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
@@ -315,6 +320,7 @@
 - hosts: cd-newuser-normal-normal
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
@@ -332,7 +338,7 @@
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
+                      'port': '{{ expected_ssh_port }}',
                       "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [

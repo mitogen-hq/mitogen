@@ -464,7 +464,7 @@ class PlayContextSpec(Spec):
         return optional_secret(self._connection_option('password'))
 
     def port(self):
-        return self._play_context.port
+        return self._connection_option('port')
 
     def python_path(self, rediscover_python=False):
         s = self._connection.get_task_var('ansible_python_interpreter')
