@@ -25,6 +25,7 @@ In Progress (unreleased)
   GitHub Actions
 * :gh:issue:`1116` :mod:`ansible_mitogen`: Support for templated variable
   `ansible_ssh_user`.
+* :gh:issue:`1083` fix: Jinja expressions are not evaluated in (not only) credential variables.
 
 
 v0.3.11 (2024-10-07)
