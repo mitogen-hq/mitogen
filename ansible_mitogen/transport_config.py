@@ -434,7 +434,7 @@ class PlayContextSpec(Spec):
         return self._play_context.remote_addr
 
     def remote_user(self):
-        return self._play_context.remote_user
+        return self._connection_option('remote_user')
 
     def become(self):
         return self._play_context.become

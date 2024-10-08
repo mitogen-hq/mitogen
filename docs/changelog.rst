@@ -23,6 +23,8 @@ In Progress (unreleased)
 
 * :gh:issue:`1138` CI: Complete migration from Azure DevOps Pipelines to
   GitHub Actions
+* :gh:issue:`1116` :mod:`ansible_mitogen`: Support for templated variable
+  `ansible_ssh_user`.
 
 
 v0.3.11 (2024-10-07)

@@ -25,11 +25,10 @@ tt-bare
 
 [tt_targets_bare:vars]
 ansible_host=localhost
-ansible_user=mitogen__has_sudo_nopw
 
 [tt_targets_inventory]
-tt-password                 ansible_password="{{ 'has_sudo_nopw_password' | trim }}"
+tt-password                 ansible_password="{{ 'has_sudo_nopw_password' | trim }}" ansible_user=mitogen__has_sudo_nopw
+tt-remote-user              ansible_password=has_sudo_nopw_password ansible_user="{{ 'mitogen__has_sudo_nopw' | trim }}"
 
 [tt_targets_inventory:vars]
 ansible_host=localhost
-ansible_user=mitogen__has_sudo_nopw
