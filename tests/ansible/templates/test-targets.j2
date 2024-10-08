@@ -47,12 +47,11 @@ tt-bare
 ansible_host={{ tt.hostname }}
 ansible_port={{ tt.port }}
 ansible_python_interpreter={{ tt.python_path }}
-ansible_user=mitogen__has_sudo_nopw
 
 [tt_targets_inventory]
-tt-password                 ansible_password="{{ '{{' }} 'has_sudo_nopw_password' | trim {{ '}}' }}"  ansible_port={{ tt.port }}
+tt-password                 ansible_password="{{ '{{' }} 'has_sudo_nopw_password' | trim {{ '}}' }}"  ansible_port={{ tt.port }} ansible_user=mitogen__has_sudo_nopw
+tt-remote-user              ansible_password=has_sudo_nopw_password  ansible_port={{ tt.port }} ansible_user="{{ '{{' }} 'mitogen__has_sudo_nopw' | trim {{ '}}' }}"
 
 [tt_targets_inventory:vars]
 ansible_host={{ tt.hostname }}
 ansible_python_interpreter={{ tt.python_path }}
-ansible_user=mitogen__has_sudo_nopw

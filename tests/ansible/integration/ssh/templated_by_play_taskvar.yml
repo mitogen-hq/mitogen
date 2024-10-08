@@ -3,6 +3,7 @@
   gather_facts: false
   vars:
     ansible_password: "{{ 'has_sudo_nopw_password' | trim }}"
+    ansible_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
 
   tasks:
     - meta: reset_connection
