@@ -443,7 +443,7 @@ class PlayContextSpec(Spec):
         return self._play_context.become_method
 
     def become_user(self):
-        return self._play_context.become_user
+        return self._connection_option('become_user')
 
     def become_pass(self):
         # become_pass is owned/provided by the active become plugin. However
