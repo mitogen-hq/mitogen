@@ -158,6 +158,7 @@ def _connect_ssh(spec):
         }
     }
 
+
 def _connect_buildah(spec):
     """
     Return ContextService arguments for a Buildah connection.
@@ -172,6 +173,7 @@ def _connect_buildah(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+
 
 def _connect_docker(spec):
     """
@@ -275,6 +277,7 @@ def _connect_podman(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+
 
 def _connect_setns(spec, kind=None):
     """

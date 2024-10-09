@@ -36,8 +36,6 @@ import random
 import traceback
 
 import ansible
-import ansible.constants
-import ansible.plugins
 import ansible.plugins.action
 import ansible.utils.unsafe_proxy
 import ansible.vars.clean
