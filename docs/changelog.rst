@@ -26,6 +26,7 @@ In Progress (unreleased)
 * :gh:issue:`1116` :mod:`ansible_mitogen`: Support for templated variable
   `ansible_ssh_user`.
 * :gh:issue:`978` :mod:`ansible_mitogen`: Support templated Ansible SSH port.
+* :gh:issue:`1073` Python 3.13 support
 
 
 v0.3.11 (2024-10-07)
