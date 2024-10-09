@@ -18,8 +18,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In Progress (unreleased)
+In progress (unreleased)
 ------------------------
+
+
+
+v0.3.13 (2024-10-09)
+--------------------
 
 * :gh:issue:`1138` CI: Complete migration from Azure DevOps Pipelines to
   GitHub Actions
@@ -29,7 +34,7 @@ In Progress (unreleased)
 * :gh:issue:`1073` Python 3.13 support
 
 
-v0.3.11 (2024-10-07)
+v0.3.12 (2024-10-07)
 --------------------
 
 * :gh:issue:`1106` :mod:`ansible_mitogen`: Support for `ansible_ssh_password`
