@@ -10,7 +10,6 @@ from __future__ import print_function
 import hashlib
 import io
 import os
-import spwd
 
 import mitogen.core
 import mitogen.master
@@ -55,21 +54,6 @@ def streamy_download_file(context, path):
         'metadata': metadata,
         'size': len(bio.getvalue()),
     }
-
-
-def get_password_hash(username):
-    """
-    Fetch a user's password hash.
-    """
-    try:
-        h = spwd.getspnam(username)
-    except KeyError:
-        return None
-
-    # mitogen.core.Secret() is a Unicode subclass with a repr() that hides the
-    # secret data. This keeps secret stuff out of logs. Like blobs, secrets can
-    # also be serialized.
-    return mitogen.core.Secret(h)
 
 
 def md5sum(path):
