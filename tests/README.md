@@ -7,7 +7,7 @@ started in September 2017. Pull requests in this area are very welcome!
 
 ## Running The Tests
 
-[![Build Status](https://dev.azure.com/mitogen-hq/mitogen/_apis/build/status/mitogen-hq.mitogen?branchName=master)](https://dev.azure.com/mitogen-hq/mitogen/_build/latest?definitionId=1&branchName=master)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/mitogen-hq/mitogen/tests.yml?branch=master)](https://github.com/mitogen-hq/mitogen/actions?query=branch%3Amaster)
 
 Your computer should have an Internet connection, and the ``docker`` command
 line tool should be able to connect to a working Docker daemon (localhost or

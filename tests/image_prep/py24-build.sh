@@ -15,7 +15,7 @@ tar xzvf cpython-2.4.6.tar.gz
 
 (
     cd cpython-2.4.6
-    ./configure --prefix=/usr/local/python2.4.6 --with-pydebug --enable-debug CFLAGS="-g -O0" # --enable-debug 
+    ./configure --prefix=/usr/local/python2.4.6 --with-pydebug --enable-debug CFLAGS="-g -O0" # --enable-debug
     echo 'zlib zlibmodule.c -I$(prefix)/include -L$(exec_prefix)/lib -lz' >> Modules/Setup.config
     make -j 8
     sudo make install

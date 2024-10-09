@@ -652,7 +652,7 @@ class ParentImpEnumerationMethod(FinderMethod):
     insane) parent package, and if no insane parents exist, simply use
     :mod:`sys.path` to search for it from scratch on the filesystem using the
     normal Python lookup mechanism.
-    
+
     This is required for older versions of :mod:`ansible.compat.six`,
     :mod:`plumbum.colors`, Ansible 2.8 :mod:`ansible.module_utils.distro` and
     its submodule :mod:`ansible.module_utils.distro._distro`.

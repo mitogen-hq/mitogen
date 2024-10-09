@@ -1,5 +1,5 @@
 cffi==1.15.1;               python_version < '3.8'
-cffi==1.16;                 python_version >= '3.8'
+cffi==1.17.1;               python_version >= '3.8'
 
 coverage==5.5;              python_version == '2.7'
 coverage==6.2;              python_version == '3.6'

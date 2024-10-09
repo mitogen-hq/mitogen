@@ -2,7 +2,7 @@
 # `.ci`
 
 This directory contains scripts for Continuous Integration platforms. Currently
-Azure Pipelines, but they will also happily run on any Debian-like machine.
+GitHub Actions, but ideally they will also run on any Debian-like machine.
 
 The scripts are usually split into `_install` and `_test` steps. The `_install`
 step will damage your machine, the `_test` step will just run the tests the way
