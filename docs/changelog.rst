@@ -29,7 +29,7 @@ In Progress (unreleased)
 * :gh:issue:`1073` Python 3.13 support
 
 
-v0.3.11 (2024-10-07)
+v0.3.12 (2024-10-07)
 --------------------
 
 * :gh:issue:`1106` :mod:`ansible_mitogen`: Support for `ansible_ssh_password`
