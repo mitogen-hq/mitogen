@@ -68,7 +68,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             password='has_sudo_password',
         )
         name = 'ssh.%s:%s' % (
-            self.dockerized_ssh.get_host(),
+            self.dockerized_ssh.host,
             self.dockerized_ssh.port,
         )
         self.assertEqual(name, context.name)
@@ -186,7 +186,7 @@ class BannerTest(testlib.DockerMixin, testlib.TestCase):
             ssh_debug_level=3,
         )
         name = 'ssh.%s:%s' % (
-            self.dockerized_ssh.get_host(),
+            self.dockerized_ssh.host,
             self.dockerized_ssh.port,
         )
         self.assertEqual(name, context.name)

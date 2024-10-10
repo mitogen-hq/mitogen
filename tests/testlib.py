@@ -574,14 +574,11 @@ class DockerizedSshDaemon(object):
 
         self.image = image_template % d
         self.start_container()
-        self.host = self.get_host()
+        self.host = get_docker_host()
         self.port = self.get_port(self.container_name)
 
-    def get_host(self):
-        return get_docker_host()
-
     def wait_for_sshd(self):
-        wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
+        wait_for_port(self.host, self.port, pattern='OpenSSH')
 
     def check_processes(self):
         # Get Accounting name (ucomm) & command line (args) of each process
