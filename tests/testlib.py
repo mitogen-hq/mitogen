@@ -51,7 +51,10 @@ except NameError:
 
 LOG = logging.getLogger(__name__)
 
-DISTRO = os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')
+DISTRO_SPECS = os.environ.get(
+    'MITOGEN_TEST_DISTRO_SPECS',
+    'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
+)
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'public.ecr.aws/n5z0e8q9/%(distro)s-test',
@@ -555,8 +558,9 @@ class DockerizedSshDaemon(object):
             self.image,
         ]
         subprocess.check_output(args)
+        self.port = self.get_port(self.container_name)
 
-    def __init__(self, distro=DISTRO, image_template=IMAGE_TEMPLATE):
+    def __init__(self, distro_spec, image_template=IMAGE_TEMPLATE):
         # Code duplicated in ci_lib.py, both should be updated together
         distro_pattern = re.compile(r'''
             (?P<distro>(?P<family>[a-z]+)[0-9]+)
@@ -565,7 +569,10 @@ class DockerizedSshDaemon(object):
             ''',
             re.VERBOSE,
         )
-        d = distro_pattern.match(distro).groupdict(default=None)
+        d = distro_pattern.match(distro_spec).groupdict(default=None)
+
+        self.distro = d['distro']
+        self.family = d['family']
 
         if d.pop('py') == 'py3':
             self.python_path = '/usr/bin/python3'
@@ -573,9 +580,7 @@ class DockerizedSshDaemon(object):
             self.python_path = '/usr/bin/python'
 
         self.image = image_template % d
-        self.start_container()
         self.host = get_docker_host()
-        self.port = self.get_port(self.container_name)
 
     def wait_for_sshd(self):
         wait_for_port(self.host, self.port, pattern='OpenSSH')
@@ -648,12 +653,10 @@ class DockerMixin(RouterMixin):
         if os.environ.get('SKIP_DOCKER_TESTS'):
             raise unittest.SkipTest('SKIP_DOCKER_TESTS is set')
 
-        # we want to be able to override test distro for some tests that need a different container spun up
-        daemon_args = {}
-        if hasattr(cls, 'mitogen_test_distro'):
-            daemon_args['mitogen_test_distro'] = cls.mitogen_test_distro
-
-        cls.dockerized_ssh = DockerizedSshDaemon(**daemon_args)
+        # cls.dockerized_ssh is injected by dynamically generating TestCase
+        # subclasses.
+        # TODO Bite the bullet, switch to e.g. pytest
+        cls.dockerized_ssh.start_container()
         cls.dockerized_ssh.wait_for_sshd()
 
     @classmethod

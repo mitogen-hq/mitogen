@@ -28,6 +28,10 @@ os.chdir(
 )
 
 
+DISTRO_SPECS = os.environ.get(
+    'MITOGEN_TEST_DISTRO_SPECS',
+    'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
+)
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'public.ecr.aws/n5z0e8q9/%(distro)s-test',
@@ -196,10 +200,6 @@ class Fold(object):
 
 
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# Used only when MODE=mitogen
-DISTRO = os.environ.get('DISTRO', 'debian9')
-# Used only when MODE=ansible
-DISTROS = os.environ.get('DISTROS', 'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004').split()
 TMP = TempDir().path
 
 
