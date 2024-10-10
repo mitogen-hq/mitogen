@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1159` CI: Reduce number of Jobs by parameterizing Mitogen Docker
+  SSH tests
 
 
 v0.3.13 (2024-10-09)
