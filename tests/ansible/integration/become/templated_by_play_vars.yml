@@ -1,0 +1,16 @@
+- name: integration/become/templated_by_play_vars.yml
+  hosts: tt_become_bare
+  gather_facts: false
+  vars:
+    ansible_become: true
+    ansible_become_user: "{{ 'root' | trim }}"
+  tasks:
+    - name: Templated become by play vars
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_play_vars_whoami
+      failed_when:
+        - become_templated_by_play_vars_whoami is failed
+          or become_templated_by_play_vars_whoami.stdout != 'root'
