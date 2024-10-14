@@ -417,11 +417,42 @@ class PlayContextSpec(Spec):
         # used to run interpreter discovery
         self._action = connection._action
 
+    def _become_option(self, name):
+        plugin = self._connection.become
+        return plugin.get_option(name, self._task_vars, self._play_context)
+        try:
+            if name not in plugin._options:
+                value, _ = plugin.get_option_and_origin(
+                    name, hostvars=self._task_vars,
+                    #playcontext=self._play_context,
+                )
+                plugin.set_option(name, value)
+            return plugin._options.get(name)
+        except AttributeError as exc:
+            raise
+            LOG.error('become plugin=%r: %s', plugin, exc)
+        except KeyError:
+            raise
+            if name not in {'become_user', 'become_pass', 'become_flags', 'become_exe'}:
+                raise
+        LOG.error(
+            'Used PlayContext fallback for become plugin=%r, option=%r, connection=%r, transport=%r, action=%r',
+            plugin, name, self._connection, self._transport, self._action,
+        )
+        try:
+            return getattr(self._play_context, name)
+        except AttributeError:
+            LOG.error('PlayContext did not have attribute %r', name)
+        return None
+
     def _connection_option(self, name):
         try:
             return self._connection.get_option(name, hostvars=self._task_vars)
         except KeyError:
-            LOG.debug('Used PlayContext fallback for option=%r', name)
+            LOG.error(
+                'Used PlayContext fallback for connection plugin=%r, option=%r',
+                self._connection, name,
+            )
             return getattr(self._play_context, name)
 
     def transport(self):
@@ -437,13 +468,13 @@ class PlayContextSpec(Spec):
         return self._connection_option('remote_user')
 
     def become(self):
-        return self._play_context.become
+        return self._connection.become
 
     def become_method(self):
         return self._play_context.become_method
 
     def become_user(self):
-        return self._play_context.become_user
+        return self._become_option('become_user')
 
     def become_pass(self):
         # become_pass is owned/provided by the active become plugin. However

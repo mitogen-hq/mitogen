@@ -1,0 +1,14 @@
+- name: integration/become/templated_by_inv.yml
+  hosts: tt_become_by_inv
+  gather_facts: false
+  tasks:
+    - meta: reset_connection
+    - name: Templated become in inventory
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_inv_whoami
+      failed_when:
+        - become_templated_by_inv_whoami is failed
+          or become_templated_by_inv_whoami.stdout != 'root'

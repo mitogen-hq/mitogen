@@ -48,6 +48,26 @@ ansible_host={{ tt.hostname }}
 ansible_port={{ tt.port }}
 ansible_python_interpreter={{ tt.python_path }}
 
+[tt_become_bare]
+tt-become-bare
+
+[tt_become_bare:vars]
+ansible_host={{ tt.hostname }}
+ansible_password=has_sudo_nopw_password
+ansible_port={{ tt.port }}
+ansible_python_interpreter={{ tt.python_path }}
+ansible_user=mitogen__has_sudo_nopw
+
+[tt_become_by_inv]
+tt-become-user              ansible_become=true ansible_become_user="{{ '{{' }} 'root' | trim {{ '}}' }}"
+
+[tt_become_by_inv:vars]
+ansible_host={{ tt.hostname }}
+ansible_password=has_sudo_nopw_password
+ansible_port={{ tt.port }}
+ansible_python_interpreter={{ tt.python_path }}
+ansible_user=mitogen__has_sudo_nopw
+
 [tt_targets_inventory]
 tt-password                 ansible_password="{{ '{{' }} 'has_sudo_nopw_password' | trim {{ '}}' }}"  ansible_port={{ tt.port }} ansible_user=mitogen__has_sudo_nopw
 tt-port                     ansible_password=has_sudo_nopw_password  ansible_port="{{ '{{' }} {{ tt.port }} | int {{ '}}' }}"  ansible_user=mitogen__has_sudo_nopw

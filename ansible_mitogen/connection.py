@@ -814,7 +814,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.context = dct['context']
         self.chain = CallChain(self, self.context, pipelined=True)
-        if self._play_context.become:
+        if self.become:
             self.login_context = dct['via']
         else:
             self.login_context = self.context
@@ -926,7 +926,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self.close()
 
         inventory_name, stack = self._build_stack()
-        if self._play_context.become:
+        if self.become:
             stack = stack[:-1]
 
         worker_model = ansible_mitogen.process.get_worker_model()
