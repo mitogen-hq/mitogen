@@ -1,3 +1,4 @@
 ---
 pkg_mgr_python_interpreter: python
+pkg_repos_gpg_keys: []
 pkg_repos_overrides: []
