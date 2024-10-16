@@ -37,7 +37,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(3, context.call(plain_old_module.add, 1, 2))
 
 
-class SshTest(testlib.DockerMixin, testlib.TestCase):
+class SshMixin(testlib.DockerMixin):
     def test_debug_decoding(self):
         # ensure filter_debug_logs() decodes the logged string.
         capture = testlib.LogCapturer()
@@ -68,7 +68,7 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             password='has_sudo_password',
         )
         name = 'ssh.%s:%s' % (
-            self.dockerized_ssh.get_host(),
+            self.dockerized_ssh.host,
             self.dockerized_ssh.port,
         )
         self.assertEqual(name, context.name)
@@ -176,7 +176,18 @@ class SshTest(testlib.DockerMixin, testlib.TestCase):
             fp.close()
 
 
-class BannerTest(testlib.DockerMixin, testlib.TestCase):
+for distro_spec in testlib.DISTRO_SPECS.split():
+    dockerized_ssh = testlib.DockerizedSshDaemon(distro_spec)
+    klass_name = 'SshTest%s' % (dockerized_ssh.distro.capitalize(),)
+    klass = type(
+        klass_name,
+        (SshMixin, testlib.TestCase),
+        {'dockerized_ssh': dockerized_ssh},
+    )
+    globals()[klass_name] = klass
+
+
+class BannerMixin(testlib.DockerMixin):
     # Verify the ability to disambiguate random spam appearing in the SSHd's
     # login banner from a legitimate password prompt.
     def test_verbose_enabled(self):
@@ -186,11 +197,22 @@ class BannerTest(testlib.DockerMixin, testlib.TestCase):
             ssh_debug_level=3,
         )
         name = 'ssh.%s:%s' % (
-            self.dockerized_ssh.get_host(),
+            self.dockerized_ssh.host,
             self.dockerized_ssh.port,
         )
         self.assertEqual(name, context.name)
         context.shutdown(wait=True)
+
+
+for distro_spec in testlib.DISTRO_SPECS.split():
+    dockerized_ssh = testlib.DockerizedSshDaemon(distro_spec)
+    klass_name = 'BannerTest%s' % (dockerized_ssh.distro.capitalize(),)
+    klass = type(
+        klass_name,
+        (BannerMixin, testlib.TestCase),
+        {'dockerized_ssh': dockerized_ssh},
+    )
+    globals()[klass_name] = klass
 
 
 class StubPermissionDeniedTest(StubSshMixin, testlib.TestCase):

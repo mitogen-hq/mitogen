@@ -23,6 +23,14 @@ In progress (unreleased)
 
 
 
+v0.3.14 (2024-10-16)
+--------------------
+
+* :gh:issue:`1159` CI: Reduce number of Jobs by parameterizing Mitogen Docker
+  SSH tests
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Support templated become username.
+
+
 v0.3.13 (2024-10-09)
 --------------------
 

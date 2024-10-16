@@ -417,6 +417,10 @@ class PlayContextSpec(Spec):
         # used to run interpreter discovery
         self._action = connection._action
 
+    def _become_option(self, name):
+        plugin = self._connection.become
+        return plugin.get_option(name, self._task_vars, self._play_context)
+
     def _connection_option(self, name):
         try:
             return self._connection.get_option(name, hostvars=self._task_vars)
@@ -437,13 +441,13 @@ class PlayContextSpec(Spec):
         return self._connection_option('remote_user')
 
     def become(self):
-        return self._play_context.become
+        return self._connection.become
 
     def become_method(self):
         return self._play_context.become_method
 
     def become_user(self):
-        return self._play_context.become_user
+        return self._become_option('become_user')
 
     def become_pass(self):
         # become_pass is owned/provided by the active become plugin. However
