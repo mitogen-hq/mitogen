@@ -5,3 +5,7 @@
 - import_playbook: sudo_nopassword.yml
 - import_playbook: sudo_password.yml
 - import_playbook: sudo_requiretty.yml
+- import_playbook: templated_by_inv.yml
+- import_playbook: templated_by_play_keywords.yml
+- import_playbook: templated_by_play_vars.yml
+- import_playbook: templated_by_task_keywords.yml
