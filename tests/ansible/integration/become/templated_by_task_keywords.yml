@@ -1,0 +1,27 @@
+- name: integration/become/templated_by_task_keywords.yml
+  hosts: tt_become_bare
+  gather_facts: false
+  # FIXME Resetting the connection shouldn't require credentials
+  #       https://github.com/mitogen-hq/mitogen/issues/1132
+  become: true
+  become_user: "{{ 'root' | trim }}"
+  tasks:
+    - name: Reset connection to target that will be delegate_to
+      meta: reset_connection
+
+- name: Test connection template by task keywords, with delegate_to
+  hosts: test-targets[0]
+  gather_facts: false
+  tasks:
+    - name: Templated become by task keywords, with delegate_to
+      become: true
+      become_user: "{{ 'root' | trim }}"
+      delegate_to: "{{ groups.tt_become_bare[0] }}"
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_task_with_delegate_to_whoami
+      failed_when:
+        - become_templated_by_task_with_delegate_to_whoami is failed
+          or become_templated_by_task_with_delegate_to_whoami.stdout != 'root'

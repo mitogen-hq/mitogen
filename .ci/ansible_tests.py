@@ -35,7 +35,7 @@ ci_lib.check_stray_processes(interesting)
 
 
 with ci_lib.Fold('docker_setup'):
-    containers = ci_lib.container_specs(ci_lib.DISTROS)
+    containers = ci_lib.container_specs(ci_lib.DISTRO_SPECS.split())
     ci_lib.start_containers(containers)
 
 

@@ -67,80 +67,14 @@ jobs:
             python_version: '3.13'
             tox_env: py313-mode_ansible-ansible10-strategy_linear
 
-          - name: Mito_27_centos6
-            tox_env: py27-mode_mitogen-distro_centos6
-          - name: Mito_27_centos7
-            tox_env: py27-mode_mitogen-distro_centos7
-          - name: Mito_27_centos8
-            tox_env: py27-mode_mitogen-distro_centos8
-          - name: Mito_27_debian9
-            tox_env: py27-mode_mitogen-distro_debian9
-          - name: Mito_27_debian10
-            tox_env: py27-mode_mitogen-distro_debian10
-          - name: Mito_27_debian11
-            tox_env: py27-mode_mitogen-distro_debian11
-          - name: Mito_27_ubuntu1604
-            tox_env: py27-mode_mitogen-distro_ubuntu1604
-          - name: Mito_27_ubuntu1804
-            tox_env: py27-mode_mitogen-distro_ubuntu1804
-          - name: Mito_27_ubuntu2004
-            tox_env: py27-mode_mitogen-distro_ubuntu2004
-
-          - name: Mito_36_centos6
+          - name: Mito_27
+            tox_env: py27-mode_mitogen
+          - name: Mito_36
             python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_centos6
-          - name: Mito_36_centos7
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_centos7
-          - name: Mito_36_centos8
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_centos8
-          - name: Mito_36_debian9
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_debian9
-          - name: Mito_36_debian10
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_debian10
-          - name: Mito_36_debian11
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_debian11
-          - name: Mito_36_ubuntu1604
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_ubuntu1604
-          - name: Mito_36_ubuntu1804
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_ubuntu1804
-          - name: Mito_36_ubuntu2004
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_ubuntu2004
-
-          - name: Mito_313_centos6
+            tox_env: py36-mode_mitogen
+          - name: Mito_313
             python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_centos6
-          - name: Mito_313_centos7
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_centos7
-          - name: Mito_313_centos8
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_centos8
-          - name: Mito_313_debian9
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_debian9
-          - name: Mito_313_debian10
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_debian10
-          - name: Mito_313_debian11
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_debian11
-          - name: Mito_313_ubuntu1604
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_ubuntu1604
-          - name: Mito_313_ubuntu1804
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_ubuntu1804
-          - name: Mito_313_ubuntu2004
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen-distro_ubuntu2004
+            tox_env: py313-mode_mitogen
 
     steps:
       - uses: actions/checkout@v4

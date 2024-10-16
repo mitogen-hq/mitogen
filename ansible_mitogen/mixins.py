@@ -294,7 +294,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if not path.startswith('~'):
             # /home/foo -> /home/foo
             return path
-        if sudoable or not self._play_context.become:
+        if sudoable or not self._connection.become:
             if path == '~':
                 # ~ -> /home/dmw
                 return self._connection.homedir
