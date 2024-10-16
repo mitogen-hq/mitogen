@@ -6,7 +6,6 @@ import os
 import ci_lib
 
 os.environ.update({
-    'MITOGEN_TEST_DISTRO': ci_lib.DISTRO,
     'MITOGEN_LOG_LEVEL': 'debug',
     'SKIP_ANSIBLE': '1',
 })

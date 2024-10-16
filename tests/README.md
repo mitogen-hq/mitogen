@@ -30,11 +30,19 @@ and run the tests there.
 1. Run ``test``
 
 
-# Selecting a target distribution
+# Selecting target distributions
 
-Docker target images exist for testing against CentOS and Debian, with the
-default being Debian. To select CentOS, specify `MITOGEN_TEST_DISTRO=centos` in
-the environment.
+Linux container images for testing are available at
+
+- https://github.com/orgs/mitogen-hq/packages
+- https://public.ecr.aws/n5z0e8q9
+
+The images used are determined by two environment variables
+
+- `MITOGEN_TEST_DISTRO_SPECS`
+- `MITOGEN_TEST_IMAGE_TEMPLATE`
+
+Defaults for these can be found in `.ci/ci_lib.py` & `tests/testlib.py`
 
 
 # User Accounts

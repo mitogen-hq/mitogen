@@ -4,8 +4,7 @@
 # When running the tests outside CI, make a single 'target' host which is the
 # local machine. The ansible_user override is necessary since some tests want a
 # fixed ansible.cfg remote_user setting to test against.
-# FIXME Hardcoded by replacement in some CI runs https://github.com/mitogen-hq/mitogen/issues/1022
-#       and os.environ['USER'] is not populated on Azure macOS runners.
+# os.environ['USER'] is an empty string on GitHub Actions macOS runners.
 target ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
 
 [test-targets]
@@ -25,6 +24,20 @@ tt-bare
 
 [tt_targets_bare:vars]
 ansible_host=localhost
+
+[tt_become_bare]
+tt-become-bare
+
+[tt_become_bare:vars]
+ansible_host=localhost
+ansible_user="{{ lookup('pipe', 'whoami') }}"
+
+[tt_become_by_inv]
+tt-become-user              ansible_become=true ansible_become_user="{{ 'root' | trim }}"
+
+[tt_become_by_inv:vars]
+ansible_host=localhost
+ansible_user="{{ lookup('pipe', 'whoami') }}"
 
 [tt_targets_inventory]
 tt-password                 ansible_password="{{ 'has_sudo_nopw_password' | trim }}" ansible_user=mitogen__has_sudo_nopw

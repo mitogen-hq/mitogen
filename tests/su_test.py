@@ -23,7 +23,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(argv[2], '-c')
 
 
-class SuTest(testlib.DockerMixin, testlib.TestCase):
+class SuMixin(testlib.DockerMixin):
     stub_su_path = testlib.data_path('stubs/stub-su.py')
 
     def test_slow_auth_failure(self):
@@ -64,3 +64,14 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         )
         context = self.router.su(via=ssh, password='rootpassword')
         self.assertEqual(0, context.call(os.getuid))
+
+
+for distro_spec in testlib.DISTRO_SPECS.split():
+    dockerized_ssh = testlib.DockerizedSshDaemon(distro_spec)
+    klass_name = 'SuTest%s' % (dockerized_ssh.distro.capitalize(),)
+    klass = type(
+        klass_name,
+        (SuMixin, testlib.TestCase),
+        {'dockerized_ssh': dockerized_ssh},
+    )
+    globals()[klass_name] = klass
