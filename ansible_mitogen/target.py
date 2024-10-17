@@ -60,8 +60,10 @@ import mitogen.service
 # ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
 # we must setup a fake "__main__" before that module is ever imported. The
 # str() is to cast Unicode to bytes on Python 2.6.
-if not sys.modules.get(str('__main__')):
-    sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
+if '__main__' not in sys.modules:
+    sys.modules['__main__'] = types.ModuleType(
+        '__main__', doc='ansible_mitogen.target __main__ module substitute',
+    )
 
 import ansible.module_utils.json_utils
 

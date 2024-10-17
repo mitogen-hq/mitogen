@@ -49,9 +49,11 @@ import shlex
 import shutil
 import sys
 import tempfile
+import textwrap
 import traceback
 import types
 
+from ansible.module_utils.common.text.converters import to_native
 from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
@@ -75,6 +77,7 @@ except ImportError:
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+import ansible.module_utils.common.respawn
 
 # For tasks that modify /etc/resolv.conf, non-Debian derivative glibcs cache
 # resolv.conf at startup and never implicitly reload it. Cope with that via an
@@ -622,6 +625,20 @@ class TemporaryArgv(object):
         sys.argv[:] = self.original
 
 
+def _create_payload():
+    smuggled_args = getattr(ansible.module_utils.basic, '_ANSIBLE_ARGS')
+    if not smuggled_args:
+        raise Exception('unable to access ansible.module_utils.basic._ANSIBLE_ARGS (not launched by AnsiballZ?)')
+
+    assert 0, '%r, %r, spec %r' % (
+        sys.modules['__main__'],
+        ' '.join('%s=%r' % (s, getattr(sys.modules['__main__'], s)) for s in sorted(dir(sys.modules['__main__']))),
+        ' '.join('%s=%r' % (s, getattr(sys.modules['__main__'].__spec__, s)) for s in sorted(dir(sys.modules['__main__'].__spec__))),
+    )
+    module_fqn = sys.modules['__main__']._module_fqn
+    modlib_path = sys.modules['__main__']._modlib_path
+
+
 class NewStyleStdio(object):
     """
     Patch ansible.module_utils.basic argument globals.
@@ -640,11 +657,15 @@ class NewStyleStdio(object):
         self.original_get_path = getattr(ansible.module_utils.basic,
                                         'get_module_path', None)
         ansible.module_utils.basic.get_module_path = self._get_path
+        #self.original_create_payload = getattr(ansible.module_utils.common.respawn,
+        #                                '_create_payload', None)
+        #ansible.module_utils.common.respawn._create_payload = _create_payload
 
     def _get_path(self):
         return self.temp_dir
 
     def revert(self):
+        #ansible.module_utils.common.respawn._create_payload = self.original_create_payload
         ansible.module_utils.basic.get_module_path = self.original_get_path
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
@@ -978,10 +999,7 @@ class NewStyleRunner(ScriptRunner):
                 True,                   # dont_inherit
             ))
 
-    if mitogen.core.PY3:
-        main_module_name = '__main__'
-    else:
-        main_module_name = b'__main__'
+    main_module_name = '__main__'
 
     def _handle_magic_exception(self, mod, exc):
         """
@@ -1032,6 +1050,10 @@ class NewStyleRunner(ScriptRunner):
             'ansible_module_' + os.path.basename(self.path),
         )
 
+        # CREDIT https://github.com/phemmer
+        # https://github.com/mitogen-hq/mitogen/issues/849#issuecomment-988207114
+        sys.modules['__main__']._module_fqn = self.py_module_name
+        sys.modules['__main__']._modlib_path = self.get_temp_dir()
         code = self._get_code()
         rc = 2
         try:
