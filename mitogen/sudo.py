@@ -219,20 +219,24 @@ class SetupProtocol(mitogen.parent.RegexProtocol):
             self.stream.name, line.decode('utf-8', 'replace'))
 
         if self.stream.conn.options.password is None:
+            LOG.error('%s: password prompted, not available', self.stream.name)
             self.stream.conn._fail_connection(
                 PasswordError(password_required_msg)
             )
             return
 
         if self.password_sent:
+            LOG.error('%s: password already sent', self.stream.name)
             self.stream.conn._fail_connection(
                 PasswordError(password_incorrect_msg)
             )
             return
 
+        LOG.info('%s: providing password', self.stream.name)
         self.stream.transmit_side.write(
             (self.stream.conn.options.password + '\n').encode('utf-8')
         )
+        LOG.debug('%s: provided password', self.stream.name)
         self.password_sent = True
 
     PARTIAL_PATTERNS = [

@@ -37,6 +37,14 @@ with ci_lib.Fold('job_setup'):
 
 
 with ci_lib.Fold('machine_prep'):
+    b_ls_out = subprocess.check_output(['sudo', 'ls', '/private/etc/sudoers.d'])
+    ls_out = b_ls_out.decode()
+    for filename in sorted(ls_out.splitlines()):
+        path = os.path.join('/private/etc/sudoers.d', filename)
+        ci_lib.print('--- %s ---' % path, flush=True)
+        subprocess.check_call(['sudo', 'cat', path])
+        ci_lib.print('---', flush=True)
+
     # generate a new ssh key for localhost ssh
     if not os.path.exists(os.path.expanduser("~/.ssh/id_rsa")):
         subprocess.check_call("ssh-keygen -P '' -m pem -f ~/.ssh/id_rsa", shell=True)
