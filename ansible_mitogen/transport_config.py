@@ -506,13 +506,12 @@ class PlayContextSpec(Spec):
         )
 
     def ssh_args(self):
-        local_vars = self._task_vars.get("hostvars", {}).get(self._inventory_name, {})
         return [
             mitogen.core.to_text(term)
             for s in (
-                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=local_vars),
-                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=local_vars),
-                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=local_vars)
+                self._connection_option('ssh_args'),
+                self._connection_option('ssh_common_args'),
+                self._connection_option('ssh_extra_args'),
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
         ]
