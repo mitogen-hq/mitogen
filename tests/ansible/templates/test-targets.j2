@@ -45,7 +45,6 @@ tt-bare
 
 [tt_targets_bare:vars]
 ansible_host={{ tt.hostname }}
-ansible_port={{ tt.port }}
 ansible_python_interpreter={{ tt.python_path }}
 
 [tt_become_bare]
@@ -59,6 +58,7 @@ ansible_python_interpreter={{ tt.python_path }}
 ansible_user=mitogen__has_sudo_nopw
 
 [tt_become_by_inv]
+tt-become-pass              ansible_become=true ansible_become_pass="{{ '{{' }} 'pw_required_password' | trim {{ '}}' }}" ansible_become_user=mitogen__pw_required
 tt-become-user              ansible_become=true ansible_become_user="{{ '{{' }} 'root' | trim {{ '}}' }}"
 
 [tt_become_by_inv:vars]
