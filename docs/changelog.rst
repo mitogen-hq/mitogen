@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.15 (2024-10-28)
+--------------------
 
 * :gh:issue:`905` :mod:`ansible_mitogen`: Support templated SSH command
   arguments (e.g. ``ansible_ssh_args``, ``ansible_ssh_extra_args``).
