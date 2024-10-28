@@ -18,6 +18,16 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.15 (2024-10-28)
+--------------------
+
+* :gh:issue:`905` :mod:`ansible_mitogen`: Support templated SSH command
+  arguments (e.g. ``ansible_ssh_args``, ``ansible_ssh_extra_args``).
+* :gh:issue:`692` tests: Fix and re-enable several sudo tests
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Support templated become password
+  (e.g. ``ansible_become_pass``, ``ansible_sudo_pass``)
+
+
 v0.3.14 (2024-10-16)
 --------------------
 

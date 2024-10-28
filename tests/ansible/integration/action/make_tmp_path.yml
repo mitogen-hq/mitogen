@@ -142,17 +142,16 @@
     # readonly homedir
     #
 
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - name: "Try writing to temp directory for the readonly_homedir user"
-    #   become: true
-    #   become_user: mitogen__readonly_homedir
-    #   custom_python_run_script:
-    #     script: |
-    #       from ansible.module_utils.basic import get_module_path
-    #       path = get_module_path() + '/foo.txt'
-    #       result['path'] = path
-    #       open(path, 'w').write("bar")
-    #   register: tmp_path
+    - name: Try writing to temp directory for the readonly_homedir user
+      become: true
+      become_user: mitogen__readonly_homedir
+      custom_python_run_script:
+        script: |
+          from ansible.module_utils.basic import get_module_path
+          path = get_module_path() + '/foo.txt'
+          result['path'] = path
+          open(path, 'w').write("bar")
+      register: tmp_path
 
     #
     # modules get the same base dir

@@ -73,6 +73,7 @@
       - user:
           name: "mitogen__{{item}}"
           shell: /bin/bash
+          group: staff
           groups: |
             {{
                 ['com.apple.access_ssh'] +

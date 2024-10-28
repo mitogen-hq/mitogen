@@ -3,30 +3,39 @@
 
 - name: integration/playbook_semantics/with_items.yml
   hosts: test-targets
+  gather_facts: true
   tasks:
+    - block:
+        - name: Spin up a few interpreters
+          become: true
+          vars:
+            ansible_become_user: "mitogen__user{{ item }}"
+          command:
+            cmd: whoami
+          with_sequence: start=1 end=3
+          register: first_run
+          changed_when: false
 
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - name: Spin up a few interpreters
-    #   shell: whoami
-    #   become: true
-    #   vars:
-    #     ansible_become_user: "mitogen__user{{item}}"
-    #   with_sequence: start=1 end=3
-    #   register: first_run
+        - name: Reuse them
+          become: true
+          vars:
+            ansible_become_user: "mitogen__user{{ item }}"
+          command:
+            cmd: whoami
+          with_sequence: start=1 end=3
+          register: second_run
+          changed_when: false
 
-    # - name: Reuse them
-    #   shell: whoami
-    #   become: true
-    #   vars:
-    #     ansible_become_user: "mitogen__user{{item}}"
-    #   with_sequence: start=1 end=3
-    #   register: second_run
-
-    # - name: Verify first and second run matches expected username.
-    #   assert:
-    #     that:
-    #     - first_run.results[item|int].stdout == ("mitogen__user%d" % (item|int + 1))
-    #     - first_run.results[item|int].stdout == second_run.results[item|int].stdout
-    #   with_sequence: start=0 end=2
-  tags:
-    - custom_python_new_style_module
+        - name: Verify first and second run matches expected username.
+          vars:
+            user_expected: "mitogen__user{{ item | int + 1 }}"
+          assert:
+            that:
+              - first_run.results[item | int].stdout == user_expected
+              - second_run.results[item | int].stdout == user_expected
+          with_sequence: start=0 end=2
+      when:
+        # https://github.com/ansible/ansible/pull/70785
+        - ansible_facts.distribution not in ["MacOSX"]
+          or ansible_version.full is version("2.11", ">=", strict=True)
+          or is_mitogen

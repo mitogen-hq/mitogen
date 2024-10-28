@@ -1,12 +1,9 @@
-- name: integration/ssh/args.yml
+- name: integration/ssh/args_by_inv.yml
   hosts: issue905
   gather_facts: false
   tasks:
     # Test that ansible_ssh_common_args are templated; ansible_ssh_args &
     # ansible_ssh_extra_args aren't directly tested, we assume they're similar.
-    # FIXME This test currently relies on variables set in the host group.
-    #       Ideally they'd be set here, and the host group eliminated, but
-    #       Mitogen currently fails to template when defined in the play.
     # TODO Replace LocalCommand canary with SetEnv canary, to simplify test.
     #      Requires modification of sshd_config files to add AcceptEnv ...
     - name: Test templating of ansible_ssh_common_args et al
