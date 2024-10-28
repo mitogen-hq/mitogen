@@ -419,7 +419,28 @@ class PlayContextSpec(Spec):
 
     def _become_option(self, name):
         plugin = self._connection.become
-        return plugin.get_option(name, self._task_vars, self._play_context)
+        try:
+            return plugin.get_option(name, self._task_vars, self._play_context)
+        except AttributeError:
+            # A few ansible_mitogen connection plugins look more like become
+            # plugins. They don't quite fit Ansible's plugin.get_option() API.
+            # https://github.com/mitogen-hq/mitogen/issues/1173
+            fallback_plugins = {'mitogen_doas', 'mitogen_sudo', 'mitogen_su'}
+            if self._connection.transport not in fallback_plugins:
+                raise
+
+            fallback_options = {
+                'become_exe',
+            }
+            if name not in fallback_options:
+                raise
+
+            LOG.info(
+                'Used PlayContext fallback for plugin=%r, option=%r',
+                self._connection, name,
+            )
+            return getattr(self._play_context, name)
+
 
     def _connection_option(self, name):
         try:
@@ -505,15 +526,7 @@ class PlayContextSpec(Spec):
         ]
 
     def become_exe(self):
-        # In Ansible 2.8, PlayContext.become_exe always has a default value due
-        # to the new options mechanism. Previously it was only set if a value
-        # ("somewhere") had been specified for the task.
-        # For consistency in the tests, here we make older Ansibles behave like
-        # newer Ansibles.
-        exe = self._play_context.become_exe
-        if exe is None and self._play_context.become_method == 'sudo':
-            exe = 'sudo'
-        return exe
+        return self._become_option('become_exe')
 
     def sudo_args(self):
         return [
