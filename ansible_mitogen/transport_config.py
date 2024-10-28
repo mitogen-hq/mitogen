@@ -450,19 +450,7 @@ class PlayContextSpec(Spec):
         return self._become_option('become_user')
 
     def become_pass(self):
-        # become_pass is owned/provided by the active become plugin. However
-        # PlayContext is intertwined with it. Known complications
-        # - ansible_become_password is higher priority than ansible_become_pass,
-        #   `play_context.become_pass` doesn't obey this (atleast with Mitgeon).
-        # - `meta: reset_connection` runs `connection.reset()` but
-        #   `ansible_mitogen.connection.Connection.reset()` recreates the
-        #   connection object, setting `connection.become = None`.
-        become_plugin = self._connection.become
-        try:
-            become_pass = become_plugin.get_option('become_pass', playcontext=self._play_context)
-        except AttributeError:
-            become_pass = self._play_context.become_pass
-        return optional_secret(become_pass)
+        return optional_secret(self._become_option('become_pass'))
 
     def password(self):
         return optional_secret(self._connection_option('password'))

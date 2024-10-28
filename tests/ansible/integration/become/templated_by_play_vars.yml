@@ -5,7 +5,7 @@
     ansible_become: true
     ansible_become_user: "{{ 'root' | trim }}"
   tasks:
-    - name: Templated become by play vars
+    - name: Templated become by play vars, no password
       command:
         cmd: whoami
       changed_when: false
@@ -14,3 +14,26 @@
       failed_when:
         - become_templated_by_play_vars_whoami is failed
           or become_templated_by_play_vars_whoami.stdout != 'root'
+
+- name: integration/become/templated_by_play_vars.yml
+  hosts: tt_become_bare
+  gather_facts: true
+  vars:
+    ansible_become: true
+    ansible_become_pass: "{{ 'pw_required_password' | trim }}"
+    ansible_become_user: "{{ 'mitogen__pw_required' | trim }}"
+  tasks:
+    - name: Templated become by play vars, password
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_play_vars_password_whoami
+      failed_when:
+        - become_templated_by_play_vars_password_whoami is failed
+          or become_templated_by_play_vars_password_whoami.stdout != 'mitogen__pw_required'
+      when:
+        # https://github.com/ansible/ansible/pull/70785
+        - ansible_facts.distribution not in ["MacOSX"]
+          or ansible_version.full is version("2.11", ">=", strict=True)
+          or is_mitogen

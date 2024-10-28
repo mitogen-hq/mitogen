@@ -4,6 +4,10 @@
   tasks:
     - meta: reset_connection
     - name: Templated become in inventory
+      vars:
+        expected_become_users:
+          tt-become-pass: mitogen__pw_required
+          tt-become-user: root
       command:
         cmd: whoami
       changed_when: false
@@ -11,4 +15,4 @@
       register: become_templated_by_inv_whoami
       failed_when:
         - become_templated_by_inv_whoami is failed
-          or become_templated_by_inv_whoami.stdout != 'root'
+          or become_templated_by_inv_whoami.stdout != expected_become_users[inventory_hostname]
