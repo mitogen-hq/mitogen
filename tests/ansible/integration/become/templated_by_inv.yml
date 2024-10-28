@@ -2,8 +2,18 @@
   hosts: tt_become_by_inv
   gather_facts: false
   tasks:
+    - name: Gather facts (avoiding any unprivileged become)
+      vars:
+        ansible_become: false
+      setup:
+
     - meta: reset_connection
+
     - name: Templated become in inventory
+      vars:
+        expected_become_users:
+          tt-become-pass: mitogen__pw_required
+          tt-become-user: root
       command:
         cmd: whoami
       changed_when: false
@@ -11,4 +21,10 @@
       register: become_templated_by_inv_whoami
       failed_when:
         - become_templated_by_inv_whoami is failed
-          or become_templated_by_inv_whoami.stdout != 'root'
+          or become_templated_by_inv_whoami.stdout != expected_become_users[inventory_hostname]
+      when:
+        # https://github.com/ansible/ansible/pull/70785
+        - ansible_become_user in ['root']
+          or ansible_facts.distribution not in ["MacOSX"]
+          or ansible_version.full is version("2.11", ">=", strict=True)
+          or is_mitogen
