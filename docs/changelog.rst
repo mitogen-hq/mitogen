@@ -21,6 +21,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+
+v0.3.15 (2024-10-28)
+--------------------
+
 * :gh:issue:`905` :mod:`ansible_mitogen`: Support templated SSH command
   arguments (e.g. ``ansible_ssh_args``, ``ansible_ssh_extra_args``).
 * :gh:issue:`692` tests: Fix and re-enable several sudo tests
