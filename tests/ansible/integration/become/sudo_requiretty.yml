@@ -3,34 +3,38 @@
 - name: integration/become/sudo_requiretty.yml
   hosts: test-targets
   tasks:
-    # - include_tasks: ../_mitogen_only.yml
+    # AIUI Vanilla Ansible cannot do sudo when requiretty configured
+    - include_tasks: ../_mitogen_only.yml
 
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - name: Verify we can login to a non-passworded requiretty account
-    #   shell: whoami
-    #   become: true
-    #   become_user: mitogen__require_tty
-    #   register: out
+    - name: Verify we can login to a non-passworded requiretty account
+      become: true
+      become_user: mitogen__require_tty
+      command:
+        cmd: whoami
+      changed_when: false
+      register: sudo_require_tty_whoami
 
-    # - assert:
-    #     that:
-    #       - out.stdout == 'mitogen__require_tty'
+    - assert:
+        that:
+          - sudo_require_tty_whoami.stdout == 'mitogen__require_tty'
+        fail_msg: |
+          sudo_require_tty_whoami={{ sudo_require_tty_whoami }}
 
+    - name: Verify we can login to a passworded requiretty account
+      become: true
+      become_user: mitogen__require_tty_pw_required
+      vars:
+        ansible_become_pass: require_tty_pw_required_password
+      command:
+        cmd: whoami
+      changed_when: false
+      register: sudo_require_tty_password_whoami
 
-    # ---------------
-
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - name: Verify we can login to a passworded requiretty account
-    #   shell: whoami
-    #   become: true
-    #   become_user: mitogen__require_tty_pw_required
-    #   vars:
-    #     ansible_become_pass: require_tty_pw_required_password
-    #   register: out
-
-    # - assert:
-    #     that:
-    #       - out.stdout == 'mitogen__require_tty_pw_required'
+    - assert:
+        that:
+          - sudo_require_tty_password_whoami.stdout == 'mitogen__require_tty_pw_required'
+        fail_msg: |
+          sudo_require_tty_password_whoami={{ sudo_require_tty_password_whoami }}
   tags:
     - mitogen_only
     - sudo
