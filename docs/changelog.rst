@@ -23,6 +23,7 @@ In progress (unreleased)
 
 * :gh:issue:`905` :mod:`ansible_mitogen`: Support templated SSH command
   arguments (e.g. ``ansible_ssh_args``, ``ansible_ssh_extra_args``).
+* :gh:issue:`692` tests: Fix and re-enable several sudo tests
 
 
 v0.3.14 (2024-10-16)
