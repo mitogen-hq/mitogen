@@ -40,11 +40,11 @@
       delegate_to: localhost
       run_once: true
 
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - file:
-    #     path: /tmp/sync-test.out
-    #     state: absent
-    #   become: true
+    - name: Ensure clean slate
+      become: true
+      file:
+        path: /tmp/sync-test.out
+        state: absent
 
     # exception:   File "/tmp/venv/lib/python2.7/site-packages/ansible/plugins/action/__init__.py", line 129, in cleanup
     # exception:     self._remove_tmp_path(self._connection._shell.tmpdir)
@@ -70,14 +70,14 @@
               outout={{ outout }}
       when: False
 
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - file:
-    #     path: "{{item}}"
-    #     state: absent
-    #   become: true
-    #   with_items:
-    #   - /tmp/synchronize-action-key
-    #   - /tmp/sync-test
-    #   - /tmp/sync-test.out
+    - name: Cleanup
+      become: true
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - /tmp/synchronize-action-key
+        - /tmp/sync-test
+        - /tmp/sync-test.out
   tags:
     - synchronize

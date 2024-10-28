@@ -450,19 +450,7 @@ class PlayContextSpec(Spec):
         return self._become_option('become_user')
 
     def become_pass(self):
-        # become_pass is owned/provided by the active become plugin. However
-        # PlayContext is intertwined with it. Known complications
-        # - ansible_become_password is higher priority than ansible_become_pass,
-        #   `play_context.become_pass` doesn't obey this (atleast with Mitgeon).
-        # - `meta: reset_connection` runs `connection.reset()` but
-        #   `ansible_mitogen.connection.Connection.reset()` recreates the
-        #   connection object, setting `connection.become = None`.
-        become_plugin = self._connection.become
-        try:
-            become_pass = become_plugin.get_option('become_pass', playcontext=self._play_context)
-        except AttributeError:
-            become_pass = self._play_context.become_pass
-        return optional_secret(become_pass)
+        return optional_secret(self._become_option('become_pass'))
 
     def password(self):
         return optional_secret(self._connection_option('password'))
@@ -506,13 +494,12 @@ class PlayContextSpec(Spec):
         )
 
     def ssh_args(self):
-        local_vars = self._task_vars.get("hostvars", {}).get(self._inventory_name, {})
         return [
             mitogen.core.to_text(term)
             for s in (
-                C.config.get_config_value("ssh_args", plugin_type="connection", plugin_name="ssh", variables=local_vars),
-                C.config.get_config_value("ssh_common_args", plugin_type="connection", plugin_name="ssh", variables=local_vars),
-                C.config.get_config_value("ssh_extra_args", plugin_type="connection", plugin_name="ssh", variables=local_vars)
+                self._connection_option('ssh_args'),
+                self._connection_option('ssh_common_args'),
+                self._connection_option('ssh_extra_args'),
             )
             for term in ansible.utils.shlex.shlex_split(s or '')
         ]
