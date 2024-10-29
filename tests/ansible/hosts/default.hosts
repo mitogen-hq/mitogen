@@ -46,6 +46,7 @@ ansible_user="{{ lookup('pipe', 'whoami') }}"
 tt-password                 ansible_password="{{ 'has_sudo_nopw_password' | trim }}" ansible_user=mitogen__has_sudo_nopw
 tt-port                     ansible_password=has_sudo_nopw_password ansible_port="{{ 22 | int }}" ansible_user=mitogen__has_sudo_nopw
 tt-remote-user              ansible_password=has_sudo_nopw_password ansible_user="{{ 'mitogen__has_sudo_nopw' | trim }}"
+tt-ssh-executable           ansible_password=has_sudo_nopw_password ansible_ssh_executable="{{ 'ssh' | trim }}" ansible_user=mitogen__has_sudo_nopw
 
 [tt_targets_inventory:vars]
 ansible_host=localhost

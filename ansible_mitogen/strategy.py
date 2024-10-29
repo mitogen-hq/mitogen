@@ -45,6 +45,7 @@ import ansible_mitogen.mixins
 import ansible_mitogen.process
 
 import ansible.executor.process.worker
+import ansible.template
 import ansible.utils.sentinel
 
 
@@ -326,3 +327,24 @@ class StrategyMixin(object):
                 self._worker_model.on_strategy_complete()
         finally:
             ansible_mitogen.process.set_worker_model(None)
+
+    def _smuggle_to_connction_reset(self, task, play_context, iterator, target_host):
+        # Workaround for https://github.com/ansible/ansible/issues/84238
+        variables = self._variable_manager.get_vars(
+            play=iterator._play, host=target_host, task=task,
+            _hosts=self._hosts_cache, _hosts_all=self._hosts_cache_all,
+        )
+        templar = ansible.template.Templar(
+            loader=self._loader, variables=variables,
+        )
+        play_context.vars.update({
+            '_mitogen.smuggled.reset_connection': (task, templar),
+        })
+
+    def _execute_meta(self, task, play_context, iterator, target_host):
+        if task.args['_raw_params'] == 'reset_connection':
+            self._smuggle_to_connction_reset(task, play_context, iterator, target_host)
+
+        return super(StrategyMixin, self)._execute_meta(
+            task, play_context, iterator, target_host,
+        )

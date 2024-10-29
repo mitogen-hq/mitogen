@@ -511,7 +511,7 @@ class PlayContextSpec(Spec):
         return self._play_context.private_key_file
 
     def ssh_executable(self):
-        return C.config.get_config_value("ssh_executable", plugin_type="connection", plugin_name="ssh", variables=self._task_vars.get("vars", {}))
+        return self._connection_option('ssh_executable')
 
     def timeout(self):
         return self._play_context.timeout
