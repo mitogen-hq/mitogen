@@ -13,6 +13,7 @@
       vars:
         expected_become_users:
           tt-become-exe: root
+          tt-become-flags: root
           tt-become-pass: mitogen__pw_required
           tt-become-user: root
       command:
