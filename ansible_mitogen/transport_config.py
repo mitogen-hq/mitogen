@@ -214,6 +214,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def become_flags(self):
+        """
+        The command line arguments passed to the become executable.
+        """
+
+    @abc.abstractmethod
     def become_method(self):
         """
         The name of the Ansible become method to use.
@@ -290,10 +296,9 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
     @abc.abstractmethod
     def sudo_args(self):
         """
-        The list of additional arguments that should be included in a become
+        The list of additional arguments that should be included in a sudo
         invocation.
         """
-        # TODO: split out into sudo_args/become_args.
 
     @abc.abstractmethod
     def mitogen_via(self):
@@ -431,6 +436,7 @@ class PlayContextSpec(Spec):
 
             fallback_options = {
                 'become_exe',
+                'become_flags',
             }
             if name not in fallback_options:
                 raise
@@ -463,6 +469,9 @@ class PlayContextSpec(Spec):
 
     def become(self):
         return self._connection.become
+
+    def become_flags(self):
+        return self._become_option('become_flags')
 
     def become_method(self):
         return self._play_context.become_method
@@ -529,19 +538,7 @@ class PlayContextSpec(Spec):
         return self._become_option('become_exe')
 
     def sudo_args(self):
-        return [
-            mitogen.core.to_text(term)
-            for term in ansible.utils.shlex.shlex_split(
-                first_true((
-                    self._play_context.become_flags,
-                    # Ansible <=2.7.
-                    getattr(self._play_context, 'sudo_flags', ''),
-                    # Ansible <=2.3.
-                    getattr(C, 'DEFAULT_BECOME_FLAGS', ''),
-                    getattr(C, 'DEFAULT_SUDO_FLAGS', '')
-                ), default='')
-            )
-        ]
+        return ansible.utils.shlex.shlex_split(self.become_flags() or '')
 
     def mitogen_via(self):
         return self._connection.get_task_var('mitogen_via')
@@ -676,6 +673,9 @@ class MitogenViaSpec(Spec):
     def become(self):
         return bool(self._become_user)
 
+    def become_flags(self):
+        return self._host_vars.get('ansible_become_flags')
+
     def become_method(self):
         return (
             self._become_method or
@@ -771,7 +771,7 @@ class MitogenViaSpec(Spec):
             mitogen.core.to_text(term)
             for s in (
                 self._host_vars.get('ansible_sudo_flags') or '',
-                self._host_vars.get('ansible_become_flags') or '',
+                self.become_flags() or '',
             )
             for term in ansible.utils.shlex.shlex_split(s)
         ]

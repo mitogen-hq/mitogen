@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
   (e.g. ``become_exe``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
+  arguments (e.g. ``become_flags``).
 
 
 v0.3.15 (2024-10-28)

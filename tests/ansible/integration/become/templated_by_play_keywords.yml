@@ -3,6 +3,7 @@
   gather_facts: false
   become: true
   become_exe: "{{ 'sudo' | trim }}"
+  become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
   become_user: "{{ 'root' | trim }}"
   tasks:
     - meta: reset_connection
@@ -22,6 +23,7 @@
   gather_facts: false
   become: true
   become_exe: "{{ 'sudo' | trim }}"
+  become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
   become_user: "{{ 'mitogen__pw_required' | trim }}"
   vars:
     ansible_become_pass: "{{ 'pw_required_password' | trim }}"
