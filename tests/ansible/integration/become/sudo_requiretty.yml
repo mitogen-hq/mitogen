@@ -13,12 +13,16 @@
         cmd: whoami
       changed_when: false
       register: sudo_require_tty_whoami
+      when:
+        - become_unpriv_available
 
     - assert:
         that:
           - sudo_require_tty_whoami.stdout == 'mitogen__require_tty'
         fail_msg: |
           sudo_require_tty_whoami={{ sudo_require_tty_whoami }}
+      when:
+        - become_unpriv_available
 
     - name: Verify we can login to a passworded requiretty account
       become: true
@@ -29,12 +33,16 @@
         cmd: whoami
       changed_when: false
       register: sudo_require_tty_password_whoami
+      when:
+        - become_unpriv_available
 
     - assert:
         that:
           - sudo_require_tty_password_whoami.stdout == 'mitogen__require_tty_pw_required'
         fail_msg: |
           sudo_require_tty_password_whoami={{ sudo_require_tty_password_whoami }}
+      when:
+        - become_unpriv_available
   tags:
     - mitogen_only
     - sudo

@@ -152,6 +152,8 @@
           result['path'] = path
           open(path, 'w').write("bar")
       register: tmp_path
+      when:
+        - become_unpriv_available
 
     #
     # modules get the same base dir

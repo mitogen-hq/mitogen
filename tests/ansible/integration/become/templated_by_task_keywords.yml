@@ -77,7 +77,4 @@
         - become_templated_by_task_with_delegate_to_password_whoami is failed
           or become_templated_by_task_with_delegate_to_password_whoami.stdout != 'mitogen__pw_required'
       when:
-        # https://github.com/ansible/ansible/pull/70785
-        - ansible_facts.distribution not in ["MacOSX"]
-          or ansible_version.full is version("2.11", ">=", strict=True)
-          or is_mitogen
+        - become_unpriv_available

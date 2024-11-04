@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1129` :mod:`ansible_mitogen`: Ansible 11 support
 
 
 v0.3.18 (2024-11-07)
