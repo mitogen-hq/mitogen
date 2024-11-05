@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1182` CI: Fix incorrect world readable/writable file permissions
+  on SSH key ``mitogen__has_sudo_pubkey.key`` during Ansible tests.
 
 
 v0.3.16 (2024-11-05)
