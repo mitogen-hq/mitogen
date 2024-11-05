@@ -58,6 +58,8 @@ ansible_python_interpreter={{ tt.python_path }}
 ansible_user=mitogen__has_sudo_nopw
 
 [tt_become_by_inv]
+tt-become-exe               ansible_become=true ansible_become_exe="{{ '{{' }} 'sudo' | trim {{ '}}' }}" ansible_become_user=root
+tt-become-flags             ansible_become=true ansible_become_flags="{{ '{{' }} '--set-home --stdin --non-interactive' | trim {{ '}}' }}" ansible_become_user=root
 tt-become-pass              ansible_become=true ansible_become_pass="{{ '{{' }} 'pw_required_password' | trim {{ '}}' }}" ansible_become_user=mitogen__pw_required
 tt-become-user              ansible_become=true ansible_become_user="{{ '{{' }} 'root' | trim {{ '}}' }}"
 
@@ -72,6 +74,7 @@ ansible_user=mitogen__has_sudo_nopw
 tt-password                 ansible_password="{{ '{{' }} 'has_sudo_nopw_password' | trim {{ '}}' }}"  ansible_port={{ tt.port }} ansible_user=mitogen__has_sudo_nopw
 tt-port                     ansible_password=has_sudo_nopw_password  ansible_port="{{ '{{' }} {{ tt.port }} | int {{ '}}' }}"  ansible_user=mitogen__has_sudo_nopw
 tt-remote-user              ansible_password=has_sudo_nopw_password  ansible_port={{ tt.port }} ansible_user="{{ '{{' }} 'mitogen__has_sudo_nopw' | trim {{ '}}' }}"
+tt-ssh-executable           ansible_password=has_sudo_nopw_password  ansible_port={{ tt.port }} ansible_ssh_executable="{{ '{{' }} 'ssh' | trim {{ '}}' }}" ansible_user=mitogen__has_sudo_nopw
 
 [tt_targets_inventory:vars]
 ansible_host={{ tt.hostname }}

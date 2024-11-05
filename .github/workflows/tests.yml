@@ -156,30 +156,21 @@ jobs:
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
 
   macos:
-    # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md
-    runs-on: macos-12
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
+    runs-on: macos-13
     timeout-minutes: 120
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Mito_27
-            tox_env: py27-mode_mitogen
           - name: Mito_313
-            python_version: '3.13'
             tox_env: py313-mode_mitogen
 
-          - name: Loc_27_210
-            tox_env: py27-mode_localhost-ansible2.10
           - name: Loc_313_10
-            python_version: '3.13'
             tox_env: py313-mode_localhost-ansible10
 
-          - name: Van_27_210
-            tox_env: py27-mode_localhost-ansible2.10-strategy_linear
           - name: Van_313_10
-            python_version: '3.13'
             tox_env: py313-mode_localhost-ansible10-strategy_linear
 
     steps:
