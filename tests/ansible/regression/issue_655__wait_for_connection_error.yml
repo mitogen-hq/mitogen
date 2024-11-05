@@ -11,10 +11,15 @@
   tasks:
     - meta: end_play
       when:
-        # TODO CI currently runs on macOS 12 & which isn't supported by Podman
-        #      version available in Homebrew.
+        # Podman versions available in Homebrew have dropped macOS 12 support.
         - ansible_facts.system == 'Darwin'
         - ansible_facts.distribution_version is version('13.0', '<', strict=True)
+
+    - meta: end_play
+      when:
+        # Ansible 10 (ansible-core 2.17+) require Python 3.7+ on targets.
+        # On CentOS 8 /usr/libexec/platform-python is Python 3.6
+        - ansible_version.full is version('2.17', '>=', strict=True)
 
     - name: set up test container and run tests inside it
       block:
@@ -33,6 +38,7 @@
             - cmd: podman info
           timeout: 300
           register: podman_machine
+          changed_when: true
 
         - debug:
             var: podman_machine
@@ -41,11 +47,13 @@
         - name: create container
           command:
             cmd: podman run --name testMitogen -d --rm centos:8 bash -c "sleep infinity & wait"
+          changed_when: true
 
         - name: add container to inventory
           add_host:
             name: testMitogen
             ansible_connection: podman
+            ansible_python_interpreter: /usr/libexec/platform-python  # Python 3.6
             ansible_user: root
           changed_when: false
           environment:
@@ -57,6 +65,7 @@
             - name: create test file
               file:
                 path: /var/run/reboot-required
+                mode: u=rw,go=r
                 state: touch
 
             - name: Check if reboot is required
@@ -68,13 +77,16 @@
               shell: sleep 2 && shutdown -r now "Ansible updates triggered"
               async: 1
               poll: 0
-              when: reboot_required.stat.exists == True
+              changed_when: true
+              when:
+                - reboot_required.stat.exists
 
             - name: Wait 300 seconds for server to become available
               wait_for_connection:
                 delay: 30
                 timeout: 300
-              when: reboot_required.stat.exists == True
+              when:
+                - reboot_required.stat.exists
 
             - name: cleanup test file
               file:
@@ -90,6 +102,7 @@
           loop:
             - cmd: podman stop testMitogen
             - cmd: podman machine stop
+          changed_when: true
       when:
         - ansible_facts.pkg_mgr in ['homebrew']
   tags:
