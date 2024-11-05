@@ -25,6 +25,10 @@ In progress (unreleased)
   (e.g. ``become_exe``).
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
   arguments (e.g. ``become_flags``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated ssh executable
+  (``ansible_ssh_executable``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Fixed templated connection options
+  during a ``meta: reset_connection`` task.
 
 
 v0.3.15 (2024-10-28)
