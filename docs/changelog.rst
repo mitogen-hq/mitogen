@@ -18,6 +18,20 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.16 (2024-11-05)
+--------------------
+
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
+  (e.g. ``become_exe``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
+  arguments (e.g. ``become_flags``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated ssh executable
+  (``ansible_ssh_executable``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Fixed templated connection options
+  during a ``meta: reset_connection`` task.
+* :gh:issue:`1129` CI: Migrated macOS 12 runners to macOS 13, due to EOL.
+
+
 v0.3.15 (2024-10-28)
 --------------------
 
