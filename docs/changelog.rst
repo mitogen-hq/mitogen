@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.16 (2024-11-05)
+--------------------
 
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
   (e.g. ``become_exe``).
