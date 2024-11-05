@@ -29,6 +29,7 @@ In progress (unreleased)
   (``ansible_ssh_executable``).
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Fixed templated connection options
   during a ``meta: reset_connection`` task.
+* :gh:issue:`1129` CI: Migrated macOS 12 runners to macOS 13, due to EOL.
 
 
 v0.3.15 (2024-10-28)
