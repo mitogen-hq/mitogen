@@ -25,6 +25,8 @@ In progress (unreleased)
   on SSH key ``mitogen__has_sudo_pubkey.key`` during Ansible tests.
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH private key file
   (e.g. ``ansible_private_key_file``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH host key checking
+  (e.g. ``ansible_host_key_checking``, ``ansible_ssh_host_key_checking``).
 
 
 v0.3.16 (2024-11-05)

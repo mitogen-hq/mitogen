@@ -500,12 +500,7 @@ class PlayContextSpec(Spec):
             rediscover_python=rediscover_python)
 
     def host_key_checking(self):
-        def candidates():
-            yield self._connection.get_task_var('ansible_ssh_host_key_checking')
-            yield self._connection.get_task_var('ansible_host_key_checking')
-            yield C.HOST_KEY_CHECKING
-        val = next((v for v in candidates() if v is not None), True)
-        return boolean(val)
+        return self._connection_option('host_key_checking')
 
     def private_key_file(self):
         return self._connection_option('private_key_file')
