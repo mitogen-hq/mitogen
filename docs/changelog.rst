@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1182` CI: Fix incorrect world readable/writable file permissions
   on SSH key ``mitogen__has_sudo_pubkey.key`` during Ansible tests.
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH private key file
+  (e.g. ``ansible_private_key_file``).
 
 
 v0.3.16 (2024-11-05)

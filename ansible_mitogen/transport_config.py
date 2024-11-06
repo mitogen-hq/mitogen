@@ -508,7 +508,7 @@ class PlayContextSpec(Spec):
         return boolean(val)
 
     def private_key_file(self):
-        return self._play_context.private_key_file
+        return self._connection_option('private_key_file')
 
     def ssh_executable(self):
         return self._connection_option('ssh_executable')
