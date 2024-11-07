@@ -2,6 +2,7 @@
   hosts: tt_targets_bare
   gather_facts: false
   vars:
+    ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
     ansible_password: "{{ 'has_sudo_nopw_password' | trim }}"
     ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
     ansible_ssh_common_args: >-

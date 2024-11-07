@@ -18,6 +18,20 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.17 (2024-11-07)
+--------------------
+
+* :gh:issue:`1182` CI: Fix incorrect world readable/writable file permissions
+  on SSH key ``mitogen__has_sudo_pubkey.key`` during Ansible tests.
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH private key file
+  (e.g. ``ansible_private_key_file``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH host key checking
+  (e.g. ``ansible_host_key_checking``, ``ansible_ssh_host_key_checking``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated host address
+  (e.g. ``ansible_host``, ``ansible_ssh_host``)
+* :gh:issue:`1184` Test templated SSH host key checking in task vars
+
+
 v0.3.16 (2024-11-05)
 --------------------
 
