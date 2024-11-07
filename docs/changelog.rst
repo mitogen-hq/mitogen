@@ -29,6 +29,7 @@ In progress (unreleased)
   (e.g. ``ansible_host_key_checking``, ``ansible_ssh_host_key_checking``).
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated host address
   (e.g. ``ansible_host``, ``ansible_ssh_host``)
+* :gh:issue:`1184` Test templated SSH host key checking in task vars
 
 
 v0.3.16 (2024-11-05)
