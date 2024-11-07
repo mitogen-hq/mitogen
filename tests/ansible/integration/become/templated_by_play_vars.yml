@@ -5,6 +5,7 @@
     ansible_become: true
     ansible_become_exe: "{{ 'sudo' | trim }}"
     ansible_become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+    ansible_become_method: "{{ 'sudo' | trim }}"
     ansible_become_user: "{{ 'root' | trim }}"
   tasks:
     - name: Templated become by play vars, no password
@@ -24,6 +25,7 @@
     ansible_become: true
     ansible_become_exe: "{{ 'sudo' | trim }}"
     ansible_become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+    ansible_become_method: "{{ 'sudo' | trim }}"
     ansible_become_pass: "{{ 'pw_required_password' | trim }}"
     ansible_become_user: "{{ 'mitogen__pw_required' | trim }}"
   tasks:
