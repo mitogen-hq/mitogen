@@ -1,0 +1,31 @@
+- name: Create login banner
+  copy:
+    src: banner.txt
+    dest: /etc/ssh/banner.txt
+    mode: u=rw,go=r
+
+- name: Configure sshd_config
+  lineinfile:
+    path: "{{ sshd_config_file }}"
+    line: "{{ item.line }}"
+    regexp: "{{ item.regexp }}"
+  loop:
+    - line:     Banner /etc/ssh/banner.txt
+      regexp:   '^#? *Banner.*'
+    - line:     MaxAuthTries {{ sshd_config__max_auth_tries }}
+      regexp:   '^#? *MaxAuthTries.*'
+    - line:     PermitRootLogin yes
+      regexp:   '.*PermitRootLogin.*'
+  loop_control:
+    label: "{{ item.line }}"
+  register: configure_sshd_result
+
+- name: Restart sshd
+  shell: |
+    launchctl unload /System/Library/LaunchDaemons/ssh.plist
+    wait 5
+    launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+  changed_when: true
+  when:
+    - ansible_facts.distribution == "MacOSX"
+    - configure_sshd_result is changed
