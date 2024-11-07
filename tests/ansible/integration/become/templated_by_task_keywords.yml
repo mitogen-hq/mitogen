@@ -6,6 +6,7 @@
   become: true
   become_exe: "{{ 'sudo' | trim }}"
   become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+  become_method: "{{ 'sudo' | trim }}"
   become_user: "{{ 'root' | trim }}"
   tasks:
     - name: Reset connection to target that will be delegate_to
@@ -19,6 +20,7 @@
       become: true
       become_exe: "{{ 'sudo' | trim }}"
       become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+      become_method: "{{ 'sudo' | trim }}"
       become_user: "{{ 'root' | trim }}"
       delegate_to: "{{ groups.tt_become_bare[0] }}"
       command:
@@ -39,6 +41,7 @@
   become: true
   become_exe: "{{ 'sudo' | trim }}"
   become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+  become_method: "{{ 'sudo' | trim }}"
   become_user: "{{ 'mitogen__pw_required' | trim }}"
   vars:
     ansible_become_pass: "{{ 'pw_required_password' | trim }}"
@@ -60,6 +63,7 @@
       become: true
       become_exe: "{{ 'sudo' | trim }}"
       become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+      become_method: "{{ 'sudo' | trim }}"
       become_user: "{{ 'mitogen__pw_required' | trim }}"
       delegate_to: "{{ groups.tt_become_bare[0] }}"
       vars:
