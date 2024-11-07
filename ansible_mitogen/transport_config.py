@@ -442,18 +442,22 @@ class PlayContextSpec(Spec):
                 raise
 
             LOG.info(
-                'Used PlayContext fallback for plugin=%r, option=%r',
-                self._connection, name,
+                'Used fallback=PlayContext.%s for plugin=%r, option=%r',
+                name, self._connection, name,
             )
             return getattr(self._play_context, name)
 
-
-    def _connection_option(self, name):
+    def _connection_option(self, name, fallback_attr=None):
         try:
             return self._connection.get_option(name, hostvars=self._task_vars)
         except KeyError:
-            LOG.debug('Used PlayContext fallback for option=%r', name)
-            return getattr(self._play_context, name)
+            if fallback_attr is None:
+                fallback_attr = name
+            LOG.info(
+                'Used fallback=PlayContext.%s for plugin=%r, option=%r',
+                fallback_attr, self._connection, name,
+            )
+            return getattr(self._play_context, fallback_attr)
 
     def transport(self):
         return self._transport
@@ -462,7 +466,7 @@ class PlayContextSpec(Spec):
         return self._inventory_name
 
     def remote_addr(self):
-        return self._play_context.remote_addr
+        return self._connection_option('host', fallback_attr='remote_addr')
 
     def remote_user(self):
         return self._connection_option('remote_user')
@@ -500,15 +504,10 @@ class PlayContextSpec(Spec):
             rediscover_python=rediscover_python)
 
     def host_key_checking(self):
-        def candidates():
-            yield self._connection.get_task_var('ansible_ssh_host_key_checking')
-            yield self._connection.get_task_var('ansible_host_key_checking')
-            yield C.HOST_KEY_CHECKING
-        val = next((v for v in candidates() if v is not None), True)
-        return boolean(val)
+        return self._connection_option('host_key_checking')
 
     def private_key_file(self):
-        return self._play_context.private_key_file
+        return self._connection_option('private_key_file')
 
     def ssh_executable(self):
         return self._connection_option('ssh_executable')
