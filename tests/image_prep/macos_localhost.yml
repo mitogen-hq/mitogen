@@ -1,0 +1,7 @@
+- name: Configure macOS
+  hosts: all
+  gather_facts: true
+  strategy: mitogen_free
+  become: true
+  roles:
+    - role: sshd
