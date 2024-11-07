@@ -30,6 +30,7 @@ ansible_host=localhost
 ansible_user="{{ lookup('pipe', 'whoami') }}"
 
 [tt_become_by_inv]
+tt-become                   ansible_become="{{ 'true' | trim }}" ansible_become_user=root
 tt-become-exe               ansible_become=true ansible_become_exe="{{ 'sudo' | trim }}" ansible_become_user=root
 tt-become-flags             ansible_become=true ansible_become_flags="{{ '--set-home --stdin --non-interactive' | trim }}" ansible_become_user=root
 tt-become-method            ansible_become=true ansible_become_method="{{ 'sudo' | trim }}" ansible_become_user=root
