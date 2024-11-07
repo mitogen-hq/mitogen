@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.18 (2024-11-07)
+--------------------
 
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become method
   (e.g. ``ansible_become_method``).
