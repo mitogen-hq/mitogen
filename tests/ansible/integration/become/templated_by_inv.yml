@@ -12,6 +12,7 @@
     - name: Templated become in inventory
       vars:
         expected_become_users:
+          tt-become: root
           tt-become-exe: root
           tt-become-flags: root
           tt-become-method: root

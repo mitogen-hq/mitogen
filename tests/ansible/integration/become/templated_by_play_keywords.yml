@@ -1,7 +1,7 @@
 - name: integration/become/templated_by_play_keywords.yml
   hosts: tt_become_bare
   gather_facts: false
-  become: true
+  become: "{{ 'true' | trim }}"
   become_exe: "{{ 'sudo' | trim }}"
   become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
   become_method: "{{ 'sudo' | trim }}"
@@ -22,7 +22,7 @@
 - name: integration/become/templated_by_play_keywords.yml
   hosts: tt_become_bare
   gather_facts: false
-  become: true
+  become: "{{ 'true' | trim }}"
   become_exe: "{{ 'sudo' | trim }}"
   become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
   become_method: "{{ 'sudo' | trim }}"

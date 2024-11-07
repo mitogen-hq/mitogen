@@ -3,7 +3,7 @@
   gather_facts: false
   # FIXME Resetting the connection shouldn't require credentials
   #       https://github.com/mitogen-hq/mitogen/issues/1132
-  become: true
+  become: "{{ 'true' | trim }}"
   become_exe: "{{ 'sudo' | trim }}"
   become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
   become_method: "{{ 'sudo' | trim }}"
@@ -17,7 +17,7 @@
   gather_facts: false
   tasks:
     - name: Templated become by task keywords, with delegate_to
-      become: true
+      become: "{{ 'true' | trim }}"
       become_exe: "{{ 'sudo' | trim }}"
       become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
       become_method: "{{ 'sudo' | trim }}"
@@ -38,7 +38,7 @@
   gather_facts: false
   # FIXME Resetting the connection shouldn't require credentials
   #       https://github.com/mitogen-hq/mitogen/issues/1132
-  become: true
+  become: "{{ 'true' | trim }}"
   become_exe: "{{ 'sudo' | trim }}"
   become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
   become_method: "{{ 'sudo' | trim }}"
@@ -60,7 +60,7 @@
       setup:
 
     - name: Templated become by task keywords, with delegate_to
-      become: true
+      become: "{{ 'true' | trim }}"
       become_exe: "{{ 'sudo' | trim }}"
       become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
       become_method: "{{ 'sudo' | trim }}"

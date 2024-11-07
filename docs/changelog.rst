@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become method
   (e.g. ``ansible_become_method``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become flag
+  (e.g. ``ansible_become_method``, ``become`` keyword).
 
 
 v0.3.17 (2024-11-07)
