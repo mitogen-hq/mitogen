@@ -44,7 +44,6 @@ ssh_args_canary_file=/tmp/ssh_args_by_inv_{{ '{{' }} inventory_hostname {{ '}}' 
 tt-bare
 
 [tt_targets_bare:vars]
-ansible_host={{ tt.hostname }}
 ansible_python_interpreter={{ tt.python_path }}
 
 [tt_become_bare]
@@ -71,13 +70,10 @@ ansible_python_interpreter={{ tt.python_path }}
 ansible_user=mitogen__has_sudo_nopw
 
 [tt_targets_inventory]
-tt-host-key-checking        ansible_host_key_checking="{{ '{{' }} 'false' | trim {{ '}}' }}" ansible_password=has_sudo_nopw_password ansible_port={{ tt.port }} ansible_user=mitogen__has_sudo_nopw
-tt-password                 ansible_password="{{ '{{' }} 'has_sudo_nopw_password' | trim {{ '}}' }}"  ansible_port={{ tt.port }} ansible_user=mitogen__has_sudo_nopw
-tt-port                     ansible_password=has_sudo_nopw_password  ansible_port="{{ '{{' }} {{ tt.port }} | int {{ '}}' }}"  ansible_user=mitogen__has_sudo_nopw
-tt-private-key-file         ansible_port={{ tt.port }} ansible_private_key_file="{{ '{{' }} git_basedir {{ '}}' }}/tests/data/docker/mitogen__has_sudo_pubkey.key" ansible_user=mitogen__has_sudo_pubkey
-tt-remote-user              ansible_password=has_sudo_nopw_password  ansible_port={{ tt.port }} ansible_user="{{ '{{' }} 'mitogen__has_sudo_nopw' | trim {{ '}}' }}"
-tt-ssh-executable           ansible_password=has_sudo_nopw_password  ansible_port={{ tt.port }} ansible_ssh_executable="{{ '{{' }} 'ssh' | trim {{ '}}' }}" ansible_user=mitogen__has_sudo_nopw
-
-[tt_targets_inventory:vars]
-ansible_host={{ tt.hostname }}
-ansible_python_interpreter={{ tt.python_path }}
+tt-host                     ansible_host="{{ '{{' }} '{{ tt.hostname }}' | trim {{ '}}' }}"    ansible_password=has_sudo_nopw_password    ansible_port={{ tt.port }}    ansible_python_interpreter={{ tt.python_path }}    ansible_user=mitogen__has_sudo_nopw
+tt-host-key-checking        ansible_host={{ tt.hostname }}    ansible_host_key_checking="{{ '{{' }} 'false' | trim {{ '}}' }}"    ansible_password=has_sudo_nopw_password    ansible_port={{ tt.port }}    ansible_python_interpreter={{ tt.python_path }}    ansible_user=mitogen__has_sudo_nopw
+tt-password                 ansible_host={{ tt.hostname }}    ansible_password="{{ '{{' }} 'has_sudo_nopw_password' | trim {{ '}}' }}"    ansible_port={{ tt.port }}    ansible_python_interpreter={{ tt.python_path }}    ansible_user=mitogen__has_sudo_nopw
+tt-port                     ansible_host={{ tt.hostname }}    ansible_password=has_sudo_nopw_password    ansible_port="{{ '{{' }} {{ tt.port }} | int {{ '}}' }}"    ansible_python_interpreter={{ tt.python_path }}    ansible_user=mitogen__has_sudo_nopw
+tt-private-key-file         ansible_host={{ tt.hostname }}    ansible_port={{ tt.port }}    ansible_private_key_file="{{ '{{' }} git_basedir {{ '}}' }}/tests/data/docker/mitogen__has_sudo_pubkey.key"    ansible_python_interpreter={{ tt.python_path }}    ansible_user=mitogen__has_sudo_pubkey
+tt-remote-user              ansible_host={{ tt.hostname }}    ansible_password=has_sudo_nopw_password    ansible_port={{ tt.port }}    ansible_python_interpreter={{ tt.python_path }}    ansible_user="{{ '{{' }} 'mitogen__has_sudo_nopw' | trim {{ '}}' }}"
+tt-ssh-executable           ansible_host={{ tt.hostname }}    ansible_password=has_sudo_nopw_password    ansible_port={{ tt.port }}    ansible_python_interpreter={{ tt.python_path }}    ansible_ssh_executable="{{ '{{' }} 'ssh' | trim {{ '}}' }}"    ansible_user=mitogen__has_sudo_nopw

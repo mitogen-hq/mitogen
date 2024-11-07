@@ -22,9 +22,6 @@ ssh_args_canary_file=/tmp/ssh_args_by_inv_{{ inventory_hostname }}
 [tt_targets_bare]
 tt-bare
 
-[tt_targets_bare:vars]
-ansible_host=localhost
-
 [tt_become_bare]
 tt-become-bare
 
@@ -43,12 +40,10 @@ ansible_host=localhost
 ansible_user="{{ lookup('pipe', 'whoami') }}"
 
 [tt_targets_inventory]
-tt-host-key-checking        ansible_host_key_checking="{{ 'false' | trim }}" ansible_password=has_sudo_nopw_password ansible_user=mitogen__has_sudo_nopw
-tt-password                 ansible_password="{{ 'has_sudo_nopw_password' | trim }}" ansible_user=mitogen__has_sudo_nopw
-tt-port                     ansible_password=has_sudo_nopw_password ansible_port="{{ 22 | int }}" ansible_user=mitogen__has_sudo_nopw
-tt-private-key-file         ansible_private_key_file="{{ git_basedir }}/tests/data/docker/mitogen__has_sudo_pubkey.key" ansible_user=mitogen__has_sudo_pubkey
-tt-remote-user              ansible_password=has_sudo_nopw_password ansible_user="{{ 'mitogen__has_sudo_nopw' | trim }}"
-tt-ssh-executable           ansible_password=has_sudo_nopw_password ansible_ssh_executable="{{ 'ssh' | trim }}" ansible_user=mitogen__has_sudo_nopw
-
-[tt_targets_inventory:vars]
-ansible_host=localhost
+tt-host                     ansible_host="{{ 'localhost' | trim }}"    ansible_password=has_sudo_nopw_password    ansible_user=mitogen__has_sudo_nopw
+tt-host-key-checking        ansible_host=localhost    ansible_host_key_checking="{{ 'false' | trim }}"    ansible_password=has_sudo_nopw_password    ansible_user=mitogen__has_sudo_nopw
+tt-password                 ansible_host=localhost    ansible_password="{{ 'has_sudo_nopw_password' | trim }}"    ansible_user=mitogen__has_sudo_nopw
+tt-port                     ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_port="{{ 22 | int }}"    ansible_user=mitogen__has_sudo_nopw
+tt-private-key-file         ansible_host=localhost    ansible_private_key_file="{{ git_basedir }}/tests/data/docker/mitogen__has_sudo_pubkey.key"    ansible_user=mitogen__has_sudo_pubkey
+tt-remote-user              ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_user="{{ 'mitogen__has_sudo_nopw' | trim }}"
+tt-ssh-executable           ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_ssh_executable="{{ 'ssh' | trim }}"    ansible_user=mitogen__has_sudo_nopw
