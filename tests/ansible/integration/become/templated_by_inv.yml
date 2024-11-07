@@ -12,8 +12,10 @@
     - name: Templated become in inventory
       vars:
         expected_become_users:
+          tt-become: root
           tt-become-exe: root
           tt-become-flags: root
+          tt-become-method: root
           tt-become-pass: mitogen__pw_required
           tt-become-user: root
       command:

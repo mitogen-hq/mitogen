@@ -478,7 +478,7 @@ class PlayContextSpec(Spec):
         return self._become_option('become_flags')
 
     def become_method(self):
-        return self._play_context.become_method
+        return self._connection.become.name
 
     def become_user(self):
         return self._become_option('become_user')
