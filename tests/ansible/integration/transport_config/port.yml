@@ -6,13 +6,16 @@
   hosts: tc-port-unset
   tasks:
   - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 1
       - out.result[0].method == "ssh"
-      - out.result[0].kwargs.port == None
-      fail_msg: out={{out}}
+      - out.result[0].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -29,7 +32,8 @@
       - out.result[0].kwargs.port == None
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == 4321
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -43,7 +47,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 4321
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -51,6 +56,7 @@
   vars: {mitogen_via: tc-port-explicit-ssh}
   tasks:
   - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -58,8 +64,10 @@
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 4321
       - out.result[1].method == "ssh"
-      - out.result[1].kwargs.port == None
-      fail_msg: out={{out}}
+      - out.result[1].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -73,7 +81,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1234
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -81,6 +90,7 @@
   vars: {mitogen_via: tc-port-explicit-port}
   tasks:
   - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -88,8 +98,10 @@
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1234
       - out.result[1].method == "ssh"
-      - out.result[1].kwargs.port == None
-      fail_msg: out={{out}}
+      - out.result[1].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -104,7 +116,8 @@
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1532
-      fail_msg: out={{out}}
+      fail_msg: |
+        out={{ out }}
   tags:
     - mitogen_only
 
@@ -112,6 +125,7 @@
   vars: {mitogen_via: tc-port-both}
   tasks:
   - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -119,7 +133,9 @@
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1532
       - out.result[1].method == "ssh"
-      - out.result[1].kwargs.port == None
-      fail_msg: out={{out}}
+      - out.result[1].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
   tags:
     - mitogen_only

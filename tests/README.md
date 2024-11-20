@@ -7,7 +7,7 @@ started in September 2017. Pull requests in this area are very welcome!
 
 ## Running The Tests
 
-[![Build Status](https://dev.azure.com/mitogen-hq/mitogen/_apis/build/status/mitogen-hq.mitogen?branchName=master)](https://dev.azure.com/mitogen-hq/mitogen/_build/latest?definitionId=1&branchName=master)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/mitogen-hq/mitogen/tests.yml?branch=master)](https://github.com/mitogen-hq/mitogen/actions?query=branch%3Amaster)
 
 Your computer should have an Internet connection, and the ``docker`` command
 line tool should be able to connect to a working Docker daemon (localhost or
@@ -30,11 +30,19 @@ and run the tests there.
 1. Run ``test``
 
 
-# Selecting a target distribution
+# Selecting target distributions
 
-Docker target images exist for testing against CentOS and Debian, with the
-default being Debian. To select CentOS, specify `MITOGEN_TEST_DISTRO=centos` in
-the environment.
+Linux container images for testing are available at
+
+- https://github.com/orgs/mitogen-hq/packages
+- https://public.ecr.aws/n5z0e8q9
+
+The images used are determined by two environment variables
+
+- `MITOGEN_TEST_DISTRO_SPECS`
+- `MITOGEN_TEST_IMAGE_TEMPLATE`
+
+Defaults for these can be found in `.ci/ci_lib.py` & `tests/testlib.py`
 
 
 # User Accounts

@@ -11,11 +11,11 @@
 - name: integration/connection_delegation/delegate_to_template.yml
   vars:
     physical_host: "cd-normal-alias"
-    physical_hosts: ["cd-normal-alias", "cd-normal-normal"]
   hosts: test-targets
   gather_facts: no
   tasks:
     - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
 
     - meta: end_play
       when:
@@ -67,7 +67,7 @@
               'keepalive_interval': 30,
               'keepalive_count': 10,
               'password': null,
-              'port': null,
+              'port': '{{ expected_ssh_port }}',
               'python_path': ['python3000'],
               'remote_name': null,
               'ssh_args': [

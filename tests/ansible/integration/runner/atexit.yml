@@ -25,6 +25,7 @@
     - assert:
         that:
         - not out.stat.exists
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - atexit

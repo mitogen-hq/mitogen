@@ -22,6 +22,7 @@
         - (out.module_stdout == "" and out.module_stderr is search(tb_pattern))
           or
           (out.module_stdout is search(tb_pattern) and out.module_stderr is match("Shared connection to localhost closed."))
-        fail_msg: out={{out}}
+        fail_msg: |
+          out={{ out }}
   tags:
     - crashy_new_style_module

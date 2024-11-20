@@ -32,7 +32,8 @@
 
     - assert:
         that: result.rc == 0
-        fail_msg: result={{result}}
+        fail_msg: |
+          result={{ result }}
   tags:
     - mitogen_only
     - sens_lxd

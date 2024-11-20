@@ -35,13 +35,13 @@ ci_lib.check_stray_processes(interesting)
 
 
 with ci_lib.Fold('docker_setup'):
-    containers = ci_lib.container_specs(ci_lib.DISTROS)
+    containers = ci_lib.container_specs(ci_lib.DISTRO_SPECS.split())
     ci_lib.start_containers(containers)
 
 
 with ci_lib.Fold('job_setup'):
     os.chdir(TESTS_DIR)
-    os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
+    os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 8))
 
     ci_lib.run("mkdir %s", HOSTS_DIR)
     for path in glob.glob(TESTS_DIR + '/hosts/*'):

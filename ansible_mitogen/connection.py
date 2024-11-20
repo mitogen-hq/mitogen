@@ -159,6 +159,7 @@ def _connect_ssh(spec):
         }
     }
 
+
 def _connect_buildah(spec):
     """
     Return ContextService arguments for a Buildah connection.
@@ -173,6 +174,7 @@ def _connect_buildah(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+
 
 def _connect_docker(spec):
     """
@@ -276,6 +278,7 @@ def _connect_podman(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+
 
 def _connect_setns(spec, kind=None):
     """
@@ -812,7 +815,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
 
         self.context = dct['context']
         self.chain = CallChain(self, self.context, pipelined=True)
-        if self._play_context.become:
+        if self.become:
             self.login_context = dct['via']
         else:
             self.login_context = self.context
@@ -888,6 +891,29 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             self.binding.close()
             self.binding = None
 
+    def _mitogen_var_options(self, templar):
+        # Workaround for https://github.com/ansible/ansible/issues/84238
+        var_names = C.config.get_plugin_vars('connection', self._load_name)
+        variables = templar.available_variables
+        var_options = {
+            var_name: templar.template(variables[var_name])
+            for var_name in var_names
+            if var_name in variables
+        }
+
+        if self.allow_extras:
+            extras_var_prefix = 'ansible_%s_' % self.extras_prefix
+            var_options['_extras'] = {
+                var_name: templar.template(variables[var_name])
+                for var_name in variables
+                if var_name not in var_options
+                and var_name.startswith(extras_var_prefix)
+            }
+        else:
+            var_options['_extras'] = {}
+
+        return var_options
+
     reset_compat_msg = (
         'Mitogen only supports "reset_connection" on Ansible 2.5.6 or later'
     )
@@ -920,11 +946,24 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             shared_loader_obj=0
         )
 
+        # Workaround for https://github.com/ansible/ansible/issues/84238
+        try:
+            task, templar = self._play_context.vars.pop(
+                '_mitogen.smuggled.reset_connection',
+            )
+        except KeyError:
+            pass
+        else:
+            self.set_options(
+                task_keys=task.dump_attrs(),
+                var_options=self._mitogen_var_options(templar),
+            )
+
         # Clear out state in case we were ever connected.
         self.close()
 
         inventory_name, stack = self._build_stack()
-        if self._play_context.become:
+        if self.become:
             stack = stack[:-1]
 
         worker_model = ansible_mitogen.process.get_worker_model()

@@ -26,4 +26,6 @@
     - original.stat.checksum == copied.stat.checksum
     # Upstream does not preserve timestamps at al.
     #- (not is_mitogen) or (original.stat.mtime|int == copied.stat.mtime|int)
-    fail_msg: original={{original}} copied={{copied}}
+    fail_msg: |
+      original={{ original }}
+      copied={{ copied }}

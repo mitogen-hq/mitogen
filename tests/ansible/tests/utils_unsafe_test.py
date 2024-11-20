@@ -48,7 +48,7 @@ class CastTest(unittest.TestCase):
         self.assertCasts(wrap_var([]), [])
         self.assertCasts(wrap_var(u''), u'')
         self.assertCasts(wrap_var(()), [])
-        
+
     def test_subtypes_roundtrip(self):
         self.assertCasts(wrap_var(Bytes()), b'')
         self.assertCasts(wrap_var(Dict()), {})

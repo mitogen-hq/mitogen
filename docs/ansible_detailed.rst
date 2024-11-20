@@ -132,13 +132,13 @@ Noteworthy Differences
   | 5               | 3.8 - 3.11      |
   +-----------------+-----------------+
   | 6               |                 |
-  +-----------------+ 3.8 - 3.12      |
+  +-----------------+ 3.8 - 3.13      |
   | 7               |                 |
   +-----------------+-----------------+
-  | 8               | 3.9 - 3.12      |
+  | 8               | 3.9 - 3.13      |
   +-----------------+-----------------+
   | 9               |                 |
-  +-----------------+ 3.10 - 3.12     |
+  +-----------------+ 3.10 - 3.13     |
   | 10              |                 |
   +-----------------+-----------------+
 
@@ -306,7 +306,8 @@ container.
     * Intermediary machines cannot use login and become passwords that were
       supplied to Ansible interactively. If an intermediary requires a
       password, it must be supplied via ``ansible_ssh_pass``,
-      ``ansible_password``, or ``ansible_become_pass`` inventory variables.
+      ``ansible_ssh_password``, ``ansible_password``, or
+      ``ansible_become_pass`` inventory variables.
 
     * Automatic tunnelling of SSH-dependent actions, such as the
       ``synchronize`` module, is not yet supported. This will be addressed in a
@@ -1011,7 +1012,8 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``ansible_port``, ``ssh_port``
 * ``ansible_ssh_executable``, ``ssh_executable``
 * ``ansible_ssh_private_key_file``
-* ``ansible_ssh_pass``, ``ansible_password`` (default: assume passwordless)
+* ``ansible_ssh_pass``, ``ansible_ssh_password``, ``ansible_password``
+  (default: assume passwordless)
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 * ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
   Ansible controller process on remote machines. To simplify diagnostics,
@@ -1273,7 +1275,7 @@ on each process whose name begins with ``mitogen:``::
     [pid 29858] futex(0x55ea9be52f60, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, 0xffffffff
     ^C
 
-    $ 
+    $
 
 This shows one thread waiting on IO (``poll``) and two more waiting on the same
 lock. It is taken from a real example of a deadlock due to a forking bug.

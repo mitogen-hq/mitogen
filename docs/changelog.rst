@@ -18,7 +18,89 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-v0.3.11 (2024-10-30)
+In progress (unreleased)
+------------------------
+
+
+
+v0.3.18 (2024-11-07)
+--------------------
+
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become method
+  (e.g. ``ansible_become_method``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become flag
+  (e.g. ``ansible_become_method``, ``become`` keyword).
+
+
+v0.3.17 (2024-11-07)
+--------------------
+
+* :gh:issue:`1182` CI: Fix incorrect world readable/writable file permissions
+  on SSH key ``mitogen__has_sudo_pubkey.key`` during Ansible tests.
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH private key file
+  (e.g. ``ansible_private_key_file``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated SSH host key checking
+  (e.g. ``ansible_host_key_checking``, ``ansible_ssh_host_key_checking``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated host address
+  (e.g. ``ansible_host``, ``ansible_ssh_host``)
+* :gh:issue:`1184` Test templated SSH host key checking in task vars
+
+
+v0.3.16 (2024-11-05)
+--------------------
+
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
+  (e.g. ``become_exe``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated become executable
+  arguments (e.g. ``become_flags``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated ssh executable
+  (``ansible_ssh_executable``).
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Fixed templated connection options
+  during a ``meta: reset_connection`` task.
+* :gh:issue:`1129` CI: Migrated macOS 12 runners to macOS 13, due to EOL.
+
+
+v0.3.15 (2024-10-28)
+--------------------
+
+* :gh:issue:`905` :mod:`ansible_mitogen`: Support templated SSH command
+  arguments (e.g. ``ansible_ssh_args``, ``ansible_ssh_extra_args``).
+* :gh:issue:`692` tests: Fix and re-enable several sudo tests
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Support templated become password
+  (e.g. ``ansible_become_pass``, ``ansible_sudo_pass``)
+
+
+v0.3.14 (2024-10-16)
+--------------------
+
+* :gh:issue:`1159` CI: Reduce number of Jobs by parameterizing Mitogen Docker
+  SSH tests
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Support templated become username.
+
+
+v0.3.13 (2024-10-09)
+--------------------
+
+* :gh:issue:`1138` CI: Complete migration from Azure DevOps Pipelines to
+  GitHub Actions
+* :gh:issue:`1116` :mod:`ansible_mitogen`: Support for templated variable
+  `ansible_ssh_user`.
+* :gh:issue:`978` :mod:`ansible_mitogen`: Support templated Ansible SSH port.
+* :gh:issue:`1073` Python 3.13 support
+
+
+v0.3.12 (2024-10-07)
+--------------------
+
+* :gh:issue:`1106` :mod:`ansible_mitogen`: Support for `ansible_ssh_password`
+  connection variable, and templated SSH connection password.
+* :gh:issue:`1136` tests: Improve Ansible fail_msg formatting.
+* :gh:issue:`1137` tests: Ignore inventory files of inactive tests & benchmarks
+* :gh:issue:`1138` CI: Add re-actors/alls-green GitHub Actions job to simplify
+  branch protections configuration.
+
+
+v0.3.11 (2024-09-30)
 --------------------
 
 * :gh:issue:`1127` :mod:`mitogen`: Consolidate mitogen backward compatibility
@@ -101,7 +183,7 @@ v0.3.4 (2023-07-02)
 
 * :gh:issue:`929` Support Ansible 6 and ansible-core 2.13
 * :gh:issue:`832` Fix runtime error when using the ansible.builtin.dnf module multiple times
-* :gh:issue:`925` :class:`ansible_mitogen.connection.Connection` no longer tries to close the 
+* :gh:issue:`925` :class:`ansible_mitogen.connection.Connection` no longer tries to close the
   connection on destruction. This is expected to reduce cases of `mitogen.core.Error: An attempt
   was made to enqueue a message with a Broker that has already exitted`. However it may result in
   resource leaks.

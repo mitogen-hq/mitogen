@@ -1,0 +1,18 @@
+# Ansible removed its default SSH port in May 2021, defering to the SSH
+# implementation.
+# https://github.com/ansible/ansible/commit/45618a6f3856f7332df8afe4adc40d85649a70da
+
+# Careful templating is needed to preseve the type(s) of expected_ssh_port,
+# particularly in combination with the assert_equal action plugin.
+# Do:     {{ expected_ssh_port }}
+# Don't:  {{ expected_ssh_port | any_filter }}
+# Don't:  {% if ...%}{{ expected_ssh_port }}{% else %}...{% endif %}
+# https://stackoverflow.com/questions/66102524/ansible-set-fact-type-cast/66104814#66104814
+
+- set_fact:
+    expected_ssh_port: null
+  when: ansible_version.full is version('2.11.1', '>=', strict=True)
+
+- set_fact:
+    expected_ssh_port: 22
+  when: ansible_version.full is version('2.11.1', '<', strict=True)

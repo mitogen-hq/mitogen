@@ -36,8 +36,6 @@ import random
 import traceback
 
 import ansible
-import ansible.constants
-import ansible.plugins
 import ansible.plugins.action
 import ansible.utils.unsafe_proxy
 import ansible.vars.clean
@@ -296,7 +294,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if not path.startswith('~'):
             # /home/foo -> /home/foo
             return path
-        if sudoable or not self._play_context.become:
+        if sudoable or not self._connection.become:
             if path == '~':
                 # ~ -> /home/dmw
                 return self._connection.homedir

@@ -29,7 +29,8 @@
         - result.failed == 1
         - result.finished == 1
         - result.msg == "Job reached maximum time limit of 1 seconds."
-      fail_msg: result={{result}}
+      fail_msg: |
+        result={{ result }}
   tags:
     - mitogen_only
     - runner_timeout_then_polling

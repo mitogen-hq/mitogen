@@ -1,0 +1,12 @@
+- name: integration/ssh/templated_by_play_keyword.yml
+  hosts: tt_targets_bare
+  gather_facts: false
+  remote_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
+  vars:
+    ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
+    ansible_password: has_sudo_nopw_password
+    ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
+  tasks:
+    - meta: reset_connection
+    - name: Templated variables in play keywords
+      ping:

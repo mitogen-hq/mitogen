@@ -23,10 +23,16 @@
   gather_facts: true
   vars:
     distro: "{{ansible_distribution}}"
-  tasks:
-    - when: ansible_virtualization_type != "docker"
-      meta: end_play
 
+  pre_tasks:
+    - meta: end_play
+      when:
+        - ansible_facts.virtualization_type != "docker"
+
+  roles:
+    - role: sshd
+
+  tasks:
     - name: Ensure requisite apt packages are installed
       apt:
         name: "{{ common_packages + packages }}"
@@ -134,10 +140,6 @@
         content: |
           i-am-mitogen-test-docker-image
 
-    - copy:
-        dest: /etc/ssh/banner.txt
-        src: ../data/docker/ssh_login_banner.txt
-
     - name: Ensure /etc/sudoers.d exists
       file:
         state: directory
@@ -168,17 +170,6 @@
         regexp: '#* *%wheel +ALL=(ALL) +ALL'
         line: "%wheel  ALL=(ALL)       ALL"
       when: ansible_os_family == 'RedHat'
-
-    - name: Enable SSH banner
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        line: Banner /etc/ssh/banner.txt
-
-    - name: Allow remote SSH root login
-      lineinfile:
-        path: /etc/ssh/sshd_config
-        line: PermitRootLogin yes
-        regexp: '.*PermitRootLogin.*'
 
     - name: Allow remote SSH root login
       lineinfile:

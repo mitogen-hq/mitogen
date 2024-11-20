@@ -1,0 +1,36 @@
+- name: integration/ssh/templated_by_play_taskvar.yml
+  hosts: tt_targets_bare
+  gather_facts: false
+  vars:
+    ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
+    ansible_host_key_checking: "{{ 'false' | trim }}"
+    ansible_password: "{{ 'has_sudo_nopw_password' | trim }}"
+    ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
+    ansible_ssh_executable: "{{ 'ssh' | trim }}"
+    ansible_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
+
+  tasks:
+    - meta: reset_connection
+    - name: Templated variables in play, password authentication
+      ping:
+
+- name: integration/ssh/templated_by_play_taskvar.yml
+  hosts: tt_targets_bare
+  gather_facts: false
+  vars:
+    ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
+    ansible_host_key_checking: "{{ 'false' | trim }}"
+    ansible_private_key_file: "{{ git_basedir }}/tests/data/docker/mitogen__has_sudo_pubkey.key"
+    ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
+    ansible_ssh_executable: "{{ 'ssh' | trim }}"
+    ansible_user: "{{ 'mitogen__has_sudo_pubkey' | trim }}"
+
+  tasks:
+    - meta: end_play
+      when:
+        # https://github.com/ansible/ansible/issues/84238
+        - not is_mitogen
+        - ansible_version.full is version('2.19', '<', strict=True)
+    - meta: reset_connection
+    - name: Templated variables in play, key authentication
+      ping:

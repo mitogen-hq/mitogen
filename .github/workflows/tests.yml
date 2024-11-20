@@ -48,99 +48,33 @@ jobs:
           - name: Ans_311_5
             python_version: '3.11'
             tox_env: py311-mode_ansible-ansible5
-          - name: Ans_312_6
-            python_version: '3.12'
-            tox_env: py312-mode_ansible-ansible6
-          - name: Ans_312_7
-            python_version: '3.12'
-            tox_env: py312-mode_ansible-ansible7
-          - name: Ans_312_8
-            python_version: '3.12'
-            tox_env: py312-mode_ansible-ansible8
-          - name: Ans_312_9
-            python_version: '3.12'
-            tox_env: py312-mode_ansible-ansible9
-          - name: Ans_312_10
-            python_version: '3.12'
-            tox_env: py312-mode_ansible-ansible10
-          - name: Van_312_10
-            python_version: '3.12'
-            tox_env: py312-mode_ansible-ansible10-strategy_linear
+          - name: Ans_313_6
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible6
+          - name: Ans_313_7
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible7
+          - name: Ans_313_8
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible8
+          - name: Ans_313_9
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible9
+          - name: Ans_313_10
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible10
+          - name: Van_313_10
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible10-strategy_linear
 
-          - name: Mito_27_centos6
-            tox_env: py27-mode_mitogen-distro_centos6
-          - name: Mito_27_centos7
-            tox_env: py27-mode_mitogen-distro_centos7
-          - name: Mito_27_centos8
-            tox_env: py27-mode_mitogen-distro_centos8
-          - name: Mito_27_debian9
-            tox_env: py27-mode_mitogen-distro_debian9
-          - name: Mito_27_debian10
-            tox_env: py27-mode_mitogen-distro_debian10
-          - name: Mito_27_debian11
-            tox_env: py27-mode_mitogen-distro_debian11
-          - name: Mito_27_ubuntu1604
-            tox_env: py27-mode_mitogen-distro_ubuntu1604
-          - name: Mito_27_ubuntu1804
-            tox_env: py27-mode_mitogen-distro_ubuntu1804
-          - name: Mito_27_ubuntu2004
-            tox_env: py27-mode_mitogen-distro_ubuntu2004
-
-          - name: Mito_36_centos6
+          - name: Mito_27
+            tox_env: py27-mode_mitogen
+          - name: Mito_36
             python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_centos6
-          - name: Mito_36_centos7
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_centos7
-          - name: Mito_36_centos8
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_centos8
-          - name: Mito_36_debian9
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_debian9
-          - name: Mito_36_debian10
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_debian10
-          - name: Mito_36_debian11
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_debian11
-          - name: Mito_36_ubuntu1604
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_ubuntu1604
-          - name: Mito_36_ubuntu1804
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_ubuntu1804
-          - name: Mito_36_ubuntu2004
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen-distro_ubuntu2004
-
-          - name: Mito_312_centos6
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_centos6
-          - name: Mito_312_centos7
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_centos7
-          - name: Mito_312_centos8
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_centos8
-          - name: Mito_312_debian9
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_debian9
-          - name: Mito_312_debian10
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_debian10
-          - name: Mito_312_debian11
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_debian11
-          - name: Mito_312_ubuntu1604
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_ubuntu1604
-          - name: Mito_312_ubuntu1804
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_ubuntu1804
-          - name: Mito_312_ubuntu2004
-            python_version: '3.12'
-            tox_env: py312-mode_mitogen-distro_ubuntu2004
+            tox_env: py36-mode_mitogen
+          - name: Mito_313
+            python_version: '3.13'
+            tox_env: py313-mode_mitogen
 
     steps:
       - uses: actions/checkout@v4
@@ -222,28 +156,22 @@ jobs:
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
 
   macos:
-    # https://github.com/actions/runner-images/blob/main/images/macos/macos-12-Readme.md
-    runs-on: macos-12
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
+    runs-on: macos-13
     timeout-minutes: 120
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Mito_27
-            tox_env: py27-mode_mitogen
-          - name: Mito_312
-            tox_env: py312-mode_mitogen
+          - name: Mito_313
+            tox_env: py313-mode_mitogen
 
-          - name: Loc_27_210
-            tox_env: py27-mode_localhost-ansible2.10
-          - name: Loc_312_10
-            tox_env: py312-mode_localhost-ansible10
+          - name: Loc_313_10
+            tox_env: py313-mode_localhost-ansible10
 
-          - name: Van_27_210
-            tox_env: py27-mode_localhost-ansible2.10-strategy_linear
-          - name: Van_312_10
-            tox_env: py312-mode_localhost-ansible10-strategy_linear
+          - name: Van_313_10
+            tox_env: py313-mode_localhost-ansible10-strategy_linear
 
     steps:
       - uses: actions/checkout@v4
@@ -324,3 +252,15 @@ jobs:
           fi
 
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+
+  # https://github.com/marketplace/actions/alls-green
+  check:
+    if: always()
+    needs:
+      - linux
+      - macos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
