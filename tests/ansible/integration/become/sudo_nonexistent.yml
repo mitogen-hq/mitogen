@@ -9,10 +9,7 @@
       ignore_errors: true
       register: out
       when:
-        # https://github.com/ansible/ansible/pull/70785
-        - ansible_facts.distribution not in ["MacOSX"]
-          or ansible_version.full is version("2.11", ">=", strict=True)
-          or is_mitogen
+        - become_unpriv_available
 
     - name: Verify raw module output.
       assert:
@@ -26,10 +23,7 @@
         fail_msg: |
           out={{ out }}
       when:
-        # https://github.com/ansible/ansible/pull/70785
-        - ansible_facts.distribution not in ["MacOSX"]
-          or ansible_version.full is version("2.11", ">=", strict=True)
-          or is_mitogen
+        - become_unpriv_available
   tags:
     - sudo
     - sudo_nonexistent
