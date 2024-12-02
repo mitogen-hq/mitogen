@@ -35,7 +35,4 @@
               - second_run.results[item | int].stdout == user_expected
           with_sequence: start=0 end=2
       when:
-        # https://github.com/ansible/ansible/pull/70785
-        - ansible_facts.distribution not in ["MacOSX"]
-          or ansible_version.full is version("2.11", ">=", strict=True)
-          or is_mitogen
+        - become_unpriv_available
