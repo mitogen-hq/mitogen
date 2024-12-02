@@ -23,6 +23,12 @@ In progress (unreleased)
 
 
 
+v0.3.19 (2024-12-02)
+--------------------
+
+* :gh:issue:`1129` :mod:`ansible_mitogen`: Ansible 11 support
+
+
 v0.3.18 (2024-11-07)
 --------------------
 
