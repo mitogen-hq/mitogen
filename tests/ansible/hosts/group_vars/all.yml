@@ -1,3 +1,30 @@
 ---
+become_unpriv_available: >-
+  {#
+    Vanilla Ansible >= 4 (ansible-core >= 2.11) can use `setfacl` for
+    unpriv -> unpriv, but Mitogen test containers lack setfacl
+    https://github.com/mitogen-hq/mitogen/issues/1118
+
+    Mitogen + Ansible can do unpriv -> unpriv without temporary files,
+    but Ansible >= 11 (ansible-core >= 2.18) detection tries to use Python
+    3.13 which hits https://github.com/python/cpython/issues/115911 on macOS.
+  #}
+  {{-
+    (
+      not is_mitogen
+      and ansible_facts.distribution in ["MacOSX"]
+      and ansible_version.full is version("2.11", ">=", strict=True)
+    )
+    or (
+      is_mitogen
+      and not ansible_facts.distribution in ["MacOSX"]
+    )
+    or (
+      is_mitogen
+      and ansible_python_interpreter is not defined
+      and ansible_version.full is version("2.18", "<", strict=True)
+    )
+  -}}
+
 pkg_mgr_python_interpreter: python
 pkg_repos_overrides: []
