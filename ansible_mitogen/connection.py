@@ -933,30 +933,38 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                 self.reset_compat_msg
             )
 
-        # Strategy's _execute_meta doesn't have an action obj but we'll need one for
-        # running interpreter_discovery
-        # will create a new temporary action obj for this purpose
-        self._action = ansible_mitogen.mixins.ActionModuleMixin(
-            task=0,
-            connection=self,
-            play_context=self._play_context,
-            loader=0,
-            templar=0,
-            shared_loader_obj=0
-        )
-
-        # Workaround for https://github.com/ansible/ansible/issues/84238
+        # Handle templated connection variables during `meta: reset_connection`.
+        # Many bugs/implementation details of Mitogen & Ansible collide here.
+        # See #1079, #1096, #1132, ansible/ansible#84238, ...
         try:
             task, templar = self._play_context.vars.pop(
                 '_mitogen.smuggled.reset_connection',
             )
         except KeyError:
-            pass
+            self._action_monkey_patched_by_mitogen = False
         else:
+            # LOG.info('%r.reset(): remote_addr=%r', self, self._play_context.remote_addr)
+            # ansible.plugins.strategy.StrategyBase._execute_meta() doesn't
+            # have an action object, which we need for interpreter_discovery.
+            # Create a temporary action object for this purpose.
+            self._action = ansible_mitogen.mixins.ActionModuleMixin(
+                task=task,
+                connection=self,
+                play_context=self._play_context,
+                loader=templar._loader,
+                templar=templar,
+                shared_loader_obj=0,
+            )
+            self._action_monkey_patched_by_mitogen = True
+
+            # Workaround for https://github.com/ansible/ansible/issues/84238
             self.set_options(
                 task_keys=task.dump_attrs(),
                 var_options=self._mitogen_var_options(templar),
             )
+
+            del task
+            del templar
 
         # Clear out state in case we were ever connected.
         self.close()
@@ -976,6 +984,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             )
         finally:
             binding.close()
+
+        # Cleanup any monkey patching we did for `meta: reset_connection`
+        if self._action_monkey_patched_by_mitogen:
+            del self._action
+        del self._action_monkey_patched_by_mitogen
 
     # Compatibility with Ansible 2.4 wait_for_connection plug-in.
     _reset = reset

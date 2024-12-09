@@ -19,6 +19,9 @@ ssh-common-args ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami')
 ansible_ssh_common_args=-o PermitLocalCommand=yes -o LocalCommand="touch {{ ssh_args_canary_file }}"
 ssh_args_canary_file=/tmp/ssh_args_by_inv_{{ inventory_hostname }}
 
+[issue1079]
+wait-for-connection ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
+
 [tt_targets_bare]
 tt-bare
 
