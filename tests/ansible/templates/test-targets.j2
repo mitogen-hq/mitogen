@@ -40,6 +40,13 @@ ssh_args_canary_file=/tmp/ssh_args_by_inv_{{ '{{' }} inventory_hostname {{ '}}' 
 
 {% set tt = containers[0] %}
 
+[issue1079]
+wait-for-connection ansible_host={{ tt.hostname }} ansible_port={{ tt.port }} ansible_python_interpreter="{{ '{{' }} '{{ tt.python_path }}' | trim {{ '}}' }}"
+
+[issue1079:vars]
+ansible_user=mitogen__has_sudo_nopw
+ansible_password=has_sudo_nopw_password
+
 [tt_targets_bare]
 tt-bare
 
