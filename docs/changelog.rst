@@ -25,6 +25,8 @@ In progress (unreleased)
   timeout with templated ``ansible_python_interpreter``
 * :gh:issue:`1079` :mod:`ansible_mitogen`: Fix templated python interpreter
   with `meta: reset_connection`
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated connection timeout
+  (e.g. ``ansible_timeout``).
 
 
 v0.3.19 (2024-12-02)
