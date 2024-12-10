@@ -948,11 +948,11 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             # have an action object, which we need for interpreter_discovery.
             # Create a temporary action object for this purpose.
             self._action = ansible_mitogen.mixins.ActionModuleMixin(
-                task=0,
+                task=task,
                 connection=self,
                 play_context=self._play_context,
-                loader=0,
-                templar=0,
+                loader=templar._loader,
+                templar=templar,
                 shared_loader_obj=0,
             )
             self._action_monkey_patched_by_mitogen = True

@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1079` :mod:`ansible_mitogen`: Fix :ans:mod:`wait_for_connection`
   timeout with templated ``ansible_python_interpreter``
+* :gh:issue:`1079` :mod:`ansible_mitogen`: Fix templated python interpreter
+  with `meta: reset_connection`
 
 
 v0.3.19 (2024-12-02)
