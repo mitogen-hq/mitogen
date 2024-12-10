@@ -513,7 +513,7 @@ class PlayContextSpec(Spec):
         return self._connection_option('ssh_executable')
 
     def timeout(self):
-        return self._play_context.timeout
+        return self._connection_option('timeout')
 
     def ansible_ssh_timeout(self):
         return (
@@ -521,6 +521,7 @@ class PlayContextSpec(Spec):
             self._connection.get_task_var('ansible_ssh_timeout') or
             self.timeout()
         )
+        return self.timeout()
 
     def ssh_args(self):
         return [

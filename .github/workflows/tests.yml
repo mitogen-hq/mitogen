@@ -162,7 +162,7 @@ jobs:
   macos:
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
     runs-on: macos-13
-    timeout-minutes: 120
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
