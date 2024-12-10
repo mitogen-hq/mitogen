@@ -26,6 +26,7 @@
           - env.cwd == ansible_user_dir
           - (not env.mitogen_loaded) or (env.python_path.count("") == 1)
         fail_msg: |
+          ansible_user_dir={{ ansible_user_dir }}
           env={{ env }}
 
     - name: Run some new-style from ansible.module_utils... modules
