@@ -8,3 +8,15 @@
   tags:
     - issue_1079
     - wait_for_connection
+
+- hosts: issue1079
+  gather_facts: false
+  tasks:
+    - meta: reset_connection
+    - name: Wait for connection after reset_connection
+      wait_for_connection:
+        timeout: 5
+  tags:
+    - issue_1079
+    - reset_connection
+    - wait_for_connection

@@ -7,6 +7,7 @@
     ansible_password: "{{ 'has_sudo_nopw_password' | trim }}"
     ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
     ansible_ssh_executable: "{{ 'ssh' | trim }}"
+    ansible_timeout: "{{ 5 | int }}"
     ansible_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
 
   tasks:
@@ -23,6 +24,7 @@
     ansible_private_key_file: "{{ git_basedir }}/tests/data/docker/mitogen__has_sudo_pubkey.key"
     ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
     ansible_ssh_executable: "{{ 'ssh' | trim }}"
+    ansible_timeout: "{{ 5 | int }}"
     ansible_user: "{{ 'mitogen__has_sudo_pubkey' | trim }}"
 
   tasks:
