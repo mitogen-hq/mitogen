@@ -4,8 +4,7 @@
   hosts: dtc-container-1
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - mitogen_get_stack:
     register: out
@@ -20,10 +19,14 @@
             'kind': 'lxc',
             'lxc_info_path': null,
             'machinectl_path': null,
-            'python_path': ['/usr/bin/python'],
+            'python_path': ['python3000'],
             'remote_name': null,
             'username': null,
           },
           'method': 'setns',
         },
       ]
+  tags:
+    - mitogen_only
+    - osa
+    - osa_container_standalone

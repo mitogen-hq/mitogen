@@ -3,9 +3,19 @@
 
 - name: integration/interpreter_discovery/complex_args.yml
   hosts: test-targets
-  any_errors_fatal: true
   gather_facts: true
+  environment:
+      http_proxy: "{{ lookup('env', 'http_proxy') | default(omit) }}"
+      https_proxy: "{{ lookup('env', 'https_proxy') | default(omit) }}"
+      no_proxy: "{{ lookup('env', 'no_proxy') | default(omit) }}"
   tasks:
+    # Ansible releases after June 2024 quote ansible_python_interpreter
+    # https://github.com/ansible/ansible/pull/83365
+    - meta: end_play
+      when:
+        - not is_mitogen
+        - ansible_version.full is version('2.17.1', '>=', strict=True)
+
     - name: create temp file to source
       file:
         path: /tmp/fake
@@ -22,35 +32,27 @@
     #     special_python: source /tmp/fake && python
     - name: set python using sourced file
       set_fact:
-        special_python: source /tmp/fake || true && python
+        special_python: "source /tmp/fake || true && {{ ansible_facts.python.executable }}"
 
     - name: run get_url with specially-sourced python
-      get_url:
-        url: https://google.com
-        dest: "/tmp/"
-        mode: 0644
-        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
-        validate_certs: no
+      uri:
+        # Plain http for wider Ansible & Python version compatibility
+        url: http://www.gstatic.com/generate_204
+        status_code: [204]
       vars:
         ansible_python_interpreter: "{{ special_python }}"
-      environment:
-        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
 
     - name: run get_url with specially-sourced python including jinja
-      get_url:
-        url: https://google.com
-        dest: "/tmp/"
-        mode: 0644
-        # this url is the build pic from mitogen's github site; some python versions require ssl stuff installed so will disable need to validate certs
-        validate_certs: no
+      uri:
+        # Plain http for wider Ansible & Python version compatibility
+        url: http://www.gstatic.com/generate_204
+        status_code: [204]
       vars:
         ansible_python_interpreter: >
           {% if "1" == "1" %}
             {{ special_python }}
           {% else %}
-            python 
+            python
           {% endif %}
-      environment:
-        https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
-        no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
+  tags:
+    - complex_args

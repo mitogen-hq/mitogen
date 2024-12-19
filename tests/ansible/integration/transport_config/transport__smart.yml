@@ -4,19 +4,21 @@
 
 # When no ansible_connection= is set, transport comes via ansible.cfg ("smart"
 # is parsed away to either paramiko or ssh).
-- name: integration/transport_config/transport.yml
+- name: integration/transport_config/transport__smart.yml
   hosts: tc-transport-smart
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].method
       right: "ssh"
+  tags:
+    - mitogen_only
 
 - hosts: tc-transport-local
   vars: {mitogen_via: tc-transport-smart}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].method
@@ -24,22 +26,26 @@
   - assert_equal:
       left: out.result[1].method
       right: "local"
+  tags:
+    - mitogen_only
 
 
 # ansible_connection=local
 
 - hosts: tc-transport-local
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].method
       right: "local"
+  tags:
+    - mitogen_only
 
 - hosts: tc-transport-smart
   vars: {mitogen_via: tc-transport-local}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
       left: out.result[0].method
@@ -47,3 +53,5 @@
   - assert_equal:
       left: out.result[1].method
       right: "ssh"
+  tags:
+    - mitogen_only

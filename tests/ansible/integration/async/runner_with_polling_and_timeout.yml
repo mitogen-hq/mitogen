@@ -2,7 +2,6 @@
 
 - name: integration/async/runner_with_polling_and_timeout.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   # Verify async-with-polling-and-timeout behaviour.
@@ -22,4 +21,7 @@
           job1.msg == "async task did not complete within the requested time" or
           job1.msg == "async task did not complete within the requested time - 1s" or
           job1.msg == "Job reached maximum time limit of 1 seconds."
-
+      fail_msg: |
+        job1={{ job1 }}
+  tags:
+    - runner_with_polling_and_timeout

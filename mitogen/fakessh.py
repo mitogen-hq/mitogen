@@ -103,7 +103,6 @@ import tempfile
 import threading
 
 import mitogen.core
-import mitogen.master
 import mitogen.parent
 
 from mitogen.core import LOG, IOLOG
@@ -200,7 +199,7 @@ class Process(object):
 
     def _on_stdin(self, msg):
         if msg.is_dead:
-            IOLOG.debug('%r._on_stdin() -> %r', self, data)
+            IOLOG.debug('%r._on_stdin() -> %r', self, msg)
             self.pump.protocol.close()
             return
 
@@ -437,7 +436,7 @@ def run(dest, router, args, deadline=None, econtext=None):
             fp.write(inspect.getsource(mitogen.core))
             fp.write('\n')
             fp.write('ExternalContext(%r).main()\n' % (
-                _get_econtext_config(context, sock2),
+                _get_econtext_config(econtext, sock2),
             ))
         finally:
             fp.close()

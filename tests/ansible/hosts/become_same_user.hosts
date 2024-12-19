@@ -1,4 +1,9 @@
+# code: language=ini
+# vim: syntax=dosini
 
+[become_same_user]
 # become_same_user.yml
 bsu-joe ansible_user=joe
 
+[become_same_user:vars]
+ansible_python_interpreter=python3000

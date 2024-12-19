@@ -1,2 +1,4 @@
 
-- include: kubectl.yml
+- include_playbook: kubectl.yml
+  tags:
+    - kubectl

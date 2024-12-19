@@ -1,0 +1,270 @@
+# https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions
+
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - docs-master
+
+env:
+  #ANSIBLE_VERBOSITY: 3
+  #MITOGEN_LOG_LEVEL: DEBUG
+  MITOGEN_TEST_IMAGE_TEMPLATE: "ghcr.io/mitogen-hq/%(distro)s-test"
+
+# https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
+# https://github.com/actions/runner-images/blob/main/README.md#software-and-image-support
+jobs:
+  linux:
+    # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2004-Readme.md
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ans_27_210
+            tox_env: py27-mode_ansible-ansible2.10
+          - name: Ans_27_4
+            tox_env: py27-mode_ansible-ansible4
+
+          - name: Ans_36_210
+            python_version: '3.6'
+            tox_env: py36-mode_ansible-ansible2.10
+          - name: Ans_36_4
+            python_version: '3.6'
+            tox_env: py36-mode_ansible-ansible4
+
+          - name: Ans_311_210
+            python_version: '3.11'
+            tox_env: py311-mode_ansible-ansible2.10
+          - name: Ans_311_3
+            python_version: '3.11'
+            tox_env: py311-mode_ansible-ansible3
+          - name: Ans_311_4
+            python_version: '3.11'
+            tox_env: py311-mode_ansible-ansible4
+          - name: Ans_311_5
+            python_version: '3.11'
+            tox_env: py311-mode_ansible-ansible5
+          - name: Ans_313_6
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible6
+          - name: Ans_313_7
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible7
+          - name: Ans_313_8
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible8
+          - name: Ans_313_9
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible9
+          - name: Ans_313_10
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible10
+          - name: Ans_313_11
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible11
+
+          - name: Van_313_11
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible11-strategy_linear
+
+          - name: Mito_27
+            tox_env: py27-mode_mitogen
+          - name: Mito_36
+            python_version: '3.6'
+            tox_env: py36-mode_mitogen
+          - name: Mito_313
+            python_version: '3.13'
+            tox_env: py313-mode_mitogen
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+        if: ${{ matrix.python_version }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install build deps
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          sudo apt-get update
+          sudo apt-get install -y python2-dev python3-pip virtualenv
+      - name: Show Python versions
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          # macOS builders lack a realpath command
+          type python  && python  -c"import os.path;print(os.path.realpath('$(type -p python)'))" &&  python --version
+          type python2 && python2 -c"import os.path;print(os.path.realpath('$(type -p python2)'))" && python2 --version
+          type python3 && python3 -c"import os.path;print(os.path.realpath('$(type -p python3)'))" && python3 --version
+          echo
+
+          if [ -e /usr/bin/python ]; then
+              echo "/usr/bin/python:    sys.executable: $(/usr/bin/python -c 'import sys; print(sys.executable)')"
+          fi
+
+          if [ -e /usr/bin/python2 ]; then
+              echo "/usr/bin/python2:   sys.executable: $(/usr/bin/python2 -c 'import sys; print(sys.executable)')"
+          fi
+
+          if [ -e /usr/bin/python2.7 ]; then
+              echo "/usr/bin/python2.7: sys.executable: $(/usr/bin/python2.7 -c 'import sys; print(sys.executable)')"
+          fi
+      - name: Install tooling
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
+
+          if [[ -z $PYTHON ]]; then
+              echo 1>&2 "Python interpreter could not be determined"
+              exit 1
+          fi
+
+          if [[ $PYTHON == "python2.7" && $(uname) == "Darwin" ]]; then
+              "$PYTHON" -m ensurepip --user --altinstall --no-default-pip
+              "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
+          elif [[ $PYTHON == "python2.7" ]]; then
+              curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
+              "$PYTHON" get-pip.py --user --no-python-version-warning
+              # Avoid Python 2.x pip masking system pip
+              rm -f ~/.local/bin/{easy_install,pip,wheel}
+              "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
+          else
+              "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          fi
+      - name: Run tests
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
+
+          if [[ -z $PYTHON ]]; then
+              echo 1>&2 "Python interpreter could not be determined"
+              exit 1
+          fi
+
+          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+
+  macos:
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
+    runs-on: macos-13
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Mito_313
+            tox_env: py313-mode_mitogen
+
+          - name: Loc_313_11
+            tox_env: py313-mode_localhost-ansible11
+
+          - name: Van_313_11
+            tox_env: py313-mode_localhost-ansible11-strategy_linear
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python_version }}
+        if: ${{ matrix.python_version }}
+      - name: Show Python versions
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          # macOS builders lack a realpath command
+          type python  && python  -c"import os.path;print(os.path.realpath('$(type -p python)'))" &&  python --version
+          type python2 && python2 -c"import os.path;print(os.path.realpath('$(type -p python2)'))" && python2 --version
+          type python3 && python3 -c"import os.path;print(os.path.realpath('$(type -p python3)'))" && python3 --version
+          echo
+
+          if [ -e /usr/bin/python ]; then
+              echo "/usr/bin/python:    sys.executable: $(/usr/bin/python -c 'import sys; print(sys.executable)')"
+          fi
+
+          if [ -e /usr/bin/python2 ]; then
+              echo "/usr/bin/python2:   sys.executable: $(/usr/bin/python2 -c 'import sys; print(sys.executable)')"
+          fi
+
+          if [ -e /usr/bin/python2.7 ]; then
+              echo "/usr/bin/python2.7: sys.executable: $(/usr/bin/python2.7 -c 'import sys; print(sys.executable)')"
+          fi
+
+          if [ -e /Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7 ]; then
+              # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
+              echo "/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7: sys.executable: $(/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7 -c 'import sys; print(sys.executable)')"
+          fi
+      - name: Install tooling
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
+
+          if [[ -z $PYTHON ]]; then
+              echo 1>&2 "Python interpreter could not be determined"
+              exit 1
+          fi
+
+          if [[ $PYTHON == "python2.7" && $(uname) == "Darwin" ]]; then
+              # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
+              PYTHON="/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7"
+              "$PYTHON" -m ensurepip --user --altinstall --no-default-pip
+              "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
+          elif [[ $PYTHON == "python2.7" ]]; then
+              curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
+              "$PYTHON" get-pip.py --user --no-python-version-warning
+              # Avoid Python 2.x pip masking system pip
+              rm -f ~/.local/bin/{easy_install,pip,wheel}
+              "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
+          else
+              "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          fi
+      - name: Run tests
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o errexit -o nounset -o pipefail
+
+          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
+
+          if [[ -z $PYTHON ]]; then
+              echo 1>&2 "Python interpreter could not be determined"
+              exit 1
+          fi
+
+          if [[ $PYTHON == "python2.7" && $(uname) == "Darwin" ]]; then
+              # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
+              PYTHON="/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7"
+          fi
+
+          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+
+  # https://github.com/marketplace/actions/alls-green
+  check:
+    if: always()
+    needs:
+      - linux
+      - macos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}

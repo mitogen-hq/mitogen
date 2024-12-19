@@ -2,7 +2,6 @@
 
 - name: integration/context_service/lru_one_target.yml
   hosts: test-targets
-  any_errors_fatal: true
   vars:
     max_interps: "{{lookup('env', 'MITOGEN_MAX_INTERPRETERS')}}"
     ubound: "{{max_interps|int + 1}}"
@@ -40,3 +39,5 @@
     #     that:
     #     - first_run.results[-1].pid != second_run.results[-1].pid
     #   when: is_mitogen
+  tags:
+    - lru_one_target

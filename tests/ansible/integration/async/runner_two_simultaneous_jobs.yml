@@ -1,12 +1,12 @@
 
 - name: integration/async/runner_two_simultaneous_jobs.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   # Start 2 duplicate jobs, verify they run concurrently.
 
-  - file:
+  - name: Cleanup semaphore file
+    file:
       path: /tmp/flurp
       state: absent
 
@@ -56,8 +56,16 @@
       that:
         - result1.rc == 0
         - result2.rc == 0
+      fail_msg: |
+        result1={{ result1 }}
+        result2={{ result2 }}
 
   - assert:
       that:
         - result2.stdout == 'im_alive'
-    when: ansible_version.full > '2.8'  # ansible#51393
+      fail_msg: |
+        result2={{ result2 }}
+    when:
+      - ansible_version.full is version('2.8', '>=', strict=True)  # ansible#51393
+  tags:
+    - runner_two_simultaneous_jobs

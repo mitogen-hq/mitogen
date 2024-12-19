@@ -1,15 +1,16 @@
-
 - name: bench/file_transfer.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
-
   - name: Make 32MiB file
     delegate_to: localhost
+    run_once: true
     shell: openssl rand 33554432 > /tmp/bigfile.in
+    args:
+      creates: /tmp/bigfile.in
 
   - name: Make 320MiB file
     delegate_to: localhost
+    run_once: true
     shell: >
       cat
       /tmp/bigfile.in
@@ -23,6 +24,8 @@
       /tmp/bigfile.in
       /tmp/bigfile.in
       > /tmp/bigbigfile.in
+    args:
+      creates: /tmp/bigbigfile.in
 
   - name: Delete SSH file is present.
     file:
@@ -37,35 +40,74 @@
     copy:
       src: /tmp/bigfile.in
       dest: /tmp/bigfile.out
+      mode: ugo=rw
 
   - name: Copy 320MiB file via SSH
     copy:
       src: /tmp/bigbigfile.in
       dest: /tmp/bigbigfile.out
+      mode: ugo=rw
 
   - name: Delete localhost sudo file if present.
     file:
       path: "{{item}}"
       state: absent
     delegate_to: localhost
+    run_once: true
     become: true
     with_items:
     - /tmp/bigfile.out
     - /tmp/bigbigfile.out
+    tags:
+      - requires_local_sudo
 
   - name: Copy 32MiB file via localhost sudo
     delegate_to: localhost
+    run_once: true
     become: true
     copy:
       src: /tmp/bigfile.in
       dest: /tmp/bigfile.out
+      mode: ugo=rw
+    tags:
+      - requires_local_sudo
 
   - name: Copy 320MiB file via localhost sudo
     delegate_to: localhost
+    run_once: true
     become: true
     copy:
       src: /tmp/bigbigfile.in
       dest: /tmp/bigbigfile.out
+      mode: ugo=rw
+    tags:
+      - requires_local_sudo
+
+  - name: Local cleanup
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    loop:
+      - /tmp/bigfile.in
+      - /tmp/bigfile.out
+      - /tmp/bigbigfile.in
+      - /tmp/bigbigfile.out
+    delegate_to: localhost
+    run_once: true
+    tags:
+      - cleanup_local
+      - cleanup
+
+  - name: Target cleanup
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    loop:
+      - /tmp/bigfile.out
+      - /tmp/bigbigfile.out
+    tags:
+      - cleanup_target
+      - cleanup
 
   tags:
   - resource_intensive

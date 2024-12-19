@@ -1,0 +1,31 @@
+- name: integration/become/templated_by_inv.yml
+  hosts: tt_become_by_inv
+  gather_facts: false
+  tasks:
+    - name: Gather facts (avoiding any unprivileged become)
+      vars:
+        ansible_become: false
+      setup:
+
+    - meta: reset_connection
+
+    - name: Templated become in inventory
+      vars:
+        expected_become_users:
+          tt-become: root
+          tt-become-exe: root
+          tt-become-flags: root
+          tt-become-method: root
+          tt-become-pass: mitogen__pw_required
+          tt-become-user: root
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_inv_whoami
+      failed_when:
+        - become_templated_by_inv_whoami is failed
+          or become_templated_by_inv_whoami.stdout != expected_become_users[inventory_hostname]
+      when:
+        - ansible_become_user in ['root']
+          or become_unpriv_available

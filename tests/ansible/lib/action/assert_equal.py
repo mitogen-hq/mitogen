@@ -7,23 +7,26 @@
 __metaclass__ = type
 
 import inspect
-import unittest2
+import unittest
 
 import ansible.template
 
-from ansible.errors import AnsibleError
 from ansible.plugins.action import ActionBase
-from ansible.module_utils.six import string_types
 
 
 TEMPLATE_KWARGS = {}
 
-_argspec = inspect.getargspec(ansible.template.Templar.template)
+try:
+    # inspect.getfullargspec()  Added: 3.0
+    _argspec = inspect.getfullargspec(ansible.template.Templar.template)
+except AttributeError:
+    # inspect.getargspec()      Added: 2.1  Deprecated: 3.0  Removed: 3.11
+    _argspec = inspect.getargspec(ansible.template.Templar.template)
 if 'bare_deprecated' in _argspec.args:
     TEMPLATE_KWARGS['bare_deprecated'] = False
 
 
-class TestCase(unittest2.TestCase):
+class TestCase(unittest.TestCase):
     def runTest(self):
         pass
 

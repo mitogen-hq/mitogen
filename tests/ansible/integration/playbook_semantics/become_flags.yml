@@ -4,7 +4,6 @@
 
 - name: integration/playbook_semantics/become_flags.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
     - name: "without -E"
@@ -14,9 +13,12 @@
 
     - assert:
         that: "out.stdout == ''"
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - become_flags
 
 - hosts: test-targets
-  any_errors_fatal: true
   become_flags: -E
   tasks:
     - name: "with -E"
@@ -28,3 +30,7 @@
 
     - assert:
         that: "out2.stdout == '2'"
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - become_flags

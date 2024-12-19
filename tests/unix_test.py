@@ -1,11 +1,8 @@
-
 import os
 import socket
 import subprocess
 import sys
 import time
-
-import unittest2
 
 import mitogen
 import mitogen.master
@@ -68,17 +65,13 @@ class ListenerTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_constructor_basic(self):
         listener = self.klass.build_stream(router=self.router)
-        capture = testlib.LogCapturer()
-        capture.start()
-        try:
-            self.assertFalse(mitogen.unix.is_path_dead(listener.protocol.path))
-            os.unlink(listener.protocol.path)
-            # ensure we catch 0 byte read error log message
-            self.broker.shutdown()
-            self.broker.join()
-            self.broker_shutdown = True
-        finally:
-            capture.stop()
+        self.assertFalse(mitogen.unix.is_path_dead(listener.protocol.path))
+        os.unlink(listener.protocol.path)
+
+        # ensure we catch 0 byte read error log message
+        self.broker.shutdown()
+        self.broker.join()
+        self.broker_shutdown = True
 
 
 class ClientTest(testlib.TestCase):
@@ -98,12 +91,12 @@ class ClientTest(testlib.TestCase):
     def _test_simple_client(self, path):
         router, context = self._try_connect(path)
         try:
-            self.assertEquals(0, context.context_id)
-            self.assertEquals(1, mitogen.context_id)
-            self.assertEquals(0, mitogen.parent_id)
+            self.assertEqual(0, context.context_id)
+            self.assertEqual(1, mitogen.context_id)
+            self.assertEqual(0, mitogen.parent_id)
             resp = context.call_service(service_name=MyService, method_name='ping')
-            self.assertEquals(mitogen.context_id, resp['src_id'])
-            self.assertEquals(0, resp['auth_id'])
+            self.assertEqual(mitogen.context_id, resp['src_id'])
+            self.assertEqual(0, resp['auth_id'])
         finally:
             router.broker.shutdown()
             router.broker.join()
@@ -133,7 +126,8 @@ class ClientTest(testlib.TestCase):
     def test_simple(self):
         path = mitogen.unix.make_socket_path()
         proc = subprocess.Popen(
-            [sys.executable, __file__, 'ClientTest_server', path]
+            [sys.executable, __file__, 'ClientTest_server', path],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         try:
             self._test_simple_client(path)
@@ -142,11 +136,11 @@ class ClientTest(testlib.TestCase):
             mitogen.context_id = 0
             mitogen.parent_id = None
             mitogen.parent_ids = []
-        proc.wait()
+        b_stdout, _ = proc.communicate()
+        self.assertEqual(proc.returncode, 0)
+        self.assertEqual(b_stdout.decode(), '')
 
 
 if __name__ == '__main__':
     if len(sys.argv) == 3 and sys.argv[1] == 'ClientTest_server':
         ClientTest._test_simple_server(path=sys.argv[2])
-    else:
-        unittest2.main()

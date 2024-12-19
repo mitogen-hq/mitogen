@@ -1,9 +1,12 @@
-
 import logging
-import mock
 import sys
+import unittest
 
-import unittest2
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import testlib
 import mitogen.core
 import mitogen.master
@@ -38,8 +41,8 @@ class BufferingTest(testlib.TestCase):
         context, handler = self.build()
         rec = self.record()
         handler.emit(rec)
-        self.assertEquals(0, context.send.call_count)
-        self.assertEquals(1, len(handler._buffer))
+        self.assertEqual(0, context.send.call_count)
+        self.assertEqual(1, len(handler._buffer))
 
     def test_uncork(self):
         context, handler = self.build()
@@ -47,14 +50,14 @@ class BufferingTest(testlib.TestCase):
         handler.emit(rec)
         handler.uncork()
 
-        self.assertEquals(1, context.send.call_count)
-        self.assertEquals(None, handler._buffer)
+        self.assertEqual(1, context.send.call_count)
+        self.assertEqual(None, handler._buffer)
 
         _, args, _ = context.send.mock_calls[0]
         msg, = args
 
-        self.assertEquals(mitogen.core.FORWARD_LOG, msg.handle)
-        self.assertEquals(b('name\x0099\x00msg'), msg.data)
+        self.assertEqual(mitogen.core.FORWARD_LOG, msg.handle)
+        self.assertEqual(b('name\x0099\x00msg'), msg.data)
 
 
 class StartupTest(testlib.RouterMixin, testlib.TestCase):
@@ -66,8 +69,8 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
         c1.shutdown(wait=True)
 
         logs = log.stop()
-        self.assertTrue('Python version is' in logs)
-        self.assertTrue('Parent is context 0 (master)' in logs)
+        self.assertIn('Python version is', logs)
+        self.assertIn('Parent is context 0 (master)', logs)
 
     def test_earliest_messages_logged_via(self):
         c1 = self.router.local(name='c1')
@@ -81,16 +84,12 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
         c2.shutdown(wait=True)
 
         logs = log.stop()
-        self.assertTrue('Python version is' in logs)
+        self.assertIn('Python version is', logs)
 
         expect = 'Parent is context %s (%s)' % (c1.context_id, 'parent')
-        self.assertTrue(expect in logs)
+        self.assertIn(expect, logs)
 
-StartupTest = unittest2.skipIf(
+StartupTest = unittest.skipIf(
     condition=sys.version_info < (2, 7) or sys.version_info >= (3, 6),
     reason="Message log flaky on Python < 2.7 or >= 3.6"
 )(StartupTest)
-
-
-if __name__ == '__main__':
-    unittest2.main()

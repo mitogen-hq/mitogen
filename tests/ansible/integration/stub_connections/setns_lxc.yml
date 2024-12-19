@@ -8,12 +8,13 @@
   any_errors_fatal: false
   connection: local
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: _end_play_if_not_sudo_linux.yml
 
-    - include: _end_play_if_not_sudo_linux.yml
-
-    - command: |
+    - name: Run stub-lxc-info.py
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+      command: |
         sudo -nE "{{lookup('env', 'VIRTUAL_ENV')}}/bin/ansible"
         -i localhost,
         -c setns
@@ -26,8 +27,13 @@
         localhost
       args:
         chdir: ../..
-        warn: false
+        warn: "{{ False if ansible_version.full is version('2.10', '<=', strict=True) else omit }}"
       register: result
 
     - assert:
         that: result.rc == 0
+        fail_msg: |
+          result={{ result }}
+  tags:
+    - stns_lxc
+    - mitogen_only

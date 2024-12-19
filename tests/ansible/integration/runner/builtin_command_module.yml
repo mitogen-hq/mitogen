@@ -1,10 +1,10 @@
 
 - name: integration/runner/builtin_command_module.yml
   hosts: test-targets
-  any_errors_fatal: true
   gather_facts: true
   tasks:
-    - command: hostname
+    - name: Run hostname
+      command: hostname
       with_sequence: start=1 end={{end|default(1)}}
       register: out
 
@@ -16,3 +16,7 @@
           out.results[0].item == '1' and
           out.results[0].rc == 0 and
           (out.results[0].stdout == ansible_nodename)
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - builtin_command_module

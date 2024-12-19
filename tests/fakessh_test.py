@@ -1,16 +1,14 @@
-
 import os
 import shutil
-
-import unittest2
+import unittest
 
 import mitogen.fakessh
 
 import testlib
 
 
+@unittest.skip('broken')
 class RsyncTest(testlib.DockerMixin, testlib.TestCase):
-    @unittest2.skip('broken')
     def test_rsync_from_master(self):
         context = self.docker_ssh_any()
 
@@ -26,7 +24,6 @@ class RsyncTest(testlib.DockerMixin, testlib.TestCase):
         self.assertTrue(context.call(os.path.exists, '/tmp/data'))
         self.assertTrue(context.call(os.path.exists, '/tmp/data/simple_pkg/a.py'))
 
-    @unittest2.skip('broken')
     def test_rsync_between_direct_children(self):
         # master -> SSH -> mitogen__has_sudo_pubkey -> rsync(.ssh) -> master ->
         # mitogen__has_sudo -> rsync
@@ -59,7 +56,3 @@ class RsyncTest(testlib.DockerMixin, testlib.TestCase):
             pubkey_acct.call(os.path.getsize, '.ssh/authorized_keys'),
             webapp_acct.call(os.path.getsize, dest_path + '/authorized_keys'),
         )
-
-
-if __name__ == '__main__':
-    unittest2.main()

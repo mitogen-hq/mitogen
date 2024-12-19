@@ -2,7 +2,6 @@
 # must be reinitialized or cleared out somehow on each invocation.
 
 - name: regression/issue_154__module_state_leaks.yml
-  any_errors_fatal: true
   hosts: test-targets
   tasks:
 
@@ -15,4 +14,8 @@
       that:
         - out.results[item|int].leak1 == ["David"]
         - out.results[item|int].leak2 == ["David"]
+      fail_msg: |
+        out={{ out }}
     with_sequence: start=0 end=3
+  tags:
+    - issue_154

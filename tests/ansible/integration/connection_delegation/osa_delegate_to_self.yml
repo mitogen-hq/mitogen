@@ -6,8 +6,7 @@
     target: osa-container-1
   gather_facts: false
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - mitogen_get_stack:
     delegate_to: "{{target}}"
@@ -24,9 +23,13 @@
             'lxc_info_path': null,
             'lxc_path': null,
             'machinectl_path': null,
-            'python_path': ["/usr/bin/python"],
+            'python_path': ["python3000"],
             'username': 'ansible-cfg-remote-user',
           },
           'method': 'setns',
         },
       ]
+  tags:
+    - mitogen_only
+    - osa
+    - osa_delegate_to_self

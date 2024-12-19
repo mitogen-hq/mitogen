@@ -1,0 +1,26 @@
+- name: integration/ssh/templated_by_task_keyword.yml
+  hosts: tt_targets_bare
+  gather_facts: false
+  # FIXME Resetting the connection shouldn't require credentials
+  #       https://github.com/mitogen-hq/mitogen/issues/1132
+  remote_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
+  vars:
+    ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
+    ansible_password: has_sudo_nopw_password
+    ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
+  tasks:
+    - name: Reset connection to target that will be delegate_to
+      meta: reset_connection
+
+- name: Test connection template by task keywords, with delegate_to
+  hosts: test-targets[0]
+  gather_facts: false
+  tasks:
+    - name: Templated by task keywords, with delegate_to
+      delegate_to: "{{ groups.tt_targets_bare[0] }}"
+      remote_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
+      vars:
+        ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
+        ansible_password: has_sudo_nopw_password
+        ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
+      ping:

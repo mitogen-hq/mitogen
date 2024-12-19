@@ -30,11 +30,16 @@
 Stable names for PluginLoader instances across Ansible versions.
 """
 
-from __future__ import absolute_import
-import distutils.version
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
+import ansible.errors
+
+import ansible_mitogen.utils
 
 __all__ = [
     'action_loader',
+    'become_loader',
     'connection_loader',
     'module_loader',
     'module_utils_loader',
@@ -42,10 +47,9 @@ __all__ = [
     'strategy_loader',
 ]
 
-import ansible
 
 ANSIBLE_VERSION_MIN = (2, 10)
-ANSIBLE_VERSION_MAX = (2, 10)
+ANSIBLE_VERSION_MAX = (2, 18)
 
 NEW_VERSION_MSG = (
     "Your Ansible version (%s) is too recent. The most recent version\n"
@@ -68,10 +72,7 @@ def assert_supported_release():
     Throw AnsibleError with a descriptive message in case of being loaded into
     an unsupported Ansible release.
     """
-    v = ansible.__version__
-    if not isinstance(v, tuple):
-        v = tuple(distutils.version.LooseVersion(v).version)
-
+    v = ansible_mitogen.utils.ansible_version
     if v[:2] < ANSIBLE_VERSION_MIN:
         raise ansible.errors.AnsibleError(
             OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
@@ -79,7 +80,7 @@ def assert_supported_release():
 
     if v[:2] > ANSIBLE_VERSION_MAX:
         raise ansible.errors.AnsibleError(
-            NEW_VERSION_MSG % (ansible.__version__, ANSIBLE_VERSION_MAX)
+            NEW_VERSION_MSG % (v, ANSIBLE_VERSION_MAX)
         )
 
 
@@ -90,6 +91,7 @@ assert_supported_release()
 
 
 from ansible.plugins.loader import action_loader
+from ansible.plugins.loader import become_loader
 from ansible.plugins.loader import connection_loader
 from ansible.plugins.loader import module_loader
 from ansible.plugins.loader import module_utils_loader

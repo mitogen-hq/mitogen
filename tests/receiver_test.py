@@ -1,7 +1,6 @@
-
 import sys
 import threading
-import unittest2
+import unittest
 
 import mitogen.core
 import testlib
@@ -17,8 +16,8 @@ def yield_stuff_then_die(sender):
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
     def test_handle(self):
         recv = mitogen.core.Receiver(self.router)
-        self.assertTrue(isinstance(recv.handle, int))
-        self.assertTrue(recv.handle > 100)
+        self.assertIsInstance(recv.handle, int)
+        self.assertGreater(recv.handle, 100)
         self.router.route(
             mitogen.core.Message.pickled(
                 'hi',
@@ -26,7 +25,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
                 handle=recv.handle,
             )
         )
-        self.assertEquals('hi', recv.get().unpickle())
+        self.assertEqual('hi', recv.get().unpickle())
 
 
 class IterationTest(testlib.RouterMixin, testlib.TestCase):
@@ -34,8 +33,8 @@ class IterationTest(testlib.RouterMixin, testlib.TestCase):
         recv = mitogen.core.Receiver(self.router)
         fork = self.router.local()
         ret = fork.call_async(yield_stuff_then_die, recv.to_sender())
-        self.assertEquals(list(range(5)), list(m.unpickle() for m in recv))
-        self.assertEquals(10, ret.get().unpickle())
+        self.assertEqual(list(range(5)), list(m.unpickle() for m in recv))
+        self.assertEqual(10, ret.get().unpickle())
 
     def iter_and_put(self, recv, latch):
         try:
@@ -76,7 +75,7 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
             raise latch.get()
         t.join()
         e = self.assertRaises(mitogen.core.ChannelError, throw)
-        self.assertEquals(e.args[0], mitogen.core.Receiver.closed_msg)
+        self.assertEqual(e.args[0], mitogen.core.Receiver.closed_msg)
 
     def test_closes_all(self):
         latch = mitogen.core.Latch()
@@ -92,7 +91,7 @@ class CloseTest(testlib.RouterMixin, testlib.TestCase):
             raise latch.get()
         for x in range(5):
             e = self.assertRaises(mitogen.core.ChannelError, throw)
-            self.assertEquals(e.args[0], mitogen.core.Receiver.closed_msg)
+            self.assertEqual(e.args[0], mitogen.core.Receiver.closed_msg)
         for t in ts:
             t.join()
 
@@ -118,9 +117,9 @@ class OnReceiveTest(testlib.RouterMixin, testlib.TestCase):
             raise latch.get()
         t.join()
         e = self.assertRaises(mitogen.core.ChannelError, throw)
-        self.assertEquals(e.args[0], sender.explicit_close_msg)
+        self.assertEqual(e.args[0], sender.explicit_close_msg)
 
-    @unittest2.skip(reason=(
+    @unittest.skip(reason=(
         'Unclear if a asingle dead message received from remote should '
         'cause all threads to wake up.'
     ))
@@ -139,7 +138,7 @@ class OnReceiveTest(testlib.RouterMixin, testlib.TestCase):
             raise latch.get()
         for x in range(5):
             e = self.assertRaises(mitogen.core.ChannelError, throw)
-            self.assertEquals(e.args[0], mitogen.core.Receiver.closed_msg)
+            self.assertEqual(e.args[0], mitogen.core.Receiver.closed_msg)
         for t in ts:
             t.join()
 
@@ -152,8 +151,4 @@ class ToSenderTest(testlib.RouterMixin, testlib.TestCase):
     def test_returned_context(self):
         myself = self.router.myself()
         recv = self.klass(self.router)
-        self.assertEquals(myself, recv.to_sender().context)
-
-
-if __name__ == '__main__':
-    unittest2.main()
+        self.assertEqual(myself, recv.to_sender().context)

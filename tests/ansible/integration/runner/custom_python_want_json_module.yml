@@ -1,6 +1,5 @@
 - name: integration/runner/custom_python_want_json_module.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - custom_python_want_json_module:
         foo: true
@@ -13,3 +12,7 @@
           (not out.results[0].changed) and
           out.results[0].input[0].foo and
           out.results[0].msg == 'Here is my input'
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - custom_python_want_json_module

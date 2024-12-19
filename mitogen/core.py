@@ -34,6 +34,34 @@ non-essential code in order to reduce its size, since it is also serves as the
 bootstrap implementation sent to every new slave context.
 """
 
+import sys
+try:
+    import _frozen_importlib_external
+except ImportError:
+    pass
+else:
+    class MonkeyPatchedPathFinder(_frozen_importlib_external.PathFinder):
+        """
+        Meta path finder for sys.path and package __path__ attributes.
+
+        Patched for https://github.com/python/cpython/issues/115911.
+        """
+        @classmethod
+        def _path_importer_cache(cls, path):
+            if path == '':
+                try:
+                    path = _frozen_importlib_external._os.getcwd()
+                except (FileNotFoundError, PermissionError):
+                    return None
+            return super()._path_importer_cache(path)
+
+    if sys.version_info[:2] <= (3, 12):
+        for i, mpf in enumerate(sys.meta_path):
+            if mpf is _frozen_importlib_external.PathFinder:
+                sys.meta_path[i] = MonkeyPatchedPathFinder
+        del i, mpf
+
+
 import binascii
 import collections
 import encodings.latin_1
@@ -49,18 +77,22 @@ import pstats
 import signal
 import socket
 import struct
-import sys
 import syslog
 import threading
 import time
 import traceback
+import types
 import warnings
 import weakref
 import zlib
 
-# Python >3.7 deprecated the imp module.
-warnings.filterwarnings('ignore', message='the imp module is deprecated')
-import imp
+try:
+    # Python >= 3.4, PEP 451 ModuleSpec API
+    import importlib.machinery
+    import importlib.util
+except ImportError:
+    # Python < 3.4, PEP 302 Import Hooks
+    import imp
 
 # Absolute imports for <2.5.
 select = __import__('select')
@@ -69,21 +101,6 @@ try:
     import cProfile
 except ImportError:
     cProfile = None
-
-try:
-    import thread
-except ImportError:
-    import threading as thread
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
-
-try:
-    from cStringIO import StringIO as BytesIO
-except ImportError:
-    from io import BytesIO
 
 try:
     BaseException
@@ -137,31 +154,35 @@ STUB_CALL_SERVICE = 111
 #:    :meth:`mitogen.core.Router.add_handler` callbacks to clean up.
 IS_DEAD = 999
 
-try:
-    BaseException
-except NameError:
-    BaseException = Exception
-
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if PY3:
+    import pickle
+    import _thread as thread
+    from io import BytesIO
     b = str.encode
     BytesType = bytes
     UnicodeType = str
     FsPathTypes = (str,)
     BufferType = lambda buf, start: memoryview(buf)[start:]
-    long = int
+    integer_types = (int,)
+    iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
 else:
+    import cPickle as pickle
+    import thread
+    from cStringIO import StringIO as BytesIO
     b = str
     BytesType = str
     FsPathTypes = (str, unicode)
     BufferType = buffer
     UnicodeType = unicode
+    integer_types = (int, long)
+    iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
 
 AnyTextType = (BytesType, UnicodeType)
 
 try:
-    next
+    next = next
 except NameError:
     next = lambda it: it.next()
 
@@ -368,12 +389,19 @@ now = getattr(time, 'monotonic', time.time)
 
 # Python 2.4
 try:
-    any
+    all, any = all, any
 except NameError:
+    def all(it):
+        for elem in it:
+            if not elem:
+                return False
+        return True
+
     def any(it):
         for elem in it:
             if elem:
                 return True
+        return False
 
 
 def _partition(s, sep, find):
@@ -384,6 +412,20 @@ def _partition(s, sep, find):
     if idx != -1:
         left = s[0:idx]
         return left, sep, s[len(left)+len(sep):]
+
+
+def threading__current_thread():
+    try:
+        return threading.current_thread()  # Added in Python 2.6+
+    except AttributeError:
+        return threading.currentThread()  # Deprecated in Python 3.10+
+
+
+def threading__thread_name(thread):
+    try:
+        return thread.name  # Added in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
 
 
 if hasattr(UnicodeType, 'rpartition'):
@@ -1019,8 +1061,8 @@ class Sender(object):
 
 def _unpickle_sender(router, context_id, dst_handle):
     if not (isinstance(router, Router) and
-            isinstance(context_id, (int, long)) and context_id >= 0 and
-            isinstance(dst_handle, (int, long)) and dst_handle > 0):
+            isinstance(context_id, integer_types) and context_id >= 0 and
+            isinstance(dst_handle, integer_types) and dst_handle > 0):
         raise TypeError('cannot unpickle Sender: bad input or missing router')
     return Sender(Context(router, context_id), dst_handle)
 
@@ -1254,6 +1296,7 @@ class Importer(object):
         'minify',
         'os_fork',
         'parent',
+        'podman',
         'select',
         'service',
         'setns',
@@ -1338,6 +1381,19 @@ class Importer(object):
     def __repr__(self):
         return 'Importer'
 
+    @staticmethod
+    def _loader_from_module(module, default=None):
+        """Return the loader for a module object."""
+        try:
+            return module.__spec__.loader
+        except AttributeError:
+            pass
+        try:
+            return module.__loader__
+        except AttributeError:
+            pass
+        return default
+
     def builtin_find_module(self, fullname):
         # imp.find_module() will always succeed for __main__, because it is a
         # built-in module. That means it exists on a special linked list deep
@@ -1345,17 +1401,35 @@ class Importer(object):
         if fullname == '__main__':
             raise ModuleNotFoundError()
 
+        # For a module inside a package (e.g. pkg_a.mod_b) use the search path
+        # of that package (e.g. ['/usr/lib/python3.11/site-packages/pkg_a']).
         parent, _, modname = str_rpartition(fullname, '.')
         if parent:
             path = sys.modules[parent].__path__
         else:
             path = None
 
+        # For a top-level module search builtin modules, frozen modules,
+        # system specific locations (e.g. Windows registry, site-packages).
+        # Otherwise use search path of the parent package.
+        # Works for both stdlib modules & third-party modules.
+        # If the search is unsuccessful then raises ImportError.
         fp, pathname, description = imp.find_module(modname, path)
         if fp:
             fp.close()
 
     def find_module(self, fullname, path=None):
+        """
+        Return a loader (ourself) or None, for the module with fullname.
+
+        Implements importlib.abc.MetaPathFinder.find_module().
+        Deprecrated in Python 3.4+, replaced by find_spec().
+        Raises ImportWarning in Python 3.10+.
+        Removed in Python 3.12.
+
+        fullname    Fully qualified module name, e.g. "os.path".
+        path        __path__ of parent packge. None for a top level module.
+        """
         if hasattr(_tls, 'running'):
             return None
 
@@ -1363,14 +1437,13 @@ class Importer(object):
         try:
             #_v and self._log.debug('Python requested %r', fullname)
             fullname = to_text(fullname)
-            pkgname, dot, _ = str_rpartition(fullname, '.')
+            pkgname, _, suffix = str_rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
             if pkgname and getattr(pkg, '__loader__', None) is not self:
                 self._log.debug('%s is submodule of a locally loaded package',
                                 fullname)
                 return None
 
-            suffix = fullname[len(pkgname+dot):]
             if pkgname and suffix not in self._present.get(pkgname, ()):
                 self._log.debug('%s has no submodule %s', pkgname, suffix)
                 return None
@@ -1389,6 +1462,66 @@ class Importer(object):
                 return self
         finally:
             del _tls.running
+
+    def find_spec(self, fullname, path, target=None):
+        """
+        Return a `ModuleSpec` for module with `fullname` if we will load it.
+        Otherwise return `None`, allowing other finders to try.
+
+        fullname    Fully qualified name of the module (e.g. foo.bar.baz)
+        path        Path entries to search. None for a top-level module.
+        target      Existing module to be reloaded (if any).
+
+        Implements importlib.abc.MetaPathFinder.find_spec()
+        Python 3.4+.
+        """
+        # Presence of _tls.running indicates we've re-invoked importlib.
+        # Abort early to prevent infinite recursion. See below.
+        if hasattr(_tls, 'running'):
+            return None
+
+        log = self._log.getChild('find_spec')
+
+        if fullname.endswith('.'):
+            return None
+
+        pkgname, _, modname = fullname.rpartition('.')
+        if pkgname and modname not in self._present.get(pkgname, ()):
+            log.debug('Skipping %s. Parent %s has no submodule %s',
+                      fullname, pkgname, modname)
+            return None
+
+        pkg = sys.modules.get(pkgname)
+        pkg_loader = self._loader_from_module(pkg)
+        if pkgname and pkg_loader is not self:
+            log.debug('Skipping %s. Parent %s was loaded by %r',
+                      fullname, pkgname, pkg_loader)
+            return None
+
+        # #114: whitelisted prefixes override any system-installed package.
+        if self.whitelist != ['']:
+            if any(s and fullname.startswith(s) for s in self.whitelist):
+                log.debug('Handling %s. It is whitelisted', fullname)
+                return importlib.machinery.ModuleSpec(fullname, loader=self)
+
+        if fullname == '__main__':
+            log.debug('Handling %s. A special case', fullname)
+            return importlib.machinery.ModuleSpec(fullname, loader=self)
+
+        # Re-invoke the import machinery to allow other finders to try.
+        # Set a guard, so we don't infinitely recurse. See top of this method.
+        _tls.running = True
+        try:
+            spec = importlib.util._find_spec(fullname, path, target)
+        finally:
+            del _tls.running
+
+        if spec:
+            log.debug('Skipping %s. Available as %r', fullname, spec)
+            return spec
+
+        log.debug('Handling %s. Unavailable locally', fullname)
+        return importlib.machinery.ModuleSpec(fullname, loader=self)
 
     blacklisted_msg = (
         '%r is present in the Mitogen importer blacklist, therefore this '
@@ -1476,7 +1609,71 @@ class Importer(object):
         if present:
             callback()
 
+    def create_module(self, spec):
+        """
+        Return a module object for the given ModuleSpec.
+
+        Implements PEP-451 importlib.abc.Loader API introduced in Python 3.4.
+        Unlike Loader.load_module() this shouldn't populate sys.modules or
+        set module attributes. Both are done by Python.
+        """
+        self._log.debug('Creating module for %r', spec)
+
+        # FIXME Should this be done in find_spec()? Can it?
+        self._refuse_imports(spec.name)
+
+        # FIXME "create_module() should properly handle the case where it is
+        #       called more than once for the same spec/module." -- PEP-451
+        event = threading.Event()
+        self._request_module(spec.name, callback=event.set)
+        event.wait()
+
+        # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
+        _, pkg_present, path, _, _ = self._cache[spec.name]
+
+        if path is None:
+            raise ImportError(self.absent_msg % (spec.name))
+
+        spec.origin = self.get_filename(spec.name)
+        if pkg_present is not None:
+            # TODO Namespace packages
+            spec.submodule_search_locations = []
+            self._present[spec.name] = pkg_present
+
+        module = types.ModuleType(spec.name)
+        # FIXME create_module() shouldn't initialise module attributes
+        module.__file__ = spec.origin
+        return module
+
+    def exec_module(self, module):
+        """
+        Execute the module to initialise it. Don't return anything.
+
+        Implements PEP-451 importlib.abc.Loader API, introduced in Python 3.4.
+        """
+        name = module.__spec__.name
+        origin = module.__spec__.origin
+        self._log.debug('Executing %s from %s', name, origin)
+        source = self.get_source(name)
+        try:
+            # Compile the source into a code object. Don't add any __future__
+            # flags and don't inherit any from this module.
+            # FIXME Should probably be exposed as get_code()
+            code = compile(source, origin, 'exec', flags=0, dont_inherit=True)
+        except SyntaxError:
+            # FIXME Why is this LOG, rather than self._log?
+            LOG.exception('while importing %r', name)
+            raise
+
+        exec(code, module.__dict__)
+
     def load_module(self, fullname):
+        """
+        Return the loaded module specified by fullname.
+
+        Implements importlib.abc.Loader.load_module().
+        Deprecated in Python 3.4+, replaced by create_module() & exec_module().
+        """
         fullname = to_text(fullname)
         _v and self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
@@ -1485,11 +1682,11 @@ class Importer(object):
         self._request_module(fullname, event.set)
         event.wait()
 
-        ret = self._cache[fullname]
-        if ret[2] is None:
+        # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
+        _, pkg_present, path, _, _ = self._cache[fullname]
+        if path is None:
             raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
-        pkg_present = ret[1]
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = self.get_filename(fullname)
         mod.__loader__ = self
@@ -2307,7 +2504,7 @@ class Context(object):
 
 
 def _unpickle_context(context_id, name, router=None):
-    if not (isinstance(context_id, (int, long)) and context_id >= 0 and (
+    if not (isinstance(context_id, integer_types) and context_id >= 0 and (
         (name is None) or
         (isinstance(name, UnicodeType) and len(name) < 100))
     ):
@@ -2322,8 +2519,7 @@ class Poller(object):
     """
     A poller manages OS file descriptors the user is waiting to become
     available for IO. The :meth:`poll` method blocks the calling thread
-    until one or more become ready. The default implementation is based on
-    :func:`select.poll`.
+    until one or more become ready.
 
     Each descriptor has an associated `data` element, which is unique for each
     readiness type, and defaults to being the same as the file descriptor. The
@@ -2345,18 +2541,12 @@ class Poller(object):
     a resource leak.
 
     Pollers may only be used by one thread at a time.
+
+    This implementation uses :func:`select.select` for wider platform support.
+    That is considered an implementation detail. Previous versions have used
+    :func:`select.poll`. Future versions may decide at runtime.
     """
     SUPPORTED = True
-
-    # This changed from select() to poll() in Mitogen 0.2.4. Since poll() has
-    # no upper FD limit, it is suitable for use with Latch, which must handle
-    # FDs larger than select's limit during many-host runs. We want this
-    # because poll() requires no setup and teardown: just a single system call,
-    # which is important because Latch.get() creates a Poller on each
-    # invocation. In a microbenchmark, poll() vs. epoll_ctl() is 30% faster in
-    # this scenario. If select() must return in future, it is important
-    # Latch.poller_class is set from parent.py to point to the industrial
-    # strength poller for the OS, otherwise Latch will fail randomly.
 
     #: Increments on every poll(). Used to version _rfds and _wfds.
     _generation = 1
@@ -2480,11 +2670,10 @@ class Latch(object):
 
     See :ref:`waking-sleeping-threads` for further discussion.
     """
-    #: The :class:`Poller` implementation to use for waiting. Since the poller
-    #: will be very short-lived, we prefer :class:`mitogen.parent.PollPoller`
-    #: if it is available, or :class:`mitogen.core.Poller` otherwise, since
-    #: these implementations require no system calls to create, configure or
-    #: destroy.
+    #: The :class:`Poller` implementation to use. Instances are short lived so
+    #: prefer :class:`mitogen.parent.PollPoller` if it's available, otherwise
+    #: :class:`mitogen.core.Poller`. They don't need syscalls to create,
+    #: configure, or destroy. Replaced during import of :mod:`mitogen.parent`.
     poller_class = Poller
 
     #: If not :data:`None`, a function invoked as `notify(latch)` after a
@@ -2686,7 +2875,7 @@ class Latch(object):
                 raise e
 
             assert cookie == got_cookie, (
-                "Cookie incorrect; got %r, expected %r" \
+                "Cookie incorrect; got %r, expected %r"
                 % (binascii.hexlify(got_cookie),
                    binascii.hexlify(cookie))
             )
@@ -2741,7 +2930,7 @@ class Latch(object):
         return 'Latch(%#x, size=%d, t=%r)' % (
             id(self),
             len(self._queue),
-            threading.currentThread().getName(),
+            threading__thread_name(threading__current_thread()),
         )
 
 
@@ -3101,7 +3290,7 @@ class Router(object):
         This can be used from any thread, but its output is only meaningful
         from the context of the :class:`Broker` thread, as disconnection or
         replacement could happen in parallel on the broker thread at any
-        moment. 
+        moment.
         """
         return (
             self._stream_by_id.get(dst_id) or
@@ -3641,7 +3830,6 @@ class Dispatcher(object):
             self._service_recv.notify = None
         self.recv.close()
 
-
     @classmethod
     @takes_econtext
     def forget_chain(cls, chain_id, econtext):
@@ -3891,7 +4079,7 @@ class ExternalContext(object):
 
     def _setup_package(self):
         global mitogen
-        mitogen = imp.new_module('mitogen')
+        mitogen = types.ModuleType('mitogen')
         mitogen.__package__ = 'mitogen'
         mitogen.__path__ = []
         mitogen.__loader__ = self.importer

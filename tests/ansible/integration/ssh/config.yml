@@ -6,8 +6,7 @@
   vars:
     ansible_private_key_file: ~/fakekey
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
 
     - mitogen_get_stack:
       register: out
@@ -17,3 +16,8 @@
           out.result[0].kwargs.identity_file == (
             lookup('env', 'HOME') + '/fakekey'
           )
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - config
+    - mitogen_only

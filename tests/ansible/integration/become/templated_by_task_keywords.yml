@@ -1,0 +1,80 @@
+- name: integration/become/templated_by_task_keywords.yml
+  hosts: tt_become_bare
+  gather_facts: false
+  # FIXME Resetting the connection shouldn't require credentials
+  #       https://github.com/mitogen-hq/mitogen/issues/1132
+  become: "{{ 'true' | trim }}"
+  become_exe: "{{ 'sudo' | trim }}"
+  become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+  become_method: "{{ 'sudo' | trim }}"
+  become_user: "{{ 'root' | trim }}"
+  tasks:
+    - name: Reset connection to target that will be delegate_to
+      meta: reset_connection
+
+- name: Test connection template by task keywords, with delegate_to
+  hosts: test-targets[0]
+  gather_facts: false
+  tasks:
+    - name: Templated become by task keywords, with delegate_to
+      become: "{{ 'true' | trim }}"
+      become_exe: "{{ 'sudo' | trim }}"
+      become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+      become_method: "{{ 'sudo' | trim }}"
+      become_user: "{{ 'root' | trim }}"
+      delegate_to: "{{ groups.tt_become_bare[0] }}"
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_task_with_delegate_to_whoami
+      failed_when:
+        - become_templated_by_task_with_delegate_to_whoami is failed
+          or become_templated_by_task_with_delegate_to_whoami.stdout != 'root'
+
+
+- name: integration/become/templated_by_task_keywords.yml
+  hosts: tt_become_bare
+  gather_facts: false
+  # FIXME Resetting the connection shouldn't require credentials
+  #       https://github.com/mitogen-hq/mitogen/issues/1132
+  become: "{{ 'true' | trim }}"
+  become_exe: "{{ 'sudo' | trim }}"
+  become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+  become_method: "{{ 'sudo' | trim }}"
+  become_user: "{{ 'mitogen__pw_required' | trim }}"
+  vars:
+    ansible_become_pass: "{{ 'pw_required_password' | trim }}"
+  tasks:
+    - name: Reset connection to target that will be delegate_to
+      meta: reset_connection
+
+- name: Test connection template by task keywords, with delegate_to
+  hosts: test-targets[0]
+  gather_facts: false
+  tasks:
+    - name: Gather facts (avoiding any unprivileged become)
+      delegate_to: "{{ groups.tt_become_bare[0] }}"
+      vars:
+        ansible_become: false
+      setup:
+
+    - name: Templated become by task keywords, with delegate_to
+      become: "{{ 'true' | trim }}"
+      become_exe: "{{ 'sudo' | trim }}"
+      become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+      become_method: "{{ 'sudo' | trim }}"
+      become_user: "{{ 'mitogen__pw_required' | trim }}"
+      delegate_to: "{{ groups.tt_become_bare[0] }}"
+      vars:
+        ansible_become_pass: "{{ 'pw_required_password' | trim }}"
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_task_with_delegate_to_password_whoami
+      failed_when:
+        - become_templated_by_task_with_delegate_to_password_whoami is failed
+          or become_templated_by_task_with_delegate_to_password_whoami.stdout != 'mitogen__pw_required'
+      when:
+        - become_unpriv_available

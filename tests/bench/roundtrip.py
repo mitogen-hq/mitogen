@@ -2,9 +2,6 @@
 Measure latency of local RPC.
 """
 
-import time
-
-import mitogen
 import mitogen.core
 import mitogen.utils
 import ansible_mitogen.affinity

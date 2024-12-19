@@ -2,7 +2,6 @@
 
 - name: integration/connection_loader__ssh_blemished.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - determine_strategy:
 
@@ -12,3 +11,8 @@
 
     - assert:
         that: (not not out.mitogen_loaded) == (not not is_mitogen)
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - ssh
+    - ssh_blemished

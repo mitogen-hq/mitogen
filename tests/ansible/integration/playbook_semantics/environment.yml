@@ -2,12 +2,16 @@
 
 - name: integration/playbook_semantics/environment.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
-    - shell: echo $SOME_ENV
+    - name: Echo $SOME_ENV
+      shell: echo $SOME_ENV
       environment:
         SOME_ENV: 123
       register: result
 
     - assert:
         that: "result.stdout == '123'"
+        fail_msg: |
+          result={{ result }}
+  tags:
+    - environment

@@ -1,10 +1,7 @@
-
 import os
 
-import mitogen
+import mitogen.core
 import mitogen.su
-
-import unittest2
 
 import testlib
 
@@ -22,11 +19,11 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_basic(self):
         context, argv = self.run_su()
-        self.assertEquals(argv[1], 'root')
-        self.assertEquals(argv[2], '-c')
+        self.assertEqual(argv[1], 'root')
+        self.assertEqual(argv[2], '-c')
 
 
-class SuTest(testlib.DockerMixin, testlib.TestCase):
+class SuMixin(testlib.DockerMixin):
     stub_su_path = testlib.data_path('stubs/stub-su.py')
 
     def test_slow_auth_failure(self):
@@ -48,7 +45,7 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.su(via=ssh)
         )
-        self.assertTrue(mitogen.su.password_required_msg in str(e))
+        self.assertIn(mitogen.su.password_required_msg, str(e))
 
     def test_password_incorrect(self):
         ssh = self.docker_ssh(
@@ -58,7 +55,7 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
             lambda: self.router.su(via=ssh, password='x')
         )
-        self.assertTrue(mitogen.su.password_incorrect_msg in str(e))
+        self.assertIn(mitogen.su.password_incorrect_msg, str(e))
 
     def test_password_okay(self):
         ssh = self.docker_ssh(
@@ -66,8 +63,15 @@ class SuTest(testlib.DockerMixin, testlib.TestCase):
             password='has_sudo_password',
         )
         context = self.router.su(via=ssh, password='rootpassword')
-        self.assertEquals(0, context.call(os.getuid))
+        self.assertEqual(0, context.call(os.getuid))
 
 
-if __name__ == '__main__':
-    unittest2.main()
+for distro_spec in testlib.DISTRO_SPECS.split():
+    dockerized_ssh = testlib.DockerizedSshDaemon(distro_spec)
+    klass_name = 'SuTest%s' % (dockerized_ssh.distro.capitalize(),)
+    klass = type(
+        klass_name,
+        (SuMixin, testlib.TestCase),
+        {'dockerized_ssh': dockerized_ssh},
+    )
+    globals()[klass_name] = klass

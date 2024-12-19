@@ -1,6 +1,4 @@
-
 import testlib
-import unittest2
 
 import mitogen.core
 from mitogen.core import b
@@ -11,30 +9,30 @@ class BytesPartitionTest(testlib.TestCase):
 
     def test_no_sep(self):
         left, sep, right = self.func(b('dave'), b('x'))
-        self.assertTrue(isinstance(left, mitogen.core.BytesType))
-        self.assertTrue(isinstance(sep, mitogen.core.BytesType))
-        self.assertTrue(isinstance(right, mitogen.core.BytesType))
-        self.assertEquals(left, b('dave'))
-        self.assertEquals(sep, b(''))
-        self.assertEquals(right, b(''))
+        self.assertIsInstance(left, mitogen.core.BytesType)
+        self.assertIsInstance(sep, mitogen.core.BytesType)
+        self.assertIsInstance(right, mitogen.core.BytesType)
+        self.assertEqual(left, b('dave'))
+        self.assertEqual(sep, b(''))
+        self.assertEqual(right, b(''))
 
     def test_one_sep(self):
         left, sep, right = self.func(b('davexdave'), b('x'))
-        self.assertTrue(isinstance(left, mitogen.core.BytesType))
-        self.assertTrue(isinstance(sep, mitogen.core.BytesType))
-        self.assertTrue(isinstance(right, mitogen.core.BytesType))
-        self.assertEquals(left, b('dave'))
-        self.assertEquals(sep, b('x'))
-        self.assertEquals(right, b('dave'))
+        self.assertIsInstance(left, mitogen.core.BytesType)
+        self.assertIsInstance(sep, mitogen.core.BytesType)
+        self.assertIsInstance(right, mitogen.core.BytesType)
+        self.assertEqual(left, b('dave'))
+        self.assertEqual(sep, b('x'))
+        self.assertEqual(right, b('dave'))
 
     def test_two_seps(self):
         left, sep, right = self.func(b('davexdavexdave'), b('x'))
-        self.assertTrue(isinstance(left, mitogen.core.BytesType))
-        self.assertTrue(isinstance(sep, mitogen.core.BytesType))
-        self.assertTrue(isinstance(right, mitogen.core.BytesType))
-        self.assertEquals(left, b('dave'))
-        self.assertEquals(sep, b('x'))
-        self.assertEquals(right, b('davexdave'))
+        self.assertIsInstance(left, mitogen.core.BytesType)
+        self.assertIsInstance(sep, mitogen.core.BytesType)
+        self.assertIsInstance(right, mitogen.core.BytesType)
+        self.assertEqual(left, b('dave'))
+        self.assertEqual(sep, b('x'))
+        self.assertEqual(right, b('davexdave'))
 
 
 class StrPartitionTest(testlib.TestCase):
@@ -42,30 +40,30 @@ class StrPartitionTest(testlib.TestCase):
 
     def test_no_sep(self):
         left, sep, right = self.func(u'dave', u'x')
-        self.assertTrue(isinstance(left, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(sep, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(right, mitogen.core.UnicodeType))
-        self.assertEquals(left, u'dave')
-        self.assertEquals(sep, u'')
-        self.assertEquals(right, u'')
+        self.assertIsInstance(left, mitogen.core.UnicodeType)
+        self.assertIsInstance(sep, mitogen.core.UnicodeType)
+        self.assertIsInstance(right, mitogen.core.UnicodeType)
+        self.assertEqual(left, u'dave')
+        self.assertEqual(sep, u'')
+        self.assertEqual(right, u'')
 
     def test_one_sep(self):
         left, sep, right = self.func(u'davexdave', u'x')
-        self.assertTrue(isinstance(left, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(sep, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(right, mitogen.core.UnicodeType))
-        self.assertEquals(left, u'dave')
-        self.assertEquals(sep, u'x')
-        self.assertEquals(right, u'dave')
+        self.assertIsInstance(left, mitogen.core.UnicodeType)
+        self.assertIsInstance(sep, mitogen.core.UnicodeType)
+        self.assertIsInstance(right, mitogen.core.UnicodeType)
+        self.assertEqual(left, u'dave')
+        self.assertEqual(sep, u'x')
+        self.assertEqual(right, u'dave')
 
     def test_two_seps(self):
         left, sep, right = self.func(u'davexdavexdave', u'x')
-        self.assertTrue(isinstance(left, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(sep, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(right, mitogen.core.UnicodeType))
-        self.assertEquals(left, u'dave')
-        self.assertEquals(sep, u'x')
-        self.assertEquals(right, u'davexdave')
+        self.assertIsInstance(left, mitogen.core.UnicodeType)
+        self.assertIsInstance(sep, mitogen.core.UnicodeType)
+        self.assertIsInstance(right, mitogen.core.UnicodeType)
+        self.assertEqual(left, u'dave')
+        self.assertEqual(sep, u'x')
+        self.assertEqual(right, u'davexdave')
 
 
 class StrRpartitionTest(testlib.TestCase):
@@ -73,31 +71,27 @@ class StrRpartitionTest(testlib.TestCase):
 
     def test_no_sep(self):
         left, sep, right = self.func(u'dave', u'x')
-        self.assertTrue(isinstance(left, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(sep, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(right, mitogen.core.UnicodeType))
-        self.assertEquals(left, u'')
-        self.assertEquals(sep, u'')
-        self.assertEquals(right, u'dave')
+        self.assertIsInstance(left, mitogen.core.UnicodeType)
+        self.assertIsInstance(sep, mitogen.core.UnicodeType)
+        self.assertIsInstance(right, mitogen.core.UnicodeType)
+        self.assertEqual(left, u'')
+        self.assertEqual(sep, u'')
+        self.assertEqual(right, u'dave')
 
     def test_one_sep(self):
         left, sep, right = self.func(u'davexdave', u'x')
-        self.assertTrue(isinstance(left, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(sep, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(right, mitogen.core.UnicodeType))
-        self.assertEquals(left, u'dave')
-        self.assertEquals(sep, u'x')
-        self.assertEquals(right, u'dave')
+        self.assertIsInstance(left, mitogen.core.UnicodeType)
+        self.assertIsInstance(sep, mitogen.core.UnicodeType)
+        self.assertIsInstance(right, mitogen.core.UnicodeType)
+        self.assertEqual(left, u'dave')
+        self.assertEqual(sep, u'x')
+        self.assertEqual(right, u'dave')
 
     def test_two_seps(self):
         left, sep, right = self.func(u'davexdavexdave', u'x')
-        self.assertTrue(isinstance(left, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(sep, mitogen.core.UnicodeType))
-        self.assertTrue(isinstance(right, mitogen.core.UnicodeType))
-        self.assertEquals(left, u'davexdave')
-        self.assertEquals(sep, u'x')
-        self.assertEquals(right, u'dave')
-
-
-if __name__ == '__main__':
-    unittest2.main()
+        self.assertIsInstance(left, mitogen.core.UnicodeType)
+        self.assertIsInstance(sep, mitogen.core.UnicodeType)
+        self.assertIsInstance(right, mitogen.core.UnicodeType)
+        self.assertEqual(left, u'davexdave')
+        self.assertEqual(sep, u'x')
+        self.assertEqual(right, u'dave')

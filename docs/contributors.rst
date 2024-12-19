@@ -116,6 +116,7 @@ sponsorship and outstanding future-thinking of its early adopters.
 
     <ul>
     <li>Alex Willmer</li>
+    <li><a href="https://github.com/momiji">Christian Bourgeois </a></li>
     <li><a href="https://underwhelm.net/">Dan Dorman</a> &mdash; - <em>When I truly understand my enemy … then in that very moment I also love him.</em></li>
     <li>Daniel Foerster</li>
     <li><a href="https://www.deps.co/">Deps</a> &mdash; <em>Private Maven Repository Hosting for Java, Scala, Groovy, Clojure</em></li>
@@ -125,11 +126,18 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li><a href="https://www.channable.com">rkrzr</a></li>
     <li>jgadling</li>
     <li>John F Wall &mdash; <em>Making Ansible Great with Massive Parallelism</em></li>
+    <li><a href="https://github.com/jrosser">Jonathan Rosser</a></li>
+    <li><a href="https://github.com/jmkeyes">Joshua M. Keyes</a></li>
     <li>KennethC</li>
+    <li><a href="https://github.com/lberruti">Luca Berruti</li>
     <li>Lewis Bellwood &mdash; <em>Happy to be apart of a great project.</em></li>
     <li>luto</li>
     <li><a href="https://mayeu.me/">Mayeu a.k.a Matthieu Maury</a></li>
+    <li><a href="https://github.com/madsi1m">Michael D'Silva</a></li>
+    <li><a href="https://github.com/mordekasg">mordek</a></li>
     <li><a href="https://twitter.com/nathanhruby">@nathanhruby</a></li>
+    <li><a href="https://github.com/opoplawski">Orion Poplawski</a></li>
+    <li><a href="https://github.com/philfry">Philippe Kueck</a></li>
     <li><a href="http://pageflows.com/">Ramy</a></li>
     <li>Scott Vokes</li>
     <li><a href="https://twitter.com/sirtux">Tom Eichhorn</a></li>
@@ -138,4 +146,5 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li>randy &mdash; <em>desperate for automation</em></li>
     <li>Michael & Vicky Twomey-Lee</li>
     <li><a href="http://www.wezm.net/">Wesley Moore</a></li>
+    <li><a href="https://github.com/baryluk">Witold Baryluk</a></li>
     </ul>

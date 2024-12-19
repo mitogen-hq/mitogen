@@ -2,36 +2,48 @@
 
 - name: integration/become/sudo_requiretty.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
+    # AIUI Vanilla Ansible cannot do sudo when requiretty configured
+    - include_tasks: ../_mitogen_only.yml
 
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - name: Verify we can login to a non-passworded requiretty account
-    #   shell: whoami
-    #   become: true
-    #   become_user: mitogen__require_tty
-    #   register: out
-    #   when: is_mitogen
+    - name: Verify we can login to a non-passworded requiretty account
+      become: true
+      become_user: mitogen__require_tty
+      command:
+        cmd: whoami
+      changed_when: false
+      register: sudo_require_tty_whoami
+      when:
+        - become_unpriv_available
 
-    # - assert:
-    #     that:
-    #       - out.stdout == 'mitogen__require_tty'
-    #   when: is_mitogen
+    - assert:
+        that:
+          - sudo_require_tty_whoami.stdout == 'mitogen__require_tty'
+        fail_msg: |
+          sudo_require_tty_whoami={{ sudo_require_tty_whoami }}
+      when:
+        - become_unpriv_available
 
+    - name: Verify we can login to a passworded requiretty account
+      become: true
+      become_user: mitogen__require_tty_pw_required
+      vars:
+        ansible_become_pass: require_tty_pw_required_password
+      command:
+        cmd: whoami
+      changed_when: false
+      register: sudo_require_tty_password_whoami
+      when:
+        - become_unpriv_available
 
-    # ---------------
-
-    # TODO: https://github.com/dw/mitogen/issues/692
-    # - name: Verify we can login to a passworded requiretty account
-    #   shell: whoami
-    #   become: true
-    #   become_user: mitogen__require_tty_pw_required
-    #   vars:
-    #     ansible_become_pass: require_tty_pw_required_password
-    #   register: out
-    #   when: is_mitogen
-
-    # - assert:
-    #     that:
-    #       - out.stdout == 'mitogen__require_tty_pw_required'
-    #   when: is_mitogen
+    - assert:
+        that:
+          - sudo_require_tty_password_whoami.stdout == 'mitogen__require_tty_pw_required'
+        fail_msg: |
+          sudo_require_tty_password_whoami={{ sudo_require_tty_password_whoami }}
+      when:
+        - become_unpriv_available
+  tags:
+    - mitogen_only
+    - sudo
+    - sudo_requiretty

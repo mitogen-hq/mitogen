@@ -1,8 +1,8 @@
 
 # `.ci`
 
-This directory contains scripts for Travis CI and (more or less) Azure
-Pipelines, but they will also happily run on any Debian-like machine.
+This directory contains scripts for Continuous Integration platforms. Currently
+GitHub Actions, but ideally they will also run on any Debian-like machine.
 
 The scripts are usually split into `_install` and `_test` steps. The `_install`
 step will damage your machine, the `_test` step will just run the tests the way
@@ -28,17 +28,15 @@ for doing `setup.py install` while pulling a Docker container, for example.
 
 ### Environment Variables
 
-* `VER`: Ansible version the `_install` script should install. Default changes
-  over time.
-* `TARGET_COUNT`: number of targets for `debops_` run. Defaults to 2.
-* `DISTRO`: the `mitogen_` tests need a target Docker container distro. This
-  name comes from the Docker Hub `mitogen` user, i.e. `mitogen/$DISTRO-test`
-* `DISTROS`: the `ansible_` tests can run against multiple targets
-  simultaneously, which speeds things up. This is a space-separated list of
-  DISTRO names, but additionally, supports:
+* `MITOGEN_TEST_DISTRO_SPECS`: a space delimited list of distro specs to run
+  the tests against. (e.g. `centos6 ubuntu2004-py3*4`). Each spec determines
+  the Linux distribution, target Python interepreter & number of instances.
+  Only distributions with a pre-built Linux container image can be used.
     * `debian-py3`: when generating Ansible inventory file, set
       `ansible_python_interpreter` to `python3`, i.e. run a test where the
       target interpreter is Python 3.
     * `debian*16`: generate 16 Docker containers running Debian. Also works
       with -py3.
 
+* `MITOGEN_TEST_IMAGE_TEMPLATE`: specifies the Linux container image name,
+  and hence the container registry used for test targets.

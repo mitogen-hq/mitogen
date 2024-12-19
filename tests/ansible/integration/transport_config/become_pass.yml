@@ -2,11 +2,11 @@
 
 
 # No become-pass set, defaults to "root"
-- name: integration/transport_config/become-pass.yml
+- name: integration/transport_config/become_pass.yml
   hosts: tc-become-pass-unset
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -14,13 +14,17 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == None
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 # Not set, unbecoming mitogen_via=
 - hosts: tc-become-pass-unset
   become: true
   vars: {mitogen_via: tc-become-pass-password}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -29,13 +33,17 @@
       - out.result[1].method == "ssh"
       - out.result[2].method == "sudo"
       - out.result[2].kwargs.password == None
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 # Not set, becoming mitogen_via=
 - hosts: tc-become-pass-unset
   become: true
   vars: {mitogen_via: viapass@tc-become-pass-password}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -46,13 +54,17 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == None
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_password= set.
 - hosts: tc-become-pass-password
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -60,6 +72,10 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "apassword"
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_password=, via=
@@ -67,7 +83,7 @@
   vars: {mitogen_via: root@tc-become-pass-pass}
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -78,13 +94,17 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == "apassword"
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_pass=
 - hosts: tc-become-pass-pass
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -92,6 +112,10 @@
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
       - out.result[1].kwargs.password == "apass"
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
 # ansible_become_pass=, via=
@@ -99,7 +123,7 @@
   vars: {mitogen_via: root@tc-become-pass-password}
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -110,34 +134,46 @@
       - out.result[2].method == "ssh"
       - out.result[3].method == "sudo"
       - out.result[3].kwargs.password == "apass"
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
-
-# ansible_become_pass & ansible_become_password set, password used to take precedence
-# but it's possible since https://github.com/ansible/ansible/pull/69629/files#r428376864, now it doesn't
 - hosts: tc-become-pass-both
   become: true
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 2
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
-      - out.result[1].kwargs.password == "c.b.a"
+      # Ansible <= 2.9.1 prioritises ansible_become_password.
+      # Ansible >= 2.9.2 prioritises ansible_become_pass.
+      # https://github.com/ansible/ansible/commit/480b106d6535978ae6ecab68b40942ca4fa914a0
+      - out.result[1].kwargs.password == "bpass"
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
 # both, mitogen_via
 - hosts: tc-become-pass-unset
   vars: {mitogen_via: root@tc-become-pass-both}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 3
       - out.result[0].method == "ssh"
       - out.result[1].method == "sudo"
-      - out.result[1].kwargs.password == "a.b.c"
+      - out.result[1].kwargs.password == "bpass"
       - out.result[2].method == "ssh"
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only

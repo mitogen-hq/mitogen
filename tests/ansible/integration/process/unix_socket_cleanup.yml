@@ -1,5 +1,5 @@
-
-- hosts: test-targets[0]
+- name: integration/process/unix_socket_cleanup.yml
+  hosts: test-targets[0]
   tasks:
   - mitogen_action_script:
       script: |
@@ -9,8 +9,13 @@
 
   - shell: >
       ANSIBLE_STRATEGY=mitogen_linear
-      ANSIBLE_SSH_ARGS=""
-      ansible -m shell -c local -a whoami -i "{{MITOGEN_INVENTORY_FILE}}" test-targets
+      ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+      ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
+      ansible -m shell -c local -a whoami
+      {% for inv in ansible_inventory_sources %}
+      -i "{{ inv }}"
+      {% endfor %}
+      test-targets
     args:
       chdir: ../..
     register: out
@@ -26,3 +31,5 @@
   - assert_equal:
       left: socks
       right: socks2
+  tags:
+    - custom_python_new_style_module

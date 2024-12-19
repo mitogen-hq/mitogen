@@ -1,14 +1,19 @@
-
 from __future__ import absolute_import
 from __future__ import print_function
 
 import atexit
+import errno
 import os
+import re
 import shlex
 import shutil
-import subprocess
 import sys
 import tempfile
+
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 try:
     import urlparse
@@ -23,65 +28,50 @@ os.chdir(
 )
 
 
-#
-# check_output() monkeypatch cutpasted from testlib.py
-#
-
-def subprocess__check_output(*popenargs, **kwargs):
-    # Missing from 2.6.
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd)
-    return output
-
-if not hasattr(subprocess, 'check_output'):
-    subprocess.check_output = subprocess__check_output
+DISTRO_SPECS = os.environ.get(
+    'MITOGEN_TEST_DISTRO_SPECS',
+    'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
+)
+IMAGE_TEMPLATE = os.environ.get(
+    'MITOGEN_TEST_IMAGE_TEMPLATE',
+    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+)
 
 
-# ------------------
+_print = print
+def print(*args, **kwargs):
+    file = kwargs.get('file', sys.stdout)
+    flush = kwargs.pop('flush', False)
+    _print(*args, **kwargs)
+    if flush:
+        file.flush()
+
+
+def _have_cmd(args):
+    try:
+        subprocess.run(
+            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return False
+        raise
+    except subprocess.CallProcessError:
+        return False
+    return True
+
 
 def have_apt():
-    proc = subprocess.Popen('apt --help >/dev/null 2>/dev/null', shell=True)
-    return proc.wait() == 0
+    return _have_cmd(['apt', '--help'])
+
 
 def have_brew():
-    proc = subprocess.Popen('brew help >/dev/null 2>/dev/null', shell=True)
-    return proc.wait() == 0
+    return _have_cmd(['brew', 'help'])
 
 
 def have_docker():
-    proc = subprocess.Popen('docker info >/dev/null 2>/dev/null', shell=True)
-    return proc.wait() == 0
+    return _have_cmd(['docker', 'info'])
 
-
-# -----------------
-
-# Force line buffering on stdout.
-sys.stdout = os.fdopen(1, 'w', 1)
-
-# Force stdout FD 1 to be a pipe, so tools like pip don't spam progress bars.
-if 'TRAVIS_HOME' in os.environ:
-    proc = subprocess.Popen(
-        args=['stdbuf', '-oL', 'cat'],
-        stdin=subprocess.PIPE
-    )
-
-    os.dup2(proc.stdin.fileno(), 1)
-    os.dup2(proc.stdin.fileno(), 2)
-
-    def cleanup_travis_junk(stdout=sys.stdout, stderr=sys.stderr, proc=proc):
-        stdout.close()
-        stderr.close()
-        proc.terminate()
-
-    atexit.register(cleanup_travis_junk)
-
-# -----------------
 
 def _argv(s, *args):
     """Interpolate a command line using *args, return an argv style list.
@@ -95,24 +85,22 @@ def _argv(s, *args):
 
 
 def run(s, *args, **kwargs):
-    """ Run a command, with arguments, and print timing information
+    """ Run a command, with arguments
 
     >>> rc = run('echo "%s %s"', 'foo', 'bar')
-    Running: ['/usr/bin/time', '--', 'echo', 'foo bar']
+    Running: ['echo', 'foo bar']
     foo bar
-    0.00user 0.00system 0:00.00elapsed ?%CPU (0avgtext+0avgdata 1964maxresident)k
-    0inputs+0outputs (0major+71minor)pagefaults 0swaps
-    Finished running: ['/usr/bin/time', '--', 'echo', 'foo bar']
+    Finished running: ['echo', 'foo bar']
     >>> rc
     0
     """
-    argv = ['/usr/bin/time', '--'] + _argv(s, *args)
-    print('Running: %s' % (argv,))
+    argv = _argv(s, *args)
+    print('Running: %s' % (argv,), flush=True)
     try:
         ret = subprocess.check_call(argv, **kwargs)
-        print('Finished running: %s' % (argv,))
+        print('Finished running: %s' % (argv,), flush=True)
     except Exception:
-        print('Exception occurred while running: %s' % (argv,))
+        print('Exception occurred while running: %s' % (argv,), file=sys.stderr, flush=True)
         raise
 
     return ret
@@ -179,13 +167,13 @@ def get_output(s, *args, **kwargs):
     'foo bar\n'
     """
     argv = _argv(s, *args)
-    print('Running: %s' % (argv,))
+    print('Running: %s' % (argv,), flush=True)
     return subprocess.check_output(argv, **kwargs)
 
 
 def exists_in_path(progname):
     """
-    Return True if proganme exists in $PATH.
+    Return True if progname exists in $PATH.
 
     >>> exists_in_path('echo')
     True
@@ -206,40 +194,12 @@ class TempDir(object):
 
 
 class Fold(object):
-    """
-    Bracket a section of stdout with travis_fold markers.
-
-    This allows the section to be collapsed or expanded in Travis CI web UI.
-
-    >>> with Fold('stage 1'):
-    ...     print('Frobnicate the frobnitz')
-    ...
-    travis_fold:start:stage 1
-    Frobnicate the frobnitz
-    travis_fold:end:stage 1
-    """
-    def __init__(self, name):
-        self.name = name
-
-    def __enter__(self):
-        print('travis_fold:start:%s' % (self.name))
-
-    def __exit__(self, _1, _2, _3):
-        print('')
-        print('travis_fold:end:%s' % (self.name))
+    def __init__(self, name): pass
+    def __enter__(self): pass
+    def __exit__(self, _1, _2, _3): pass
 
 
-os.environ.setdefault('ANSIBLE_STRATEGY',
-    os.environ.get('STRATEGY', 'mitogen_linear'))
-# Ignoreed when MODE=mitogen
-ANSIBLE_VERSION = os.environ.get('VER', '2.6.2')
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-# Used only when MODE=mitogen
-DISTRO = os.environ.get('DISTRO', 'debian')
-# Used only when MODE=ansible
-DISTROS = os.environ.get('DISTROS', 'debian centos6 centos7').split()
-TARGET_COUNT = int(os.environ.get('TARGET_COUNT', '2'))
-BASE_PORT = 2200
 TMP = TempDir().path
 
 
@@ -262,6 +222,7 @@ os.environ['PYTHONPATH'] = '%s:%s' % (
 def get_docker_hostname():
     """Return the hostname where the docker daemon is running.
     """
+    # Duplicated in testlib
     url = os.environ.get('DOCKER_HOST')
     if url in (None, 'http+docker://localunixsocket'):
         return 'localhost'
@@ -270,61 +231,65 @@ def get_docker_hostname():
     return parsed.netloc.partition(':')[0]
 
 
-def image_for_distro(distro):
-    """Return the container image name or path for a test distro name.
-
-    The returned value is suitable for use with `docker pull`.
-
-    >>> image_for_distro('centos5')
-    'public.ecr.aws/n5z0e8q9/centos5-test'
-    >>> image_for_distro('centos5-something_custom')
-    'public.ecr.aws/n5z0e8q9/centos5-test'
-    """
-    return 'public.ecr.aws/n5z0e8q9/%s-test' % (distro.partition('-')[0],)
-
-
-def make_containers(name_prefix='', port_offset=0):
+def container_specs(
+        distros,
+        base_port=2200,
+        image_template=IMAGE_TEMPLATE,
+        name_template='target-%(distro)s-%(index)d',
+):
     """
     >>> import pprint
-    >>> BASE_PORT=2200; DISTROS=['debian', 'centos6']
-    >>> pprint.pprint(make_containers())
-    [{'distro': 'debian',
+    >>> pprint.pprint(container_specs(['debian11-py3', 'centos6']))
+    [{'distro': 'debian11',
+      'family': 'debian',
       'hostname': 'localhost',
-      'name': 'target-debian-1',
+      'image': 'public.ecr.aws/n5z0e8q9/debian11-test',
+      'index': 1,
+      'name': 'target-debian11-1',
       'port': 2201,
-      'python_path': '/usr/bin/python'},
+      'python_path': '/usr/bin/python3'},
      {'distro': 'centos6',
+      'family': 'centos',
       'hostname': 'localhost',
+      'image': 'public.ecr.aws/n5z0e8q9/centos6-test',
+      'index': 2,
       'name': 'target-centos6-2',
       'port': 2202,
       'python_path': '/usr/bin/python'}]
     """
     docker_hostname = get_docker_hostname()
-    firstbit = lambda s: (s+'-').split('-')[0]
-    secondbit = lambda s: (s+'-').split('-')[1]
-
+    # Code duplicated in testlib.py, both should be updated together
+    distro_pattern = re.compile(r'''
+        (?P<distro>(?P<family>[a-z]+)[0-9]+)
+        (?:-(?P<py>py3))?
+        (?:\*(?P<count>[0-9]+))?
+        ''',
+        re.VERBOSE,
+    )
     i = 1
     lst = []
 
-    for distro in DISTROS:
-        distro, star, count = distro.partition('*')
-        if star:
-            count = int(count)
+    for distro in distros:
+        # Code duplicated in testlib.py, both should be updated together
+        d = distro_pattern.match(distro).groupdict(default=None)
+
+        if d.pop('py') == 'py3':
+            python_path = '/usr/bin/python3'
         else:
-            count = 1
+            python_path = '/usr/bin/python'
+
+        count = int(d.pop('count') or '1', 10)
 
         for x in range(count):
-            lst.append({
-                "distro": firstbit(distro),
-                "name": name_prefix + ("target-%s-%s" % (distro, i)),
+            d['index'] = i
+            d.update({
+                'image': image_template % d,
+                'name': name_template % d,
                 "hostname": docker_hostname,
-                "port": BASE_PORT + i + port_offset,
-                "python_path": (
-                    '/usr/bin/python3'
-                    if secondbit(distro) == 'py3'
-                    else '/usr/bin/python'
-                )
+                'port': base_port + i,
+                "python_path": python_path,
             })
+            lst.append(d)
             i += 1
 
     return lst
@@ -348,17 +313,23 @@ def proc_is_docker(pid):
 
 
 def get_interesting_procs(container_name=None):
+    """
+    Return a list of (pid, line) tuples for processes considered interesting.
+    """
     args = ['ps', 'ax', '-oppid=', '-opid=', '-ocomm=', '-ocommand=']
     if container_name is not None:
         args = ['docker', 'exec', container_name] + args
 
     out = []
-    for line in subprocess__check_output(args).decode().splitlines():
+    for line in subprocess.check_output(args).decode().splitlines():
         ppid, pid, comm, rest = line.split(None, 3)
         if (
             (
                 any(comm.startswith(s) for s in INTERESTING_COMMS) or
                 'mitogen:' in rest
+            ) and
+            (
+                'WALinuxAgent' not in rest
             ) and
             (
                 container_name is not None or
@@ -394,7 +365,7 @@ def start_containers(containers):
                 "--publish 0.0.0.0:%(port)s:22/tcp "
                 "--hostname=%(name)s "
                 "--name=%(name)s "
-                "mitogen/%(distro)s-test "
+                "%(image)s"
             % container
         ]
         for container in containers
@@ -409,12 +380,10 @@ def start_containers(containers):
 def verify_procs(hostname, old, new):
     oldpids = set(pid for pid, _ in old)
     if any(pid not in oldpids for pid, _ in new):
-        print('%r had stray processes running:' % (hostname,))
+        print('%r had stray processes running:' % (hostname,), file=sys.stderr, flush=True)
         for pid, line in new:
             if pid not in oldpids:
-                print('New process:', line)
-
-        print()
+                print('New process:', line, flush=True)
         return False
 
     return True
@@ -438,13 +407,10 @@ def check_stray_processes(old, containers=None):
 
 
 def dump_file(path):
-    print()
-    print('--- %s ---' % (path,))
-    print()
+    print('--- %s ---' % (path,), flush=True)
     with open(path, 'r') as fp:
-        print(fp.read().rstrip())
-    print('---')
-    print()
+        print(fp.read().rstrip(), flush=True)
+    print('---', flush=True)
 
 
 # SSH passes these through to the container when run interactively, causing

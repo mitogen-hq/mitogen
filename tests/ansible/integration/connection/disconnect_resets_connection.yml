@@ -12,10 +12,8 @@
 - name: integration/connection/disconnect_resets_connection.yml
   hosts: test-targets
   gather_facts: no
-  any_errors_fatal: true
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - mitogen_action_script:
       script: |
@@ -45,3 +43,7 @@
         except AnsibleConnectionFailure:
           e = sys.exc_info()[1]
           assert str(e).startswith('Mitogen was disconnected')
+  tags:
+    - disconnect
+    - disconnect_resets_connection
+    - mitogen_only

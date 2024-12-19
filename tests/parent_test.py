@@ -2,15 +2,15 @@ import errno
 import fcntl
 import os
 import signal
-import subprocess
 import sys
-import tempfile
 import time
+import unittest
 
-import mock
-import unittest2
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 import testlib
-from testlib import Popen__terminate
 
 import mitogen.core
 import mitogen.parent
@@ -72,20 +72,20 @@ class GetDefaultRemoteNameTest(testlib.TestCase):
         mock_gethostname.return_value = 'box'
         mock_getuser.return_value = 'ECORP\\Administrator'
         mock_getpid.return_value = 123
-        self.assertEquals("ECORP_Administrator@box:123", self.func())
+        self.assertEqual("ECORP_Administrator@box:123", self.func())
 
 
 class ReturncodeToStrTest(testlib.TestCase):
     func = staticmethod(mitogen.parent.returncode_to_str)
 
     def test_return_zero(self):
-        self.assertEquals(self.func(0), 'exited with return code 0')
+        self.assertEqual(self.func(0), 'exited with return code 0')
 
     def test_return_one(self):
-        self.assertEquals(self.func(1), 'exited with return code 1')
+        self.assertEqual(self.func(1), 'exited with return code 1')
 
     def test_sigkill(self):
-        self.assertEquals(self.func(-signal.SIGKILL),
+        self.assertEqual(self.func(-signal.SIGKILL),
             'exited due to signal %s (SIGKILL)' % (int(signal.SIGKILL),)
         )
 
@@ -110,7 +110,7 @@ class ReapChildTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(OSError,
             lambda: os.kill(conn.proc.pid, 0)
         )
-        self.assertEquals(e.args[0], errno.ESRCH)
+        self.assertEqual(e.args[0], errno.ESRCH)
 
 
 class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
@@ -135,7 +135,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         expect = mitogen.parent.Connection.eof_error_msg
-        self.assertTrue(expect in e.args[0])
+        self.assertIn(expect, e.args[0])
 
     def test_direct_enoent(self):
         e = self.assertRaises(mitogen.core.StreamError,
@@ -157,7 +157,7 @@ class StreamErrorTest(testlib.RouterMixin, testlib.TestCase):
             )
         )
         s = 'Child start failed: [Errno 2] No such file or directory'
-        self.assertTrue(s in e.args[0])
+        self.assertIn(s, e.args[0])
 
 
 class ContextTest(testlib.RouterMixin, testlib.TestCase):
@@ -176,9 +176,9 @@ class OpenPtyTest(testlib.TestCase):
         master_fp, slave_fp = self.func()
         try:
             self.assertTrue(master_fp.isatty())
-            self.assertTrue(isinstance(master_fp, file))
+            self.assertIsInstance(master_fp, file)
             self.assertTrue(slave_fp.isatty())
-            self.assertTrue(isinstance(slave_fp, file))
+            self.assertIsInstance(slave_fp, file)
         finally:
             master_fp.close()
             slave_fp.close()
@@ -189,9 +189,9 @@ class OpenPtyTest(testlib.TestCase):
         e = self.assertRaises(mitogen.core.StreamError,
                               lambda: self.func())
         msg = mitogen.parent.OPENPTY_MSG % (openpty.side_effect,)
-        self.assertEquals(e.args[0], msg)
+        self.assertEqual(e.args[0], msg)
 
-    @unittest2.skipIf(condition=(os.uname()[0] != 'Linux'),
+    @unittest.skipIf(condition=(os.uname()[0] != 'Linux'),
                       reason='Fallback only supported on Linux')
     @mock.patch('os.openpty')
     def test_broken_linux_fallback(self, openpty):
@@ -199,12 +199,12 @@ class OpenPtyTest(testlib.TestCase):
         master_fp, slave_fp = self.func()
         try:
             st = os.fstat(master_fp.fileno())
-            self.assertEquals(5, os.major(st.st_rdev))
+            self.assertEqual(5, os.major(st.st_rdev))
             flags = fcntl.fcntl(master_fp.fileno(), fcntl.F_GETFL)
             self.assertTrue(flags & os.O_RDWR)
 
             st = os.fstat(slave_fp.fileno())
-            self.assertEquals(136, os.major(st.st_rdev))
+            self.assertEqual(136, os.major(st.st_rdev))
             flags = fcntl.fcntl(slave_fp.fileno(), fcntl.F_GETFL)
             self.assertTrue(flags & os.O_RDWR)
         finally:
@@ -221,7 +221,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c1.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
+        self.assertEqual(e.args[0], self.router.respondent_disconnect_msg)
 
     def test_indirect_child_disconnected(self):
         # Achievement unlocked: process notices an indirectly connected child
@@ -232,7 +232,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c2.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
+        self.assertEqual(e.args[0], self.router.respondent_disconnect_msg)
 
     def test_indirect_child_intermediary_disconnected(self):
         # Battlefield promotion: process notices indirect child disconnected
@@ -243,7 +243,7 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
         c1.shutdown(wait=True)
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get())
-        self.assertEquals(e.args[0], self.router.respondent_disconnect_msg)
+        self.assertEqual(e.args[0], self.router.respondent_disconnect_msg)
 
     def test_near_sibling_disconnected(self):
         # Hard mode: child notices sibling connected to same parent has
@@ -291,7 +291,3 @@ class DisconnectTest(testlib.RouterMixin, testlib.TestCase):
             lambda: recv.get().unpickle())
         s = 'mitogen.core.ChannelError: ' + self.router.respondent_disconnect_msg
         self.assertTrue(e.args[0].startswith(s))
-
-
-if __name__ == '__main__':
-    unittest2.main()

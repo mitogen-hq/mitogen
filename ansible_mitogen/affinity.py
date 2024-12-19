@@ -73,7 +73,9 @@ necessarily involves preventing the scheduler from making load balancing
 decisions.
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import ctypes
 import logging
 import mmap
@@ -81,7 +83,6 @@ import multiprocessing
 import os
 import struct
 
-import mitogen.core
 import mitogen.parent
 
 
@@ -263,7 +264,7 @@ class LinuxPolicy(FixedPolicy):
         for x in range(16):
             chunks.append(struct.pack('<Q', mask & shiftmask))
             mask >>= 64
-        return mitogen.core.b('').join(chunks)
+        return b''.join(chunks)
 
     def _get_thread_ids(self):
         try:

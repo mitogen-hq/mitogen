@@ -1,17 +1,27 @@
-
+import errno
+import io
 import logging
 import os
 import random
 import re
-import signal
 import socket
-import subprocess
+import stat
 import sys
 import threading
 import time
 import traceback
+import unittest
 
-import unittest2
+try:
+    import configparser
+except ImportError:
+    import ConfigParser as configparser
+
+import psutil
+if sys.version_info < (3, 0):
+    import subprocess32 as subprocess
+else:
+    import subprocess
 
 import mitogen.core
 import mitogen.fork
@@ -40,8 +50,22 @@ except NameError:
 
 
 LOG = logging.getLogger(__name__)
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-MODS_DIR = os.path.join(DATA_DIR, 'importer')
+
+DISTRO_SPECS = os.environ.get(
+    'MITOGEN_TEST_DISTRO_SPECS',
+    'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
+)
+IMAGE_TEMPLATE = os.environ.get(
+    'MITOGEN_TEST_IMAGE_TEMPLATE',
+    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+)
+
+TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
+ANSIBLE_LIB_DIR =               os.path.join(TESTS_DIR, 'ansible', 'lib')
+ANSIBLE_MODULE_UTILS_DIR =      os.path.join(TESTS_DIR, 'ansible', 'lib', 'module_utils')
+ANSIBLE_MODULES_DIR =           os.path.join(TESTS_DIR, 'ansible', 'lib', 'modules')
+DATA_DIR =                      os.path.join(TESTS_DIR, 'data')
+MODS_DIR =                      os.path.join(TESTS_DIR, 'data', 'importer')
 
 sys.path.append(DATA_DIR)
 sys.path.append(MODS_DIR)
@@ -62,13 +86,65 @@ if faulthandler is not None:
 mitogen.core.LOG.propagate = True
 
 
+def base_executable(executable=None):
+    '''Return the path of the Python executable used to create the virtualenv.
+    '''
+    # https://docs.python.org/3/library/venv.html
+    # https://github.com/pypa/virtualenv/blob/main/src/virtualenv/discovery/py_info.py
+    # https://virtualenv.pypa.io/en/16.7.9/reference.html#compatibility-with-the-stdlib-venv-module
+    if executable is None:
+        executable = sys.executable
 
-def get_fd_count():
-    """
-    Return the number of FDs open by this process.
-    """
-    import psutil
-    return psutil.Process().num_fds()
+    if not executable:
+        raise ValueError
+
+    try:
+        base_executable = sys._base_executable
+    except AttributeError:
+        base_executable = None
+
+    if base_executable and base_executable != executable:
+        return base_executable
+
+    # Python 2.x only has sys.base_prefix if running outside a virtualenv.
+    try:
+        sys.base_prefix
+    except AttributeError:
+        # Python 2.x outside a virtualenv
+        return executable
+
+    # Python 3.3+ has sys.base_prefix. In a virtualenv it differs to sys.prefix.
+    if sys.base_prefix == sys.prefix:
+        return executable
+
+    while executable.startswith(sys.prefix) and stat.S_ISLNK(os.lstat(executable).st_mode):
+        dirname = os.path.dirname(executable)
+        target = os.path.join(dirname, os.readlink(executable))
+        executable = os.path.abspath(os.path.normpath(target))
+        print(executable)
+
+    if executable.startswith(sys.base_prefix):
+        return executable
+
+    # Virtualenvs record details in pyvenv.cfg
+    parser = configparser.RawConfigParser()
+    with io.open(os.path.join(sys.prefix, 'pyvenv.cfg'), encoding='utf-8') as f:
+        content = u'[virtualenv]\n' + f.read()
+    try:
+        parser.read_string(content)
+    except AttributeError:
+        parser.readfp(io.StringIO(content))
+
+    # virtualenv style pyvenv.cfg includes the base executable.
+    # venv style pyvenv.cfg doesn't.
+    try:
+        return parser.get(u'virtualenv', u'base-executable')
+    except configparser.NoOptionError:
+        pass
+
+    basename = os.path.basename(executable)
+    home = parser.get(u'virtualenv', u'home')
+    return os.path.join(home, basename)
 
 
 def data_path(suffix):
@@ -79,28 +155,15 @@ def data_path(suffix):
     return path
 
 
-def subprocess__check_output(*popenargs, **kwargs):
-    # Missing from 2.6.
-    process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
-    output, _ = process.communicate()
-    retcode = process.poll()
-    if retcode:
-        cmd = kwargs.get("args")
-        if cmd is None:
-            cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd)
-    return output
-
-
-def Popen__terminate(proc):
-    os.kill(proc.pid, signal.SIGTERM)
-
-
-if hasattr(subprocess, 'check_output'):
-    subprocess__check_output = subprocess.check_output
-
-if hasattr(subprocess.Popen, 'terminate'):
-    Popen__terminate = subprocess.Popen.terminate
+def retry(fn, on, max_attempts, delay):
+    for i in range(max_attempts):
+        try:
+            return fn()
+        except on:
+            if i >= max_attempts - 1:
+                raise
+            else:
+                time.sleep(delay)
 
 
 def threading__thread_is_alive(thread):
@@ -113,6 +176,13 @@ def threading__thread_is_alive(thread):
         return thread.is_alive()
     except AttributeError:
         return thread.isAlive()
+
+
+def threading_thread_name(thread):
+    try:
+        return thread.name  # Available in Python 2.6+
+    except AttributeError:
+        return thread.getName()  # Deprecated in Python 3.10+
 
 
 def wait_for_port(
@@ -144,7 +214,7 @@ def wait_for_port(
 
         if not pattern:
             # Success: We connected & there's no banner check to perform.
-            sock.shutdown(socket.SHUTD_RDWR)
+            sock.shutdown(socket.SHUT_RDWR)
             sock.close()
             return
 
@@ -327,13 +397,17 @@ class LogCapturer(object):
         return self.raw()
 
 
-class TestCase(unittest2.TestCase):
+class TestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # This is done in setUpClass() so we have a chance to run before any
         # Broker() instantiations in setUp() etc.
         mitogen.fork.on_fork()
-        cls._fd_count_before = get_fd_count()
+        cls._fds_before = psutil.Process().open_files()
+        # Ignore children started by external packages - in particular
+        # multiprocessing.resource_tracker.main()`, started when some Ansible
+        # versions instantiate a `multithreading.Lock()`.
+        cls._children_before = frozenset(psutil.Process().children())
         super(TestCase, cls).setUpClass()
 
     ALLOWED_THREADS = set([
@@ -344,7 +418,7 @@ class TestCase(unittest2.TestCase):
     def _teardown_check_threads(self):
         counts = {}
         for thread in threading.enumerate():
-            name = thread.getName()
+            name = threading_thread_name(thread)
             # Python 2.4: enumerate() may return stopped threads.
             assert \
                 not threading__thread_is_alive(thread) \
@@ -360,10 +434,23 @@ class TestCase(unittest2.TestCase):
 
     def _teardown_check_fds(self):
         mitogen.core.Latch._on_fork()
-        if get_fd_count() != self._fd_count_before:
-            import os; os.system('lsof +E -w -p %s | grep -vw mem' % (os.getpid(),))
-            assert 0, "%s leaked FDs. Count before: %s, after: %s" % (
-                self, self._fd_count_before, get_fd_count(),
+        fds_after = psutil.Process().open_files()
+        fds_leaked = len(self._fds_before) != len(fds_after)
+        if not fds_leaked:
+            return
+        else:
+            if sys.platform == 'linux':
+                subprocess.check_call(
+                    'lsof +E -w -p %i | grep -vw mem' % (os.getpid(),),
+                    shell=True,
+                )
+            else:
+                subprocess.check_call(
+                    'lsof -w -p %i | grep -vw mem' % (os.getpid(),),
+                    shell=True,
+                )
+            assert 0, "%s leaked FDs: %s\nBefore:\t%s\nAfter:\t%s" % (
+                self, fds_leaked, self._fds_before, fds_after,
             )
 
     # Some class fixtures (like Ansible MuxProcess) start persistent children
@@ -374,19 +461,39 @@ class TestCase(unittest2.TestCase):
         if self.no_zombie_check:
             return
 
+        # pid=0: Wait for any child process in the same process group as us.
+        # WNOHANG: Don't block if no processes ready to report status.
         try:
             pid, status = os.waitpid(0, os.WNOHANG)
-        except OSError:
-            return  # ECHILD
+        except OSError as e:
+            # ECHILD: there are no child processes in our group.
+            if e.errno == errno.ECHILD:
+                return
+            raise
 
         if pid:
             assert 0, "%s failed to reap subprocess %d (status %d)." % (
                 self, pid, status
             )
 
-        print('')
-        print('Children of unit test process:')
-        os.system('ps uww --ppid ' + str(os.getpid()))
+        children_after = frozenset(psutil.Process().children())
+        children_leaked = children_after.difference(self._children_before)
+        if not children_leaked:
+            return
+
+        print('Leaked children of unit test process:')
+        subprocess.check_call(
+            ['ps', '-o', 'user,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command', '-ww', '-p',
+             ','.join(str(p.pid) for p in children_leaked),
+            ],
+        )
+        if self._children_before:
+            print('Pre-existing children of unit test process:')
+            subprocess.check_call(
+                ['ps', '-o', 'user,pid,%cpu,%mem,vsz,rss,tty,stat,start,time,command', '-ww', '-p',
+                 ','.join(str(p.pid) for p in self._children_before),
+                ],
+            )
         assert 0, "%s leaked still-running subprocesses." % (self,)
 
     def tearDown(self):
@@ -411,6 +518,7 @@ class TestCase(unittest2.TestCase):
 
 
 def get_docker_host():
+    # Duplicated in ci_lib
     url = os.environ.get('DOCKER_HOST')
     if url in (None, 'http+docker://localunixsocket'):
         return 'localhost'
@@ -420,22 +528,24 @@ def get_docker_host():
 
 
 class DockerizedSshDaemon(object):
-    def _get_container_port(self):
-        s = subprocess__check_output(['docker', 'port', self.container_name])
-        for line in s.decode().splitlines():
-            dport, proto, baddr, bport = self.PORT_RE.match(line).groups()
-            if dport == '22' and proto == 'tcp':
-                self.port = int(bport)
+    PORT_RE = re.compile(
+        # e.g. 0.0.0.0:32771, :::32771, [::]:32771'
+        r'(?P<addr>[0-9.]+|::|\[[a-f0-9:.]+\]):(?P<port>[0-9]+)',
+    )
 
-        self.host = self.get_host()
-        if self.port is None:
+    @classmethod
+    def get_port(cls, container):
+        s = subprocess.check_output(['docker', 'port', container, '22/tcp'])
+        m = cls.PORT_RE.search(s.decode())
+        if not m:
             raise ValueError('could not find SSH port in: %r' % (s,))
+        return int(m.group('port'))
 
     def start_container(self):
         try:
-            subprocess__check_output(['docker', '--version'])
+            subprocess.check_output(['docker', '--version'])
         except Exception:
-            raise unittest2.SkipTest('Docker binary is unavailable')
+            raise unittest.SkipTest('Docker binary is unavailable')
 
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         args = [
@@ -447,58 +557,66 @@ class DockerizedSshDaemon(object):
             '--name', self.container_name,
             self.image,
         ]
-        subprocess__check_output(args)
-        self._get_container_port()
+        subprocess.check_output(args)
+        self.port = self.get_port(self.container_name)
 
-    def __init__(self, mitogen_test_distro=os.environ.get('MITOGEN_TEST_DISTRO', 'debian9')):
-        if '-'  in mitogen_test_distro:
-            distro, _py3 = mitogen_test_distro.split('-')
-        else:
-            distro = mitogen_test_distro
-            _py3 = None
+    def __init__(self, distro_spec, image_template=IMAGE_TEMPLATE):
+        # Code duplicated in ci_lib.py, both should be updated together
+        distro_pattern = re.compile(r'''
+            (?P<distro>(?P<family>[a-z]+)[0-9]+)
+            (?:-(?P<py>py3))?
+            (?:\*(?P<count>[0-9]+))?
+            ''',
+            re.VERBOSE,
+        )
+        d = distro_pattern.match(distro_spec).groupdict(default=None)
 
-        if _py3 == 'py3':
+        self.distro = d['distro']
+        self.family = d['family']
+
+        if d.pop('py') == 'py3':
             self.python_path = '/usr/bin/python3'
         else:
             self.python_path = '/usr/bin/python'
 
-        self.image = 'public.ecr.aws/n5z0e8q9/%s-test' % (distro,)
-
-        # 22/tcp -> 0.0.0.0:32771
-        self.PORT_RE = re.compile(r'([^/]+)/([^ ]+) -> ([^:]+):(.*)')
-        self.port = None
-
-        self.start_container()
-
-    def get_host(self):
-        return get_docker_host()
+        self.image = image_template % d
+        self.host = get_docker_host()
 
     def wait_for_sshd(self):
-        wait_for_port(self.get_host(), self.port, pattern='OpenSSH')
+        wait_for_port(self.host, self.port, pattern='OpenSSH')
 
     def check_processes(self):
-        args = ['docker', 'exec', self.container_name, 'ps', '-o', 'comm=']
+        # Get Accounting name (ucomm) & command line (args) of each process
+        # in the container. No truncation (-ww). No column headers (foo=).
+        ps_output = subprocess.check_output([
+            'docker', 'exec', self.container_name,
+            'ps', '-w', '-w', '-o', 'ucomm=', '-o', 'args=',
+        ])
+        ps_lines = ps_output.decode().splitlines()
+        processes = [tuple(line.split(None, 1)) for line in ps_lines]
         counts = {}
-        for comm in subprocess__check_output(args).decode().splitlines():
-            comm = comm.strip()
-            counts[comm] = counts.get(comm, 0) + 1
+        for ucomm, _ in processes:
+            counts[ucomm] = counts.get(ucomm, 0) + 1
 
         if counts != {'ps': 1, 'sshd': 1}:
             assert 0, (
                 'Docker container %r contained extra running processes '
                 'after test completed: %r' % (
                     self.container_name,
-                    counts
+                    processes,
                 )
             )
 
     def close(self):
         args = ['docker', 'rm', '-f', self.container_name]
-        subprocess__check_output(args)
+        subprocess.check_output(args)
 
 
 class BrokerMixin(object):
     broker_class = mitogen.master.Broker
+
+    # Flag for tests that shutdown the broker themself
+    # e.g. unix_test.ListenerTest
     broker_shutdown = False
 
     def setUp(self):
@@ -533,28 +651,52 @@ class DockerMixin(RouterMixin):
     def setUpClass(cls):
         super(DockerMixin, cls).setUpClass()
         if os.environ.get('SKIP_DOCKER_TESTS'):
-            raise unittest2.SkipTest('SKIP_DOCKER_TESTS is set')
+            raise unittest.SkipTest('SKIP_DOCKER_TESTS is set')
 
-        # we want to be able to override test distro for some tests that need a different container spun up
-        daemon_args = {}
-        if hasattr(cls, 'mitogen_test_distro'):
-            daemon_args['mitogen_test_distro'] = cls.mitogen_test_distro
-
-        cls.dockerized_ssh = DockerizedSshDaemon(**daemon_args)
+        # cls.dockerized_ssh is injected by dynamically generating TestCase
+        # subclasses.
+        # TODO Bite the bullet, switch to e.g. pytest
+        cls.dockerized_ssh.start_container()
         cls.dockerized_ssh.wait_for_sshd()
 
     @classmethod
     def tearDownClass(cls):
-        cls.dockerized_ssh.check_processes()
+        retry(
+            cls.dockerized_ssh.check_processes,
+            on=AssertionError,
+            max_attempts=5,
+            delay=0.1,
+        )
         cls.dockerized_ssh.close()
         super(DockerMixin, cls).tearDownClass()
 
+    @property
+    def docker_ssh_default_kwargs(self):
+        return {
+            'hostname': self.dockerized_ssh.host,
+            'port': self.dockerized_ssh.port,
+            'check_host_keys': 'ignore',
+            'ssh_debug_level': 3,
+            # https://www.openssh.com/legacy.html
+            # ssh-rsa uses SHA1. Least worst available with CentOS 7 sshd.
+            # Rejected by default in newer ssh clients (e.g. Ubuntu 22.04).
+            # Duplicated cases in
+            #   - tests/ansible/ansible.cfg
+            #   - tests/ansible/integration/connection_delegation/delegate_to_template.yml
+            #   - tests/ansible/integration/connection_delegation/stack_construction.yml
+            #   - tests/ansible/integration/process/unix_socket_cleanup.yml
+            #   - tests/ansible/integration/ssh/variables.yml
+            #   - tests/testlib.py
+            'ssh_args': [
+                '-o', 'HostKeyAlgorithms +ssh-rsa',
+                '-o', 'PubkeyAcceptedKeyTypes +ssh-rsa',
+            ],
+            'python_path': self.dockerized_ssh.python_path,
+        }
+
     def docker_ssh(self, **kwargs):
-        kwargs.setdefault('hostname', self.dockerized_ssh.host)
-        kwargs.setdefault('port', self.dockerized_ssh.port)
-        kwargs.setdefault('check_host_keys', 'ignore')
-        kwargs.setdefault('ssh_debug_level', 3)
-        kwargs.setdefault('python_path', self.dockerized_ssh.python_path)
+        for k, v in self.docker_ssh_default_kwargs.items():
+            kwargs.setdefault(k, v)
         return self.router.ssh(**kwargs)
 
     def docker_ssh_any(self, **kwargs):

@@ -4,11 +4,11 @@
 
 - name: regression/issue_140__thread_pileup.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - name: Create file tree
     connection: local
+    run_once: true
     shell: >
       mkdir /tmp/filetree.in;
       seq -f /tmp/filetree.in/%g 1 1000 | xargs touch;
@@ -18,19 +18,34 @@
   - name: Delete remote file tree
     file: path=/tmp/filetree.out state=absent
 
-  - file:
+  - name: Recreate file tree
+    file:
       state: directory
       path: /tmp/filetree.out
+      mode: u=rwx,go=rx
 
   - name: Trigger nasty process pileup
     copy:
       src: "{{item.src}}"
       dest: "/tmp/filetree.out/{{item.path}}"
-      mode: 0644
+      mode: u=rw,go=r
     with_filetree: /tmp/filetree.in
     when: item.state == 'file'
     loop_control:
       label: "/tmp/filetree.out/{{ item.path }}"
 
+  - name: Cleanup local file tree
+    connection: local
+    run_once: true
+    file:
+      path: /tmp/filetree.in
+      state: absent
+
+  - name: Cleanup remote file tree
+    file:
+      path: /tmp/filetree.out
+      state: absent
+
   tags:
   - resource_intensive
+  - issue_140

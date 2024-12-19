@@ -26,50 +26,32 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import logging
 import os
 import pwd
 import random
 import traceback
 
-try:
-    from shlex import quote as shlex_quote
-except ImportError:
-    from pipes import quote as shlex_quote
-
-from ansible.module_utils._text import to_bytes
-from ansible.parsing.utils.jsonify import jsonify
-
 import ansible
-import ansible.constants
-import ansible.plugins
 import ansible.plugins.action
+import ansible.utils.unsafe_proxy
+import ansible.vars.clean
+
+from ansible.module_utils.common.text.converters import to_bytes, to_text
+from ansible.module_utils.six.moves import shlex_quote
+from ansible.parsing.utils.jsonify import jsonify
 
 import mitogen.core
 import mitogen.select
-import mitogen.utils
 
 import ansible_mitogen.connection
 import ansible_mitogen.planner
 import ansible_mitogen.target
-from ansible.module_utils._text import to_text
-
-try:
-    from ansible.utils.unsafe_proxy import wrap_var
-except ImportError:
-    from ansible.vars.unsafe_proxy import wrap_var
-
-try:
-    # ansible 2.8 moved remove_internal_keys to the clean module
-    from ansible.vars.clean import remove_internal_keys
-except ImportError:
-    try:
-        from ansible.vars.manager import remove_internal_keys
-    except ImportError:
-        # ansible 2.3.3 has remove_internal_keys as a protected func on the action class
-        # we'll fallback to calling self._remove_internal_keys in this case
-        remove_internal_keys = lambda a: "Not found"
+import ansible_mitogen.utils
+import ansible_mitogen.utils.unsafe
 
 
 LOG = logging.getLogger(__name__)
@@ -183,7 +165,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         LOG.debug('_remote_file_exists(%r)', path)
         return self._connection.get_chain().call(
             ansible_mitogen.target.file_exists,
-            mitogen.utils.cast(path)
+            ansible_mitogen.utils.unsafe.cast(path)
         )
 
     def _configure_module(self, module_name, module_args, task_vars=None):
@@ -226,7 +208,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         with a pipelined call to :func:`ansible_mitogen.target.prune_tree`.
         """
         LOG.debug('_remove_tmp_path(%r)', tmp_path)
-        if tmp_path is None and ansible.__version__ > '2.6':
+        if tmp_path is None and ansible_mitogen.utils.ansible_version[:2] >= (2, 6):
             tmp_path = self._connection._shell.tmpdir  # 06f73ad578d
         if tmp_path is not None:
             self._connection.get_chain().call_no_reply(
@@ -276,7 +258,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                   paths, mode, sudoable)
         return self.fake_shell(lambda: mitogen.select.Select.all(
             self._connection.get_chain().call_async(
-                ansible_mitogen.target.set_file_mode, path, mode
+                ansible_mitogen.target.set_file_mode,
+                ansible_mitogen.utils.unsafe.cast(path),
+                mode,
             )
             for path in paths
         ))
@@ -310,7 +294,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if not path.startswith('~'):
             # /home/foo -> /home/foo
             return path
-        if sudoable or not self._play_context.become:
+        if sudoable or not self._connection.become:
             if path == '~':
                 # ~ -> /home/dmw
                 return self._connection.homedir
@@ -320,7 +304,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # ~root/.ansible -> /root/.ansible
         return self._connection.get_chain(use_login=(not sudoable)).call(
             os.path.expanduser,
-            mitogen.utils.cast(path),
+            ansible_mitogen.utils.unsafe.cast(path),
         )
 
     def get_task_timeout_secs(self):
@@ -335,7 +319,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
     def _set_temp_file_args(self, module_args, wrap_async):
         # Ansible>2.5 module_utils reuses the action's temporary directory if
         # one exists. Older versions error if this key is present.
-        if ansible.__version__ > '2.5':
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 5):
             if wrap_async:
                 # Sharing is not possible with async tasks, as in that case,
                 # the directory must outlive the action plug-in.
@@ -346,14 +330,16 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # If _ansible_tmpdir is unset, Ansible>2.6 module_utils will use
         # _ansible_remote_tmp as the location to create the module's temporary
         # directory. Older versions error if this key is present.
-        if ansible.__version__ > '2.6':
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 6):
             module_args['_ansible_remote_tmp'] = (
                 self._connection.get_good_temp_dir()
             )
 
     def _execute_module(self, module_name=None, module_args=None, tmp=None,
                         task_vars=None, persist_files=False,
-                        delete_remote_tmp=True, wrap_async=False):
+                        delete_remote_tmp=True, wrap_async=False,
+                        ignore_unknown_opts=False,
+                        ):
         """
         Collect up a module's execution environment then use it to invoke
         target.run_module() or helpers.run_module_async() in the target
@@ -366,7 +352,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         if task_vars is None:
             task_vars = {}
 
-        self._update_module_args(module_name, module_args, task_vars)
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 17):
+            self._update_module_args(
+                module_name, module_args, task_vars,
+                ignore_unknown_opts=ignore_unknown_opts,
+            )
+        else:
+            self._update_module_args(module_name, module_args, task_vars)
         env = {}
         self._compute_environment_string(env)
         self._set_temp_file_args(module_args, wrap_async)
@@ -383,26 +375,23 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             ansible_mitogen.planner.Invocation(
                 action=self,
                 connection=self._connection,
-                module_name=mitogen.core.to_text(module_name),
-                module_args=mitogen.utils.cast(module_args),
+                module_name=ansible_mitogen.utils.unsafe.cast(mitogen.core.to_text(module_name)),
+                module_args=ansible_mitogen.utils.unsafe.cast(module_args),
                 task_vars=task_vars,
                 templar=self._templar,
-                env=mitogen.utils.cast(env),
+                env=ansible_mitogen.utils.unsafe.cast(env),
                 wrap_async=wrap_async,
                 timeout_secs=self.get_task_timeout_secs(),
             )
         )
 
-        if tmp and ansible.__version__ < '2.5' and delete_remote_tmp:
+        if tmp and delete_remote_tmp and ansible_mitogen.utils.ansible_version[:2] < (2, 5):
             # Built-in actions expected tmpdir to be cleaned up automatically
             # on _execute_module().
             self._remove_tmp_path(tmp)
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
-        # handle ansible 2.3.3 that has remove_internal_keys in a different place
-        check = remove_internal_keys(result)
-        if check == 'Not found':
-            self._remove_internal_keys(result)
+        ansible.vars.clean.remove_internal_keys(result)
 
         # taken from _execute_module of ansible 2.8.6
         # propagate interpreter discovery results back to the controller
@@ -426,7 +415,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                 result['deprecations'] = []
             result['deprecations'].extend(self._discovery_deprecation_warnings)
 
-        return wrap_var(result)
+        return ansible.utils.unsafe_proxy.wrap_var(result)
 
     def _postprocess_response(self, result):
         """

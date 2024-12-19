@@ -74,6 +74,8 @@
           register: _
 
         - assert: { that: "'Python 3' in _.stdout" }
+          fail_msg: |
+            _={{ _ }}
 
         - debug: var=_.stdout,_.stderr
           run_once: yes
@@ -83,6 +85,8 @@
           register: _
 
         - assert: { that: "'Python 2' in _.stderr" }
+          fail_msg: |
+            _={{ _ }}
 
         - debug: var=_.stdout,_.stderr
           run_once: yes
@@ -113,7 +117,10 @@
             ansible_kubectl_container: python3
           register: _
 
-        - assert: { that: "'Python 3' in _.stdout" }
+        - assert:
+            that: "'Python 3' in _.stdout"
+            fail_msg: |
+              _={{ _ }}
 
         - debug: var=_.stdout,_.stderr
           run_once: yes
@@ -122,7 +129,10 @@
           command: python --version
           register: _
 
-        - assert: { that: "'Python 2' in _.stderr" }
+        - assert:
+            that: "'Python 2' in _.stderr"
+            fail_msg: |
+              _={{ _ }}
 
         - debug: var=_.stdout,_.stderr
           run_once: yes

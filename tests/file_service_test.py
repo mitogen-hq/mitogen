@@ -1,7 +1,4 @@
-
 import sys
-
-import unittest2
 
 import mitogen.service
 
@@ -43,7 +40,7 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
             pool.stop()
 
         expect = service.unregistered_msg % ('/etc/shadow',)
-        self.assertTrue(expect in e.args[0])
+        self.assertIn(expect, e.args[0])
 
     if sys.platform == 'darwin':
         ROOT_GROUP = 'wheel'
@@ -51,13 +48,13 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
         ROOT_GROUP = 'root'
 
     def _validate_response(self, resp):
-        self.assertTrue(isinstance(resp, dict))
-        self.assertEquals('root', resp['owner'])
-        self.assertEquals(self.ROOT_GROUP, resp['group'])
-        self.assertTrue(isinstance(resp['mode'], int))
-        self.assertTrue(isinstance(resp['mtime'], float))
-        self.assertTrue(isinstance(resp['atime'], float))
-        self.assertTrue(isinstance(resp['size'], int))
+        self.assertIsInstance(resp, dict)
+        self.assertEqual('root', resp['owner'])
+        self.assertEqual(self.ROOT_GROUP, resp['group'])
+        self.assertIsInstance(resp['mode'], int)
+        self.assertIsInstance(resp['mtime'], float)
+        self.assertIsInstance(resp['atime'], float)
+        self.assertIsInstance(resp['size'], int)
 
     def test_path_authorized(self):
         recv = mitogen.core.Receiver(self.router)
@@ -120,7 +117,7 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
             pool.stop()
 
         expect = service.unregistered_msg % (path,)
-        self.assertTrue(expect in e.args[0])
+        self.assertIn(expect, e.args[0])
 
     def test_prefix_authorized_abspath_good(self):
         l1 = self.router.local()
@@ -147,8 +144,4 @@ class FetchTest(testlib.RouterMixin, testlib.TestCase):
             pool.stop()
 
         expect = service.unregistered_msg % (path,)
-        self.assertTrue(expect in e.args[0])
-
-
-if __name__ == '__main__':
-    unittest2.main()
+        self.assertIn(expect, e.args[0])

@@ -37,7 +37,6 @@ contexts.
 
 import dis
 import errno
-import imp
 import inspect
 import itertools
 import logging
@@ -49,6 +48,16 @@ import sys
 import threading
 import types
 import zlib
+
+try:
+    # Python >= 3.4, PEP 451 ModuleSpec API
+    import importlib.machinery
+    import importlib.util
+    from _imp import is_builtin as _is_builtin
+except ImportError:
+    # Python < 3.4, PEP 302 Import Hooks
+    import imp
+    from imp import is_builtin as _is_builtin
 
 try:
     import sysconfig
@@ -65,26 +74,17 @@ import mitogen.core
 import mitogen.minify
 import mitogen.parent
 
+from mitogen.core import any
 from mitogen.core import b
 from mitogen.core import IOLOG
 from mitogen.core import LOG
+from mitogen.core import next
 from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
 imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
-
-try:
-    any
-except NameError:
-    from mitogen.core import any
-
-try:
-    next
-except NameError:
-    from mitogen.core import next
-
 
 RLOG = logging.getLogger('mitogen.ctx')
 
@@ -108,7 +108,7 @@ def _stdlib_paths():
     ]
     prefixes = (getattr(sys, a, None) for a in attr_candidates)
     version = 'python%s.%s' % sys.version_info[0:2]
-    s = set(os.path.abspath(os.path.join(p, 'lib', version))
+    s = set(os.path.realpath(os.path.join(p, 'lib', version))
             for p in prefixes if p is not None)
 
     # When running 'unit2 tests/module_finder_test.py' in a Py2 venv on Ubuntu
@@ -122,7 +122,16 @@ def is_stdlib_name(modname):
     """
     Return :data:`True` if `modname` appears to come from the standard library.
     """
-    if imp.is_builtin(modname) != 0:
+    # `(_imp|imp).is_builtin()` isn't a documented part of Python's stdlib.
+    # Returns 1 if modname names a module that is "builtin" to the the Python
+    # interpreter (e.g. '_sre'). Otherwise 0 (e.g. 're', 'netifaces').
+    #
+    # """
+    # Main is a little special - imp.is_builtin("__main__") will return False,
+    # but BuiltinImporter is still the most appropriate initial setting for
+    # its __loader__ attribute.
+    # """ -- comment in CPython pylifecycle.c:add_main_module()
+    if _is_builtin(modname) != 0:
         return True
 
     module = sys.modules.get(modname)
@@ -453,6 +462,9 @@ class FinderMethod(object):
     name according to the running Python interpreter. You'd think this was a
     simple task, right? Naive young fellow, welcome to the real world.
     """
+    def __init__(self):
+        self.log = LOG.getChild(self.__class__.__name__)
+
     def __repr__(self):
         return '%s()' % (type(self).__name__,)
 
@@ -512,42 +524,57 @@ class PkgutilMethod(FinderMethod):
         Find `fullname` using :func:`pkgutil.find_loader`.
         """
         try:
+            # If fullname refers to a submodule that's not already imported
+            # then the containing package is imported.
             # Pre-'import spec' this returned None, in Python3.6 it raises
             # ImportError.
             loader = pkgutil.find_loader(fullname)
         except ImportError:
             e = sys.exc_info()[1]
-            LOG.debug('%r._get_module_via_pkgutil(%r): %s',
-                      self, fullname, e)
+            LOG.debug('%r: find_loader(%r) failed: %s', self, fullname, e)
             return None
 
-        IOLOG.debug('%r._get_module_via_pkgutil(%r) -> %r',
-                    self, fullname, loader)
         if not loader:
+            LOG.debug('%r: find_loader(%r) returned %r, aborting',
+                      self, fullname, loader)
             return
 
         try:
-            path, is_special = _py_filename(loader.get_filename(fullname))
-            source = loader.get_source(fullname)
-            is_pkg = loader.is_package(fullname)
-
-            # workaround for special python modules that might only exist in memory
-            if is_special and is_pkg and not source:
-                source = '\n'
-        except (AttributeError, ImportError):
-            # - Per PEP-302, get_source() and is_package() are optional,
-            #   calling them may throw AttributeError.
+            path = loader.get_filename(fullname)
+        except (AttributeError, ImportError, ValueError):
             # - get_filename() may throw ImportError if pkgutil.find_loader()
             #   picks a "parent" package's loader for some crap that's been
             #   stuffed in sys.modules, for example in the case of urllib3:
             #       "loader for urllib3.contrib.pyopenssl cannot handle
             #        requests.packages.urllib3.contrib.pyopenssl"
             e = sys.exc_info()[1]
-            LOG.debug('%r: loading %r using %r failed: %s',
-                      self, fullname, loader, e)
+            LOG.debug('%r: %r.get_file_name(%r) failed: %r', self, loader, fullname, e)
             return
 
+        path, is_special = _py_filename(path)
+
+        try:
+            source = loader.get_source(fullname)
+        except AttributeError:
+            # Per PEP-302, get_source() is optional,
+            e = sys.exc_info()[1]
+            LOG.debug('%r: %r.get_source() failed: %r', self, loader, fullname, e)
+            return
+
+        try:
+            is_pkg = loader.is_package(fullname)
+        except AttributeError:
+            # Per PEP-302, is_package() is optional,
+            e = sys.exc_info()[1]
+            LOG.debug('%r: %r.is_package(%r) failed: %r', self, loader, fullname, e)
+            return
+
+        # workaround for special python modules that might only exist in memory
+        if is_special and is_pkg and not source:
+            source = '\n'
+
         if path is None or source is None:
+            LOG.debug('%r: path=%r, source=%r, aborting', self, path, source)
             return
 
         if isinstance(source, mitogen.core.UnicodeType):
@@ -567,23 +594,37 @@ class SysModulesMethod(FinderMethod):
         """
         Find `fullname` using its :data:`__file__` attribute.
         """
-        module = sys.modules.get(fullname)
+        try:
+            module = sys.modules[fullname]
+        except KeyError:
+            LOG.debug('%r: sys.modules[%r] absent, aborting', self, fullname)
+            return
+
         if not isinstance(module, types.ModuleType):
-            LOG.debug('%r: sys.modules[%r] absent or not a regular module',
-                      self, fullname)
+            LOG.debug('%r: sys.modules[%r] is %r, aborting',
+                      self, fullname, module)
             return
 
-        LOG.debug('_get_module_via_sys_modules(%r) -> %r', fullname, module)
-        alleged_name = getattr(module, '__name__', None)
-        if alleged_name != fullname:
-            LOG.debug('sys.modules[%r].__name__ is incorrect, assuming '
-                      'this is a hacky module alias and ignoring it. '
-                      'Got %r, module object: %r',
-                      fullname, alleged_name, module)
+        try:
+            resolved_name = module.__name__
+        except AttributeError:
+            LOG.debug('%r: %r has no __name__, aborting', self, module)
             return
 
-        path, _ = _py_filename(getattr(module, '__file__', ''))
+        if resolved_name != fullname:
+            LOG.debug('%r: %r.__name__ is %r, aborting',
+                      self, module, resolved_name)
+            return
+
+        try:
+            path = module.__file__
+        except AttributeError:
+            LOG.debug('%r: %r has no __file__, aborting', self, module)
+            return
+
+        path, _ = _py_filename(path)
         if not path:
+            LOG.debug('%r: %r.__file__ is %r, aborting', self, module, path)
             return
 
         LOG.debug('%r: sys.modules[%r]: found %s', self, fullname, path)
@@ -605,13 +646,13 @@ class SysModulesMethod(FinderMethod):
         return path, source, is_pkg
 
 
-class ParentEnumerationMethod(FinderMethod):
+class ParentImpEnumerationMethod(FinderMethod):
     """
     Attempt to fetch source code by examining the module's (hopefully less
     insane) parent package, and if no insane parents exist, simply use
     :mod:`sys.path` to search for it from scratch on the filesystem using the
     normal Python lookup mechanism.
-    
+
     This is required for older versions of :mod:`ansible.compat.six`,
     :mod:`plumbum.colors`, Ansible 2.8 :mod:`ansible.module_utils.distro` and
     its submodule :mod:`ansible.module_utils.distro._distro`.
@@ -628,10 +669,24 @@ class ParentEnumerationMethod(FinderMethod):
     module object or any parent package's :data:`__path__`, since they have all
     been overwritten. Some men just want to watch the world burn.
     """
+
+    @staticmethod
+    def _iter_parents(fullname):
+        """
+        >>> list(ParentEnumerationMethod._iter_parents('a'))
+        [('', 'a')]
+        >>> list(ParentEnumerationMethod._iter_parents('a.b.c'))
+        [('a.b', 'c'), ('a', 'b'), ('', 'a')]
+        """
+        while fullname:
+            fullname, _, modname = str_rpartition(fullname, u'.')
+            yield fullname, modname
+
     def _find_sane_parent(self, fullname):
         """
         Iteratively search :data:`sys.modules` for the least indirect parent of
-        `fullname` that is loaded and contains a :data:`__path__` attribute.
+        `fullname` that's from the same package and has a :data:`__path__`
+        attribute.
 
         :return:
             `(parent_name, path, modpath)` tuple, where:
@@ -644,21 +699,40 @@ class ParentEnumerationMethod(FinderMethod):
                 * `modpath`: list of module name components leading from `path`
                    to the target module.
         """
-        path = None
         modpath = []
-        while True:
-            pkgname, _, modname = str_rpartition(to_text(fullname), u'.')
+        for pkgname, modname in self._iter_parents(fullname):
             modpath.insert(0, modname)
             if not pkgname:
                 return [], None, modpath
 
-            pkg = sys.modules.get(pkgname)
-            path = getattr(pkg, '__path__', None)
-            if pkg and path:
-                return pkgname.split('.'), path, modpath
+            try:
+                pkg = sys.modules[pkgname]
+            except KeyError:
+                LOG.debug('%r: sys.modules[%r] absent, skipping', self, pkgname)
+                continue
 
-            LOG.debug('%r: %r lacks __path__ attribute', self, pkgname)
-            fullname = pkgname
+            try:
+                resolved_pkgname = pkg.__name__
+            except AttributeError:
+                LOG.debug('%r: %r has no __name__, skipping', self, pkg)
+                continue
+
+            if resolved_pkgname != pkgname:
+                LOG.debug('%r: %r.__name__ is %r, skipping',
+                          self, pkg, resolved_pkgname)
+                continue
+
+            try:
+                path = pkg.__path__
+            except AttributeError:
+                LOG.debug('%r: %r has no __path__, skipping', self, pkg)
+                continue
+
+            if not path:
+                LOG.debug('%r: %r.__path__ is %r, skipping', self, pkg, path)
+                continue
+
+            return pkgname.split('.'), path, modpath
 
     def _found_package(self, fullname, path):
         path = os.path.join(path, '__init__.py')
@@ -690,6 +764,7 @@ class ParentEnumerationMethod(FinderMethod):
     def _find_one_component(self, modname, search_path):
         try:
             #fp, path, (suffix, _, kind) = imp.find_module(modname, search_path)
+            # FIXME The imp module was removed in Python 3.12.
             return imp.find_module(modname, search_path)
         except ImportError:
             e = sys.exc_info()[1]
@@ -701,6 +776,9 @@ class ParentEnumerationMethod(FinderMethod):
         """
         See implementation for a description of how this works.
         """
+        if sys.version_info >= (3, 4):
+            return None
+
         #if fullname not in sys.modules:
             # Don't attempt this unless a module really exists in sys.modules,
             # else we could return junk.
@@ -727,6 +805,99 @@ class ParentEnumerationMethod(FinderMethod):
                 return self._found_package(fullname, path)
             else:
                 return self._found_module(fullname, path, fp)
+
+
+class ParentSpecEnumerationMethod(ParentImpEnumerationMethod):
+    def _find_parent_spec(self, fullname):
+        #history = []
+        debug = self.log.debug
+        children = []
+        for parent_name, child_name in self._iter_parents(fullname):
+            children.insert(0, child_name)
+            if not parent_name:
+                debug('abandoning %r, reached top-level', fullname)
+                return None, children
+
+            try:
+                parent = sys.modules[parent_name]
+            except KeyError:
+                debug('skipping %r, not in sys.modules', parent_name)
+                continue
+
+            try:
+                spec = parent.__spec__
+            except AttributeError:
+                debug('skipping %r: %r.__spec__ is absent',
+                      parent_name, parent)
+                continue
+
+            if not spec:
+                debug('skipping %r: %r.__spec__=%r',
+                      parent_name, parent, spec)
+                continue
+
+            if spec.name != parent_name:
+                debug('skipping %r: %r.__spec__.name=%r does not match',
+                      parent_name, parent, spec.name)
+                continue
+
+            if not spec.submodule_search_locations:
+                debug('skipping %r: %r.__spec__.submodule_search_locations=%r',
+                      parent_name, parent, spec.submodule_search_locations)
+                continue
+
+            return spec, children
+
+        raise ValueError('%s._find_parent_spec(%r) unexpectedly reached bottom'
+                         % (self.__class__.__name__, fullname))
+
+    def find(self, fullname):
+        # Returns absolute path, ParentImpEnumerationMethod returns relative
+        # >>> spec_pem.find('six_brokenpkg._six')[::2]
+        # ('/Users/alex/src/mitogen/tests/data/importer/six_brokenpkg/_six.py', False)
+
+        if sys.version_info < (3, 4):
+            return None
+
+        fullname = to_text(fullname)
+        spec, children = self._find_parent_spec(fullname)
+        for child_name in children:
+            if spec:
+                name = '%s.%s' % (spec.name, child_name)
+                submodule_search_locations = spec.submodule_search_locations
+            else:
+                name = child_name
+                submodule_search_locations = None
+            spec = importlib.util._find_spec(name, submodule_search_locations)
+            if spec is None:
+                self.log.debug('%r spec unavailable from %s', fullname, spec)
+                return None
+
+            is_package = spec.submodule_search_locations is not None
+            if name != fullname:
+                if not is_package:
+                    self.log.debug('%r appears to be child of non-package %r',
+                                   fullname, spec)
+                    return None
+                continue
+
+            if not spec.has_location:
+                self.log.debug('%r.origin cannot be read as a file', spec)
+                return None
+
+            if os.path.splitext(spec.origin)[1] != '.py':
+                self.log.debug('%r.origin does not contain Python source code',
+                               spec)
+                return None
+
+            # FIXME This should use loader.get_source()
+            with open(spec.origin, 'rb') as f:
+                source = f.read()
+
+            return spec.origin, source, is_package
+
+        raise ValueError('%s.find(%r) unexpectedly reached bottom'
+                         % (self.__class__.__name__, fullname))
 
 
 class ModuleFinder(object):
@@ -769,7 +940,8 @@ class ModuleFinder(object):
         DefectivePython3xMainMethod(),
         PkgutilMethod(),
         SysModulesMethod(),
-        ParentEnumerationMethod(),
+        ParentSpecEnumerationMethod(),
+        ParentImpEnumerationMethod(),
     ]
 
     def get_module_source(self, fullname):
@@ -1167,7 +1339,7 @@ class Broker(mitogen.core.Broker):
     def __init__(self, install_watcher=True):
         if install_watcher:
             self._watcher = ThreadWatcher.watch(
-                target=threading.currentThread(),
+                target=mitogen.core.threading__current_thread(),
                 on_join=self.shutdown,
             )
         super(Broker, self).__init__()

@@ -33,8 +33,13 @@ Helper functions intended to be executed on the target. These are entrypoints
 for file transfer, module execution and sundry bits like changing file modes.
 """
 
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import errno
 import grp
+import json
+import logging
 import operator
 import os
 import pwd
@@ -47,32 +52,9 @@ import tempfile
 import traceback
 import types
 
-# Absolute imports for <2.5.
-logging = __import__('logging')
-
 import mitogen.core
-import mitogen.fork
 import mitogen.parent
 import mitogen.service
-from mitogen.core import b
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
-
-try:
-    reduce
-except NameError:
-    # Python 3.x.
-    from functools import reduce
-
-try:
-    BaseException
-except NameError:
-    # Python 2.4
-    BaseException = Exception
-
 
 # Ansible since PR #41749 inserts "import __main__" into
 # ansible.module_utils.basic. Mitogen's importer will refuse such an import, so
@@ -82,6 +64,9 @@ if not sys.modules.get(str('__main__')):
     sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
 
 import ansible.module_utils.json_utils
+
+from ansible.module_utils.six.moves import reduce
+
 import ansible_mitogen.runner
 
 
@@ -144,7 +129,7 @@ def subprocess__Popen__close_fds(self, but):
 
 if (
     sys.platform.startswith(u'linux') and
-    sys.version < u'3.0' and
+    sys.version_info < (3,) and
     hasattr(subprocess.Popen, u'_close_fds') and
     not mitogen.is_master
 ):
@@ -368,11 +353,6 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     # the connection multiplexer process in the master.
     LOG.setLevel(log_level)
     logging.getLogger('ansible_mitogen').setLevel(log_level)
-
-    # issue #536: if the json module is available, remove simplejson from the
-    # importer whitelist to avoid confusing certain Ansible modules.
-    if json.__name__ == 'json':
-        econtext.importer.whitelist.remove('simplejson')
 
     global _fork_parent
     if FORK_SUPPORTED:
@@ -622,8 +602,8 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     stdout, stderr = proc.communicate(in_data)
 
     if emulate_tty:
-        stdout = stdout.replace(b('\n'), b('\r\n'))
-    return proc.returncode, stdout, stderr or b('')
+        stdout = stdout.replace(b'\n', b'\r\n')
+    return proc.returncode, stdout, stderr or b''
 
 
 def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
@@ -652,7 +632,8 @@ def read_path(path):
     """
     Fetch the contents of a filesystem `path` as bytes.
     """
-    return open(path, 'rb').read()
+    with open(path, 'rb') as f:
+        return f.read()
 
 
 def set_file_owner(path, owner, group=None, fd=None):
@@ -752,9 +733,7 @@ def set_file_mode(path, spec, fd=None):
     """
     Update the permissions of a file using the same syntax as chmod(1).
     """
-    if isinstance(spec, int):
-        new_mode = spec
-    elif not mitogen.core.PY3 and isinstance(spec, long):
+    if isinstance(spec, mitogen.core.integer_types):
         new_mode = spec
     elif spec.isdigit():
         new_mode = int(spec, 8)

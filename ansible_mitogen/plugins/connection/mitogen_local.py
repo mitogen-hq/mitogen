@@ -26,7 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import os.path
 import sys
 
@@ -40,13 +42,7 @@ except ImportError:
 import ansible_mitogen.connection
 import ansible_mitogen.process
 
-
-if sys.version_info > (3,):
-    viewkeys = dict.keys
-elif sys.version_info > (2, 7):
-    viewkeys = dict.viewkeys
-else:
-    viewkeys = lambda dct: set(dct)
+viewkeys = getattr(dict, 'viewkeys', dict.keys)
 
 
 def dict_diff(old, new):

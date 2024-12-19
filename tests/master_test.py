@@ -1,7 +1,5 @@
 import inspect
 
-import unittest2
-
 import testlib
 import mitogen.master
 
@@ -16,16 +14,12 @@ class ScanCodeImportsTest(testlib.TestCase):
 
     SIMPLE_EXPECT = [
         (level, 'inspect', ()),
-        (level, 'unittest2', ()),
         (level, 'testlib', ()),
         (level, 'mitogen.master', ()),
     ]
 
     def test_simple(self):
         source_path = inspect.getsourcefile(ScanCodeImportsTest)
-        co = compile(open(source_path).read(), source_path, 'exec')
-        self.assertEquals(list(self.func(co)), self.SIMPLE_EXPECT)
-
-
-if __name__ == '__main__':
-    unittest2.main()
+        with open(source_path) as f:
+            co = compile(f.read(), source_path, 'exec')
+        self.assertEqual(list(self.func(co)), self.SIMPLE_EXPECT)

@@ -14,23 +14,5 @@
 
 {% block footer %}
     {{ super() }}
-
-    <script>
-      (function() {
-        {% include "piwik-config.js" %}
-        var u="https://networkgenomics.com/p/tr/";
-        _paq.push(['setTrackerUrl', u+'ep']);
-        var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0]; g.type='text/javascript';
-        g.defer=true; g.async=true; g.src=u+'js'; s.parentNode.insertBefore(g,s);
-      })();
-    </script>
-
-    <noscript>
-        <p>
-        {% set fulltitle = (title|striptags|e) + titlesuffix -%}
-        <img src="https://networkgenomics.com/p/tr/ep?idsite=6&action_name={{fulltitle}}" style="border:0" alt="">
-        </p>
-    </noscript>
-
     <script async defer src="https://buttons.github.io/buttons.js"></script>
 {% endblock %}

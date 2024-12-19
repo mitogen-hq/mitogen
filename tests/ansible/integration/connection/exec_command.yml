@@ -4,7 +4,6 @@
 - name: integration/connection/exec_command.yml
   hosts: test-targets
   gather_facts: no
-  any_errors_fatal: true
   tasks:
   - connection_passthrough:
       method: exec_command
@@ -17,3 +16,7 @@
       - out.result[0] == 0
       - out.result[1].decode() == "hello, world\r\n"
       - out.result[2].decode().startswith("Shared connection to ")
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - exec_command

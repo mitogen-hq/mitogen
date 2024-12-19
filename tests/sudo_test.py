@@ -1,10 +1,4 @@
-
 import os
-
-import mitogen
-import mitogen.sudo
-
-import unittest2
 
 import testlib
 
@@ -23,7 +17,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 
     def test_basic(self):
         context, argv = self.run_sudo()
-        self.assertEquals(argv[:4], [
+        self.assertEqual(argv[:4], [
             self.sudo_path,
             '-u', 'root',
             '--'
@@ -34,7 +28,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             selinux_type='setype',
             selinux_role='serole',
         )
-        self.assertEquals(argv[:8], [
+        self.assertEqual(argv[:8], [
             self.sudo_path,
             '-u', 'root',
             '-r', 'serole',
@@ -46,7 +40,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         context, argv = self.run_sudo(
             sudo_args=['--type', 'setype', '--role', 'serole', '--user', 'user']
         )
-        self.assertEquals(argv[:8], [
+        self.assertEqual(argv[:8], [
             self.sudo_path,
             '-u', 'user',
             '-r', 'serole',
@@ -59,7 +53,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         os.environ['PREHISTORIC_SUDO'] = '1'
         try:
             context, argv = self.run_sudo()
-            self.assertEquals('1', context.call(os.getenv, 'PREHISTORIC_SUDO'))
+            self.assertEqual('1', context.call(os.getenv, 'PREHISTORIC_SUDO'))
         finally:
             del os.environ['PREHISTORIC_SUDO']
 
@@ -79,7 +73,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #         e = self.assertRaises(mitogen.core.StreamError,
 #             lambda: self.router.sudo(via=ssh)
 #         )
-#         self.assertTrue(mitogen.sudo.password_required_msg in str(e))
+#         self.assertIn(mitogen.sudo.password_required_msg, str(e))
 
 #     def test_password_incorrect(self):
 #         ssh = self.docker_ssh(
@@ -91,7 +85,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #         e = self.assertRaises(mitogen.core.StreamError,
 #             lambda: self.router.sudo(via=ssh, password='x')
 #         )
-#         self.assertTrue(mitogen.sudo.password_incorrect_msg in str(e))
+#         self.assertIn(mitogen.sudo.password_incorrect_msg, str(e))
 
 #     def test_password_okay(self):
 #         ssh = self.docker_ssh(
@@ -103,8 +97,4 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
 #         e = self.assertRaises(mitogen.core.StreamError,
 #             lambda: self.router.sudo(via=ssh, password='rootpassword')
 #         )
-#         self.assertTrue(mitogen.sudo.password_incorrect_msg in str(e))
-
-
-if __name__ == '__main__':
-    unittest2.main()
+#         self.assertIn(mitogen.sudo.password_incorrect_msg, str(e))

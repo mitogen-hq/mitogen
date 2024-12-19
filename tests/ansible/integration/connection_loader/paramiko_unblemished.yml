@@ -3,7 +3,6 @@
 
 - name: integration/connection_loader/paramiko_unblemished.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - debug:
         msg: "skipped for now"
@@ -15,4 +14,9 @@
 
         - assert:
             that: not out.mitogen_loaded
+            fail_msg: |
+              out={{ out }}
       when: False
+  tags:
+    - paramiko
+    - paramiko_unblemished

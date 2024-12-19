@@ -1,0 +1,71 @@
+- name: regression/issue_1066__add_host__host_key_checking.yml
+  hosts: test-targets[0]
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Add hosts dynamically
+      add_host:
+        name: "{{ item.name }}"
+        ansible_host_key_checking:        "{{ item.host_key_checking | default(omit) }}"
+        ansible_ssh_host_key_checking:    "{{ item.host_ssh_key_checking | default(omit) }}"
+        ansible_host:                     "{{ hostvars[inventory_hostname].ansible_host | default(omit) }}"
+        ansible_password:                 "{{ hostvars[inventory_hostname].ansible_password | default(omit) }}"
+        ansible_port:                     "{{ hostvars[inventory_hostname].ansible_port | default(omit) }}"
+        ansible_python_interpreter:       "{{ hostvars[inventory_hostname].ansible_python_interpreter | default(omit) }}"
+        ansible_user:                     "{{ hostvars[inventory_hostname].ansible_user | default(omit) }}"
+      loop:
+        - {name: issue-1066-host-hkc-false,   host_key_checking: false}
+        - {name: issue-1066-host-hkc-true,    host_key_checking: true}
+        - {name: issue-1066-host-hskc-false,  host_ssh_key_checking: false}
+        - {name: issue-1066-host-hskc-true,   host_ssh_key_checking: true}
+      delegate_to: localhost
+  tags:
+    - issue_1066
+
+- name: regression/issue_1066__add_host__host_key_checking.yml
+  hosts: issue-1066-host-*
+  gather_facts: false
+  become: false
+  serial: 1
+  tasks:
+    # FIXME https://github.com/mitogen-hq/mitogen/issues/1096
+    - meta: end_play
+      when:
+        - ansible_version.full is version('2.17', '>=', strict=True)
+    - meta: reset_connection
+
+    # The host key might be in ~/.ssh/known_hosts. If it's removed then no
+    # problem - test-targets hosts have host_key_checking=false.
+    - name: Remove existing host keys
+      known_hosts:
+        name: "{{ ansible_host }}"
+        state: absent
+      delegate_to: localhost
+
+    - name: Ping dynamically added hosts
+      ping:
+      ignore_errors: true
+      ignore_unreachable: true
+      register: issue_1066_ping
+
+    - debug:
+        var: issue_1066_ping
+
+    - name: Confirm dynamically added hosts are/are not reachable
+      vars:
+        expected:
+          issue-1066-host-hkc-false:    {}
+          issue-1066-host-hkc-true:     {unreachable: true}
+          issue-1066-host-hskc-false:   {}
+          issue-1066-host-hskc-true:    {unreachable: true}
+      assert:
+        that:
+          - issue_1066_ping.unreachable is defined == expected[inventory_hostname].unreachable is defined
+          - issue_1066_ping.unreachable | default(42) == expected[inventory_hostname].unreachable | default(42)
+      # ansible_host_key_checking don't work on Vanilla Ansible 2.10, even for
+      # static inventory hosts (ansible/ansible#49254, ansible/ansible#73708).
+      when:
+        - ansible_version.full is version('2.11', '>=', strict=True)
+          or is_mitogen
+  tags:
+    - issue_1066

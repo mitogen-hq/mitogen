@@ -5,19 +5,25 @@
 - name: integration/transport_config/port.yml
   hosts: tc-port-unset
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 1
       - out.result[0].method == "ssh"
-      - out.result[0].kwargs.port == None
+      - out.result[0].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 # Not set, mitogen_via=
 - hosts: tc-port-explicit-ssh
   vars: {mitogen_via: tc-port-unset}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -26,46 +32,65 @@
       - out.result[0].kwargs.port == None
       - out.result[1].method == "ssh"
       - out.result[1].kwargs.port == 4321
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 # ansible_ssh_port=
 - hosts: tc-port-explicit-ssh
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 4321
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
-- hosts: tc-port-explicit-unset
+- hosts: tc-port-unset
   vars: {mitogen_via: tc-port-explicit-ssh}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 2
       - out.result[0].method == "ssh"
-      - out.result[1].kwargs.port == 4321
+      - out.result[0].kwargs.port == 4321
       - out.result[1].method == "ssh"
-      - out.result[0].kwargs.port == None
+      - out.result[1].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 # ansible_port=
 - hosts: tc-port-explicit-port
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1234
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 - hosts: tc-port-unset
   vars: {mitogen_via: tc-port-explicit-port}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -73,24 +98,34 @@
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1234
       - out.result[1].method == "ssh"
-      - out.result[1].kwargs.port == None
+      - out.result[1].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 
 # both, ssh takes precedence
 - hosts: tc-port-both
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
       - out.result|length == 1
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1532
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - mitogen_only
 
 - hosts: tc-port-unset
   vars: {mitogen_via: tc-port-both}
   tasks:
-  - include: ../_mitogen_only.yml
+  - include_tasks: ../_mitogen_only.yml
+  - include_tasks: ../_expected_ssh_port.yml
   - {mitogen_get_stack: {}, register: out}
   - assert:
       that:
@@ -98,4 +133,9 @@
       - out.result[0].method == "ssh"
       - out.result[0].kwargs.port == 1532
       - out.result[1].method == "ssh"
-      - out.result[1].kwargs.port == None
+      - out.result[1].kwargs.port == expected_ssh_port
+      fail_msg: |
+        expected_ssh_port={{ expected_ssh_port }}
+        out={{ out }}
+  tags:
+    - mitogen_only

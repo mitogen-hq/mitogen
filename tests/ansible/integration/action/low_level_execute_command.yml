@@ -2,7 +2,6 @@
 
 - name: integration/action/low_level_execute_command.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
     # "echo -en" to test we actually hit bash shell too.
@@ -16,6 +15,8 @@
           - 'raw.rc == 0'
           - 'raw.stdout_lines[-1]|to_text == "2"'
           - 'raw.stdout[-1]|to_text == "2"'
+        fail_msg: |
+          raw={{ raw }}
 
     - name: Run raw module with sudo
       become: true
@@ -39,3 +40,7 @@
             ["root\r\n"],
             ["root"],
           )
+        fail_msg: |
+          raw={{ raw }}
+  tags:
+    - low_level_execute_command

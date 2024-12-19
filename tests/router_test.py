@@ -1,10 +1,7 @@
 import errno
 import os
 import sys
-import time
 import zlib
-
-import unittest2
 
 import testlib
 import mitogen.core
@@ -74,7 +71,7 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
 
         # Ensure error was logged.
         expect = 'bad auth_id: got %r via' % (self.child2_msg.auth_id,)
-        self.assertTrue(expect in log.stop())
+        self.assertIn(expect, log.stop())
 
     def test_parent_unaware_of_disconnect(self):
         # Parent -> Child A -> Child B. B disconnects concurrent to Parent
@@ -99,7 +96,7 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: recv.get().unpickle()
         )
-        self.assertEquals(e.args[0], self.router.no_route_msg % (
+        self.assertEqual(e.args[0], self.router.no_route_msg % (
             1234,
             c1.context_id,
         ))
@@ -128,7 +125,7 @@ class SourceVerifyTest(testlib.RouterMixin, testlib.TestCase):
 
         # Ensure error was lgoged.
         expect = 'bad src_id: got %d via' % (self.child1_msg.src_id,)
-        self.assertTrue(expect in log.stop())
+        self.assertIn(expect, log.stop())
 
 
 class PolicyTest(testlib.RouterMixin, testlib.TestCase):
@@ -138,7 +135,7 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         recv.to_sender().send(123)
         self.sync_with_broker()
         self.assertFalse(recv.empty())
-        self.assertEquals(123, recv.get().unpickle())
+        self.assertEqual(123, recv.get().unpickle())
 
     def test_refuse_all(self):
         # Deliver a message locally from child2 with the correct auth_id, but
@@ -168,7 +165,7 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         self.sync_with_broker()
 
         # Verify log.
-        self.assertTrue(self.router.refused_msg in log.stop())
+        self.assertIn(self.router.refused_msg, log.stop())
 
         # Verify message was not delivered.
         self.assertTrue(recv.empty())
@@ -176,7 +173,7 @@ class PolicyTest(testlib.RouterMixin, testlib.TestCase):
         # Verify CallError received by reply_to target.
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: reply_target.get().unpickle())
-        self.assertEquals(e.args[0], self.router.refused_msg)
+        self.assertEqual(e.args[0], self.router.refused_msg)
 
 
 class CrashTest(testlib.BrokerMixin, testlib.TestCase):
@@ -205,7 +202,7 @@ class CrashTest(testlib.BrokerMixin, testlib.TestCase):
 
         # Ensure it was logged.
         expect = 'broker crashed'
-        self.assertTrue(expect in log.stop())
+        self.assertIn(expect, log.stop())
 
         self.broker.join()
 
@@ -227,7 +224,7 @@ class AddHandlerTest(testlib.TestCase):
             router.add_handler((lambda: None), handle=1234)
             e = self.assertRaises(mitogen.core.Error,
                 lambda: router.add_handler((lambda: None), handle=1234))
-            self.assertEquals(router.duplicate_handle_msg, e.args[0])
+            self.assertEqual(router.duplicate_handle_msg, e.args[0])
             router.del_handler(1234)
         finally:
             router.broker.shutdown()
@@ -248,9 +245,9 @@ class AddHandlerTest(testlib.TestCase):
 class MyselfTest(testlib.RouterMixin, testlib.TestCase):
     def test_myself(self):
         myself = self.router.myself()
-        self.assertEquals(myself.context_id, mitogen.context_id)
+        self.assertEqual(myself.context_id, mitogen.context_id)
         # TODO: context should know its own name too.
-        self.assertEquals(myself.name, 'self')
+        self.assertEqual(myself.name, 'self')
 
 
 class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
@@ -267,7 +264,7 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         router.broker.defer_sync(lambda: None)
 
         expect = 'message too large (max 4096 bytes)'
-        self.assertTrue(expect in logs.stop())
+        self.assertIn(expect, logs.stop())
 
     def test_local_dead_message(self):
         # Local router should generate dead message when reply_to is set.
@@ -283,9 +280,9 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         child = router.local()
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: child.call(zlib.crc32, ' '*8192))
-        self.assertEquals(e.args[0], expect)
+        self.assertEqual(e.args[0], expect)
 
-        self.assertTrue(expect in logs.stop())
+        self.assertIn(expect, logs.stop())
 
     def test_remote_dead_message(self):
         # Router should send dead message to original recipient when reply_to
@@ -302,20 +299,20 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
             lambda: recv.get().unpickle()
         )
         expect = router.too_large_msg % (4096,)
-        self.assertEquals(e.args[0], expect)
+        self.assertEqual(e.args[0], expect)
 
     def test_remote_configured(self):
         router = self.klass(broker=self.broker, max_message_size=64*1024)
         remote = router.local()
         size = remote.call(return_router_max_message_size)
-        self.assertEquals(size, 64*1024)
+        self.assertEqual(size, 64*1024)
 
     def test_remote_of_remote_configured(self):
         router = self.klass(broker=self.broker, max_message_size=64*1024)
         remote = router.local()
         remote2 = router.local(via=remote)
         size = remote2.call(return_router_max_message_size)
-        self.assertEquals(size, 64*1024)
+        self.assertEqual(size, 64*1024)
 
     def test_remote_exceeded(self):
         # Ensure new contexts receive a router with the same value.
@@ -328,7 +325,7 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         remote.call(send_n_sized_reply, recv.to_sender(), 128*1024)
 
         expect = 'message too large (max %d bytes)' % (64*1024,)
-        self.assertTrue(expect in logs.stop())
+        self.assertIn(expect, logs.stop())
 
 
 class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
@@ -338,14 +335,14 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         l1 = self.router.local()
         recv = l1.send_async(mitogen.core.Message(handle=999))
         msg = recv.get(throw_dead=False)
-        self.assertEquals(msg.is_dead, True)
-        self.assertEquals(msg.src_id, l1.context_id)
-        self.assertEquals(msg.data, self.router.invalid_handle_msg.encode())
+        self.assertEqual(msg.is_dead, True)
+        self.assertEqual(msg.src_id, l1.context_id)
+        self.assertEqual(msg.data, self.router.invalid_handle_msg.encode())
 
         recv = l1.send_async(mitogen.core.Message(handle=999))
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
-        self.assertEquals(e.args[0], self.router.invalid_handle_msg)
+        self.assertEqual(e.args[0], self.router.invalid_handle_msg)
 
     def test_totally_invalid_context_returns_dead(self):
         recv = mitogen.core.Receiver(self.router)
@@ -356,9 +353,9 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         )
         self.router.route(msg)
         rmsg = recv.get(throw_dead=False)
-        self.assertEquals(rmsg.is_dead, True)
-        self.assertEquals(rmsg.src_id, mitogen.context_id)
-        self.assertEquals(rmsg.data, (self.router.no_route_msg % (
+        self.assertEqual(rmsg.is_dead, True)
+        self.assertEqual(rmsg.src_id, mitogen.context_id)
+        self.assertEqual(rmsg.data, (self.router.no_route_msg % (
             1234,
             mitogen.context_id,
         )).encode())
@@ -366,7 +363,7 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         self.router.route(msg)
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
-        self.assertEquals(e.args[0], (self.router.no_route_msg % (
+        self.assertEqual(e.args[0], (self.router.no_route_msg % (
             1234,
             mitogen.context_id,
         )))
@@ -382,9 +379,9 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         )
         self.router.route(msg)
         rmsg = recv.get(throw_dead=False)
-        self.assertEquals(rmsg.is_dead, True)
-        self.assertEquals(rmsg.src_id, mitogen.context_id)
-        self.assertEquals(rmsg.data, (self.router.no_route_msg % (
+        self.assertEqual(rmsg.is_dead, True)
+        self.assertEqual(rmsg.src_id, mitogen.context_id)
+        self.assertEqual(rmsg.data, (self.router.no_route_msg % (
             l1.context_id,
             mitogen.context_id,
         )).encode())
@@ -392,7 +389,7 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
         self.router.route(msg)
         e = self.assertRaises(mitogen.core.ChannelError,
                               lambda: recv.get())
-        self.assertEquals(e.args[0], self.router.no_route_msg % (
+        self.assertEqual(e.args[0], self.router.no_route_msg % (
             l1.context_id,
             mitogen.context_id,
         ))
@@ -467,7 +464,7 @@ class EgressIdsTest(testlib.RouterMixin, testlib.TestCase):
             # causes messages to be sent.
             pass
 
-        self.assertEquals(c1s.protocol.egress_ids, set([
+        self.assertEqual(c1s.protocol.egress_ids, set([
             mitogen.context_id,
             c2.context_id,
         ]))
@@ -498,11 +495,11 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
 
         e = self.assertRaises(OSError,
             lambda: os.waitpid(pid, 0))
-        self.assertEquals(e.args[0], errno.ECHILD)
+        self.assertEqual(e.args[0], errno.ECHILD)
 
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: l1.call(os.getpid))
-        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+        self.assertEqual(e.args[0], mitogen.core.Router.no_route_msg % (
             l1.context_id,
             mitogen.context_id,
         ))
@@ -520,11 +517,11 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
 
         e = self.assertRaises(OSError,
             lambda: os.waitpid(pid, 0))
-        self.assertEquals(e.args[0], errno.ECHILD)
+        self.assertEqual(e.args[0], errno.ECHILD)
 
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: l1.call(os.getpid))
-        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+        self.assertEqual(e.args[0], mitogen.core.Router.no_route_msg % (
             l1.context_id,
             mitogen.context_id,
         ))
@@ -547,11 +544,11 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
 
         e = self.assertRaises(OSError,
             lambda: os.waitpid(pid, 0))
-        self.assertEquals(e.args[0], errno.ECHILD)
+        self.assertEqual(e.args[0], errno.ECHILD)
 
         e = self.assertRaises(mitogen.core.ChannelError,
             lambda: l1.call(os.getpid))
-        self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+        self.assertEqual(e.args[0], mitogen.core.Router.no_route_msg % (
             l1.context_id,
             mitogen.context_id,
         ))
@@ -574,16 +571,12 @@ class ShutdownTest(testlib.RouterMixin, testlib.TestCase):
         for pid in pids:
             e = self.assertRaises(OSError,
                 lambda: os.waitpid(pid, 0))
-            self.assertEquals(e.args[0], errno.ECHILD)
+            self.assertEqual(e.args[0], errno.ECHILD)
 
         for ctx in l1, l2:
             e = self.assertRaises(mitogen.core.ChannelError,
                 lambda: ctx.call(os.getpid))
-            self.assertEquals(e.args[0], mitogen.core.Router.no_route_msg % (
+            self.assertEqual(e.args[0], mitogen.core.Router.no_route_msg % (
                 ctx.context_id,
                 mitogen.context_id,
             ))
-
-
-if __name__ == '__main__':
-    unittest2.main()

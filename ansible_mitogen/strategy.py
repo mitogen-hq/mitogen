@@ -26,7 +26,9 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import os
 import signal
 import threading
@@ -43,7 +45,8 @@ import ansible_mitogen.mixins
 import ansible_mitogen.process
 
 import ansible.executor.process.worker
-from ansible.utils.sentinel import Sentinel
+import ansible.template
+import ansible.utils.sentinel
 
 
 def _patch_awx_callback():
@@ -54,12 +57,11 @@ def _patch_awx_callback():
     # AWX uses sitecustomize.py to force-load this package. If it exists, we're
     # running under AWX.
     try:
-        from awx_display_callback.events import EventContext
-        from awx_display_callback.events import event_context
+        import awx_display_callback.events
     except ImportError:
         return
 
-    if hasattr(EventContext(), '_local'):
+    if hasattr(awx_display_callback.events.EventContext(), '_local'):
         # Patched version.
         return
 
@@ -68,8 +70,8 @@ def _patch_awx_callback():
         ctx = tls.setdefault('_ctx', {})
         ctx.update(kwargs)
 
-    EventContext._local = threading.local()
-    EventContext.add_local = patch_add_local
+    awx_display_callback.events.EventContext._local = threading.local()
+    awx_display_callback.events.EventContext.add_local = patch_add_local
 
 _patch_awx_callback()
 
@@ -107,6 +109,7 @@ REDIRECTED_CONNECTION_PLUGINS = (
     'lxc',
     'lxd',
     'machinectl',
+    'podman',
     'setns',
     'ssh',
 )
@@ -278,7 +281,7 @@ class StrategyMixin(object):
             name=task.action,
             class_only=True,
         )
-        if play_context.connection is not Sentinel:
+        if play_context.connection is not ansible.utils.sentinel.Sentinel:
             # 2.8 appears to defer computing this until inside the worker.
             # TODO: figure out where it has moved.
             ansible_mitogen.loaders.connection_loader.get(
@@ -324,3 +327,44 @@ class StrategyMixin(object):
                 self._worker_model.on_strategy_complete()
         finally:
             ansible_mitogen.process.set_worker_model(None)
+
+    def _smuggle_to_connection_reset(self, task, play_context, iterator, target_host):
+        """
+        Create a templar and make it available for use in Connection.reset().
+        This allows templated connection variables to be used when Mitogen
+        reconstructs its connection stack.
+        """
+        variables = self._variable_manager.get_vars(
+            play=iterator._play, host=target_host, task=task,
+            _hosts=self._hosts_cache, _hosts_all=self._hosts_cache_all,
+        )
+        templar = ansible.template.Templar(
+            loader=self._loader, variables=variables,
+        )
+
+        # Required for remote_user option set by variable (e.g. ansible_user).
+        # Without it remote_user in ansible.cfg gets used.
+        play_context = play_context.set_task_and_variable_override(
+            task=task, variables=variables, templar=templar,
+        )
+        play_context.post_validate(templar=templar)
+
+        # Required for timeout option set by variable (e.g. ansible_timeout).
+        # Without it the task timeout keyword (default: 0) gets used.
+        play_context.update_vars(variables)
+
+        # Stash the task and templar somewhere Connection.reset() can find it
+        play_context.vars.update({
+            '_mitogen.smuggled.reset_connection': (task, templar),
+        })
+        return play_context
+
+    def _execute_meta(self, task, play_context, iterator, target_host):
+        if task.args['_raw_params'] == 'reset_connection':
+            play_context = self._smuggle_to_connection_reset(
+                task, play_context, iterator, target_host,
+            )
+
+        return super(StrategyMixin, self)._execute_meta(
+            task, play_context, iterator, target_host,
+        )

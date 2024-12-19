@@ -34,7 +34,7 @@ sent to any child context that is due to become a parent, due to recursive
 connection.
 """
 
-import codecs
+import binascii
 import errno
 import fcntl
 import getpass
@@ -42,7 +42,6 @@ import heapq
 import inspect
 import logging
 import os
-import platform
 import re
 import signal
 import socket
@@ -57,15 +56,13 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
-try:
-    import thread
-except ImportError:
-    import threading as thread
-
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import bytes_partition
 from mitogen.core import IOLOG
+from mitogen.core import itervalues
+from mitogen.core import next
+from mitogen.core import thread
 
 
 LOG = logging.getLogger(__name__)
@@ -80,15 +77,6 @@ try:
 except IOError:
     SELINUX_ENABLED = False
 
-
-try:
-    next
-except NameError:
-    # Python 2.4/2.5
-    from mitogen.core import next
-
-
-itervalues = getattr(dict, 'itervalues', dict.values)
 
 if mitogen.core.PY3:
     xrange = range
@@ -148,6 +136,8 @@ LINUX_TIOCGPTN = _ioctl_cast(2147767344)
 LINUX_TIOCSPTLCK = _ioctl_cast(1074025521)
 
 IS_LINUX = os.uname()[0] == 'Linux'
+IS_SOLARIS = os.uname()[0] == 'SunOS'
+
 
 SIGNAL_BY_NUM = dict(
     (getattr(signal, name), name)
@@ -412,7 +402,7 @@ def _acquire_controlling_tty():
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
         os.close(os.open(os.ttyname(2), os.O_RDWR))
-    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL:
+    if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL and not IS_SOLARIS:
         # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
@@ -480,7 +470,8 @@ def openpty():
 
     master_fp = os.fdopen(master_fd, 'r+b', 0)
     slave_fp = os.fdopen(slave_fd, 'r+b', 0)
-    disable_echo(master_fd)
+    if not IS_SOLARIS:
+        disable_echo(master_fd)
     disable_echo(slave_fd)
     mitogen.core.set_block(slave_fd)
     return master_fp, slave_fp
@@ -640,7 +631,7 @@ class TimerList(object):
     def get_timeout(self):
         """
         Return the floating point seconds until the next event is due.
-        
+
         :returns:
             Floating point delay, or 0.0, or :data:`None` if no events are
             scheduled.
@@ -746,8 +737,7 @@ def _upgrade_broker(broker):
     broker.timers = TimerList()
     LOG.debug('upgraded %r with %r (new: %d readers, %d writers; '
               'old: %d readers, %d writers)', old, new,
-              len(new.readers), len(new.writers),
-              len(old.readers), len(old.writers))
+              len(new._rfds), len(new._wfds), len(old._rfds), len(old._wfds))
 
 
 @mitogen.core.takes_econtext
@@ -903,22 +893,18 @@ class CallSpec(object):
 class PollPoller(mitogen.core.Poller):
     """
     Poller based on the POSIX :linux:man2:`poll` interface. Not available on
-    some versions of OS X, otherwise it is the preferred poller for small FD
-    counts, as there is no setup/teardown/configuration system call overhead.
+    some Python/OS X combinations. Otherwise the preferred poller for small
+    FD counts; or if many pollers are created, used once, then closed.
+    There there is no setup/teardown/configuration system call overhead.
     """
     SUPPORTED = hasattr(select, 'poll')
-    _repr = 'PollPoller()'
+    _readmask = SUPPORTED and select.POLLIN | select.POLLHUP
 
     def __init__(self):
         super(PollPoller, self).__init__()
         self._pollobj = select.poll()
 
     # TODO: no proof we dont need writemask too
-    _readmask = (
-        getattr(select, 'POLLIN', 0) |
-        getattr(select, 'POLLHUP', 0)
-    )
-
     def _update(self, fd):
         mask = (((fd in self._rfds) and self._readmask) |
                 ((fd in self._wfds) and select.POLLOUT))
@@ -953,7 +939,6 @@ class KqueuePoller(mitogen.core.Poller):
     Poller based on the FreeBSD/Darwin :freebsd:man2:`kqueue` interface.
     """
     SUPPORTED = hasattr(select, 'kqueue')
-    _repr = 'KqueuePoller()'
 
     def __init__(self):
         super(KqueuePoller, self).__init__()
@@ -1028,10 +1013,10 @@ class KqueuePoller(mitogen.core.Poller):
 
 class EpollPoller(mitogen.core.Poller):
     """
-    Poller based on the Linux :linux:man2:`epoll` interface.
+    Poller based on the Linux :linux:man7:`epoll` interface.
     """
     SUPPORTED = hasattr(select, 'epoll')
-    _repr = 'EpollPoller()'
+    _inmask = SUPPORTED and select.EPOLLIN | select.EPOLLHUP
 
     def __init__(self):
         super(EpollPoller, self).__init__()
@@ -1078,9 +1063,6 @@ class EpollPoller(mitogen.core.Poller):
         self._wfds.pop(fd, None)
         self._control(fd)
 
-    _inmask = (getattr(select, 'EPOLLIN', 0) |
-               getattr(select, 'EPOLLHUP', 0))
-
     def _poll(self, timeout):
         the_timeout = -1
         if timeout is not None:
@@ -1101,18 +1083,14 @@ class EpollPoller(mitogen.core.Poller):
                     yield data
 
 
-# 2.4 and 2.5 only had select.select() and select.poll().
-for _klass in mitogen.core.Poller, PollPoller, KqueuePoller, EpollPoller:
-    if _klass.SUPPORTED:
-        PREFERRED_POLLER = _klass
+POLLERS = (EpollPoller, KqueuePoller, PollPoller, mitogen.core.Poller)
+PREFERRED_POLLER = next(cls for cls in POLLERS if cls.SUPPORTED)
+
 
 # For processes that start many threads or connections, it's possible Latch
 # will also get high-numbered FDs, and so select() becomes useless there too.
-# So swap in our favourite poller.
-if PollPoller.SUPPORTED:
-    mitogen.core.Latch.poller_class = PollPoller
-else:
-    mitogen.core.Latch.poller_class = PREFERRED_POLLER
+POLLER_LIGHTWEIGHT = PollPoller.SUPPORTED and PollPoller or PREFERRED_POLLER
+mitogen.core.Latch.poller_class = POLLER_LIGHTWEIGHT
 
 
 class LineLoggingProtocolMixin(object):
@@ -1406,13 +1384,24 @@ class Connection(object):
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
     # with a custom argv.
     #   * Optimized for minimum byte count after minification & compression.
+    #     The script preamble_size.py measures this.
     #   * 'CONTEXT_NAME' and 'PREAMBLE_COMPRESSED_LEN' are substituted with
     #     their respective values.
     #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
     #     order to allow virtualenvs to detect their install prefix.
-    #   * For Darwin, OS X installs a craptacular argv0-introspecting Python
-    #     version switcher as /usr/bin/python. Override attempts to call it
-    #     with an explicit call to python2.7
+    #
+    # macOS tweaks for Python 2.7 must be kept in sync with the the Ansible
+    # module test_echo_module, used by the integration tests.
+    #   * macOS <= 10.14 (Darwin <= 18) install an unreliable Python version
+    #     switcher as /usr/bin/python, which introspects argv0. To workaround
+    #     it we redirect attempts to call /usr/bin/python with an explicit
+    #     call to /usr/bin/python2.7. macOS 10.15 (Darwin 19) removed it.
+    #   * macOS 11.x (Darwin 20, Big Sur) and macOS 12.x (Darwin 21, Montery)
+    #     do something slightly different. The Python executable is patched to
+    #     perform an extra execvp(). I don't fully understand the details, but
+    #     setting PYTHON_LAUNCHED_FROM_WRAPPER=1 avoids it.
+    #   * macOS 12.3+ (Darwin 21.4+, Monterey) doesn't ship Python.
+    #     https://developer.apple.com/documentation/macos-release-notes/macos-12_3-release-notes#Python
     #
     # Locals:
     #   R: read side of interpreter stdin.
@@ -1435,15 +1424,12 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            # this doesn't apply anymore to Mac OSX 10.15+ (Darwin 19+), new interpreter looks like this:
-            # /System/Library/Frameworks/Python.framework/Versions/2.7/Resources/Python.app/Contents/MacOS/Python
-            if sys.platform == 'darwin' and sys.executable == '/usr/bin/python' and \
-                    int(platform.release()[:2]) < 19:
-                sys.executable += sys.version[:3]
+            if os.uname()[0]=='Darwin'and os.uname()[2][:2]<'19'and sys.executable=='/usr/bin/python':sys.executable='/usr/bin/python2.7'
+            if os.uname()[0]=='Darwin'and os.uname()[2][:2]in'2021'and sys.version[:3]=='2.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
-        C=_(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN),'zip')
+        C=zlib.decompress(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN))
         fp=os.fdopen(W,'wb',0)
         fp.write(C)
         fp.close()
@@ -1469,22 +1455,22 @@ class Connection(object):
     def get_boot_command(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
-        source = source.replace('    ', '\t')
+        source = source.replace('    ', ' ')
         source = source.replace('CONTEXT_NAME', self.options.remote_name)
         preamble_compressed = self.get_preamble()
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
                                 str(len(preamble_compressed)))
         compressed = zlib.compress(source.encode(), 9)
-        encoded = codecs.encode(compressed, 'base64').replace(b('\n'), b(''))
-        # We can't use bytes.decode() in 3.x since it was restricted to always
-        # return unicode, so codecs.decode() is used instead. In 3.x
-        # codecs.decode() requires a bytes object. Since we must be compatible
-        # with 2.4 (no bytes literal), an extra .encode() either returns the
-        # same str (2.x) or an equivalent bytes (3.x).
+        encoded = binascii.b2a_base64(compressed).replace(b('\n'), b(''))
+
+        # Just enough to decode, decompress, and exec the first stage.
+        # Priorities: wider compatibility, faster startup, shorter length.
+        # `import os` here, instead of stage 1, to save a few bytes.
+        # `sys.path=...` for https://github.com/python/cpython/issues/115911.
         return self.get_python_argv() + [
             '-c',
-            'import codecs,os,sys;_=codecs.decode;'
-            'exec(_(_("%s".encode(),"base64"),"zip"))' % (encoded.decode(),)
+            'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
+            'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
         ]
 
     def get_econtext_config(self):
@@ -1506,7 +1492,7 @@ class Connection(object):
 
     def get_preamble(self):
         suffix = (
-            '\nExternalContext(%r).main()\n' %\
+            '\nExternalContext(%r).main()\n' %
             (self.get_econtext_config(),)
         )
         partial = get_core_source_partial()
@@ -2505,6 +2491,9 @@ class Router(mitogen.core.Router):
     def ssh(self, **kwargs):
         return self.connect(u'ssh', **kwargs)
 
+    def podman(self, **kwargs):
+        return self.connect(u'podman', **kwargs)
+
 
 class Reaper(object):
     """
@@ -2545,7 +2534,7 @@ class Reaper(object):
         # because it is setuid, so this is best-effort only.
         LOG.debug('%r: sending %s', self.proc, SIGNAL_BY_NUM[signum])
         try:
-            os.kill(self.proc.pid, signum)
+            self.proc.send_signal(signum)
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] != errno.EPERM:
@@ -2665,6 +2654,17 @@ class Process(object):
         """
         raise NotImplementedError()
 
+    def send_signal(self, sig):
+        os.kill(self.pid, sig)
+
+    def terminate(self):
+        "Ask the process to gracefully shutdown."
+        self.send_signal(signal.SIGTERM)
+
+    def kill(self):
+        "Ask the operating system to forcefully destroy the process."
+        self.send_signal(signal.SIGKILL)
+
 
 class PopenProcess(Process):
     """
@@ -2680,6 +2680,9 @@ class PopenProcess(Process):
 
     def poll(self):
         return self.proc.poll()
+
+    def send_signal(self, sig):
+        self.proc.send_signal(sig)
 
 
 class ModuleForwarder(object):

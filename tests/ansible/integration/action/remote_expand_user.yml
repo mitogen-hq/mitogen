@@ -3,7 +3,6 @@
 
 - name: integration/action/remote_expand_user.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
     - name: "Find out root's homedir."
       # Runs first because it blats regular Ansible facts with junk, so
@@ -26,7 +25,9 @@
           sudoable: false
       register: out
     - assert:
-        that: out.result == '{{user_facts.ansible_facts.ansible_user_dir}}/foo'
+        that: out.result == user_facts.ansible_facts.ansible_user_dir ~ '/foo'
+        fail_msg: |
+          out={{ out }}
 
     - name: "Expand ~/foo with become active. ~ is become_user's home."
       action_passthrough:
@@ -48,7 +49,9 @@
           sudoable: false
       register: out
     - assert:
-        that: out.result == '{{user_facts.ansible_facts.ansible_user_dir}}/foo'
+        that: out.result == user_facts.ansible_facts.ansible_user_dir ~ '/foo'
+        fail_msg: |
+          out={{ out }}
 
     - name: "Expanding $HOME/foo has no effect."
       action_passthrough:
@@ -59,6 +62,8 @@
       register: out
     - assert:
         that: out.result == '$HOME/foo'
+        fail_msg: |
+          out={{ out }}
 
     # ------------------------
 
@@ -70,7 +75,9 @@
           sudoable: true
       register: out
     - assert:
-        that: out.result == '{{user_facts.ansible_facts.ansible_user_dir}}/foo'
+        that: out.result == user_facts.ansible_facts.ansible_user_dir ~ '/foo'
+        fail_msg: |
+          out={{ out }}
 
     - name: "sudoable; Expand ~/foo with become active. ~ is become_user's home."
       action_passthrough:
@@ -93,7 +100,9 @@
           sudoable: true
       register: out
     - assert:
-        that: out.result == '{{user_facts.ansible_facts.ansible_user_dir}}/foo'
+        that: out.result == user_facts.ansible_facts.ansible_user_dir ~ '/foo'
+        fail_msg: |
+          out={{ out }}
 
     - name: "sudoable; Expanding $HOME/foo has no effect."
       action_passthrough:
@@ -104,3 +113,7 @@
       register: out
     - assert:
         that: out.result == '$HOME/foo'
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - remote_expand_user

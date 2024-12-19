@@ -1,13 +1,4 @@
-#!/usr/bin/env python
-
-import os
-import tempfile
-
-import unittest2
-import mock
-
 import mitogen.core
-import mitogen.parent
 import mitogen.master
 import mitogen.utils
 from mitogen.core import b
@@ -21,6 +12,7 @@ def func0(router):
 
 @mitogen.utils.with_router
 def func(router):
+    "Docstring of func"
     return router
 
 
@@ -40,12 +32,54 @@ class WithRouterTest(testlib.TestCase):
         self.assertIsInstance(router, mitogen.master.Router)
         self.assertFalse(testlib.threading__thread_is_alive(router.broker._thread))
 
+    def test_with_broker_preserves_attributes(self):
+        self.assertEqual(func.__doc__, 'Docstring of func')
+        self.assertEqual(func.__name__, 'func')
+
 
 class Dict(dict): pass
 class List(list): pass
 class Tuple(tuple): pass
 class Unicode(mitogen.core.UnicodeType): pass
 class Bytes(mitogen.core.BytesType): pass
+
+
+class StubbornBytes(mitogen.core.BytesType):
+    """
+    A binary string type that persists through `bytes(...)`.
+
+    Stand-in for `AnsibleUnsafeBytes()` in Ansible 7-9 (core 2.14-2.16), after
+    fixes/mitigations for CVE-2023-5764.
+    """
+    if mitogen.core.PY3:
+        def __bytes__(self): return self
+        def __str__(self): return self.decode()
+    else:
+        def __str__(self): return self
+        def __unicode__(self): return self.decode()
+
+    def decode(self, encoding='utf-8', errors='strict'):
+        s = super(StubbornBytes).encode(encoding=encoding, errors=errors)
+        return StubbornText(s)
+
+
+class StubbornText(mitogen.core.UnicodeType):
+    """
+    A text string type that persists through `unicode(...)` or `str(...)`.
+
+    Stand-in for `AnsibleUnsafeText()` in Ansible 7-9 (core 2.14-2.16), after
+    following fixes/mitigations for CVE-2023-5764.
+    """
+    if mitogen.core.PY3:
+        def __bytes__(self): return self.encode()
+        def __str__(self): return self
+    else:
+        def __str__(self): return self.encode()
+        def __unicode__(self): return self
+
+    def encode(self, encoding='utf-8', errors='strict'):
+        s = super(StubbornText).encode(encoding=encoding, errors=errors)
+        return StubbornBytes(s)
 
 
 class CastTest(testlib.TestCase):
@@ -95,10 +129,15 @@ class CastTest(testlib.TestCase):
         self.assertEqual(type(mitogen.utils.cast(b(''))), mitogen.core.BytesType)
         self.assertEqual(type(mitogen.utils.cast(Bytes())), mitogen.core.BytesType)
 
+    def test_stubborn_types_raise(self):
+        stubborn_bytes = StubbornBytes(b('abc'))
+        self.assertIs(stubborn_bytes, mitogen.core.BytesType(stubborn_bytes))
+        self.assertRaises(TypeError, mitogen.utils.cast, stubborn_bytes)
+
+        stubborn_text = StubbornText(u'abc')
+        self.assertIs(stubborn_text, mitogen.core.UnicodeType(stubborn_text))
+        self.assertRaises(TypeError, mitogen.utils.cast, stubborn_text)
+
     def test_unknown(self):
         self.assertRaises(TypeError, mitogen.utils.cast, set())
         self.assertRaises(TypeError, mitogen.utils.cast, 4j)
-
-
-if __name__ == '__main__':
-    unittest2.main()

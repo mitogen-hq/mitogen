@@ -10,7 +10,7 @@ demonstrator for what does and doesn't work.
 
 ## Preparation
 
-See `../image_prep/README.md`.
+See [`../image_prep/README.md`](../image_prep/README.md).
 
 
 ## `run_ansible_playbook.py`

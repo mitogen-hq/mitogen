@@ -8,7 +8,8 @@
 #
 # See also: loop-100-items.yml
 #
-- hosts: all
+- name: bench/loop-100-tasks.yml
+  hosts: all
   tasks:
     - command: hostname
     - command: hostname

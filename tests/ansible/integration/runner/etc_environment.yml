@@ -4,12 +4,13 @@
 
 - name: integration/runner/etc_environment.yml
   hosts: test-targets[0]
-  any_errors_fatal: true
   gather_facts: true
   tasks:
-    - include: _etc_environment_user.yml
+    - include_tasks: _etc_environment_user.yml
       when: ansible_system == "Linux" and is_mitogen
 
     - include_tasks: _etc_environment_global.yml
       # Don't destroy laptops.
       when: ansible_virtualization_type == "docker"
+  tags:
+    - etc_environment

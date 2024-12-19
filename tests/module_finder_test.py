@@ -1,14 +1,13 @@
 import inspect
+import json
 import os
 import sys
-
-import unittest2
+import unittest
 
 import mitogen.master
 from mitogen.core import b
 
 import testlib
-from testlib import MODS_DIR
 
 
 class ConstructorTest(testlib.TestCase):
@@ -22,7 +21,7 @@ class ReprTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
     def test_simple(self):
-        self.assertEquals('ModuleFinder()', repr(self.klass()))
+        self.assertEqual('ModuleFinder()', repr(self.klass()))
 
 
 class IsStdlibNameTest(testlib.TestCase):
@@ -59,21 +58,21 @@ class GetMainModuleDefectivePython3x(testlib.TestCase):
         return self.klass().find(fullname)
 
     def test_builtin(self):
-        self.assertEquals(None, self.call('sys'))
+        self.assertEqual(None, self.call('sys'))
 
     def test_not_main(self):
-        self.assertEquals(None, self.call('mitogen'))
+        self.assertEqual(None, self.call('mitogen'))
 
     def test_main(self):
         import __main__
 
         path, source, is_pkg = self.call('__main__')
-        self.assertTrue(path is not None)
+        self.assertIsNotNone(path)
         self.assertTrue(os.path.exists(path))
-        self.assertEquals(path, __main__.__file__)
+        self.assertEqual(path, __main__.__file__)
         fp = open(path, 'rb')
         try:
-            self.assertEquals(source, fp.read())
+            self.assertEqual(source, fp.read())
         finally:
             fp.close()
         self.assertFalse(is_pkg)
@@ -87,24 +86,24 @@ class PkgutilMethodTest(testlib.TestCase):
 
     def test_empty_source_pkg(self):
         path, src, is_pkg = self.call('module_finder_testmod')
-        self.assertEquals(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/__init__.py'))
-        self.assertEquals(mitogen.core.b(''), src)
+        self.assertEqual(path,
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/__init__.py'))
+        self.assertEqual(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
         path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
-        self.assertEquals(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/empty_mod.py'))
-        self.assertEquals(mitogen.core.b(''), src)
+        self.assertEqual(path,
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/empty_mod.py'))
+        self.assertEqual(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
     def test_regular_mod(self):
         from module_finder_testmod import regular_mod
         path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
-        self.assertEquals(path,
-            os.path.join(MODS_DIR, 'module_finder_testmod/regular_mod.py'))
-        self.assertEquals(mitogen.core.to_text(src),
+        self.assertEqual(path,
+            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/regular_mod.py'))
+        self.assertEqual(mitogen.core.to_text(src),
                           inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
 
@@ -118,14 +117,15 @@ class SysModulesMethodTest(testlib.TestCase):
     def test_main(self):
         import __main__
         path, src, is_pkg = self.call('__main__')
-        self.assertEquals(path, __main__.__file__)
+        self.assertEqual(path, __main__.__file__)
 
         # linecache adds a line ending to the final line if one is missing.
-        actual_src = open(path, 'rb').read()
+        with open(path, 'rb') as f:
+            actual_src = f.read()
         if actual_src[-1:] != b('\n'):
             actual_src += b('\n')
 
-        self.assertEquals(src, actual_src)
+        self.assertEqual(src, actual_src)
         self.assertFalse(is_pkg)
 
     def test_dylib_fails(self):
@@ -140,9 +140,7 @@ class SysModulesMethodTest(testlib.TestCase):
         self.assertIsNone(tup)
 
 
-class GetModuleViaParentEnumerationTest(testlib.TestCase):
-    klass = mitogen.master.ParentEnumerationMethod
-
+class ParentEnumerationMixin(object):
     def call(self, fullname):
         return self.klass().find(fullname)
 
@@ -165,66 +163,81 @@ class GetModuleViaParentEnumerationTest(testlib.TestCase):
         # plumbum has been eating too many rainbow-colored pills
         import pkg_like_plumbum.colors
         path, src, is_pkg = self.call('pkg_like_plumbum.colors')
-        modpath = os.path.join(MODS_DIR, 'pkg_like_plumbum/colors.py')
-        self.assertEquals(path, modpath)
+        modpath = os.path.join(testlib.MODS_DIR, 'pkg_like_plumbum/colors.py')
+        self.assertEqual(path, modpath)
 
-        self.assertEquals(src, open(modpath, 'rb').read())
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
         self.assertFalse(is_pkg)
 
     def test_ansible_module_utils_distro_succeeds(self):
         # #590: a package that turns itself into a module.
         import pkg_like_ansible.module_utils.distro as d
-        self.assertEquals(d.I_AM, "the module that replaced the package")
-        self.assertEquals(
+        self.assertEqual(d.I_AM, "the module that replaced the package")
+        self.assertEqual(
             sys.modules['pkg_like_ansible.module_utils.distro'].__name__,
             'pkg_like_ansible.module_utils.distro._distro'
         )
 
         # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.distro')
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/distro/__init__.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, True)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, True)
 
         # ensure we can resolve a child of the subpackage.
         path, src, is_pkg = self.call(
             'pkg_like_ansible.module_utils.distro._distro'
         )
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/distro/_distro.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, False)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, False)
 
     def test_ansible_module_utils_system_distro_succeeds(self):
         # #590: a package that turns itself into a module.
         # #590: a package that turns itself into a module.
         import pkg_like_ansible.module_utils.sys_distro as d
-        self.assertEquals(d.I_AM, "the system module that replaced the subpackage")
-        self.assertEquals(
+        self.assertEqual(d.I_AM, "the system module that replaced the subpackage")
+        self.assertEqual(
             sys.modules['pkg_like_ansible.module_utils.sys_distro'].__name__,
             'system_distro'
         )
 
         # ensure we can resolve the subpackage.
         path, src, is_pkg = self.call('pkg_like_ansible.module_utils.sys_distro')
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/__init__.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, True)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, True)
 
         # ensure we can resolve a child of the subpackage.
         path, src, is_pkg = self.call(
             'pkg_like_ansible.module_utils.sys_distro._distro'
         )
-        modpath = os.path.join(MODS_DIR,
+        modpath = os.path.join(testlib.MODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/_distro.py')
-        self.assertEquals(path, modpath)
-        self.assertEquals(src, open(modpath, 'rb').read())
-        self.assertEquals(is_pkg, False)
+        self.assertEqual(path, modpath)
+        with open(modpath, 'rb') as f:
+            self.assertEqual(src, f.read())
+        self.assertEqual(is_pkg, False)
+
+
+@unittest.skipIf(sys.version_info >= (3, 4), 'Superceded in Python >= 3.4')
+class ParentImpEnumerationMethodTest(ParentEnumerationMixin, testlib.TestCase):
+    klass = mitogen.master.ParentImpEnumerationMethod
+
+
+@unittest.skipIf(sys.version_info < (3, 4), 'Requires ModuleSpec, Python 3.4+')
+class ParentSpecEnumerationMethodTest(ParentEnumerationMixin, testlib.TestCase):
+    klass = mitogen.master.ParentSpecEnumerationMethod
 
 
 class ResolveRelPathTest(testlib.TestCase):
@@ -234,21 +247,21 @@ class ResolveRelPathTest(testlib.TestCase):
         return self.klass().resolve_relpath(fullname, level)
 
     def test_empty(self):
-        self.assertEquals('', self.call('', 0))
-        self.assertEquals('', self.call('', 1))
-        self.assertEquals('', self.call('', 2))
+        self.assertEqual('', self.call('', 0))
+        self.assertEqual('', self.call('', 1))
+        self.assertEqual('', self.call('', 2))
 
     def test_absolute(self):
-        self.assertEquals('', self.call('email.utils', 0))
+        self.assertEqual('', self.call('email.utils', 0))
 
     def test_rel1(self):
-        self.assertEquals('email.', self.call('email.utils', 1))
+        self.assertEqual('email.', self.call('email.utils', 1))
 
     def test_rel2(self):
-        self.assertEquals('', self.call('email.utils', 2))
+        self.assertEqual('', self.call('email.utils', 2))
 
     def test_rel_overflow(self):
-        self.assertEquals('', self.call('email.utils', 3))
+        self.assertEqual('', self.call('email.utils', 3))
 
 
 class FakeSshTest(testlib.TestCase):
@@ -260,10 +273,9 @@ class FakeSshTest(testlib.TestCase):
     def test_simple(self):
         import mitogen.fakessh
         related = self.call('mitogen.fakessh')
-        self.assertEquals(related, [
+        self.assertEqual(related, [
             'mitogen',
             'mitogen.core',
-            'mitogen.master',
             'mitogen.parent',
         ])
 
@@ -277,8 +289,6 @@ class FindRelatedTest(testlib.TestCase):
     SIMPLE_EXPECT = set([
         u'mitogen',
         u'mitogen.core',
-        u'mitogen.master',
-        u'mitogen.minify',
         u'mitogen.parent',
     ])
 
@@ -292,205 +302,68 @@ class FindRelatedTest(testlib.TestCase):
     def test_simple(self):
         import mitogen.fakessh
         related = self.call('mitogen.fakessh')
-        self.assertEquals(set(related), self.SIMPLE_EXPECT)
+        self.assertEqual(set(related), self.SIMPLE_EXPECT)
 
 
-if sys.version_info > (2, 6):
-    class DjangoMixin(object):
-        WEBPROJECT_PATH = os.path.join(MODS_DIR, 'webproject')
+class DjangoMixin(object):
+    WEBPROJECT_PATH = os.path.join(testlib.MODS_DIR, 'webproject')
 
-        # TODO: rip out Django and replace with a static tree of weird imports
-        # that don't depend on .. Django! The hack below is because the version
-        # of Django we need to test against 2.6 doesn't actually run on 3.6.
-        # But we don't care, we just need to be able to import it.
-        #
-        #   File "django/utils/html_parser.py", line 12, in <module>
-        #   AttributeError: module 'html.parser' has no attribute
-        #   'HTMLParseError'
-        #
-        from django.utils.six.moves import html_parser as _html_parser
-        _html_parser.HTMLParseError = Exception
+    @classmethod
+    def modules_expected_path(cls):
+        if sys.version_info[0:2] < (3, 0):
+            modules_expected_filename = 'modules_expected_py2x.json'
+        elif sys.version_info[0:2] <= (3, 6):
+            modules_expected_filename = 'modules_expected_py3x-legacy.json'
+        elif sys.version_info[0:2] >= (3, 10):
+            modules_expected_filename = 'modules_expected_py3x-new.json'
+        return os.path.join(cls.WEBPROJECT_PATH, modules_expected_filename)
 
-        @classmethod
-        def setUpClass(cls):
-            super(DjangoMixin, cls).setUpClass()
-            sys.path.append(cls.WEBPROJECT_PATH)
-            os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
+    @classmethod
+    def setUpClass(cls):
+        super(DjangoMixin, cls).setUpClass()
+        sys.path.append(cls.WEBPROJECT_PATH)
+        os.environ['DJANGO_SETTINGS_MODULE'] = 'webproject.settings'
+        with open(cls.modules_expected_path(), 'rb') as f:
+            cls.MODULES_EXPECTED = json.load(f)
 
-        @classmethod
-        def tearDownClass(cls):
-            sys.path.remove(cls.WEBPROJECT_PATH)
-            del os.environ['DJANGO_SETTINGS_MODULE']
-            super(DjangoMixin, cls).tearDownClass()
-
-
-    class FindRelatedImportsTest(DjangoMixin, testlib.TestCase):
-        klass = mitogen.master.ModuleFinder
-
-        def call(self, fullname):
-            return self.klass().find_related_imports(fullname)
-
-        def test_django_db(self):
-            import django.db
-            related = self.call('django.db')
-            self.assertEquals(related, [
-                'django',
-                'django.core',
-                'django.core.signals',
-                'django.db.utils',
-                'django.utils.functional',
-            ])
-
-        def test_django_db_models(self):
-            import django.db.models
-            related = self.call('django.db.models')
-            self.maxDiff=None
-            self.assertEquals(related, [
-                u'django',
-                u'django.core.exceptions',
-                u'django.db',
-                u'django.db.models',
-                u'django.db.models.aggregates',
-                u'django.db.models.base',
-                u'django.db.models.deletion',
-                u'django.db.models.expressions',
-                u'django.db.models.fields',
-                u'django.db.models.fields.files',
-                u'django.db.models.fields.related',
-                u'django.db.models.fields.subclassing',
-                u'django.db.models.loading',
-                u'django.db.models.manager',
-                u'django.db.models.query',
-                u'django.db.models.signals',
-            ])
+    @classmethod
+    def tearDownClass(cls):
+        sys.path.remove(cls.WEBPROJECT_PATH)
+        del os.environ['DJANGO_SETTINGS_MODULE']
+        super(DjangoMixin, cls).tearDownClass()
 
 
-    class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
-        klass = mitogen.master.ModuleFinder
-        maxDiff = None
+class DjangoFindRelatedTest(DjangoMixin, testlib.TestCase):
+    maxDiff = None
 
-        def call(self, fullname):
-            return self.klass().find_related(fullname)
+    def test_django_db(self):
+        import django.db
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related('django.db')
+        expected = self.MODULES_EXPECTED['find_related']['django.db']
+        self.assertEqual(related, expected)
 
-        def test_django_db(self):
-            import django.db
-            related = self.call('django.db')
-            self.assertEquals(related, [
-                u'django',
-                u'django.conf',
-                u'django.conf.global_settings',
-                u'django.core',
-                u'django.core.exceptions',
-                u'django.core.signals',
-                u'django.db.utils',
-                u'django.dispatch',
-                u'django.dispatch.dispatcher',
-                u'django.dispatch.saferef',
-                u'django.utils',
-                u'django.utils._os',
-                u'django.utils.encoding',
-                u'django.utils.functional',
-                u'django.utils.importlib',
-                u'django.utils.module_loading',
-                u'django.utils.six',
-            ])
+    def test_django_db_models(self):
+        import django.db.models
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related('django.db.models')
+        expected = self.MODULES_EXPECTED['find_related']['django.db.models']
+        self.assertEqual(related, expected)
 
-        @unittest2.skipIf(
-            condition=(sys.version_info >= (3, 0)),
-            reason='broken due to ancient vendored six.py'
-        )
-        def test_django_db_models(self):
-            import django.db.models
-            related = self.call('django.db.models')
-            self.assertEquals(related, [
-                u'django',
-                u'django.conf',
-                u'django.conf.global_settings',
-                u'django.core',
-                u'django.core.exceptions',
-                u'django.core.files',
-                u'django.core.files.base',
-                u'django.core.files.images',
-                u'django.core.files.locks',
-                u'django.core.files.move',
-                u'django.core.files.storage',
-                u'django.core.files.utils',
-                u'django.core.signals',
-                u'django.core.validators',
-                u'django.db',
-                u'django.db.backends',
-                u'django.db.backends.signals',
-                u'django.db.backends.util',
-                u'django.db.models.aggregates',
-                u'django.db.models.base',
-                u'django.db.models.constants',
-                u'django.db.models.deletion',
-                u'django.db.models.expressions',
-                u'django.db.models.fields',
-                u'django.db.models.fields.files',
-                u'django.db.models.fields.proxy',
-                u'django.db.models.fields.related',
-                u'django.db.models.fields.subclassing',
-                u'django.db.models.loading',
-                u'django.db.models.manager',
-                u'django.db.models.options',
-                u'django.db.models.query',
-                u'django.db.models.query_utils',
-                u'django.db.models.related',
-                u'django.db.models.signals',
-                u'django.db.models.sql',
-                u'django.db.models.sql.aggregates',
-                u'django.db.models.sql.constants',
-                u'django.db.models.sql.datastructures',
-                u'django.db.models.sql.expressions',
-                u'django.db.models.sql.query',
-                u'django.db.models.sql.subqueries',
-                u'django.db.models.sql.where',
-                u'django.db.transaction',
-                u'django.db.utils',
-                u'django.dispatch',
-                u'django.dispatch.dispatcher',
-                u'django.dispatch.saferef',
-                u'django.forms',
-                u'django.forms.fields',
-                u'django.forms.forms',
-                u'django.forms.formsets',
-                u'django.forms.models',
-                u'django.forms.util',
-                u'django.forms.widgets',
-                u'django.utils',
-                u'django.utils._os',
-                u'django.utils.crypto',
-                u'django.utils.datastructures',
-                u'django.utils.dateformat',
-                u'django.utils.dateparse',
-                u'django.utils.dates',
-                u'django.utils.datetime_safe',
-                u'django.utils.decorators',
-                u'django.utils.deprecation',
-                u'django.utils.encoding',
-                u'django.utils.formats',
-                u'django.utils.functional',
-                u'django.utils.html',
-                u'django.utils.html_parser',
-                u'django.utils.importlib',
-                u'django.utils.ipv6',
-                u'django.utils.itercompat',
-                u'django.utils.module_loading',
-                u'django.utils.numberformat',
-                u'django.utils.safestring',
-                u'django.utils.six',
-                u'django.utils.text',
-                u'django.utils.timezone',
-                u'django.utils.translation',
-                u'django.utils.tree',
-                u'django.utils.tzinfo',
-                u'pytz',
-                u'pytz.exceptions',
-                u'pytz.lazy',
-                u'pytz.tzfile',
-                u'pytz.tzinfo',
-            ])
 
-if __name__ == '__main__':
-    unittest2.main()
+class DjangoFindRelatedImportsTest(DjangoMixin, testlib.TestCase):
+    maxDiff = None
+
+    def test_django_db(self):
+        import django.db
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related_imports('django.db')
+        expected = self.MODULES_EXPECTED['find_related_imports']['django.db']
+        self.assertEqual(related, expected)
+
+    def test_django_db_models(self):
+        import django.db.models
+        module_finder = mitogen.master.ModuleFinder()
+        related = module_finder.find_related_imports('django.db.models')
+        expected = self.MODULES_EXPECTED['find_related_imports']['django.db.models']
+        self.assertEqual(related, expected)

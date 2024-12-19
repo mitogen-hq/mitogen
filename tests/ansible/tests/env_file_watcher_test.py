@@ -1,9 +1,6 @@
 import os
-import sys
 import tempfile
 
-import mock
-import unittest2
 import testlib
 
 from mitogen.core import b
@@ -45,7 +42,7 @@ class WatcherTest(testlib.TestCase):
         self.tf.seek(0)
         self.tf.truncate(0)
         watcher.check()
-        self.assertTrue(b('SOMEKEY') not in environb)
+        self.assertNotIn(b('SOMEKEY'), environb)
 
     def test_key_added(self):
         watcher = klass(self.tf.name)
@@ -68,7 +65,3 @@ class WatcherTest(testlib.TestCase):
         self.tf.flush()
         watcher.check()
         self.assertEqual(environb[b('SOMEKEY')], b('\xff\xff\xff'))
-
-
-if __name__ == '__main__':
-    unittest2.main()

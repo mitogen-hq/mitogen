@@ -1,8 +1,5 @@
-
 import sys
 import threading
-
-import unittest2
 
 import mitogen.core
 
@@ -47,19 +44,19 @@ class GetTest(testlib.TestCase):
         obj = object()
         latch = self.klass()
         latch.put(obj)
-        self.assertEquals(obj, latch.get())
+        self.assertEqual(obj, latch.get())
 
     def test_nonempty_noblock(self):
         obj = object()
         latch = self.klass()
         latch.put(obj)
-        self.assertEquals(obj, latch.get(block=False))
+        self.assertEqual(obj, latch.get(block=False))
 
     def test_nonempty_zero_timeout(self):
         obj = object()
         latch = self.klass()
         latch.put(obj)
-        self.assertEquals(obj, latch.get(timeout=0))
+        self.assertEqual(obj, latch.get(timeout=0))
 
 
 class ThreadedGetTest(testlib.TestCase):
@@ -93,8 +90,8 @@ class ThreadedGetTest(testlib.TestCase):
         self.start_one(lambda: latch.get(timeout=3.0))
         latch.put('test')
         self.join()
-        self.assertEquals(self.results, ['test'])
-        self.assertEquals(self.excs, [])
+        self.assertEqual(self.results, ['test'])
+        self.assertEqual(self.excs, [])
 
     def test_five_threads(self):
         latch = self.klass()
@@ -103,8 +100,8 @@ class ThreadedGetTest(testlib.TestCase):
         for x in range(5):
             latch.put(x)
         self.join()
-        self.assertEquals(sorted(self.results), list(range(5)))
-        self.assertEquals(self.excs, [])
+        self.assertEqual(sorted(self.results), list(range(5)))
+        self.assertEqual(self.excs, [])
 
 
 
@@ -114,7 +111,7 @@ class PutTest(testlib.TestCase):
     def test_put(self):
         latch = self.klass()
         latch.put(None)
-        self.assertEquals(None, latch.get())
+        self.assertEqual(None, latch.get())
 
 
 class CloseTest(testlib.TestCase):
@@ -199,9 +196,9 @@ class ThreadedCloseTest(testlib.TestCase):
         self.start_one(lambda: latch.get(timeout=3.0))
         latch.close()
         self.join()
-        self.assertEquals(self.results, [None])
+        self.assertEqual(self.results, [None])
         for exc in self.excs:
-            self.assertTrue(isinstance(exc, mitogen.core.LatchError))
+            self.assertIsInstance(exc, mitogen.core.LatchError)
 
     def test_five_threads(self):
         latch = self.klass()
@@ -209,11 +206,6 @@ class ThreadedCloseTest(testlib.TestCase):
             self.start_one(lambda: latch.get(timeout=3.0))
         latch.close()
         self.join()
-        self.assertEquals(self.results, [None]*5)
+        self.assertEqual(self.results, [None]*5)
         for exc in self.excs:
-            self.assertTrue(isinstance(exc, mitogen.core.LatchError))
-
-
-
-if __name__ == '__main__':
-    unittest2.main()
+            self.assertIsInstance(exc, mitogen.core.LatchError)

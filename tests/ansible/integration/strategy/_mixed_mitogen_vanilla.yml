@@ -3,7 +3,6 @@
 
 - name: integration/strategy/_mixed_mitogen_vanilla.yml (mitogen_linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   strategy: mitogen_linear
   run_once: true
   tasks:
@@ -11,37 +10,51 @@
       register: out
     - assert:
         that: out.mitogen_loaded
+        fail_msg: |
+          out={{ out }}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
-
+        fail_msg: |
+          strategy={{ strategy }}
+  tags:
+    - mitogen_linear
 
 - name: integration/strategy/_mixed_mitogen_vanilla.yml (linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   strategy: linear
   tasks:
     - custom_python_detect_environment:
       register: out
     - assert:
         that: not out.mitogen_loaded
+        fail_msg: |
+          out={{ out }}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.linear.StrategyModule'
-
+        fail_msg: |
+          strategy={{ strategy }}
+  tags:
+    - linear
 
 - name: integration/strategy/_mixed_mitogen_vanilla.yml (mitogen_linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   strategy: mitogen_linear
   tasks:
     - custom_python_detect_environment:
       register: out
     - assert:
         that: out.mitogen_loaded
+        fail_msg: |
+          out={{ out }}
 
     - determine_strategy:
     - assert:
         that: strategy == 'ansible.plugins.strategy.mitogen_linear.StrategyModule'
+        fail_msg: |
+          strategy={{ strategy }}
+  tags:
+    - mitogen_linear

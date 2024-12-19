@@ -4,12 +4,11 @@
 # can test for.
 
 - name: regression/issue_152__local_action_wrong_interpreter.yml
-  hosts: test-targets
+  hosts: test-targets[0]
   connection: local
-  any_errors_fatal: true
   tasks:
-
-    - copy:
+    - name: Create /tmp/issue_152_interpreter.sh
+      copy:
         dest: /tmp/issue_152_interpreter.sh
         mode: u+x
         content: |
@@ -25,7 +24,12 @@
     - assert:
         that:
           - out.env.CUSTOM_INTERPRETER == "1"
+        fail_msg: |
+          out={{ out }}
 
-    - file:
+    - name: Cleanup /tmp/issue_152_interpreter.sh
+      file:
         path: /tmp/issue_152_interpreter.sh
         state: absent
+  tags:
+    - issue_152

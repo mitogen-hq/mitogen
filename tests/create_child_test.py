@@ -1,13 +1,8 @@
-
 import fcntl
 import os
 import stat
 import sys
-import time
 import tempfile
-
-import mock
-import unittest2
 
 import mitogen.core
 import mitogen.parent
@@ -80,7 +75,8 @@ def close_proc(proc):
     proc.stdin.close()
     proc.stdout.close()
     if proc.stderr:
-        prco.stderr.close()
+        proc.stderr.close()
+    proc.proc.wait()
 
 
 def wait_read(fp, n):
@@ -100,12 +96,13 @@ class StdinSockMixin(object):
             lambda proc: proc.stdin.send(b('TEST')))
         st = os.fstat(proc.stdin.fileno())
         self.assertTrue(stat.S_ISSOCK(st.st_mode))
-        self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, _osx_mode(info['st_mode']))
+        self.assertEqual(st.st_dev, info['st_dev'])
+        self.assertEqual(st.st_mode, _osx_mode(info['st_mode']))
         flags = fcntl.fcntl(proc.stdin.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['buf'], 'TEST')
         self.assertTrue(info['flags'] & os.O_RDWR)
+        close_proc(proc)
 
 
 class StdoutSockMixin(object):
@@ -114,12 +111,13 @@ class StdoutSockMixin(object):
             lambda proc: wait_read(proc.stdout, 4))
         st = os.fstat(proc.stdout.fileno())
         self.assertTrue(stat.S_ISSOCK(st.st_mode))
-        self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, _osx_mode(info['st_mode']))
+        self.assertEqual(st.st_dev, info['st_dev'])
+        self.assertEqual(st.st_mode, _osx_mode(info['st_mode']))
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
         self.assertTrue(info['flags'] & os.O_RDWR)
+        close_proc(proc)
 
 
 class CreateChildTest(StdinSockMixin, StdoutSockMixin, testlib.TestCase):
@@ -128,9 +126,10 @@ class CreateChildTest(StdinSockMixin, StdoutSockMixin, testlib.TestCase):
     def test_stderr(self):
         proc, info, _ = run_fd_check(self.func, 2, 'write')
         st = os.fstat(sys.stderr.fileno())
-        self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, info['st_mode'])
-        self.assertEquals(st.st_ino, info['st_ino'])
+        self.assertEqual(st.st_dev, info['st_dev'])
+        self.assertEqual(st.st_mode, info['st_mode'])
+        self.assertEqual(st.st_ino, info['st_ino'])
+        close_proc(proc)
 
 
 class CreateChildMergedTest(StdinSockMixin, StdoutSockMixin,
@@ -142,13 +141,14 @@ class CreateChildMergedTest(StdinSockMixin, StdoutSockMixin,
     def test_stderr(self):
         proc, info, buf = run_fd_check(self.func, 2, 'write',
             lambda proc: wait_read(proc.stdout, 4))
-        self.assertEquals(None, proc.stderr)
+        self.assertEqual(None, proc.stderr)
         st = os.fstat(proc.stdout.fileno())
         self.assertTrue(stat.S_ISSOCK(st.st_mode))
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
         self.assertTrue(info['flags'] & os.O_RDWR)
+        close_proc(proc)
 
 
 class CreateChildStderrPipeTest(StdinSockMixin, StdoutSockMixin,
@@ -162,13 +162,14 @@ class CreateChildStderrPipeTest(StdinSockMixin, StdoutSockMixin,
             lambda proc: wait_read(proc.stderr, 4))
         st = os.fstat(proc.stderr.fileno())
         self.assertTrue(stat.S_ISFIFO(st.st_mode))
-        self.assertEquals(st.st_dev, info['st_dev'])
-        self.assertEquals(st.st_mode, info['st_mode'])
+        self.assertEqual(st.st_dev, info['st_dev'])
+        self.assertEqual(st.st_mode, info['st_mode'])
         flags = fcntl.fcntl(proc.stderr.fileno(), fcntl.F_GETFL)
         self.assertFalse(flags & os.O_WRONLY)
         self.assertFalse(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
         self.assertTrue(info['flags'] & os.O_WRONLY)
+        close_proc(proc)
 
 
 class TtyCreateChildTest(testlib.TestCase):
@@ -191,14 +192,14 @@ class TtyCreateChildTest(testlib.TestCase):
             ])
             mitogen.core.set_block(proc.stdin.fileno())
             # read(3) below due to https://bugs.python.org/issue37696
-            self.assertEquals(mitogen.core.b('hi\n'), proc.stdin.read(3))
+            self.assertEqual(mitogen.core.b('hi\n'), proc.stdin.read(3))
             waited_pid, status = os.waitpid(proc.pid, 0)
-            self.assertEquals(proc.pid, waited_pid)
-            self.assertEquals(0, status)
-            self.assertEquals(mitogen.core.b(''), tf.read())
-            proc.stdout.close()
+            self.assertEqual(proc.pid, waited_pid)
+            self.assertEqual(0, status)
+            self.assertEqual(mitogen.core.b(''), tf.read())
         finally:
             tf.close()
+            close_proc(proc)
 
     def test_stdin(self):
         proc, info, _ = run_fd_check(self.func, 0, 'read',
@@ -207,14 +208,14 @@ class TtyCreateChildTest(testlib.TestCase):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stdin.fileno()))
 
         flags = fcntl.fcntl(proc.stdin.fileno(), fcntl.F_GETFL)
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(info['flags'] & os.O_RDWR)
         self.assertTrue(info['buf'], 'TEST')
+        close_proc(proc)
 
     def test_stdout(self):
         proc, info, buf = run_fd_check(self.func, 1, 'write',
@@ -224,8 +225,7 @@ class TtyCreateChildTest(testlib.TestCase):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stdout.fileno()))
 
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
@@ -234,6 +234,7 @@ class TtyCreateChildTest(testlib.TestCase):
 
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
+        close_proc(proc)
 
     def test_stderr(self):
         # proc.stderr is None in the parent since there is no separate stderr
@@ -245,8 +246,7 @@ class TtyCreateChildTest(testlib.TestCase):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stdout.fileno()))
 
         flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFL)
@@ -255,6 +255,7 @@ class TtyCreateChildTest(testlib.TestCase):
 
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
+        close_proc(proc)
 
     def test_dev_tty_open_succeeds(self):
         # In the early days of UNIX, a process that lacked a controlling TTY
@@ -271,14 +272,15 @@ class TtyCreateChildTest(testlib.TestCase):
             proc = self.func([
                 'bash', '-c', 'exec 2>%s; echo hi > /dev/tty' % (tf.name,)
             ])
-            self.assertEquals(mitogen.core.b('hi\n'), wait_read(proc.stdout, 3))
+            self.assertEqual(mitogen.core.b('hi\n'), wait_read(proc.stdout, 3))
             waited_pid, status = os.waitpid(proc.pid, 0)
-            self.assertEquals(proc.pid, waited_pid)
-            self.assertEquals(0, status)
-            self.assertEquals(mitogen.core.b(''), tf.read())
+            self.assertEqual(proc.pid, waited_pid)
+            self.assertEqual(0, status)
+            self.assertEqual(mitogen.core.b(''), tf.read())
             proc.stdout.close()
         finally:
             tf.close()
+            close_proc(proc)
 
 
 class StderrDiagTtyMixin(object):
@@ -291,8 +293,7 @@ class StderrDiagTtyMixin(object):
         self.assertTrue(stat.S_ISCHR(st.st_mode))
         self.assertTrue(stat.S_ISCHR(info['st_mode']))
 
-        self.assertTrue(isinstance(info['ttyname'],
-                        mitogen.core.UnicodeType))
+        self.assertIsInstance(info['ttyname'], mitogen.core.UnicodeType)
         self.assertTrue(os.isatty(proc.stderr.fileno()))
 
         flags = fcntl.fcntl(proc.stderr.fileno(), fcntl.F_GETFL)
@@ -301,6 +302,7 @@ class StderrDiagTtyMixin(object):
 
         self.assertTrue(flags & os.O_RDWR)
         self.assertTrue(buf, 'TEST')
+        close_proc(proc)
 
 
 class HybridTtyCreateChildTest(StdinSockMixin, StdoutSockMixin,
@@ -319,27 +321,25 @@ if 0:
                 lambda proc: proc.transmit_side.write('TEST'))
             st = os.fstat(proc.transmit_side.fd)
             self.assertTrue(stat.S_ISFIFO(st.st_mode))
-            self.assertEquals(st.st_dev, info['st_dev'])
-            self.assertEquals(st.st_mode, info['st_mode'])
+            self.assertEqual(st.st_dev, info['st_dev'])
+            self.assertEqual(st.st_mode, info['st_mode'])
             flags = fcntl.fcntl(proc.transmit_side.fd, fcntl.F_GETFL)
             self.assertTrue(flags & os.O_WRONLY)
             self.assertTrue(buf, 'TEST')
             self.assertFalse(info['flags'] & os.O_WRONLY)
             self.assertFalse(info['flags'] & os.O_RDWR)
+            close_proc(proc)
 
         def test_stdout(self):
             proc, info, buf = run_fd_check(self.func, 1, 'write',
                 lambda proc: wait_read(proc.receive_side, 4))
             st = os.fstat(proc.receive_side.fd)
             self.assertTrue(stat.S_ISFIFO(st.st_mode))
-            self.assertEquals(st.st_dev, info['st_dev'])
-            self.assertEquals(st.st_mode, info['st_mode'])
+            self.assertEqual(st.st_dev, info['st_dev'])
+            self.assertEqual(st.st_mode, info['st_mode'])
             flags = fcntl.fcntl(proc.receive_side.fd, fcntl.F_GETFL)
             self.assertFalse(flags & os.O_WRONLY)
             self.assertFalse(flags & os.O_RDWR)
             self.assertTrue(info['flags'] & os.O_WRONLY)
             self.assertTrue(buf, 'TEST')
-
-
-if __name__ == '__main__':
-    unittest2.main()
+            close_proc(proc)

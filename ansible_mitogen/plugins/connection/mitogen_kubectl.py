@@ -27,12 +27,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import os.path
 import sys
 
-from ansible.errors import AnsibleConnectionFailure
-from ansible.module_utils.six import iteritems
+import ansible.errors
 
 try:
     import ansible_mitogen
@@ -45,16 +46,10 @@ import ansible_mitogen.connection
 import ansible_mitogen.loaders
 
 
-_class = ansible_mitogen.loaders.connection_loader__get(
+_get_result = ansible_mitogen.loaders.connection_loader__get(
     'kubectl',
     class_only=True,
 )
-
-if _class:
-    kubectl = sys.modules[_class.__module__]
-    del _class
-else:
-    kubectl = None
 
 
 class Connection(ansible_mitogen.connection.Connection):
@@ -66,14 +61,22 @@ class Connection(ansible_mitogen.connection.Connection):
     )
 
     def __init__(self, *args, **kwargs):
-        if kubectl is None:
-            raise AnsibleConnectionFailure(self.not_supported_msg)
+        if not _get_result:
+            raise ansible.errors.AnsibleConnectionFailure(self.not_supported_msg)
         super(Connection, self).__init__(*args, **kwargs)
 
     def get_extra_args(self):
+        try:
+            # Ansible < 2.10, _get_result is the connection class
+            connection_options = _get_result.connection_options
+        except AttributeError:
+            # Ansible >= 2.10, _get_result is a get_with_context_result
+            connection_options = _get_result.object.connection_options
         parameters = []
-        for key, option in iteritems(kubectl.CONNECTION_OPTIONS):
-            if self.get_task_var('ansible_' + key) is not None:
-                parameters += [ option, self.get_task_var('ansible_' + key) ]
+        for key in connection_options:
+            task_var_name = 'ansible_%s' % key
+            task_var = self.get_task_var(task_var_name)
+            if task_var is not None:
+                parameters += [connection_options[key], task_var]
 
         return parameters

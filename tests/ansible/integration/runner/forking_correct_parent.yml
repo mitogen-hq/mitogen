@@ -1,8 +1,8 @@
 
 - name: integration/runner/forking_correct_parent.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
+  - include_tasks: ../_mitogen_only.yml
 
   # Verify mitogen_task_isolation=fork forks from "virginal fork parent", not
   # shared interpreter, but only if forking is enabled (e.g. that's never true
@@ -15,29 +15,40 @@
           self._connection.init_child_result['fork_context'] is not None
         )
     register: forkmode
-    when: is_mitogen
 
   - name: get regular process ID.
     custom_python_detect_environment:
     register: regular_proc
-    when: is_mitogen
 
   - name: get force-forked process ID again.
     custom_python_detect_environment:
     register: fork_proc
     vars:
       mitogen_task_isolation: fork
-    when: is_mitogen
 
   - assert:
       that:
       - fork_proc.pid != regular_proc.pid
-    when: is_mitogen
+      fail_msg: |
+        fork_proc={{ fork_proc }}
+        regular_proc={{ regular_proc }}
 
   - assert:
       that: fork_proc.ppid != regular_proc.pid
-    when: is_mitogen and forkmode.uses_fork
+      fail_msg: |
+        fork_proc={{ fork_proc }}
+        regular_proc={{ regular_proc }}
+    when:
+      - forkmode.uses_fork
 
   - assert:
       that: fork_proc.ppid == regular_proc.pid
-    when: is_mitogen and not forkmode.uses_fork
+      fail_msg: |
+        fork_proc={{ fork_proc }}
+        regular_proc={{ regular_proc }}
+    when:
+      - not forkmode.uses_fork
+
+  tags:
+    - forking_correct_parent
+    - mitogen_only

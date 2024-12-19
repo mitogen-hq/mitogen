@@ -19,20 +19,17 @@
 - name: integration/connection_delegation/stack_construction.yml
   hosts: cd-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
     # used later for local_action test.
     - local_action: custom_python_detect_environment
       register: local_env
+  tags:
+    - stack_construction
 
 
 - hosts: cd-normal
-  any_errors_fatal: true
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -40,23 +37,25 @@
         right: [
           {
             "kwargs": {
-              "connect_timeout": 10,
+              "connect_timeout": 30,
               "doas_path": null,
               "password": null,
-              "python_path": ["/usr/bin/python"],
+              "python_path": ["python3000"],
               'remote_name': null,
               "username": "normal-user",
             },
             "method": "doas",
           }
         ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
@@ -67,25 +66,23 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      'port': '{{ expected_ssh_port }}',
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -94,13 +91,15 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-alias
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -110,25 +109,23 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      'port': '{{ expected_ssh_port }}',
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -137,13 +134,15 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-normal-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -151,10 +150,10 @@
         right: [
               {
                   'kwargs': {
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'doas_path': null,
                       'password': null,
-                      "python_path": ["/usr/bin/python"],
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'username': 'normal-user',
                   },
@@ -164,25 +163,23 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'cd-normal-normal',
                       'identities_only': False,
                       'identity_file': null,
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      'port': '{{ expected_ssh_port }}',
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -191,13 +188,15 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-normal-alias
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -207,7 +206,7 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
@@ -215,17 +214,15 @@
                       'keepalive_count': 10,
                       'password': null,
                       'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -237,25 +234,23 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'cd-normal-alias',
                       'identities_only': False,
                       'identity_file': null,
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      'port': '{{ expected_ssh_port }}',
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -264,13 +259,14 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - stack_construction
 
 
 - hosts: cd-newuser-normal-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -278,10 +274,10 @@
         right: [
               {
                   'kwargs': {
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'doas_path': null,
                       'password': null,
-                      "python_path": ["/usr/bin/python"],
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'username': 'normal-user',
                   },
@@ -291,25 +287,23 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'cd-newuser-normal-normal',
                       'identities_only': False,
                       'identity_file': null,
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      'port': '{{ expected_ssh_port }}',
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -318,13 +312,15 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-newuser-normal-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
     - mitogen_get_stack:
       delegate_to: cd-alias
       register: out
@@ -335,25 +331,23 @@
                   'kwargs': {
                       'check_host_keys': 'ignore',
                       'compression': True,
-                      'connect_timeout': 10,
+                      'connect_timeout': 30,
                       'hostname': 'alias-host',
                       'identities_only': False,
                       'identity_file': null,
                       'keepalive_interval': 30,
                       'keepalive_count': 10,
                       'password': null,
-                      'port': null,
-                      "python_path": ["/usr/bin/python"],
+                      'port': '{{ expected_ssh_port }}',
+                      "python_path": ["python3000"],
                       'remote_name': null,
                       'ssh_args': [
-                          '-o',
-                          'UserKnownHostsFile=/dev/null',
-                          '-o',
-                          'ForwardAgent=yes',
-                          '-o',
-                          'ControlMaster=auto',
-                          '-o',
-                          'ControlPersist=60s',
+                          -o, ControlMaster=auto,
+                          -o, ControlPersist=60s,
+                          -o, ForwardAgent=yes,
+                          -o, HostKeyAlgorithms=+ssh-rsa,
+                          -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                          -o, UserKnownHostsFile=/dev/null,
                       ],
                       'ssh_debug_level': null,
                       'ssh_path': 'ssh',
@@ -362,13 +356,14 @@
                   'method': 'ssh',
               },
           ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-newuser-normal-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
     - local_action: mitogen_get_stack
       register: out
     - assert_equal:
@@ -381,13 +376,14 @@
             'method': 'local',
           },
         ]
+  tags:
+    - mitogen_only
+    - stack_construction
 
 
 - hosts: cd-newuser-doas-normal
   tasks:
-    - meta: end_play
-      when: not is_mitogen
-
+    - include_tasks: ../_mitogen_only.yml
     - mitogen_get_stack:
       register: out
     - assert_equal:
@@ -395,10 +391,10 @@
         right: [
           {
             'kwargs': {
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'doas_path': null,
               'password': null,
-              'python_path': ["/usr/bin/python"],
+              'python_path': ["python3000"],
               'remote_name': null,
               'username': 'normal-user',
             },
@@ -406,13 +402,16 @@
           },
           {
             'kwargs': {
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'doas_path': null,
               'password': null,
-              'python_path': ["/usr/bin/python"],
+              'python_path': ["python3000"],
               'remote_name': null,
               'username': 'newuser-doas-normal-user',
             },
             'method': 'doas',
           },
-      ]
+        ]
+  tags:
+    - mitogen_only
+    - stack_construction

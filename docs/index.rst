@@ -26,7 +26,7 @@ and efficient low-level API on which tools like `Salt`_, `Ansible`_, or
 `Fabric`_ can be built, and while the API is quite friendly and comparable to
 `Fabric`_, ultimately it is not intended for direct use by consumer software.
 
-.. _Salt: https://docs.saltstack.com/en/latest/
+.. _Salt: https://docs.saltproject.io/en/latest/
 .. _Ansible: https://docs.ansible.com/
 .. _Fabric: https://www.fabfile.org/
 
@@ -101,7 +101,7 @@ to your network topology**.
         container='billing0',
     )
 
-    internal_box.call(os.system, './run-nightly-billing.py')
+    internal_box.call(subprocess.check_call, ['./run-nightly-billing.py'])
 
 The multiplexer also ensures the remote process is terminated if your Python
 program crashes, communication is lost, or the application code running in the
@@ -250,7 +250,7 @@ After:
         """
         Install our application.
         """
-        os.system('tar zxvf app.tar.gz')
+        subprocess.check_call(['tar', 'zxvf', 'app.tar.gz'])
 
     context.call(install_app)
 
@@ -258,7 +258,7 @@ Or even:
 
 .. code-block:: python
 
-    context.call(os.system, 'tar zxvf app.tar.gz')
+    context.call(subprocess.check_call, ['tar', 'zxvf', 'app.tar.gz'])
 
 Exceptions raised by function calls are propagated back to the parent program,
 and timeouts can be configured to ensure failed calls do not block progress of

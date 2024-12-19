@@ -1,12 +1,8 @@
 #!/usr/bin/python
 # I am an Ansible Python WANT_JSON module. I should receive a JSON-encoded file.
 
+import json
 import sys
-
-try:
-    import json
-except ImportError:
-    import simplejson as json
 
 
 WANT_JSON = 1

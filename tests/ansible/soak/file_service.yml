@@ -1,8 +1,9 @@
-- hosts: all
+- name: soak/file_service.yml
+  hosts: all
   tasks:
   - set_fact:
       content: "{% for x in range(126977) %}x{% endfor %}"
-  - include: _file_service_loop.yml
+  - include_tasks: _file_service_loop.yml
     with_sequence: start=1 end=100
   tags:
     - resource_intensive

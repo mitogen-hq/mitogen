@@ -1,8 +1,8 @@
-
 import os
 import random
-import struct
+import subprocess
 import sys
+import unittest
 
 try:
     import _ssl
@@ -21,22 +21,34 @@ except ImportError:
     ctypes = None
 
 import mitogen
-import unittest2
 
 import testlib
 import plain_old_module
 
 
 def _find_ssl_linux():
-    s = testlib.subprocess__check_output(['ldd', _ssl.__file__])
-    for line in s.decode().splitlines():
+    proc = subprocess.Popen(
+        ['ldd', _ssl.__file__],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    b_stdout, b_stderr = proc.communicate()
+    assert proc.returncode == 0
+    assert b_stderr.decode() == ''
+    for line in b_stdout.decode().splitlines():
         bits = line.split()
         if bits[0].startswith('libssl'):
             return bits[2]
 
+
 def _find_ssl_darwin():
-    s = testlib.subprocess__check_output(['otool', '-l', _ssl.__file__])
-    for line in s.decode().splitlines():
+    proc = subprocess.Popen(
+        ['otool', '-l', _ssl.__file__],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    b_stdout, b_stderr = proc.communicate()
+    assert proc.returncode == 0
+    assert b_stderr.decode() == ''
+    for line in b_stdout.decode().splitlines():
         bits = line.split()
         if bits[0] == 'name' and 'libssl' in bits[1]:
             return bits[1]
@@ -78,7 +90,7 @@ def exercise_importer(n):
     return simple_pkg.a.subtract_one_add_two(n)
 
 
-skipIfUnsupported = unittest2.skipIf(
+skipIfUnsupported = unittest.skipIf(
     condition=(not mitogen.fork.FORK_SUPPORTED),
     reason="mitogen.fork unsupported on this platform"
 )
@@ -94,7 +106,7 @@ class ForkTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.fork()
         self.assertNotEqual(context.call(random_random), random_random())
 
-    @unittest2.skipIf(
+    @unittest.skipIf(
         condition=LIBSSL_PATH is None or ctypes is None,
         reason='cant test libssl on this platform',
     )
@@ -115,7 +127,7 @@ class ForkTest(testlib.RouterMixin, testlib.TestCase):
             sender = mitogen.core.Sender(econtext.parent, recv.handle)
             sender.send(123)
         context = self.router.fork(on_start=on_start)
-        self.assertEquals(123, recv.get().unpickle())
+        self.assertEqual(123, recv.get().unpickle())
 
 ForkTest = skipIfUnsupported(ForkTest)
 
@@ -134,7 +146,7 @@ class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
         # successfully. In future, we need lots more tests.
         c1 = self.router.fork()
         c2 = self.router.fork(via=c1)
-        self.assertEquals(123, c2.call(ping))
+        self.assertEqual(123, c2.call(ping))
 
     def test_importer(self):
         c1 = self.router.fork(name='c1')
@@ -142,7 +154,3 @@ class DoubleChildTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(2, c2.call(exercise_importer, 1))
 
 DoubleChildTest = skipIfUnsupported(DoubleChildTest)
-
-
-if __name__ == '__main__':
-    unittest2.main()

@@ -11,16 +11,15 @@
 - name: integration/connection_delegation/delegate_to_template.yml
   vars:
     physical_host: "cd-normal-alias"
-    physical_hosts: ["cd-normal-alias", "cd-normal-normal"]
   hosts: test-targets
   gather_facts: no
-  any_errors_fatal: true
   tasks:
-    - meta: end_play
-      when: not is_mitogen
+    - include_tasks: ../_mitogen_only.yml
+    - include_tasks: ../_expected_ssh_port.yml
 
     - meta: end_play
-      when: ansible_version.full < '2.4'
+      when:
+        - ansible_version.full is version('2.4', '<', strict=True)
 
     - mitogen_get_stack:
       delegate_to: "{{ physical_host }}"
@@ -33,7 +32,7 @@
             'kwargs': {
               'check_host_keys': 'ignore',
               'compression': True,
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'hostname': 'alias-host',
               'identities_only': False,
               'identity_file': null,
@@ -41,17 +40,15 @@
               'keepalive_count': 10,
               'password': null,
               'port': null,
-              'python_path': ["/usr/bin/python"],
+              'python_path': ['python3000'],
               'remote_name': null,
               'ssh_args': [
-                '-o',
-                'UserKnownHostsFile=/dev/null',
-                '-o',
-                'ForwardAgent=yes',
-                '-o',
-                'ControlMaster=auto',
-                '-o',
-                'ControlPersist=60s',
+                -o, ControlMaster=auto,
+                -o, ControlPersist=60s,
+                -o, ForwardAgent=yes,
+                -o, HostKeyAlgorithms=+ssh-rsa,
+                -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                -o, UserKnownHostsFile=/dev/null,
               ],
               'ssh_debug_level': null,
               'ssh_path': 'ssh',
@@ -63,25 +60,23 @@
             'kwargs': {
               'check_host_keys': 'ignore',
               'compression': True,
-              'connect_timeout': 10,
+              'connect_timeout': 30,
               'hostname': 'cd-normal-alias',
               'identities_only': False,
               'identity_file': null,
               'keepalive_interval': 30,
               'keepalive_count': 10,
               'password': null,
-              'port': null,
-              'python_path': ["/usr/bin/python"],
+              'port': '{{ expected_ssh_port }}',
+              'python_path': ['python3000'],
               'remote_name': null,
               'ssh_args': [
-                '-o',
-                'UserKnownHostsFile=/dev/null',
-                '-o',
-                'ForwardAgent=yes',
-                '-o',
-                'ControlMaster=auto',
-                '-o',
-                'ControlPersist=60s',
+                -o, ControlMaster=auto,
+                -o, ControlPersist=60s,
+                -o, ForwardAgent=yes,
+                -o, HostKeyAlgorithms=+ssh-rsa,
+                -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
+                -o, UserKnownHostsFile=/dev/null,
               ],
               'ssh_debug_level': null,
               'ssh_path': 'ssh',
@@ -90,3 +85,6 @@
             'method': 'ssh',
           }
         ]
+  tags:
+    - delegate_to_template
+    - mitogen_only

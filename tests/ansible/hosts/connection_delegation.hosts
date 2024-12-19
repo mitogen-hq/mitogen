@@ -1,9 +1,10 @@
+# code: language=ini
 # vim: syntax=dosini
 
 # Connection delegation scenarios. It's impossible to connect to them, but their would-be
 # config can be inspected using "mitogen_get_stack" action.
 
-
+[cd]
 # Normal inventory host, no aliasing.
 cd-normal ansible_connection=mitogen_doas ansible_user=normal-user
 
@@ -22,6 +23,8 @@ cd-newuser-normal-normal mitogen_via=cd-normal ansible_user=newuser-normal-norma
 # doas:newuser via host.
 cd-newuser-doas-normal mitogen_via=cd-normal ansible_connection=mitogen_doas ansible_user=newuser-doas-normal-user
 
+[cd:vars]
+ansible_python_interpreter = python3000
 
 [connection-delegation-test]
 cd-bastion

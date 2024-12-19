@@ -2,7 +2,6 @@
 - name: integration/async/result_binary_producing_json.yml
   gather_facts: true
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - block:
@@ -28,6 +27,8 @@
         (job.started == 1) and
         (job.changed == True) and
         (job.finished == 0)
+      fail_msg: |
+        job={{ job }}
 
   - name: busy-poll up to 100000 times
     async_status:
@@ -37,7 +38,8 @@
     retries: 100000
     delay: 0
 
-  - slurp:
+  - name: Slurp async busy-poll
+    slurp:
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 
@@ -51,5 +53,9 @@
         - async_out.failed == False
         - async_out.msg == "Hello, world."
         - 'async_out.stderr == "binary_producing_json: oh noes\n"'
+      fail_msg: |
+        async_out={{ async_out }}
     vars:
       async_out: "{{result.content|b64decode|from_json}}"
+  tags:
+    - result_binary_producing_json

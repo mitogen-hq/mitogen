@@ -2,7 +2,6 @@
 
 - name: integration/module_utils/from_config_path.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
 
   - custom_python_external_module:
@@ -12,4 +11,7 @@
       that:
       - out.external1_path == "ansible/lib/module_utils/external1.py"
       - out.external2_path == "ansible/lib/module_utils/external2.py"
-
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - from_config_path

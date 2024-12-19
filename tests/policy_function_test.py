@@ -1,6 +1,7 @@
-
-import mock
-import unittest2
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import mitogen.core
 import mitogen.parent
@@ -34,7 +35,3 @@ class IsImmediateChildTest(testlib.TestCase):
     def test_okay(self):
         self.assertFalse(0, 1)
         self.assertTrue(1, 1)
-
-
-if __name__ == '__main__':
-    unittest2.main()

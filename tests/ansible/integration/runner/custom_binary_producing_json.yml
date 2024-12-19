@@ -1,6 +1,5 @@
 - name: integration/runner/custom_binary_producing_json.yml
   hosts: test-targets
-  any_errors_fatal: true
   gather_facts: true
   tasks:
     - block:
@@ -24,3 +23,7 @@
           out.changed and
           out.results[0].changed and
           out.results[0].msg == 'Hello, world.'
+        fail_msg: |
+          out={{ out }}
+  tags:
+    - custom_binary_producing_json

@@ -5,12 +5,7 @@
 
 - name: integration/action/fixup_perms2__copy.yml
   hosts: test-targets
-  any_errors_fatal: true
   tasks:
-    #
-    # copy module (no mode).
-    #
-
     - name: "Copy files (no mode)"
       copy:
         content: ""
@@ -21,10 +16,8 @@
     - assert:
         that:
         -  out.stat.mode in ("0644", "0664")
-
-    #
-    # copy module (explicit mode).
-    #
+        fail_msg: |
+          out={{ out }}
 
     - name: "Copy files from content: arg"
       copy:
@@ -37,23 +30,24 @@
     - assert:
         that:
         -  out.stat.mode == "0400"
+        fail_msg: |
+          out={{ out }}
 
-    #
-    # copy module (existing disk files, no mode).
-    #
-
-    - file:
+    - name: Cleanup local weird mode file
+      file:
         path: /tmp/weird-mode.out
         state: absent
 
-    - name: Create local test file.
+    - name: Create local weird mode file
       delegate_to: localhost
+      run_once: true
       copy:
         content: "weird mode"
         dest: "/tmp/weird-mode"
         mode: "1462"
 
-    - copy:
+    - name: Copy file with weird mode
+      copy:
         src: "/tmp/weird-mode"
         dest: "/tmp/weird-mode.out"
 
@@ -63,12 +57,11 @@
     - assert:
         that:
         - out.stat.mode in ("0644", "0664")
+        fail_msg: |
+          out={{ out }}
 
-    #
-    # copy module (existing disk files, preserve mode).
-    #
-
-    - copy:
+    - name: Copy file with weird mode, preserving mode
+      copy:
         src: "/tmp/weird-mode"
         dest: "/tmp/weird-mode"
         mode: preserve
@@ -79,12 +72,11 @@
     - assert:
         that:
         - out.stat.mode == "1462"
+        fail_msg: |
+          out={{ out }}
 
-    #
-    # copy module (existing disk files, explicit mode).
-    #
-
-    - copy:
+    - name: Copy file with weird mode, explicit mode
+      copy:
         src: "/tmp/weird-mode"
         dest: "/tmp/weird-mode"
         mode: "1461"
@@ -96,8 +88,11 @@
     - assert:
         that:
         - out.stat.mode == "1461"
+        fail_msg: |
+          out={{ out }}
 
-    - file:
+    - name: Cleanup
+      file:
         state: absent
         path: "{{item}}"
       with_items:
@@ -109,3 +104,5 @@
       - /tmp/copy-with-mode.out
 
     # end of cleaning out files
+  tags:
+    - fixup_perms2__copy

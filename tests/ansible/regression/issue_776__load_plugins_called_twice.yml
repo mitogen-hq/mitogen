@@ -1,0 +1,75 @@
+# https://github.com/mitogen-hq/mitogen/issues/776
+---
+- name: regression/issue_776__load_plugins_called_twice.yml
+  hosts: test-targets
+  become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
+  # Delayed until after the end_play, due to Python version requirements
+  gather_facts: false
+  tags:
+    - issue_776
+  vars:
+    ansible_python_interpreter: "{{ pkg_mgr_python_interpreter }}"
+    package: rsync  # Chosen to exist in all tested distros/package managers
+  tasks:
+    # The package management modules require using the same Python version
+    # as the target's package manager libraries. This is sometimes in conflict
+    # with Ansible requirements, e.g. Ansible 10 (ansible-core 2.17) does not
+    # support Python 2.x on targets.
+    - meta: end_play
+      when:
+        - ansible_version.full is version('2.17', '>=', strict=True)
+
+    - name: Gather facts manually
+      setup:
+
+    - name: Switch to archived package repositories
+      copy:
+        dest: "{{ item.dest }}"
+        content: "{{ item.content }}"
+        mode: u=rw,go=r
+      loop: "{{ pkg_repos_overrides }}"
+      loop_control:
+        label: "{{ item.dest }}"
+
+    - name: Add signing keys
+      copy:
+        src: "{{ item.src }}"
+        dest: "/etc/apt/trusted.gpg.d/{{ item.src | basename }}"
+        mode: u=rw,go=r
+      loop:
+        - src: debian-archive-bullseye-automatic.gpg  # Debian 11
+        - src: debian-archive-bookworm-automatic.gpg  # Debian 12
+      when:
+        # Ideally this would check for Debian 11, but distribution_major_version
+        # is unpopulated sometimes.
+        - ansible_facts.distribution == "Debian"
+
+    - name: Update package index
+      apt:
+        update_cache: true
+      when:
+        - ansible_facts.pkg_mgr in ["apt"]
+
+    - name: Test package module 1st call
+      package:
+        name: "{{ package }}"
+        state: present
+
+    - name: Test package module 2nd call
+      package:
+        name: "{{ package }}"
+        state: present
+
+    - name: Test dnf module 2nd call
+      dnf:
+        name: "{{ package }}"
+        state: present
+      when:
+        - ansible_facts.pkg_mgr == 'dnf'
+
+    - name: Test dnf module 2nd call
+      dnf:
+        name: "{{ package }}"
+        state: present
+      when:
+        - ansible_facts.pkg_mgr == 'dnf'

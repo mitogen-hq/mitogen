@@ -813,7 +813,7 @@ executes under the runtime importer lock, ensuring :py:keyword:`import`
 statements executing in local threads are serialized.
 
 .. note::
-   
+
     In Python 2, :py:exc:`ImportError` is raised when :py:keyword:`import` is
     attempted while the runtime import lock is held by another thread,
     therefore imports must be serialized by only attempting them from the main
@@ -1038,7 +1038,7 @@ receive items in the order they are requested, as they become available.
    Mitogen enables SSH compression by default, there are circumstances where
    disabling SSH compression is desirable, and many scenarios for future
    connection methods where transport-layer compression is not supported at
-   all. 
+   all.
 
 .. [#f2] Compression may seem redundant, however it is basically free and reducing IO
    is always a good idea. The 33% / 200 byte saving may mean the presence or

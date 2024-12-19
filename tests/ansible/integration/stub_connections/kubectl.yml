@@ -2,21 +2,24 @@
 - name: integration/stub_connections/kubectl.yml
   hosts: test-targets
   gather_facts: false
-  any_errors_fatal: true
   tasks:
-  - meta: end_play
-    when: not is_mitogen
+  - include_tasks: ../_mitogen_only.yml
 
   - meta: end_play
-    when: ansible_version.full < '2.5'
+    when:
+      - ansible_version.full is version('2.5', '<', strict=True)
 
   - custom_python_detect_environment:
     vars:
       ansible_connection: kubectl
-      ansible_python_interpreter: python  # avoid Travis virtualenv breakage
       mitogen_kubectl_path: stub-kubectl.py
     register: out
 
   - assert:
       that:
       - out.env.THIS_IS_STUB_KUBECTL == '1'
+      fail_msg: |
+        out={{ out }}
+  tags:
+    - kubectl
+    - mitogen_only

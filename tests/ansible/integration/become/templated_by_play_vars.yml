@@ -1,0 +1,49 @@
+- name: integration/become/templated_by_play_vars.yml
+  hosts: tt_become_bare
+  gather_facts: false
+  vars:
+    ansible_become: true
+    ansible_become_exe: "{{ 'sudo' | trim }}"
+    ansible_become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+    ansible_become_method: "{{ 'sudo' | trim }}"
+    ansible_become_user: "{{ 'root' | trim }}"
+  tasks:
+    - name: Templated become by play vars, no password
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_play_vars_whoami
+      failed_when:
+        - become_templated_by_play_vars_whoami is failed
+          or become_templated_by_play_vars_whoami.stdout != 'root'
+
+- name: integration/become/templated_by_play_vars.yml
+  hosts: tt_become_bare
+  gather_facts: false
+  vars:
+    ansible_become: true
+    ansible_become_exe: "{{ 'sudo' | trim }}"
+    ansible_become_flags: "{{ '--set-home --stdin --non-interactive' | trim }}"
+    ansible_become_method: "{{ 'sudo' | trim }}"
+    ansible_become_pass: "{{ 'pw_required_password' | trim }}"
+    ansible_become_user: "{{ 'mitogen__pw_required' | trim }}"
+  tasks:
+    - name: Gather facts (avoiding any unprivileged become)
+      vars:
+        ansible_become: false
+      setup:
+
+    - meta: reset_connection
+
+    - name: Templated become by play vars, password
+      command:
+        cmd: whoami
+      changed_when: false
+      check_mode: false
+      register: become_templated_by_play_vars_password_whoami
+      failed_when:
+        - become_templated_by_play_vars_password_whoami is failed
+          or become_templated_by_play_vars_password_whoami.stdout != 'mitogen__pw_required'
+      when:
+        - become_unpriv_available

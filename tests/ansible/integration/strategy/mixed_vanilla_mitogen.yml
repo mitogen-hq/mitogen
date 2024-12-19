@@ -1,24 +1,31 @@
 
 - name: integration/strategy/mixed_vanilla_mitogen.yml (linear->mitogen->linear)
   hosts: test-targets[0]
-  any_errors_fatal: true
   tasks:
     - connection: local
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
         ansible-playbook
-        -i "{{MITOGEN_INVENTORY_FILE}}"
-        -vvv
+        {% for inv in ansible_inventory_sources %}
+        -i "{{ inv }}"
+        {% endfor %}
         integration/strategy/_mixed_mitogen_vanilla.yml
       args:
         chdir: ../..
       register: out
 
     - connection: local
+      environment:
+        ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
         ansible-playbook
-        -i "{{MITOGEN_INVENTORY_FILE}}"
-        -vvv
+        {% for inv in ansible_inventory_sources %}
+        -i "{{ inv }}"
+        {% endfor %}
         integration/strategy/_mixed_vanilla_mitogen.yml
       args:
         chdir: ../..
       register: out
+  tags:
+    - mixed_vanilla_mitogen

@@ -1,0 +1,53 @@
+- name: integration/ssh/args_by_play_taskvar.yml
+  hosts: tt_targets_bare
+  gather_facts: false
+  vars:
+    ansible_host: "{{ hostvars[groups['test-targets'][0]].host | default('localhost') }}"
+    ansible_password: "{{ 'has_sudo_nopw_password' | trim }}"
+    ansible_port: "{{ hostvars[groups['test-targets'][0]].ansible_port | default(22) }}"
+    ansible_ssh_common_args: >-
+      -o PermitLocalCommand=yes
+      -o LocalCommand="touch {{ ssh_args_canary_file }}"
+    ansible_user: "{{ 'mitogen__has_sudo_nopw' | trim }}"
+    ssh_args_canary_file: "/tmp/ssh_args_by_play_taskvar_{{ inventory_hostname }}"
+  tasks:
+    # Test that ansible_ssh_common_args are templated; ansible_ssh_args &
+    # ansible_ssh_extra_args aren't directly tested, we assume they're similar.
+    # TODO Replace LocalCommand canary with SetEnv canary, to simplify test.
+    #      Requires modification of sshd_config files to add AcceptEnv ...
+    - name: Test templating of ansible_ssh_common_args et al, by play taskvars
+      block:
+        - name: Ensure no lingering canary files
+          file:
+            path: "{{ ssh_args_canary_file }}"
+            state: absent
+          delegate_to: localhost
+
+        - name: Reset connections to force new ssh execution
+          meta: reset_connection
+
+        - name: Perform SSH connection, to trigger side effect
+          ping:
+
+        - name: Stat for canary file created by side effect
+          stat:
+            path: "{{ ssh_args_canary_file }}"
+          delegate_to: localhost
+          register: ssh_args_by_play_taskvar_canary_stat
+
+        - assert:
+            that:
+              - ssh_args_by_play_taskvar_canary_stat.stat.exists == true
+            quiet: true
+            success_msg: "Canary found: {{ ssh_args_canary_file }}"
+            fail_msg: |
+              ssh_args_canary_file={{ ssh_args_canary_file }}
+              ssh_args_by_play_taskvar_canary_stat={{ ssh_args_by_play_taskvar_canary_stat }}
+      always:
+        - name: Cleanup canary files
+          file:
+            path: "{{ ssh_args_canary_file }}"
+            state: absent
+          delegate_to: localhost
+  tags:
+    - issue_905

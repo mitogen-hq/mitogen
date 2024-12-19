@@ -1,15 +1,18 @@
 #!/usr/bin/env python
 # Run tests/ansible/all.yml under Ansible and Ansible-Mitogen
 
+import collections
 import glob
 import os
 import signal
 import sys
 
+import jinja2
+
 import ci_lib
-from ci_lib import run
 
 
+TEMPLATES_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible/templates')
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
 HOSTS_DIR = os.path.join(ci_lib.TMP, 'hosts')
 
@@ -32,45 +35,51 @@ ci_lib.check_stray_processes(interesting)
 
 
 with ci_lib.Fold('docker_setup'):
-    containers = ci_lib.make_containers()
+    containers = ci_lib.container_specs(ci_lib.DISTRO_SPECS.split())
     ci_lib.start_containers(containers)
 
 
 with ci_lib.Fold('job_setup'):
     os.chdir(TESTS_DIR)
-    os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 7))
+    os.chmod('../data/docker/mitogen__has_sudo_pubkey.key', int('0600', 8))
 
-    run("mkdir %s", HOSTS_DIR)
+    ci_lib.run("mkdir %s", HOSTS_DIR)
     for path in glob.glob(TESTS_DIR + '/hosts/*'):
         if not path.endswith('default.hosts'):
-            run("ln -s %s %s", path, HOSTS_DIR)
+            ci_lib.run("ln -s %s %s", path, HOSTS_DIR)
 
+    distros = collections.defaultdict(list)
+    families = collections.defaultdict(list)
+    for container in containers:
+        distros[container['distro']].append(container['name'])
+        families[container['family']].append(container['name'])
+
+    jinja_env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(searchpath=TEMPLATES_DIR),
+        lstrip_blocks=True,  # Remove spaces and tabs from before a block
+        trim_blocks=True,  # Remove first newline after a block
+    )
+    inventory_template = jinja_env.get_template('test-targets.j2')
     inventory_path = os.path.join(HOSTS_DIR, 'target')
+
     with open(inventory_path, 'w') as fp:
-        fp.write('[test-targets]\n')
-        fp.writelines(
-            "%(name)s "
-            "ansible_host=%(hostname)s "
-            "ansible_port=%(port)s "
-            "ansible_python_interpreter=%(python_path)s "
-            "ansible_user=mitogen__has_sudo_nopw "
-            "ansible_password=has_sudo_nopw_password"
-            "\n"
-            % container
-            for container in containers
-        )
+        fp.write(inventory_template.render(
+            containers=containers,
+            distros=distros,
+            families=families,
+        ))
 
     ci_lib.dump_file(inventory_path)
 
     if not ci_lib.exists_in_path('sshpass'):
-        run("sudo apt-get update")
-        run("sudo apt-get install -y sshpass")
+        ci_lib.run("sudo apt-get update")
+        ci_lib.run("sudo apt-get install -y sshpass")
 
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
-        run('./run_ansible_playbook.py %s -i "%s" -vvv %s',
+        ci_lib.run('./run_ansible_playbook.py %s -i "%s" %s',
             playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
     except:
         pause_if_interactive()

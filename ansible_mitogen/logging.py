@@ -26,19 +26,19 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
+__metaclass__ = type
+
 import logging
 import os
+
+import ansible.utils.display
 
 import mitogen.core
 import mitogen.utils
 
-try:
-    from __main__ import display
-except ImportError:
-    from ansible.utils.display import Display
-    display = Display()
 
+display = ansible.utils.display.Display()
 
 #: The process name set via :func:`set_process_name`.
 _process_name = None

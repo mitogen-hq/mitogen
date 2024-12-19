@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
 import os
-import shutil
 import sys
 
 import ci_lib
 
-
-# DebOps only supports Debian.
-ci_lib.DISTROS = ['debian'] * ci_lib.TARGET_COUNT
 
 project_dir = os.path.join(ci_lib.TMP, 'project')
 vars_path = 'ansible/inventory/group_vars/debops_all_hosts.yml'
@@ -18,7 +13,11 @@ docker_hostname = ci_lib.get_docker_hostname()
 
 
 with ci_lib.Fold('docker_setup'):
-    containers = ci_lib.make_containers(port_offset=500, name_prefix='debops-')
+    containers = ci_lib.container_specs(
+        ['debian*2'],
+        base_port=2700,
+        name_template='debops-target-%(distro)s-%(index)d',
+    )
     ci_lib.start_containers(containers)
 
 
@@ -60,11 +59,7 @@ with ci_lib.Fold('job_setup'):
             for container in containers
         )
 
-    print()
-    print(' echo --- ansible/inventory/hosts: ---')
-    ci_lib.run('cat ansible/inventory/hosts')
-    print('---')
-    print()
+    ci_lib.dump_file('ansible/inventory/hosts')
 
     # Now we have real host key checking, we need to turn it off
     os.environ['ANSIBLE_HOST_KEY_CHECKING'] = 'False'
