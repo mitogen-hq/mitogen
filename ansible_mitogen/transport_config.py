@@ -140,8 +140,7 @@ def parse_python_path(s, task_vars, action, rediscover_python):
     discovery value in `facts_from_task_vars` like how Ansible handles this.
     """
     if not s:
-        # if python_path doesn't exist, default to `auto` and attempt to discover it
-        s = 'auto'
+        raise ValueError("Expected Python path or discovery mode, got: %r", s)
 
     s = run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python)
     # if unable to determine python_path, fallback to '/usr/bin/python'
@@ -493,12 +492,14 @@ class PlayContextSpec(Spec):
         return self._connection_option('port')
 
     def python_path(self, rediscover_python=False):
-        s = self._connection.get_task_var('ansible_python_interpreter')
+        path_or_discovery_mode = C.config.get_config_value(
+            'INTERPRETER_PYTHON', variables=self._task_vars,
+        )
         # #511, #536: executor/module_common.py::_get_shebang() hard-wires
         # "/usr/bin/python" as the default interpreter path if no other
         # interpreter is specified.
         return parse_python_path(
-            s,
+            path_or_discovery_mode,
             task_vars=self._task_vars,
             action=self._action,
             rediscover_python=rediscover_python)
