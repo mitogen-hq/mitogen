@@ -633,7 +633,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         does not make sense to extract connection-related configuration for the
         delegated-to machine from them.
         """
-        def _fetch_task_var(task_vars, key):
+        def _fetch_task_var(task_vars, key, default):
             """
             Special helper func in case vars can be templated
             """
@@ -651,15 +651,16 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                         escape_backslashes=False
                     )
                 return val
+            return default
 
         task_vars = self._get_task_vars()
         if self.delegate_to_hostname is None:
-            return _fetch_task_var(task_vars, key)
+            return _fetch_task_var(task_vars, key, default)
         else:
             delegated_vars = task_vars['ansible_delegated_vars']
             if self.delegate_to_hostname in delegated_vars:
                 task_vars = delegated_vars[self.delegate_to_hostname]
-                return _fetch_task_var(task_vars, key)
+                return _fetch_task_var(task_vars, key, default)
 
         return default
 

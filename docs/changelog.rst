@@ -27,6 +27,7 @@ In progress (unreleased)
   with `meta: reset_connection`
 * :gh:issue:`1083` :mod:`ansible_mitogen`: Templated connection timeout
   (e.g. ``ansible_timeout``).
+* :gh:issue:`740` respect `interpreter_python` global configuration variable
 
 
 v0.3.19 (2024-12-02)
