@@ -43,6 +43,7 @@ import ansible.vars.clean
 from ansible.module_utils.common.text.converters import to_bytes, to_text
 from ansible.module_utils.six.moves import shlex_quote
 from ansible.parsing.utils.jsonify import jsonify
+from ansible.utils.display import Display
 
 import mitogen.core
 import mitogen.select
@@ -53,6 +54,8 @@ import ansible_mitogen.target
 import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
 
+
+display = Display()
 
 LOG = logging.getLogger(__name__)
 
@@ -107,9 +110,19 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         self._rediscovered_python = False
         # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
         self._discovered_interpreter_key = None
-        self._discovered_interpreter = False
+        self._discovered_interpreterr = False
         self._discovery_deprecation_warnings = []
         self._discovery_warnings = []
+
+    @property
+    def _discovered_interpreter(self):
+        return self._discovered_interpreterr
+
+    @_discovered_interpreter.setter
+    def _discovered_interpreter(self, value):
+        if value:
+            display.warning('%r %s' % (value, traceback.format_stack()), formatted=True)
+        self._discovered_interpreterr = value
 
     def run(self, tmp=None, task_vars=None):
         """
