@@ -31,15 +31,39 @@ import os
 
 from setuptools import find_packages, setup
 
+def parse_assignment(line, starts_with):
+    if line.startswith(starts_with):
+        _, _, s = line.partition('=')
+        parts = ast.literal_eval(s.strip())
+        return parts
+    return None
+
 
 def grep_version():
     path = os.path.join(os.path.dirname(__file__), 'mitogen/__init__.py')
     with open(path) as fp:
         for line in fp:
-            if line.startswith('__version__'):
-                _, _, s = line.partition('=')
-                parts = ast.literal_eval(s.strip())
-                return '.'.join(str(part) for part in parts)
+            parts = parse_assignment(line, '__version__')
+            if parts:
+                return '.'.join(map(str, parts))
+
+
+def ansible_core_version():
+    path = os.path.join(os.path.dirname(__file__), 'ansible_mitogen/loaders.py')
+    min_version = None
+    with open(path) as fp:
+        for line in fp:
+            ansible_version_min = parse_assignment(line, 'ANSIBLE_VERSION_MIN')
+            if ansible_version_min:
+                # ansible-core's minimum version is 2.11, older versions were
+                # called ansible-base.
+                if ansible_version_min == (2, 10):
+                    ansible_version_min = (2, 11)
+                min_version = '.'.join(map(str, ansible_version_min))
+            ansible_version_max = parse_assignment(line, 'ANSIBLE_VERSION_MAX')
+            if ansible_version_max:
+                major, minor = ansible_version_max
+                return (min_version, '{}.{}'.format(major, minor + 1))
 
 
 def long_description():
@@ -84,4 +108,7 @@ setup(
         'Topic :: System :: Distributed Computing',
         'Topic :: System :: Systems Administration',
     ],
+    extras_require = {
+        'ansible-core': ['ansible-core>={},<{}'.format(*ansible_core_version())],
+    },
 )
