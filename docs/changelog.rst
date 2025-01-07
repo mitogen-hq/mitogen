@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.20 (2025-01-07)
+--------------------
+
 * :gh:issue:`1079` :mod:`ansible_mitogen`: Fix :ans:mod:`wait_for_connection`
   timeout with templated ``ansible_python_interpreter``
 * :gh:issue:`1079` :mod:`ansible_mitogen`: Fix templated python interpreter
