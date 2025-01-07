@@ -328,8 +328,12 @@ class StrategyMixin(object):
         finally:
             ansible_mitogen.process.set_worker_model(None)
 
-    def _smuggle_to_connction_reset(self, task, play_context, iterator, target_host):
-        # Workaround for https://github.com/ansible/ansible/issues/84238
+    def _smuggle_to_connection_reset(self, task, play_context, iterator, target_host):
+        """
+        Create a templar and make it available for use in Connection.reset().
+        This allows templated connection variables to be used when Mitogen
+        reconstructs its connection stack.
+        """
         variables = self._variable_manager.get_vars(
             play=iterator._play, host=target_host, task=task,
             _hosts=self._hosts_cache, _hosts_all=self._hosts_cache_all,
@@ -337,13 +341,29 @@ class StrategyMixin(object):
         templar = ansible.template.Templar(
             loader=self._loader, variables=variables,
         )
+
+        # Required for remote_user option set by variable (e.g. ansible_user).
+        # Without it remote_user in ansible.cfg gets used.
+        play_context = play_context.set_task_and_variable_override(
+            task=task, variables=variables, templar=templar,
+        )
+        play_context.post_validate(templar=templar)
+
+        # Required for timeout option set by variable (e.g. ansible_timeout).
+        # Without it the task timeout keyword (default: 0) gets used.
+        play_context.update_vars(variables)
+
+        # Stash the task and templar somewhere Connection.reset() can find it
         play_context.vars.update({
             '_mitogen.smuggled.reset_connection': (task, templar),
         })
+        return play_context
 
     def _execute_meta(self, task, play_context, iterator, target_host):
         if task.args['_raw_params'] == 'reset_connection':
-            self._smuggle_to_connction_reset(task, play_context, iterator, target_host)
+            play_context = self._smuggle_to_connection_reset(
+                task, play_context, iterator, target_host,
+            )
 
         return super(StrategyMixin, self)._execute_meta(
             task, play_context, iterator, target_host,

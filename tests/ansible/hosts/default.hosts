@@ -19,6 +19,9 @@ ssh-common-args ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami')
 ansible_ssh_common_args=-o PermitLocalCommand=yes -o LocalCommand="touch {{ ssh_args_canary_file }}"
 ssh_args_canary_file=/tmp/ssh_args_by_inv_{{ inventory_hostname }}
 
+[issue1079]
+wait-for-connection ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
+
 [tt_targets_bare]
 tt-bare
 
@@ -47,5 +50,7 @@ tt-host-key-checking        ansible_host=localhost    ansible_host_key_checking=
 tt-password                 ansible_host=localhost    ansible_password="{{ 'has_sudo_nopw_password' | trim }}"    ansible_user=mitogen__has_sudo_nopw
 tt-port                     ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_port="{{ 22 | int }}"    ansible_user=mitogen__has_sudo_nopw
 tt-private-key-file         ansible_host=localhost    ansible_private_key_file="{{ git_basedir }}/tests/data/docker/mitogen__has_sudo_pubkey.key"    ansible_user=mitogen__has_sudo_pubkey
+tt-python-interpreter       ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_python_interpreter="{{ ansible_playbook_python | trim }}"    ansible_user=mitogen__has_sudo_nopw
 tt-remote-user              ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_user="{{ 'mitogen__has_sudo_nopw' | trim }}"
 tt-ssh-executable           ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_ssh_executable="{{ 'ssh' | trim }}"    ansible_user=mitogen__has_sudo_nopw
+tt-timeout                  ansible_host=localhost    ansible_password=has_sudo_nopw_password    ansible_timeout="{{ 5 | int }}"    ansible_user=mitogen__has_sudo_nopw

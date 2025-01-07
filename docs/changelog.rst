@@ -18,6 +18,19 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.20 (2025-01-07)
+--------------------
+
+* :gh:issue:`1079` :mod:`ansible_mitogen`: Fix :ans:mod:`wait_for_connection`
+  timeout with templated ``ansible_python_interpreter``
+* :gh:issue:`1079` :mod:`ansible_mitogen`: Fix templated python interpreter
+  with `meta: reset_connection`
+* :gh:issue:`1083` :mod:`ansible_mitogen`: Templated connection timeout
+  (e.g. ``ansible_timeout``).
+* :gh:issue:`740` :mod:`ansible_mitogen`: Respect ``interpreter_python``
+  in ``ansible.cfg`` and ``ANSIBLE_PYTHON_INTERPRETER`` environment variable.
+
+
 v0.3.19 (2024-12-02)
 --------------------
 
