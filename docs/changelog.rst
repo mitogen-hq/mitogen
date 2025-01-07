@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1209` docs: Fix Netlify build of website
+
 
 v0.3.20 (2025-01-07)
 --------------------
