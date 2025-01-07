@@ -1,0 +1,22 @@
+- name: regression/issue_1079__wait_for_connection_timeout.yml
+  hosts: issue1079
+  gather_facts: false
+  tasks:
+    - name: Wait for connection at start of play
+      wait_for_connection:
+        timeout: 5
+  tags:
+    - issue_1079
+    - wait_for_connection
+
+- hosts: issue1079
+  gather_facts: false
+  tasks:
+    - meta: reset_connection
+    - name: Wait for connection after reset_connection
+      wait_for_connection:
+        timeout: 5
+  tags:
+    - issue_1079
+    - reset_connection
+    - wait_for_connection
