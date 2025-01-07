@@ -493,12 +493,24 @@ class PlayContextSpec(Spec):
         return self._connection_option('port')
 
     def python_path(self, rediscover_python=False):
-        s = self._connection.get_task_var('ansible_python_interpreter')
-        # #511, #536: executor/module_common.py::_get_shebang() hard-wires
-        # "/usr/bin/python" as the default interpreter path if no other
-        # interpreter is specified.
+        # See also
+        #   - ansible_mitogen.connecton.Connection.get_task_var()
+        try:
+            delegated_vars = self._task_vars['ansible_delegated_vars']
+            variables = delegated_vars[self._connection.delegate_to_hostname]
+        except KeyError:
+            variables = self._task_vars
+
+        interpreter_python = C.config.get_config_value(
+            'INTERPRETER_PYTHON', variables=variables,
+        )
+
+        if '{{' in interpreter_python or '{%' in interpreter_python:
+            templar = self._connection.templar
+            interpreter_python = templar.template(interpreter_python)
+
         return parse_python_path(
-            s,
+            interpreter_python,
             task_vars=self._task_vars,
             action=self._action,
             rediscover_python=rediscover_python)
@@ -513,14 +525,10 @@ class PlayContextSpec(Spec):
         return self._connection_option('ssh_executable')
 
     def timeout(self):
-        return self._play_context.timeout
+        return self._connection_option('timeout')
 
     def ansible_ssh_timeout(self):
-        return (
-            self._connection.get_task_var('ansible_timeout') or
-            self._connection.get_task_var('ansible_ssh_timeout') or
-            self.timeout()
-        )
+        return self.timeout()
 
     def ssh_args(self):
         return [
