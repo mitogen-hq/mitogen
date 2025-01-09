@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1213` tests: Enable default Python warnings
 
 
 v0.3.21 (2025-01-20)
