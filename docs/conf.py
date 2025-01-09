@@ -1,8 +1,21 @@
+import re
 import sys
 
 sys.path.append('.')
 
-VERSION = '0.3.9'
+
+def changelog_version(path, encoding='utf-8'):
+    version_pattern = re.compile(
+        r'^v(?P<version>[0-9]+\.[0-9]+\.[0-9]+)',
+        re.MULTILINE,
+    )
+
+    with open(path, encoding=encoding) as f:
+        match = version_pattern.search(f.read())
+        return match.group('version')
+
+
+VERSION = changelog_version('changelog.rst')
 
 author = u'Network Genomics'
 copyright = u'2021, the Mitogen authors'
