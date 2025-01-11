@@ -99,5 +99,5 @@ from ansible.plugins.loader import shell_loader
 from ansible.plugins.loader import strategy_loader
 
 # These are original, unwrapped implementations
-action_loader__get = action_loader.get
-connection_loader__get = connection_loader.get_with_context
+action_loader__get_with_context = action_loader.get_with_context
+connection_loader__get_with_context = connection_loader.get_with_context

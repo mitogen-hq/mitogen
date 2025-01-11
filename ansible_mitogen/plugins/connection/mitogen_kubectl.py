@@ -46,14 +46,12 @@ import ansible_mitogen.connection
 import ansible_mitogen.loaders
 
 
-_get_result = ansible_mitogen.loaders.connection_loader__get(
-    'kubectl',
-    class_only=True,
-)
-
-
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'kubectl'
+    (vanilla_class, load_context) = ansible_mitogen.loaders.connection_loader__get_with_context(
+        'kubectl',
+        class_only=True,
+    )
 
     not_supported_msg = (
         'The "mitogen_kubectl" plug-in requires a version of Ansible '
@@ -61,17 +59,12 @@ class Connection(ansible_mitogen.connection.Connection):
     )
 
     def __init__(self, *args, **kwargs):
-        if not _get_result:
+        if not Connection.vanilla_class:
             raise ansible.errors.AnsibleConnectionFailure(self.not_supported_msg)
         super(Connection, self).__init__(*args, **kwargs)
 
     def get_extra_args(self):
-        try:
-            # Ansible < 2.10, _get_result is the connection class
-            connection_options = _get_result.connection_options
-        except AttributeError:
-            # Ansible >= 2.10, _get_result is a get_with_context_result
-            connection_options = _get_result.object.connection_options
+        connection_options = Connection.vanilla_class.connection_options
         parameters = []
         for key in connection_options:
             task_var_name = 'ansible_%s' % key
