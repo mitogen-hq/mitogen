@@ -22,6 +22,8 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1209` docs: Fix Netlify build of website
+* :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
+  :py:func:`pkgutil.find_loader`
 
 
 v0.3.20 (2025-01-07)
