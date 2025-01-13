@@ -22,6 +22,8 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1209` docs: Fix Netlify build of website
+* :gh:issue:`1216` :mod:`ansible_mitogen`: Add all ansible_freeipa modules to
+  the always-fork list.
 
 
 v0.3.20 (2025-01-07)
