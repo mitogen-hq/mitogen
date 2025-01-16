@@ -47,6 +47,7 @@ import ansible_mitogen.process
 import ansible.executor.process.worker
 import ansible.template
 import ansible.utils.sentinel
+import ansible.playbook.play_context
 import ansible.plugins.loader
 
 
@@ -135,7 +136,17 @@ def wrap_connection_loader__get_with_context(name, *args, **kwargs):
     connection_loader.get_with_context() calls for some transports into
     requests for a compatible Mitogen transport.
     """
-    if name in REDIRECTED_CONNECTION_PLUGINS:
+    is_play_using_mitogen_connection = None
+    if len(args) > 0 and isinstance(args[0], ansible.playbook.play_context.PlayContext):
+        play_context = args[0]
+        is_play_using_mitogen_connection = play_context.connection in REDIRECTED_CONNECTION_PLUGINS
+
+    # assume true if we're not in a play context since we're using a Mitogen strategy
+    if is_play_using_mitogen_connection is None:
+        is_play_using_mitogen_connection = True
+
+    redirect_connection = name in REDIRECTED_CONNECTION_PLUGINS and is_play_using_mitogen_connection
+    if redirect_connection:
         name = 'mitogen_' + name
 
     return ansible_mitogen.loaders.connection_loader__get_with_context(name, *args, **kwargs)
