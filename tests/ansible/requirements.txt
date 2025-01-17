@@ -1,7 +1,13 @@
-paramiko==2.3.2  # Last 2.6-compat version.
+paramiko==2.12.0;           python_version <= '2.7'
+paramiko==3.5.0;            python_version >= '3.6'
+
 # Incompatible with pip >= 72, due to removal of `setup.py test`:
 #   ModuleNotFoundError: No module named 'setuptools.command.test'
 # https://github.com/pypa/setuptools/issues/4519
 hdrhistogram==0.6.1
+
+ncclient==0.6.13; python_version <= '2.7'
+ncclient==0.6.16; python_version > '2.7'
+
 PyYAML==3.11; python_version < '2.7'
 PyYAML==5.3.1; python_version >= '2.7'  # Latest release (Jan 2021)
