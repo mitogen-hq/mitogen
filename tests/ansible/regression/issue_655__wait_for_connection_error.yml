@@ -11,7 +11,10 @@
   tasks:
     - meta: end_play
       when:
-        # Podman versions available in Homebrew have dropped macOS 12 support.
+        # Podman versions available in Homebrew require macOS 13+ (Ventura).
+        # https://formulae.brew.sh/formula/podman
+        # See also
+        #   - issue_766__get_with_context.yml
         - ansible_facts.system == 'Darwin'
         - ansible_facts.distribution_version is version('13.0', '<', strict=True)
 
