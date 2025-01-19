@@ -197,7 +197,7 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(2+os_fork, self.router.responder.get_module_count)
         self.assertEqual(2+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(10000, self.router.responder.good_load_module_size)
-        self.assertGreater(40000, self.router.responder.good_load_module_size)
+        self.assertGreater(41000, self.router.responder.good_load_module_size)
 
 
 class BlacklistTest(testlib.TestCase):

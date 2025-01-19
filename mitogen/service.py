@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# !mitogen: minify_safe
 
 import grp
 import logging
@@ -204,7 +203,7 @@ class Error(Exception):
     """
     Raised when an error occurs configuring a service or pool.
     """
-    pass  # cope with minify_source() bug.
+    pass
 
 
 class Policy(object):
