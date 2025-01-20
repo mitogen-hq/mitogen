@@ -124,6 +124,7 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li><a href="https://www.epartment.nl/">Epartment</a></li>
     <li><a href="http://andrianaivo.org/">Fidy Andrianaivo</a> &mdash; <em>never let a human do an ansible job ;)</em></li>
     <li><a href="https://www.channable.com">rkrzr</a></li>
+    <li><a href="https://github.com/Nihlus">Jarl Gullberg</a></li>
     <li>jgadling</li>
     <li>John F Wall &mdash; <em>Making Ansible Great with Massive Parallelism</em></li>
     <li><a href="https://github.com/jrosser">Jonathan Rosser</a></li>
@@ -132,6 +133,7 @@ sponsorship and outstanding future-thinking of its early adopters.
     <li><a href="https://github.com/lberruti">Luca Berruti</li>
     <li>Lewis Bellwood &mdash; <em>Happy to be apart of a great project.</em></li>
     <li>luto</li>
+    <li><a href="https://github.com/markafarrell">@markafarrell</a></li>
     <li><a href="https://mayeu.me/">Mayeu a.k.a Matthieu Maury</a></li>
     <li><a href="https://github.com/madsi1m">Michael D'Silva</a></li>
     <li><a href="https://github.com/mordekasg">mordek</a></li>
