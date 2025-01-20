@@ -21,7 +21,17 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+
+v0.3.21 (2025-01-20)
+--------------------
+
 * :gh:issue:`1209` docs: Fix Netlify build of website
+* :gh:issue:`1216` :mod:`ansible_mitogen`: Add all ansible_freeipa modules to
+  the always-fork list.
+* :gh:issue:`766` :mod:`ansible_mitogen`: Fix ""could not recover task_vars"
+  and "get_with_context_result object has no attribute _create_control_path"
+  when using ``kubectl``, ``netconf``, or ``network_cli`` connection plugins.
 
 
 v0.3.20 (2025-01-07)
