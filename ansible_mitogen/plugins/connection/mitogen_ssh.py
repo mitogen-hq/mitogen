@@ -60,7 +60,7 @@ import ansible_mitogen.loaders
 
 class Connection(ansible_mitogen.connection.Connection):
     transport = 'ssh'
-    vanilla_class = ansible_mitogen.loaders.connection_loader__get(
+    (vanilla_class, load_context) = ansible_mitogen.loaders.connection_loader__get_with_context(
         'ssh',
         class_only=True,
     )
