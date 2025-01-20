@@ -485,8 +485,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # TODO: what exception is thrown?
             except:
                 # we've reached the last python attempted and failed
-                # TODO: could use enumerate(), need to check which version of python first had it though
-                if possible_python == 'python':
+                if possible_python == possible_pythons[-1]:
                     raise
                 else:
                     continue
