@@ -105,6 +105,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         connection.templar = self._templar
 
         self._mitogen_discovering_interpreter = False
+        self._mitogen_interpreter_candidate = None
         self._mitogen_rediscovered_interpreter = False
 
     def run(self, tmp=None, task_vars=None):
@@ -485,7 +486,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
         for possible_python in possible_pythons:
             try:
-                self._possible_python_interpreter = possible_python
+                self._mitogen_interpreter_candidate = possible_python
                 rc, stdout, stderr = _run_cmd()
             # TODO: what exception is thrown?
             except:

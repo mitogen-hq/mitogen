@@ -88,7 +88,7 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
     """
     # keep trying different interpreters until we don't error
     if action._mitogen_discovering_interpreter:
-        return action._possible_python_interpreter
+        return action._mitogen_interpreter_candidate
 
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
         # python is the only supported interpreter_name as of Ansible 2.8.8
