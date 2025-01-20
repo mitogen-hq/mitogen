@@ -476,18 +476,12 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # not used, just adding a filler value
             possible_pythons = ['python']
 
-        def _run_cmd():
-            return self._connection.exec_command(
-                cmd=cmd,
-                in_data=in_data,
-                sudoable=sudoable,
-                mitogen_chdir=chdir,
-            )
-
         for possible_python in possible_pythons:
             try:
                 self._mitogen_interpreter_candidate = possible_python
-                rc, stdout, stderr = _run_cmd()
+                rc, stdout, stderr = self._connection.exec_command(
+                    cmd, in_data, sudoable, mitogen_chdir=chdir,
+                )
             # TODO: what exception is thrown?
             except:
                 # we've reached the last python attempted and failed
