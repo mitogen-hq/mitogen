@@ -1,0 +1,64 @@
+# https://github.com/mitogen-hq/mitogen/issues/776
+---
+- name: regression/issue_766__get_with_context.yml
+  hosts: localhost
+  # Gather facts to use *and* to trigger any "could not recover task_vars" error
+  # https://github.com/mitogen-hq/mitogen/pull/1215#issuecomment-2596421111
+  gather_facts: true
+  vars:
+    netconf_container_image: ghcr.io/mitogen-hq/sysrepo-netopeer2:latest
+    netconf_container_name: sysprep
+    netconf_container_port: 8030
+
+  tasks:
+    - meta: end_play
+      when:
+        # Podman can be installed on macOS, but authenticating to gchr.io isn't
+        # worth the trouble right now.
+        # See also
+        #   - issue_655__wait_for_connection_error.yml
+        - ansible_facts.system == 'Darwin'
+
+    - meta: end_play
+      when:
+        # A failure during the ansible.netcommon.netconf_get task, when run
+        # with Ansible 4 (ansible-core 2.11) & associated collections.
+        # ansible.module_utils.connection.ConnectionError: Method not found
+        # https://github.com/mitogen-hq/mitogen/actions/runs/12854359099/job/35838635886
+        - ansible_version.full is version('2.11', '>=', strict=True)
+        - ansible_version.full is version('2.12', '<', strict=True)
+
+    - block:
+        - name: Start container
+          command:
+            cmd: >-
+              podman run
+              --name "{{ netconf_container_name }}"
+              --detach
+              --rm
+              --publish "{{ netconf_container_port }}:830"
+              "{{ netconf_container_image }}"
+          changed_when: true
+
+        - name: Wait for container
+          # TODO robust condition. wait_for + search_regex? wait_for_connection?
+          wait_for:
+            timeout: 5
+
+        - name: Get running configuration and state data
+          vars:
+            ansible_connection: netconf
+            ansible_user: netconf
+            ansible_password: netconf
+            ansible_port: "{{ netconf_container_port }}"
+            ansible_host_key_checking: false
+            ansible_python_interpreter: "{{ ansible_playbook_python }}"
+          ansible.netcommon.netconf_get:
+
+      always:
+        - name: Cleanup container
+          command:
+            cmd: podman stop "{{ netconf_container_name }}"
+          changed_when: true
+  tags:
+    - issue_766

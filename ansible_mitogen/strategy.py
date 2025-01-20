@@ -47,6 +47,8 @@ import ansible_mitogen.process
 import ansible.executor.process.worker
 import ansible.template
 import ansible.utils.sentinel
+import ansible.playbook.play_context
+import ansible.plugins.loader
 
 
 def _patch_awx_callback():
@@ -76,12 +78,12 @@ def _patch_awx_callback():
 _patch_awx_callback()
 
 
-def wrap_action_loader__get(name, *args, **kwargs):
+def wrap_action_loader__get_with_context(name, *args, **kwargs):
     """
-    While the mitogen strategy is active, trap action_loader.get() calls,
-    augmenting any fetched class with ActionModuleMixin, which replaces various
-    helper methods inherited from ActionBase with implementations that avoid
-    the use of shell fragments wherever possible.
+    While the mitogen strategy is active, trap action_loader.get_with_context()
+    calls, augmenting any fetched class with ActionModuleMixin, which replaces
+    various helper methods inherited from ActionBase with implementations that
+    avoid the use of shell fragments wherever possible.
 
     This is used instead of static subclassing as it generalizes to third party
     action plugins outside the Ansible tree.
@@ -91,13 +93,26 @@ def wrap_action_loader__get(name, *args, **kwargs):
         name = 'mitogen_' + name
     get_kwargs['collection_list'] = kwargs.pop('collection_list', None)
 
-    klass = ansible_mitogen.loaders.action_loader__get(name, **get_kwargs)
+    (klass, context) = ansible_mitogen.loaders.action_loader__get_with_context(
+        name,
+        **get_kwargs
+    )
+
     if klass:
         bases = (ansible_mitogen.mixins.ActionModuleMixin, klass)
         adorned_klass = type(str(name), bases, {})
         if kwargs.get('class_only'):
-            return adorned_klass
-        return adorned_klass(*args, **kwargs)
+            return ansible.plugins.loader.get_with_context_result(
+                adorned_klass,
+                context
+            )
+
+        return ansible.plugins.loader.get_with_context_result(
+            adorned_klass(*args, **kwargs),
+            context
+        )
+
+    return ansible.plugins.loader.get_with_context_result(None, context)
 
 
 REDIRECTED_CONNECTION_PLUGINS = (
@@ -115,15 +130,26 @@ REDIRECTED_CONNECTION_PLUGINS = (
 )
 
 
-def wrap_connection_loader__get(name, *args, **kwargs):
+def wrap_connection_loader__get_with_context(name, *args, **kwargs):
     """
-    While a Mitogen strategy is active, rewrite connection_loader.get() calls
-    for some transports into requests for a compatible Mitogen transport.
+    While a Mitogen strategy is active, rewrite
+    connection_loader.get_with_context() calls for some transports into
+    requests for a compatible Mitogen transport.
     """
-    if name in REDIRECTED_CONNECTION_PLUGINS:
+    is_play_using_mitogen_connection = None
+    if len(args) > 0 and isinstance(args[0], ansible.playbook.play_context.PlayContext):
+        play_context = args[0]
+        is_play_using_mitogen_connection = play_context.connection in REDIRECTED_CONNECTION_PLUGINS
+
+    # assume true if we're not in a play context since we're using a Mitogen strategy
+    if is_play_using_mitogen_connection is None:
+        is_play_using_mitogen_connection = True
+
+    redirect_connection = name in REDIRECTED_CONNECTION_PLUGINS and is_play_using_mitogen_connection
+    if redirect_connection:
         name = 'mitogen_' + name
 
-    return ansible_mitogen.loaders.connection_loader__get(name, *args, **kwargs)
+    return ansible_mitogen.loaders.connection_loader__get_with_context(name, *args, **kwargs)
 
 
 def wrap_worker__run(self):
@@ -173,8 +199,8 @@ class AnsibleWrappers(object):
         Install our PluginLoader monkey patches and update global variables
         with references to the real functions.
         """
-        ansible_mitogen.loaders.action_loader.get = wrap_action_loader__get
-        ansible_mitogen.loaders.connection_loader.get_with_context = wrap_connection_loader__get
+        ansible_mitogen.loaders.action_loader.get_with_context = wrap_action_loader__get_with_context
+        ansible_mitogen.loaders.connection_loader.get_with_context = wrap_connection_loader__get_with_context
 
         global worker__run
         worker__run = ansible.executor.process.worker.WorkerProcess.run
@@ -184,11 +210,11 @@ class AnsibleWrappers(object):
         """
         Uninstall the PluginLoader monkey patches.
         """
-        ansible_mitogen.loaders.action_loader.get = (
-            ansible_mitogen.loaders.action_loader__get
+        ansible_mitogen.loaders.action_loader.get_with_context = (
+            ansible_mitogen.loaders.action_loader__get_with_context
         )
         ansible_mitogen.loaders.connection_loader.get_with_context = (
-            ansible_mitogen.loaders.connection_loader__get
+            ansible_mitogen.loaders.connection_loader__get_with_context
         )
         ansible.executor.process.worker.WorkerProcess.run = worker__run
 
