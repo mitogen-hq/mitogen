@@ -103,13 +103,9 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
 
         # required for python interpreter discovery
         connection.templar = self._templar
-        self._finding_python_interpreter = False
-        self._rediscovered_python = False
-        # redeclaring interpreter discovery vars here in case running ansible < 2.8.0
-        self._discovered_interpreter_key = None
-        self._discovered_interpreter = False
-        self._discovery_deprecation_warnings = []
-        self._discovery_warnings = []
+
+        self._mitogen_discovering_interpreter = False
+        self._mitogen_rediscovered_interpreter = False
 
     def run(self, tmp=None, task_vars=None):
         """
@@ -402,7 +398,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             # only cache discovered_interpreter if we're not running a rediscovery
             # rediscovery happens in places like docker connections that could have different
             # python interpreters than the main host
-            if not self._rediscovered_python:
+            if not self._mitogen_rediscovered_interpreter:
                 result['ansible_facts'][self._discovered_interpreter_key] = self._discovered_interpreter
 
         if self._discovery_warnings:
@@ -462,7 +458,7 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # calling exec_command until we run into the right python we'll use
         # chicken-and-egg issue, mitogen needs a python to run low_level_execute_command
         # which is required by Ansible's discover_interpreter function
-        if self._finding_python_interpreter:
+        if self._mitogen_discovering_interpreter:
             possible_pythons = [
                 '/usr/bin/python',
                 'python3',
