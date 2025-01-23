@@ -28,6 +28,8 @@ In progress (unreleased)
 * :gh:issue:`1213` tests: Fix unclosed file in fd_check script
 * :gh:issue:`1213` :mod:`ansible_mitogen`: Don't redeclare Ansible interpreter
   discovery attributes
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Rename Mitogen interpreter discovery
+  attributes
 
 
 v0.3.21 (2025-01-20)
