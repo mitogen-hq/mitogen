@@ -32,6 +32,13 @@ import base64
 import logging
 import optparse
 import re
+import shlex
+
+try:
+    from shlex import quote as shlex_quote
+except ImportError:
+    from pipes import quote as shlex_quote
+
 
 import mitogen.core
 import mitogen.parent
@@ -256,8 +263,6 @@ class Connection(mitogen.parent.Connection):
         # Note: sudo did not introduce long-format option processing until July
         # 2013, so even though we parse long-format options, supply short-form
         # to the sudo command.
-        boot_cmd = super(Connection, self).get_boot_command()
-
         bits = [self.options.sudo_path, '-u', self.options.username]
         if self.options.preserve_env:
             bits += ['-E']
@@ -270,25 +275,7 @@ class Connection(mitogen.parent.Connection):
         if self.options.selinux_type:
             bits += ['-t', self.options.selinux_type]
 
-        # special handling for bash builtins
-        # TODO: more efficient way of doing this, at least
-        # it's only 1 iteration of boot_cmd to go through
-        source_found = False
-        for cmd in boot_cmd[:]:
-            # rip `source` from boot_cmd if it exists; sudo.py can't run this
-            # even with -i or -s options
-            # since we've already got our ssh command working we shouldn't
-            # need to source anymore
-            # couldn't figure out how to get this to work using sudo flags
-            if 'source' == cmd:
-                boot_cmd.remove(cmd)
-                source_found = True
-                continue
-            if source_found:
-                # remove words until we hit the python interpreter call
-                if not cmd.endswith('python'):
-                    boot_cmd.remove(cmd)
-                else:
-                    break
-
-        return bits + ['--'] + boot_cmd
+        python_argv = self.get_python_argv()
+        bootstrap_argv = self._bootstrap_argv()
+        boot_argv = python_argv + [shlex_quote(s) for s in bootstrap_argv]
+        return bits + ['--', 'sh', '-c', ' '.join(boot_argv)]
