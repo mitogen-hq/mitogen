@@ -26,6 +26,8 @@ In progress (unreleased)
   :py:func:`pkgutil.find_loader`
 * :gh:issue:`1213` :mod:`mitogen`: Fix unclosed file in first stage
 * :gh:issue:`1213` tests: Fix unclosed file in fd_check script
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Don't redeclare Ansible interpreter
+  discovery attributes
 
 
 v0.3.21 (2025-01-20)
