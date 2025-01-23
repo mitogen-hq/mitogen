@@ -491,10 +491,12 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                     continue
 
         stdout_text = to_text(stdout, errors=encoding_errors)
+        stderr_text = to_text(stderr, errors=encoding_errors)
 
         return {
             'rc': rc,
             'stdout': stdout_text,
             'stdout_lines': stdout_text.splitlines(),
-            'stderr': stderr,
+            'stderr': stderr_text,
+            'stderr_lines': stderr_text.splitlines(),
         }

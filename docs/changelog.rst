@@ -32,6 +32,8 @@ In progress (unreleased)
   attributes
 * :gh:issue:`1213` :mod:`ansible_mitogen`: Decouple possible_pythons order &
   error handling
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Return ``stderr_lines`` from
+  ``_low_level_execute_command()``
 
 
 v0.3.21 (2025-01-20)
