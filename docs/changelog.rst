@@ -25,6 +25,7 @@ In progress (unreleased)
 * :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
   :py:func:`pkgutil.find_loader`
 * :gh:issue:`1213` :mod:`mitogen`: Fix unclosed file in first stage
+* :gh:issue:`1213` tests: Fix unclosed file in fd_check script
 
 
 v0.3.21 (2025-01-20)
