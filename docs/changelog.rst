@@ -21,6 +21,19 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1213` tests: Enable default Python warnings
+* :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
+  :py:func:`pkgutil.find_loader`
+* :gh:issue:`1213` :mod:`mitogen`: Fix unclosed file in first stage
+* :gh:issue:`1213` tests: Fix unclosed file in fd_check script
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Don't redeclare Ansible interpreter
+  discovery attributes
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Rename Mitogen interpreter discovery
+  attributes
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Decouple possible_pythons order &
+  error handling
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Return ``stderr_lines`` from
+  ``_low_level_execute_command()``
 
 
 v0.3.21 (2025-01-20)

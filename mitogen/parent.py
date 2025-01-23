@@ -1429,7 +1429,9 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
-        C=zlib.decompress(os.fdopen(0,'rb').read(PREAMBLE_COMPRESSED_LEN))
+        fp=os.fdopen(0,'rb')
+        C=zlib.decompress(fp.read(PREAMBLE_COMPRESSED_LEN))
+        fp.close()
         fp=os.fdopen(W,'wb',0)
         fp.write(C)
         fp.close()
