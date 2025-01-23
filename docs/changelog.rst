@@ -24,6 +24,7 @@ In progress (unreleased)
 * :gh:issue:`1213` tests: Enable default Python warnings
 * :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
   :py:func:`pkgutil.find_loader`
+* :gh:issue:`1213` :mod:`mitogen`: Fix unclosed file in first stage
 
 
 v0.3.21 (2025-01-20)
