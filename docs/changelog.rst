@@ -30,6 +30,8 @@ In progress (unreleased)
   discovery attributes
 * :gh:issue:`1213` :mod:`ansible_mitogen`: Rename Mitogen interpreter discovery
   attributes
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Decouple possible_pythons order &
+  error handling
 
 
 v0.3.21 (2025-01-20)
