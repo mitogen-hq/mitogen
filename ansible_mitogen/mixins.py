@@ -461,15 +461,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # which is required by Ansible's discover_interpreter function
         if self._mitogen_discovering_interpreter:
             possible_pythons = [
-                '/usr/bin/python',
                 'python3',
-                'python3.7',
-                'python3.6',
-                'python3.5',
-                'python2.7',
-                'python2.6',
-                '/usr/libexec/platform-python',
-                '/usr/bin/python3',
+                'python2',
                 'python'
             ]
         else:
