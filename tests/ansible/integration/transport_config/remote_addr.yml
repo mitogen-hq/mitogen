@@ -15,7 +15,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-addr-unset
+- name: tc-remote-addr-unset via tc-remote-addr-explicit-ssh
+  hosts: tc-remote-addr-unset
   vars: {mitogen_via: tc-remote-addr-explicit-ssh}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -42,7 +43,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-addr-explicit-ssh
+- name: tc-remote-addr-explicit-ssh via tc-remote-addr-unset
+  hosts: tc-remote-addr-explicit-ssh
   vars: {mitogen_via: tc-remote-addr-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -69,7 +71,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-addr-explicit-host
+- name: tc-remote-addr-explicit-host via tc-remote-addr-unset
+  hosts: tc-remote-addr-explicit-host
   vars: {mitogen_via: tc-remote-addr-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -96,7 +99,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-addr-explicit-both
+- name: tc-remote-addr-explicit-both via tc-remote-addr-unset
+  hosts: tc-remote-addr-explicit-both
   vars: {mitogen_via: tc-remote-addr-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml

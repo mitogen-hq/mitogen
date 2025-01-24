@@ -17,7 +17,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-become-unset
+- name: tc-become-unset via becomeuser@tc-become-set
+  hosts: tc-become-unset
   vars: {mitogen_via: becomeuser@tc-become-set}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -59,7 +60,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-become-set
+- name: tc-become-set via tc-become-unset
+  hosts: tc-become-set
   vars: {mitogen_via: tc-become-unset}
   become: true
   become_user: becomeuser

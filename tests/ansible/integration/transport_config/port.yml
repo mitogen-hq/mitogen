@@ -20,7 +20,8 @@
     - mitogen_only
 
 # Not set, mitogen_via=
-- hosts: tc-port-explicit-ssh
+- name: tc-port-explicit-ssh via tc-port-unset
+  hosts: tc-port-explicit-ssh
   vars: {mitogen_via: tc-port-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -52,7 +53,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-port-unset
+- name: tc-port-unset via tc-port-explicit-ssh
+  hosts: tc-port-unset
   vars: {mitogen_via: tc-port-explicit-ssh}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -86,7 +88,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-port-unset
+- name: tc-port-unset via tc-port-explicit-port
+  hosts: tc-port-unset
   vars: {mitogen_via: tc-port-explicit-port}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -121,7 +124,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-port-unset
+- name: tc-port-unset via tc-port-both
+  hosts: tc-port-unset
   vars: {mitogen_via: tc-port-both}
   tasks:
   - include_tasks: ../_mitogen_only.yml

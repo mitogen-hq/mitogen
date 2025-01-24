@@ -79,7 +79,8 @@
 
 
 # ansible_become_password=, via=
-- hosts: tc-become-pass-password
+- name: tc-become-pass-password via root@tc-become-pass-pass
+  hosts: tc-become-pass-password
   vars: {mitogen_via: root@tc-become-pass-pass}
   become: true
   tasks:
@@ -119,7 +120,8 @@
 
 
 # ansible_become_pass=, via=
-- hosts: tc-become-pass-pass
+- name: tc-become-pass-pass via root@tc-become-pass-password
+  hosts: tc-become-pass-pass
   vars: {mitogen_via: root@tc-become-pass-password}
   become: true
   tasks:
@@ -161,7 +163,8 @@
 
 
 # both, mitogen_via
-- hosts: tc-become-pass-unset
+- name: tc-become-pass-unset via root@tc-become-pass-both
+  hosts: tc-become-pass-unset
   vars: {mitogen_via: root@tc-become-pass-both}
   tasks:
   - include_tasks: ../_mitogen_only.yml

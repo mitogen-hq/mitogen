@@ -18,7 +18,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-become-method-unset
+- name: tc-become-method-unset via becomeuser@tc-become-method-su
+  hosts: tc-become-method-unset
   vars: {mitogen_via: becomeuser@tc-become-method-su}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -55,7 +56,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-become-method-su
+- name: tc-become-method-su via tc-become-method-unset
+  hosts: tc-become-method-su
   vars: {mitogen_via: tc-become-method-unset}
   become: true
   become_user: becomeuser
@@ -79,9 +81,9 @@
     - mitogen_only
 
 
-
 # mitogen_via used to specify explicit become method
-- hosts: tc-become-method-unset
+- name: tc-become-method-unset via doas:doasuser@tc-become-method-su
+  hosts: tc-become-method-unset
   vars: {mitogen_via: "doas:doasuser@tc-become-method-su"}
   tasks:
   - include_tasks: ../_mitogen_only.yml

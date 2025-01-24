@@ -15,7 +15,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-hkc-unset
+- name: tc-hkc-unset via tc-hkc-host-key-checking
+  hosts: tc-hkc-unset
   vars:
     mitogen_via: tc-hkc-host-key-checking
   tasks:
@@ -48,7 +49,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-hkc-host-key-checking
+- name: tc-hkc-host-key-checking via tc-hkc-unset
+  hosts: tc-hkc-host-key-checking
   vars:
     mitogen_via: tc-hkc-unset
   tasks:
@@ -81,7 +83,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-hkc-ssh-host-key-checking
+- name: tc-hkc-ssh-host-key-checking via tc-hkc-unset
+  hosts: tc-hkc-ssh-host-key-checking
   vars:
     mitogen_via: tc-hkc-unset
   tasks:
