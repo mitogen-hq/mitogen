@@ -34,6 +34,7 @@ In progress (unreleased)
   error handling
 * :gh:issue:`1213` :mod:`ansible_mitogen`: Return ``stderr_lines`` from
   ``_low_level_execute_command()``
+* :gh:issue:`1227` tests: Name transport_config tests that use ``mitogen_via``
 
 
 v0.3.21 (2025-01-20)
