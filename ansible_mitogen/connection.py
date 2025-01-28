@@ -422,7 +422,9 @@ CONNECTION_METHOD = {
     'ssh': _connect_ssh,
     'smart': _connect_ssh,  # issue #548.
     'su': _connect_su,
+    'ansible.builtin.su': _connect_su,
     'sudo': _connect_sudo,
+    'ansible.builtin.sudo': _connect_sudo,
     'doas': _connect_doas,
     'mitogen_su': _connect_mitogen_su,
     'mitogen_sudo': _connect_mitogen_sudo,

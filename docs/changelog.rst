@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1232` :mod:`ansible_mitogen`: Add support for fully qualified
+  connection names in become_method
 * :gh:issue:`1213` tests: Enable default Python warnings
 * :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
   :py:func:`pkgutil.find_loader`
