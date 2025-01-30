@@ -615,6 +615,23 @@ def _fix_py35(invocation, module_source):
         invocation._overridden_sources[invocation.module_path] = module_source
 
 
+def _fix_dnf(invocation, module_source):
+    """
+    Handles edge case where dnf ansible module showed failure due to a missing import in the dnf module.
+    Specifically addresses errors like "Failed loading plugin 'debuginfo-install': module 'dnf' has no attribute 'cli'".
+    https://github.com/mitogen-hq/mitogen/issues/1143
+    This issue is resolved by adding 'dnf.cli' to the import statement in the module source.
+    This works in vanilla Ansible but not in Mitogen otherwise.
+    """
+    if invocation.module_name in {'ansible.builtin.dnf', 'ansible.legacy.dnf', 'dnf'} and \
+            invocation.module_path not in invocation._overridden_sources:
+        module_source = module_source.replace(
+            b"import dnf\n",
+            b"import dnf, dnf.cli\n"
+        )
+        invocation._overridden_sources[invocation.module_path] = module_source
+
+
 def _load_collections(invocation):
     """
     Special loader that ensures that `ansible_collections` exist as a module path for import
@@ -652,6 +669,7 @@ def invoke(invocation):
 
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
+        _fix_dnf(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation,
             module_source

@@ -35,6 +35,7 @@ In progress (unreleased)
 * :gh:issue:`1213` :mod:`ansible_mitogen`: Return ``stderr_lines`` from
   ``_low_level_execute_command()``
 * :gh:issue:`1227` tests: Name transport_config tests that use ``mitogen_via``
+* :gh:issue:`1143` :mod:`ansible_mitogen`: Fix dnf module include for dnf.cli
 
 
 v0.3.21 (2025-01-20)
