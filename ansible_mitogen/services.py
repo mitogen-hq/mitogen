@@ -330,7 +330,9 @@ class ContextService(mitogen.service.Service):
         finally:
             self._lock.release()
 
-    ALWAYS_PRELOAD = (
+    # NB unicode_literals is making these unicode strings on Python 2
+    ALWAYS_PRELOAD = tuple(
+        str(s) for s in [
         'ansible.module_utils.basic',
         'ansible.module_utils.json_utils',
         'ansible.release',
@@ -338,7 +340,7 @@ class ContextService(mitogen.service.Service):
         'ansible_mitogen.target',
         'mitogen.fork',
         'mitogen.service',
-    )
+    ])
 
     def _send_module_forwards(self, context):
         if hasattr(self.router.responder, 'forward_modules'):

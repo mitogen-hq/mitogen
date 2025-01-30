@@ -44,6 +44,7 @@ else:
 
 
 def minimize_source(source):
+    # types: (bytes) -> bytes
     """
     Remove comments and docstrings from Python `source`, preserving line
     numbers and syntax of empty blocks.
