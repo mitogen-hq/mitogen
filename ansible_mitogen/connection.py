@@ -302,7 +302,7 @@ def _connect_su(spec):
     """
     Return ContextService arguments for su as a become method.
     """
-    return {
+    args = {
         'method': 'su',
         'enable_lru': True,
         'kwargs': {
@@ -314,13 +314,15 @@ def _connect_su(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+    LOG.info('_connect_su: %r', args)
+    return args
 
 
 def _connect_sudo(spec):
     """
     Return ContextService arguments for sudo as a become method.
     """
-    return {
+    args = {
         'method': 'sudo',
         'enable_lru': True,
         'kwargs': {
@@ -333,6 +335,8 @@ def _connect_sudo(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+    LOG.info('_connect_sudo: %r', args)
+    return args
 
 
 def _connect_doas(spec):
@@ -357,7 +361,7 @@ def _connect_mitogen_su(spec):
     """
     Return ContextService arguments for su as a first class connection.
     """
-    return {
+    args = {
         'method': 'su',
         'kwargs': {
             'username': spec.remote_user(),
@@ -368,13 +372,15 @@ def _connect_mitogen_su(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+    LOG.info('_connect_mitogen_su: %r', args)
+    return args
 
 
 def _connect_mitogen_sudo(spec):
     """
     Return ContextService arguments for sudo as a first class connection.
     """
-    return {
+    args = {
         'method': 'sudo',
         'kwargs': {
             'username': spec.remote_user(),
@@ -386,6 +392,8 @@ def _connect_mitogen_sudo(spec):
             'remote_name': get_remote_name(spec),
         }
     }
+    LOG.info('_connect_mitogen_sudo: %r', args)
+    return args
 
 
 def _connect_mitogen_doas(spec):
@@ -491,6 +499,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: Only sudo, su, and doas are supported for now.
     # Ansible ConnectionBase attribute, removed in Ansible >= 2.8
     become_methods = ['sudo', 'su', 'doas']
+    become_methods += ['mitogen.builtin.%s' % s for s in become_methods]
 
     #: Dict containing init_child() return value as recorded at startup by
     #: ContextService. Contains:

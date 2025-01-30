@@ -424,6 +424,9 @@ class PlayContextSpec(Spec):
 
     def _become_option(self, name):
         plugin = self._connection.become
+        if not plugin:
+            LOG.error('Become option %s unavailable from %r in action %r',
+                      name, plugin, self._action)
         try:
             return plugin.get_option(name, self._task_vars, self._play_context)
         except AttributeError:
