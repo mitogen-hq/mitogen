@@ -21,6 +21,8 @@ except ImportError:
     ctypes = None
 
 import mitogen
+import mitogen.core
+import mitogen.fork
 
 import testlib
 import plain_old_module

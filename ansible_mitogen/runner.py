@@ -57,6 +57,7 @@ from ansible.module_utils.six.moves import shlex_quote
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import to_text
+from mitogen.core import utf8
 
 try:
     # Python >= 3.4, PEP 451 ModuleSpec API
@@ -258,15 +259,6 @@ class EnvironmentFileWatcher(object):
 
 _pam_env_watcher = EnvironmentFileWatcher('~/.pam_environment')
 _etc_env_watcher = EnvironmentFileWatcher('/etc/environment')
-
-
-def utf8(s):
-    """
-    Coerce an object to bytes if it is Unicode.
-    """
-    if isinstance(s, mitogen.core.UnicodeType):
-        s = s.encode('utf-8')
-    return s
 
 
 def reopen_readonly(fp):

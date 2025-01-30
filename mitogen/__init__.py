@@ -41,22 +41,22 @@ __version__ = (0, 3, 25, 'dev')
 #: This is :data:`False` in slave contexts. Previously it was used to prevent
 #: re-execution of :mod:`__main__` in single file programs, however that now
 #: happens automatically.
-is_master = True
+is_master = True  # type: bool
 
 
 #: This is `0` in a master, otherwise it is the master-assigned ID unique to
 #: the slave context used for message routing.
-context_id = 0
+context_id = 0  # type: int
 
 
 #: This is :data:`None` in a master, otherwise it is the master-assigned ID
 #: unique to the slave's parent context.
-parent_id = None
+parent_id = None  # type: int | None
 
 
 #: This is an empty list in a master, otherwise it is a list of parent context
 #: IDs ordered from most direct to least direct.
-parent_ids = []
+parent_ids = []  # type: list[int]
 
 
 import os

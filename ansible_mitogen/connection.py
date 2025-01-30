@@ -37,12 +37,21 @@ import pprint
 import stat
 import sys
 import time
+try:
+    import typing
+    if typing.TYPE_CHECKING:
+        from typing import Any
+        import ansible.template
+except ImportError:
+    pass
 
 import ansible.constants as C
 import ansible.errors
 import ansible.plugins.connection
 
 import mitogen.core
+import mitogen.parent
+import mitogen.service
 
 import ansible_mitogen.mixins
 import ansible_mitogen.parsing
@@ -446,6 +455,7 @@ class CallChain(mitogen.parent.CallChain):
     )
 
     def __init__(self, connection, context, pipelined=False):
+        # type: (Connection, mitogen.core.Context, bool) -> None
         super(CallChain, self).__init__(context, pipelined)
         #: The connection to reset on CallError.
         self._connection = connection
@@ -476,7 +486,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: The :class:`ansible_mitogen.process.Binding` representing the connection
     #: multiplexer this connection's target is assigned to. :data:`None` when
     #: disconnected.
-    binding = None
+    binding = None  # type: ansible_mitogen.process.Binding | None
 
     #: mitogen.parent.Context for the target account on the target, possibly
     #: reached via become.
@@ -503,7 +513,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     #: A :class:`mitogen.parent.CallChain` for calls made to the target
     #: account, to ensure subsequent calls fail with the original exception if
     #: pipelined directory creation or file transfer fails.
-    chain = None
+    chain = None  # type: mitogen.parent.CallChain | None
 
     #
     # Note: any of the attributes below may be :data:`None` if the connection
@@ -515,7 +525,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
     _task_vars = None
 
     #: Set by on_action_run()
-    delegate_to_hostname = None
+    delegate_to_hostname = None  # type: bool | None
 
     #: Set to '_loader.get_basedir()' by on_action_run(). Used by mitogen_local
     #: to change the working directory to that of the current playbook,
@@ -891,6 +901,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
             self.binding = None
 
     def _mitogen_var_options(self, templar):
+        # type: (ansible.template.Templar) -> dict[str, Any]
         # Workaround for https://github.com/ansible/ansible/issues/84238
         var_names = C.config.get_plugin_vars('connection', self._load_name)
         variables = templar.available_variables
@@ -1008,7 +1019,6 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         self._connect()
         if use_login:
             return self.login_context.default_call_chain
-        # See FORK_SUPPORTED comments in target.py.
         if use_fork and self.init_child_result['fork_context'] is not None:
             return self.init_child_result['fork_context'].default_call_chain
         return self.chain
@@ -1046,7 +1056,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
         """
         return None
 
-    def exec_command(self, cmd, in_data='', sudoable=True, mitogen_chdir=None):
+    def exec_command(self, cmd, in_data=None, sudoable=True, mitogen_chdir=None):
         """
         Implement exec_command() by calling the corresponding
         ansible_mitogen.target function in the target.
