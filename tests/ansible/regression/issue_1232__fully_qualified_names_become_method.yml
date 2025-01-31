@@ -1,0 +1,23 @@
+- name: regression/issue_1232__fully_qualified_names_become_method.yml (1/2)
+  hosts: test-targets
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Run a shell command with sudo root
+      vars:
+        ansible_become_pass: rootpassword
+      ansible.builtin.command: whoami
+      become: true
+      become_user: root
+
+- name: regression/issue_1232__fully_qualified_names_become_method.yml (2/2)
+  hosts: test-targets
+  become_method: ansible.builtin.su
+  tasks:
+    - name: Run a shell command with su mitogen__user1
+      vars:
+        ansible_become_pass: user1_password
+      when:
+        - become_unpriv_available
+      ansible.builtin.command: whoami
+      become: true
+      become_user: mitogen__user1
