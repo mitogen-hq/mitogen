@@ -36,6 +36,8 @@ In progress (unreleased)
   ``_low_level_execute_command()``
 * :gh:issue:`1227` tests: Name transport_config tests that use ``mitogen_via``
 * :gh:issue:`1143` :mod:`ansible_mitogen`: Fix dnf module include for dnf.cli
+* :gh:issue:`1234` :mod:`ansible_mitogen`: Fix :exc:`TypeError` in
+  :func:`ansible_mitogen.target.set_file_owner`
 
 
 v0.3.21 (2025-01-20)
