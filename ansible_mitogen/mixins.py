@@ -483,7 +483,8 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
                     cmd, in_data, sudoable, mitogen_chdir=chdir,
                 )
             # TODO: what exception is thrown?
-            except:
+            except BaseException as e:
+                LOG.warning(e)
                 # we've reached the last python attempted and failed
                 if possible_python == possible_pythons[-1]:
                     raise

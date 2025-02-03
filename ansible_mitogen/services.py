@@ -477,6 +477,7 @@ class ContextService(mitogen.service.Service):
         """
         via = None
         for spec in stack:
+            LOG.info('trying spec=%r', spec)
             try:
                 result = self._wait_or_start(spec, via=via).get()
                 if isinstance(result, tuple):  # exc_info()
@@ -497,6 +498,7 @@ class ContextService(mitogen.service.Service):
                     'msg': str(e),
                 }
 
+        LOG.info('found spec=%r, via=%r -> result=%r', spec, via, result)
         return result
 
 

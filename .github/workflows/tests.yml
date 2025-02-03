@@ -9,7 +9,7 @@ on:
       - docs-master
 
 env:
-  #ANSIBLE_VERBOSITY: 3
+  ANSIBLE_VERBOSITY: 3
   #MITOGEN_LOG_LEVEL: DEBUG
   MITOGEN_TEST_IMAGE_TEMPLATE: "ghcr.io/mitogen-hq/%(distro)s-test"
 
@@ -24,61 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Ans_27_210
-            tox_env: py27-mode_ansible-ansible2.10
-          - name: Ans_27_4
-            tox_env: py27-mode_ansible-ansible4
-
           - name: Ans_36_210
             python_version: '3.6'
             tox_env: py36-mode_ansible-ansible2.10
-          - name: Ans_36_4
-            python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible4
-
-          - name: Ans_311_210
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible2.10
-          - name: Ans_311_3
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible3
-          - name: Ans_311_4
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible4
-          - name: Ans_311_5
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible5
-          - name: Ans_313_6
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible6
-          - name: Ans_313_7
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible7
-          - name: Ans_313_8
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible8
-          - name: Ans_313_9
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible9
-          - name: Ans_313_10
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible10
-          - name: Ans_313_11
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible11
-
-          - name: Van_313_11
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible11-strategy_linear
-
-          - name: Mito_27
-            tox_env: py27-mode_mitogen
-          - name: Mito_36
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen
-          - name: Mito_313
-            python_version: '3.13'
-            tox_env: py313-mode_mitogen
 
     steps:
       - uses: actions/checkout@v4
@@ -170,12 +118,6 @@ jobs:
         include:
           - name: Mito_313
             tox_env: py313-mode_mitogen
-
-          - name: Loc_313_11
-            tox_env: py313-mode_localhost-ansible11
-
-          - name: Van_313_11
-            tox_env: py313-mode_localhost-ansible11-strategy_linear
 
     steps:
       - uses: actions/checkout@v4

@@ -1,0 +1,71 @@
+- name: regression/issue_1232__fully_qualified_names_become_method.yml (1/3)
+  hosts: test-targets
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Test FQCN sudo, passwordless
+      become: true
+      become_user: root
+      command:
+        cmd: whoami
+      register: fqcn_sudo_passwordless_whoami
+      changed_when: false
+
+    - assert:
+        that:
+          - fqcn_sudo_passwordless_whoami.stdout == 'root'
+        fail_msg: |
+          fqcn_sudo_passwordless_whoami={{ fqcn_sudo_passwordless_whoami }}
+  tags:
+    - sudo
+
+- name: regression/issue_1232__fully_qualified_names_become_method.yml (2/3)
+  hosts: test-targets
+  become_method: ansible.builtin.sudo
+  tasks:
+    - name: Test FQCN sudo, password required
+      become: true
+      become_user: mitogen__pw_required
+      vars:
+        ansible_become_pass: pw_required_password
+      command:
+        cmd: whoami
+      register: fqcn_sudo_password_whoami
+      changed_when: false
+      when:
+        - become_unpriv_available
+
+    - assert:
+        that:
+          - fqcn_sudo_password_whoami.stdout == 'mitogen__pw_required'
+        fail_msg: |
+          fqcn_sudo_password_whoami={{ fqcn_sudo_password_whoami }}
+      when:
+        - become_unpriv_available
+  tags:
+    - sudo
+
+- name: regression/issue_1232__fully_qualified_names_become_method.yml (3/3)
+  hosts: test-targets
+  become_method: ansible.builtin.su
+  tasks:
+    - name: Test FQCN su, password required
+      become: true
+      become_user: mitogen__user1
+      vars:
+        ansible_become_pass: user1_password
+      command:
+        cmd: whoami
+      register: fqcn_su_password_whoami
+      changed_when: false
+      when:
+        - become_unpriv_available
+
+    - assert:
+        that:
+          - fqcn_su_password_whoami.stdout == 'mitogen__user1'
+        fail_msg: |
+          fqcn_su_password_whoami={{ fqcn_su_password_whoami }}
+      when:
+        - become_unpriv_available
+  tags:
+    - su
