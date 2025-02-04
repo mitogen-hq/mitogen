@@ -21,6 +21,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+
+v0.3.22 (2025-02-04)
+--------------------
+
 * :gh:issue:`1213` tests: Enable default Python warnings
 * :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
   :py:func:`pkgutil.find_loader`
