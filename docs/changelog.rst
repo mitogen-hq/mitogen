@@ -229,6 +229,7 @@ v0.3.5 (2024-03-17)
   required by Python 3.12
 * :gh:issue:`1033` Support Python 3.12
 
+* :gh:issue:`947` Provide `ansible-core` extra which installs compatible version of ansible-core
 
 v0.3.4 (2023-07-02)
 -------------------
