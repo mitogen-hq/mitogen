@@ -87,8 +87,8 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
     it could be different than what's ran on the host
     """
     # keep trying different interpreters until we don't error
-    if action._finding_python_interpreter:
-        return action._possible_python_interpreter
+    if action._mitogen_discovering_interpreter:
+        return action._mitogen_interpreter_candidate
 
     if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
         # python is the only supported interpreter_name as of Ansible 2.8.8
@@ -102,13 +102,13 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
             # if we're rediscovering python then chances are we're running something like a docker connection
             # this will handle scenarios like running a playbook that does stuff + then dynamically creates a docker container,
             # then runs the rest of the playbook inside that container, and then rerunning the playbook again
-            action._rediscovered_python = True
+            action._mitogen_rediscovered_interpreter = True
 
             # blow away the discovered_interpreter_config cache and rediscover
             del task_vars['ansible_facts'][discovered_interpreter_config]
 
         if discovered_interpreter_config not in task_vars['ansible_facts']:
-            action._finding_python_interpreter = True
+            action._mitogen_discovering_interpreter = True
             # fake pipelining so discover_interpreter can be happy
             action._connection.has_pipelining = True
             s = ansible.executor.interpreter_discovery.discover_interpreter(
@@ -128,7 +128,7 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
         action._discovered_interpreter_key = discovered_interpreter_config
         action._discovered_interpreter = s
 
-    action._finding_python_interpreter = False
+    action._mitogen_discovering_interpreter = False
     return s
 
 

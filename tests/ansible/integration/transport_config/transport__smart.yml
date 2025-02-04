@@ -15,7 +15,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-transport-local
+- name: tc-transport-local via tc-transport-smart
+  hosts: tc-transport-local
   vars: {mitogen_via: tc-transport-smart}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -42,7 +43,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-transport-smart
+- name: tc-transport-smart via tc-transport-local
+  hosts: tc-transport-smart
   vars: {mitogen_via: tc-transport-local}
   tasks:
   - include_tasks: ../_mitogen_only.yml

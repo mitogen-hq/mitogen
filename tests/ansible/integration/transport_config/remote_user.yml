@@ -16,7 +16,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-user-unset
+- name: tc-remote-user-unset via tc-remote-user-explicit-ssh
+  hosts: tc-remote-user-unset
   vars: {mitogen_via: tc-remote-user-explicit-ssh}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -43,7 +44,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-user-explicit-ssh
+- name: tc-remote-user-explicit-ssh via tc-remote-user-unset
+  hosts: tc-remote-user-explicit-ssh
   vars: {mitogen_via: tc-remote-user-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -68,7 +70,8 @@
       left: out.result[0].kwargs.username
       right: "ansi-user"
 
-- hosts: tc-remote-user-explicit-user
+- name: tc-remote-user-explicit-user via tc-remote-user-unset
+  hosts: tc-remote-user-explicit-user
   vars: {mitogen_via: tc-remote-user-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -95,7 +98,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-remote-user-explicit-both
+- name: tc-remote-user-explicit-both via tc-remote-user-unset
+  hosts: tc-remote-user-explicit-both
   vars: {mitogen_via: tc-remote-user-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml

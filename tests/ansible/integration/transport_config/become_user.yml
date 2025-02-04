@@ -79,7 +79,8 @@
 
 
 # ansible_become_user=, unbecoming via=
-- hosts: tc-become-user-set
+- name: tc-become-user-set via tc-become-user-unset
+  hosts: tc-become-user-set
   vars: {mitogen_via: tc-become-user-unset}
   become: true
   tasks:
@@ -103,7 +104,8 @@
 
 
 # ansible_become_user=, becoming via=
-- hosts: tc-become-user-set
+- name: tc-become-user-set via doas:doasuser@tc-become-user-unset
+  hosts: tc-become-user-set
   vars: {mitogen_via: "doas:doasuser@tc-become-user-unset"}
   become: true
   tasks:
