@@ -647,11 +647,10 @@ def set_file_owner(path, owner, group=None, fd=None):
     else:
         gid = os.getegid()
 
-    if fd is not None and hasattr(os, 'fchown'):
-        os.fchown(fd, (uid, gid))
+    if fd is not None:
+        os.fchown(fd, uid, gid)
     else:
-        # Python<2.6
-        os.chown(path, (uid, gid))
+        os.chown(path, uid, gid)
 
 
 def write_path(path, s, owner=None, group=None, mode=None,
@@ -741,7 +740,7 @@ def set_file_mode(path, spec, fd=None):
         mode = os.stat(path).st_mode
         new_mode = apply_mode_spec(spec, mode)
 
-    if fd is not None and hasattr(os, 'fchmod'):
+    if fd is not None:
         os.fchmod(fd, new_mode)
     else:
         os.chmod(path, new_mode)

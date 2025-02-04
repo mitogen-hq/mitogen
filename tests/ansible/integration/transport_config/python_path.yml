@@ -20,7 +20,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-python-path-hostvar
+- name: tc-python-path-hostvar via tc-python-path-unset
+  hosts: tc-python-path-hostvar
   vars: {mitogen_via: tc-python-path-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -49,7 +50,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-python-path-unset
+- name: tc-python-path-unset via tc-python-path-hostvar
+  hosts: tc-python-path-unset
   vars: {mitogen_via: tc-python-path-hostvar}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -78,7 +80,8 @@
   tags:
     - mitogen_only
 
-- hosts: tc-python-path-unset
+- name: tc-python-path-unset via localhost
+  hosts: tc-python-path-unset
   vars: {mitogen_via: localhost}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -108,7 +111,8 @@
     - mitogen_only
 
 
-- hosts: localhost
+- name: localhost via tc-python-path-local-unset
+  hosts: localhost
   vars: {mitogen_via: tc-python-path-local-unset}
   tasks:
   - include_tasks: ../_mitogen_only.yml
@@ -134,7 +138,8 @@
   tags:
     - mitogen_only
 
-- hosts: localhost
+- name: localhost via tc-python-path-local-explicit
+  hosts: localhost
   vars: {mitogen_via: tc-python-path-local-explicit}
   tasks:
   - include_tasks: ../_mitogen_only.yml

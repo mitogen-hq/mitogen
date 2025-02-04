@@ -23,6 +23,28 @@ In progress (unreleased)
 
 
 
+v0.3.22 (2025-02-04)
+--------------------
+
+* :gh:issue:`1213` tests: Enable default Python warnings
+* :gh:issue:`1111` :mod:`mitogen`: Replace uses of deprecated
+  :py:func:`pkgutil.find_loader`
+* :gh:issue:`1213` :mod:`mitogen`: Fix unclosed file in first stage
+* :gh:issue:`1213` tests: Fix unclosed file in fd_check script
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Don't redeclare Ansible interpreter
+  discovery attributes
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Rename Mitogen interpreter discovery
+  attributes
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Decouple possible_pythons order &
+  error handling
+* :gh:issue:`1213` :mod:`ansible_mitogen`: Return ``stderr_lines`` from
+  ``_low_level_execute_command()``
+* :gh:issue:`1227` tests: Name transport_config tests that use ``mitogen_via``
+* :gh:issue:`1143` :mod:`ansible_mitogen`: Fix dnf module include for dnf.cli
+* :gh:issue:`1234` :mod:`ansible_mitogen`: Fix :exc:`TypeError` in
+  :func:`ansible_mitogen.target.set_file_owner`
+
+
 v0.3.21 (2025-01-20)
 --------------------
 
