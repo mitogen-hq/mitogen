@@ -336,9 +336,8 @@ Mitogen is compatible with **Python 2.7** released July 2010, making it
 suitable for managing a fleet of potentially ancient corporate hardware, such
 as Red Hat Enterprise Linux 7, released in 2013.
 
-.. TODO update
 Every combination of Python 3.x/2.x parent and child should be possible,
-however at present only Python 2.4, 2.6, 2.7 and 3.6 are tested automatically.
+however at present there's very little manual testing, and nothing automated.
 
 
 Zero Dependencies
