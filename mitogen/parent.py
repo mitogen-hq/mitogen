@@ -224,8 +224,16 @@ def flags(names):
     Return the result of ORing a set of (space separated) :py:mod:`termios`
     module constants together.
     """
-    return sum(getattr(termios, name, 0)
-               for name in names.split())
+    i = 0
+    skipped = []
+    for name in names.split():
+        try:
+            i |= getattr(termios, name)
+        except AttributeError:
+            skipped.append(name)
+    if skipped:
+        LOG.debug('Skipped termios attributes: %s', ', '.join(skipped))
+    return i
 
 
 def cfmakeraw(tflags):
