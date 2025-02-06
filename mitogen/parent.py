@@ -234,12 +234,9 @@ def cfmakeraw(tflags):
     modified in a manner similar to the `cfmakeraw()` C library function, but
     additionally disabling local echo.
     """
-    # BSD: github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
-    # Linux: github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
     iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK '
-                    'ISTRIP INLCR ICRNL IXON IGNPAR')
-    iflag &= ~flags('IGNBRK BRKINT PARMRK')
+                    'ISTRIP INLCR ICRNL IXON IGNPAR IGNBRK')
     oflag &= ~flags('OPOST')
     lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG '
                     'IEXTEN NOFLSH TOSTOP PENDIN')
