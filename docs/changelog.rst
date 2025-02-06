@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1121` :mod:`mitogen`: Log skipped :py:mod:`termios` attributes
 
 
 v0.3.22 (2025-02-04)
