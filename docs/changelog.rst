@@ -22,6 +22,7 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1121` :mod:`mitogen`: Log skipped :py:mod:`termios` attributes
+* :gh:issue:`1238` packaging: Avoid :py:mod:`ast`, requires Python = 2.6
 
 
 v0.3.22 (2025-02-04)
