@@ -161,6 +161,7 @@
           Defaults>mitogen__require_tty requiretty
           Defaults>mitogen__require_tty_pw_required requiretty,targetpw
         prepend_newline: true
+        validate: '/usr/sbin/visudo -cf %s'
 
     - name: Configure sudoers users
       blockinfile:
