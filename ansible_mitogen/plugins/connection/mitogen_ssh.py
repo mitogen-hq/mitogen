@@ -29,9 +29,6 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-import os.path
-import sys
-
 from ansible.plugins.connection.ssh import (
     DOCUMENTATION as _ansible_ssh_DOCUMENTATION,
 )
@@ -47,12 +44,6 @@ DOCUMENTATION = """
     options:
 """ + _ansible_ssh_DOCUMENTATION.partition('options:\n')[2]
 
-try:
-    import ansible_mitogen
-except ImportError:
-    base_dir = os.path.dirname(__file__)
-    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
-    del base_dir
 
 import ansible_mitogen.connection
 import ansible_mitogen.loaders
