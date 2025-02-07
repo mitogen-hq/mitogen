@@ -29,10 +29,14 @@ os.chdir(
 
 
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+ANSIBLE_TESTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible')
+ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
+ANSIBLE_TESTS_TEMPLATES_DIR = os.path.join(GIT_ROOT, 'tests/ansible/templates')
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
     'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
 )
+IMAGE_PREP_DIR = os.path.join(GIT_ROOT, 'tests/image_prep')
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'public.ecr.aws/n5z0e8q9/%(distro)s-test',

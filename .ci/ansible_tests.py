@@ -12,8 +12,6 @@ import jinja2
 import ci_lib
 
 
-TEMPLATES_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible/templates')
-TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
 TMP = ci_lib.TempDir(prefix='mitogen_ci_ansible')
 TMP_HOSTS_DIR = os.path.join(TMP.path, 'hosts')
 
@@ -42,10 +40,10 @@ with ci_lib.Fold('docker_setup'):
 
 with ci_lib.Fold('job_setup'):
     os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
-    os.chdir(TESTS_DIR)
+    os.chdir(ci_lib.ANSIBLE_TESTS_DIR)
 
     os.mkdir(TMP_HOSTS_DIR)
-    for path in glob.glob(TESTS_DIR + '/hosts/*'):
+    for path in glob.glob(os.path.join(ci_lib.ANSIBLE_TESTS_HOSTS_DIR, '*')):
         if not path.endswith('default.hosts'):
             os.symlink(path, os.path.join(TMP_HOSTS_DIR, os.path.basename(path)))
 
@@ -56,7 +54,9 @@ with ci_lib.Fold('job_setup'):
         families[container['family']].append(container['name'])
 
     jinja_env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(searchpath=TEMPLATES_DIR),
+        loader=jinja2.FileSystemLoader(
+            searchpath=ci_lib.ANSIBLE_TESTS_TEMPLATES_DIR,
+        ),
         lstrip_blocks=True,  # Remove spaces and tabs from before a block
         trim_blocks=True,  # Remove first newline after a block
     )
