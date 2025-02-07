@@ -29,40 +29,6 @@ jobs:
           - name: Ans_27_4
             tox_env: py27-mode_ansible-ansible4
 
-          - name: Ans_36_210
-            python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible2.10
-          - name: Ans_36_4
-            python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible4
-
-          - name: Ans_311_210
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible2.10
-          - name: Ans_311_3
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible3
-          - name: Ans_311_4
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible4
-          - name: Ans_311_5
-            python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible5
-          - name: Ans_313_6
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible6
-          - name: Ans_313_7
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible7
-          - name: Ans_313_8
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible8
-          - name: Ans_313_9
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible9
-          - name: Ans_313_10
-            python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible10
           - name: Ans_313_11
             python_version: '3.13'
             tox_env: py313-mode_ansible-ansible11
@@ -157,7 +123,7 @@ jobs:
               exit 1
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   macos:
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
@@ -255,7 +221,7 @@ jobs:
               PYTHON="/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7"
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   # https://github.com/marketplace/actions/alls-green
   check:

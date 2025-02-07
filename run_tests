@@ -40,7 +40,7 @@ fi
             --pattern '*_test.py' \
             "$@"
     else
-        python -m unittest discover \
+        python -b -m unittest discover \
             --start-directory "tests" \
             --pattern '*_test.py' \
             "$@"
@@ -61,7 +61,7 @@ fi
             --pattern '*_test.py' \
             "$@"
     else
-        python -m unittest discover \
+        python -b -m unittest discover \
             --start-directory "tests/ansible" \
             --pattern '*_test.py' \
             "$@"

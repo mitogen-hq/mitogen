@@ -52,6 +52,7 @@ import tempfile
 import traceback
 import types
 
+import mitogen
 import mitogen.core
 import mitogen.parent
 import mitogen.service

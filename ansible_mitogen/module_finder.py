@@ -48,7 +48,7 @@ import mitogen.master
 
 
 LOG = logging.getLogger(__name__)
-PREFIX = 'ansible.module_utils.'
+PREFIX = str('ansible.module_utils.')
 
 
 # Analog of `importlib.machinery.ModuleSpec` or `pkgutil.ModuleInfo`.
@@ -57,9 +57,12 @@ PREFIX = 'ansible.module_utils.'
 #   kind    One of the constants in `imp`, as returned in `imp.find_module()`
 #   parent  `ansible_mitogen.module_finder.Module` of parent package (if any).
 Module = collections.namedtuple('Module', 'name path kind parent')
+# https://stackoverflow.com/questions/34269772/type-hints-in-namedtuple
+Module.__annotations__ = {'name': str, 'path': str, 'kind': int, 'parent': Module}
 
 
 def get_fullname(module):
+    # type: (Module) -> str
     """
     Reconstruct a Module's canonical path by recursing through its parents.
     """
@@ -82,6 +85,7 @@ def get_code(module):
 
 
 def is_pkg(module):
+    # type: (Module) -> bool
     """
     Return :data:`True` if a Module represents a package.
     """
@@ -89,14 +93,15 @@ def is_pkg(module):
 
 
 def find(name, path=(), parent=None):
+    # type: (str, tuple, Module|None) -> Module|None
     """
     Return a Module instance describing the first matching module found on the
     search path.
 
     :param str name:
         Module name.
-    :param list path:
-        List of directory names to search for the module.
+    :param tuple path:
+        Directory names to search for the module.
     :param Module parent:
         Optional module parent.
     """
@@ -129,6 +134,7 @@ def find(name, path=(), parent=None):
 
 
 def find_relative(parent, name, path=()):
+    # type: (Module, str, tuple) -> Module|None
     if parent.kind == imp.PKG_DIRECTORY:
         path = (os.path.dirname(parent.path),) + path
     return find(name, path, parent=parent)
@@ -182,7 +188,7 @@ def walk_imports(code, prefix=None):
 
 
 def scan(module_name, module_path, search_path):
-    # type: (str, str, list[str]) -> list[(str, str, bool)]
+    # type: (str, str, list[str]) -> list[tuple[str, str, bool]]
     """Return a list of (name, path, is_package) for ansible.module_utils
     imports used by an Ansible module.
     """
@@ -201,7 +207,7 @@ def scan(module_name, module_path, search_path):
 
 
 def _scan_importlib_find_spec(module_name, module_path, search_path):
-    # type: (str, str, list[str]) -> list[(str, str, bool)]
+    # type: (str, str, list[str]) -> list[tuple[str, str, bool]]
     module = importlib.machinery.ModuleSpec(
         module_name, loader=None, origin=module_path,
     )
@@ -210,7 +216,7 @@ def _scan_importlib_find_spec(module_name, module_path, search_path):
     )
     prefix.submodule_search_locations = search_path
     queue = collections.deque([module])
-    specs = {prefix.name: prefix}
+    specs = {prefix.name: prefix}  # type: dict[str, importlib.machinery.ModuleSpec|None]
     while queue:
         spec = queue.popleft()
         if spec.origin is None:
@@ -242,6 +248,8 @@ def _scan_importlib_find_spec(module_name, module_path, search_path):
             queue.append(child)
 
     del specs[prefix.name]
+    # Pyright complains that spec.origin could be None, but the function
+    #         signature doesn't mention this possibility.
     return sorted(
         (spec.name, spec.origin, spec.submodule_search_locations is not None)
         for spec in specs.values() if spec is not None
@@ -249,7 +257,7 @@ def _scan_importlib_find_spec(module_name, module_path, search_path):
 
 
 def _scan_imp_find_module(module_name, module_path, search_path):
-    # type: (str, str, list[str]) -> list[(str, str, bool)]
+    # type: (str, str, list[str]) -> list[tuple[str, str, bool]]
     module = Module(module_name, module_path, imp.PY_SOURCE, None)
     stack = [module]
     seen = set()
