@@ -71,11 +71,6 @@ with ci_lib.Fold('job_setup'):
 
     ci_lib.dump_file(inventory_path)
 
-    if not ci_lib.exists_in_path('sshpass'):
-        ci_lib.run("sudo apt-get update")
-        ci_lib.run("sudo apt-get install -y sshpass")
-
-
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
