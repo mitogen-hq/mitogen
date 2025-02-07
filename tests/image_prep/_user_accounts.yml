@@ -152,42 +152,30 @@
             owner: mitogen__has_sudo_pubkey
             group: mitogen__group
 
-    - name: Require a TTY for two accounts
-      lineinfile:
+    - name: Configure sudoers defaults
+      blockinfile:
         path: /etc/sudoers
-        line: "{{item}}"
-      with_items:
-        - Defaults>mitogen__pw_required targetpw
-        - Defaults>mitogen__require_tty requiretty
-        - Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+        marker: "# {mark} Mitogen test defaults"
+        block: |
+          Defaults>mitogen__pw_required targetpw
+          Defaults>mitogen__require_tty requiretty
+          Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+        prepend_newline: true
 
-    - name: Require password for two accounts
-      lineinfile:
+    - name: Configure sudoers users
+      blockinfile:
         path: /etc/sudoers
-        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}:ALL) ALL"
+        marker: "# {mark} Mitogen test users"
+        block: |
+          # User    Host(s) = (runas user:runas group) Command(s)
+          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__pw_required:ALL) ALL
+          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__require_tty_pw_required:ALL) ALL
+          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__require_tty:ALL) NOPASSWD:ALL
+          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__readonly_homedir:ALL) NOPASSWD:ALL
+          {% for runas_user in normal_users %}
+          {{ lookup('pipe', 'whoami') }} ALL = ({{ runas_user.name }}:ALL) NOPASSWD:ALL
+          {% endfor %}
+        prepend_newline: true
         validate: '/usr/sbin/visudo -cf %s'
-      with_items:
-        - mitogen__pw_required
-        - mitogen__require_tty_pw_required
-      when:
-        - ansible_virtualization_type != "docker"
-
-    - name: Allow passwordless sudo for require_tty/readonly_homedir
-      lineinfile:
-        path: /etc/sudoers
-        line: "{{lookup('pipe', 'whoami')}} ALL = ({{item}}:ALL) NOPASSWD:ALL"
-        validate: '/usr/sbin/visudo -cf %s'
-      with_items:
-        - mitogen__require_tty
-        - mitogen__readonly_homedir
-      when:
-        - ansible_virtualization_type != "docker"
-
-    - name: Allow passwordless for many accounts
-      lineinfile:
-        path: /etc/sudoers
-        line: "{{ lookup('pipe', 'whoami') }} ALL = ({{ item.name }}:ALL) NOPASSWD:ALL"
-        validate: '/usr/sbin/visudo -cf %s'
-      with_items: "{{normal_users}}"
       when:
         - ansible_virtualization_type != "docker"
