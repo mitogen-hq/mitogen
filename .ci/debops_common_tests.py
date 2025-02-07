@@ -22,6 +22,7 @@ with ci_lib.Fold('docker_setup'):
 
 
 with ci_lib.Fold('job_setup'):
+    os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
     ci_lib.run('debops-init %s', project_dir)
     os.chdir(project_dir)
 
@@ -45,7 +46,7 @@ with ci_lib.Fold('job_setup'):
             "\n"
             # Speed up slow DH generation.
             "dhparam__bits: ['128', '64']\n"
-            % (ci_lib.key_file,)
+            % (ci_lib.TESTS_SSH_PRIVATE_KEY_FILE,)
         )
 
     with open(inventory_path, 'a') as fp:

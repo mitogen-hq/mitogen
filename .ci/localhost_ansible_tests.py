@@ -13,7 +13,6 @@ import ci_lib
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
 IMAGE_PREP_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/image_prep')
 HOSTS_DIR = os.path.join(TESTS_DIR, 'hosts')
-KEY_PATH = os.path.join(TESTS_DIR, '../data/docker/mitogen__has_sudo_pubkey.key')
 
 
 with ci_lib.Fold('unit_tests'):
@@ -22,7 +21,7 @@ with ci_lib.Fold('unit_tests'):
 
 
 with ci_lib.Fold('job_setup'):
-    os.chmod(KEY_PATH, int('0600', 8))
+    os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
     # NOTE: sshpass v1.06 causes errors so pegging to 1.05 -> "msg": "Error when changing password","out": "passwd: DS error: eDSAuthFailed\n", 
     # there's a checksum error with "brew install http://git.io/sshpass.rb" though, so installing manually
     if not ci_lib.exists_in_path('sshpass'):
