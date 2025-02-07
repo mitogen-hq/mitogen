@@ -6,7 +6,8 @@ import sys
 import ci_lib
 
 
-project_dir = os.path.join(ci_lib.TMP, 'project')
+TMP = ci_lib.TempDir(prefix='mitogen_ci_debops')
+project_dir = os.path.join(TMP.path, 'project')
 vars_path = 'ansible/inventory/group_vars/debops_all_hosts.yml'
 inventory_path = 'ansible/inventory/hosts'
 docker_hostname = ci_lib.get_docker_hostname()
@@ -22,6 +23,7 @@ with ci_lib.Fold('docker_setup'):
 
 
 with ci_lib.Fold('job_setup'):
+    os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
     ci_lib.run('debops-init %s', project_dir)
     os.chdir(project_dir)
 
@@ -45,7 +47,7 @@ with ci_lib.Fold('job_setup'):
             "\n"
             # Speed up slow DH generation.
             "dhparam__bits: ['128', '64']\n"
-            % (ci_lib.key_file,)
+            % (ci_lib.TESTS_SSH_PRIVATE_KEY_FILE,)
         )
 
     with open(inventory_path, 'a') as fp:

@@ -96,7 +96,7 @@ jobs:
           set -o errexit -o nounset -o pipefail
 
           sudo apt-get update
-          sudo apt-get install -y python2-dev python3-pip virtualenv
+          sudo apt-get install -y python2-dev python3-pip sshpass virtualenv
       - name: Show Python versions
         run: |
           set -o errexit -o nounset -o pipefail
