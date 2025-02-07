@@ -61,14 +61,6 @@ def _have_cmd(args):
     return True
 
 
-def have_apt():
-    return _have_cmd(['apt', '--help'])
-
-
-def have_brew():
-    return _have_cmd(['brew', 'help'])
-
-
 def have_docker():
     return _have_cmd(['docker', 'info'])
 
