@@ -25,6 +25,7 @@ In progress (unreleased)
 * :gh:issue:`1238` packaging: Avoid :py:mod:`ast`, requires Python = 2.6
 * :gh:issue:`1118` CI: Statically specify test usernames and group names
 * :gh:issue:`1118` CI: Don't copy SSH private key to temporary dir
+* :gh:issue:`1118` CI: Don't share temporary directory between test groupings
 
 
 v0.3.22 (2025-02-04)

@@ -14,7 +14,8 @@ import ci_lib
 
 TEMPLATES_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible/templates')
 TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
-HOSTS_DIR = os.path.join(ci_lib.TMP, 'hosts')
+TMP = ci_lib.TempDir(prefix='mitogen_ci_ansible')
+TMP_HOSTS_DIR = os.path.join(TMP.path, 'hosts')
 
 
 def pause_if_interactive():
@@ -43,10 +44,10 @@ with ci_lib.Fold('job_setup'):
     os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
     os.chdir(TESTS_DIR)
 
-    ci_lib.run("mkdir %s", HOSTS_DIR)
+    os.mkdir(TMP_HOSTS_DIR)
     for path in glob.glob(TESTS_DIR + '/hosts/*'):
         if not path.endswith('default.hosts'):
-            ci_lib.run("ln -s %s %s", path, HOSTS_DIR)
+            os.symlink(path, os.path.join(TMP_HOSTS_DIR, os.path.basename(path)))
 
     distros = collections.defaultdict(list)
     families = collections.defaultdict(list)
@@ -60,7 +61,7 @@ with ci_lib.Fold('job_setup'):
         trim_blocks=True,  # Remove first newline after a block
     )
     inventory_template = jinja_env.get_template('test-targets.j2')
-    inventory_path = os.path.join(HOSTS_DIR, 'target')
+    inventory_path = os.path.join(TMP_HOSTS_DIR, 'test-targets.ini')
 
     with open(inventory_path, 'w') as fp:
         fp.write(inventory_template.render(
@@ -75,7 +76,8 @@ with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
         ci_lib.run('./run_ansible_playbook.py %s -i "%s" %s',
-            playbook, HOSTS_DIR, ' '.join(sys.argv[1:]))
+            playbook, TMP_HOSTS_DIR, ' '.join(sys.argv[1:]),
+        )
     except:
         pause_if_interactive()
         raise

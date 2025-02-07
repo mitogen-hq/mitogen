@@ -179,8 +179,8 @@ def exists_in_path(progname):
 
 
 class TempDir(object):
-    def __init__(self):
-        self.path = tempfile.mkdtemp(prefix='mitogen_ci_lib')
+    def __init__(self, prefix='mitogen_ci_lib'):
+        self.path = tempfile.mkdtemp(prefix=prefix)
         atexit.register(self.destroy)
 
     def destroy(self, rmtree=shutil.rmtree):
@@ -191,9 +191,6 @@ class Fold(object):
     def __init__(self, name): pass
     def __enter__(self): pass
     def __exit__(self, _1, _2, _3): pass
-
-
-TMP = TempDir().path
 
 
 os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
