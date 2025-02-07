@@ -86,19 +86,10 @@
                 ['com.apple.access_ssh'] +
                 (user_groups[item.name] | default(['mitogen__group']))
             }}
+          hidden: true
           password: "{{ password }}"
         with_items: "{{all_users}}"
         when: ansible_system == 'Darwin'
-
-    - name: Hide users from login window (Darwin).
-      when: ansible_system == 'Darwin'
-      with_items: "{{all_users}}"
-      osx_defaults:
-        array_add: true
-        domain: /Library/Preferences/com.apple.loginwindow
-        type: array
-        key: HiddenUsersList
-        value: ['{{ item.name }}']
 
     - name: Check if AccountsService is used
       stat:
