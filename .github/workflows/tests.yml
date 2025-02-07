@@ -8,11 +8,6 @@ on:
     branches-ignore:
       - docs-master
 
-env:
-  #ANSIBLE_VERBOSITY: 3
-  #MITOGEN_LOG_LEVEL: DEBUG
-  MITOGEN_TEST_IMAGE_TEMPLATE: "ghcr.io/mitogen-hq/%(distro)s-test"
-
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
 # https://github.com/actions/runner-images/blob/main/README.md#software-and-image-support
 jobs:
