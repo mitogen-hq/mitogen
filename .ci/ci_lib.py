@@ -56,7 +56,7 @@ def _have_cmd(args):
         if exc.errno == errno.ENOENT:
             return False
         raise
-    except subprocess.CallProcessError:
+    except subprocess.CalledProcessError:
         return False
     return True
 
