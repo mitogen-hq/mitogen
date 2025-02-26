@@ -18,3 +18,18 @@
         interactive: true
         tty: true
       delegate_to: localhost
+
+    - name: Wait for containers
+      # Can't use wait_for_connection yet, not all base images have a python
+      command: >-
+        docker inspect
+        --format "{% raw %}{{.State.Running}}{% endraw %}"
+        "{{ inventory_hostname }}"
+      register: container_inspect_result
+      retries: 5
+      delay: 10
+      until:
+        - container_inspect_result is succeeded
+        - container_inspect_result.stdout == "true"
+      changed_when: false
+      delegate_to: localhost
