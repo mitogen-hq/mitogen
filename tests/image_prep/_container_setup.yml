@@ -87,16 +87,20 @@
         content: |
           en_US.UTF-8 UTF-8
           fr_FR.UTF-8 UTF-8
+        mode: u=rw,go=r
       when: ansible_pkg_mgr == 'apt'
 
     - name: Generate UTF-8 locale on Debian
-      shell: locale-gen
+      command:
+        cmd: locale-gen
+      changed_when: true
       when: ansible_pkg_mgr == 'apt'
 
     - name: Write Unicode into /etc/environment
       copy:
         dest: /etc/environment
         content: "UNICODE_SNOWMAN=\u2603\n"
+        mode: u=rw,go=r
 
     - name: Install prebuilt 'doas' binary
       unarchive:
@@ -116,6 +120,7 @@
         content: |
           permit :mitogen__group
           permit :root
+        mode: u=rw,go=
 
     - name: Set root user password and shell
       user:
@@ -127,6 +132,7 @@
       file:
         path: /var/run/sshd
         state: directory
+        mode: u=rwx,go=rx
 
     - name: Generate SSH host key
       command: ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
@@ -142,6 +148,7 @@
         dest: /etc/sentinel
         content: |
           i-am-mitogen-test-docker-image
+        mode: u=rw,go=r
 
     - name: Ensure /etc/sudoers.d exists
       file:
