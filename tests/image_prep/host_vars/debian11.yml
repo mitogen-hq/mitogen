@@ -1,6 +1,6 @@
 bootstrap_packages: [python3, python3-apt]
 
-docker_base: debian:bullseye
+docker_base: debian:11
 
 packages:
   - libjson-perl
@@ -9,3 +9,9 @@ packages:
   - python2
   - python3-virtualenv
   - virtualenv
+
+package_manager_keys:
+  - src: debian-archive-bullseye-automatic.gpg  # Debian 11
+    dest: /etc/apt/trusted.gpg.d/
+  - src: debian-archive-bookworm-automatic.gpg  # Debian 12
+    dest: /etc/apt/trusted.gpg.d/
