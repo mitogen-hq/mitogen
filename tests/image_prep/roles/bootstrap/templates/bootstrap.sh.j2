@@ -1,6 +1,12 @@
 set -o errexit
 set -o nounset
 
+{% for item in package_manager_repos %}
+cat << "EOF" > "{{ item.dest }}"
+{{ item.content }}
+EOF
+{% endfor %}
+
 {% if bootstrap_packages %}
 if command -v apt-get; then
   apt-get -y update
