@@ -111,7 +111,11 @@
         state: restarted
 
     - name: Readonly homedir for one account
-      shell: "chown -R root: ~mitogen__readonly_homedir"
+      file:
+        path: ~mitogen__readonly_homedir
+        owner: root
+        recurse: true
+        state: directory
 
     - name: Slow bash profile for one account
       copy:
