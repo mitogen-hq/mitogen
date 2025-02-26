@@ -5,6 +5,8 @@ set -o nounset
 if command -v apt-get; then
   apt-get -y update
   apt-get -y --no-install-recommends install {{ bootstrap_packages | join(' ') }}
+elif command -v dnf; then
+  dnf -y install {{ bootstrap_packages | join(' ') }}
 elif command -v yum; then
   yum -y install {{ bootstrap_packages | join(' ') }}
 else
