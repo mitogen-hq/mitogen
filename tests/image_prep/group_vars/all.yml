@@ -8,7 +8,7 @@ common_packages:
   - sudo
 
 container_image_name: "{{ container_registry }}/{{ inventory_hostname }}-test"
-container_registry: public.ecr.aws/n5z0e8q9
+container_registry: ghcr.io/mitogen-hq
 
 sudo_group:
   MacOSX: admin
