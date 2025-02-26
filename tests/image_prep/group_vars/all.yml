@@ -15,3 +15,4 @@ sudo_group:
   Debian: sudo
   Ubuntu: sudo
   CentOS: wheel
+  AlmaLinux: wheel
