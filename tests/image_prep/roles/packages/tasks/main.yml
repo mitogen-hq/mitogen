@@ -1,0 +1,35 @@
+- name: Ensure requisite apt packages are installed
+  apt:
+    name: "{{ common_packages + packages }}"
+    state: present
+    install_recommends: false
+    update_cache: true
+  when:
+    - ansible_pkg_mgr == 'apt'
+
+- name: Ensure requisite yum packages are installed
+  yum:
+    name: "{{ common_packages + packages }}"
+    state: present
+    update_cache: true
+  when:
+    - ansible_pkg_mgr == 'yum'
+
+- name: Ensure requisite dnf packages are installed
+  dnf:
+    name: "{{ common_packages + packages }}"
+    state: present
+    update_cache: true
+  when:
+    - ansible_pkg_mgr == 'dnf'
+
+- name: Clean up package cache
+  command:
+    cmd: "{{ packages_clean_command[ansible_pkg_mgr] }}"
+  changed_when: true
+
+- name: Clean up package directories
+  shell:
+    rm -rf {{ item }}/*
+  with_items: "{{ packages_cleanup_directories }}"
+  changed_when: true

@@ -22,49 +22,11 @@
 
   roles:
     - role: package_manager
+    - role: packages
     - role: sshd
     - role: sshd_container
 
   tasks:
-    - name: Ensure requisite apt packages are installed
-      apt:
-        name: "{{ common_packages + packages }}"
-        state: present
-        install_recommends: false
-        update_cache: true
-      when: ansible_pkg_mgr == 'apt'
-
-    - name: Ensure requisite yum packages are installed
-      yum:
-        name: "{{ common_packages + packages }}"
-        state: present
-        update_cache: true
-      when: ansible_pkg_mgr == 'yum'
-
-    - name: Ensure requisite dnf packages are installed
-      dnf:
-        name: "{{ common_packages + packages }}"
-        state: present
-        update_cache: true
-      when: ansible_pkg_mgr == 'dnf'
-
-    - name: Clean up package cache
-      vars:
-        clean_command:
-          apt: apt-get clean
-          yum: yum clean all
-          dnf: dnf clean all
-      command: "{{ clean_command[ansible_pkg_mgr] }}"
-      args:
-        warn: "{{ False if ansible_version_major_minor is version('2.10', '<=', strict=True) else omit }}"
-
-    - name: Clean up apt package lists
-      shell: rm -rf {{item}}/*
-      with_items:
-      - /var/cache/apt
-      - /var/lib/apt/lists
-      when: ansible_pkg_mgr == 'apt'
-
     - name: Configure /usr/bin/python
       command: alternatives --set python /usr/bin/python3.8
       args:
