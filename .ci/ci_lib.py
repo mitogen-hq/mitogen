@@ -39,7 +39,7 @@ DISTRO_SPECS = os.environ.get(
 IMAGE_PREP_DIR = os.path.join(GIT_ROOT, 'tests/image_prep')
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2021',
 )
 TESTS_SSH_PRIVATE_KEY_FILE = os.path.join(GIT_ROOT, 'tests/data/docker/mitogen__has_sudo_pubkey.key')
 
@@ -227,7 +227,7 @@ def container_specs(
     [{'distro': 'debian11',
       'family': 'debian',
       'hostname': 'localhost',
-      'image': 'public.ecr.aws/n5z0e8q9/debian11-test',
+      'image': 'ghcr.io/mitogen-hq/debian11-test:2021',
       'index': 1,
       'name': 'target-debian11-1',
       'port': 2201,
@@ -235,7 +235,7 @@ def container_specs(
      {'distro': 'centos6',
       'family': 'centos',
       'hostname': 'localhost',
-      'image': 'public.ecr.aws/n5z0e8q9/centos6-test',
+      'image': 'ghcr.io/mitogen-hq/centos6-test:2021',
       'index': 2,
       'name': 'target-centos6-2',
       'port': 2202,

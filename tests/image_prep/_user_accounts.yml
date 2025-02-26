@@ -3,10 +3,8 @@
 #
 # WARNING: this creates non-privilged accounts with pre-set passwords!
 #
-
-- import_playbook: ../ansible/setup/report_controller.yml
-
-- hosts: all
+- name: Mitogen test users and groups
+  hosts: all
   gather_facts: true
   strategy: mitogen_free
   become: true
@@ -64,7 +62,7 @@
     - name: Create Mitogen test groups
       group:
         name: "{{ item.name }}"
-      loop: "{{ mitogen_test_groups }}"
+      with_items: "{{ mitogen_test_groups }}"
 
     - name: Create user accounts
       vars:
@@ -113,7 +111,11 @@
         state: restarted
 
     - name: Readonly homedir for one account
-      shell: "chown -R root: ~mitogen__readonly_homedir"
+      file:
+        path: ~mitogen__readonly_homedir
+        owner: root
+        recurse: true
+        state: directory
 
     - name: Slow bash profile for one account
       copy:
@@ -160,7 +162,6 @@
           Defaults>mitogen__pw_required targetpw
           Defaults>mitogen__require_tty requiretty
           Defaults>mitogen__require_tty_pw_required requiretty,targetpw
-        prepend_newline: true
         validate: '/usr/sbin/visudo -cf %s'
 
     - name: Configure sudoers users
@@ -176,7 +177,6 @@
           {% for runas_user in normal_users %}
           {{ lookup('pipe', 'whoami') }} ALL = ({{ runas_user.name }}:ALL) NOPASSWD:ALL
           {% endfor %}
-        prepend_newline: true
         validate: '/usr/sbin/visudo -cf %s'
       when:
         - ansible_virtualization_type != "docker"

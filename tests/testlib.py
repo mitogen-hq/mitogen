@@ -57,7 +57,7 @@ DISTRO_SPECS = os.environ.get(
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2021',
 )
 
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))

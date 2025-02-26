@@ -27,4 +27,3 @@ become_unpriv_available: >-
   -}}
 
 pkg_mgr_python_interpreter: python
-pkg_repos_overrides: []

@@ -1,0 +1,13 @@
+- name: Add signing keys
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: u=rw,go=r
+  with_items: "{{ package_manager_keys }}"
+
+- name: Configure package repositories
+  copy:
+    dest: "{{ item.dest }}"
+    content: "{{ item.content }}"
+    mode: u=rw,go=r
+  with_items: "{{ package_manager_repos }}"
