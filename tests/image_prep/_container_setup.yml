@@ -54,18 +54,6 @@
         content: "UNICODE_SNOWMAN=\u2603\n"
         mode: u=rw,go=r
 
-    - name: Install prebuilt 'doas' binary
-      unarchive:
-        dest: /
-        src: ../data/docker/doas-debian.tar.gz
-
-    - name: Make prebuilt 'doas' binary executable
-      file:
-        path: /usr/local/bin/doas
-        mode: 'u=rwxs,go=rx'
-        owner: root
-        group: root
-
     - name: Install doas.conf
       copy:
         dest: /etc/doas.conf
