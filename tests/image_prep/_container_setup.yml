@@ -8,8 +8,6 @@
 - name: Setup containers
   hosts: all
   strategy: mitogen_free
-  # Resource limitation, my laptop freezes doing every container concurrently
-  serial: 4
   # Can't gather facts before here.
   gather_facts: true
   vars:
