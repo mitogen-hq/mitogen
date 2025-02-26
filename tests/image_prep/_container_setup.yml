@@ -16,7 +16,7 @@
   pre_tasks:
     - meta: end_play
       when:
-        - ansible_facts.virtualization_type != "docker"
+        - ansible_virtualization_type != "docker"
 
   roles:
     - role: package_manager

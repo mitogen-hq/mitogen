@@ -3,11 +3,6 @@
   strategy: mitogen_free
   gather_facts: false
   tasks:
-    - name: Fetch container images
-      docker_image:
-        name: "{{ docker_base }}"
-      delegate_to: localhost
-
     - name: Start containers
       docker_container:
         name: "{{ inventory_hostname }}"
