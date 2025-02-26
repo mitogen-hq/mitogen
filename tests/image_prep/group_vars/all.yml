@@ -1,4 +1,5 @@
 common_packages:
+  - acl
   - openssh-server
   - rsync
   - strace
