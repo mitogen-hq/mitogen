@@ -2,18 +2,8 @@
   hosts: all
   strategy: linear
   gather_facts: false
-  tasks:
-    - name: Install bootstrap packages
-      raw: |
-        set -o errexit
-        set -o nounset
-        if type -p yum; then
-          yum -y install {{ bootstrap_packages | join(' ') }}
-        else
-          apt-get -y update
-          apt-get -y --no-install-recommends install {{ bootstrap_packages | join(' ') }}
-        fi
-      when: bootstrap_packages | length
+  roles:
+    - role: bootstrap
 
 - name: Setup containers
   hosts: all
