@@ -31,6 +31,7 @@
         - ansible_facts.virtualization_type != "docker"
 
   roles:
+    - role: package_manager
     - role: sshd
     - role: sshd_container
 
