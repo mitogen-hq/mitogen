@@ -62,7 +62,7 @@
     - name: Create Mitogen test groups
       group:
         name: "{{ item.name }}"
-      loop: "{{ mitogen_test_groups }}"
+      with_items: "{{ mitogen_test_groups }}"
 
     - name: Create user accounts
       vars:
@@ -158,7 +158,6 @@
           Defaults>mitogen__pw_required targetpw
           Defaults>mitogen__require_tty requiretty
           Defaults>mitogen__require_tty_pw_required requiretty,targetpw
-        prepend_newline: true
         validate: '/usr/sbin/visudo -cf %s'
 
     - name: Configure sudoers users
@@ -174,7 +173,6 @@
           {% for runas_user in normal_users %}
           {{ lookup('pipe', 'whoami') }} ALL = ({{ runas_user.name }}:ALL) NOPASSWD:ALL
           {% endfor %}
-        prepend_newline: true
         validate: '/usr/sbin/visudo -cf %s'
       when:
         - ansible_virtualization_type != "docker"

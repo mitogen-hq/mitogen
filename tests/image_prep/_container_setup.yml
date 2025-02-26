@@ -32,6 +32,7 @@
 
   roles:
     - role: sshd
+    - role: sshd_container
 
   tasks:
     - name: Ensure requisite apt packages are installed
