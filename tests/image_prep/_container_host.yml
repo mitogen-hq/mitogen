@@ -1,0 +1,5 @@
+- name: Setup container host
+  hosts: localhost
+  become: true
+  roles:
+    - role: container_host
