@@ -1,6 +1,7 @@
 ansible_version_major_minor: "{{ ansible_version.major }}.{{ ansible_version.minor }}"
 
 common_packages:
+  - acl
   - openssh-server
   - rsync
   - strace
