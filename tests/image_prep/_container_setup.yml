@@ -1,5 +1,5 @@
-
-- hosts: all
+- name: Bootstrap containers
+  hosts: all
   strategy: linear
   gather_facts: false
   tasks:
@@ -15,7 +15,8 @@
         fi
       when: bootstrap_packages | length
 
-- hosts: all
+- name: Setup containers
+  hosts: all
   strategy: mitogen_free
   # Resource limitation, my laptop freezes doing every container concurrently
   serial: 4
