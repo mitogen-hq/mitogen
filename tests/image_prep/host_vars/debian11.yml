@@ -3,6 +3,7 @@ bootstrap_packages: [python3, python3-apt]
 docker_base: debian:11
 
 packages:
+  - doas
   - libjson-perl
   - locales
   - python-is-python3
