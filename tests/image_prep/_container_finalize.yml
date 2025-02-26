@@ -1,7 +1,7 @@
 - name: Prepare images
   hosts: all
   strategy: mitogen_free
-  gather_facts: true
+  gather_facts: false
   tasks:
     - name: Commit containers
       command: >
@@ -10,9 +10,11 @@
         --change 'CMD ["/usr/sbin/sshd", "-D"]'
         {{ inventory_hostname }}
         {{ container_image_name }}
+      changed_when: true
       delegate_to: localhost
 
     - name: Stop containers
       command: >
         docker rm -f {{ inventory_hostname }}
+      changed_when: true
       delegate_to: localhost
