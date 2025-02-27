@@ -3,18 +3,30 @@
   strategy: mitogen_free
   gather_facts: false
   tasks:
-    - name: Fetch container images
-      docker_image:
-        name: "{{ docker_base }}"
-      delegate_to: localhost
-
     - name: Start containers
       docker_container:
         name: "{{ inventory_hostname }}"
         image: "{{ docker_base }}"
         command: /bin/bash
         hostname: "mitogen-{{ inventory_hostname }}"
+        etc_hosts:
+          centos-vault-proxy: host-gateway
         detach: true
         interactive: true
         tty: true
+      delegate_to: localhost
+
+    - name: Wait for containers
+      # Can't use wait_for_connection yet, not all base images have a python
+      command: >-
+        docker inspect
+        --format "{% raw %}{{.State.Running}}{% endraw %}"
+        "{{ inventory_hostname }}"
+      register: container_inspect_result
+      retries: 5
+      delay: 10
+      until:
+        - container_inspect_result is succeeded
+        - container_inspect_result.stdout == "true"
+      changed_when: false
       delegate_to: localhost
