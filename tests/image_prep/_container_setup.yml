@@ -13,11 +13,6 @@
   vars:
     distro: "{{ansible_distribution}}"
 
-  pre_tasks:
-    - meta: end_play
-      when:
-        - ansible_virtualization_type != "docker"
-
   roles:
     - role: package_manager
     - role: packages
