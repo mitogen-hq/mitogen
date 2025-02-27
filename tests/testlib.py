@@ -53,11 +53,11 @@ LOG = logging.getLogger(__name__)
 
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
+    'centos6 alma9-py3 debian9 debian12-py3 ubuntu1604 ubuntu2404-py3',
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'ghcr.io/mitogen-hq/%(distro)s-test:2021',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
 )
 
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))

@@ -27,3 +27,9 @@ become_unpriv_available: >-
   -}}
 
 pkg_mgr_python_interpreter: python
+
+virtualenv_create_argv:
+  - virtualenv
+  - -p
+  - "{{ virtualenv_python_path }}"
+  - "{{ virtualenv_env_path }}"
