@@ -1,2 +1,4 @@
 - name: Restart sshd
-  meta: noop
+  command: "true"
+  changed_when: false
+  check_mode: false
