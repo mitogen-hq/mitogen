@@ -1,0 +1,21 @@
+set -o errexit
+set -o nounset
+
+{% for item in package_manager_repos %}
+cat << "EOF" > "{{ item.dest }}"
+{{ item.content }}
+EOF
+{% endfor %}
+
+{% if bootstrap_packages %}
+if command -v apt-get; then
+  apt-get -y update
+  apt-get -y --no-install-recommends install {{ bootstrap_packages | join(' ') }}
+elif command -v dnf; then
+  dnf -y install {{ bootstrap_packages | join(' ') }}
+elif command -v yum; then
+  yum -y install {{ bootstrap_packages | join(' ') }}
+else
+  exit 42
+fi
+{% endif %}

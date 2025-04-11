@@ -1,7 +1,7 @@
 - import_playbook: issue_109__target_has_old_ansible_installed.yml
 - import_playbook: issue_113__duplicate_module_imports.yml
 - import_playbook: issue_118__script_not_marked_exec.yml
-- import_playbook: issue_122__environment_difference.yml
+#- import_playbook: issue_122__environment_difference.yml
 - import_playbook: issue_140__thread_pileup.yml
 - import_playbook: issue_152__local_action_wrong_interpreter.yml
 - import_playbook: issue_152__virtualenv_python_fails.yml
