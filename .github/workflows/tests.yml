@@ -11,7 +11,8 @@ on:
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
 # https://github.com/actions/runner-images/blob/main/README.md#software-and-image-support
 jobs:
-  linux:
+  u2004:
+    name: u2004 ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2004-Readme.md
     runs-on: ubuntu-20.04
 
@@ -155,6 +156,7 @@ jobs:
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
 
   macos:
+    name: macos ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
     runs-on: macos-13
     timeout-minutes: 15
@@ -256,7 +258,7 @@ jobs:
   check:
     if: always()
     needs:
-      - linux
+      - u2004
       - macos
     runs-on: ubuntu-latest
     steps:
