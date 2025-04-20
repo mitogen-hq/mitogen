@@ -26,6 +26,7 @@ In progress (unreleased)
 * :gh:issue:`1118` CI: Statically specify test usernames and group names
 * :gh:issue:`1118` CI: Don't copy SSH private key to temporary dir
 * :gh:issue:`1118` CI: Don't share temporary directory between test groupings
+* :gh:issue:`1258` Initial Ansible 12 (ansible-core 2.19) support
 
 
 v0.3.22 (2025-02-04)
