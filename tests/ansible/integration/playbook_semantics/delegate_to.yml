@@ -30,6 +30,8 @@
     # connection:local, no sudo
     #
     - name: "connection:local, no sudo"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       copy:
         dest: "{{ local_path }}"
         content: "Hello, world."
@@ -43,6 +45,8 @@
         fail_msg: "{{ lookup('file', local_path) }}"
 
     - name: "connection:local, no sudo"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       file:
         path: "{{ local_path }}"
         state: absent
@@ -84,6 +88,8 @@
     # connection:local, sudo
     #
     - name: "connection:local, sudo"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       shell: |
         whoami > "{{ local_path }}"
       args:
@@ -102,6 +108,8 @@
         - requires_local_sudo
 
     - name: "connection:local, sudo"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       file:
         path: "{{ local_path }}"
         state: absent
