@@ -41,7 +41,8 @@ def grep_version():
         match = version_pattern.search(fp.read())
     if match is None:
         raise ValueError('Could not find __version__ string in %s', path)
-    return '.'.join(str(part) for part in match.groups())
+    # E.g. '0.1.2', '0.1.3dev'
+    return '.'.join(str(part) for part in match.groups() if part)
 
 
 def long_description():
