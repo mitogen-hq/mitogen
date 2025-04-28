@@ -12,6 +12,7 @@
   - custom_python_detect_environment:
     vars:
       ansible_connection: kubectl
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
       mitogen_kubectl_path: stub-kubectl.py
     register: out
 

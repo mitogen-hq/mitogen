@@ -1,0 +1,6 @@
+- name: Restart sshd
+  shell: |
+    launchctl unload /System/Library/LaunchDaemons/ssh.plist
+    wait 5
+    launchctl load -w /System/Library/LaunchDaemons/ssh.plist
+  changed_when: true

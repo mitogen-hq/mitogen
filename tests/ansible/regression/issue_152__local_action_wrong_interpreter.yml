@@ -8,6 +8,8 @@
   connection: local
   tasks:
     - name: Create /tmp/issue_152_interpreter.sh
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       copy:
         dest: /tmp/issue_152_interpreter.sh
         mode: u+x
@@ -28,6 +30,8 @@
           out={{ out }}
 
     - name: Cleanup /tmp/issue_152_interpreter.sh
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       file:
         path: /tmp/issue_152_interpreter.sh
         state: absent

@@ -19,6 +19,8 @@
         bash -c "( sleep 3; kill -9 {{ssh_account_env.pid}}; ) & disown"
 
     - connection: local
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       shell: sleep 3
 
     - wait_for_connection:

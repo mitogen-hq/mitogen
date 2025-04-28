@@ -7,6 +7,8 @@
   gather_facts: false
   any_errors_fatal: false
   connection: local
+  vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
   tasks:
     - include_tasks: ../_mitogen_only.yml
     - include_tasks: _end_play_if_not_sudo_linux.yml
@@ -19,7 +21,7 @@
         -i localhost,
         -c setns
         -e mitogen_kind=lxc
-        -e ansible_python_interpreter=python
+        -e ansible_python_interpreter="{{ ansible_playbook_python }}"
         -e mitogen_lxc_info_path={{git_basedir}}/tests/data/stubs/stub-lxc-info.py
         -m shell
         -a "echo hi"
