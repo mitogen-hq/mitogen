@@ -10,19 +10,13 @@ import sys
 import ci_lib
 
 
-TESTS_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/ansible')
-IMAGE_PREP_DIR = os.path.join(ci_lib.GIT_ROOT, 'tests/image_prep')
-HOSTS_DIR = os.path.join(TESTS_DIR, 'hosts')
-KEY_PATH = os.path.join(TESTS_DIR, '../data/docker/mitogen__has_sudo_pubkey.key')
-
-
 with ci_lib.Fold('unit_tests'):
     os.environ['SKIP_MITOGEN'] = '1'
     ci_lib.run('./run_tests -v')
 
 
 with ci_lib.Fold('job_setup'):
-    os.chmod(KEY_PATH, int('0600', 8))
+    os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
     # NOTE: sshpass v1.06 causes errors so pegging to 1.05 -> "msg": "Error when changing password","out": "passwd: DS error: eDSAuthFailed\n", 
     # there's a checksum error with "brew install http://git.io/sshpass.rb" though, so installing manually
     if not ci_lib.exists_in_path('sshpass'):
@@ -51,11 +45,11 @@ with ci_lib.Fold('machine_prep'):
         subprocess.check_call('sudo chmod 700 ~root/.ssh', shell=True)
         subprocess.check_call('sudo chmod 600 ~root/.ssh/authorized_keys', shell=True)
 
-    os.chdir(IMAGE_PREP_DIR)
+    os.chdir(ci_lib.IMAGE_PREP_DIR)
     ci_lib.run("ansible-playbook -c local -i localhost, macos_localhost.yml")
 
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':
-        os.chdir(IMAGE_PREP_DIR)
+        os.chdir(ci_lib.IMAGE_PREP_DIR)
         ci_lib.run("ansible-playbook -c local -i localhost, _user_accounts.yml")
 
     cmd = ';'.join([
@@ -80,7 +74,7 @@ with ci_lib.Fold('machine_prep'):
 
 
 with ci_lib.Fold('ansible'):
-    os.chdir(TESTS_DIR)
+    os.chdir(ci_lib.ANSIBLE_TESTS_DIR)
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     ci_lib.run('./run_ansible_playbook.py %s %s',
         playbook, ' '.join(sys.argv[1:]))

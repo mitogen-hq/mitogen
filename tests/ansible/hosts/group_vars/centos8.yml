@@ -1,7 +1,7 @@
 ---
 pkg_mgr_python_interpreter: /usr/libexec/platform-python
 
-pkg_repos_overrides:
+package_manager_repos:
   - dest: /etc/yum.repos.d/CentOS-Linux-AppStream.repo
     content: |
       [appstream]

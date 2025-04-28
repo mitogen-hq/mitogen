@@ -57,7 +57,7 @@ DISTRO_SPECS = os.environ.get(
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'public.ecr.aws/n5z0e8q9/%(distro)s-test',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2021',
 )
 
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
@@ -153,6 +153,29 @@ def data_path(suffix):
         # SSH is funny about private key permissions.
         os.chmod(path, int('0600', 8))
     return path
+
+
+def _have_cmd(args):
+    # Code duplicated in ci_lib.py
+    try:
+        subprocess.run(
+            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError as exc:
+        if exc.errno == errno.ENOENT:
+            return False
+        raise
+    except subprocess.CalledProcessError:
+        return False
+    return True
+
+
+def have_python2():
+    return _have_cmd(['python2'])
+
+
+def have_python3():
+    return _have_cmd(['python3'])
 
 
 def retry(fn, on, max_attempts, delay):

@@ -26,20 +26,23 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import ast
 import os
+import re
 
 from setuptools import find_packages, setup
 
 
 def grep_version():
     path = os.path.join(os.path.dirname(__file__), 'mitogen/__init__.py')
+    version_pattern = re.compile(
+        r"__version__ = \((\d+), (\d+), (\d+)(?:, '(dev)')?\)",
+    )
     with open(path) as fp:
-        for line in fp:
-            if line.startswith('__version__'):
-                _, _, s = line.partition('=')
-                parts = ast.literal_eval(s.strip())
-                return '.'.join(str(part) for part in parts)
+        match = version_pattern.search(fp.read())
+    if match is None:
+        raise ValueError('Could not find __version__ string in %s', path)
+    # E.g. '0.1.2', '0.1.3dev'
+    return '.'.join(str(part) for part in match.groups() if part)
 
 
 def long_description():

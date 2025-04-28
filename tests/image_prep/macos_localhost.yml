@@ -5,3 +5,4 @@
   become: true
   roles:
     - role: sshd
+    - role: sshd_macos
