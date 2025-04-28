@@ -218,20 +218,7 @@ jobs:
               exit 1
           fi
 
-          if [[ $PYTHON == "python2.7" && $(uname) == "Darwin" ]]; then
-              # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
-              PYTHON="/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7"
-              "$PYTHON" -m ensurepip --user --altinstall --no-default-pip
-              "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
-          elif [[ $PYTHON == "python2.7" ]]; then
-              curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
-              "$PYTHON" get-pip.py --user --no-python-version-warning
-              # Avoid Python 2.x pip masking system pip
-              rm -f ~/.local/bin/{easy_install,pip,wheel}
-              "$PYTHON" -m pip install --user -r "tests/requirements-tox.txt"
-          else
-              "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
-          fi
+          "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -245,11 +232,6 @@ jobs:
           if [[ -z $PYTHON ]]; then
               echo 1>&2 "Python interpreter could not be determined"
               exit 1
-          fi
-
-          if [[ $PYTHON == "python2.7" && $(uname) == "Darwin" ]]; then
-              # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
-              PYTHON="/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7"
           fi
 
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
