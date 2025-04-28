@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.23 (2025-04-28)
+--------------------
 
 * :gh:issue:`1121` :mod:`mitogen`: Log skipped :py:mod:`termios` attributes
 * :gh:issue:`1238` packaging: Avoid :py:mod:`ast`, requires Python = 2.6
