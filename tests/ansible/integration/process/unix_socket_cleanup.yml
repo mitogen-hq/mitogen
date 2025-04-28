@@ -7,7 +7,10 @@
         result['sockets'] = glob.glob('/tmp/mitogen_unix*.sock')
     register: socks
 
-  - shell: >
+  - name: Run whoami locally in an ansible subprocess
+    vars:
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
+    shell: >-
       ANSIBLE_STRATEGY=mitogen_linear
       ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
       ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
@@ -15,6 +18,7 @@
       {% for inv in ansible_inventory_sources %}
       -i "{{ inv }}"
       {% endfor %}
+      -e ansible_python_interpreter="{{ ansible_playbook_python }}"
       test-targets
     args:
       chdir: ../..

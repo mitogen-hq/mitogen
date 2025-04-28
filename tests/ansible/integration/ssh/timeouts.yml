@@ -15,6 +15,8 @@
       environment:
         ANSIBLE_SSH_TIMEOUT: 10
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       command: |
         ansible
         {% for inv in ansible_inventory_sources %}

@@ -26,6 +26,7 @@ In progress (unreleased)
 * :gh:issue:`1118` CI: Statically specify test usernames and group names
 * :gh:issue:`1118` CI: Don't copy SSH private key to temporary dir
 * :gh:issue:`1118` CI: Don't share temporary directory between test groupings
+* :gh:issue:`1256` CI: Upgrade Github jobs from Ubuntu 20.04 to 22.04 & 24.04
 
 
 v0.3.22 (2025-02-04)
