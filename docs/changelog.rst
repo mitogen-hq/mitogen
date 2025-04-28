@@ -23,6 +23,18 @@ In progress (unreleased)
 
 
 
+v0.3.23 (2025-04-28)
+--------------------
+
+* :gh:issue:`1121` :mod:`mitogen`: Log skipped :py:mod:`termios` attributes
+* :gh:issue:`1238` packaging: Avoid :py:mod:`ast`, requires Python = 2.6
+* :gh:issue:`1118` CI: Statically specify test usernames and group names
+* :gh:issue:`1118` CI: Don't copy SSH private key to temporary dir
+* :gh:issue:`1118` CI: Don't share temporary directory between test groupings
+* :gh:issue:`1256` CI: Upgrade Github jobs from Ubuntu 20.04 to 22.04 & 24.04
+* :gh:issue:`1263` packaging: Fix InvalidVersion in release versions
+
+
 v0.3.22 (2025-02-04)
 --------------------
 

@@ -8,6 +8,7 @@
   - custom_python_detect_environment:
     vars:
       ansible_connection: lxc
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
       mitogen_lxc_attach_path: stub-lxc-attach.py
     register: out
 

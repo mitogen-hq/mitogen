@@ -224,8 +224,16 @@ def flags(names):
     Return the result of ORing a set of (space separated) :py:mod:`termios`
     module constants together.
     """
-    return sum(getattr(termios, name, 0)
-               for name in names.split())
+    i = 0
+    skipped = []
+    for name in names.split():
+        try:
+            i |= getattr(termios, name)
+        except AttributeError:
+            skipped.append(name)
+    if skipped:
+        LOG.debug('Skipped termios attributes: %s', ', '.join(skipped))
+    return i
 
 
 def cfmakeraw(tflags):
@@ -234,12 +242,9 @@ def cfmakeraw(tflags):
     modified in a manner similar to the `cfmakeraw()` C library function, but
     additionally disabling local echo.
     """
-    # BSD: github.com/freebsd/freebsd/blob/master/lib/libc/gen/termios.c#L162
-    # Linux: github.com/lattera/glibc/blob/master/termios/cfmakeraw.c#L20
     iflag, oflag, cflag, lflag, ispeed, ospeed, cc = tflags
     iflag &= ~flags('IMAXBEL IXOFF INPCK BRKINT PARMRK '
-                    'ISTRIP INLCR ICRNL IXON IGNPAR')
-    iflag &= ~flags('IGNBRK BRKINT PARMRK')
+                    'ISTRIP INLCR ICRNL IXON IGNPAR IGNBRK')
     oflag &= ~flags('OPOST')
     lflag &= ~flags('ECHO ECHOE ECHOK ECHONL ICANON ISIG '
                     'IEXTEN NOFLSH TOSTOP PENDIN')
