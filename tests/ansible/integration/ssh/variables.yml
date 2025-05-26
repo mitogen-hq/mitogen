@@ -6,6 +6,7 @@
   hosts: test-targets[0]
   connection: local
   vars:
+    ansible_python_interpreter: "{{ ansible_playbook_python }}"
     # ControlMaster has the effect of caching the previous auth to the same
     # account, so disable it. Can't disable with ControlMaster no since that
     # already appears on command line, so override ControlPath with junk.

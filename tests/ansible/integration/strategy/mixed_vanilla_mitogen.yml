@@ -4,7 +4,10 @@
   tasks:
     - connection: local
       environment:
+        ANSIBLE_PYTHON_INTERPRETER: "{{ ansible_playbook_python }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       command: |
         ansible-playbook
         {% for inv in ansible_inventory_sources %}
@@ -18,6 +21,8 @@
     - connection: local
       environment:
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
       command: |
         ansible-playbook
         {% for inv in ansible_inventory_sources %}

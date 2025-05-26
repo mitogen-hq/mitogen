@@ -17,6 +17,8 @@
         - name: Test template does not cause StreamError
           delegate_to: localhost
           run_once: true
+          vars:
+            ansible_python_interpreter: "{{ ansible_playbook_python }}"
           environment:
             ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
           command:

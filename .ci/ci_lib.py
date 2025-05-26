@@ -54,6 +54,7 @@ def print(*args, **kwargs):
 
 
 def _have_cmd(args):
+    # Code duplicated in testlib.py
     try:
         subprocess.run(
             args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,

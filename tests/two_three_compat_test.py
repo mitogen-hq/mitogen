@@ -1,4 +1,3 @@
-import os
 import unittest
 
 import mitogen.core
@@ -11,8 +10,8 @@ import simple_pkg.ping
 # There should be 100 tests in this file.
 
 @unittest.skipIf(
-    os.uname()[0] == 'Darwin' and int(os.uname()[2].partition('.')[0]) >= 21,
-    "Python 2.x not shipped on macOS 12.3+ (Darwin 21.4+, Monterey)",
+    not testlib.have_python2() or not testlib.have_python3(),
+    "Python 2/3 compatibility tests require both versions on the controller",
 )
 class TwoThreeCompatTest(testlib.RouterMixin, testlib.TestCase):
     if mitogen.core.PY3:

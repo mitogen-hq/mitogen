@@ -9,6 +9,8 @@
   - name: Create file tree
     connection: local
     run_once: true
+    vars:
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
     shell: >
       mkdir /tmp/filetree.in;
       seq -f /tmp/filetree.in/%g 1 1000 | xargs touch;
@@ -37,6 +39,8 @@
   - name: Cleanup local file tree
     connection: local
     run_once: true
+    vars:
+      ansible_python_interpreter: "{{ ansible_playbook_python }}"
     file:
       path: /tmp/filetree.in
       state: absent
