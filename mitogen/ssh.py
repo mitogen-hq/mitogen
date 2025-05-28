@@ -40,6 +40,7 @@ try:
 except ImportError:
     from pipes import quote as shlex_quote
 
+import mitogen.core
 import mitogen.parent
 from mitogen.core import b
 
