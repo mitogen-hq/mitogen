@@ -545,7 +545,16 @@ def set_cloexec(fd):
     they must be explicitly closed through some other means, such as
     :func:`mitogen.fork.on_fork`.
     """
-    assert fd > pty.STDERR_FILENO, 'fd %r <= 2 (STDERR_FILENO)' % (fd,)
+    stdfds = [
+        stdfd
+        for stdio, stdfd in [
+            (sys.stdin, pty.STDIN_FILENO),
+            (sys.stdout, pty.STDOUT_FILENO),
+            (sys.stderr, pty.STDERR_FILENO),
+        ]
+        if stdio is not None and not stdio.closed
+    ]
+    assert fd not in stdfds, 'fd %r is one of the stdio fds: %r' % (fd, stdfds)
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
@@ -4106,11 +4115,13 @@ class ExternalContext(object):
         Open /dev/null to replace stdio temporarily. In case of odd startup,
         assume we may be allocated a standard handle.
         """
-        for stdfd, mode in [
-                (pty.STDIN_FILENO, os.O_RDONLY),
-                (pty.STDOUT_FILENO, os.O_RDWR),
-                (pty.STDERR_FILENO, os.O_RDWR),
+        for stdio, stdfd, mode in [
+                (sys.stdin, pty.STDIN_FILENO, os.O_RDONLY),
+                (sys.stdout, pty.STDOUT_FILENO, os.O_RDWR),
+                (sys.stderr, pty.STDERR_FILENO, os.O_RDWR),
         ]:
+            if stdio is None:
+                continue
             fd = os.open('/dev/null', mode)
             if fd != stdfd:
                 os.dup2(fd, stdfd)
@@ -4148,10 +4159,12 @@ class ExternalContext(object):
         self._nullify_stdio()
 
         self.loggers = []
-        for stdfd, name in [
-                (pty.STDOUT_FILENO, 'stdout'),
-                (pty.STDERR_FILENO, 'stderr'),
+        for stdio, stdfd, name in [
+                (sys.stdout, pty.STDOUT_FILENO, 'stdout'),
+                (sys.stderr, pty.STDERR_FILENO, 'stderr'),
         ]:
+            if stdio is None:
+                continue
             log = IoLoggerProtocol.build_stream(name, stdfd)
             self.broker.start_receive(log)
             self.loggers.append(log)
