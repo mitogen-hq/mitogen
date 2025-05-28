@@ -1390,10 +1390,6 @@ class Connection(object):
     # with a custom argv.
     #   * Optimized for minimum byte count after minification & compression.
     #     The script preamble_size.py measures this.
-    #   * 'CONTEXT_NAME' and 'PREAMBLE_COMPRESSED_LEN' are substituted with
-    #     their respective values.
-    #   * CONTEXT_NAME must be prefixed with the name of the Python binary in
-    #     order to allow virtualenvs to detect their install prefix.
     #
     # macOS tweaks for Python 2.7 must be kept in sync with the the Ansible
     # module test_echo_module, used by the integration tests.
@@ -1432,10 +1428,10 @@ class Connection(object):
             if os.uname()[0]=='Darwin'and os.uname()[2][:2]<'19'and sys.executable=='/usr/bin/python':sys.executable='/usr/bin/python2.7'
             if os.uname()[0]=='Darwin'and os.uname()[2][:2]in'2021'and sys.version[:3]=='2.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
-            os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
+            os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
         fp=os.fdopen(0,'rb')
-        C=zlib.decompress(fp.read(PREAMBLE_COMPRESSED_LEN))
+        C=zlib.decompress(fp.read(int(sys.argv[3])))
         fp.close()
         fp=os.fdopen(W,'wb',0)
         fp.write(C)
@@ -1463,10 +1459,6 @@ class Connection(object):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', ' ')
-        source = source.replace('CONTEXT_NAME', self.options.remote_name)
-        preamble_compressed = self.get_preamble()
-        source = source.replace('PREAMBLE_COMPRESSED_LEN',
-                                str(len(preamble_compressed)))
         compressor = zlib.compressobj(zlib.Z_BEST_COMPRESSION, zlib.DEFLATED, -zlib.MAX_WBITS)
         compressed = compressor.compress(source.encode()) + compressor.flush()
         encoded = binascii.b2a_base64(compressed).replace(b('\n'), b(''))
@@ -1480,6 +1472,8 @@ class Connection(object):
             'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
             'exec(zlib.decompress(binascii.a2b_base64(sys.argv[1]),-15))',
             encoded.decode(),
+            self.options.remote_name,
+            str(len(self.get_preamble())),
         ]
 
     def get_econtext_config(self):
