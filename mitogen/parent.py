@@ -1425,8 +1425,9 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            if os.uname()[0]=='Darwin'and os.uname()[2][:2]<'19'and sys.executable=='/usr/bin/python':sys.executable='/usr/bin/python2.7'
-            if os.uname()[0]=='Darwin'and os.uname()[2][:2]in'2021'and sys.version[:3]=='2.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
+            if os.uname()[0]+os.uname()[2][:2]+sys.executable=='Darwin19/usr/bin/python':sys.executable+='2.7'
+            if os.uname()[0]+os.uname()[2][:2]+sys.version[:3]=='Darwin202.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
+            if os.uname()[0]+os.uname()[2][:2]+sys.version[:3]=='Darwin212.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
