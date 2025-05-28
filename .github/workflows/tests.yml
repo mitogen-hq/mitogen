@@ -4,7 +4,7 @@ name: Tests
 
 # env:
 #  ANSIBLE_VERBOSITY: 3
-#   MITOGEN_LOG_LEVEL: DEBUG
+#  MITOGEN_LOG_LEVEL: DEBUG
 
 on:
   pull_request:
