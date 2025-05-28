@@ -12,12 +12,12 @@ become_unpriv_available: >-
   {{-
     (
       not is_mitogen
-      and ansible_facts.distribution in ["MacOSX"]
+      and is_macos_controller
       and ansible_version.full is version("2.11", ">=", strict=True)
     )
     or (
       is_mitogen
-      and not ansible_facts.distribution in ["MacOSX"]
+      and not is_macos_controller
     )
     or (
       is_mitogen
