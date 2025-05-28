@@ -43,11 +43,11 @@ import ansible.errors
 import ansible.plugins.connection
 
 import mitogen.core
+import mitogen.parent
+import mitogen.service
 
 import ansible_mitogen.mixins
-import ansible_mitogen.parsing
 import ansible_mitogen.process
-import ansible_mitogen.services
 import ansible_mitogen.target
 import ansible_mitogen.transport_config
 import ansible_mitogen.utils.unsafe

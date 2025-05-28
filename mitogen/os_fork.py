@@ -38,6 +38,7 @@ import sys
 import weakref
 
 import mitogen.core
+import mitogen.parent
 
 
 # List of weakrefs. On Python 2.4, mitogen.core registers its Broker on this

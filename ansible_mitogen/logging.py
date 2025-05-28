@@ -34,7 +34,6 @@ import os
 
 import ansible.utils.display
 
-import mitogen.core
 import mitogen.utils
 
 
