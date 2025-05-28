@@ -16,7 +16,7 @@
       assert:
         that:
         - not out.changed
-        - out.rc == 1
+        - out is failed
         # https://github.com/ansible/ansible/commit/62d8c8fde6a76d9c567ded381e9b34dad69afcd6
         - out.msg is match(msg_pattern)
         - (out.module_stdout == "" and out.module_stderr is search(tb_pattern))
