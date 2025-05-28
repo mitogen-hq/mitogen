@@ -1467,7 +1467,8 @@ class Connection(object):
         preamble_compressed = self.get_preamble()
         source = source.replace('PREAMBLE_COMPRESSED_LEN',
                                 str(len(preamble_compressed)))
-        compressed = zlib.compress(source.encode(), 9)
+        compressor = zlib.compressobj(zlib.Z_BEST_COMPRESSION, zlib.DEFLATED, -zlib.MAX_WBITS)
+        compressed = compressor.compress(source.encode()) + compressor.flush()
         encoded = binascii.b2a_base64(compressed).replace(b('\n'), b(''))
 
         # Just enough to decode, decompress, and exec the first stage.
@@ -1477,7 +1478,7 @@ class Connection(object):
         return self.get_python_argv() + [
             '-c',
             'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
-            'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
+            'exec(zlib.decompress(binascii.a2b_base64("%s"),-15))' % (encoded.decode(),),
         ]
 
     def get_econtext_config(self):
