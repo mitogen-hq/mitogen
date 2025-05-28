@@ -14,6 +14,7 @@
       connection: local
       environment:
         ANSIBLE_SSH_TIMEOUT: 10
+        ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       vars:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
