@@ -43,6 +43,7 @@ import inspect
 import logging
 import os
 import re
+import pty
 import signal
 import socket
 import struct
@@ -406,12 +407,14 @@ def _acquire_controlling_tty():
     if sys.platform in ('linux', 'linux2'):
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
-        os.close(os.open(os.ttyname(2), os.O_RDWR))
+        tty_path = os.ttyname(pty.STDERR_FILENO)
+        tty_fd = os.open(tty_path, os.O_RDWR)
+        os.close(tty_fd)
     if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL and not IS_SOLARIS:
         # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
-        fcntl.ioctl(2, termios.TIOCSCTTY)
+        fcntl.ioctl(pty.STDERR_FILENO, termios.TIOCSCTTY)
 
 
 def _linux_broken_devpts_openpty():
@@ -1415,7 +1418,7 @@ class Connection(object):
     #   w: write side of core_src FD.
     #   C: the decompressed core source.
 
-    # Final os.close(2) to avoid --py-debug build from corrupting stream with
+    # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
