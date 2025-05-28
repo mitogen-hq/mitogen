@@ -19,6 +19,7 @@ jobs:
     name: u2204 ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2204-Readme.md
     runs-on: ubuntu-22.04
+    timeout-minutes: 25
 
     strategy:
       fail-fast: false
@@ -140,6 +141,7 @@ jobs:
     name: u2404 ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
     runs-on: ubuntu-24.04
+    timeout-minutes: 25
 
     strategy:
       fail-fast: false
