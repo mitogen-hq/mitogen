@@ -1686,9 +1686,7 @@ class Connection(object):
 
         LOG.debug('child for %r started: pid:%r stdin:%r stdout:%r stderr:%r',
                   self, self.proc.pid,
-                  self.proc.stdin.fileno(),
-                  self.proc.stdout.fileno(),
-                  self.proc.stderr and self.proc.stderr.fileno())
+                  self.proc.stdin, self.proc.stdout, self.proc.stderr)
 
         self.stdio_stream = self._setup_stdio_stream()
         if self.context.name is None:
