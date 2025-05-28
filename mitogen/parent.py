@@ -361,13 +361,13 @@ def create_child(args, merge_stdio=False, stderr_pipe=False,
         escalates_privilege=escalates_privilege
     )
 
-    stderr = None
-    stderr_r = None
     if merge_stdio:
-        stderr = child_wfp
+        stderr_r, stderr = None, child_wfp
     elif stderr_pipe:
         stderr_r, stderr = mitogen.core.pipe()
         mitogen.core.set_cloexec(stderr_r.fileno())
+    else:
+        stderr_r, stderr = None, None
 
     try:
         proc = popen(
