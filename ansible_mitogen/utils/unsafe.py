@@ -31,7 +31,12 @@ _CAST_DISPATCH = {
 }
 _CAST_DISPATCH.update({t: _passthrough for t in mitogen.utils.PASSTHROUGH})
 
-if hasattr(ansible.utils.unsafe_proxy.AnsibleUnsafeText, '_strip_unsafe'):
+if ansible_mitogen.utils.ansible_version[:2] >= (2, 19):
+    _CAST_DISPATCH.update({
+        ansible.utils.unsafe_proxy.AnsibleUnsafeBytes: bytes,
+        ansible.utils.unsafe_proxy.AnsibleUnsafeText: mitogen.core.UnicodeType,
+    })
+elif hasattr(ansible.utils.unsafe_proxy.AnsibleUnsafeText, '_strip_unsafe'):
     _CAST_DISPATCH.update({
         ansible.utils.unsafe_proxy.AnsibleUnsafeBytes: _cast_unsafe,
         ansible.utils.unsafe_proxy.AnsibleUnsafeText: _cast_unsafe,
