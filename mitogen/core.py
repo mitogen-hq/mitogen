@@ -74,6 +74,7 @@ import logging
 import os
 import pickle as py_pickle
 import pstats
+import pty
 import signal
 import socket
 import struct
@@ -544,8 +545,17 @@ def set_cloexec(fd):
     they must be explicitly closed through some other means, such as
     :func:`mitogen.fork.on_fork`.
     """
+    stdfds = [
+        stdfd
+        for stdio, stdfd in [
+            (sys.stdin, pty.STDIN_FILENO),
+            (sys.stdout, pty.STDOUT_FILENO),
+            (sys.stderr, pty.STDERR_FILENO),
+        ]
+        if stdio is not None and not stdio.closed
+    ]
+    assert fd not in stdfds, 'fd %r is one of the stdio fds: %r' % (fd, stdfds)
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-    assert fd > 2, 'fd %r <= 2' % (fd,)
     fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 
@@ -4019,7 +4029,9 @@ class ExternalContext(object):
         in_fp = os.fdopen(os.dup(in_fd), 'rb', 0)
         os.close(in_fd)
 
-        out_fp = os.fdopen(os.dup(self.config.get('out_fd', 1)), 'wb', 0)
+        out_fd = self.config.get('out_fd', pty.STDOUT_FILENO)
+        out_fd2 = os.dup(out_fd)
+        out_fp = os.fdopen(out_fd2, 'wb', 0)
         self.stream = MitogenProtocol.build_stream(
             self.router,
             parent_id,
@@ -4103,7 +4115,13 @@ class ExternalContext(object):
         Open /dev/null to replace stdio temporarily. In case of odd startup,
         assume we may be allocated a standard handle.
         """
-        for stdfd, mode in ((0, os.O_RDONLY), (1, os.O_RDWR), (2, os.O_RDWR)):
+        for stdio, stdfd, mode in [
+                (sys.stdin, pty.STDIN_FILENO, os.O_RDONLY),
+                (sys.stdout, pty.STDOUT_FILENO, os.O_RDWR),
+                (sys.stderr, pty.STDERR_FILENO, os.O_RDWR),
+        ]:
+            if stdio is None:
+                continue
             fd = os.open('/dev/null', mode)
             if fd != stdfd:
                 os.dup2(fd, stdfd)
@@ -4119,8 +4137,9 @@ class ExternalContext(object):
         avoid receiving SIGHUP.
         """
         try:
-            if os.isatty(2):
-                self.reserve_tty_fp = os.fdopen(os.dup(2), 'r+b', 0)
+            if os.isatty(pty.STDERR_FILENO):
+                reserve_tty_fd = os.dup(pty.STDERR_FILENO)
+                self.reserve_tty_fp = os.fdopen(reserve_tty_fd, 'r+b', 0)
                 set_cloexec(self.reserve_tty_fp.fileno())
         except OSError:
             pass
@@ -4140,13 +4159,18 @@ class ExternalContext(object):
         self._nullify_stdio()
 
         self.loggers = []
-        for name, fd in (('stdout', 1), ('stderr', 2)):
-            log = IoLoggerProtocol.build_stream(name, fd)
+        for stdio, stdfd, name in [
+                (sys.stdout, pty.STDOUT_FILENO, 'stdout'),
+                (sys.stderr, pty.STDERR_FILENO, 'stderr'),
+        ]:
+            if stdio is None:
+                continue
+            log = IoLoggerProtocol.build_stream(name, stdfd)
             self.broker.start_receive(log)
             self.loggers.append(log)
 
         # Reopen with line buffering.
-        sys.stdout = os.fdopen(1, 'w', 1)
+        sys.stdout = os.fdopen(pty.STDOUT_FILENO, 'w', 1)
 
     def main(self):
         self._setup_master()

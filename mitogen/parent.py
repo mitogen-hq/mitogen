@@ -43,6 +43,7 @@ import inspect
 import logging
 import os
 import re
+import pty
 import signal
 import socket
 import struct
@@ -361,13 +362,13 @@ def create_child(args, merge_stdio=False, stderr_pipe=False,
         escalates_privilege=escalates_privilege
     )
 
-    stderr = None
-    stderr_r = None
     if merge_stdio:
-        stderr = child_wfp
+        stderr_r, stderr = None, child_wfp
     elif stderr_pipe:
         stderr_r, stderr = mitogen.core.pipe()
         mitogen.core.set_cloexec(stderr_r.fileno())
+    else:
+        stderr_r, stderr = None, None
 
     try:
         proc = popen(
@@ -406,12 +407,14 @@ def _acquire_controlling_tty():
     if sys.platform in ('linux', 'linux2'):
         # On Linux, the controlling tty becomes the first tty opened by a
         # process lacking any prior tty.
-        os.close(os.open(os.ttyname(2), os.O_RDWR))
+        tty_path = os.ttyname(pty.STDERR_FILENO)
+        tty_fd = os.open(tty_path, os.O_RDWR)
+        os.close(tty_fd)
     if hasattr(termios, 'TIOCSCTTY') and not mitogen.core.IS_WSL and not IS_SOLARIS:
         # #550: prehistoric WSL does not like TIOCSCTTY.
         # On BSD an explicit ioctl is required. For some inexplicable reason,
         # Python 2.6 on Travis also requires it.
-        fcntl.ioctl(2, termios.TIOCSCTTY)
+        fcntl.ioctl(pty.STDERR_FILENO, termios.TIOCSCTTY)
 
 
 def _linux_broken_devpts_openpty():
@@ -1415,7 +1418,7 @@ class Connection(object):
     #   w: write side of core_src FD.
     #   C: the decompressed core source.
 
-    # Final os.close(2) to avoid --py-debug build from corrupting stream with
+    # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
@@ -1683,9 +1686,7 @@ class Connection(object):
 
         LOG.debug('child for %r started: pid:%r stdin:%r stdout:%r stderr:%r',
                   self, self.proc.pid,
-                  self.proc.stdin.fileno(),
-                  self.proc.stdout.fileno(),
-                  self.proc.stderr and self.proc.stderr.fileno())
+                  self.proc.stdin, self.proc.stdout, self.proc.stderr)
 
         self.stdio_stream = self._setup_stdio_stream()
         if self.context.name is None:

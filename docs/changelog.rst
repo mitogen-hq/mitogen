@@ -23,6 +23,13 @@ In progress (unreleased)
 
 
 
+v0.3.24 (2025-05-29)
+--------------------
+
+* :gh:issue:`1268` :mod:`mitogen` Only close stdin, stdout, and stderr file
+  descriptors (0, 1, and 2) if they were open at process startup.
+
+
 v0.3.23 (2025-04-28)
 --------------------
 
