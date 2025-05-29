@@ -42,6 +42,7 @@ import json
 import logging
 import operator
 import os
+import pty
 import pwd
 import re
 import signal
@@ -120,7 +121,7 @@ def subprocess__Popen__close_fds(self, but):
             continue
 
         fd = int(name, 10)
-        if fd > 2 and fd != but:
+        if fd > pty.STDERR_FILENO and fd != but:
             try:
                 os.close(fd)
             except OSError:

@@ -19,7 +19,7 @@
       jid: "{{ item.ansible_job_id }}"
     become: yes
     register: out
-    until: out.finished
+    until: out is finished
     retries: 30
     with_items:
       - "{{ jobs.results }}"

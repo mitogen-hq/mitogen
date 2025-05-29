@@ -95,6 +95,7 @@ Sequence:
 import getopt
 import inspect
 import os
+import pty
 import shutil
 import socket
 import subprocess
@@ -354,8 +355,9 @@ def _fakessh_main(dest_context_id, econtext):
               control_handle, stdin_handle)
 
     process = Process(econtext.router,
-                      stdin=os.fdopen(1, 'w+b', 0),
-                      stdout=os.fdopen(0, 'r+b', 0))
+        stdin=os.fdopen(pty.STDOUT_FILENO, 'w+b', 0),
+        stdout=os.fdopen(pty.STDIN_FILENO, 'r+b', 0),
+    )
     process.start_master(
         stdin=mitogen.core.Sender(dest, stdin_handle),
         control=mitogen.core.Sender(dest, control_handle),
