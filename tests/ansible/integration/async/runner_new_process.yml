@@ -30,7 +30,7 @@
     async_status:
       jid: "{{async_proc1.ansible_job_id}}"
     register: async_result1
-    until: async_result1.finished
+    until: async_result1 is finished
     retries: 100000
     delay: 0
 
@@ -44,7 +44,7 @@
     async_status:
       jid: "{{async_proc2.ansible_job_id}}"
     register: async_result2
-    until: async_result2.finished
+    until: async_result2 is finished
     retries: 100000
     delay: 0
 

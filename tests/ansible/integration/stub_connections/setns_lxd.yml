@@ -15,6 +15,7 @@
 
     - name: Run ansible stub-lxc.py
       environment:
+        ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
         sudo -nE "{{lookup('env', 'VIRTUAL_ENV')}}/bin/ansible"

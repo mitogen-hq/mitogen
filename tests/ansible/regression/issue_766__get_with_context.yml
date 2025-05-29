@@ -1,4 +1,4 @@
-# https://github.com/mitogen-hq/mitogen/issues/776
+# https://github.com/mitogen-hq/mitogen/issues/766
 ---
 - name: regression/issue_766__get_with_context.yml
   hosts: localhost
@@ -7,7 +7,7 @@
   gather_facts: true
   vars:
     netconf_container_image: ghcr.io/mitogen-hq/sysrepo-netopeer2:latest
-    netconf_container_name: sysprep
+    netconf_container_name: sysrepo
     netconf_container_port: 8030
 
   tasks:

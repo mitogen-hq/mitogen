@@ -40,7 +40,7 @@
     async_status:
       jid: "{{job1.ansible_job_id}}"
     register: result1
-    until: result1.finished
+    until: result1 is finished
     retries: 5
     delay: 1
 
@@ -48,7 +48,7 @@
     async_status:
       jid: "{{job2.ansible_job_id}}"
     register: result2
-    until: result2.finished
+    until: result2 is finished
     retries: 5
     delay: 1
 
