@@ -177,10 +177,16 @@ jobs:
           - name: Ans_313_11
             python_version: '3.13'
             tox_env: py313-mode_ansible-ansible11
+          - name: Ans_313_12
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible12
 
           - name: Van_313_11
             python_version: '3.13'
             tox_env: py313-mode_ansible-ansible11-strategy_linear
+          - name: Van_313_12
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible12-strategy_linear
 
           - name: Mito_313
             python_version: '3.13'
@@ -272,6 +278,12 @@ jobs:
 
           - name: Van_313_11
             tox_env: py313-mode_localhost-ansible11-strategy_linear
+
+          - name: Loc_313_12
+            tox_env: py313-mode_localhost-ansible12
+
+          - name: Van_313_12
+            tox_env: py313-mode_localhost-ansible12-strategy_linear
 
     steps:
       - uses: actions/checkout@v4

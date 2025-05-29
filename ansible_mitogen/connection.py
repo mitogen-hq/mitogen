@@ -767,7 +767,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                               C.BECOME_ALLOW_SAME_USER):
             stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
-        return stack
+        return ansible_mitogen.utils.unsafe.cast(stack)
 
     def _build_stack(self):
         """

@@ -4,6 +4,7 @@ from ansible.utils.unsafe_proxy import AnsibleUnsafeBytes
 from ansible.utils.unsafe_proxy import AnsibleUnsafeText
 from ansible.utils.unsafe_proxy import wrap_var
 
+import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
 
 import mitogen.core
@@ -17,7 +18,7 @@ class Text(mitogen.core.UnicodeType): pass
 class Tuple(tuple): pass
 
 
-class CastTest(unittest.TestCase):
+class CastMixin(unittest.TestCase):
     def assertIsType(self, obj, cls, msg=None):
         self.assertIs(type(obj), cls, msg)
 
@@ -29,6 +30,8 @@ class CastTest(unittest.TestCase):
         self.assertEqual(cast(obj), expected)
         self.assertIsType(cast(obj), type(expected))
 
+
+class CastKnownTest(CastMixin):
     def test_ansible_unsafe(self):
         self.assertCasts(AnsibleUnsafeBytes(b'abc'), b'abc')
         self.assertCasts(AnsibleUnsafeText(u'abc'), u'abc')
@@ -47,14 +50,12 @@ class CastTest(unittest.TestCase):
         self.assertCasts(wrap_var({}), {})
         self.assertCasts(wrap_var([]), [])
         self.assertCasts(wrap_var(u''), u'')
-        self.assertCasts(wrap_var(()), [])
 
     def test_subtypes_roundtrip(self):
         self.assertCasts(wrap_var(Bytes()), b'')
         self.assertCasts(wrap_var(Dict()), {})
         self.assertCasts(wrap_var(List()), [])
         self.assertCasts(wrap_var(Text()), u'')
-        self.assertCasts(wrap_var(Tuple()), [])
 
     def test_subtype_nested_dict(self):
         obj = Dict(foo=Dict(bar=u'abc'))
@@ -75,18 +76,59 @@ class CastTest(unittest.TestCase):
         self.assertIsType(unwrapped[0], list)
         self.assertIsType(unwrapped[0][0], mitogen.core.UnicodeType)
 
-    def test_subtype_roundtrip_tuple(self):
-        # wrap_var() preserves sequence types, cast() does not (for now)
+
+@unittest.skipIf(
+    ansible_mitogen.utils.ansible_version[:2] <= (2, 18),
+    'Ansible <= 11 (ansible-core >= 2.18) does not send/receive sets',
+)
+class CastSetTest(CastMixin):
+    def test_set(self):
+        self.assertCasts(wrap_var(set()), set())
+
+    def test_set_subclass(self):
+        self.assertCasts(wrap_var(Set()), set())
+
+
+class CastTupleTest(CastMixin):
+    def test_tuple(self):
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 19):
+            expected = ()
+        else:
+            expected = []
+        self.assertCasts(wrap_var(Tuple()), expected)
+
+    def test_tuple_subclass(self):
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 19):
+            expected = ()
+        else:
+            expected = []
+        self.assertCasts(wrap_var(()), expected)
+
+    def test_tuple_subclass_with_contents(self):
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 19):
+            expected = ((u'abc',),)
+        else:
+            expected = [[u'abc']]
+
         obj = Tuple([Tuple([u'abc'])])
         wrapped = wrap_var(obj)
         unwrapped = ansible_mitogen.utils.unsafe.cast(wrapped)
-        self.assertEqual(unwrapped, [[u'abc']])
-        self.assertIsType(unwrapped, list)
-        self.assertIsType(unwrapped[0], list)
+        self.assertEqual(unwrapped, expected)
+        self.assertIsType(unwrapped, type(expected))
+        self.assertIsType(unwrapped[0], type(expected[0]))
         self.assertIsType(unwrapped[0][0], mitogen.core.UnicodeType)
 
-    def test_unknown_types_raise(self):
+
+class CastUknownTypeTest(unittest.TestCase):
+    @unittest.skipIf(
+        ansible_mitogen.utils.ansible_version[:2] >= (2, 19),
+        'Ansible >= 12 (ansible-core >= 2.19) uses/preserves sets',
+    )
+    def test_set_raises(self):
         cast = ansible_mitogen.utils.unsafe.cast
         self.assertRaises(TypeError, cast, set())
         self.assertRaises(TypeError, cast, Set())
+
+    def test_complex_raises(self):
+        cast = ansible_mitogen.utils.unsafe.cast
         self.assertRaises(TypeError, cast, 4j)
