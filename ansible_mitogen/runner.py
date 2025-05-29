@@ -73,6 +73,7 @@ except ImportError:
     from io import StringIO
 
 # Prevent accidental import of an Ansible module from hanging on stdin read.
+# FIXME Should probably be b'{}' or None. Ansible 2.19 has bytes | None = None.
 import ansible.module_utils.basic
 ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
 
@@ -635,6 +636,7 @@ class NewStyleStdio(object):
         sys.stderr = StringIO()
         encoded = json.dumps({'ANSIBLE_MODULE_ARGS': args})
         ansible.module_utils.basic._ANSIBLE_ARGS = utf8(encoded)
+        ansible.module_utils.basic._ANSIBLE_PROFILE = 'legacy'
         sys.stdin = StringIO(mitogen.core.to_text(encoded))
 
         self.original_get_path = getattr(ansible.module_utils.basic,
@@ -649,7 +651,9 @@ class NewStyleStdio(object):
         sys.stdout = self.original_stdout
         sys.stderr = self.original_stderr
         sys.stdin = self.original_stdin
+        # FIXME Should probably be b'{}' or None. Ansible 2.19 has bytes | None = None.
         ansible.module_utils.basic._ANSIBLE_ARGS = '{}'
+        ansible.module_utils.basic._ANSIBLE_PROFILE = None
 
 
 class ProgramRunner(Runner):

@@ -170,6 +170,7 @@ class Planner(object):
         """
         binding = self._inv.connection.get_binding()
 
+        kwargs = ansible_mitogen.utils.unsafe.cast(kwargs)
         new = dict((mitogen.core.UnicodeType(k), kwargs[k])
                    for k in kwargs)
         new.setdefault('good_temp_dir',
@@ -204,7 +205,7 @@ class BinaryPlanner(Planner):
             module=self._inv.module_name,
             path=self._inv.module_path,
             json_args=json.dumps(self._inv.module_args),
-            env=self._inv.env,
+            env=ansible_mitogen.utils.unsafe.cast(self._inv.env),
             **kwargs
         )
 
@@ -546,7 +547,7 @@ def _invoke_async_task(invocation, planner):
         call_recv = context.call_async(
             ansible_mitogen.target.run_module_async,
             job_id=job_id,
-            timeout_secs=invocation.timeout_secs,
+            timeout_secs=ansible_mitogen.utils.unsafe.cast(invocation.timeout_secs),
             started_sender=started_recv.to_sender(),
             kwargs=planner.get_kwargs(),
         )

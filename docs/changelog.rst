@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1258` Initial Ansible 12 (ansible-core 2.19) support
 
 
 v0.3.24 (2025-05-29)
