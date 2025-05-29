@@ -2,6 +2,7 @@
 # Wrap ansible-playbook, setting up some test of the test environment.
 import json
 import os
+import platform
 import sys
 
 GIT_BASEDIR = os.path.dirname(
@@ -36,6 +37,7 @@ os.environ['PATH'] = '%s%s%s' % (
 )
 
 extra = {
+    'is_macos_controller': platform.system() == 'Darwin',
     'is_mitogen': os.environ.get('ANSIBLE_STRATEGY', '').startswith('mitogen'),
     'git_basedir': GIT_BASEDIR,
 }

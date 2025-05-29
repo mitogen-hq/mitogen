@@ -19,7 +19,7 @@
     async_status:
       jid: "{{job.ansible_job_id}}"
     register: result
-    until: result.finished
+    until: result is finished
     retries: 500
     delay: 0
     ignore_errors: true
