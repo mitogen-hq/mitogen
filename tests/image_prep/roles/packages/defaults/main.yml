@@ -1,0 +1,14 @@
+common_packages: []
+packages: []
+
+packages_clean_command:
+    apt: apt-get clean
+    dnf: dnf clean all
+    yum: yum clean all
+
+packages_cleanup_directories:
+    apt:
+      - /var/cache/apt
+      - /var/lib/apt/lists
+    dnf: []
+    yum: []

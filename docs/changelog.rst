@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1118` CI: WIP
 
 
 v0.3.24 (2025-05-29)

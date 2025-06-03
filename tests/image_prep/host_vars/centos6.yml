@@ -1,6 +1,27 @@
 bootstrap_packages: [python]
 
-docker_base: moreati/centos6-vault
+docker_base: centos:6
 
 packages:
   - perl-JSON
+
+package_manager_repos:
+  - dest: /etc/yum.repos.d/CentOS-Base.repo
+    content: |
+      [base]
+      name=CentOS-$releasever - Base
+      baseurl=http://vault.centos.org/6.10/os/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+      [updates]
+      name=CentOS-$releasever - Updates
+      baseurl=http://vault.centos.org/6.10/updates/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6
+
+      [extras]
+      name=CentOS-$releasever - Extras
+      baseurl=http://vault.centos.org/6.10/extras/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6

@@ -1,4 +1,6 @@
 package_manager_repos:
   - dest: /etc/apt/sources.list
     content: |
-      deb http://archive.debian.org/debian stretch main contrib non-free
+      deb http://archive.debian.org/debian/ stretch main contrib non-free
+      deb http://archive.debian.org/debian/ stretch-proposed-updates main contrib non-free
+      deb http://archive.debian.org/debian-security stretch/updates main contrib non-free
