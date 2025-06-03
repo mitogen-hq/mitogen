@@ -30,17 +30,7 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
-import os.path
-import sys
-
 import ansible.errors
-
-try:
-    import ansible_mitogen
-except ImportError:
-    base_dir = os.path.dirname(__file__)
-    sys.path.insert(0, os.path.abspath(os.path.join(base_dir, '../../..')))
-    del base_dir
 
 import ansible_mitogen.connection
 import ansible_mitogen.loaders
