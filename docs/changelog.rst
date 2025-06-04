@@ -22,6 +22,10 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1258` Initial Ansible 12 (ansible-core 2.19) support
+* :gh:issue:`1258` :mod:`ansible_mitogen`: Initial Ansible datatag support
+  (:gh:anspull:`84621`)
+* :gh:issue:`1258` :mod:`ansible_mitogen`: Ansible 12 (ansible-core 2.19) test
+  jobs
 
 
 v0.3.24 (2025-05-29)

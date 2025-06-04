@@ -64,6 +64,15 @@ domainrefs = {
         'text': '#%s',
         'url': 'https://github.com/mitogen-hq/mitogen/pull/%s',
     },
+    'gh:ansissue': {
+        'text': 'Ansible #%s',
+        'url': 'https://github.com/ansible/ansible/issues/%s',
+    },
+    'gh:anspull': {
+        'text': 'Ansible #%s',
+        'url': 'https://github.com/ansible/ansible/pull/%s',
+    },
+
     'ans:mod': {
         'text': '%s module',
         'url': 'https://docs.ansible.com/ansible/latest/modules/%s_module.html',

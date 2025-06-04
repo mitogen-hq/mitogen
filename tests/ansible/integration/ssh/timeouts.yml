@@ -43,6 +43,7 @@
           '"unreachable": true' in out.stdout
         - |
           '"msg": "Connection timed out."' in out.stdout
+          or '"msg": "Task failed: Connection timed out."' in out.stdout
         fail_msg: |
           out={{ out }}
   tags:

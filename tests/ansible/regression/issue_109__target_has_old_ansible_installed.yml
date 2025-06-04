@@ -24,7 +24,8 @@
       assert:
         that:
           - env.cwd == ansible_user_dir
-          - (not env.mitogen_loaded) or (env.python_path.count("") == 1)
+          - not env.mitogen_loaded
+            or (env.python_path | select('eq', '') | length == 1)
         fail_msg: |
           ansible_user_dir={{ ansible_user_dir }}
           env={{ env }}
