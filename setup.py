@@ -33,15 +33,34 @@ from setuptools import find_packages, setup
 
 
 def grep_version():
+    # See also changlelog_version() in docs.conf.py
     path = os.path.join(os.path.dirname(__file__), 'mitogen/__init__.py')
+
+    # Based on https://packaging.python.org/en/latest/specifications/version-specifiers/#appendix-parsing-version-strings-with-regular-expressions
+    # e.g. "__version__ = (0, 1, 2)", "__version__ = (0, 1, 3, 'dev')",
+    #      "__version__ = (0, 1, 4, 'a', 1)"
     version_pattern = re.compile(
-        r"__version__ = \((\d+), (\d+), (\d+)(?:, '(dev)')?\)",
+        r'''
+        ^__version__\s=\s\(
+        (?P<major>\d+)
+        ,\s
+        (?P<minor>\d+)
+        ,\s
+        (?P<patch>\d+)
+        (?:
+            (?:,\s '(?P<dev_l>dev)')
+            | (?:,\s '(?P<pre_l>a|b)' ,\s (?P<pre_n>\d+))
+        )?
+        \)
+        $
+        ''',
+        re.MULTILINE | re.VERBOSE,
     )
     with open(path) as fp:
         match = version_pattern.search(fp.read())
     if match is None:
         raise ValueError('Could not find __version__ string in %s', path)
-    # E.g. '0.1.2', '0.1.3dev'
+    # e.g. '0.1.2', '0.1.3dev', '0.1.4a1'
     return '.'.join(str(part) for part in match.groups() if part)
 
 
