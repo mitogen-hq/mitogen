@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.25a1 (2025-06-05)
+----------------------
 
 * :gh:issue:`1258` Initial Ansible 12 (ansible-core 2.19) support
 * :gh:issue:`1258` :mod:`ansible_mitogen`: Initial Ansible datatag support
