@@ -57,6 +57,7 @@ import mitogen.service
 import ansible_mitogen.loaders
 import ansible_mitogen.module_finder
 import ansible_mitogen.target
+import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
 
 
@@ -338,7 +339,12 @@ class ContextService(mitogen.service.Service):
         'ansible_mitogen.target',
         'mitogen.fork',
         'mitogen.service',
-    )
+    ) + ((
+        'ansible.module_utils._internal._json._profiles._module_legacy_c2m',
+        'ansible.module_utils._internal._json._profiles._module_legacy_m2c',
+        'ansible.module_utils._internal._json._profiles._module_modern_c2m',
+        'ansible.module_utils._internal._json._profiles._module_legacy_m2c',
+    ) if ansible_mitogen.utils.ansible_version[:2] >= (2, 19) else ())
 
     def _send_module_forwards(self, context):
         if hasattr(self.router.responder, 'forward_modules'):
