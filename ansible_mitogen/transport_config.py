@@ -107,7 +107,9 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
             # blow away the discovered_interpreter_config cache and rediscover
             del task_vars['ansible_facts'][discovered_interpreter_config]
 
-        if discovered_interpreter_config not in task_vars['ansible_facts']:
+        try:
+            s = task_vars['ansible_facts'][discovered_interpreter_config]
+        except KeyError:
             action._mitogen_discovering_interpreter = True
             # fake pipelining so discover_interpreter can be happy
             action._connection.has_pipelining = True
@@ -121,8 +123,6 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
             # cache discovered interpreter
             task_vars['ansible_facts'][discovered_interpreter_config] = s
             action._connection.has_pipelining = False
-        else:
-            s = task_vars['ansible_facts'][discovered_interpreter_config]
 
         # propagate discovered interpreter as fact
         action._discovered_interpreter_key = discovered_interpreter_config
@@ -144,9 +144,8 @@ def parse_python_path(s, task_vars, action, rediscover_python):
         s = 'auto'
 
     s = run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python)
-    # if unable to determine python_path, fallback to '/usr/bin/python'
     if not s:
-        s = '/usr/bin/python'
+        raise ValueError("Interpreter discovery failed, got: %r", s)
 
     return ansible.utils.shlex.shlex_split(s)
 
