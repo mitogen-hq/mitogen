@@ -7,8 +7,9 @@ sys.path.append('.')
 def changelog_version(path, encoding='utf-8'):
     "Return the 1st *stable* (not pre, dev) version in the changelog"
     # See also grep_version() in setup.py
+    # e.g. "0.1.2, (1999-12-31)\n"
     version_pattern = re.compile(
-        r'^v(?P<version>[0-9]+\.[0-9]+\.[0-9]+)',
+        r'^v(?P<version>\d+\.\d+\.\d+) \((?P<date>\d\d\d\d-\d\d-\d\d)\)$',
         re.MULTILINE,
     )
 
