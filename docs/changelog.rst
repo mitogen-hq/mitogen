@@ -36,6 +36,8 @@ to strategy plugins under :gh:issue:`1278`.
   instead of deprecated `stdout_callback = yaml`
 * :gh:issue:`1293` CI: Fix ``ansible_version`` comparisons when an Ansible
   release candidate is under test
+* :gh:issue:`1275` CI: Test ``ansible_ssh_password`` behaviour without
+  ``sshpass`` installed
 
 
 v0.3.25a2 (2025-06-21)
