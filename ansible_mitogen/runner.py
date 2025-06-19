@@ -52,10 +52,9 @@ import tempfile
 import traceback
 import types
 
-from ansible.module_utils.six.moves import shlex_quote
-
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
+from mitogen.compat.shlex import shlex_quote
 from mitogen.core import to_text
 
 try:
