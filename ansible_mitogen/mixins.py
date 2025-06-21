@@ -29,6 +29,7 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
+import json
 import logging
 import os
 import pwd
@@ -42,7 +43,6 @@ import ansible.vars.clean
 
 from ansible.module_utils.common.text.converters import to_bytes, to_text
 from ansible.module_utils.six.moves import shlex_quote
-from ansible.parsing.utils.jsonify import jsonify
 
 import mitogen.core
 import mitogen.select
@@ -219,8 +219,13 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         Used by the base _execute_module(), and in <2.4 also by the template
         action module, and probably others.
         """
+        if data is None and ansible_mitogen.utils.ansible_version[:2] <= (2, 18):
+            data = '{}'
         if isinstance(data, dict):
-            data = jsonify(data)
+            try:
+                data = json.dumps(data, ensure_ascii=False)
+            except UnicodeDecodeError:
+                data = json.dumps(data)
         if not isinstance(data, bytes):
             data = to_bytes(data, errors='surrogate_or_strict')
 

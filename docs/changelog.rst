@@ -33,6 +33,13 @@ Ansible + Mitogen will still work for now. Mitogen is considering alternatives
 to strategy plugins under :gh:issue:`1278`.
 
 
+v0.3.25a2 (2025-06-21)
+----------------------
+
+* :gh:issue:`1274` :mod:`ansible_mitogen`: Replace use of `jsonify()`, which
+  is deprecated form Ansible 12 (ansible-core 2.19)
+
+
 v0.3.25a1 (2025-06-05)
 ----------------------
 
