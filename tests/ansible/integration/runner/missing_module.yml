@@ -5,6 +5,8 @@
     - name: Run missing_module
       connection: local
       environment:
+        ANSIBLE_CALLBACK_RESULT_FORMAT: json
+        ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
         ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       vars:
