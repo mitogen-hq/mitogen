@@ -41,6 +41,7 @@ v0.3.25a2 (2025-06-21)
 
 * :gh:issue:`1274` :mod:`ansible_mitogen`: Replace use of `jsonify()`, which
   is deprecated form Ansible 12 (ansible-core 2.19)
+* :gh:issue:`1118` CI: WIP
 
 
 v0.3.25a1 (2025-06-05)

@@ -42,10 +42,11 @@ import ansible.utils.unsafe_proxy
 import ansible.vars.clean
 
 from ansible.module_utils.common.text.converters import to_bytes, to_text
-from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
 import mitogen.select
+
+from mitogen.compat.shlex import shlex_quote
 
 import ansible_mitogen.connection
 import ansible_mitogen.planner

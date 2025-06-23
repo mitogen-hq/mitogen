@@ -1,0 +1,6 @@
+bootstrap_packages: [python3]
+docker_base: almalinux:9
+
+packages:
+  - perl-JSON
+  - procps-ng

@@ -1,6 +1,36 @@
 bootstrap_packages: [python-simplejson]
 
-docker_base: astj/centos5-vault
+docker_base: centos:5
 
 packages:
   - perl
+package_manager_repos:
+  - dest: /etc/yum.repos.d/CentOS-Base.repo
+    content: |
+      [base]
+      name=CentOS-$releasever - Base
+      baseurl=http://centos-vault-proxy:8090/5.11/os/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+
+      [updates]
+      name=CentOS-$releasever - Updates
+      baseurl=http://centos-vault-proxy:8090/5.11/updates/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+
+      [extras]
+      name=CentOS-$releasever - Extras
+      baseurl=http://centos-vault-proxy:8090/5.11/extras/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+
+  - dest: /etc/yum.repos.d/libselinux.repo
+    content: |
+      [libselinux]
+      name=CentOS-$releasever - libselinux
+      baseurl=http://centos-vault-proxy:8090/5.11/centosplus/$basearch/
+      gpgcheck=1
+      enabled=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
+      includepkgs=libselinux*

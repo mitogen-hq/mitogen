@@ -40,7 +40,6 @@ import errno
 import grp
 import json
 import logging
-import operator
 import os
 import pty
 import pwd
@@ -65,8 +64,6 @@ if not sys.modules.get(str('__main__')):
     sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
 
 import ansible.module_utils.json_utils
-
-from ansible.module_utils.six.moves import reduce
 
 import ansible_mitogen.runner
 
@@ -718,7 +715,9 @@ def apply_mode_spec(spec, mode):
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
+            new_perm_bits = 0
+            for perm in perms:
+                new_perm_bits |= bits[perm]
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
