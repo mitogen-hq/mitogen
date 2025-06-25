@@ -80,6 +80,10 @@ to your network topology**.
     :class: mitogen-right-150
 
 .. code::
+    import mitogen.master
+
+    broker = mitogen.master.Broker()
+    router = mitogen.master.Router(broker)
 
     bastion_host = router.ssh(
         hostname='jump-box.mycorp.com'
@@ -101,7 +105,9 @@ to your network topology**.
         container='billing0',
     )
 
-    internal_box.call(subprocess.check_call, ['./run-nightly-billing.py'])
+    internal_box.call(
+        subprocess.check_call, ['./nightly-billing.py'],
+    )
 
 The multiplexer also ensures the remote process is terminated if your Python
 program crashes, communication is lost, or the application code running in the
