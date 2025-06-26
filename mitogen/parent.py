@@ -750,6 +750,7 @@ def _upgrade_broker(broker):
 
 @mitogen.core.takes_econtext
 def upgrade_router(econtext):
+    # type (mitogen.core.ExternalContext) -> None
     if not isinstance(econtext.router, Router):  # TODO
         econtext.broker.defer(_upgrade_broker, econtext.broker)
         econtext.router.__class__ = Router  # TODO
@@ -760,6 +761,7 @@ def upgrade_router(econtext):
 
 
 def get_connection_class(name):
+    # type: (str) -> Connection
     """
     Given the name of a Mitogen connection method, import its implementation
     module and return its Stream subclass.
@@ -769,9 +771,16 @@ def get_connection_class(name):
     module = mitogen.core.import_module(u'mitogen.' + name)
     return module.Connection
 
+import typing
+ContextID = int
+class ProxyConnectType(typing.TypedDict):
+    id: ContextID
+    name: str
+    msg: str|None
 
 @mitogen.core.takes_econtext
 def _proxy_connect(name, method_name, kwargs, econtext):
+    # type (str, str, dict[str, Any], mitogen.core.ExternalContext) -> ProxyConnectType
     """
     Implements the target portion of Router._proxy_connect() by upgrading the
     local process to a parent if it was not already, then calling back into
@@ -1478,7 +1487,7 @@ class Connection(object):
         # `import os` here, instead of stage 1, to save a few bytes.
         # `sys.path=...` for https://github.com/python/cpython/issues/115911.
         return self.get_python_argv() + [
-            '-c',
+            '-b', '-c',
             'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
             'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
         ]

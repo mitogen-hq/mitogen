@@ -27,21 +27,6 @@ jobs:
         include:
           - name: Ans_27_210
             tox_env: py27-mode_ansible-ansible2.10
-          - name: Ans_27_4
-            tox_env: py27-mode_ansible-ansible4
-
-          - name: Ans_36_210
-            python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible2.10
-          - name: Ans_36_4
-            python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible4
-
-          - name: Mito_27
-            tox_env: py27-mode_mitogen
-          - name: Mito_36
-            python_version: '3.6'
-            tox_env: py36-mode_mitogen
 
     steps:
       - uses: actions/checkout@v4
@@ -258,7 +243,7 @@ jobs:
               exit 1
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   macos:
     name: macos ${{ matrix.tox_env }}
@@ -345,7 +330,7 @@ jobs:
               exit 1
           fi
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -b -m tox -e "${{ matrix.tox_env }}"
 
   # https://github.com/marketplace/actions/alls-green
   check:

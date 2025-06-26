@@ -75,7 +75,7 @@ with ci_lib.Fold('job_setup'):
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
     try:
-        ci_lib.run('./run_ansible_playbook.py %s -i "%s" %s',
+        ci_lib.run('python -b ./run_ansible_playbook.py %s -i "%s" %s',
             playbook, TMP_HOSTS_DIR, ' '.join(sys.argv[1:]),
         )
     except:

@@ -40,7 +40,6 @@ import errno
 import grp
 import json
 import logging
-import operator
 import os
 import pty
 import pwd
@@ -53,6 +52,7 @@ import tempfile
 import traceback
 import types
 
+import mitogen
 import mitogen.core
 import mitogen.parent
 import mitogen.service
@@ -65,8 +65,6 @@ if not sys.modules.get(str('__main__')):
     sys.modules[str('__main__')] = types.ModuleType(str('__main__'))
 
 import ansible.module_utils.json_utils
-
-from ansible.module_utils.six.moves import reduce
 
 import ansible_mitogen.runner
 
@@ -83,14 +81,6 @@ MAKE_TEMP_FAILED_MSG = (
     u"\n"
     u"Please check '-vvv' output for a log of individual path errors."
 )
-
-# Python 2.4/2.5 cannot support fork+threads whatsoever, it doesn't even fix up
-# interpreter state. So 2.4/2.5 interpreters start .local() contexts for
-# isolation instead. Since we don't have any crazy memory sharing problems to
-# avoid, there is no virginal fork parent either. The child is started directly
-# from the login/become process. In future this will be default everywhere,
-# fork is brainwrong from the stone age.
-FORK_SUPPORTED = sys.version_info >= (2, 6)
 
 #: Initialized to an econtext.parent.Context pointing at a pristine fork of
 #: the target Python interpreter before it executes any code or imports.
@@ -356,9 +346,8 @@ def init_child(econtext, log_level, candidate_temp_dirs):
     logging.getLogger('ansible_mitogen').setLevel(log_level)
 
     global _fork_parent
-    if FORK_SUPPORTED:
-        mitogen.parent.upgrade_router(econtext)
-        _fork_parent = econtext.router.fork()
+    mitogen.parent.upgrade_router(econtext)
+    _fork_parent = econtext.router.fork()
 
     global good_temp_dir
     good_temp_dir = find_good_temp_dir(candidate_temp_dirs)
@@ -382,11 +371,8 @@ def spawn_isolated_child(econtext):
     custom module_utils paths.
     """
     mitogen.parent.upgrade_router(econtext)
-    if FORK_SUPPORTED:
-        context = econtext.router.fork()
-    else:
-        context = econtext.router.local()
-    LOG.debug('create_fork_child() -> %r', context)
+    context = econtext.router.fork()
+    LOG.debug('spawn_isolated_child() -> %r', context)
     return context
 
 
@@ -569,7 +555,7 @@ def get_user_shell():
     return pw_shell or '/bin/sh'
 
 
-def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
+def exec_args(args, in_data=b'', chdir=None, shell=None, emulate_tty=False):
     """
     Run a command in a subprocess, emulating the argument handling behaviour of
     SSH.
@@ -607,7 +593,7 @@ def exec_args(args, in_data='', chdir=None, shell=None, emulate_tty=False):
     return proc.returncode, stdout, stderr or b''
 
 
-def exec_command(cmd, in_data='', chdir=None, shell=None, emulate_tty=False):
+def exec_command(cmd, in_data=b'', chdir=None, shell=None, emulate_tty=False):
     """
     Run a command in a subprocess, emulating the argument handling behaviour of
     SSH.
@@ -707,6 +693,7 @@ CHMOD_BITS = {
 
 
 def apply_mode_spec(spec, mode):
+    # type: (str|bytes, int) -> int
     """
     Given a symbolic file mode change specification in the style of chmod(1)
     `spec`, apply changes in the specification to the numeric file mode `mode`.
@@ -718,7 +705,9 @@ def apply_mode_spec(spec, mode):
             mask = CHMOD_MASKS[ch]
             bits = CHMOD_BITS[ch]
             cur_perm_bits = mode & mask
-            new_perm_bits = reduce(operator.or_, (bits[p] for p in perms), 0)
+            new_perm_bits = 0
+            for p in perms:
+                new_perm_bits |= bits[p]
             mode &= ~mask
             if op == '=':
                 mode |= new_perm_bits
