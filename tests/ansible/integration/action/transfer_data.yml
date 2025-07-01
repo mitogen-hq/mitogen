@@ -6,7 +6,7 @@
       when:
         # Ansible >= 12 (ansible-core >= 2.19) only allows bytes|str through
         # `ansible.plugins.action.ActionBase._transfer_data()`.
-        - ansible_version.full is version('2.18.999', '>', strict=True)
+        - ansible_version_major_minor is version('2.19', '>=', strict=True)
         - not is_mitogen
 
     - name: Cleanup transfer data

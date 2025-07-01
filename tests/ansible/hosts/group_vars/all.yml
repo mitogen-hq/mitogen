@@ -1,4 +1,11 @@
 ---
+# Avoid `ansible_version.full is version(..., strict=True)` limitations.
+# Pre-release info (alpha/beta/rc) is intentionally ignored.
+# Behaviour that is present or expected in ansible-core 2.50.x should be
+# tested even if ansible-core 2.50.0a1 or 2.50.0rc1 is under test.
+ansible_version_major_minor: "{{ ansible_version.major }}.{{ ansible_version.minor }}"
+ansible_version_major_minor_patch: "{{ ansible_version.major }}.{{ ansible_version.minor }}.{{ ansible_version.revision | regex_search('^[0-9]+') }}"
+
 become_unpriv_available: >-
   {#
     Vanilla Ansible >= 4 (ansible-core >= 2.11) can use `setfacl` for
@@ -13,7 +20,7 @@ become_unpriv_available: >-
     (
       not is_mitogen
       and is_macos_controller
-      and ansible_version.full is version("2.11", ">=", strict=True)
+      and ansible_version_major_minor is version("2.11", ">=", strict=True)
     )
     or (
       is_mitogen
@@ -22,7 +29,7 @@ become_unpriv_available: >-
     or (
       is_mitogen
       and ansible_python_interpreter is not defined
-      and ansible_version.full is version("2.18", "<", strict=True)
+      and ansible_version_major_minor is version("2.18", "<", strict=True)
     )
   -}}
 
