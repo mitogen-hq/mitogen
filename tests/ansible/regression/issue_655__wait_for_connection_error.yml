@@ -22,7 +22,7 @@
       when:
         # Ansible 10 (ansible-core 2.17+) require Python 3.7+ on targets.
         # On CentOS 8 /usr/libexec/platform-python is Python 3.6
-        - ansible_version.full is version('2.17', '>=', strict=True)
+        - ansible_version_major_minor is version('2.17', '>=', strict=True)
 
     - name: set up test container and run tests inside it
       block:

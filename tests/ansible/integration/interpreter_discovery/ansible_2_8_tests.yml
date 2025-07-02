@@ -46,9 +46,9 @@
         '20': /usr/bin/python3.8
 
     discovered_interpreter_expected: >-
-      {%- if ansible_version.full is version('2.12', '<', strict=True) -%}
+      {%- if ansible_version_major_minor is version('2.12', '<', strict=True) -%}
       {{ DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_lt_2_12[distro][distro_major] }}
-      {%- elif ansible_version.full is version('2.17', '<', strict=True) -%}
+      {%- elif ansible_version_major_minor is version('2.17', '<', strict=True) -%}
       {{ DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_2_12_to_2_16[distro][distro_major] }}
       {%- else -%}
       {{ DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_ge_2_17[distro][distro_major] }}
@@ -141,7 +141,7 @@
             when:
               - legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
               - auto_out.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
-              - ansible_version.full is version_compare('2.12.0', '<', strict=True)
+              - ansible_version_major_minor is version('2.12', '<', strict=True)
 
           - name: check for warning (only on platforms where auto result is not /usr/bin/python and legacy is) from ansible 2.12 on
             assert:
@@ -153,7 +153,7 @@
             when:
               - legacy.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
               -  auto_out.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
-              -  ansible_version.full is version_compare('2.12.0', '>=', strict=True)
+              -  ansible_version_major_minor is version('2.12', '>=', strict=True)
 
         - name: test that auto_silent never warns and got the same answer as auto
           block:
@@ -229,6 +229,6 @@
           always:
           - meta: clear_facts
       when:
-        - ansible_version.full is version_compare('2.8.0', '>=', strict=True)
+        - ansible_version_major_minor is version('2.8', '>=', strict=True)
   tags:
     - ansible_2_8_tests

@@ -20,6 +20,6 @@
         fail_msg: |
           out={{ out }}
       when:
-        - ansible_version.full is version('2.4', '>=', strict=True)
+        - ansible_version_major_minor is version('2.4', '>=', strict=True)
   tags:
     - custom_perl_json_args_module

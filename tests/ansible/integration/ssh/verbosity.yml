@@ -1,0 +1,41 @@
+# Ansible >= 12 (ansible-core >= 2.19) adds SSH connection `verbosity` property.
+# Ansible <= 11 (ansible-core <= 2.18) applies ANSIBLE_VERBOSITY -> ssh.
+
+- name: integration/ssh/verbosity.yml
+  hosts: test-targets
+  gather_facts: false
+  tasks:
+    - meta: end_play
+      when:
+        - ansible_version_major_minor is version('2.19', '<', strict=True)
+
+    - name: Exercise ssh verbosity
+      connection: local
+      environment:
+        ANSIBLE_CALLBACK_RESULT_FORMAT: json
+        ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
+        ANSIBLE_SSH_VERBOSITY: 3
+        ANSIBLE_STRATEGY: "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
+        ANSIBLE_VERBOSITY: 3
+      vars:
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+      command:
+        cmd:
+          ansible
+          {% for inv in ansible_inventory_sources %}
+          -i "{{ inv }}"
+          {% endfor %}
+          "{{ inventory_hostname }}"
+          -m ping
+        chdir: ../..
+      register: out
+      changed_when: false
+      check_mode: false
+
+    - name: Verify ssh -vvv output is included
+      assert:
+        that:
+          - >-
+            out.stdout is search('debug1: Reading configuration data')
+        fail_msg: |
+          out={{ out }}

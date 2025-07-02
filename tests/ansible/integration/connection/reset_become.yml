@@ -8,11 +8,11 @@
   tasks:
   - debug: msg="reset_become.yml skipped on Ansible<2.5.6"
     when:
-      - ansible_version.full is version('2.5.6', '<', strict=True)
+      - ansible_version_major_minor_patch is version('2.5.6', '<', strict=True)
 
   - meta: end_play
     when:
-      - ansible_version.full is version('2.5.6', '<', strict=True)
+      - ansible_version_major_minor_patch is version('2.5.6', '<', strict=True)
 
   - name: save pid of the become acct
     custom_python_detect_environment:

@@ -8,3 +8,4 @@
 - import_playbook: templated_by_play_taskvar.yml
 - import_playbook: templated_by_task_keyword.yml
 - import_playbook: variables.yml
+- import_playbook: verbosity.yml
