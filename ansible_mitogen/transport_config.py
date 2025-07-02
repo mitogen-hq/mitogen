@@ -406,6 +406,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         Value of "ansible_doas_exe" variable.
         """
 
+    @abc.abstractmethod
+    def verbosity(self):
+        """
+        How verbose to make logging or diagnostics output.
+        """
+
 
 class PlayContextSpec(Spec):
     """
@@ -600,6 +606,17 @@ class PlayContextSpec(Spec):
             self._connection.get_task_var('ansible_doas_exe') or
             os.environ.get('ANSIBLE_DOAS_EXE')
         )
+
+    def verbosity(self):
+        try:
+            verbosity = self._connection.get_option('verbosity', hostvars=self._task_vars)
+        except KeyError:
+            verbosity = self.mitogen_ssh_debug_level()
+
+        if verbosity:
+            return int(verbosity)
+
+        return 0
 
 
 class MitogenViaSpec(Spec):
@@ -836,3 +853,13 @@ class MitogenViaSpec(Spec):
             self._host_vars.get('ansible_doas_exe') or
             os.environ.get('ANSIBLE_DOAS_EXE')
         )
+
+    def verbosity(self):
+        verbosity = self._host_vars.get('ansible_ssh_verbosity')
+        if verbosity is None:
+            verbosity = self.mitogen_ssh_debug_level()
+
+        if verbosity:
+            return int(verbosity)
+
+        return 0
