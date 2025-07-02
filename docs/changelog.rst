@@ -32,6 +32,10 @@ Running Ansible 12 + Mitogen will currently print a deprecation warning
 Ansible + Mitogen will still work for now. Mitogen is considering alternatives
 to strategy plugins under :gh:issue:`1278`.
 
+
+v0.3.25a3 (2025-07-02)
+----------------------
+
 * :gh:issue:`1285` CI: use `result_format = yaml` for Ansible test output,
   instead of deprecated `stdout_callback = yaml`
 * :gh:issue:`1293` CI: Fix ``ansible_version`` comparisons when an Ansible
