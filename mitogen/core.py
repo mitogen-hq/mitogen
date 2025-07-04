@@ -2224,7 +2224,19 @@ class Side(object):
             # Refuse to touch the handle after closed, it may have been reused
             # by another thread. TODO: synchronize read()/write()/close().
             return b('')
-        s, disconnected = io_op(os.read, self.fd, n)
+
+        # FIXME What should this do with BlockingIOError?
+        try:
+            s, disconnected = io_op(os.read, self.fd, n)
+        except IOError:
+            exc = sys.exc_info()[1]
+            if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                LOG.warning(
+                    '%r.read() BlockingIOError %r fp=%r\n%s',
+                    self, exc, self.fp, traceback.format_exc(),
+                )
+            raise
+
         if disconnected:
             LOG.debug('%r: disconnected during read: %s', self, disconnected)
             return b('')
@@ -2244,7 +2256,19 @@ class Side(object):
             # Don't touch the handle after close, it may be reused elsewhere.
             return None
 
-        written, disconnected = io_op(os.write, self.fd, s)
+        # FIXME Does BlockingIOError *always* mean 0 bytes written?
+        # FIXME Are callers handling a return value of 0?
+        try:
+            written, disconnected = io_op(os.write, self.fd, s)
+        except IOError:
+            exc = sys.exc_info()[1]
+            if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                LOG.warning(
+                    '%r.write() BlockingIOError %r fp=%r len(s)=%d\n%s',
+                    self, exc, self.fp, len(s), traceback.format_exc(),
+                )
+            return 0
+
         if disconnected:
             LOG.debug('%r: disconnected during write: %s', self, disconnected)
             return None
@@ -2933,7 +2957,16 @@ class Latch(object):
             self._wake(wsock, cookie)
 
     def _wake(self, wsock, cookie):
-        written, disconnected = io_op(os.write, wsock.fileno(), cookie)
+        try:
+            written, disconnected = io_op(os.write, wsock.fileno(), cookie)
+        except IOError:
+            exc = sys.exc_info()[1]
+            if exc.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                LOG.warning(
+                    '%r._wake() BlockingIOError %r wsock=%r len(cookie)=%d\n%s',
+                    self, exc, wsock, len(cookie), traceback.format_exc(),
+                )
+            raise
         assert written == len(cookie) and not disconnected
 
     def __repr__(self):
