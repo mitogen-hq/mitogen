@@ -600,6 +600,8 @@ def io_op(func, *args):
         the return value of `func(*args)`, and `disconnected` is an exception
         instance when disconnection was detected, otherwise :data:`None`.
     """
+    attempts_limit = 3
+    attempts_count = 1
     while True:
         try:
             return func(*args), None
@@ -608,8 +610,12 @@ def io_op(func, *args):
             _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
             if e.args[0] == errno.EINTR:
                 continue
+            if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK) and attempts_count <= attempts_limit:
+                attempts_count += 1
+                continue
             if e.args[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
                 return None, e
+            e.attempts_count = attempts_count
             raise
 
 
@@ -2244,7 +2250,17 @@ class Side(object):
             # Don't touch the handle after close, it may be reused elsewhere.
             return None
 
-        written, disconnected = io_op(os.write, self.fd, s)
+        try:
+            written, disconnected = io_op(os.write, self.fd, s)
+        except BlockingIOError as exc:
+            flags = fcntl.fcntl(self.fd, fcntl.F_GETFL)
+            nonblock = bool(flags & os.O_NONBLOCK)
+            LOG.error(
+                '%r: flags=%d nonblock=%r exc=%r, attempts_count=%d, len(s)=%d',
+                self, flags, nonblock, exc, exc.attempts_count, len(s),
+            )
+            raise
+
         if disconnected:
             LOG.debug('%r: disconnected during write: %s', self, disconnected)
             return None
@@ -2933,7 +2949,14 @@ class Latch(object):
             self._wake(wsock, cookie)
 
     def _wake(self, wsock, cookie):
-        written, disconnected = io_op(os.write, wsock.fileno(), cookie)
+        try:
+            written, disconnected = io_op(os.write, wsock.fileno(), cookie)
+        except BlockingIOError as exc:
+            LOG.error(
+                '%r: wsock=%r, wsock.timeout=%r, wsock.getblocking()=%r, wsock.gettimeout()=%r, exc=%r, attempts_count=%d',
+                 self, wsock, wsock.timeout, wsock.getblocking(), wsock.gettimeout(), exc, exc.attempts_count,
+            )
+            raise
         assert written == len(cookie) and not disconnected
 
     def __repr__(self):
