@@ -1,0 +1,37 @@
+# 288230376151711744 mitogen-test-file ABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+import argparse
+
+PADDING_POOL = b'ABCDEFGHIJKLMNOPQRSTUVWXYZ' * 2
+PADDING_SIZE = len(PADDING_POOL) // 2
+FILE_SIZE = 512 * 2**20
+LINE_SIZE = 64
+
+try:
+    xrange = range
+except NameError:
+    pass
+
+def line(lineno):
+    # type: (int) -> bytes
+    line_offset = lineno * LINE_SIZE
+    padding_offset = lineno % PADDING_SIZE
+    padding = PADDING_POOL[padding_offset:padding_offset + PADDING_SIZE]
+    return b'%018d mitogen-test-file %s\x0a' % (line_offset, padding)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('output_file')
+    args = parser.parse_args()
+
+    written_bytes_count = 0
+    with open(args.output_file, 'wb') as f:
+        for lineno in xrange(0, FILE_SIZE // LINE_SIZE):
+            written_bytes_count += f.write(line(lineno))
+
+    print('Wrote %d bytes to %s' % (written_bytes_count, args.output_file))
+
+
+if __name__ == '__main__':
+    main()
