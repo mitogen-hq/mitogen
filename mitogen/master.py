@@ -1051,6 +1051,7 @@ class ModuleFinder(object):
                 if sys.modules.get(name) is not None
                 and not is_stdlib_name(name)
                 and u'six.moves' not in name  # TODO: crap
+                #and name != u'__main__'
             )
         ))
 
@@ -1213,7 +1214,7 @@ class ModuleResponder(object):
         self._cache[fullname] = tup
         return tup
 
-    def _send_load_module(self, stream, fullname):
+    def _send_load_module(self, stream, fullname, reason):
         if fullname not in stream.protocol.sent_modules:
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
@@ -1221,8 +1222,8 @@ class ModuleResponder(object):
                 dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            self._log.debug('sending %s (%.2f KiB) to %s',
-                            fullname, len(msg.data) / 1024.0, stream.name)
+            self._log.debug('sending %s %s (%.2f KiB) to %s',
+                            reason, fullname, len(msg.data) / 1024.0, stream.name)
             self._router._async_route(msg)
             stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
@@ -1253,8 +1254,8 @@ class ModuleResponder(object):
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
-                self._send_load_module(stream, name)
-            self._send_load_module(stream, fullname)
+                self._send_load_module(stream, name, 'related')
+            self._send_load_module(stream, fullname, 'requested')
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
             self._send_module_load_failed(stream, fullname)
