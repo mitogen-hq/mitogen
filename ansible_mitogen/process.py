@@ -426,7 +426,7 @@ class ClassicWorkerModel(WorkerModel):
 
         common_setup(_init_logging=_init_logging)
 
-        self.parent_sock, self.child_sock = socket.socketpair()
+        self.parent_sock, self.child_sock = mitogen.core.socketpair()
         mitogen.core.set_cloexec(self.parent_sock.fileno())
         mitogen.core.set_cloexec(self.child_sock.fileno())
 

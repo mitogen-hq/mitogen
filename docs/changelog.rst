@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1318` CI: Abbreviate Github Actions job names
 * :gh:issue:`1309` :mod:`ansible_mitogen`: Fix ``become_method: doas``
+* :gh:issue:`712` :mod:`mitogen`: Fix :exc:`BlockingIOError` & ``EAGAIN``
+  errors in subprocesses that write to stdio
 
 
 v0.3.25 (2025-07-29)
