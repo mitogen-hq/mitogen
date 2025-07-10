@@ -561,10 +561,15 @@ def set_cloexec(fd):
 
 def set_nonblock(fd):
     """
-    Set the file descriptor `fd` to non-blocking mode. For most underlying file
-    types, this causes :func:`os.read` or :func:`os.write` to raise
+    Set non-blocking mode on the file description referred to by file
+    descriptor :param:`fd`.
+
+    File operations (e.g. :func:`os.read`, :func:`os.write`) will raise
     :class:`OSError` with :data:`errno.EAGAIN` rather than block the thread
     when the underlying kernel buffer is exhausted.
+
+    Changing the blocking mode of a file description affects all file
+    descriptors that refer to it, such as any created with :func:`os.dup`.
     """
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
@@ -572,8 +577,10 @@ def set_nonblock(fd):
 
 def set_block(fd):
     """
-    Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread when
-    the underlying kernel buffer is exhausted.
+    Set blocking mode on the file description referred to by file descriptor
+    :param:`fd`.
+
+    Inverse of :func:`set_nonblock`.
     """
     flags = fcntl.fcntl(fd, fcntl.F_GETFL)
     fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
@@ -1875,11 +1882,12 @@ class Stream(object):
         self.protocol = protocol
         self.protocol.stream = self
 
-    def accept(self, rfp, wfp):
+    def accept(self, rfp, wfp, blocking=False):
         """
         Attach a pair of file objects to :attr:`receive_side` and
         :attr:`transmit_side`, after wrapping them in :class:`Side` instances.
-        :class:`Side` will call :func:`set_nonblock` and :func:`set_cloexec`
+        :param:`blocking` is passed onto the :class:`Side` constructors,
+        which may call :func:`set_nonblock` and :func:`set_cloexec`
         on the underlying file descriptors during construction.
 
         The same file object may be used for both sides. The default
@@ -1890,9 +1898,11 @@ class Stream(object):
             The file object to receive from.
         :param file wfp:
             The file object to transmit to.
+        :param bool blocking:
+            If False then file objects will be made non-blocking.
         """
-        self.receive_side = Side(self, rfp)
-        self.transmit_side = Side(self, wfp)
+        self.receive_side = Side(self, rfp, blocking=blocking)
+        self.transmit_side = Side(self, wfp, blocking=blocking)
 
     def __repr__(self):
         return "<Stream %s #%04x>" % (self.name, id(self) & 0xffff,)
@@ -3060,7 +3070,7 @@ class IoLoggerProtocol(DelimitedProtocol):
         os.dup2(wsock.fileno(), dest_fd)
         stream = super(IoLoggerProtocol, cls).build_stream(name)
         stream.name = name
-        stream.accept(rsock, wsock)
+        stream.accept(rsock, wsock, blocking=True)
         return stream
 
     def __init__(self, name):
