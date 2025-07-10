@@ -53,7 +53,7 @@ import termios
 import textwrap
 import threading
 import zlib
-
+import time
 # Absolute imports for <2.5.
 select = __import__('select')
 
@@ -1438,7 +1438,19 @@ class Connection(object):
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
         fp=os.fdopen(0,'rb')
-        C=zlib.decompress(fp.read(PREAMBLE_COMPRESSED_LEN))
+        remaining = PREAMBLE_COMPRESSED_LEN
+        chunks = []
+        deadline = time.time() + 10
+        while remaining:
+            chunk = fp.read(remaining)
+            if chunk:
+                chunks.append(chunk)
+                remaining -= len(chunk)
+                continue
+            if time.time() > deadline:
+                raise RuntimeError('early EOF while reading preamble')
+            time.sleep(0.02)
+        C = zlib.decompress(b''.join(chunks))
         fp.close()
         fp=os.fdopen(W,'wb',0)
         fp.write(C)
