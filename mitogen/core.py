@@ -1875,11 +1875,12 @@ class Stream(object):
         self.protocol = protocol
         self.protocol.stream = self
 
-    def accept(self, rfp, wfp):
+    def accept(self, rfp, wfp, blocking=False):
         """
         Attach a pair of file objects to :attr:`receive_side` and
         :attr:`transmit_side`, after wrapping them in :class:`Side` instances.
-        :class:`Side` will call :func:`set_nonblock` and :func:`set_cloexec`
+        :param:`blocking` is passed onto the :class:`Side` constructors,
+        which may call :func:`set_nonblock` and :func:`set_cloexec`
         on the underlying file descriptors during construction.
 
         The same file object may be used for both sides. The default
@@ -1890,9 +1891,11 @@ class Stream(object):
             The file object to receive from.
         :param file wfp:
             The file object to transmit to.
+        :param bool blocking:
+            If False then file objects will be made non-blocking.
         """
-        self.receive_side = Side(self, rfp)
-        self.transmit_side = Side(self, wfp)
+        self.receive_side = Side(self, rfp, blocking=blocking)
+        self.transmit_side = Side(self, wfp, blocking=blocking)
 
     def __repr__(self):
         return "<Stream %s #%04x>" % (self.name, id(self) & 0xffff,)
@@ -3060,7 +3063,7 @@ class IoLoggerProtocol(DelimitedProtocol):
         os.dup2(wsock.fileno(), dest_fd)
         stream = super(IoLoggerProtocol, cls).build_stream(name)
         stream.name = name
-        stream.accept(rsock, wsock)
+        stream.accept(rsock, wsock, blocking=True)
         return stream
 
     def __init__(self, name):
