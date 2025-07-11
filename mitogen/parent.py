@@ -2555,9 +2555,8 @@ class Reaper(object):
         relatively conservative retries.
         """
         delay = 0.05
-        for _ in xrange(count):
-            delay *= 1.72
-        return delay
+        factor = 1.72
+        return delay * factor ** count
 
     def _on_broker_shutdown(self):
         """
