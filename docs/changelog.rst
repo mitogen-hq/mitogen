@@ -32,6 +32,8 @@ Running Ansible 12 + Mitogen will currently print a deprecation warning
 Ansible + Mitogen will still work for now. Mitogen is considering alternatives
 to strategy plugins under :gh:issue:`1278`.
 
+* :gh:issue:`1303` CI: Switch to archived Debian 10 (buster) apt repository
+
 
 v0.3.25a3 (2025-07-02)
 ----------------------
