@@ -111,7 +111,7 @@ def log_to_file(path=None, io=False, level='INFO'):
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
-        mitogen.core.set_cloexec(fp.fileno())
+        mitogen.core.set_inheritable(fp.fileno(), False)
     else:
         fp = sys.stderr
 
