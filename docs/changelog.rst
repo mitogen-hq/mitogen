@@ -32,6 +32,9 @@ Running Ansible 12 + Mitogen will currently print a deprecation warning
 Ansible + Mitogen will still work for now. Mitogen is considering alternatives
 to strategy plugins under :gh:issue:`1278`.
 
+* :gh:issue:`712` :mod:`ansible_mitogen`: Fix :exc:`BlockingIOError` &
+  ``EAGAIN`` errors when operating on stdio
+
 
 v0.3.25a3 (2025-07-02)
 ----------------------

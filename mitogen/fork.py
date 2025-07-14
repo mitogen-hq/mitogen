@@ -211,7 +211,7 @@ class Connection(mitogen.parent.Connection):
         on_fork()
         if self.options.on_fork:
             self.options.on_fork()
-        mitogen.core.set_block(childfp.fileno())
+        mitogen.core.set_blocking(childfp.fileno(), True)
 
         childfp.send(b('MITO002\n'))
 

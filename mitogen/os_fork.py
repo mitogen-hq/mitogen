@@ -131,9 +131,9 @@ class Corker(object):
         `obj` to be written to by one of its threads.
         """
         rsock, wsock = mitogen.parent.create_socketpair(size=4096)
-        mitogen.core.set_cloexec(rsock.fileno())
-        mitogen.core.set_cloexec(wsock.fileno())
-        mitogen.core.set_block(wsock)  # gevent
+        mitogen.core.set_inheritable(rsock.fileno(), False)
+        mitogen.core.set_inheritable(wsock.fileno(), False)
+        mitogen.core.set_blocking(wsock.fileno(), True)  # gevent
         self._rsocks.append(rsock)
         obj.defer(self._do_cork, s, wsock)
 

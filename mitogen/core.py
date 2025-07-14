@@ -161,6 +161,7 @@ if PY3:
     import pickle
     import _thread as thread
     from io import BytesIO
+    from os import set_blocking, set_inheritable
     b = str.encode
     BytesType = bytes
     UnicodeType = str
@@ -179,6 +180,20 @@ else:
     UnicodeType = unicode
     integer_types = (int, long)
     iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
+
+    def set_blocking(fd, blocking):
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        if blocking:
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
+        else:
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+    def set_inheritable(fd, inheritable):
+        flags = fcntl.fcntl(fd, fcntl.F_GETFD)
+        if inheritable:
+            fcntl.fcntl(fd, fcntl.F_SETFD, flags & ~fcntl.FD_CLOEXEC)
+        else:
+            fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
 
 AnyTextType = (BytesType, UnicodeType)
 
@@ -555,28 +570,7 @@ def set_cloexec(fd):
         if stdio is not None and not stdio.closed
     ]
     assert fd not in stdfds, 'fd %r is one of the stdio fds: %r' % (fd, stdfds)
-    flags = fcntl.fcntl(fd, fcntl.F_GETFD)
-    fcntl.fcntl(fd, fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
-
-
-def set_nonblock(fd):
-    """
-    Set the file descriptor `fd` to non-blocking mode. For most underlying file
-    types, this causes :func:`os.read` or :func:`os.write` to raise
-    :class:`OSError` with :data:`errno.EAGAIN` rather than block the thread
-    when the underlying kernel buffer is exhausted.
-    """
-    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
-
-def set_block(fd):
-    """
-    Inverse of :func:`set_nonblock`, i.e. cause `fd` to block the thread when
-    the underlying kernel buffer is exhausted.
-    """
-    flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-    fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
+    set_inheritable(fd, False)
 
 
 def io_op(func, *args):
@@ -638,7 +632,7 @@ class PidfulStreamHandler(logging.StreamHandler):
             ts = time.strftime('%Y%m%d_%H%M%S')
             path = self.template % (os.getpid(), ts)
             self.stream = open(path, 'w', 1)
-            set_cloexec(self.stream.fileno())
+            set_inheritable(self.stream.fileno(), False)
             self.stream.write('Parent PID: %s\n' % (os.getppid(),))
             self.stream.write('Created by:\n\n%s\n' % (
                 ''.join(traceback.format_stack()),
@@ -720,7 +714,7 @@ def import_module(modname):
     return __import__(modname, None, None, [''])
 
 
-def pipe():
+def pipe(blocking=True, inheritable=False):
     """
     Create a UNIX pipe pair using :func:`os.pipe`, wrapping the returned
     descriptors in Python file objects in order to manage their lifetime and
@@ -728,10 +722,21 @@ def pipe():
     not been closed explicitly.
     """
     rfd, wfd = os.pipe()
+    for fd in rfd, wfd:
+        set_blocking(fd, blocking)
+        set_inheritable(fd, inheritable)
     return (
         os.fdopen(rfd, 'rb', 0),
         os.fdopen(wfd, 'wb', 0)
     )
+
+
+def socketpair(blocking=True, inheritable=False):
+    fp1, fp2 = socket.socketpair()
+    for fp in fp1, fp2:
+        set_blocking(fp.fileno(), blocking)
+        set_inheritable(fp.fileno(), inheritable)
+    return fp1, fp2
 
 
 def iter_split(buf, delim, func):
@@ -1879,8 +1884,6 @@ class Stream(object):
         """
         Attach a pair of file objects to :attr:`receive_side` and
         :attr:`transmit_side`, after wrapping them in :class:`Side` instances.
-        :class:`Side` will call :func:`set_nonblock` and :func:`set_cloexec`
-        on the underlying file descriptors during construction.
 
         The same file object may be used for both sides. The default
         :meth:`on_disconnect` is handles the possibility that only one
@@ -2149,20 +2152,14 @@ class Side(object):
     :param object fp:
         The file or socket object managing the underlying file descriptor. Any
         object may be used that supports `fileno()` and `close()` methods.
-    :param bool cloexec:
-        If :data:`True`, the descriptor has its :data:`fcntl.FD_CLOEXEC` flag
-        enabled using :func:`fcntl.fcntl`.
     :param bool keep_alive:
         If :data:`True`, the continued existence of this side will extend the
         shutdown grace period until it has been unregistered from the broker.
-    :param bool blocking:
-        If :data:`False`, the descriptor has its :data:`os.O_NONBLOCK` flag
-        enabled using :func:`fcntl.fcntl`.
     """
     _fork_refs = weakref.WeakValueDictionary()
     closed = False
 
-    def __init__(self, stream, fp, cloexec=True, keep_alive=True, blocking=False):
+    def __init__(self, stream, fp, keep_alive=True):
         #: The :class:`Stream` for which this is a read or write side.
         self.stream = stream
         # File or socket object responsible for the lifetime of its underlying
@@ -2178,10 +2175,6 @@ class Side(object):
         #: side is disconnected.
         self.keep_alive = keep_alive
         self._fork_refs[id(self)] = self
-        if cloexec:
-            set_cloexec(self.fd)
-        if not blocking:
-            set_nonblock(self.fd)
 
     def __repr__(self):
         return '<Side of %s fd %s>' % (
@@ -2785,10 +2778,8 @@ class Latch(object):
         try:
             return self._cls_idle_socketpairs.pop()  # pop() must be atomic
         except IndexError:
-            rsock, wsock = socket.socketpair()
+            rsock, wsock = socketpair()
             rsock.setblocking(False)
-            set_cloexec(rsock.fileno())
-            set_cloexec(wsock.fileno())
             self._cls_all_sockets.extend((rsock, wsock))
             return rsock, wsock
 
@@ -2958,7 +2949,8 @@ class Waker(Protocol):
     @classmethod
     def build_stream(cls, broker):
         stream = super(Waker, cls).build_stream(broker)
-        stream.accept(*pipe())
+        rfp, wfp = pipe(blocking=False)
+        stream.accept(rfp, wfp)
         return stream
 
     def __init__(self, broker):
@@ -4038,6 +4030,10 @@ class ExternalContext(object):
             local_id=self.config['context_id'],
             parent_ids=self.config['parent_ids']
         )
+        for f in [in_fp, out_fp]:
+            fd = f.fileno()
+            set_blocking(fd, False)
+            set_inheritable(fd, False)
         self.stream.accept(in_fp, out_fp)
         self.stream.name = 'parent'
         self.stream.receive_side.keep_alive = False
@@ -4140,7 +4136,7 @@ class ExternalContext(object):
             if os.isatty(pty.STDERR_FILENO):
                 reserve_tty_fd = os.dup(pty.STDERR_FILENO)
                 self.reserve_tty_fp = os.fdopen(reserve_tty_fd, 'r+b', 0)
-                set_cloexec(self.reserve_tty_fp.fileno())
+                set_inheritable(self.reserve_tty_fp.fileno(), False)
         except OSError:
             pass
 

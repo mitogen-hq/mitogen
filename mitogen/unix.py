@@ -112,6 +112,8 @@ class Listener(mitogen.core.Protocol):
 
         stream = super(Listener, cls).build_stream(router, path)
         stream.accept(sock, sock)
+        mitogen.core.set_blocking(sock.fileno(), False)
+        mitogen.core.set_inheritable(sock.fileno(), False)
         router.broker.start_receive(stream)
         return stream
 
@@ -169,6 +171,8 @@ class Listener(mitogen.core.Protocol):
             auth_id=mitogen.context_id,
         )
         stream.name = u'unix_client.%d' % (pid,)
+        mitogen.core.set_blocking(sock.fileno(), False)
+        mitogen.core.set_inheritable(sock.fileno(), False)
         stream.accept(sock, sock)
         LOG.debug('listener: accepted connection from PID %d: %s',
                   pid, stream.name)

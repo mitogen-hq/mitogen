@@ -265,7 +265,7 @@ def disable_echo(fd):
     termios.tcsetattr(fd, flags, new)
 
 
-def create_socketpair(size=None):
+def create_socketpair(size=None, blocking=True, inheritable=False):
     """
     Create a :func:`socket.socketpair` for use as a child's UNIX stdio
     channels. As socketpairs are bidirectional, they are economical on file
@@ -276,14 +276,14 @@ def create_socketpair(size=None):
     if size is None:
         size = mitogen.core.CHUNK_SIZE
 
-    parentfp, childfp = socket.socketpair()
+    parentfp, childfp = mitogen.core.socketpair(blocking, inheritable)
     for fp in parentfp, childfp:
         fp.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, size)
 
     return parentfp, childfp
 
 
-def create_best_pipe(escalates_privilege=False):
+def create_best_pipe(escalates_privilege=False, blocking=True, inheritable=False):
     """
     By default we prefer to communicate with children over a UNIX socket, as a
     single file descriptor can represent bidirectional communication, and a
@@ -305,12 +305,12 @@ def create_best_pipe(escalates_privilege=False):
         `(parent_rfp, child_wfp, child_rfp, parent_wfp)`
     """
     if (not escalates_privilege) or (not SELINUX_ENABLED):
-        parentfp, childfp = create_socketpair()
+        parentfp, childfp = create_socketpair(blocking, inheritable)
         return parentfp, childfp, childfp, parentfp
 
-    parent_rfp, child_wfp = mitogen.core.pipe()
+    parent_rfp, child_wfp = mitogen.core.pipe(blocking, inheritable)
     try:
-        child_rfp, parent_wfp = mitogen.core.pipe()
+        child_rfp, parent_wfp = mitogen.core.pipe(blocking, inheritable)
         return parent_rfp, child_wfp, child_rfp, parent_wfp
     except:
         parent_rfp.close()
@@ -366,7 +366,7 @@ def create_child(args, merge_stdio=False, stderr_pipe=False,
         stderr_r, stderr = None, child_wfp
     elif stderr_pipe:
         stderr_r, stderr = mitogen.core.pipe()
-        mitogen.core.set_cloexec(stderr_r.fileno())
+        mitogen.core.set_inheritable(stderr_r.fileno(), False)
     else:
         stderr_r, stderr = None, None
 
@@ -481,7 +481,7 @@ def openpty():
     if not IS_SOLARIS:
         disable_echo(master_fd)
     disable_echo(slave_fd)
-    mitogen.core.set_block(slave_fd)
+    mitogen.core.set_blocking(slave_fd, True)
     return master_fp, slave_fp
 
 
@@ -547,8 +547,8 @@ def hybrid_tty_create_child(args, escalates_privilege=False):
             escalates_privilege=escalates_privilege,
         )
         try:
-            mitogen.core.set_block(child_rfp)
-            mitogen.core.set_block(child_wfp)
+            mitogen.core.set_blocking(child_rfp, True)
+            mitogen.core.set_blocking(child_wfp, True)
             proc = popen(
                 args=args,
                 stdin=child_rfp,
@@ -1643,6 +1643,10 @@ class Connection(object):
         stream = self.stream_factory()
         stream.conn = self
         stream.name = self.options.name or self._get_name()
+        for fp in self.proc.stdout, self.proc.stdin:
+            fd = fp.fileno()
+            mitogen.core.set_blocking(fd, False)
+            mitogen.core.set_inheritable(fd, False)
         stream.accept(self.proc.stdout, self.proc.stdin)
 
         mitogen.core.listen(stream, 'disconnect', self.on_stdio_disconnect)
@@ -1653,6 +1657,9 @@ class Connection(object):
         stream = self.stderr_stream_factory()
         stream.conn = self
         stream.name = self.options.name or self._get_name()
+        fd = self.proc.stderr.fileno()
+        mitogen.core.set_blocking(fd, False)
+        mitogen.core.set_inheritable(fd, False)
         stream.accept(self.proc.stderr, self.proc.stderr)
 
         mitogen.core.listen(stream, 'disconnect', self.on_stderr_disconnect)
