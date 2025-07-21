@@ -8,6 +8,7 @@ import inspect
 import sys
 import zlib
 
+import mitogen.core
 import mitogen.fakessh
 import mitogen.fork
 import mitogen.master
@@ -17,6 +18,8 @@ import mitogen.select
 import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
+
+COLUMN_HEADERS = (' ', 'Original', 'Minimized', 'Compressed')
 
 router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
@@ -36,17 +39,10 @@ if '--dump' in sys.argv:
     exit()
 
 
-print(
-    '                           '
-    ' '
-    '  Original   '
-    '  '
-    '     Minimized     '
-    '  '
-    '    Compressed     '
-)
+print('{:20} {:^15}  {:^19}  {:^19}'.format(*COLUMN_HEADERS))
 
 for mod in (
+        mitogen.core,
         mitogen.parent,
         mitogen.fork,
         mitogen.ssh,
@@ -63,9 +59,9 @@ for mod in (
     compressed = zlib.compress(minimized.encode(), 9)
     compressed_size = len(compressed)
     print(
-        '%-25s'
+        '%-20s'
         ' '
-        '%5i %4.1fKiB'
+        '%6i %5.1fKiB'
         '  '
         '%5i %4.1fKiB %.1f%%'
         '  '

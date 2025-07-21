@@ -159,9 +159,10 @@
         path: /etc/sudoers
         marker: "# {mark} Mitogen test defaults"
         block: |
-          Defaults>mitogen__pw_required targetpw
-          Defaults>mitogen__require_tty requiretty
-          Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+          Defaults log_output
+          Defaults>mitogen__pw_required log_output,targetpw
+          Defaults>mitogen__require_tty log_output,requiretty
+          Defaults>mitogen__require_tty_pw_required log_output,requiretty,targetpw
         validate: '/usr/sbin/visudo -cf %s'
 
     - name: Configure sudoers users
