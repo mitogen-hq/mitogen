@@ -1422,6 +1422,7 @@ class Connection(object):
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
+        import fcntl
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
@@ -1438,6 +1439,7 @@ class Connection(object):
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
         fp=os.fdopen(0,'rb')
+        assert not (fcntl.fcntl(0, fcntl.F_GETFL) & os.O_NONBLOCK)
         C=zlib.decompress(fp.read(PREAMBLE_COMPRESSED_LEN))
         fp.close()
         fp=os.fdopen(W,'wb',0)
