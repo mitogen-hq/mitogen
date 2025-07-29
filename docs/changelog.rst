@@ -19,7 +19,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 
 
 In progress (unreleased)
-------------------------
+========================
+
+
+v0.3.25 (2025-07-29)
+--------------------
 
 Ansible 12 has deprecated third-party strategy plugins. This is currently
 how Mitogen integrates with Ansible (e.g. `ANSIBLE_STRATEGY=mitogen_linear`).
@@ -31,6 +35,8 @@ Running Ansible 12 + Mitogen will currently print a deprecation warning
 
 Ansible + Mitogen will still work for now. Mitogen is considering alternatives
 to strategy plugins under :gh:issue:`1278`.
+
+* :gh:issue:`1258` Ansible 12 (ansible-core 2.19) support
 
 
 v0.3.25b1 (2025-07-21)
