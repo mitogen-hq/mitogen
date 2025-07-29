@@ -141,7 +141,9 @@ Noteworthy Differences
   +-----------------+ 3.10 - 3.13     |
   | 10              |                 |
   +-----------------+-----------------+
-  | 11              | 3.11 - 3.13     |
+  | 11              |                 |
+  +-----------------+ 3.11 - 3.13+    |
+  | 12              |                 |
   +-----------------+-----------------+
 
   Verify your installation is running one of these versions by checking
@@ -1016,6 +1018,8 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``ansible_ssh_private_key_file``
 * ``ansible_ssh_pass``, ``ansible_ssh_password``, ``ansible_password``
   (default: assume passwordless)
+* ``ansible_ssh_host_key_checking``, ``ansible_host_key_checking`` (default: 
+  :data:`True`)
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 * ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
   Ansible controller process on remote machines. To simplify diagnostics,

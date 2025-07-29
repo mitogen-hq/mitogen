@@ -25,8 +25,15 @@
         # with Ansible 4 (ansible-core 2.11) & associated collections.
         # ansible.module_utils.connection.ConnectionError: Method not found
         # https://github.com/mitogen-hq/mitogen/actions/runs/12854359099/job/35838635886
-        - ansible_version.full is version('2.11', '>=', strict=True)
-        - ansible_version.full is version('2.12', '<', strict=True)
+        - ansible_version_major_minor is version('2.11', '>=', strict=True)
+        - ansible_version_major_minor is version('2.12', '<', strict=True)
+
+    - meta: end_play
+      when:
+        # TASK [Get running configuration and state data ]
+        # Error: : Task failed: ActionBase._parse_returned_data() missing 1 required positional argument: 'profile'
+        # https://github.com/ansible-collections/ansible.netcommon/issues/698#issuecomment-2910082548
+        - ansible_version_major_minor is version('2.19', '>=', strict=True)
 
     - block:
         - name: Start container

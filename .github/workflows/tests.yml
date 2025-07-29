@@ -177,10 +177,16 @@ jobs:
           - name: Ans_313_11
             python_version: '3.13'
             tox_env: py313-mode_ansible-ansible11
+          - name: Ans_313_12
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible12
 
           - name: Van_313_11
             python_version: '3.13'
             tox_env: py313-mode_ansible-ansible11-strategy_linear
+          - name: Van_313_12
+            python_version: '3.13'
+            tox_env: py313-mode_ansible-ansible12-strategy_linear
 
           - name: Mito_313
             python_version: '3.13'
@@ -268,10 +274,18 @@ jobs:
             tox_env: py313-mode_mitogen
 
           - name: Loc_313_11
+            sshpass_version: "1.10"
             tox_env: py313-mode_localhost-ansible11
 
           - name: Van_313_11
+            sshpass_version: "1.10"
             tox_env: py313-mode_localhost-ansible11-strategy_linear
+
+          - name: Loc_313_12
+            tox_env: py313-mode_localhost-ansible12
+
+          - name: Van_313_12
+            tox_env: py313-mode_localhost-ansible12-strategy_linear
 
     steps:
       - uses: actions/checkout@v4
@@ -305,6 +319,8 @@ jobs:
               # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
               echo "/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7: sys.executable: $(/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7 -c 'import sys; print(sys.executable)')"
           fi
+      - run: .ci/install_sshpass ${{ matrix.sshpass_version }}
+        if: ${{ matrix.sshpass_version }}
       - name: Install tooling
         run: |
           set -o errexit -o nounset -o pipefail

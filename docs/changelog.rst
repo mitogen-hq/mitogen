@@ -18,6 +18,59 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.25 (2025-07-29)
+--------------------
+
+Ansible 12 has deprecated third-party strategy plugins. This is currently
+how Mitogen integrates with Ansible (e.g. `ANSIBLE_STRATEGY=mitogen_linear`).
+Running Ansible 12 + Mitogen will currently print a deprecation warning
+
+    [DEPRECATION WARNING]: Use of strategy plugins not included in
+    ansible.builtin are deprecated [...]. This feature will be removed from
+    ansible-core in a future release.
+
+Ansible + Mitogen will still work for now. Mitogen is considering alternatives
+to strategy plugins under :gh:issue:`1278`.
+
+* :gh:issue:`1258` Ansible 12 (ansible-core 2.19) support
+
+
+v0.3.25b1 (2025-07-21)
+----------------------
+
+* :gh:issue:`1303` CI: Switch to archived Debian 10 (buster) apt repository
+
+
+v0.3.25a3 (2025-07-02)
+----------------------
+
+* :gh:issue:`1285` CI: use `result_format = yaml` for Ansible test output,
+  instead of deprecated `stdout_callback = yaml`
+* :gh:issue:`1293` CI: Fix ``ansible_version`` comparisons when an Ansible
+  release candidate is under test
+* :gh:issue:`1275` CI: Test ``ansible_ssh_password`` behaviour without
+  ``sshpass`` installed
+* :gh:issue:`1282` :mod:`ansible_mitogen`: Support ``ANSIBLE_SSH_VERBOSITY``
+  with Ansible 12
+
+
+v0.3.25a2 (2025-06-21)
+----------------------
+
+* :gh:issue:`1274` :mod:`ansible_mitogen`: Replace use of `jsonify()`, which
+  is deprecated form Ansible 12 (ansible-core 2.19)
+
+
+v0.3.25a1 (2025-06-05)
+----------------------
+
+* :gh:issue:`1258` Initial Ansible 12 (ansible-core 2.19) support
+* :gh:issue:`1258` :mod:`ansible_mitogen`: Initial Ansible datatag support
+  (:gh:anspull:`84621`)
+* :gh:issue:`1258` :mod:`ansible_mitogen`: Ansible 12 (ansible-core 2.19) test
+  jobs
+
+
 v0.3.24 (2025-05-29)
 --------------------
 

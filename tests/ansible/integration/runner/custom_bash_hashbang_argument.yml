@@ -7,7 +7,7 @@
     - meta: end_play
       when:
         - not is_mitogen
-        - ansible_version.full is version('2.17.1', '>=', strict=True)
+        - ansible_version_major_minor_patch is version('2.17.1', '>=', strict=True)
 
     - custom_bash_old_style_module:
         foo: true

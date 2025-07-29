@@ -5,8 +5,11 @@ sys.path.append('.')
 
 
 def changelog_version(path, encoding='utf-8'):
+    "Return the 1st *stable* (not pre, dev) version in the changelog"
+    # See also grep_version() in setup.py
+    # e.g. "0.1.2, (1999-12-31)\n"
     version_pattern = re.compile(
-        r'^v(?P<version>[0-9]+\.[0-9]+\.[0-9]+)',
+        r'^v(?P<version>\d+\.\d+\.\d+) \((?P<date>\d\d\d\d-\d\d-\d\d)\)$',
         re.MULTILINE,
     )
 
@@ -64,6 +67,15 @@ domainrefs = {
         'text': '#%s',
         'url': 'https://github.com/mitogen-hq/mitogen/pull/%s',
     },
+    'gh:ansissue': {
+        'text': 'Ansible #%s',
+        'url': 'https://github.com/ansible/ansible/issues/%s',
+    },
+    'gh:anspull': {
+        'text': 'Ansible #%s',
+        'url': 'https://github.com/ansible/ansible/pull/%s',
+    },
+
     'ans:mod': {
         'text': '%s module',
         'url': 'https://docs.ansible.com/ansible/latest/modules/%s_module.html',

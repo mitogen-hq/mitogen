@@ -7,7 +7,7 @@
   tasks:
     - meta: end_play
       when:
-        - ansible_version.full is version('2.6', '<', strict=True)
+        - ansible_version_major_minor is version('2.6', '<', strict=True)
 
     - name: Copy the naughty ansible into place
       copy:
@@ -24,7 +24,8 @@
       assert:
         that:
           - env.cwd == ansible_user_dir
-          - (not env.mitogen_loaded) or (env.python_path.count("") == 1)
+          - not env.mitogen_loaded
+            or (env.python_path | select('eq', '') | length == 1)
         fail_msg: |
           ansible_user_dir={{ ansible_user_dir }}
           env={{ env }}

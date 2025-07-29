@@ -1,7 +1,14 @@
 
-- name: integration/action/transfer_data.yml
+- name: integration/action/transfer_data.yml, json
   hosts: test-targets
   tasks:
+    - meta: end_play
+      when:
+        # Ansible >= 12 (ansible-core >= 2.19) only allows bytes|str through
+        # `ansible.plugins.action.ActionBase._transfer_data()`.
+        - ansible_version_major_minor is version('2.19', '>=', strict=True)
+        - not is_mitogen
+
     - name: Cleanup transfer data
       file:
         path: /tmp/transfer-data
@@ -15,26 +22,41 @@
           data: {
             "I am JSON": true
           }
+
     - name: Slurp JSON transfer data
       slurp:
         src: /tmp/transfer-data
       register: out
+
     - assert:
         that: |
           out.content|b64decode == '{"I am JSON": true}'
         fail_msg: |
           out={{ out }}
 
+    - name: Cleanup transfer data
+      file:
+        path: /tmp/transfer-data
+        state: absent
+  tags:
+    - transfer_data
+
+
+- name: integration/action/transfer_data.yml, text
+  hosts: test-targets
+  tasks:
     - name: Create text transfer data
       action_passthrough:
         method: _transfer_data
         kwargs:
           remote_path: /tmp/transfer-data
           data: "I am text."
+
     - name: Slurp text transfer data
       slurp:
         src: /tmp/transfer-data
       register: out
+
     - assert:
         that:
           out.content|b64decode == 'I am text.'

@@ -11,6 +11,8 @@
     vars:
       ansible_python_interpreter: "{{ ansible_playbook_python }}"
     shell: >-
+      ANSIBLE_CALLBACK_RESULT_FORMAT=json
+      ANSIBLE_LOAD_CALLBACK_PLUGINS=false
       ANSIBLE_STRATEGY=mitogen_linear
       ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
       ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"

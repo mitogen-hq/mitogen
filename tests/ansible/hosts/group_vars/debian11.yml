@@ -1,5 +1,7 @@
 package_manager_keys:
   - src: debian-archive-bullseye-automatic.gpg  # Debian 11
     dest: /etc/apt/trusted.gpg.d/debian-archive-bullseye-automatic.gpg
+  - src: debian-archive-bullseye-security-automatic.asc  # Debian 11
+    dest: /etc/apt/trusted.gpg.d/debian-archive-bullseye-security-automatic.asc
   - src: debian-archive-bookworm-automatic.gpg  # Debian 12
     dest: /etc/apt/trusted.gpg.d/debian-archive-bookworm-automatic.gpg
