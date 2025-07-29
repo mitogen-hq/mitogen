@@ -31,7 +31,7 @@
     # FIXME https://github.com/mitogen-hq/mitogen/issues/1096
     - meta: end_play
       when:
-        - ansible_version.full is version('2.17', '>=', strict=True)
+        - ansible_version_major_minor is version('2.17', '>=', strict=True)
     - meta: reset_connection
 
     # The host key might be in ~/.ssh/known_hosts. If it's removed then no
@@ -65,7 +65,7 @@
       # ansible_host_key_checking don't work on Vanilla Ansible 2.10, even for
       # static inventory hosts (ansible/ansible#49254, ansible/ansible#73708).
       when:
-        - ansible_version.full is version('2.11', '>=', strict=True)
+        - ansible_version_major_minor is version('2.11', '>=', strict=True)
           or is_mitogen
   tags:
     - issue_1066

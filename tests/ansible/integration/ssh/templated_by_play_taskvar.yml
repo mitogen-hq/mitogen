@@ -32,7 +32,7 @@
       when:
         # https://github.com/ansible/ansible/issues/84238
         - not is_mitogen
-        - ansible_version.full is version('2.19', '<', strict=True)
+        - ansible_version_major_minor is version('2.19', '<', strict=True)
     - meta: reset_connection
     - name: Templated variables in play, key authentication
       ping:

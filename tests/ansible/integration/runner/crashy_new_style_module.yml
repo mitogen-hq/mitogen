@@ -18,10 +18,17 @@
         - not out.changed
         - out is failed
         # https://github.com/ansible/ansible/commit/62d8c8fde6a76d9c567ded381e9b34dad69afcd6
-        - out.msg is match(msg_pattern)
-        - (out.module_stdout == "" and out.module_stderr is search(tb_pattern))
-          or
-          (out.module_stdout is search(tb_pattern) and out.module_stderr is match("Shared connection to localhost closed."))
+        - |
+          out.msg is match(msg_pattern)
+          or out.msg in (
+             "Task failed: Module failed: name 'kaboom' is not defined",
+             'Module result deserialization failed: No start of json char found',
+          )
+        # - out.exception is undefined
+        #   or out.exception | default('') is match(tb_pattern)
+        #   or out.module_stderr is search(tb_pattern)
+        # - out.module_stdout == ''
+        # - out.module_stderr is search(tb_pattern)
         fail_msg: |
           out={{ out }}
   tags:

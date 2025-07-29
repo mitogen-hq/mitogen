@@ -147,7 +147,7 @@ def _connect_ssh(spec):
             'ssh_path': spec.ssh_executable(),
             'connect_timeout': spec.timeout(),
             'ssh_args': spec.ssh_args(),
-            'ssh_debug_level': spec.mitogen_ssh_debug_level(),
+            'ssh_debug_level': spec.verbosity(),
             'remote_name': get_remote_name(spec),
             'keepalive_count': (
                 spec.mitogen_ssh_keepalive_count() or 10
@@ -767,7 +767,7 @@ class Connection(ansible.plugins.connection.ConnectionBase):
                               C.BECOME_ALLOW_SAME_USER):
             stack += (CONNECTION_METHOD[spec.become_method()](spec),)
 
-        return stack
+        return ansible_mitogen.utils.unsafe.cast(stack)
 
     def _build_stack(self):
         """

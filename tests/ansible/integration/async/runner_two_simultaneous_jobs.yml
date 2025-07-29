@@ -66,6 +66,6 @@
       fail_msg: |
         result2={{ result2 }}
     when:
-      - ansible_version.full is version('2.8', '>=', strict=True)  # ansible#51393
+      - ansible_version_major_minor is version('2.8', '>=', strict=True)  # ansible#51393
   tags:
     - runner_two_simultaneous_jobs

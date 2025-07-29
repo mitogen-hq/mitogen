@@ -7,7 +7,7 @@
 
   - meta: end_play
     when:
-      - ansible_version.full is version('2.5', '<', strict=True)
+      - ansible_version_major_minor is version('2.5', '<', strict=True)
 
   - custom_python_detect_environment:
     vars:

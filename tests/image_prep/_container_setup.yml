@@ -66,7 +66,7 @@
           dnf: dnf clean all
       command: "{{ clean_command[ansible_pkg_mgr] }}"
       args:
-        warn: "{{ False if ansible_version.full is version('2.10', '<=', strict=True) else omit }}"
+        warn: "{{ False if ansible_version_major_minor is version('2.10', '<=', strict=True) else omit }}"
 
     - name: Clean up apt package lists
       shell: rm -rf {{item}}/*

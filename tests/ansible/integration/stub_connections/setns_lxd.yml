@@ -15,6 +15,8 @@
 
     - name: Run ansible stub-lxc.py
       environment:
+        ANSIBLE_CALLBACK_RESULT_FORMAT: json
+        ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
         ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       command: |
@@ -30,7 +32,7 @@
         localhost
       args:
         chdir: ../..
-        warn: "{{ False if ansible_version.full is version('2.10', '<=', strict=True) else omit }}"
+        warn: "{{ False if ansible_version_major_minor is version('2.10', '<=', strict=True) else omit }}"
       register: result
 
     - assert:

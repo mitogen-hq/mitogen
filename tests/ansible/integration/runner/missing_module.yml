@@ -5,6 +5,8 @@
     - name: Run missing_module
       connection: local
       environment:
+        ANSIBLE_CALLBACK_RESULT_FORMAT: json
+        ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
         ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
       vars:
@@ -26,6 +28,7 @@
     - assert:
         that: |
           'The module missing_module was not found in configured module paths' in out.stdout
+          or "Cannot resolve 'missing_module' to an action or module" in out.stdout
         fail_msg: |
           out={{ out }}
   tags:

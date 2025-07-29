@@ -19,6 +19,8 @@
     - name: ansible_user, ansible_ssh_private_key_file
       shell: >
         ANSIBLE_ANY_ERRORS_FATAL=false
+        ANSIBLE_CALLBACK_RESULT_FORMAT=json
+        ANSIBLE_LOAD_CALLBACK_PLUGINS=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
         ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
@@ -37,6 +39,8 @@
     - name: ansible_user, wrong ansible_ssh_private_key_file
       shell: >
         ANSIBLE_ANY_ERRORS_FATAL=false
+        ANSIBLE_CALLBACK_RESULT_FORMAT=json
+        ANSIBLE_LOAD_CALLBACK_PLUGINS=false
         ANSIBLE_STRATEGY=mitogen_linear
         ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
         ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"

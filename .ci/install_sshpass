@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+
+VERSION="$1"
+
+curl \
+    --fail \
+    --location \
+    --no-progress-meter \
+    --remote-name \
+    "https://downloads.sourceforge.net/project/sshpass/sshpass/${VERSION}/sshpass-${VERSION}.tar.gz"
+tar xvf "sshpass-${VERSION}.tar.gz"
+cd "sshpass-${VERSION}"
+./configure
+sudo make install

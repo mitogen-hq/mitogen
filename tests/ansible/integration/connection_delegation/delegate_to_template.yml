@@ -19,7 +19,7 @@
 
     - meta: end_play
       when:
-        - ansible_version.full is version('2.4', '<', strict=True)
+        - ansible_version_major_minor is version('2.4', '<', strict=True)
 
     - mitogen_get_stack:
       delegate_to: "{{ physical_host }}"
@@ -50,7 +50,7 @@
                 -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
                 -o, UserKnownHostsFile=/dev/null,
               ],
-              'ssh_debug_level': null,
+              'ssh_debug_level': 0,
               'ssh_path': 'ssh',
               'username': 'alias-user',
             },
@@ -78,7 +78,7 @@
                 -o, PubkeyAcceptedKeyTypes=+ssh-rsa,
                 -o, UserKnownHostsFile=/dev/null,
               ],
-              'ssh_debug_level': null,
+              'ssh_debug_level': 0,
               'ssh_path': 'ssh',
               'username': 'ansible-cfg-remote-user',
             },

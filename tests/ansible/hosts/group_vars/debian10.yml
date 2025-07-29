@@ -1,0 +1,4 @@
+package_manager_repos:
+  - dest: /etc/apt/sources.list
+    content: |
+      deb http://archive.debian.org/debian buster main contrib non-free
