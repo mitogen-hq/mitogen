@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ========================
 
+* :gh:issue:`1318` CI: Abbreviate Github Actions job names
+
 
 v0.3.25 (2025-07-29)
 --------------------

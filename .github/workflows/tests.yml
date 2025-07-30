@@ -25,23 +25,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Ans_27_210
-            tox_env: py27-mode_ansible-ansible2.10
-          - name: Ans_27_4
-            tox_env: py27-mode_ansible-ansible4
+          - tox_env: py27-m_ans-ans2.10
+          - tox_env: py27-m_ans-ans4
 
-          - name: Ans_36_210
+          - tox_env: py36-m_ans-ans2.10
             python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible2.10
-          - name: Ans_36_4
+          - tox_env: py36-m_ans-ans4
             python_version: '3.6'
-            tox_env: py36-mode_ansible-ansible4
 
-          - name: Mito_27
-            tox_env: py27-mode_mitogen
-          - name: Mito_36
+          - tox_env: py27-m_mtg
+          - tox_env: py36-m_mtg
             python_version: '3.6'
-            tox_env: py36-mode_mitogen
 
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +92,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
 
-          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
           PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
 
           if [[ -z $PYTHON ]]; then
@@ -123,7 +117,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
 
-          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
           PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
 
           if [[ -z $PYTHON ]]; then
@@ -147,50 +141,36 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Ans_311_210
+          - tox_env: py311-m_ans-ans2.10
             python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible2.10
-          - name: Ans_311_3
+          - tox_env: py311-m_ans-ans3
             python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible3
-          - name: Ans_311_4
+          - tox_env: py311-m_ans-ans4
             python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible4
-          - name: Ans_311_5
+          - tox_env: py311-m_ans-ans5
             python_version: '3.11'
-            tox_env: py311-mode_ansible-ansible5
-          - name: Ans_313_6
+          - tox_env: py313-m_ans-ans6
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible6
-          - name: Ans_313_7
+          - tox_env: py313-m_ans-ans7
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible7
-          - name: Ans_313_8
+          - tox_env: py313-m_ans-ans8
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible8
-          - name: Ans_313_9
+          - tox_env: py313-m_ans-ans9
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible9
-          - name: Ans_313_10
+          - tox_env: py313-m_ans-ans10
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible10
-          - name: Ans_313_11
+          - tox_env: py313-m_ans-ans11
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible11
-          - name: Ans_313_12
+          - tox_env: py313-m_ans-ans12
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible12
 
-          - name: Van_313_11
+          - tox_env: py313-m_ans-ans11-s_lin
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible11-strategy_linear
-          - name: Van_313_12
+          - tox_env: py313-m_ans-ans12-s_lin
             python_version: '3.13'
-            tox_env: py313-mode_ansible-ansible12-strategy_linear
 
-          - name: Mito_313
+          - tox_env: py313-m_mtg
             python_version: '3.13'
-            tox_env: py313-mode_mitogen
 
     steps:
       - uses: actions/checkout@v4
@@ -234,7 +214,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
 
-          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
           PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
 
           if [[ -z $PYTHON ]]; then
@@ -250,7 +230,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
 
-          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
           PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
 
           if [[ -z $PYTHON ]]; then
@@ -270,22 +250,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Mito_313
-            tox_env: py313-mode_mitogen
-
-          - name: Loc_313_11
+          - tox_env: py313-m_lcl-ans11
             sshpass_version: "1.10"
-            tox_env: py313-mode_localhost-ansible11
-
-          - name: Van_313_11
+          - tox_env: py313-m_lcl-ans11-s_lin
             sshpass_version: "1.10"
-            tox_env: py313-mode_localhost-ansible11-strategy_linear
+          - tox_env: py313-m_lcl-ans12
+          - tox_env: py313-m_lcl-ans12-s_lin
 
-          - name: Loc_313_12
-            tox_env: py313-mode_localhost-ansible12
-
-          - name: Van_313_12
-            tox_env: py313-mode_localhost-ansible12-strategy_linear
+          - tox_env: py313-m_mtg
 
     steps:
       - uses: actions/checkout@v4
@@ -325,7 +297,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
 
-          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
           PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
 
           if [[ -z $PYTHON ]]; then
@@ -341,7 +313,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
 
-          # Tox environment name (e.g. py312-mode_mitogen) -> Python executable name (e.g. python3.12)
+          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
           PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
 
           if [[ -z $PYTHON ]]; then
