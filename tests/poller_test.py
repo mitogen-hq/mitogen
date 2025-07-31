@@ -28,15 +28,13 @@ class SockMixin(object):
         # buffers on both sides (bidirectional IO), making it easier to test
         # combinations of readability/writeability on the one side of a single
         # file object.
-        self.l1_sock, self.r1_sock = socket.socketpair()
+        self.l1_sock, self.r1_sock = mitogen.core.socketpair(blocking=False)
         self.l1 = self.l1_sock.fileno()
         self.r1 = self.r1_sock.fileno()
 
-        self.l2_sock, self.r2_sock = socket.socketpair()
+        self.l2_sock, self.r2_sock = mitogen.core.socketpair(blocking=False)
         self.l2 = self.l2_sock.fileno()
         self.r2 = self.r2_sock.fileno()
-        for fp in self.l1, self.r1, self.l2, self.r2:
-            mitogen.core.set_nonblock(fp)
 
     def fill(self, fd):
         """Make `fd` unwriteable."""
