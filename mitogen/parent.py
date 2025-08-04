@@ -265,7 +265,7 @@ def disable_echo(fd):
     termios.tcsetattr(fd, flags, new)
 
 
-def create_socketpair(size=None):
+def create_socketpair(size=None, blocking=None):
     """
     Create a :func:`socket.socketpair` for use as a child's UNIX stdio
     channels. As socketpairs are bidirectional, they are economical on file
@@ -276,14 +276,14 @@ def create_socketpair(size=None):
     if size is None:
         size = mitogen.core.CHUNK_SIZE
 
-    parentfp, childfp = socket.socketpair()
+    parentfp, childfp = mitogen.core.socketpair(blocking)
     for fp in parentfp, childfp:
         fp.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, size)
 
     return parentfp, childfp
 
 
-def create_best_pipe(escalates_privilege=False):
+def create_best_pipe(escalates_privilege=False, blocking=None):
     """
     By default we prefer to communicate with children over a UNIX socket, as a
     single file descriptor can represent bidirectional communication, and a
@@ -301,16 +301,19 @@ def create_best_pipe(escalates_privilege=False):
     :param bool escalates_privilege:
         If :data:`True`, the target program may escalate privileges, causing
         SELinux to disconnect AF_UNIX sockets, so avoid those.
+    :param None|bool blocking:
+        If :data:`False` or :data:`True`, set non-blocking or blocking mode.
+        If :data:`None` (default), use default.
     :returns:
         `(parent_rfp, child_wfp, child_rfp, parent_wfp)`
     """
     if (not escalates_privilege) or (not SELINUX_ENABLED):
-        parentfp, childfp = create_socketpair()
+        parentfp, childfp = create_socketpair(blocking=blocking)
         return parentfp, childfp, childfp, parentfp
 
-    parent_rfp, child_wfp = mitogen.core.pipe()
+    parent_rfp, child_wfp = mitogen.core.pipe(blocking)
     try:
-        child_rfp, parent_wfp = mitogen.core.pipe()
+        child_rfp, parent_wfp = mitogen.core.pipe(blocking)
         return parent_rfp, child_wfp, child_rfp, parent_wfp
     except:
         parent_rfp.close()
@@ -481,7 +484,7 @@ def openpty():
     if not IS_SOLARIS:
         disable_echo(master_fd)
     disable_echo(slave_fd)
-    mitogen.core.set_block(slave_fd)
+    mitogen.core.set_blocking(slave_fd, True)
     return master_fp, slave_fp
 
 
@@ -547,8 +550,8 @@ def hybrid_tty_create_child(args, escalates_privilege=False):
             escalates_privilege=escalates_privilege,
         )
         try:
-            mitogen.core.set_block(child_rfp)
-            mitogen.core.set_block(child_wfp)
+            mitogen.core.set_blocking(child_rfp.fileno(), True)
+            mitogen.core.set_blocking(child_wfp.fileno(), True)
             proc = popen(
                 args=args,
                 stdin=child_rfp,
@@ -1643,6 +1646,9 @@ class Connection(object):
         stream = self.stream_factory()
         stream.conn = self
         stream.name = self.options.name or self._get_name()
+        for fp in self.proc.stdout, self.proc.stdin:
+            fd = fp.fileno()
+            mitogen.core.set_blocking(fd, False)
         stream.accept(self.proc.stdout, self.proc.stdin)
 
         mitogen.core.listen(stream, 'disconnect', self.on_stdio_disconnect)
@@ -1653,6 +1659,8 @@ class Connection(object):
         stream = self.stderr_stream_factory()
         stream.conn = self
         stream.name = self.options.name or self._get_name()
+        fd = self.proc.stderr.fileno()
+        mitogen.core.set_blocking(fd, False)
         stream.accept(self.proc.stderr, self.proc.stderr)
 
         mitogen.core.listen(stream, 'disconnect', self.on_stderr_disconnect)
@@ -2555,9 +2563,8 @@ class Reaper(object):
         relatively conservative retries.
         """
         delay = 0.05
-        for _ in xrange(count):
-            delay *= 1.72
-        return delay
+        factor = 1.72
+        return delay * factor ** count
 
     def _on_broker_shutdown(self):
         """

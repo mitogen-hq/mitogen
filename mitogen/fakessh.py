@@ -179,6 +179,9 @@ class Process(object):
         self.control_handle = router.add_handler(self._on_control)
         self.stdin_handle = router.add_handler(self._on_stdin)
         self.pump = IoPump.build_stream(router.broker)
+        for fp in stdin, stdout:
+            fd = fp.fileno()
+            mitogen.core.set_blocking(fd, False)
         self.pump.accept(stdin, stdout)
         self.stdin = None
         self.control = None
@@ -419,10 +422,11 @@ def run(dest, router, args, deadline=None, econtext=None):
     fakessh = mitogen.parent.Context(router, context_id)
     fakessh.name = u'fakessh.%d' % (context_id,)
 
-    sock1, sock2 = socket.socketpair()
+    sock1, sock2 = mitogen.core.socketpair()
 
     stream = mitogen.core.Stream(router, context_id)
     stream.name = u'fakessh'
+    mitogen.core.set_blocking(sock1.fileno(), False)
     stream.accept(sock1, sock1)
     router.register(fakessh, stream)
 
