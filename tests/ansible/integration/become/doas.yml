@@ -1,0 +1,91 @@
+- name: integration/become/doas.yml - unqualified
+  hosts: test-targets:&linux_containers
+  gather_facts: false
+  become_method: doas  # noqa: schema[playbook]
+  vars:
+    ansible_become_password: has_sudo_nopw_password
+  tasks:
+    # Vanilla Ansible doas requires pipelining=false
+    # https://github.com/ansible-collections/community.general/issues/9977
+    - include_tasks: ../_mitogen_only.yml
+
+    - name: Test doas -> default target user
+      become: true
+      command: whoami
+      changed_when: false
+      check_mode: false
+      register: doas_default_user
+
+    - assert:
+        that:
+          - doas_default_user.stdout == 'root'
+        fail_msg:
+          doas_default_user={{ doas_default_user }}
+
+    - name: Test doas -> mitogen__user1
+      become: true
+      become_user: mitogen__user1
+      command: whoami
+      changed_when: false
+      check_mode: false
+      register: doas_mitogen__user1
+      when:
+        - become_unpriv_available
+
+    - assert:
+        that:
+          - doas_mitogen__user1.stdout == 'mitogen__user1'
+        fail_msg:
+          doas_mitogen__user1={{ doas_mitogen__user1 }}
+      when:
+        - become_unpriv_available
+  tags:
+    - doas
+    - issue_1309
+    - mitogen_only
+
+- name: integration/become/doas.yml - FQCN
+  hosts: test-targets:&linux_containers
+  gather_facts: false
+  become_method: community.general.doas
+  vars:
+    ansible_become_password: has_sudo_nopw_password
+  tasks:
+    # Vanilla Ansible doas requires pipelining=false
+    # https://github.com/ansible-collections/community.general/issues/9977
+    - include_tasks: ../_mitogen_only.yml
+
+    - name: Test community.general.doas -> default target user
+      become: true
+      command: whoami
+      changed_when: false
+      check_mode: false
+      register: fq_doas_default_user
+
+    - assert:
+        that:
+          - fq_doas_default_user.stdout == 'root'
+        fail_msg:
+          fq_doas_default_user={{ fq_doas_default_user }}
+
+    - name: Test community.general.doas -> mitogen__user1
+      become: true
+      become_user: mitogen__user1
+      command: whoami
+      changed_when: false
+      check_mode: false
+      register: fq_doas_mitogen__user1
+      when:
+        - become_unpriv_available
+
+    - assert:
+        that:
+          - fq_doas_mitogen__user1.stdout == 'mitogen__user1'
+        fail_msg:
+          fq_doas_mitogen__user1={{ fq_doas_mitogen__user1 }}
+      when:
+        - become_unpriv_available
+  tags:
+    - doas
+    - issue_1309
+    - mitogen_only

@@ -1,4 +1,5 @@
 
+- import_playbook: doas.yml
 - import_playbook: su_password.yml
 - import_playbook: sudo_flags_failure.yml
 - import_playbook: sudo_nonexistent.yml

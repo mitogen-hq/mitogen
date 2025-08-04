@@ -409,6 +409,7 @@ def _connect_mitogen_doas(spec):
 #: generating ContextService keyword arguments matching a connection
 #: specification.
 CONNECTION_METHOD = {
+    # Ansible connection plugins
     'buildah': _connect_buildah,
     'docker': _connect_docker,
     'kubectl': _connect_kubectl,
@@ -421,9 +422,14 @@ CONNECTION_METHOD = {
     'setns': _connect_setns,
     'ssh': _connect_ssh,
     'smart': _connect_ssh,  # issue #548.
+
+    # Ansible become plugins
+    'community.general.doas': _connect_doas,
     'su': _connect_su,
     'sudo': _connect_sudo,
     'doas': _connect_doas,
+
+    # Mitogen specific methods
     'mitogen_su': _connect_mitogen_su,
     'mitogen_sudo': _connect_mitogen_sudo,
     'mitogen_doas': _connect_mitogen_doas,
