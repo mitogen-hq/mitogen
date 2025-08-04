@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-========================
+v0.3.26 (2025-08-04)
+--------------------
 
 * :gh:issue:`1318` CI: Abbreviate Github Actions job names
 * :gh:issue:`1309` :mod:`ansible_mitogen`: Fix ``become_method: doas``
