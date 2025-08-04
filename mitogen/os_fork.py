@@ -38,6 +38,7 @@ import sys
 import weakref
 
 import mitogen.core
+import mitogen.parent
 
 
 # List of weakrefs. On Python 2.4, mitogen.core registers its Broker on this
@@ -131,9 +132,9 @@ class Corker(object):
         `obj` to be written to by one of its threads.
         """
         rsock, wsock = mitogen.parent.create_socketpair(size=4096)
+        mitogen.core.set_blocking(wsock.fileno(), True)  # gevent
         mitogen.core.set_cloexec(rsock.fileno())
         mitogen.core.set_cloexec(wsock.fileno())
-        mitogen.core.set_block(wsock)  # gevent
         self._rsocks.append(rsock)
         obj.defer(self._do_cork, s, wsock)
 
