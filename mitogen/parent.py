@@ -53,7 +53,7 @@ import termios
 import textwrap
 import threading
 import zlib
-
+import time
 # Absolute imports for <2.5.
 select = __import__('select')
 
@@ -1441,15 +1441,28 @@ class Connection(object):
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
         fp=os.fdopen(0,'rb')
-        C=zlib.decompress(fp.read(PREAMBLE_COMPRESSED_LEN))
+        import time
+        remaining = PREAMBLE_COMPRESSED_LEN
+        chunks = []
+        deadline = time.time() + 10.0
+        while remaining:
+            chunk = fp.read(remaining)
+            if not chunk:
+                if time.time() >= deadline:
+                    break
+                time.sleep(0.02)
+                continue
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        try:
+            empty_bytes = bytes()
+        except NameError:
+            empty_bytes = ''
+        C = zlib.decompress(empty_bytes.join(chunks))
         fp.close()
-        fp=os.fdopen(W,'wb',0)
-        fp.write(C)
-        fp.close()
-        fp=os.fdopen(w,'wb',0)
-        fp.write(C)
-        fp.close()
-        os.write(1,'MITO001\n'.encode())
+        fp = os.fdopen(W, 'wb', 0); fp.write(C); fp.close()
+        fp = os.fdopen(w, 'wb', 0); fp.write(C); fp.close()
+        os.write(1, 'MITO001\n'.encode())
         os.close(2)
 
     def get_python_argv(self):
