@@ -179,6 +179,7 @@ if PY3:
     BufferType = lambda buf, start: memoryview(buf)[start:]
     integer_types = (int,)
     iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
+    zip = zip
 else:
     import cPickle as pickle
     import thread
@@ -190,6 +191,7 @@ else:
     UnicodeType = unicode
     integer_types = (int, long)
     iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
+    zip = itertools.izip
 
 AnyTextType = (BytesType, UnicodeType)
 
@@ -1292,6 +1294,7 @@ class Importer(object):
     # The Mitogen package is handled specially, since the child context must
     # construct it manually during startup.
     MITOGEN_PKG_CONTENT = [
+        '_more_itertools',
         'buildah',
         'compat',
         'debug',

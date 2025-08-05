@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1287` Add :mod:`mitogen._more_itertools` with 2 functions from
+  `more-itertools <https://pypi.org/project/more-itertools>`, include MIT
+  license and SPDX copyright info
+
 
 v0.3.26 (2025-08-04)
 --------------------
