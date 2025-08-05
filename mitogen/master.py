@@ -254,6 +254,10 @@ if mitogen.is_master:
 
 
 LOAD_CONST = dis.opname.index('LOAD_CONST')
+try:
+    LOAD_SMALL_INT = dis.opname.index('LOAD_SMALL_INT')
+except ValueError:
+    LOAD_SMALL_INT = None
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 
 
@@ -315,9 +319,12 @@ def scan_code_imports(co):
                 op2, arg2 = oparg2
                 op1, arg1 = oparg1
                 if op1 == op2 == LOAD_CONST:
-                    yield (co.co_consts[arg1],
-                           co.co_names[arg3],
-                           co.co_consts[arg2] or ())
+                    level = co.co_consts[arg1]
+                elif op1 == LOAD_SMALL_INT and op2 == LOAD_CONST:
+                    level = arg1
+                else:
+                    continue
+                yield (level, co.co_names[arg3], co.co_consts[arg2] or ())
     else:
         # Python 2.4 did not yet have 'level', so stack format differs.
         for oparg1, (op2, arg2) in izip(opit, opit2):
