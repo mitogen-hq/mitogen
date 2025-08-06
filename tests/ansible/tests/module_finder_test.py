@@ -14,9 +14,8 @@ class ScanFromListTest(testlib.TestCase):
             from __future__ import absolute_import
             import a; import b.c; from d.e import f; from g import h, i
         ''')
-        code = compile(source, '<str>', 'exec')
         self.assertEqual(
-            list(ansible_mitogen.module_finder.scan_fromlist(code)),
+            list(ansible_mitogen.module_finder.scan_fromlist(source)),
             [(0, '__future__.absolute_import'), (0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i')],
         )
 
@@ -27,14 +26,12 @@ class WalkImportsTest(testlib.TestCase):
             from __future__ import absolute_import
             import a; import b; import b.c; from b.d import e, f
         ''')
-        code = compile(source, '<str>', 'exec')
-
         self.assertEqual(
-            list(ansible_mitogen.module_finder.walk_imports(code)),
+            list(ansible_mitogen.module_finder.walk_imports(source)),
             ['__future__', '__future__.absolute_import', 'a', 'b', 'b', 'b.c', 'b', 'b.d', 'b.d.e', 'b.d.f'],
         )
         self.assertEqual(
-            list(ansible_mitogen.module_finder.walk_imports(code, prefix='b')),
+            list(ansible_mitogen.module_finder.walk_imports(source, prefix='b')),
             ['b.c', 'b.d', 'b.d.e', 'b.d.f'],
         )
 

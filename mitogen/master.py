@@ -35,10 +35,8 @@ be sent to any context that will be used to establish additional child
 contexts.
 """
 
-import dis
 import errno
 import inspect
-import itertools
 import logging
 import os
 import pkgutil
@@ -83,6 +81,7 @@ except ImportError:
 
 import mitogen
 import mitogen.core
+import mitogen.imports
 import mitogen.minify
 import mitogen.parent
 
@@ -90,12 +89,9 @@ from mitogen.core import any
 from mitogen.core import b
 from mitogen.core import IOLOG
 from mitogen.core import LOG
-from mitogen.core import next
 from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
-
-izip = getattr(itertools, 'izip', zip)
 
 RLOG = logging.getLogger('mitogen.ctx')
 
@@ -250,74 +246,6 @@ def _get_core_source():
 if mitogen.is_master:
     # TODO: find a less surprising way of installing this.
     mitogen.parent._get_core_source = _get_core_source
-
-
-LOAD_CONST = dis.opname.index('LOAD_CONST')
-try:
-    LOAD_SMALL_INT = dis.opname.index('LOAD_SMALL_INT')
-except ValueError:
-    LOAD_SMALL_INT = None
-IMPORT_NAME = dis.opname.index('IMPORT_NAME')
-
-
-def _getarg(nextb, c):
-    if c >= dis.HAVE_ARGUMENT:
-        return nextb() | (nextb() << 8)
-
-
-if sys.version_info < (3, 0):
-    def iter_opcodes(co):
-        # Yield `(op, oparg)` tuples from the code object `co`.
-        ordit = (ord(c) for c in co.co_code)
-        return ((c, _getarg(ordit.next, c)) for c in ordit)
-else:
-    def iter_opcodes(co):
-        # Yield `(op, oparg)` tuples from the code object `co`.
-        return ((i.opcode, i.arg) for i in dis.get_instructions(co))
-
-
-def windowed(it, n):
-    its = tuple(itertools.tee(iter(it), n))
-    for i, it in enumerate(its[1:]):
-        next(itertools.islice(it, i+1, i+1), None)
-    return izip(*its)
-
-
-def scan_code_imports(co):
-    """
-    Given a code object `co`, scan its bytecode yielding any ``IMPORT_NAME``
-    and associated prior ``LOAD_CONST`` instructions representing an `Import`
-    statement or `ImportFrom` statement.
-
-    :return:
-        Generator producing `(level, modname, namelist)` tuples, where:
-
-        * `level`: -1 for normal import, 0, for absolute import, and >0 for
-          relative import.
-        * `modname`: Name of module to import, or from where `namelist` names
-          are imported.
-        * `namelist`: for `ImportFrom`, the list of names to be imported from
-          `modname`.
-    """
-    if sys.version_info >= (2, 5):
-        for oparg1, oparg2, (op3, arg3) in windowed(iter_opcodes(co), n=3):
-            if op3 == IMPORT_NAME:
-                op2, arg2 = oparg2
-                op1, arg1 = oparg1
-                if op1 == op2 == LOAD_CONST:
-                    level = co.co_consts[arg1]
-                elif op1 == LOAD_SMALL_INT and op2 == LOAD_CONST:
-                    level = arg1
-                else:
-                    continue
-                yield (level, co.co_names[arg3], co.co_consts[arg2] or ())
-    else:
-        # Python 2.4 did not yet have 'level', so stack format differs.
-        for oparg1, (op2, arg2) in windowed(iter_opcodes(co), n=2):
-            if op2 == IMPORT_NAME:
-                op1, arg1 = oparg1
-                if op1 == LOAD_CONST:
-                    yield (-1, co.co_names[arg2], co.co_consts[arg1] or ())
 
 
 class ThreadWatcher(object):
@@ -1021,8 +949,7 @@ class ModuleFinder(object):
 
         maybe_names = list(self.generate_parent_names(fullname))
 
-        co = compile(src, modpath, 'exec')
-        for level, modname, namelist in scan_code_imports(co):
+        for level, modname, namelist in mitogen.imports.scan_imports(src):
             if level == -1:
                 modnames = [modname, '%s.%s' % (fullname, modname)]
             else:

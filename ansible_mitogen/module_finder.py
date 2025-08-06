@@ -44,7 +44,7 @@ except ImportError:
     # Python < 3.4, PEP 302 Import Hooks
     import imp
 
-import mitogen.master
+import mitogen.imports
 
 
 LOG = logging.getLogger(__name__)
@@ -68,17 +68,6 @@ def get_fullname(module):
         bits.append(str(module.parent.name))
         module = module.parent
     return '.'.join(reversed(bits))
-
-
-def get_code(module):
-    """
-    Compile and return a Module's code object.
-    """
-    fp = open(module.path, 'rb')
-    try:
-        return compile(fp.read(), str(module.name), 'exec')
-    finally:
-        fp.close()
 
 
 def is_pkg(module):
@@ -134,45 +123,43 @@ def find_relative(parent, name, path=()):
     return find(name, path, parent=parent)
 
 
-def scan_fromlist(code):
-    """Return an iterator of (level, name) for explicit imports in a code
-    object.
+def scan_fromlist(source):
+    """
+    Yield (level, name) pairs of explicit imports in Python `source`.
 
     Not all names identify a module. `from os import name, path` generates
     `(0, 'os.name'), (0, 'os.path')`, but `os.name` is usually a string.
 
     >>> src = 'import a; import b.c; from d.e import f; from g import h, i\\n'
-    >>> code = compile(src, '<str>', 'exec')
-    >>> list(scan_fromlist(code))
+    >>> list(scan_fromlist(src))
     [(0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i')]
     """
-    for level, modname_s, fromlist in mitogen.master.scan_code_imports(code):
+    for level, modname_s, fromlist in mitogen.imports.scan_imports(source):
         for name in fromlist:
             yield level, str('%s.%s' % (modname_s, name))
         if not fromlist:
             yield level, modname_s
 
 
-def walk_imports(code, prefix=None):
-    """Return an iterator of names for implicit parent imports & explicit
-    imports in a code object.
+def walk_imports(source, prefix=None):
+    """
+    Yield names of explicit and implicit parent imports in Python `source`.
 
     If a prefix is provided, then only children of that prefix are included.
     Not all names identify a module. `from os import name, path` generates
     `'os', 'os.name', 'os.path'`, but `os.name` is usually a string.
 
     >>> source = 'import a; import b; import b.c; from b.d import e, f\\n'
-    >>> code = compile(source, '<str>', 'exec')
-    >>> list(walk_imports(code))
+    >>> list(walk_imports(source))
     ['a', 'b', 'b', 'b.c', 'b', 'b.d', 'b.d.e', 'b.d.f']
-    >>> list(walk_imports(code, prefix='b'))
+    >>> list(walk_imports(source, prefix='b'))
     ['b.c', 'b.d', 'b.d.e', 'b.d.f']
     """
     if prefix is None:
         prefix = ''
     pattern = re.compile(r'(^|\.)(\w+)')
     start = len(prefix)
-    for _, name, fromlist in mitogen.master.scan_code_imports(code):
+    for _, name, fromlist in mitogen.imports.scan_imports(source):
         if not name.startswith(prefix):
             continue
         for match in pattern.finditer(name, start):
@@ -217,11 +204,11 @@ def _scan_importlib_find_spec(module_name, module_path, search_path):
             continue
         try:
             with open(spec.origin, 'rb') as f:
-                code = compile(f.read(), spec.name, 'exec')
+                source = f.read()
         except Exception as exc:
             raise ValueError((exc, module, spec, specs))
 
-        for name in walk_imports(code, prefix.name):
+        for name in walk_imports(source, prefix.name):
             if name in specs:
                 continue
 
@@ -256,7 +243,9 @@ def _scan_imp_find_module(module_name, module_path, search_path):
 
     while stack:
         module = stack.pop(0)
-        for level, fromname in scan_fromlist(get_code(module)):
+        with open(module.path, 'rb') as f:
+            source = f.read()
+        for level, fromname in scan_fromlist(source):
             if not fromname.startswith(PREFIX):
                 continue
 

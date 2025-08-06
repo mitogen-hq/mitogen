@@ -23,12 +23,16 @@
       "django.db.models.lookups",
       "django.db.models.manager",
       "django.db.models.query",
-      "django.db.models.signals"
+      "django.db.models.signals",
+      "django.utils.deprecation"
     ]
   },
   "find_related": {
     "django.db": [
       "django",
+      "django.apps",
+      "django.apps.config",
+      "django.apps.registry",
       "django.conf",
       "django.conf.global_settings",
       "django.core",
