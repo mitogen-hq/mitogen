@@ -95,7 +95,6 @@ from mitogen.core import str_partition
 from mitogen.core import str_rpartition
 from mitogen.core import to_text
 
-imap = getattr(itertools, 'imap', map)
 izip = getattr(itertools, 'izip', zip)
 
 RLOG = logging.getLogger('mitogen.ctx')
@@ -269,22 +268,19 @@ def _getarg(nextb, c):
 if sys.version_info < (3, 0):
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.
-        ordit = imap(ord, co.co_code)
-        nextb = ordit.next
-        return ((c, _getarg(nextb, c)) for c in ordit)
-elif sys.version_info < (3, 6):
-    def iter_opcodes(co):
-        # Yield `(op, oparg)` tuples from the code object `co`.
-        ordit = iter(co.co_code)
-        nextb = ordit.__next__
-        return ((c, _getarg(nextb, c)) for c in ordit)
+        ordit = (ord(c) for c in co.co_code)
+        return ((c, _getarg(ordit.next, c)) for c in ordit)
 else:
     def iter_opcodes(co):
         # Yield `(op, oparg)` tuples from the code object `co`.
-        ordit = iter(co.co_code)
-        nextb = ordit.__next__
-        # https://github.com/abarnert/cpython/blob/c095a32f/Python/wordcode.md
-        return ((c, nextb()) for c in ordit)
+        return ((i.opcode, i.arg) for i in dis.get_instructions(co))
+
+
+def windowed(it, n):
+    its = tuple(itertools.tee(iter(it), n))
+    for i, it in enumerate(its[1:]):
+        next(itertools.islice(it, i+1, i+1), None)
+    return izip(*its)
 
 
 def scan_code_imports(co):
@@ -303,18 +299,8 @@ def scan_code_imports(co):
         * `namelist`: for `ImportFrom`, the list of names to be imported from
           `modname`.
     """
-    opit = iter_opcodes(co)
-    opit, opit2, opit3 = itertools.tee(opit, 3)
-
-    try:
-        next(opit2)
-        next(opit3)
-        next(opit3)
-    except StopIteration:
-        return
-
     if sys.version_info >= (2, 5):
-        for oparg1, oparg2, (op3, arg3) in izip(opit, opit2, opit3):
+        for oparg1, oparg2, (op3, arg3) in windowed(iter_opcodes(co), n=3):
             if op3 == IMPORT_NAME:
                 op2, arg2 = oparg2
                 op1, arg1 = oparg1
@@ -327,7 +313,7 @@ def scan_code_imports(co):
                 yield (level, co.co_names[arg3], co.co_consts[arg2] or ())
     else:
         # Python 2.4 did not yet have 'level', so stack format differs.
-        for oparg1, (op2, arg2) in izip(opit, opit2):
+        for oparg1, (op2, arg2) in windowed(iter_opcodes(co), n=2):
             if op2 == IMPORT_NAME:
                 op1, arg1 = oparg1
                 if op1 == LOAD_CONST:
