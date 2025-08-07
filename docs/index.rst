@@ -148,12 +148,6 @@ Common sources of import latency and bandwidth consumption are mitigated:
   statement semantics: children have a list of submodules belonging to a
   package, and ignore requests for submodules that did not exist on the master.
 
-* Imports are extracted from each module, compared to those found in memory,
-  and recursively preloaded into children requesting that module, minimizing
-  round-trips to one per package nesting level. For example,
-  :py:mod:`django.db.models` only requires 3 round-trips to transfer 456KiB,
-  representing 1.7MiB of uncompressed source split across 148 modules.
-
 
 Message Routing
 ###############
