@@ -184,6 +184,8 @@ def _setup_responder(responder):
     Configure :class:`mitogen.master.ModuleResponder` to only permit
     certain packages, and to generate custom responses for certain modules.
     """
+    responder.blacklist_prefix('__main__')
+
     responder.whitelist_prefix('ansible')
     responder.whitelist_prefix('ansible_mitogen')
 
