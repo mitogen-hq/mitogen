@@ -2744,7 +2744,7 @@ class ModuleForwarder(object):
 
         LOG.debug('%r._on_forward_module() sending %r to %r via %r',
                   self, fullname, context_id, stream.protocol.remote_id)
-        self._send_module_and_related(stream, fullname)
+        self._send_module(stream, fullname)
         if stream.protocol.remote_id != context_id:
             stream.protocol._send(
                 mitogen.core.Message(
@@ -2766,18 +2766,10 @@ class ModuleForwarder(object):
     def _on_cache_callback(self, msg, fullname):
         stream = self.router.stream_by_id(msg.src_id)
         LOG.debug('%r: sending %s to %r', self, fullname, stream)
-        self._send_module_and_related(stream, fullname)
+        self._send_module(stream, fullname)
 
-    def _send_module_and_related(self, stream, fullname):
+    def _send_module(self, stream, fullname):
         tup = self.importer._cache[fullname]
-        for related in tup[4]:
-            rtup = self.importer._cache.get(related)
-            if rtup:
-                self._send_one_module(stream, rtup)
-            else:
-                LOG.debug('%r: %s not in cache (for %s)',
-                          self, related, fullname)
-
         self._send_one_module(stream, tup)
 
     def _send_one_module(self, stream, tup):

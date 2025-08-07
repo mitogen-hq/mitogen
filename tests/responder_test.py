@@ -87,8 +87,12 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         context = self.router.local()
         self.assertEqual(3,
             context.call(simple_pkg.a.subtract_one_add_two, 2))
+
+        # If we don't proactively send related modules, then we expect
+        # count(GET_MODULE) == count(LOAD_MODULE) == count(succesful modules).
+        # simple_pkg, simple_pkg.a, simple_pkg.b, & mitogen.os_fork as necessary
         os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
-        self.assertEqual(2+os_fork, self.router.responder.get_module_count)
+        self.assertEqual(3+os_fork, self.router.responder.get_module_count)
         self.assertEqual(3+os_fork, self.router.responder.good_load_module_count)
         self.assertEqual(0, self.router.responder.bad_load_module_count)
         self.assertLess(450, self.router.responder.good_load_module_size)

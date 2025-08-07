@@ -923,9 +923,6 @@ class ModuleFinder(object):
         #: results around.
         self._found_cache = {}
 
-        #: Avoid repeated dependency scanning, which is expensive.
-        self._related_cache = {}
-
     def __repr__(self):
         return 'ModuleFinder()'
 
@@ -1005,78 +1002,6 @@ class ModuleFinder(object):
         while '.' in fullname:
             fullname, _, _ = str_rpartition(to_text(fullname), u'.')
             yield fullname
-
-    def find_related_imports(self, fullname):
-        """
-        Return a list of non-stdlib modules that are directly imported by
-        `fullname`, plus their parents.
-
-        The list is determined by retrieving the source code of
-        `fullname`, compiling it, and examining all IMPORT_NAME ops.
-
-        :param fullname: Fully qualified name of an *already imported* module
-            for which source code can be retrieved
-        :type fullname: str
-        """
-        related = self._related_cache.get(fullname)
-        if related is not None:
-            return related
-
-        modpath, src, _ = self.get_module_source(fullname)
-        if src is None:
-            return []
-
-        maybe_names = list(self.generate_parent_names(fullname))
-
-        co = compile(src, modpath, 'exec')
-        for level, modname, namelist in scan_code_imports(co):
-            if level == -1:
-                modnames = [modname, '%s.%s' % (fullname, modname)]
-            else:
-                modnames = [
-                    '%s%s' % (self.resolve_relpath(fullname, level), modname)
-                ]
-
-            maybe_names.extend(modnames)
-            maybe_names.extend(
-                '%s.%s' % (mname, name)
-                for mname in modnames
-                for name in namelist
-            )
-
-        return self._related_cache.setdefault(fullname, sorted(
-            set(
-                mitogen.core.to_text(name)
-                for name in maybe_names
-                if sys.modules.get(name) is not None
-                and not is_stdlib_name(name)
-                and u'six.moves' not in name  # TODO: crap
-            )
-        ))
-
-    def find_related(self, fullname):
-        """
-        Return a list of non-stdlib modules that are imported directly or
-        indirectly by `fullname`, plus their parents.
-
-        This method is like :py:meth:`find_related_imports`, but also
-        recursively searches any modules which are imported by `fullname`.
-
-        :param fullname: Fully qualified name of an *already imported* module
-            for which source code can be retrieved
-        :type fullname: str
-        """
-        stack = [fullname]
-        found = set()
-
-        while stack:
-            name = stack.pop(0)
-            names = self.find_related_imports(name)
-            stack.extend(set(names).difference(set(found).union(stack)))
-            found.update(names)
-
-        found.discard(fullname)
-        return sorted(found)
 
 
 class ModuleResponder(object):
@@ -1197,18 +1122,13 @@ class ModuleResponder(object):
         if fullname == '__main__':
             source = self.neutralize_main(path, source)
         compressed = mitogen.core.Blob(zlib.compress(source, 9))
-        related = [
-            to_text(name)
-            for name in self._finder.find_related(fullname)
-            if not mitogen.core.is_blacklisted_import(self, name)
-        ]
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
         tup = (
             to_text(fullname),
             pkg_present,
             to_text(path),
             compressed,
-            related
+            [],
         )
         self._cache[fullname] = tup
         return tup
@@ -1241,19 +1161,11 @@ class ModuleResponder(object):
             )
         )
 
-    def _send_module_and_related(self, stream, fullname):
+    def _send_module(self, stream, fullname):
         if fullname in stream.protocol.sent_modules:
             return
 
         try:
-            tup = self._build_tuple(fullname)
-            for name in tup[4]:  # related
-                parent, _, _ = str_partition(name, '.')
-                if parent != fullname and parent not in stream.protocol.sent_modules:
-                    # Parent hasn't been sent, so don't load submodule yet.
-                    continue
-
-                self._send_load_module(stream, name)
             self._send_load_module(stream, fullname)
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
@@ -1276,7 +1188,7 @@ class ModuleResponder(object):
 
         t0 = mitogen.core.now()
         try:
-            self._send_module_and_related(stream, fullname)
+            self._send_module(stream, fullname)
         finally:
             self.get_module_secs += mitogen.core.now() - t0
 
@@ -1311,7 +1223,7 @@ class ModuleResponder(object):
             return
 
         for fullname in reversed(path):
-            self._send_module_and_related(stream, fullname)
+            self._send_module(stream, fullname)
             self._send_forward_module(stream, context, fullname)
 
     def _forward_modules(self, context, fullnames):
