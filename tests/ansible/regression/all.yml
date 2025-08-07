@@ -13,7 +13,6 @@
 - import_playbook: issue_591__setuptools_cwd_crash.yml
 - import_playbook: issue_615__streaming_transfer.yml
 - import_playbook: issue_655__wait_for_connection_error.yml
-- import_playbook: issue_766__get_with_context.yml
 - import_playbook: issue_776__load_plugins_called_twice.yml
 - import_playbook: issue_952__ask_become_pass.yml
 - import_playbook: issue_1066__add_host__host_key_checking.yml

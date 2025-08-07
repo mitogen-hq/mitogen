@@ -1,3 +1,4 @@
+import pkgutil
 import sys
 import threading
 import types
@@ -9,8 +10,8 @@ try:
 except ImportError:
     import mock
 
+import mitogen
 import mitogen.core
-import mitogen.utils
 from mitogen.core import b
 
 import testlib
@@ -86,6 +87,14 @@ class MissingModuleTest(ImporterMixin, testlib.TestCase):
         self.set_get_module_response(self.response)
         spec = importlib.machinery.ModuleSpec(self.modname, self.importer)
         self.assertRaises(ImportError, self.importer.create_module, spec)
+
+
+class MitogenPkgContentTest(testlib.TestCase):
+    def test_pkg_content(self):
+        self.assertEqual(
+            mitogen.core.Importer.MITOGEN_PKG_CONTENT,
+            sorted(pkgutil.iter_modules(mitogen.__path__)),
+        )
 
 
 @unittest.skipIf(sys.version_info >= (3, 4), 'Superceded in Python 3.4+')
