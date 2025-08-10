@@ -24,6 +24,8 @@ In progress (unreleased)
 * :gh:issue:`1287` Add :mod:`mitogen._more_itertools` with 2 functions from
   `more-itertools <https://pypi.org/project/more-itertools>`, include MIT
   license and SPDX copyright info
+* :gh:issue:`1287` Refactor :func:`mitogen.master.scan_code_imports` into
+  :func:`mitogen.imports.scan_code_imports`
 
 
 v0.3.26 (2025-08-04)

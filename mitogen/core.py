@@ -1303,6 +1303,7 @@ class Importer(object):
         'kubectl',
         'fakessh',
         'fork',
+        'imports',
         'jail',
         'lxc',
         'lxd',
