@@ -155,22 +155,22 @@ jobs:
             python_version: '3.13'
           - tox_env: py313-m_ans-ans8
             python_version: '3.13'
-          - tox_env: py313-m_ans-ans9
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans10
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans11
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans12
-            python_version: '3.13'
+          - tox_env: py314-m_ans-ans9
+            python_version: '3.14.0-rc.1'
+          - tox_env: py314-m_ans-ans10
+            python_version: '3.14.0-rc.1'
+          - tox_env: py314-m_ans-ans11
+            python_version: '3.14.0-rc.1'
+          - tox_env: py314-m_ans-ans12
+            python_version: '3.14.0-rc.1'
 
-          - tox_env: py313-m_ans-ans11-s_lin
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans12-s_lin
-            python_version: '3.13'
+          - tox_env: py314-m_ans-ans11-s_lin
+            python_version: '3.14.0-rc.1'
+          - tox_env: py314-m_ans-ans12-s_lin
+            python_version: '3.14.0-rc.1'
 
-          - tox_env: py313-m_mtg
-            python_version: '3.13'
+          - tox_env: py314-m_mtg
+            python_version: '3.14.0-rc.1'
 
     steps:
       - uses: actions/checkout@v4
@@ -250,14 +250,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py313-m_lcl-ans11
+          - tox_env: py314-m_lcl-ans11
+            python_version: '3.14.0-rc.1'
             sshpass_version: "1.10"
-          - tox_env: py313-m_lcl-ans11-s_lin
+          - tox_env: py314-m_lcl-ans11-s_lin
+            python_version: '3.14.0-rc.1'
             sshpass_version: "1.10"
-          - tox_env: py313-m_lcl-ans12
-          - tox_env: py313-m_lcl-ans12-s_lin
+          - tox_env: py314-m_lcl-ans12
+            python_version: '3.14.0-rc.1'
+          - tox_env: py314-m_lcl-ans12-s_lin
+            python_version: '3.14.0-rc.1'
 
-          - tox_env: py313-m_mtg
+          - tox_env: py314-m_mtg
+            python_version: '3.14.0-rc.1'
 
     steps:
       - uses: actions/checkout@v4

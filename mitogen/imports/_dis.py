@@ -9,6 +9,7 @@ from mitogen._more_itertools import sliding_window, transpose
 
 IMPORT_NAME = dis.opmap['IMPORT_NAME']
 LOAD_CONST = dis.opmap['LOAD_CONST']
+LOAD_SMALL_INT = dis.opmap.get('LOAD_SMALL_INT')  # Python >= 3.14
 
 
 def _instrs_py34(co):
@@ -25,6 +26,10 @@ def _instrs_py24(co):
     return ((i, _op_arg_py24(i, it.next)) for i in it)
 
 
+def _import_py314(co_consts, co_names, arg1, arg2, arg3):
+    return (arg1, co_names[arg3], co_consts[arg2] or ())
+
+
 def _import_py25(co_consts, co_names, arg1, arg2, arg3):
     return (co_consts[arg1], co_names[arg3], co_consts[arg2] or ())
 
@@ -36,6 +41,7 @@ def _import_py24(co_consts, co_names, arg1, arg2):
 _OPS_DISPATCH = {
     (LOAD_CONST, IMPORT_NAME): _import_py24,
     (LOAD_CONST, LOAD_CONST, IMPORT_NAME): _import_py25,
+    (LOAD_SMALL_INT, LOAD_CONST, IMPORT_NAME): _import_py314,
 }
 
 
