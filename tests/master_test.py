@@ -1,11 +1,13 @@
 import inspect
 
+import mitogen.core
+import mitogen.imports
+
 import testlib
-import mitogen.master
 
 
 class ScanCodeImportsTest(testlib.TestCase):
-    func = staticmethod(mitogen.master.scan_code_imports)
+    func = staticmethod(mitogen.imports.scan_code_imports)
 
     if mitogen.core.PY3:
         level = 0
@@ -14,8 +16,9 @@ class ScanCodeImportsTest(testlib.TestCase):
 
     SIMPLE_EXPECT = [
         (level, 'inspect', ()),
+        (level, 'mitogen.core', ()),
+        (level, 'mitogen.imports', ()),
         (level, 'testlib', ()),
-        (level, 'mitogen.master', ()),
     ]
 
     def test_simple(self):

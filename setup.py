@@ -89,6 +89,7 @@ setup(
         'Framework :: Ansible',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX',
         'Programming Language :: Python',
