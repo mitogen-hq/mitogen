@@ -2,6 +2,6 @@
 # SPDX-License-Identifier: MIT
 # !mitogen: minify_safe
 
-from mitogen.imports._dis import (
+from mitogen.imports._scan import (
     scan_code_imports as scan_code_imports,
 )

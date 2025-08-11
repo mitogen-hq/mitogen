@@ -57,10 +57,10 @@ def _imports(co, instrs, size, dispatch=_OPS_DISPATCH):
 
 def scan_code_imports(co):
     """
-    Yield (level, modname, names) tuples by scanning  the code object `co`.
+    Yield (level, modname, names) tuples by scanning the code object `co`.
 
-    Top level ``import ..`` and ``from .. import ..`` statements are matched.
-    Those inside a ``class ...`` or ``def ...`` block are currently skipped.
+    Top level `import mod` & `from mod import foo` statements are matched.
+    Those inside a `class ...` or `def ...` block are currently skipped.
 
     >>> co = compile('import a, b; from c import d, e as f', '<str>', 'exec')
     >>> list(scan_code_imports(co))  # doctest: +ELLIPSIS
@@ -69,10 +69,12 @@ def scan_code_imports(co):
     :return:
         Generator producing `(level, modname, names)` tuples, where:
 
-        * `level`: -1 for implicit import, 0 for explicit absolute import,
-          and >0 for explicit relative import.
-        * `modname`: Name of module to import, or import `names` from.
-        * `names`: tuple of names in a `from modname import ..` statement.
+        * `level`:
+            -1 implicit relative (Python 2.x default)
+            0  absolute (Python 3.x, `from __future__ import absolute_import`)
+            >0 explicit relative import (`from . import a`)
+        * `modname`: Name of module to import, or to import `names` from.
+        * `names`: tuple of names in `from mod import ..`, or empty tuple.
     """
     if sys.version_info >= (3, 4):
         return _imports(co, _instrs_py34(co), 3)
