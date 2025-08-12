@@ -160,6 +160,7 @@ def _have_cmd(args):
     try:
         subprocess.run(
             args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=True,
         )
     except OSError as exc:
         if exc.errno == errno.ENOENT:
