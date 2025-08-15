@@ -8,6 +8,7 @@ import inspect
 import sys
 import zlib
 
+import mitogen.core
 import mitogen.fakessh
 import mitogen.fork
 import mitogen.master
@@ -35,7 +36,7 @@ conn = mitogen.ssh.Connection(options, router)
 conn.context = context
 
 print('SSH command size: %s' % (len(' '.join(conn.get_boot_command())),))
-print('Bootstrap (mitogen.core) size: %s (%.2fKiB)' % (
+print('Preamble (mitogen.core + econtext) size: %s (%.2fKiB)' % (
     len(conn.get_preamble()),
     len(conn.get_preamble()) / 1024.0,
 ))
@@ -49,6 +50,7 @@ if '--dump' in sys.argv:
 table = Table()
 print(table.header())
 for mod in (
+        mitogen.core,
         mitogen.parent,
         mitogen.fork,
         mitogen.ssh,
