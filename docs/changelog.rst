@@ -23,6 +23,7 @@ In progress (unreleased)
 
 * :gh:issue:`1306` CI: Report sudo version on Ansible targets
 * :gh:issue:`1306` CI: Move sudo test users defaults into ``/etc/sudoers.d``
+* :gh:issue:`1306` preamble_size: Fix variability of measured command size
 
 
 v0.3.27 (2025-08-20)
