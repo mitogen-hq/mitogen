@@ -50,6 +50,7 @@ import ansible.executor.module_common
 
 import mitogen.core
 import mitogen.select
+import mitogen.service
 
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing

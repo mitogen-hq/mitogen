@@ -44,6 +44,7 @@ import sys
 import tempfile
 
 import mitogen.core
+import mitogen.parent
 import mitogen.master
 
 
