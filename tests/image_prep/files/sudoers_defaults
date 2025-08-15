@@ -1,0 +1,3 @@
+Defaults>mitogen__pw_required targetpw
+Defaults>mitogen__require_tty requiretty
+Defaults>mitogen__require_tty_pw_required requiretty,targetpw
