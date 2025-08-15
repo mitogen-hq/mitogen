@@ -13,3 +13,23 @@
     - debug: {var: ansible_facts.osversion}
     - debug: {var: ansible_facts.python}
     - debug: {var: ansible_facts.system}
+
+- name: Check target versions
+  hosts: localhost:test-targets
+  check_mode: false
+  tasks:
+    - name: Get command versions
+      command:
+        cmd: "{{ item.cmd }}"
+      changed_when: false
+      check_mode: false
+      loop:
+        - cmd: sudo -V
+      register: command_versions
+
+    - name: Show command versions
+      debug:
+        msg: |
+          cmd: {{ item.item.cmd }}
+          {{ item.stdout }}
+      loop: "{{ command_versions.results }}"
