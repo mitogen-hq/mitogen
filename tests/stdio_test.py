@@ -15,8 +15,8 @@ class StdIOTest(testlib.RouterMixin, testlib.TestCase):
         """
         size = 1 * 2**20
         context = self.router.local()
-        result = context.call(stdio_checks.shout_stdout, size)
-        self.assertEqual('success', result)
+        nwritten = context.call(stdio_checks.shout_stdout, size)
+        self.assertEqual(nwritten, size)
 
     def test_stdio_is_blocking(self):
         context = self.router.local()
