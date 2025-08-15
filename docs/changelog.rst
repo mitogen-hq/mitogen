@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1306` CI: Report sudo version on Ansible targets
+
 
 v0.3.27 (2025-08-20)
 --------------------
