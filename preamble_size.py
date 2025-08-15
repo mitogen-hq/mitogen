@@ -18,6 +18,16 @@ import mitogen.service
 import mitogen.ssh
 import mitogen.sudo
 
+
+class Table(object):
+    HEADERS = (' ', 'Original', 'Minimized', 'Compressed')
+    HEAD_FMT = '{:20} {:^15}  {:^19}  {:^19}'
+    ROW_FMT =  '%-20s %6i %5.1fKiB  %5i %4.1fKiB %4.1f%%  %5i %4.1fKiB %4.1f%%'
+
+    def header(self):
+        return self.HEAD_FMT.format(*self.HEADERS)
+
+
 router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
 options = mitogen.ssh.Options(max_message_size=0, hostname='foo')
@@ -36,16 +46,8 @@ if '--dump' in sys.argv:
     exit()
 
 
-print(
-    '                           '
-    ' '
-    '  Original   '
-    '  '
-    '     Minimized     '
-    '  '
-    '    Compressed     '
-)
-
+table = Table()
+print(table.header())
 for mod in (
         mitogen.parent,
         mitogen.fork,
@@ -63,13 +65,7 @@ for mod in (
     compressed = zlib.compress(minimized.encode(), 9)
     compressed_size = len(compressed)
     print(
-        '%-25s'
-        ' '
-        '%5i %4.1fKiB'
-        '  '
-        '%5i %4.1fKiB %.1f%%'
-        '  '
-        '%5i %4.1fKiB %.1f%%'
+        table.ROW_FMT
     % (
         mod.__name__,
         original_size,
