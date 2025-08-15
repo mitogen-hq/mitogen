@@ -31,7 +31,11 @@ class Table(object):
 
 router = mitogen.master.Router()
 context = mitogen.parent.Context(router, 0)
-options = mitogen.ssh.Options(max_message_size=0, hostname='foo')
+options = mitogen.ssh.Options(
+    hostname='foo',
+    max_message_size=0,
+    remote_name='alice@host:1234',
+)
 conn = mitogen.ssh.Connection(options, router)
 conn.context = context
 
