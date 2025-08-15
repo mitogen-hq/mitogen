@@ -25,6 +25,7 @@ In progress (unreleased)
 * :gh:issue:`1306` CI: Move sudo test users defaults into ``/etc/sudoers.d``
 * :gh:issue:`1306` preamble_size: Fix variability of measured command size
 * :gh:issue:`1306` tests: Count bytes written in ``stdio_test.StdIOTest``
+* :gh:issue:`1306` tests: Check stdio is blocking in sudo contexts
 
 
 v0.3.27 (2025-08-20)
