@@ -338,52 +338,14 @@ class NewStylePlanner(ScriptPlanner):
     #: to some terminal leakage that cannot be worked around in any sane
     #: manner.
     ALWAYS_FORK_MODULES = frozenset([
-        'dnf',  # issue #280; py-dnf/hawkey need therapy
-        'firewalld',  # issue #570: ansible module_utils caches dbus conn
-        'ansible.legacy.dnf',  # issue #776
-        'ansible.builtin.dnf', # issue #832
-        'freeipa.ansible_freeipa.ipaautomember', # issue #1216
-        'freeipa.ansible_freeipa.ipaautomountkey',
-        'freeipa.ansible_freeipa.ipaautomountlocation',
-        'freeipa.ansible_freeipa.ipaautomountmap',
-        'freeipa.ansible_freeipa.ipacert',
-        'freeipa.ansible_freeipa.ipaconfig',
-        'freeipa.ansible_freeipa.ipadelegation',
-        'freeipa.ansible_freeipa.ipadnsconfig',
-        'freeipa.ansible_freeipa.ipadnsforwardzone',
-        'freeipa.ansible_freeipa.ipadnsrecord',
-        'freeipa.ansible_freeipa.ipadnszone',
-        'freeipa.ansible_freeipa.ipagroup',
-        'freeipa.ansible_freeipa.ipahbacrule',
-        'freeipa.ansible_freeipa.ipahbacsvc',
-        'freeipa.ansible_freeipa.ipahbacsvcgroup',
-        'freeipa.ansible_freeipa.ipahost',
-        'freeipa.ansible_freeipa.ipahostgroup',
-        'freeipa.ansible_freeipa.idoverridegroup',
-        'freeipa.ansible_freeipa.idoverrideuser',
-        'freeipa.ansible_freeipa.idp',
-        'freeipa.ansible_freeipa.idrange',
-        'freeipa.ansible_freeipa.idview',
-        'freeipa.ansible_freeipa.ipalocation',
-        'freeipa.ansible_freeipa.ipanetgroup',
-        'freeipa.ansible_freeipa.ipapermission',
-        'freeipa.ansible_freeipa.ipaprivilege',
-        'freeipa.ansible_freeipa.ipapwpolicy',
-        'freeipa.ansible_freeipa.iparole',
-        'freeipa.ansible_freeipa.ipaselfservice',
-        'freeipa.ansible_freeipa.ipaserver',
-        'freeipa.ansible_freeipa.ipaservice',
-        'freeipa.ansible_freeipa.ipaservicedelegationrule',
-        'freeipa.ansible_freeipa.ipaservicedelegationtarget',
-        'freeipa.ansible_freeipa.ipasudocmd',
-        'freeipa.ansible_freeipa.ipasudocmdgroup',
-        'freeipa.ansible_freeipa.ipasudorule',
-        'freeipa.ansible_freeipa.ipatopologysegment',
-        'freeipa.ansible_freeipa.ipatopologysuffix',
-        'freeipa.ansible_freeipa.ipatrust',
-        'freeipa.ansible_freeipa.ipauser',
-        'freeipa.ansible_freeipa.ipavault',
+        r'dnf',  # issue #280; py-dnf/hawkey need therapy
+        r'firewalld',  # issue #570: ansible module_utils caches dbus conn
+        r'ansible\.legacy\.dnf',  # issue #776
+        r'ansible\.builtin\.dnf', # issue #832
+        r'freeipa\.ansible_freeipa\..*', # issue #1216
     ])
+
+    ALWAYS_FORK_REGEX = re.compile("(" + ")|(".join(ALWAYS_FORK_MODULES) + ")")
 
     def should_fork(self):
         """
@@ -397,7 +359,7 @@ class NewStylePlanner(ScriptPlanner):
         return (
             super(NewStylePlanner, self).should_fork() or
             (self._inv.task_vars.get('mitogen_task_isolation') == 'fork') or
-            (self._inv.module_name in self.ALWAYS_FORK_MODULES) or
+            (self.ALWAYS_FORK_REGEX.match(self._inv.module_name)) or
             (len(self.get_module_map()['custom']) > 0)
         )
 
