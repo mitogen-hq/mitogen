@@ -538,6 +538,18 @@ class UnpickleCompatTest(testlib.TestCase):
 class ReprTest(testlib.TestCase):
     klass = mitogen.core.Message
 
-    def test_repr(self):
-        # doesn't crash
-        repr(self.klass.pickled('test'))
+    def test_repr_data(self):
+        msg = self.klass(dst_id=1, src_id=2, auth_id=3, handle=4, reply_to=5, data=b'abcdef')
+        if mitogen.core.PY3:
+            expected = "mitogen.core.Message(dst_id=1, src_id=2, auth_id=3, handle=4, reply_to=5, data=b'abcdef'..6)"
+        else:
+            expected = "mitogen.core.Message(dst_id=1, src_id=2, auth_id=3, handle=4, reply_to=5, data='abcdef'..6)"
+        self.assertEqual(expected, repr(msg))
+
+    def test_repr_pickled(self):
+        msg = self.klass.pickled(u'test')
+        if mitogen.core.PY3:
+            expected = r"mitogen.core.Message(dst_id=None, src_id=0, auth_id=0, handle=None, reply_to=None, data=b'\x80\x02X\x04\x00\x00\x00testq\x00.'..14)"
+        else:
+            expected = r"mitogen.core.Message(dst_id=None, src_id=0, auth_id=0, handle=None, reply_to=None, data='\x80\x02X\x04\x00\x00\x00testq\x01.'..14)"
+        self.assertEqual(expected, repr(msg))

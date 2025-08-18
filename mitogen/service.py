@@ -254,7 +254,7 @@ class Invoker(object):
         self.service = service
 
     def __repr__(self):
-        return '%s(%s)' % (type(self).__name__, self.service)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.service)
 
     unauthorized_msg = (
         'Caller is not authorized to invoke %r of service %r'
@@ -440,7 +440,9 @@ class Service(object):
         self.select = mitogen.select.Select()
 
     def __repr__(self):
-        return '%s()' % (self.__class__.__name__,)
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__, self.router, self.select,
+        )
 
     def on_message(self, event):
         """
@@ -653,7 +655,8 @@ class Pool(object):
             raise
 
     def __repr__(self):
-        return 'Pool(%04x, size=%d, th=%r)' % (
+        return '%s.%s(%04x, size=%d, th=%r)' % (
+            __name__, self.__class__.__name__,
             id(self) & 0xffff,
             len(self._threads),
             get_thread_name(),

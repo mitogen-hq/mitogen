@@ -160,9 +160,9 @@ class IoPump(mitogen.core.Protocol):
             self.on_disconnect(broker)
 
     def __repr__(self):
-        return 'IoPump(%r, %r)' % (
-            self.receive_side.fp.fileno(),
-            self.transmit_side.fp.fileno(),
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.receive_side, self.transmit_side,
         )
 
 
@@ -195,7 +195,10 @@ class Process(object):
             pmon.add(proc.pid, self._on_proc_exit)
 
     def __repr__(self):
-        return 'Process(%r, %r)' % (self.stdin, self.stdout)
+        return '%s.%s(%r, %r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.router, self.stdin, self.stdout,
+        )
 
     def _on_proc_exit(self, status):
         LOG.debug('%r._on_proc_exit(%r)', self, status)

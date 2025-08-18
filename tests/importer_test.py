@@ -46,6 +46,11 @@ class ImporterMixin(testlib.RouterMixin):
         super(ImporterMixin, self).tearDown()
 
 
+class ImporterTest(ImporterMixin, testlib.TestCase):
+    def test_repr(self):
+        self.assertEqual('mitogen.core.Importer()', repr(self.importer))
+
+
 class InvalidNameTest(ImporterMixin, testlib.TestCase):
     modname = 'trailingdot.'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
