@@ -114,7 +114,10 @@ class Invocation(object):
         return self._module_source
 
     def __repr__(self):
-        return 'Invocation(module_name=%s)' % (self.module_name,)
+        return '%s.%s(module_name=%r)' % (
+            __name__, self.__class__.__name__,
+            self.module_name,
+        )
 
 
 class Planner(object):

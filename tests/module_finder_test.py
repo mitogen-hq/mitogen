@@ -20,8 +20,8 @@ class ConstructorTest(testlib.TestCase):
 class ReprTest(testlib.TestCase):
     klass = mitogen.master.ModuleFinder
 
-    def test_simple(self):
-        self.assertEqual('ModuleFinder()', repr(self.klass()))
+    def test_repr(self):
+        self.assertEqual('mitogen.master.ModuleFinder()', repr(self.klass()))
 
 
 class IsStdlibNameTest(testlib.TestCase):

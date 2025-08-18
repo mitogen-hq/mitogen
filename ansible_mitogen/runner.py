@@ -177,7 +177,7 @@ class EnvironmentFileWatcher(object):
         LOG.debug('%r installed; existing keys: %r', self, self._keys)
 
     def __repr__(self):
-        return 'EnvironmentFileWatcher(%r)' % (self.path,)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.path)
 
     def _stat(self):
         try:
