@@ -23,6 +23,7 @@ In progress (unreleased)
 
 * :gh:issue:`1329` CI: Refactor and de-duplicate Github Actions workflow
 * :gh:issue:`1315` CI: macOS: Increase failed logins limit of test users
+* :gh:issue:`1325` tests: Improve ``master_test.ScanCodeImportsTest`` coverage
 
 
 v0.3.26 (2025-08-04)
