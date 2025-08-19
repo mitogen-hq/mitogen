@@ -470,30 +470,27 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         # chicken-and-egg issue, mitogen needs a python to run low_level_execute_command
         # which is required by Ansible's discover_interpreter function
         if self._mitogen_discovering_interpreter:
-            possible_pythons = [
-                '/usr/bin/python',
-                'python3',
-                'python3.7',
-                'python3.6',
-                'python3.5',
-                'python2.7',
-                'python2.6',
-                '/usr/libexec/platform-python',
-                '/usr/bin/python3',
-                'python'
-            ]
+            if self._connection.transport in {'ssh'}:
+                possible_pythons = [
+                    '$(for p in python3 python2 python; do command -v "$p" 2>/dev/null && break; done;)',
+                ]
+            else:
+                possible_pythons = ['python3' 'python2', 'python']
         else:
             # not used, just adding a filler value
             possible_pythons = ['python']
 
         for possible_python in possible_pythons:
             try:
+                LOG.debug('_low_level_execute_command(): trying possible_python=%r', possible_python)
                 self._mitogen_interpreter_candidate = possible_python
                 rc, stdout, stderr = self._connection.exec_command(
                     cmd, in_data, sudoable, mitogen_chdir=chdir,
                 )
+                LOG.debug('_low_level_execute_command(): got rc=%d, stdout=%r, stderr=%r', rc, stdout, stderr)
             # TODO: what exception is thrown?
-            except:
+            except BaseException as exc:
+                LOG.debug('%r._low_level_execute_command for possible_python=%r: %s, %r', self, possible_python, type(exc), exc)
                 # we've reached the last python attempted and failed
                 if possible_python == possible_pythons[-1]:
                     raise

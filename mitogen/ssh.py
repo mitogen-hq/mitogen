@@ -296,10 +296,8 @@ class Connection(mitogen.parent.Connection):
         if self.options.ssh_args:
             bits += self.options.ssh_args
         bits.append(self.options.hostname)
-        base = super(Connection, self).get_boot_command()
 
-        base_parts = []
-        for s in base:
-            val = s if s in self.SHLEX_IGNORE else shlex_quote(s).strip()
-            base_parts.append(val)
-        return bits + base_parts
+        # https://datatracker.ietf.org/doc/html/rfc4254#section-6.5
+        python_argv = self.get_python_argv()
+        bootstrap_argv = self._bootstrap_argv()
+        return bits + python_argv + [shlex_quote(s) for s in bootstrap_argv]

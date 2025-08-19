@@ -73,10 +73,18 @@ import ansible.utils.unsafe_proxy
 from ansible.module_utils.six import with_metaclass
 from ansible.module_utils.parsing.convert_bool import boolean
 
+import ansible_mitogen.utils
 import mitogen.core
 
 
 LOG = logging.getLogger(__name__)
+
+if ansible_mitogen.utils.ansible_version[:2] >= (2, 19):
+    _FALLBACK_INTERPRETER = ansible.executor.interpreter_discovery._FALLBACK_INTERPRETER
+elif ansible_mitogen.utils.ansible_version[:2] >= (2, 17):
+    _FALLBACK_INTERPRETER = u'/usr/bin/python3'
+else:
+    _FALLBACK_INTERPRETER = u'/usr/bin/python'
 
 
 def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python):
@@ -107,7 +115,9 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
             # blow away the discovered_interpreter_config cache and rediscover
             del task_vars['ansible_facts'][discovered_interpreter_config]
 
-        if discovered_interpreter_config not in task_vars['ansible_facts']:
+        try:
+            s = task_vars['ansible_facts'][discovered_interpreter_config]
+        except KeyError:
             action._mitogen_discovering_interpreter = True
             # fake pipelining so discover_interpreter can be happy
             action._connection.has_pipelining = True
@@ -121,8 +131,6 @@ def run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_pyth
             # cache discovered interpreter
             task_vars['ansible_facts'][discovered_interpreter_config] = s
             action._connection.has_pipelining = False
-        else:
-            s = task_vars['ansible_facts'][discovered_interpreter_config]
 
         # propagate discovered interpreter as fact
         action._discovered_interpreter_key = discovered_interpreter_config
@@ -144,9 +152,9 @@ def parse_python_path(s, task_vars, action, rediscover_python):
         s = 'auto'
 
     s = run_interpreter_discovery_if_necessary(s, task_vars, action, rediscover_python)
-    # if unable to determine python_path, fallback to '/usr/bin/python'
     if not s:
-        s = '/usr/bin/python'
+        s = _FALLBACK_INTERPRETER
+        # raise ValueError("Interpreter discovery failed, got: %r", s)
 
     return ansible.utils.shlex.shlex_split(s)
 
@@ -732,9 +740,6 @@ class MitogenViaSpec(Spec):
 
     def python_path(self, rediscover_python=False):
         s = self._host_vars.get('ansible_python_interpreter')
-        # #511, #536: executor/module_common.py::_get_shebang() hard-wires
-        # "/usr/bin/python" as the default interpreter path if no other
-        # interpreter is specified.
         return parse_python_path(
             s,
             task_vars=self._task_vars,

@@ -1465,7 +1465,7 @@ class Connection(object):
             return self.options.python_path
         return [self.options.python_path]
 
-    def get_boot_command(self):
+    def _first_stage_base64(self):
         source = inspect.getsource(self._first_stage)
         source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
         source = source.replace('    ', ' ')
@@ -1475,16 +1475,22 @@ class Connection(object):
                                 str(len(preamble_compressed)))
         compressed = zlib.compress(source.encode(), 9)
         encoded = binascii.b2a_base64(compressed).replace(b('\n'), b(''))
+        return encoded.decode('ascii')
 
+    def _bootstrap_argv(self):
         # Just enough to decode, decompress, and exec the first stage.
         # Priorities: wider compatibility, faster startup, shorter length.
         # `import os` here, instead of stage 1, to save a few bytes.
         # `sys.path=...` for https://github.com/python/cpython/issues/115911.
-        return self.get_python_argv() + [
+        return [
             '-c',
             'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
-            'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
+            'exec(zlib.decompress(binascii.a2b_base64(sys.argv[1])))',
+            self._first_stage_base64(),
         ]
+
+    def get_boot_command(self):
+        return self.get_python_argv() + self._bootstrap_argv()
 
     def get_econtext_config(self):
         assert self.options.max_message_size is not None
@@ -1521,7 +1527,7 @@ class Connection(object):
 
     def start_child(self):
         args = self.get_boot_command()
-        LOG.debug('command line for %r: %s', self, Argv(args))
+        LOG.debug('command line for %r: %s', self, args)
         try:
             return self.create_child(args=args, **self.create_child_args)
         except OSError:
