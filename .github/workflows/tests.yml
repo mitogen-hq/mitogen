@@ -29,13 +29,10 @@ jobs:
           - tox_env: py27-m_ans-ans4
 
           - tox_env: py36-m_ans-ans2.10
-            python_version: '3.6'
           - tox_env: py36-m_ans-ans4
-            python_version: '3.6'
 
           - tox_env: py27-m_mtg
           - tox_env: py36-m_mtg
-            python_version: '3.6'
 
     steps:
       - uses: actions/checkout@v4
