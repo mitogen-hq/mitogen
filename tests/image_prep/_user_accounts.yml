@@ -50,7 +50,10 @@
     mitogen_test_groups:
       - name: mitogen__group
       - name: mitogen__sudo_nopw
-  tasks:
+
+    user_policies_max_failed_logins: 1000
+    user_policies_users: "{{ all_users }}"
+  pre_tasks:
     - name: Disable non-localhost SSH for Mitogen users
       when: false
       blockinfile:
@@ -180,3 +183,5 @@
         validate: '/usr/sbin/visudo -cf %s'
       when:
         - ansible_virtualization_type != "docker"
+  roles:
+    - role: user_policies
