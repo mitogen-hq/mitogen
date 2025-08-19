@@ -41,70 +41,38 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install build deps
+      - run: .ci/show_python_versions
+      - name: Install deps
+        id: install-deps
         run: |
           set -o errexit -o nounset -o pipefail
-
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
+          source .ci/bash_functions
+          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
 
           sudo apt-get update
 
           if [[ $PYTHON == "python2.7" ]]; then
               sudo apt install -y python2-dev sshpass virtualenv
-          elif [[ $PYTHON == "python3.6" ]]; then
-              sudo apt install -y gcc-10 make libbz2-dev liblzma-dev libreadline-dev libsqlite3-dev libssl-dev sshpass virtualenv zlib1g-dev
-              curl --fail --silent --show-error --location https://pyenv.run | bash
-              CC=gcc-10 ~/.pyenv/bin/pyenv install --force 3.6
-          else
-              echo 1>&2 "Python interpreter $PYTHON not available"
-              exit 1
-          fi
-      - run: .ci/show_python_versions
-      - name: Install tooling
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
-
-          if [[ $PYTHON == "python2.7" ]]; then
               curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
               "$PYTHON" get-pip.py --user --no-python-version-warning
               # Avoid Python 2.x pip masking system pip
               rm -f ~/.local/bin/{easy_install,pip,wheel}
           elif [[ $PYTHON == "python3.6" ]]; then
+              sudo apt install -y gcc-10 make libbz2-dev liblzma-dev libreadline-dev libsqlite3-dev libssl-dev sshpass virtualenv zlib1g-dev
+              curl --fail --silent --show-error --location https://pyenv.run | bash
+              CC=gcc-10 ~/.pyenv/bin/pyenv install --force 3.6
               PYTHON="$HOME/.pyenv/versions/3.6.15/bin/python3.6"
           fi
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          echo "python=$PYTHON" >> $GITHUB_OUTPUT
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o errexit -o nounset -o pipefail
-
-          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
-
-          if [[ $PYTHON == "python3.6" ]]; then
-              PYTHON="$HOME/.pyenv/versions/3.6.15/bin/python3.6"
-          fi
+          PYTHON="${{ steps.install-deps.outputs.python }}"
 
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
 
@@ -160,40 +128,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install build deps
+      - run: .ci/show_python_versions
+      - name: Install deps
+        id: install-deps
         run: |
           set -o errexit -o nounset -o pipefail
+          source .ci/bash_functions
+          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
 
           sudo apt-get update
           sudo apt-get install -y sshpass virtualenv
-      - run: .ci/show_python_versions
-      - name: Install tooling
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          echo "python=$PYTHON" >> $GITHUB_OUTPUT
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o errexit -o nounset -o pipefail
-
-          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
+          PYTHON="${{ steps.install-deps.outputs.python }}"
 
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
 
@@ -225,33 +179,22 @@ jobs:
       - run: .ci/show_python_versions
       - run: .ci/install_sshpass ${{ matrix.sshpass_version }}
         if: ${{ matrix.sshpass_version }}
-      - name: Install tooling
+      - name: Install deps
+        id: install-deps
         run: |
           set -o errexit -o nounset -o pipefail
-
-          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
+          source .ci/bash_functions
+          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          echo "python=$PYTHON" >> $GITHUB_OUTPUT
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o errexit -o nounset -o pipefail
-
-          # Tox environment name (e.g. py312-m_mtg) -> Python executable name (e.g. python3.12)
-          PYTHON=$(python -c 'import re; print(re.sub(r"^py([23])([0-9]{1,2}).*", r"python\1.\2", "${{ matrix.tox_env }}"))')
-
-          if [[ -z $PYTHON ]]; then
-              echo 1>&2 "Python interpreter could not be determined"
-              exit 1
-          fi
+          PYTHON="${{ steps.install-deps.outputs.python }}"
 
           "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
 
