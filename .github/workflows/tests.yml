@@ -64,27 +64,7 @@ jobs:
               echo 1>&2 "Python interpreter $PYTHON not available"
               exit 1
           fi
-      - name: Show Python versions
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          # macOS builders lack a realpath command
-          type python  && python  -c"import os.path;print(os.path.realpath('$(type -p python)'))" &&  python --version
-          type python2 && python2 -c"import os.path;print(os.path.realpath('$(type -p python2)'))" && python2 --version
-          type python3 && python3 -c"import os.path;print(os.path.realpath('$(type -p python3)'))" && python3 --version
-          echo
-
-          if [ -e /usr/bin/python ]; then
-              echo "/usr/bin/python:    sys.executable: $(/usr/bin/python -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /usr/bin/python2 ]; then
-              echo "/usr/bin/python2:   sys.executable: $(/usr/bin/python2 -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /usr/bin/python2.7 ]; then
-              echo "/usr/bin/python2.7: sys.executable: $(/usr/bin/python2.7 -c 'import sys; print(sys.executable)')"
-          fi
+      - run: .ci/show_python_versions
       - name: Install tooling
         run: |
           set -o errexit -o nounset -o pipefail
@@ -186,27 +166,7 @@ jobs:
 
           sudo apt-get update
           sudo apt-get install -y sshpass virtualenv
-      - name: Show Python versions
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          # macOS builders lack a realpath command
-          type python  && python  -c"import os.path;print(os.path.realpath('$(type -p python)'))" &&  python --version
-          type python2 && python2 -c"import os.path;print(os.path.realpath('$(type -p python2)'))" && python2 --version
-          type python3 && python3 -c"import os.path;print(os.path.realpath('$(type -p python3)'))" && python3 --version
-          echo
-
-          if [ -e /usr/bin/python ]; then
-              echo "/usr/bin/python:    sys.executable: $(/usr/bin/python -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /usr/bin/python2 ]; then
-              echo "/usr/bin/python2:   sys.executable: $(/usr/bin/python2 -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /usr/bin/python2.7 ]; then
-              echo "/usr/bin/python2.7: sys.executable: $(/usr/bin/python2.7 -c 'import sys; print(sys.executable)')"
-          fi
+      - run: .ci/show_python_versions
       - name: Install tooling
         run: |
           set -o errexit -o nounset -o pipefail
@@ -262,32 +222,7 @@ jobs:
         with:
           python-version: ${{ matrix.python_version }}
         if: ${{ matrix.python_version }}
-      - name: Show Python versions
-        run: |
-          set -o errexit -o nounset -o pipefail
-
-          # macOS builders lack a realpath command
-          type python  && python  -c"import os.path;print(os.path.realpath('$(type -p python)'))" &&  python --version
-          type python2 && python2 -c"import os.path;print(os.path.realpath('$(type -p python2)'))" && python2 --version
-          type python3 && python3 -c"import os.path;print(os.path.realpath('$(type -p python3)'))" && python3 --version
-          echo
-
-          if [ -e /usr/bin/python ]; then
-              echo "/usr/bin/python:    sys.executable: $(/usr/bin/python -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /usr/bin/python2 ]; then
-              echo "/usr/bin/python2:   sys.executable: $(/usr/bin/python2 -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /usr/bin/python2.7 ]; then
-              echo "/usr/bin/python2.7: sys.executable: $(/usr/bin/python2.7 -c 'import sys; print(sys.executable)')"
-          fi
-
-          if [ -e /Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7 ]; then
-              # GitHub macOS 12 images: python2.7 is installed, but not on $PATH
-              echo "/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7: sys.executable: $(/Library/Frameworks/Python.framework/Versions/2.7/bin/python2.7 -c 'import sys; print(sys.executable)')"
-          fi
+      - run: .ci/show_python_versions
       - run: .ci/install_sshpass ${{ matrix.sshpass_version }}
         if: ${{ matrix.sshpass_version }}
       - name: Install tooling
