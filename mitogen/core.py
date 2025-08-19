@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# !mitogen: minify_safe
 
 """
 This module implements most package functionality, but remains separate from
@@ -1304,7 +1303,6 @@ class Importer(object):
         'lxc',
         'lxd',
         'master',
-        'minify',
         'os_fork',
         'parent',
         'podman',

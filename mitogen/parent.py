@@ -26,7 +26,6 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-# !mitogen: minify_safe
 
 """
 This module defines functionality common to master and parent processes. It is
@@ -181,7 +180,7 @@ def _get_core_source():
 
 def get_core_source_partial():
     """
-    _get_core_source() is expensive, even with @lru_cache in minify.py, threads
+    _get_core_source() is expensive, even with caching, threads
     can enter it simultaneously causing severe slowdowns.
     """
     global _core_source_partial

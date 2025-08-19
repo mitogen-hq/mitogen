@@ -273,10 +273,6 @@ Helpers
 .. currentmodule:: mitogen.master
 .. autofunction:: get_child_modules
 
-.. currentmodule:: mitogen.minify
-.. autofunction:: minimize_source
-
-
 .. _signals:
 
 Signals

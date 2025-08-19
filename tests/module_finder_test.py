@@ -294,7 +294,6 @@ class FindRelatedTest(testlib.TestCase):
 
     if sys.version_info < (2, 7):
         SIMPLE_EXPECT.add('mitogen.compat')
-        SIMPLE_EXPECT.add('mitogen.compat.tokenize')
     if sys.version_info < (2, 6):
         SIMPLE_EXPECT.add('mitogen.compat')
         SIMPLE_EXPECT.add('mitogen.compat.pkgutil')
