@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1306` :mod:`ansible_mitogen`: Fix non-blocking IO errors in
+  first stage of bootstrap
 * :gh:issue:`1306` CI: Report sudo version on Ansible targets
 * :gh:issue:`1306` CI: Move sudo test users defaults into ``/etc/sudoers.d``
 * :gh:issue:`1306` preamble_size: Fix variability of measured command size
