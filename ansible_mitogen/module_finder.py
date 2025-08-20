@@ -44,7 +44,7 @@ except ImportError:
     # Python < 3.4, PEP 302 Import Hooks
     import imp
 
-import mitogen.master
+import mitogen.imports
 
 
 LOG = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ def scan_fromlist(code):
     >>> list(scan_fromlist(code))
     [(0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i')]
     """
-    for level, modname_s, fromlist in mitogen.master.scan_code_imports(code):
+    for level, modname_s, fromlist in mitogen.imports.codeobj_imports(code):
         for name in fromlist:
             yield level, str('%s.%s' % (modname_s, name))
         if not fromlist:
@@ -172,7 +172,7 @@ def walk_imports(code, prefix=None):
         prefix = ''
     pattern = re.compile(r'(^|\.)(\w+)')
     start = len(prefix)
-    for _, name, fromlist in mitogen.master.scan_code_imports(code):
+    for _, name, fromlist in mitogen.imports.codeobj_imports(code):
         if not name.startswith(prefix):
             continue
         for match in pattern.finditer(name, start):
