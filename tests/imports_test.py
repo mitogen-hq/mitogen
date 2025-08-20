@@ -2,8 +2,9 @@ import os
 import sys
 import unittest
 
+import mitogen.imports
+
 import testlib
-import mitogen.master
 
 
 def testmod_compile(path):
@@ -15,7 +16,7 @@ def testmod_compile(path):
 
 
 class ScanCodeImportsTest(testlib.TestCase):
-    func = staticmethod(mitogen.master.scan_code_imports)
+    func = staticmethod(mitogen.imports.codeobj_imports)
 
     @unittest.skipIf(sys.version_info < (3, 0), "Py is 2.x, would be relative")
     def test_default_absolute(self):
