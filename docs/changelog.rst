@@ -18,6 +18,17 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.27 (2025-08-20)
+--------------------
+
+* :gh:issue:`1325` :mod:`mitogen`: Refactor
+  ``mitogen.master.scan_code_imports()`` as
+  :func:`mitogen.import.codeobj_imports` and speed-up by 1.5 - 2.5 x
+* :gh:issue:`1329` CI: Refactor and de-duplicate Github Actions workflow
+* :gh:issue:`1315` CI: macOS: Increase failed logins limit of test users
+* :gh:issue:`1325` tests: Improve ``master_test.ScanCodeImportsTest`` coverage
+
+
 v0.3.26 (2025-08-04)
 --------------------
 

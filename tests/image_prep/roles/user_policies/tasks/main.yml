@@ -1,0 +1,11 @@
+- name: Set login attempts (macOS)
+  vars:
+    max_failed_logins: "{{ item.policies.max_failed_logins | default(user_policies_max_failed_logins) }}"
+  command: >
+    pwpolicy
+    -u '{{ item.name }}'
+    -setpolicy 'maxFailedLoginAttempts={{ max_failed_logins }}'
+  with_items: "{{ user_policies_users }}"
+  when:
+    - ansible_system == 'Darwin'
+  changed_when: true
