@@ -22,6 +22,7 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1306` CI: Report sudo version on Ansible targets
+* :gh:issue:`1306` CI: Move sudo test users defaults into ``/etc/sudoers.d``
 
 
 v0.3.27 (2025-08-20)
