@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.27 (2025-08-20)
+--------------------
 
 * :gh:issue:`1325` :mod:`mitogen`: Refactor
   ``mitogen.master.scan_code_imports()`` as
