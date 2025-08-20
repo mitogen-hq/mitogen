@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.27 (2025-08-20)
+--------------------
+
 * :gh:issue:`1325` :mod:`mitogen`: Refactor
   ``mitogen.master.scan_code_imports()`` as
   :func:`mitogen.import.codeobj_imports` and speed-up by 1.5 - 2.5 x
