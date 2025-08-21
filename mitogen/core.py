@@ -541,6 +541,7 @@ def is_blacklisted_import(importer, fullname):
     any packages have been whitelisted and `fullname` is not part of one.
 
     NB:
+      - The default whitelist is `['']` which matches any module name.
       - If a package is on both lists, then it is treated as blacklisted.
       - If any package is whitelisted, then all non-whitelisted packages are
         treated as blacklisted.
@@ -1536,9 +1537,9 @@ class Importer(object):
         return importlib.machinery.ModuleSpec(fullname, loader=self)
 
     blacklisted_msg = (
-        '%r is present in the Mitogen importer blacklist, therefore this '
-        'context will not attempt to request it from the master, as the '
-        'request will always be refused.'
+        "%r is blacklisted (on the Mitogen importer blacklist (%r) or not "
+        "on the whitelist (%r)). This context won't try to request it from "
+        "the master, it would be refused."
     )
     pkg_resources_msg = (
         'pkg_resources is prohibited from importing __main__, as it causes '
@@ -1553,7 +1554,10 @@ class Importer(object):
 
     def _refuse_imports(self, fullname):
         if is_blacklisted_import(self, fullname):
-            raise ModuleNotFoundError(self.blacklisted_msg % (fullname,))
+            raise ModuleNotFoundError(
+                self.blacklisted_msg
+                % (fullname, self.blacklist, self.whitelist),
+            )
 
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']
