@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1287` tests: Bump dependencies
+
 
 v0.3.28 (2025-09-17)
 --------------------
