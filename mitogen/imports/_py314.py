@@ -7,17 +7,12 @@ import opcode
 IMPORT_NAME = opcode.opmap['IMPORT_NAME']
 LOAD_CONST = opcode.opmap['LOAD_CONST']
 LOAD_SMALL_INT = opcode.opmap['LOAD_SMALL_INT']
+OPS_WINDOW = bytes([LOAD_SMALL_INT, LOAD_CONST, IMPORT_NAME])
 
 
-def _code_imports(code, consts, names):
-    start = 4
-    while (op3_idx := code.find(IMPORT_NAME, start, -1)) >= 0:
-        if op3_idx % 2:
-            start = op3_idx + 1
-            continue
-        if code[op3_idx-4] != LOAD_SMALL_INT or code[op3_idx-2] != LOAD_CONST:
-            start = op3_idx + 2
-            continue
-        start = op3_idx + 6
-        arg1, arg2, arg3 = code[op3_idx-3], code[op3_idx-1], code[op3_idx+1]
+def _code_imports(code, consts, names, start=0):
+    ops, args = code[::2], code[1::2]
+    while (start := ops.find(OPS_WINDOW, start)) != -1:
+        arg1, arg2, arg3 = args[start], args[start+1], args[start+2]
         yield (arg1, names[arg3], consts[arg2] or ())
+        start += 3
