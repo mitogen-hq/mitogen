@@ -157,15 +157,14 @@
             owner: mitogen__has_sudo_pubkey
             group: mitogen__group
 
-    - name: Configure sudoers defaults
-      blockinfile:
-        path: /etc/sudoers
-        marker: "# {mark} Mitogen test defaults"
-        block: |
-          Defaults>mitogen__pw_required targetpw
-          Defaults>mitogen__require_tty requiretty
-          Defaults>mitogen__require_tty_pw_required requiretty,targetpw
+    - name: Configure sudoers
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: ug=r,o=
         validate: '/usr/sbin/visudo -cf %s'
+      with_items:
+        - {src: sudoers_defaults, dest: /etc/sudoers.d/mitogen_test_defaults}
 
     - name: Configure sudoers users
       blockinfile:

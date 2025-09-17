@@ -41,6 +41,8 @@ IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'ghcr.io/mitogen-hq/%(distro)s-test:2021',
 )
+SUDOERS_DEFAULTS_SRC = './tests/image_prep/files/sudoers_defaults'
+SUDOERS_DEFAULTS_DEST = '/etc/sudoers.d/mitogen_test_defaults'
 TESTS_SSH_PRIVATE_KEY_FILE = os.path.join(GIT_ROOT, 'tests/data/docker/mitogen__has_sudo_pubkey.key')
 
 
@@ -58,6 +60,7 @@ def _have_cmd(args):
     try:
         subprocess.run(
             args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=True,
         )
     except OSError as exc:
         if exc.errno == errno.ENOENT:

@@ -1440,9 +1440,9 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
-        fp=os.fdopen(0,'rb')
-        C=zlib.decompress(fp.read(PREAMBLE_COMPRESSED_LEN))
-        fp.close()
+        C=''.encode()
+        while PREAMBLE_COMPRESSED_LEN-len(C)and select.select([0],[],[]):C+=os.read(0,PREAMBLE_COMPRESSED_LEN-len(C))
+        C=zlib.decompress(C)
         fp=os.fdopen(W,'wb',0)
         fp.write(C)
         fp.close()
@@ -1478,11 +1478,12 @@ class Connection(object):
 
         # Just enough to decode, decompress, and exec the first stage.
         # Priorities: wider compatibility, faster startup, shorter length.
-        # `import os` here, instead of stage 1, to save a few bytes.
         # `sys.path=...` for https://github.com/python/cpython/issues/115911.
+        # `import os,select` here (not stage 1) to save a few bytes overall.
         return self.get_python_argv() + [
             '-c',
-            'import sys;sys.path=[p for p in sys.path if p];import binascii,os,zlib;'
+            'import sys;sys.path=[p for p in sys.path if p];'
+            'import binascii,os,select,zlib;'
             'exec(zlib.decompress(binascii.a2b_base64("%s")))' % (encoded.decode(),),
         ]
 
