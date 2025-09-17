@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.28 (2025-09-17)
+--------------------
 
 * :gh:issue:`1306` :mod:`ansible_mitogen`: Fix non-blocking IO errors in
   first stage of bootstrap
