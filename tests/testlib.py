@@ -160,6 +160,7 @@ def _have_cmd(args):
     try:
         subprocess.run(
             args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            check=True,
         )
     except OSError as exc:
         if exc.errno == errno.ENOENT:
@@ -176,6 +177,15 @@ def have_python2():
 
 def have_python3():
     return _have_cmd(['python3'])
+
+
+def have_sudo_nopassword():
+    """
+    Return True if we can run `sudo` with no password, otherwise False.
+
+    Any cached credentials are ignored.
+    """
+    return _have_cmd(['sudo', '-kn', 'true'])
 
 
 def retry(fn, on, max_attempts, delay):
