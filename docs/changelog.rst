@@ -18,6 +18,20 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.28 (2025-09-17)
+--------------------
+
+* :gh:issue:`1306` :mod:`ansible_mitogen`: Fix non-blocking IO errors in
+  first stage of bootstrap
+* :gh:issue:`1306` CI: Report sudo version on Ansible targets
+* :gh:issue:`1306` CI: Move sudo test users defaults into ``/etc/sudoers.d``
+* :gh:issue:`1306` preamble_size: Fix variability of measured command size
+* :gh:issue:`1306` tests: Count bytes written in ``stdio_test.StdIOTest``
+* :gh:issue:`1306` tests: Check stdio is blocking in sudo contexts
+* :gh:issue:`1327` :mod:`ansible_mitogen`: Add FreeIPA client modules to the
+  always-fork list
+
+
 v0.3.27 (2025-08-20)
 --------------------
 
