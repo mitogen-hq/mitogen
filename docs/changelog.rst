@@ -28,6 +28,8 @@ In progress (unreleased)
 * :gh:issue:`1306` preamble_size: Fix variability of measured command size
 * :gh:issue:`1306` tests: Count bytes written in ``stdio_test.StdIOTest``
 * :gh:issue:`1306` tests: Check stdio is blocking in sudo contexts
+* :gh:issue:`1327` :mod:`ansible_mitogen`: Add FreeIPA client modules to the
+  always-fork list
 
 
 v0.3.27 (2025-08-20)
