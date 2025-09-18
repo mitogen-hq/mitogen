@@ -10,7 +10,7 @@ BIG_MODULE_PATH="$(dirname -- "$0")/data/big_module.py"
 IMPORTS="from collections import deque; from mitogen.imports import $BENCH_FUNC"
 COMPILE="co=compile(open('$BIG_MODULE_PATH').read(), '$BIG_MODULE_PATH', 'exec')"
 PYTHONS=(
-    python2.7 python3.9 python3.10 python3.11 python3.12 python3.13
+    python2.7 python3.{9..14}
 )
 for p in "${PYTHONS[@]}"; do
     echo -e -n "$BENCH_FUNC $p  "
