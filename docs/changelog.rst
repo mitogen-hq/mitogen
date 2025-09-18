@@ -18,6 +18,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.29 (2025-09-18)
+--------------------
+
+* :gh:issue:`1287` Python 3.14 support
+* :gh:issue:`1287` tests: Bump dependencies
+
+
 v0.3.28 (2025-09-17)
 --------------------
 
