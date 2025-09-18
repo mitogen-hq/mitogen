@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1287` Python 3.14 support
 * :gh:issue:`1287` tests: Bump dependencies
 
 
