@@ -4,7 +4,9 @@
 
 import sys
 
-if sys.version_info >= (3, 6):
+if sys.version_info >= (3, 14):
+    from mitogen.imports._py314 import _code_imports
+elif sys.version_info >= (3, 6):
     from mitogen.imports._py36 import _code_imports
 elif sys.version_info >= (2, 5):
     from mitogen.imports._py2 import _code_imports_py25 as _code_imports
