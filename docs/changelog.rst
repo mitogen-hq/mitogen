@@ -384,6 +384,7 @@ v0.3.1 (unreleased)
 * :gh:issue:`876` `python -c ...` first stage no longer contains tab characters, to reduce size
 * :gh:issue:`878` Continuous Integration tests now correctly perform comparisons of 2 digit versions
 * :gh:issue:`878` Kubectl connector fixed with Ansible 2.10 and above
+* :gh:pull:`683` Previously broken :mod:`mitogen.fakessh` functionality is restored
 
 
 v0.3.0 (2021-11-24)
