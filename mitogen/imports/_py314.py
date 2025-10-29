@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2025 Mitogen authors <https://github.com/mitogen-hq>
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: BSD-3-Clause
 # !mitogen: minify_safe
 
 import opcode
