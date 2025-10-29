@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1266` Import cleanups
+
 
 v0.3.29 (2025-09-18)
 --------------------

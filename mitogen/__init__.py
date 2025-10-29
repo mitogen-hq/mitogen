@@ -106,7 +106,8 @@ def main(log_level='INFO', profiling=_default_profiling):
     def wrapper(func):
         if func.__module__ != '__main__':
             return func
-        import mitogen.parent
+        import mitogen.core
+        import mitogen.master
         import mitogen.utils
         if profiling:
             mitogen.core.enable_profiling()
