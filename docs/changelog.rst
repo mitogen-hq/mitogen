@@ -23,6 +23,7 @@ In progress (unreleased)
 
 * :gh:issue:`1266` Import cleanups
 * :gh:issue:`1266` :mod:`ansible_mitogen`: De-duplicate sys.path manipulations
+* :gh:issue:`1344` Correct SPDX license declarations
 
 
 v0.3.29 (2025-09-18)
