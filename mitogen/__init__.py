@@ -35,7 +35,7 @@ be expected. On the slave, it is built dynamically during startup.
 
 
 #: Library version as a tuple.
-__version__ = (0, 3, 30, 'dev')
+__version__ = (0, 3, 31, 'dev')
 
 
 #: This is :data:`False` in slave contexts. Previously it was used to prevent
@@ -106,7 +106,8 @@ def main(log_level='INFO', profiling=_default_profiling):
     def wrapper(func):
         if func.__module__ != '__main__':
             return func
-        import mitogen.parent
+        import mitogen.core
+        import mitogen.master
         import mitogen.utils
         if profiling:
             mitogen.core.enable_profiling()

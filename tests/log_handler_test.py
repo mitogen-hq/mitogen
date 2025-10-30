@@ -14,9 +14,26 @@ import mitogen.parent
 import mitogen.utils
 from mitogen.core import b
 
+PY2 = sys.version_info[0] == 2
+if PY2:
+
+    def logging_getLogRecordFactory():
+        return logging.LogRecord
+
+    def logging_setLogRecordFactory(factory):
+        logging.LogRecord = factory
+
+else:
+    logging_getLogRecordFactory = logging.getLogRecordFactory
+    logging_setLogRecordFactory = logging.setLogRecordFactory
+
 
 def ping():
     pass
+
+
+def log_test():
+    logging.getLogger(__name__).info("This is a test")
 
 
 class BufferingTest(testlib.TestCase):
@@ -88,6 +105,36 @@ class StartupTest(testlib.RouterMixin, testlib.TestCase):
 
         expect = 'Parent is context %s (%s)' % (c1.context_id, 'parent')
         self.assertIn(expect, logs)
+
+
+class LogRecordFactoryTest(testlib.RouterMixin, testlib.TestCase):
+    def setUp(self):
+        super(LogRecordFactoryTest, self).setUp()
+        self.original_factory = logging_getLogRecordFactory()
+
+    def tearDown(self):
+        logging_setLogRecordFactory(self.original_factory)
+        super(LogRecordFactoryTest, self).tearDown()
+
+    def test_logrecordfactory(self):
+        # Change logging factory and add a custom attribute
+        old_factory = logging_getLogRecordFactory()
+
+        def record_factory(*args, **kwargs):
+            record = old_factory(*args, **kwargs)
+            record.custom_attribute = 0xDEADBEEF
+            return record
+
+        logging_setLogRecordFactory(record_factory)
+        c1 = self.router.local(name="c1")
+        log = testlib.LogCapturer(
+            __name__, formatter=logging.Formatter("%(custom_attribute)x - %(message)s")
+        )
+        log.start()
+        c1.call(log_test)
+        logs = log.stop()
+        self.assertIn("deadbeef - This is a test", logs)
+
 
 StartupTest = unittest.skipIf(
     condition=sys.version_info < (2, 7) or sys.version_info >= (3, 6),
