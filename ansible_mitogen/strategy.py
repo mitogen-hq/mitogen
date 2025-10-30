@@ -41,6 +41,7 @@ except ImportError:
 import mitogen.core
 import ansible_mitogen.affinity
 import ansible_mitogen.loaders
+import ansible_mitogen.logging
 import ansible_mitogen.mixins
 import ansible_mitogen.process
 

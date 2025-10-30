@@ -18,6 +18,16 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.30 (2025-10-30)
+--------------------
+
+* :gh:issue:`1266` Import cleanups
+* :gh:issue:`1266` :mod:`ansible_mitogen`: De-duplicate sys.path manipulations
+* :gh:issue:`1344` Correct SPDX license declarations
+* :gh:issue:`1344` Declare BSD-3-Clause SPDX license in package metadata
+* :gh:issue:`1344` :mod:`mitogen`: Use :py:func:`logging.makeLogRecord`
+
+
 v0.3.29 (2025-09-18)
 --------------------
 
