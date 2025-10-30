@@ -370,15 +370,19 @@ class LogForwarder(object):
         if logger is None:
             self._cache[logger_name] = logger = logging.getLogger(logger_name)
 
+        levelno = int(level_s)
         # See logging.Handler.makeRecord()
-        record = logging.LogRecord(
-            name=logger.name,
-            level=int(level_s),
-            pathname='(unknown file)',
-            lineno=0,
-            msg=s,
-            args=(),
-            exc_info=None,
+        record = logging.makeLogRecord(
+            {
+                "name": logger.name,
+                "levelname": logging.getLevelName(levelno),
+                "levelno": levelno,
+                "pathname": "(unknown file)",
+                "lineno": 0,
+                "msg": s,
+                "args": (),
+                "exc_info": None,
+            }
         )
         record.mitogen_message = s
         record.mitogen_context = self._router.context_by_id(msg.src_id)

@@ -393,10 +393,13 @@ class CaptureStreamHandler(logging.StreamHandler):
 
 
 class LogCapturer(object):
-    def __init__(self, name=None):
+    def __init__(self, name=None, formatter=None):
         self.sio = StringIO()
         self.logger = logging.getLogger(name)
-        self.handler = CaptureStreamHandler(self.sio)
+        handler = CaptureStreamHandler(self.sio)
+        if formatter is not None:
+            handler.setFormatter(formatter)
+        self.handler = handler
         self.old_propagate = self.logger.propagate
         self.old_handlers = self.logger.handlers
         self.old_level = self.logger.level
