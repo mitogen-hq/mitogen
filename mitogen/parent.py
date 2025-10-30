@@ -1463,8 +1463,9 @@ class Connection(object):
         return [self.options.python_path]
 
     def get_boot_command(self):
-        source = inspect.getsource(self._first_stage)
-        source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
+        lines = inspect.getsourcelines(self._first_stage)[0][2:]
+        # Remove line comments, leading indentation, trailing newline
+        source = textwrap.dedent(''.join(s for s in lines if '#' not in s))[:-1]
         source = source.replace('    ', ' ')
         compressor = zlib.compressobj(
             zlib.Z_BEST_COMPRESSION, zlib.DEFLATED, -zlib.MAX_WBITS,
