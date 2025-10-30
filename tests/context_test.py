@@ -1,7 +1,6 @@
 import pickle
 
 import mitogen.core
-from mitogen.core import b
 
 import testlib
 
