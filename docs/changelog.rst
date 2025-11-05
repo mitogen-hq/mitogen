@@ -22,6 +22,13 @@ In progress (unreleased)
 ------------------------
 
 
+v0.3.31 (2025-11-05)
+--------------------
+
+* :gh:issue:`1350` :mod:`ansible_mitogen`: Fix regression when loading plugins
+  from ``/custom/path/to/mitogen``
+
+
 v0.3.30 (2025-10-30)
 --------------------
 
