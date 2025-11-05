@@ -29,6 +29,8 @@
 from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
+import os
+import sys
 
 #
 # This is not the real Strategy implementation module, it simply exists as a
@@ -44,6 +46,11 @@ __metaclass__ = type
 # the real module, so duplicate types don't exist in memory, and things like
 # debuggers and isinstance() work predictably.
 #
+
+try:
+    import ansible_mitogen
+except ImportError:
+    sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../../..')))
 
 import ansible_mitogen.loaders
 import ansible_mitogen.strategy
