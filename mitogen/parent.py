@@ -1488,7 +1488,8 @@ class Connection(object):
             '-c',
             'import sys;sys.path=[p for p in sys.path if p];'
             'import binascii,os,select,zlib;'
-            'exec(zlib.decompress(binascii.a2b_base64("%s",-15)))' % (encoded.decode(),),
+            'exec(zlib.decompress(binascii.a2b_base64(sys.argv[1]),-15))',
+            encoded.decode(),
         ]
 
     def get_econtext_config(self):
