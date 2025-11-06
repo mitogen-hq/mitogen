@@ -26,7 +26,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         # preamble from stdin, then execute it.
 
         # This test attaches /dev/zero to stdin to create a specific failure
-        # 1. Fork child reads PREAMBLE_COMPRESSED_LEN bytes of junk (all `\0`)
+        # 1. Fork child reads <compressed preamble size> bytes of NUL (`b'\0'`)
         # 2. Fork child crashes (trying to decompress the junk data)
         # 3. Fork child's file descriptors (write pipes) are closed by the OS
         # 4. Fork parent does `dup(<read pipe>, <stdin>)` and `exec(<python>)`
