@@ -1435,20 +1435,21 @@ class Connection(object):
             os.close(r)
             os.close(W)
             os.close(w)
-            if os.uname()[0]=='Darwin'and os.uname()[2][:2]<'19'and sys.executable=='/usr/bin/python':sys.executable='/usr/bin/python2.7'
-            if os.uname()[0]=='Darwin'and os.uname()[2][:2]in'2021'and sys.version[:3]=='2.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
+            if os.uname()[0]+os.uname()[2][:2]+sys.executable=='Darwin19/usr/bin/python':sys.executable+='2.7'
+            if os.uname()[0]+os.uname()[2][:2]+sys.version[:3]=='Darwin202.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
+            if os.uname()[0]+os.uname()[2][:2]+sys.version[:3]=='Darwin212.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:CONTEXT_NAME)')
         os.write(1,'MITO000\n'.encode())
         C=''.encode()
         while PREAMBLE_COMPRESSED_LEN-len(C)and select.select([0],[],[]):C+=os.read(0,PREAMBLE_COMPRESSED_LEN-len(C))
         C=zlib.decompress(C)
-        fp=os.fdopen(W,'wb',0)
-        fp.write(C)
-        fp.close()
-        fp=os.fdopen(w,'wb',0)
-        fp.write(C)
-        fp.close()
+        f=os.fdopen(W,'wb',0)
+        f.write(C)
+        f.close()
+        f=os.fdopen(w,'wb',0)
+        f.write(C)
+        f.close()
         os.write(1,'MITO001\n'.encode())
         os.close(2)
 
