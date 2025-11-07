@@ -1427,7 +1427,7 @@ class Connection(object):
     def _first_stage():
         R,W=os.pipe()
         r,w=os.pipe()
-        if os.fork():
+        if os.fork()==0:
             os.dup2(0,100)
             os.dup2(R,0)
             os.dup2(r,101)
