@@ -172,6 +172,7 @@ v0.3.22 (2025-02-04)
 * :gh:issue:`1143` :mod:`ansible_mitogen`: Fix dnf module include for dnf.cli
 * :gh:issue:`1234` :mod:`ansible_mitogen`: Fix :exc:`TypeError` in
   :func:`ansible_mitogen.target.set_file_owner`
+* :gh:issue:`1237` Fix supported Python version mentioned in docs
 
 
 v0.3.21 (2025-01-20)
