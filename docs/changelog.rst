@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1243` :mod:`mitogen`: Pass first stage, context name, & preamble
+  size as seperate **argv** arguments
+
 
 v0.3.31 (2025-11-05)
 --------------------
