@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a bug in Mitogen 0.3.x (for Ansible 2.10 and above)
+labels:
+  - affects-0.3
+type: bug
+
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: >
+        When does the problem occur?
+        What happens after?
+        How is this different?
+        Did it previously behave as expected?
+      placeholder: |
+        When I do X, Y happens, but I was expecting Z because ...
+        Before version 1.2.3 it worked as expected.
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Mitogen version
+      placeholder: 0.3.31, 0.3.3-9+deb12u1
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: Ansible version (if applicable)
+      placeholder: 2.18.11
+
+  - type: textarea
+    attributes:
+      label: OS and environment
+      description: >
+        What operating system version(s), Python version(s), etc. are you using?
+      placeholder: |
+        Controller (master): Debian 13, Python 3.14
+        Targets (slaves): Ubuntu 20.04/Python 2.7, RHEL 10, ...
+
+  - type: textarea
+    attributes:
+      label: Steps to reproduce
+      description: >
+        Instructions, code, or playbook(s) recreate the beahviour
+      value: |
+        Steps:
+        1. Set config `foo = 42` in somefile.cfg
+        2. Run the following Python or Playbook with `cmd --option bar ...`
+
+        ```
+        Code or playbook here
+        ```
+
+  - type: textarea
+    attributes:
+      label: Anything else
+      description: >
+        Include any other details you think might be relevant or helpful.
+        Examples might include logs, unusual settings, environment variables, ...
