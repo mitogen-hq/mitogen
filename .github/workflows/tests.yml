@@ -109,8 +109,6 @@ jobs:
           - tox_env: py314-m_ans-ans12
             python_version: '3.14.0-rc.3'
 
-          - tox_env: py314-m_ans-ans11-s_lin
-            python_version: '3.14.0-rc.3'
           - tox_env: py314-m_ans-ans12-s_lin
             python_version: '3.14.0-rc.3'
 
@@ -161,12 +159,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-m_lcl-ans11
-            python_version: '3.14.0-rc.3'
-            sshpass_version: "1.10"
-          - tox_env: py314-m_lcl-ans11-s_lin
-            python_version: '3.14.0-rc.3'
-            sshpass_version: "1.10"
           - tox_env: py314-m_lcl-ans12
             python_version: '3.14.0-rc.3'
           - tox_env: py314-m_lcl-ans12-s_lin
