@@ -27,14 +27,13 @@ Python Command Line
 ###################
 
 The Python command line sent to the host is a :mod:`zlib`-compressed [#f2]_ and
-base64-encoded copy of the :py:meth:`mitogen.master.Stream._first_stage`
-function, which has been carefully optimized to reduce its size. Prior to
-compression and encoding, ``CONTEXT_NAME`` is replaced with the desired context
-name in the function's source code.
+base64-encoded copy of :py:meth:`mitogen.parent.Connection._first_stage`,
+which is carefully written to maximize it compatibility and minimize its size.
+A simplified illustration of the bootstrap command is
 
 .. code::
 
-    python -c 'exec "xxx".decode("base64").decode("zlib")'
+    python -c 'exec(sys.argv[1].decode("base64").decode("zlib"))' <base64> ...
 
 The command-line arranges for the Python interpreter to decode the base64'd
 component, decompress it and execute it as Python code. Base64 is used since
@@ -71,8 +70,8 @@ of the large base64-encoded first stage parameter, and to replace **argv[0]**
 with something descriptive.
 
 After configuring its ``stdin`` to point to the read end of the pipe, the
-parent half of the fork re-executes Python, with **argv[0]** taken from the
-``CONTEXT_NAME`` variable earlier substituted into its source code. As no
+fork parent re-executes Python with **argv[0]** composed of the Python
+interpreter path and a remote name supplied by the Mitogen parent.  As no
 arguments are provided to this new execution of Python, and since ``stdin`` is
 connected to a pipe (whose write end is connected to the first stage), the
 Python interpreter begins reading source code to execute from the pipe

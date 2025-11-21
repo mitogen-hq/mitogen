@@ -49,18 +49,6 @@ __all__ = [
 
 
 ANSIBLE_VERSION_MIN = (2, 10)
-ANSIBLE_VERSION_MAX = (2, 19)
-
-NEW_VERSION_MSG = (
-    "Your Ansible version (%s) is too recent. The most recent version\n"
-    "supported by Mitogen for Ansible is %s.x. Please check the Mitogen\n"
-    "release notes to see if a new version is available, otherwise\n"
-    "subscribe to the corresponding GitHub issue to be notified when\n"
-    "support becomes available.\n"
-    "\n"
-    "    https://mitogen.rtfd.io/en/latest/changelog.html\n"
-    "    https://github.com/mitogen-hq/mitogen/issues/\n"
-)
 OLD_VERSION_MSG = (
     "Your version of Ansible (%s) is too old. The oldest version supported by "
     "Mitogen for Ansible is %s."
@@ -76,11 +64,6 @@ def assert_supported_release():
     if v[:2] < ANSIBLE_VERSION_MIN:
         raise ansible.errors.AnsibleError(
             OLD_VERSION_MSG % (v, ANSIBLE_VERSION_MIN)
-        )
-
-    if v[:2] > ANSIBLE_VERSION_MAX:
-        raise ansible.errors.AnsibleError(
-            NEW_VERSION_MSG % (v, ANSIBLE_VERSION_MAX)
         )
 
 
