@@ -18,6 +18,15 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.32 (2025-11-21)
+--------------------
+
+* :gh:issue:`1243` :mod:`mitogen`: Pass first stage, context name, & preamble
+  size as seperate **argv** arguments
+* :gh:issue:`1218` :mod:`ansible_mitogen`: Remove maximum Ansible version check
+* :gh:issue:`1260` CI: Remove integration of retired lgtm.com
+
+
 v0.3.31 (2025-11-05)
 --------------------
 
