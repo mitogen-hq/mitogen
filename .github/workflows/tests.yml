@@ -101,21 +101,21 @@ jobs:
           - tox_env: py313-m_ans-ans8
             python_version: '3.13'
           - tox_env: py314-m_ans-ans9
-            python_version: '3.14.0-rc.3'
+            python_version: '3.14'
           - tox_env: py314-m_ans-ans10
-            python_version: '3.14.0-rc.3'
+            python_version: '3.14'
           - tox_env: py314-m_ans-ans11
-            python_version: '3.14.0-rc.3'
+            python_version: '3.14'
           - tox_env: py314-m_ans-ans12
-            python_version: '3.14.0-rc.3'
+            python_version: '3.14'
+          - tox_env: py314-m_ans-ans13
+            python_version: '3.14'
 
-          - tox_env: py314-m_ans-ans11-s_lin
-            python_version: '3.14.0-rc.3'
-          - tox_env: py314-m_ans-ans12-s_lin
-            python_version: '3.14.0-rc.3'
+          - tox_env: py314-m_ans-ans13-s_lin
+            python_version: '3.14'
 
           - tox_env: py314-m_mtg
-            python_version: '3.14.0-rc.3'
+            python_version: '3.14'
 
     steps:
       - uses: actions/checkout@v4
@@ -161,19 +161,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-m_lcl-ans11
-            python_version: '3.14.0-rc.3'
-            sshpass_version: "1.10"
-          - tox_env: py314-m_lcl-ans11-s_lin
-            python_version: '3.14.0-rc.3'
-            sshpass_version: "1.10"
-          - tox_env: py314-m_lcl-ans12
-            python_version: '3.14.0-rc.3'
-          - tox_env: py314-m_lcl-ans12-s_lin
-            python_version: '3.14.0-rc.3'
+          - tox_env: py314-m_lcl-ans13
+            python_version: '3.14'
+          - tox_env: py314-m_lcl-ans13-s_lin
+            python_version: '3.14'
 
           - tox_env: py314-m_mtg
-            python_version: '3.14.0-rc.3'
+            python_version: '3.14'
 
     steps:
       - uses: actions/checkout@v4
