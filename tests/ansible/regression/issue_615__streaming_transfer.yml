@@ -7,30 +7,36 @@
   become: true
   vars:
     mitogen_ssh_compression: false
+    file_path_controller: "/tmp/fetch-{{ inventory_hostname }}-512mb.txt"
+    file_path_target: /tmp/mitogen-test-512mb.txt
+    file_size: "{{ 512 * 2**20 }}"
   tasks:
     - include_tasks: _mitogen_only.yml
     - block:
-        - name: Create /tmp/512mb.zero
-          shell: |
-            dd if=/dev/zero of=/tmp/512mb.zero bs=1048576 count=512;
-            chmod go= /tmp/512mb.zero
-          args:
-            creates: /tmp/512mb.zero
+        - name: Create test file on target
+          script:
+            cmd: generate_ascii_test_data.py "{{ file_size }}" "{{ file_path_target }}"
+            executable: "{{ ansible_python_interpreter | default(ansible_facts.discovered_interpreter_python) }}"
+            creates: "{{ file_path_target }}"
+          register: target_file_task
 
-        - name: Fetch /tmp/512mb.zero
+        - debug:
+            var: target_file_task
+
+        - name: Fetch test file
           fetch:
-            src: /tmp/512mb.zero
-            dest: /tmp/fetch-{{ inventory_hostname }}-512mb.zero
+            src: "{{ file_path_target }}"
+            dest: "{{ file_path_controller }}"
             flat: true
 
-        - name: Cleanup /tmp/512mb.zero
+        - name: Cleanup target
           file:
-            path: /tmp/512mb.zero
+            path: "{{ file_path_target }}"
             state: absent
 
-        - name: Cleanup fetched file
+        - name: Cleanup controller
           file:
-            path: /tmp/fetch-{{ inventory_hostname }}-512mb.zero
+            path: "{{ file_path_controller }}"
             state: absent
           become: false
           delegate_to: localhost
