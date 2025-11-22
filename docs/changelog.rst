@@ -18,6 +18,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.33 (2025-11-22)
+--------------------
+
+* :gh:issue:`1354` :mod:`ansible_mitogen`: ansible_mitogen: Ansible 13
+  (ansible-core 2.20) support
+
+
 v0.3.32 (2025-11-21)
 --------------------
 
