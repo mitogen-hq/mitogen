@@ -153,8 +153,8 @@ jobs:
 
   macos:
     name: macos ${{ matrix.tox_env }}
-    # https://github.com/actions/runner-images/blob/main/images/macos/macos-13-Readme.md
-    runs-on: macos-13
+    # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
+    runs-on: macos-15
     timeout-minutes: 15
 
     strategy:
