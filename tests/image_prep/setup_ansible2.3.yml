@@ -1,0 +1,15 @@
+#!/usr/bin/env ansible-playbook
+
+- name: Get base images
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Fetch container base images
+      docker_image:
+        name: "{{ docker_base }}"
+      delegate_to: localhost
+
+- include: _container_create.yml
+- include: _container_setup.yml
+- include: _user_accounts.yml
+- include: _container_finalize.yml
