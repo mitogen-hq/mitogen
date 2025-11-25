@@ -34,12 +34,12 @@ ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
 ANSIBLE_TESTS_TEMPLATES_DIR = os.path.join(GIT_ROOT, 'tests/ansible/templates')
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'centos6 centos8 debian9 debian11 ubuntu1604 ubuntu2004',
+    'centos6 centos8-py3 debian9 debian11 ubuntu1604 ubuntu2004',
 )
 IMAGE_PREP_DIR = os.path.join(GIT_ROOT, 'tests/image_prep')
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'ghcr.io/mitogen-hq/%(distro)s-test:2021',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
 )
 SUDOERS_DEFAULTS_SRC = './tests/image_prep/files/sudoers_defaults'
 SUDOERS_DEFAULTS_DEST = '/etc/sudoers.d/mitogen_test_defaults'
@@ -156,7 +156,15 @@ def run_batches(batches):
         subprocess.Popen(combine(batch), shell=True)
         for batch in batches
     ]
-    assert [proc.wait() for proc in procs] == [0] * len(procs)
+    for proc in procs:
+        proc.wait()
+        if proc.returncode:
+            print(
+                'proc: pid=%i rc=%i args=%r'
+                % (proc.pid, proc.returncode, proc.args),
+                file=sys.stderr, flush=True,
+            )
+    assert [proc.returncode for proc in procs] == [0] * len(procs)
 
 
 def get_output(s, *args, **kwargs):
@@ -231,7 +239,7 @@ def container_specs(
     [{'distro': 'debian11',
       'family': 'debian',
       'hostname': 'localhost',
-      'image': 'ghcr.io/mitogen-hq/debian11-test:2021',
+      'image': 'ghcr.io/mitogen-hq/debian11-test:2025.02',
       'index': 1,
       'name': 'target-debian11-1',
       'port': 2201,
@@ -239,7 +247,7 @@ def container_specs(
      {'distro': 'centos6',
       'family': 'centos',
       'hostname': 'localhost',
-      'image': 'ghcr.io/mitogen-hq/centos6-test:2021',
+      'image': 'ghcr.io/mitogen-hq/centos6-test:2025.02',
       'index': 2,
       'name': 'target-centos6-2',
       'port': 2202,

@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1118` CI: Use 2025.02 test images, keeping same OS releases
+
 
 v0.3.33 (2025-11-22)
 --------------------
