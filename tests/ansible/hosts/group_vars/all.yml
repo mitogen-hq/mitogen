@@ -6,6 +6,7 @@
 ansible_version_major_minor: "{{ ansible_version.major }}.{{ ansible_version.minor }}"
 ansible_version_major_minor_patch: "{{ ansible_version.major }}.{{ ansible_version.minor }}.{{ ansible_version.revision | regex_search('^[0-9]+') }}"
 
+become_doas_available: false
 become_unpriv_available: >-
   {#
     Vanilla Ansible >= 4 (ansible-core >= 2.11) can use `setfacl` for
