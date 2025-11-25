@@ -156,7 +156,15 @@ def run_batches(batches):
         subprocess.Popen(combine(batch), shell=True)
         for batch in batches
     ]
-    assert [proc.wait() for proc in procs] == [0] * len(procs)
+    for proc in procs:
+        proc.wait()
+        if proc.returncode:
+            print(
+                'proc: pid=%i rc=%i args=%r'
+                % (proc.pid, proc.returncode, proc.args),
+                file=sys.stderr, flush=True,
+            )
+    assert [proc.returncode for proc in procs] == [0] * len(procs)
 
 
 def get_output(s, *args, **kwargs):
