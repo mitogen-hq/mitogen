@@ -13,7 +13,7 @@
       debian:
         '9': /usr/bin/python
         '10': /usr/bin/python3
-        '11': /usr/bin/python
+        '11': /usr/bin/python3
         'NA': /usr/bin/python  # Debian 11, Ansible <= 7 (ansible-core <= 2.14)
         'bullseye/sid': /usr/bin/python  # Debian 11, Ansible 8 - 9 (ansible-core 2.15 - 2.16)
       ubuntu:
@@ -29,7 +29,7 @@
       debian:
         '9': /usr/bin/python
         '10': /usr/bin/python3
-        '11': /usr/bin/python3.9
+        '11': /usr/bin/python3
         'NA': /usr/bin/python3.9  # Debian 11, Ansible <= 7 (ansible-core <= 2.14)
         'bullseye/sid': /usr/bin/python3.9  # Debian 11, Ansible 8 - 9 (ansible-core 2.15 - 2.16)
       ubuntu:
