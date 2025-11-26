@@ -843,6 +843,12 @@ class ModuleFinder(object):
     related modules likely needed by a child context requesting the original
     module.
     """
+
+    # Fullnames of modules that should not be sent as a related module
+    _related_modules_denylist = frozenset({
+        '__main__',
+    })
+
     def __init__(self):
         #: Import machinery is expensive, keep :py:meth`:get_module_source`
         #: results around.
@@ -953,6 +959,9 @@ class ModuleFinder(object):
 
         if 'six.moves' in related_fullname:
             return _log_reject('six.moves avoidence')
+
+        if related_fullname in self._related_modules_denylist:
+            return _log_reject('on denylist')
 
         return False
 
