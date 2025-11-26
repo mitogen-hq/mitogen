@@ -27,6 +27,8 @@ In progress (unreleased)
 * :gh:issue:`1118` CI: Add OS release coverage: CentOS 5
 * :gh:issue:`1118` CI: Add OS release coverage: Debian 12
 * :gh:issue:`1118` CI: Add OS release coverage: Ubuntu 22.04, Ubuntu 24.04
+* :gh:issue:`1124` :mod:`mitogen`: Log why a module is sent or not sent by
+  :class:`mitogen.master.ModuleResponder`
 
 
 v0.3.33 (2025-11-22)
