@@ -34,7 +34,7 @@ ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
 ANSIBLE_TESTS_TEMPLATES_DIR = os.path.join(GIT_ROOT, 'tests/ansible/templates')
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'alma9-py3 centos6 centos8-py3 debian9 debian11 ubuntu1604 ubuntu2004',
+    'alma9-py3 centos5 centos8-py3 debian9 debian11 ubuntu1604 ubuntu2004',
 )
 IMAGE_PREP_DIR = os.path.join(GIT_ROOT, 'tests/image_prep')
 IMAGE_TEMPLATE = os.environ.get(
