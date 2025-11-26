@@ -53,7 +53,7 @@ LOG = logging.getLogger(__name__)
 
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'centos6 centos8-py3 debian9 debian11 ubuntu1604 ubuntu2004',
+    'alma9-py3 centos6 centos8-py3 debian9 debian11 ubuntu1604 ubuntu2004',
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',

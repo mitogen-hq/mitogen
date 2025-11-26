@@ -23,6 +23,7 @@ In progress (unreleased)
 
 * :gh:issue:`1118` CI: Use 2025.02 test images, keeping same OS releases
 * :gh:issue:`1358` CI: Bump deprecated macOS 13 runner to macOS 15
+* :gh:issue:`1118` CI: Add OS release coverage: AlmaLinux 9
 
 
 v0.3.33 (2025-11-22)
