@@ -35,3 +35,11 @@ become_unpriv_available: >-
   -}}
 
 pkg_mgr_python_interpreter: python
+
+virtualenv_create_argv:
+  - virtualenv
+  - -p
+  - "{{ virtualenv_python }}"
+  - "{{ virtualenv_path }}"
+virtualenv_path: /path/intentionally/left/invalid
+virtualenv_python: /path/intentionally/left/invalid

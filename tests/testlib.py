@@ -53,7 +53,7 @@ LOG = logging.getLogger(__name__)
 
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'centos6 centos8-py3 debian9 debian11 ubuntu1604 ubuntu2004',
+    'alma9-py3 centos5 centos8-py3 debian9 debian12-py3 ubuntu1604 ubuntu2404-py3',
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
@@ -725,6 +725,7 @@ class DockerMixin(RouterMixin):
             #   - tests/testlib.py
             'ssh_args': [
                 '-o', 'HostKeyAlgorithms +ssh-rsa',
+                '-o', 'KexAlgorithms +diffie-hellman-group1-sha1',
                 '-o', 'PubkeyAcceptedKeyTypes +ssh-rsa',
             ],
             'python_path': self.dockerized_ssh.python_path,

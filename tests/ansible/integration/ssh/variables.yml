@@ -22,7 +22,7 @@
         ANSIBLE_CALLBACK_RESULT_FORMAT=json
         ANSIBLE_LOAD_CALLBACK_PLUGINS=false
         ANSIBLE_STRATEGY=mitogen_linear
-        ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o KexAlgorithms=+diffie-hellman-group1-sha1 -o PubkeyAcceptedKeyTypes=+ssh-rsa"
         ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}
@@ -42,7 +42,7 @@
         ANSIBLE_CALLBACK_RESULT_FORMAT=json
         ANSIBLE_LOAD_CALLBACK_PLUGINS=false
         ANSIBLE_STRATEGY=mitogen_linear
-        ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedKeyTypes=+ssh-rsa"
+        ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o KexAlgorithms=+diffie-hellman-group1-sha1 -o PubkeyAcceptedKeyTypes=+ssh-rsa"
         ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
         ansible -m shell -a whoami
         {% for inv in ansible_inventory_sources %}

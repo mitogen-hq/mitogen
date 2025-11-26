@@ -1,58 +1,20 @@
 # ripped and ported from https://github.com/ansible/ansible/pull/50163/files, when interpreter discovery was added to ansible
 ---
+- name: integration/interpreter_discovery/ansible_2_8_tests.yml, baseline
+  hosts: test-targets
+  strategy: linear
+  tasks:
+    - meta: clear_facts
+    - name: Discover interpreter, linear, auto
+      vars:
+        ansible_python_interpreter: auto
+      ping:
+      register: linear_auto_result
+
 
 - name: integration/interpreter_discovery/ansible_2_8_tests.yml
   hosts: test-targets
   gather_facts: true
-  vars:
-    DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_lt_2_12:
-      centos:
-        '6': /usr/bin/python
-        '7': /usr/bin/python
-        '8': /usr/libexec/platform-python
-      debian:
-        '9': /usr/bin/python
-        '10': /usr/bin/python3
-        '11': /usr/bin/python3
-        'NA': /usr/bin/python  # Debian 11, Ansible <= 7 (ansible-core <= 2.14)
-        'bullseye/sid': /usr/bin/python  # Debian 11, Ansible 8 - 9 (ansible-core 2.15 - 2.16)
-      ubuntu:
-        '16': /usr/bin/python3
-        '18': /usr/bin/python3
-        '20': /usr/bin/python3
-
-    DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_2_12_to_2_16:
-      centos:
-        '6': /usr/bin/python
-        '7': /usr/bin/python
-        '8': /usr/libexec/platform-python
-      debian:
-        '9': /usr/bin/python
-        '10': /usr/bin/python3
-        '11': /usr/bin/python3
-        'NA': /usr/bin/python3.9  # Debian 11, Ansible <= 7 (ansible-core <= 2.14)
-        'bullseye/sid': /usr/bin/python3.9  # Debian 11, Ansible 8 - 9 (ansible-core 2.15 - 2.16)
-      ubuntu:
-        '16': /usr/bin/python3
-        '18': /usr/bin/python3
-        '20': /usr/bin/python3
-
-    DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_ge_2_17:
-      debian:
-        '10': /usr/bin/python3.7
-        '11': /usr/bin/python3.9
-        'bullseye/sid': /usr/bin/python3.9
-      ubuntu:
-        '20': /usr/bin/python3.8
-
-    discovered_interpreter_expected: >-
-      {%- if ansible_version_major_minor is version('2.12', '<', strict=True) -%}
-      {{ DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_lt_2_12[distro][distro_major] }}
-      {%- elif ansible_version_major_minor is version('2.17', '<', strict=True) -%}
-      {{ DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_2_12_to_2_16[distro][distro_major] }}
-      {%- else -%}
-      {{ DISCOVERED_INTERPRETER_EXPECTED_MAP__ANSIBLE_ge_2_17[distro][distro_major] }}
-      {%- endif -%}
   tasks:
     - name: can only run these tests on ansible >= 2.8.0
       block:
@@ -64,12 +26,6 @@
             - ansible_python_interpreter == 'overriddenpython'
             fail_msg: "'ansible_python_interpreter' appears to be set at a high precedence to {{ ansible_python_interpreter }},
                       which breaks this test."
-
-        - name: snag some facts to validate for later
-          set_fact:
-            distro: '{{ ansible_facts.distribution | lower }}'
-            distro_major: '{{ ansible_facts.distribution_major_version }}'
-            system: '{{ ansible_facts.system }}'
 
         - name: test that python discovery is working and that fact persistence makes it only run once
           block:
@@ -215,16 +171,10 @@
           - name: Check discovered interpreter matches expected
             assert:
               that:
-                - auto_out.ansible_facts.discovered_interpreter_python == discovered_interpreter_expected
+                - auto_out.ansible_facts.discovered_interpreter_python == linear_auto_result.ansible_facts.discovered_interpreter_python
               fail_msg: |
-                distro={{ distro }}
-                distro_major= {{ distro_major }}
-                system={{ system }}
                 auto_out={{ auto_out }}
-                discovered_interpreter_expected={{ discovered_interpreter_expected }}
-                ansible_version.full={{ ansible_version.full }}
-            when:
-              - system in ['Linux']
+                linear_auto_result={{ linear_auto_result }}
 
           always:
           - meta: clear_facts

@@ -12,8 +12,12 @@ class MyError(Exception):
 
 def get_sentinel_value():
     # Some proof we're even talking to the mitogen-test Docker image
-    with open('/etc/sentinel', 'rb') as f:
-        return f.read().decode()
+    f = open('/etc/sentinel', 'rb')
+    try:
+        value = f.read().decode()
+    finally:
+        f.close()
+    return value
 
 
 def add(x, y):
