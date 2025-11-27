@@ -320,6 +320,8 @@ container.
 To enable connection delegation, set ``mitogen_via=<inventory name>`` on the
 command line, or as host and group variables.
 
+Note: the complete form of ``mitogen_via`` is ``[[become_method:]become_user@]inventory_hostname``. If using a password, it must be specified either in ``ansible_become_pass`` or ``ansible_become_password`` of the bastion.
+
 .. code-block:: ini
 
     # Docker container on web1.dc1 is reachable via web1.dc1.
@@ -1018,7 +1020,7 @@ Like the :ans:conn:`ssh` except connection delegation is supported.
 * ``ansible_ssh_private_key_file``
 * ``ansible_ssh_pass``, ``ansible_ssh_password``, ``ansible_password``
   (default: assume passwordless)
-* ``ansible_ssh_host_key_checking``, ``ansible_host_key_checking`` (default: 
+* ``ansible_ssh_host_key_checking``, ``ansible_host_key_checking`` (default:
   :data:`True`)
 * ``ssh_args``, ``ssh_common_args``, ``ssh_extra_args``
 * ``mitogen_mask_remote_name``: if :data:`True`, mask the identity of the
