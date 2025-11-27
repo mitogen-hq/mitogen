@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.34 (2025-11-27)
+--------------------
+
 * :gh:issue:`1118` CI: Use 2025.02 test images, keeping same OS releases
 * :gh:issue:`1358` CI: Bump deprecated macOS 13 runner to macOS 15
 * :gh:issue:`1118` CI: Add OS release coverage: AlmaLinux 9
