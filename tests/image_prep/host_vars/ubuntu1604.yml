@@ -1,4 +1,4 @@
-bootstrap_packages: [python]
+bootstrap_packages: [python, python-apt]
 
 docker_base: ubuntu:16.04
 

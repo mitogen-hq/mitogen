@@ -1,3 +1,4 @@
+become_doas_available: true
 package_manager_keys:
   - src: debian-archive-bullseye-automatic.gpg  # Debian 11
     dest: /etc/apt/trusted.gpg.d/debian-archive-bullseye-automatic.gpg

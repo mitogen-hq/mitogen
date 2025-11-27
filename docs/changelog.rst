@@ -18,6 +18,21 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.34 (2025-11-27)
+--------------------
+
+* :gh:issue:`1118` CI: Use 2025.02 test images, keeping same OS releases
+* :gh:issue:`1358` CI: Bump deprecated macOS 13 runner to macOS 15
+* :gh:issue:`1118` CI: Add OS release coverage: AlmaLinux 9
+* :gh:issue:`1118` CI: Add OS release coverage: CentOS 5
+* :gh:issue:`1118` CI: Add OS release coverage: Debian 12
+* :gh:issue:`1118` CI: Add OS release coverage: Ubuntu 22.04, Ubuntu 24.04
+* :gh:issue:`1124` :mod:`mitogen`: Log why a module is sent or not sent by
+  :class:`mitogen.master.ModuleResponder`
+* :gh:issue:`1124` :mod:`ansible_mitogen`: Speedup startup by not sending
+  ``__main__`` as a related module
+
+
 v0.3.33 (2025-11-22)
 --------------------
 

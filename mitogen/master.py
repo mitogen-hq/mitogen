@@ -843,6 +843,12 @@ class ModuleFinder(object):
     related modules likely needed by a child context requesting the original
     module.
     """
+
+    # Fullnames of modules that should not be sent as a related module
+    _related_modules_denylist = frozenset({
+        '__main__',
+    })
+
     def __init__(self):
         #: Import machinery is expensive, keep :py:meth`:get_module_source`
         #: results around.
@@ -931,6 +937,34 @@ class ModuleFinder(object):
             fullname, _, _ = str_rpartition(to_text(fullname), u'.')
             yield fullname
 
+    def _reject_related_module(self, requested_fullname, related_fullname):
+        def _log_reject(reason):
+            LOG.debug(
+                '%r: Rejected related module %s of requested module %s: %s',
+                self, related_fullname, requested_fullname, reason,
+            )
+            return reason
+
+        try:
+            related_module = sys.modules[related_fullname]
+        except KeyError:
+            return _log_reject('sys.modules entry absent')
+
+        # Python 2.x "indirection entry"
+        if related_module is None:
+            return _log_reject('sys.modules entry is None')
+
+        if is_stdlib_name(related_fullname):
+            return _log_reject('stdlib module')
+
+        if 'six.moves' in related_fullname:
+            return _log_reject('six.moves avoidence')
+
+        if related_fullname in self._related_modules_denylist:
+            return _log_reject('on denylist')
+
+        return False
+
     def find_related_imports(self, fullname):
         """
         Return a list of non-stdlib modules that are directly imported by
@@ -973,9 +1007,7 @@ class ModuleFinder(object):
             set(
                 mitogen.core.to_text(name)
                 for name in maybe_names
-                if sys.modules.get(name) is not None
-                and not is_stdlib_name(name)
-                and u'six.moves' not in name  # TODO: crap
+                if not self._reject_related_module(fullname, name)
             )
         ))
 
@@ -1138,7 +1170,7 @@ class ModuleResponder(object):
         self._cache[fullname] = tup
         return tup
 
-    def _send_load_module(self, stream, fullname):
+    def _send_load_module(self, stream, fullname, reason):
         if fullname not in stream.protocol.sent_modules:
             tup = self._build_tuple(fullname)
             msg = mitogen.core.Message.pickled(
@@ -1146,8 +1178,10 @@ class ModuleResponder(object):
                 dst_id=stream.protocol.remote_id,
                 handle=mitogen.core.LOAD_MODULE,
             )
-            self._log.debug('sending %s (%.2f KiB) to %s',
-                            fullname, len(msg.data) / 1024.0, stream.name)
+            self._log.debug(
+                'sending %s %s (%.2f KiB) to %s',
+                reason, fullname, len(msg.data) / 1024.0, stream.name,
+            )
             self._router._async_route(msg)
             stream.protocol.sent_modules.add(fullname)
             if tup[2] is not None:
@@ -1178,8 +1212,8 @@ class ModuleResponder(object):
                     # Parent hasn't been sent, so don't load submodule yet.
                     continue
 
-                self._send_load_module(stream, name)
-            self._send_load_module(stream, fullname)
+                self._send_load_module(stream, name, 'related')
+            self._send_load_module(stream, fullname, 'requested')
         except Exception:
             LOG.debug('While importing %r', fullname, exc_info=True)
             self._send_module_load_failed(stream, fullname)

@@ -1,0 +1,9 @@
+bootstrap_packages: [python3, python3-apt]
+docker_base: ubuntu:24.04
+
+packages:
+  - libjson-perl
+  - locales
+  - opendoas
+  - python3-virtualenv
+  - virtualenv

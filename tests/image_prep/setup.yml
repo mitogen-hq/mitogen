@@ -1,6 +1,17 @@
 #!/usr/bin/env ansible-playbook
 
-- include_playbook: _container_create.yml
-- include_playbook: _container_setup.yml
-- include_playbook: _user_accounts.yml
-- include_playbook: _container_finalize.yml
+- name: Get base images
+  hosts: all
+  # strategy: mitogen_free
+  gather_facts: false
+  tasks:
+    - name: Fetch container base images
+      docker_image:
+        name: "{{ docker_base }}"
+        source: pull  # Added in Ansible 2.8, required circa 2.12
+      delegate_to: localhost
+
+- import_playbook: _container_create.yml
+- import_playbook: _container_setup.yml
+- import_playbook: _user_accounts.yml
+- import_playbook: _container_finalize.yml

@@ -181,6 +181,6 @@
           {% endfor %}
         validate: '/usr/sbin/visudo -cf %s'
       when:
-        - ansible_virtualization_type != "docker"
+        - ansible_connection == "local"
   roles:
     - role: user_policies
