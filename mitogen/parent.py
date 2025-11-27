@@ -1436,6 +1436,10 @@ class Connection(object):
             if os.uname()[0]+os.uname()[2][:2]+sys.version[:3]=='Darwin212.7':os.environ['PYTHON_LAUNCHED_FROM_WRAPPER']='1'
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
+        # Timeout execution after a few seconds, to prevent hung processes.
+        # Cause might be closed/reset pipe/stream backing stdin (fd=0);
+        # or blocking write to interpreter stdin (fd=W, fd=w).
+        signal.alarm(5)
         os.write(1,'MITO000\n'.encode())
         C=''.encode()
         while int(sys.argv[3])-len(C)and select.select([0],[],[]):C+=os.read(0,int(sys.argv[3])-len(C))
@@ -1476,11 +1480,11 @@ class Connection(object):
         # Just enough to decode, decompress, and exec the first stage.
         # Priorities: wider compatibility, faster startup, shorter length.
         # `sys.path=...` for https://github.com/python/cpython/issues/115911.
-        # `import os,select` here (not stage 1) to save a few bytes overall.
+        # `import os,...` here (not stage 1) saves a few bytes overall.
         return self.get_python_argv() + [
             '-c',
             'import sys;sys.path=[p for p in sys.path if p];'
-            'import binascii,os,select,zlib;'
+            'import binascii,os,select,signal,zlib;'
             'exec(zlib.decompress(binascii.a2b_base64(sys.argv[1]),-15))',
             encoded.decode(),
             self.options.remote_name,

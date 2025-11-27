@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1266` :mod:`mitogen`: Prevent hung bootstrap processes, add 5
+  second timeout to first stage
+
 
 v0.3.34 (2025-11-27)
 --------------------
