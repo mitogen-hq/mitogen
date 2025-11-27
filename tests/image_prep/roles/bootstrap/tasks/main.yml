@@ -1,0 +1,3 @@
+- name: Bootstrap
+  raw: "{{ lookup('template', 'bootstrap.sh.j2') }}"
+  changed_when: true

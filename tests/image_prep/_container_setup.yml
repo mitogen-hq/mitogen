@@ -2,113 +2,44 @@
   hosts: all
   strategy: linear
   gather_facts: false
-  tasks:
-    - name: Install bootstrap packages
-      raw: |
-        set -o errexit
-        set -o nounset
-        if type -p yum; then
-          yum -y install {{ bootstrap_packages | join(' ') }}
-        else
-          apt-get -y update
-          apt-get -y --no-install-recommends install {{ bootstrap_packages | join(' ') }}
-        fi
-      when: bootstrap_packages | length
+  roles:
+    - role: bootstrap
 
 - name: Setup containers
   hosts: all
   strategy: mitogen_free
-  # Resource limitation, my laptop freezes doing every container concurrently
-  serial: 4
   # Can't gather facts before here.
   gather_facts: true
   vars:
     distro: "{{ansible_distribution}}"
 
-  pre_tasks:
-    - meta: end_play
-      when:
-        - ansible_facts.virtualization_type != "docker"
-
   roles:
     - role: package_manager
+    - role: packages
     - role: sshd
     - role: sshd_container
 
   tasks:
-    - name: Ensure requisite apt packages are installed
-      apt:
-        name: "{{ common_packages + packages }}"
-        state: present
-        install_recommends: false
-        update_cache: true
-      when: ansible_pkg_mgr == 'apt'
-
-    - name: Ensure requisite yum packages are installed
-      yum:
-        name: "{{ common_packages + packages }}"
-        state: present
-        update_cache: true
-      when: ansible_pkg_mgr == 'yum'
-
-    - name: Ensure requisite dnf packages are installed
-      dnf:
-        name: "{{ common_packages + packages }}"
-        state: present
-        update_cache: true
-      when: ansible_pkg_mgr == 'dnf'
-
-    - name: Clean up package cache
-      vars:
-        clean_command:
-          apt: apt-get clean
-          yum: yum clean all
-          dnf: dnf clean all
-      command: "{{ clean_command[ansible_pkg_mgr] }}"
-      args:
-        warn: "{{ False if ansible_version_major_minor is version('2.10', '<=', strict=True) else omit }}"
-
-    - name: Clean up apt package lists
-      shell: rm -rf {{item}}/*
-      with_items:
-      - /var/cache/apt
-      - /var/lib/apt/lists
-      when: ansible_pkg_mgr == 'apt'
-
-    - name: Configure /usr/bin/python
-      command: alternatives --set python /usr/bin/python3.8
-      args:
-        creates: /usr/bin/python
-      when: inventory_hostname in ["centos8"]
-
     - name: Enable UTF-8 locale on Debian
       copy:
         dest: /etc/locale.gen
         content: |
           en_US.UTF-8 UTF-8
           fr_FR.UTF-8 UTF-8
+        mode: u=rw,go=r
       when: ansible_pkg_mgr == 'apt'
 
     - name: Generate UTF-8 locale on Debian
-      shell: locale-gen
+      command:
+        cmd: locale-gen
+      changed_when: true
       when: ansible_pkg_mgr == 'apt'
 
     - name: Write Unicode into /etc/environment
       copy:
         dest: /etc/environment
         content: "UNICODE_SNOWMAN=\u2603\n"
-
-    - name: Install prebuilt 'doas' binary
-      unarchive:
-        dest: /
-        src: ../data/docker/doas-debian.tar.gz
-
-    - name: Make prebuilt 'doas' binary executable
-      file:
-        path: /usr/local/bin/doas
-        mode: 'u=rwxs,go=rx'
-        owner: root
-        group: root
+        mode: u=rw,go=r
 
     - name: Install doas.conf
       copy:
@@ -116,6 +47,7 @@
         content: |
           permit :mitogen__group
           permit :root
+        mode: u=rw,go=
 
     - name: Set root user password and shell
       user:
@@ -127,6 +59,7 @@
       file:
         path: /var/run/sshd
         state: directory
+        mode: u=rwx,go=rx
 
     - name: Generate SSH host key
       command: ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key
@@ -142,6 +75,7 @@
         dest: /etc/sentinel
         content: |
           i-am-mitogen-test-docker-image
+        mode: u=rw,go=r
 
     - name: Ensure /etc/sudoers.d exists
       file:

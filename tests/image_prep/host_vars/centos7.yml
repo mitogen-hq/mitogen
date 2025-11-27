@@ -6,3 +6,24 @@ packages:
   - perl-JSON
   - python-virtualenv
   - python3
+
+package_manager_repos:
+  - dest: /etc/yum.repos.d/CentOS-Base.repo
+    content: |
+      [base]
+      name=CentOS-$releasever - Base
+      baseurl=http://vault.centos.org/$contentdir/$releasever/os/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+      [updates]
+      name=CentOS-$releasever - Updates
+      baseurl=http://vault.centos.org/$contentdir/$releasever/updates/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
+
+      [extras]
+      name=CentOS-$releasever - Extras
+      baseurl=http://vault.centos.org/$contentdir/$releasever/extras/$basearch/
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7

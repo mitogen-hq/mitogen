@@ -1,26 +1,29 @@
 - name: regression/issue_152__virtualenv_python_fails.yml
   gather_facts: true
   hosts: test-targets
+  vars:
+    virtualenv_path: /tmp/issue_152_virtualenv
+    virtualenv_python: "{{ ansible_facts.python.executable }}"
   tasks:
     - custom_python_detect_environment:
       register: lout
 
     # Can't use pip module because it can't create virtualenvs, must call it
     # directly.
-    - name: Create /tmp/issue_152_virtualenv
+    - name: Create temporary virtualenv
       environment:
         https_proxy: "{{ lookup('env', 'https_proxy')|default('') }}"
         no_proxy: "{{ lookup('env', 'no_proxy')|default('') }}"
         PATH: "{{ lookup('env', 'PATH') }}"
       command:
-        cmd: virtualenv -p "{{ ansible_facts.python.executable }}" /tmp/issue_152_virtualenv
-        creates: /tmp/issue_152_virtualenv
+        argv: "{{ virtualenv_create_argv }}"
+        creates: "{{ virtualenv_path }}"
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
     - custom_python_detect_environment:
       vars:
-        ansible_python_interpreter: /tmp/issue_152_virtualenv/bin/python
+        ansible_python_interpreter: "{{ virtualenv_path }}/bin/python"
       register: out
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
@@ -28,7 +31,7 @@
     - name: Check virtualenv was used
       # On macOS runners a symlink /tmp -> /private/tmp has been seen
       vars:
-        requested_executable: /tmp/issue_152_virtualenv/bin/python
+        requested_executable: "{{ virtualenv_path }}/bin/python"
         expected_executables:
           - "{{ requested_executable }}"
           - "{{ requested_executable.replace('/tmp', out.fs['/tmp'].resolved) }}"
@@ -40,9 +43,9 @@
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)
 
-    - name: Cleanup /tmp/issue_152_virtualenv
+    - name: Cleanup temporary virtualenv
       file:
-        path: /tmp/issue_152_virtualenv
+        path: "{{ virtualenv_path }}"
         state: absent
       when:
         - lout.python.version.full is version('2.7', '>=', strict=True)

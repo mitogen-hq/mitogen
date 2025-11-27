@@ -13,6 +13,7 @@ build/
 dist/
 extra/
 tests/ansible/.*.pid
+tests/image_prep/logs
 docs/_build/
 htmlcov/
 *.egg-info
