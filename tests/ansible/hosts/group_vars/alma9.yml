@@ -1,0 +1,8 @@
+pkg_mgr_python_interpreter: python3
+
+# Alma Linux 9, RHEL 9, etc. lack a virtualenv package
+virtualenv_create_argv:
+  - "{{ virtualenv_python }}"
+  - -m
+  - venv
+  - "{{ virtualenv_path }}"

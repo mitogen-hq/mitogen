@@ -6,5 +6,29 @@ packages:
   - perl-JSON
   - python2-virtualenv
   - python3-virtualenv
-  - python36
-  - python38
+
+package_manager_repos:
+  - dest: /etc/yum.repos.d/CentOS-Linux-AppStream.repo
+    content: |
+      [appstream]
+      name=CentOS Linux $releasever - AppStream
+      baseurl=http://vault.centos.org/$contentdir/$releasever/AppStream/$basearch/os/
+      enabled=1
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+  - dest: /etc/yum.repos.d/CentOS-Linux-BaseOS.repo
+    content: |
+      [baseos]
+      name=CentOS Linux $releasever - BaseOS
+      baseurl=http://vault.centos.org/$contentdir/$releasever/BaseOS/$basearch/os/
+      enabled=1
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial
+  - dest: /etc/yum.repos.d/CentOS-Linux-Extras.repo
+    content: |
+      [extras]
+      name=CentOS Linux $releasever - Extras
+      baseurl=http://vault.centos.org/$contentdir/$releasever/extras/$basearch/os/
+      enabled=1
+      gpgcheck=1
+      gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial

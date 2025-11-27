@@ -15,12 +15,16 @@
       changed_when: false
       check_mode: false
       register: doas_default_user
+      when:
+        - become_doas_available
 
     - assert:
         that:
           - doas_default_user.stdout == 'root'
         fail_msg:
           doas_default_user={{ doas_default_user }}
+      when:
+        - become_doas_available
 
     - name: Test doas -> mitogen__user1
       become: true
@@ -30,6 +34,7 @@
       check_mode: false
       register: doas_mitogen__user1
       when:
+        - become_doas_available
         - become_unpriv_available
 
     - assert:
@@ -38,6 +43,7 @@
         fail_msg:
           doas_mitogen__user1={{ doas_mitogen__user1 }}
       when:
+        - become_doas_available
         - become_unpriv_available
   tags:
     - doas
@@ -61,12 +67,16 @@
       changed_when: false
       check_mode: false
       register: fq_doas_default_user
+      when:
+        - become_doas_available
 
     - assert:
         that:
           - fq_doas_default_user.stdout == 'root'
         fail_msg:
           fq_doas_default_user={{ fq_doas_default_user }}
+      when:
+        - become_doas_available
 
     - name: Test community.general.doas -> mitogen__user1
       become: true
@@ -76,6 +86,7 @@
       check_mode: false
       register: fq_doas_mitogen__user1
       when:
+        - become_doas_available
         - become_unpriv_available
 
     - assert:
@@ -84,6 +95,7 @@
         fail_msg:
           fq_doas_mitogen__user1={{ fq_doas_mitogen__user1 }}
       when:
+        - become_doas_available
         - become_unpriv_available
   tags:
     - doas

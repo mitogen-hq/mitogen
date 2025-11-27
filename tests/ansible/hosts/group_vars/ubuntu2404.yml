@@ -1,0 +1,2 @@
+become_doas_available: true
+pkg_mgr_python_interpreter: python3
