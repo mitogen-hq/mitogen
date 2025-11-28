@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1132` :mod:`ansible_mitogen` During intrepreter discovery use
+  Ansible ``INTERPRETER_PYTHON_FALLBACK`` config as list of candidates
+
 
 v0.3.34 (2025-11-27)
 --------------------
