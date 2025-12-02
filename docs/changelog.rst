@@ -22,6 +22,8 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1237` :mod:`mitogen`: Re-declare Python 2.4 compatibility
+* :gh:issue:`1385` :mod:`ansible_mitogen`: Remove a use of
+  ``ansible.module_utils.six``
 
 v0.3.35 (2025-12-01)
 --------------------
