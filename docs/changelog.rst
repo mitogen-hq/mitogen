@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1237` :mod:`mitogen`: Re-declare Python 2.4 compatibility
 
 v0.3.35 (2025-12-01)
 --------------------
