@@ -332,12 +332,16 @@ a large fleet of machines, or to alert the parent of unexpected state changes.
 Compatibility
 #############
 
-Mitogen is compatible with **Python 2.4** released November 2004, making it
+``mitogen.*`` is compatible with Python 2.4 - 2.7 and 3.6 onward; making it
 suitable for managing a fleet of potentially ancient corporate hardware, such
 as Red Hat Enterprise Linux 5, released in 2007.
 
-Every combination of Python 3.x/2.x parent and child should be possible,
-however at present only Python 2.4, 2.6, 2.7 and 3.6 are tested automatically.
+Every combination of Python 3.x/2.x parent and child should be possible.
+Automated testing cannot cover every combination, automated testing tries to
+cover the extemities (e.g. Python 3.14 parent -> Python 2.4 child).
+
+``ansible_mitogen.*`` is compatible with Python 2.7 and 3.6 onward; making it
+suitable for Ansible 2.10 onward.
 
 
 Zero Dependencies

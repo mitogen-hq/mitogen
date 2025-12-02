@@ -82,7 +82,7 @@ setup(
     license = 'BSD-3-Clause',
     url = 'https://github.com/mitogen-hq/mitogen/',
     packages = find_packages(exclude=['tests', 'examples']),
-    python_requires='>=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*',
+    python_requires='>=2.4, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*',
     zip_safe = False,
     classifiers = [
         'Environment :: Console',
@@ -91,6 +91,9 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: POSIX',
         'Programming Language :: Python',
+        'Programming Language :: Python :: 2.4',
+        'Programming Language :: Python :: 2.5',
+        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
