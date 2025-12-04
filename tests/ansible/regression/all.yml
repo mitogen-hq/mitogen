@@ -19,3 +19,4 @@
 - import_playbook: issue_1066__add_host__host_key_checking.yml
 - import_playbook: issue_1079__wait_for_connection_timeout.yml
 - import_playbook: issue_1087__template_streamerror.yml
+- import_playbook: issue_1360_atexit_cleanup.yml
