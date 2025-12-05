@@ -1418,6 +1418,8 @@ class Connection(object):
     #   C: the decompressed core source.
     #   n: size of the compressed core source to be read
     #   V: data chunk
+    #   rl: list of FDs ready for reading
+    #   _: throw away variable
 
     # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
@@ -1439,8 +1441,15 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
-        n=int(sys.argv[3]);C=''.encode();V='V'
-        while n>len(C) and V:select.select([0],[],[]);V=os.read(0,n-len(C));C+=V
+        n=int(sys.argv[3])
+        C=''.encode()
+        V='V'
+        while n>len(C) and V:
+            rl,_,_=select.select([0],[],[],10)
+            if not rl:
+                raise Exception("TODO")
+            V=os.read(0,n-len(C))
+            C+=V
         C=zlib.decompress(C)
         f=os.fdopen(W,'wb',0)
         f.write(C)
