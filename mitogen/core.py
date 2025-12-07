@@ -119,6 +119,11 @@ try:
 except NameError:
     BaseException = Exception
 
+if sys.version_info >= (2, 6):
+    from io import BlockingIOError
+else:
+    BlockingIOError = None
+
 try:
     ModuleNotFoundError
 except NameError:
@@ -577,29 +582,63 @@ def io_op(func, *args):
     or :class:`OSError`, trapping UNIX error codes relating to disconnection
     and retry events in various subsystems:
 
-    * When a signal is delivered to the process on Python 2, system call retry
-      is signalled through :data:`errno.EINTR`. The invocation is automatically
-      restarted.
-    * When performing IO against a TTY, disconnection of the remote end is
-      signalled by :data:`errno.EIO`.
-    * When performing IO against a socket, disconnection of the remote end is
-      signalled by :data:`errno.ECONNRESET`.
-    * When performing IO against a pipe, disconnection of the remote end is
-      signalled by :data:`errno.EPIPE`.
+    :data:`errno.EINTR`
+        A system call was interrupted by a signal being delivered.
+        Python >= 3.5 retries most calls, forever (see PEP 475).
+        This wrapper retries all calls, also forever.
 
+    :exc:`BlockingIOError`
+    :data:`errno.EAGAIN`
+    :data:`errno.EWOULDBLOCK`
+        A system call on a non-blocking file would have blocked.
+        Python doesn't retry calls. It raises an exception or returns
+        :data:`None` - depending on the the call, the file, and the version.
+        This wrapper tries upto ``max_attempts`` times.
+
+    :data:`errno.EIO`
+    :data:`errno.ECONNRESET`
+    :data:`errno.EPIPE`
+        IO on a TTY, socket, or pipe respectively disconnected at the other end.
+
+    :param func:
+        The callable to run (e.g. :func:`os.read`, :func:`os.write`).
+    :param *args:
+        Positional arguments for the callable.
     :returns:
         Tuple of `(return_value, disconnect_reason)`, where `return_value` is
         the return value of `func(*args)`, and `disconnected` is an exception
         instance when disconnection was detected, otherwise :data:`None`.
     """
+    max_attempts = 5
+    attempt = 0
     while True:
+        attempt += 1
         try:
             return func(*args), None
+        except BlockingIOError:
+            e = sys.exc_info()[1]
+            _vv and IOLOG.debug(
+                'io_op(%r) attempt %d/%d -> %r', func, attempt, max_attempts, e
+            )
+            try:
+                written = e.characters_written
+            except AttributeError:
+                written = None
+            if written:
+                return written, None
+            if attempt < max_attempts:
+                continue
+            raise
         except (select.error, OSError, IOError):
             e = sys.exc_info()[1]
-            _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
+            _vv and IOLOG.debug(
+                'io_op(%r) attempt %d/%d -> %r', func, attempt, max_attempts, e
+            )
             if e.args[0] == errno.EINTR:
                 continue
+            if e.args[0] in (errno.EAGAIN, errno.EWOULDBLOCK):
+                if attempt < max_attempts:
+                    continue
             if e.args[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
                 return None, e
             raise
