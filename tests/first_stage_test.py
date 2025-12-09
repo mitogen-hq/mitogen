@@ -1,6 +1,7 @@
 import fcntl
 import functools
 import operator
+import os
 
 import mitogen.core
 import mitogen.parent
@@ -267,5 +268,86 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(stdout, mitogen.parent.BootstrapProtocol.EC0_MARKER + b("\n"))
         self.assertIn(
             b(""),
+            stderr,
+        )
+
+    def test_closed_stdin(self):
+        """This test closes STDIN of the child process.
+
+        1. The child process detects that STDIN is unavailable
+        2. The child process terminates early with an OSError exception, and
+           reports the issue via exception printed on STDERR.
+        3. The parent process correctly identifies this condition.
+
+        """
+        # We do not want to wait the default of 10s, change it to 0.1s
+        self.conn._first_stage_timeout = 0.1
+        args = self.conn.get_boot_command()
+
+        proc = testlib.subprocess.Popen(
+            args=args,
+            stdout=testlib.subprocess.PIPE,
+            stderr=testlib.subprocess.PIPE,
+            preexec_fn=lambda: os.close(0),
+            close_fds=True,
+        )
+        try:
+            stdout, stderr = proc.communicate(timeout=12)
+        except testlib.subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            self.fail("Closed STDIN situation was not recognized")
+        self.assertEqual(1, proc.returncode)
+        self.assertEqual(stdout, b"")
+        self.assertIn(
+            b("Bad file descriptor"),
+            stderr,
+        )
+
+    def test_closed_stdout(self):
+        """Test that first stage bails out if STDOUT is closed
+
+        This test closes STDOUT of the child process.
+
+        1. The child process detects that STDOUT is unavailable
+        2. The child process terminates early with an OSError exception, and
+           reports the issue via exception printed on STDERR.
+        3. The parent process correctly identifies this condition.
+
+        """
+
+        stdout_r, stdout_w = mitogen.core.pipe()
+        mitogen.core.set_cloexec(stdout_r.fileno())
+        stderr_r, stderr_w = mitogen.core.pipe()
+        mitogen.core.set_cloexec(stderr_r.fileno())
+        try:
+            proc = testlib.subprocess.Popen(
+                args=self.args,
+                stdout=stdout_w,
+                stderr=stderr_w,
+                preexec_fn=lambda: os.close(0),
+            )
+        except Exception:
+            stdout_r.close()
+            stdout_w.close()
+            stderr_w.close()
+            stderr_r.close()
+            raise
+        stdout_w.close()
+        stderr_w.close()
+        try:
+            returncode = proc.wait(timeout=1)
+        except testlib.subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            self.fail("Closed STDOUT situation was not detected")
+        else:
+            stderr = stderr_r.read()
+        finally:
+            stderr_r.close()
+            stdout_r.close()
+        self.assertEqual(1, returncode)
+        self.assertIn(
+            b("Bad file descriptor"),
             stderr,
         )
