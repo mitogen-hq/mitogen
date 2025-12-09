@@ -1429,6 +1429,8 @@ class Connection(object):
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
+        os.fstat(0)
+        os.fstat(1)
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
