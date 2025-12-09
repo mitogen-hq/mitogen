@@ -1465,7 +1465,10 @@ class Connection(object):
         f.write(C)
         f.close()
         os.write(1,'MITO001\n'.encode())
-        os.close(2)
+        try:
+            os.close(2)
+        except OSError:
+            pass
 
     def get_python_argv(self):
         """
