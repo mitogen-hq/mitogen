@@ -50,3 +50,30 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             )
         finally:
             fp.close()
+
+    def test_stage(self):
+        options = mitogen.parent.Options(max_message_size=123)
+        conn = mitogen.parent.Connection(options, self.router)
+        conn.context = mitogen.core.Context(None, 123)
+
+        proc = subprocess.Popen(
+            args=conn.get_boot_command(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE,
+        )
+        stdout, stderr = proc.communicate(conn.get_preamble())
+
+        # proc is killed by SIGTERM as the broker kills itself
+        self.assertEqual(-15, proc.returncode)
+        expected_stdout_prefix = b("%s\n%s\n%s\n") % (
+            mitogen.parent.BootstrapProtocol.EC0_MARKER,
+            mitogen.parent.BootstrapProtocol.EC1_MARKER,
+            mitogen.parent.BootstrapProtocol.EC2_MARKER,
+        )
+        self.assertTrue(
+            stdout.startswith(expected_stdout_prefix),
+            "%r not at start of %r" % (expected_stdout_prefix, stdout),
+        )
+        self.assertIn(b'shutting down', stdout)
+        self.assertEqual(b(""), stderr)

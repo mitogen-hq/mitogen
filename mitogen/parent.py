@@ -1439,8 +1439,13 @@ class Connection(object):
         # Read `len(compressed preamble)` bytes sent by our Mitogen parent.
         # `select()` handles non-blocking stdin (e.g. sudo + log_output).
         # `C` accumulates compressed bytes.
+        # `c` supports detecting EOF (`<stdin>.read(...) -> b''`).
         C=''.encode()
-        while int(sys.argv[3])-len(C)and select.select([0],[],[]):C+=os.read(0,int(sys.argv[3])-len(C))
+        c=1
+        while c and int(sys.argv[3])-len(C)and select.select([0],[],[]):
+            c=os.read(0,int(sys.argv[3])-len(C))
+            # Raises `TypeError` if non-blocking read returns `None`
+            C+=c
         # Raises `zlib.error` if compressed preamble is truncated or invalid
         C=zlib.decompress(C)
         f=os.fdopen(W,'wb',0)
