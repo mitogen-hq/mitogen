@@ -1,5 +1,6 @@
 import fcntl
 import functools
+import sys
 import operator
 import os
 
@@ -90,6 +91,24 @@ class DummyConnectionNonBlocking(mitogen.parent.Connection):
     name_prefix = "dummy_non_blocking"
 
 
+class DummyConnectionClosedStderr(mitogen.parent.Connection):
+    """Dummy closed stderr connection"""
+
+    pipe_size = 4096 if getattr(fcntl, "F_SETPIPE_SZ", None) else None
+    create_child = staticmethod(
+        functools.partial(
+            own_create_child,
+            blocking=True,
+            pipe_size=pipe_size,
+            pass_stderr=False,
+            # `os.close(2)` does not work here as we use file objects in
+            # `create_child` and that would cause problems with Python2.
+            preexec_fn=lambda: sys.stderr.close(),
+        )
+    )
+    name_prefix = "dummy_closed_stderr"
+
+
 class ConnectionTest(testlib.RouterMixin, testlib.TestCase):
     def test_non_blocking_stdin(self):
         """Test that first stage works with non-blocking STDIN
@@ -126,6 +145,32 @@ class ConnectionTest(testlib.RouterMixin, testlib.TestCase):
         log = testlib.LogCapturer()
         log.start()
         ctx = self.router._connect(DummyConnectionBlocking, connect_timeout=0.5)
+        self.assertEqual(3, ctx.call(operator.add, 1, 2))
+        logs = log.stop()
+
+    def test_closed_stderr(self):
+        """Test that first stage works with closed STDERR
+
+        The boot command should read the preamble from STDIN, write all ECO
+        markers to STDOUT, and then execute the preamble.
+
+        This test writes the complete preamble to blocking STDIN.
+
+        1. Fork child reads from blocking STDIN
+        2. Fork child decompresses the data, does send the handshakes MITO001 and MITO002
+        3. Fork child crashes (when it tries to close the already closed
+           STDERR), but that's non-critical as the parent can read the data
+           already written by the fork child.
+        4. Fork child's file descriptors (write pipes) are closed by the OS
+        5. Fork parent does `dup(<read pipe>, <stdin>)` and `exec(<python>)`
+        6. Python reads all data from stdin
+        7. Python runs the preamble code
+        8. A context call works as expected.
+
+        """
+        log = testlib.LogCapturer()
+        log.start()
+        ctx = self.router._connect(DummyConnectionClosedStderr, connect_timeout=0.5)
         self.assertEqual(3, ctx.call(operator.add, 1, 2))
         logs = log.stop()
 
