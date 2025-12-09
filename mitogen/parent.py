@@ -1378,6 +1378,9 @@ class Connection(object):
     #: user.
     exception = None
 
+    #: First stage select timeout in seconds.
+    _first_stage_select_timeout = 10
+
     #: Extra text appended to :class:`EofError` if that exception is raised on
     #: a failed connection attempt. May be used in subclasses to hint at common
     #: problems with a particular connection method.
@@ -1419,6 +1422,7 @@ class Connection(object):
     #   n: size of the compressed core source to be read
     #   V: data chunk
     #   rl: list of FDs ready for reading
+    #   t: timeout value in seconds
     #   _: throw away variable
 
     # Final os.close(STDERR_FILENO) to avoid --py-debug build corrupting stream with
@@ -1442,10 +1446,11 @@ class Connection(object):
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
         n=int(sys.argv[3])
+        t=float(sys.argv[4])
         C=''.encode()
         V='V'
         while n>len(C) and V:
-            rl,_,_=select.select([0],[],[],10)
+            rl,_,_=select.select([0],[],[],t)
             if not rl:
                 sys.exit(1)
             V=os.read(0,n-len(C))
@@ -1495,6 +1500,7 @@ class Connection(object):
             encoded.decode(),
             self.options.remote_name,
             str(len(self.get_preamble())),
+            str(self._first_stage_select_timeout),
         ]
 
     def get_econtext_config(self):
