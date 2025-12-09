@@ -226,3 +226,42 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         finally:
             proc.stdout.close()
             proc.stderr.close()
+
+    def test_timeout_error(self):
+        """The boot command should write an ECO marker to stdout, try to read
+        the preamble from stdin, then fail with an TimeoutError as nothing has
+        been written.
+
+        This test writes no data to STDIN of the fork child to enforce a time out.
+        1. Fork child tries to read from STDIN, but runs into the timeout
+        2. Fork child raises TimeoutError
+        3. Fork child's file descriptors (write pipes) are closed by the OS
+        4. Fork parent does `dup(<read pipe>, <stdin>)` and `exec(<python>)`
+        5. Python reads `b''` (i.e. EOF) from stdin (a closed pipe)
+        6. Python runs `''` (a valid script) and exits with success
+        """
+
+        proc = testlib.subprocess.Popen(
+            args=self.args,
+            stdout=testlib.subprocess.PIPE,
+            stderr=testlib.subprocess.PIPE,
+            close_fds=True,
+        )
+        try:
+            returncode = proc.wait(timeout=12)
+        except testlib.subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            self.fail("Timeout situation was not recognized")
+        else:
+            stdout = proc.stdout.read()
+            stderr = proc.stderr.read()
+        finally:
+            proc.stdout.close()
+            proc.stderr.close()
+        self.assertEqual(0, returncode)
+        self.assertEqual(stdout, mitogen.parent.BootstrapProtocol.EC0_MARKER + b("\n"))
+        self.assertIn(
+            b(""),
+            stderr,
+        )
