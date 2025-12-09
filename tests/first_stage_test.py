@@ -1,8 +1,132 @@
+import fcntl
+import functools
+import operator
+
 import mitogen.core
 import mitogen.parent
 from mitogen.core import b
 
 import testlib
+
+
+def own_create_child(args, blocking, pipe_size=None, preexec_fn=None, pass_stderr=True):
+    """
+    Create a child process whose stdin/stdout/stderr is connected to a pipe.
+
+    :param list args:
+        Program argument vector.
+    :param bool blocking:
+        If :data:`True`, the pipes use blocking IO, otherwise non-blocking.
+    :param int pipe_size:
+        If not :data:`None`, use the values as the pipe size.
+    :param function preexec_fn:
+        If not :data:`None`, a function to run within the post-fork child
+        before executing the target program.
+    :returns:
+        :class:`PopenProcess` instance.
+    """
+    parent_rfp, child_wfp = mitogen.core.pipe(blocking=blocking)
+    child_rfp, parent_wfp = mitogen.core.pipe(blocking=blocking)
+    stderr_r, stderr = mitogen.core.pipe(blocking=blocking)
+    mitogen.core.set_cloexec(stderr_r.fileno())
+    if pipe_size is not None:
+        fcntl.fcntl(parent_rfp.fileno(), fcntl.F_SETPIPE_SZ, pipe_size)
+        fcntl.fcntl(child_rfp.fileno(), fcntl.F_SETPIPE_SZ, pipe_size)
+        fcntl.fcntl(stderr_r.fileno(), fcntl.F_SETPIPE_SZ, pipe_size)
+        assert fcntl.fcntl(parent_rfp.fileno(), fcntl.F_GETPIPE_SZ) == pipe_size
+        assert fcntl.fcntl(child_rfp.fileno(), fcntl.F_GETPIPE_SZ) == pipe_size
+        assert fcntl.fcntl(stderr_r.fileno(), fcntl.F_GETPIPE_SZ) == pipe_size
+
+    try:
+        proc = testlib.subprocess.Popen(
+            args=args,
+            stdin=child_rfp,
+            stdout=child_wfp,
+            stderr=stderr,
+            preexec_fn=preexec_fn,
+        )
+    except Exception:
+        child_rfp.close()
+        child_wfp.close()
+        parent_rfp.close()
+        parent_wfp.close()
+        stderr_r.close()
+        stderr.close()
+        raise
+
+    child_rfp.close()
+    child_wfp.close()
+    stderr.close()
+    # Only used to create a specific test scenario!
+    if not pass_stderr:
+        stderr_r.close()
+        stderr_r = None
+    return mitogen.parent.PopenProcess(
+        proc=proc,
+        stdin=parent_wfp,
+        stdout=parent_rfp,
+        stderr=stderr_r,
+    )
+
+
+class DummyConnectionBlocking(mitogen.parent.Connection):
+    """Dummy blocking IO connection"""
+
+    pipe_size = 4096 if getattr(fcntl, "F_SETPIPE_SZ", None) else None
+    create_child = staticmethod(
+        functools.partial(own_create_child, blocking=True, pipe_size=pipe_size)
+    )
+    name_prefix = "dummy_blocking"
+
+
+class DummyConnectionNonBlocking(mitogen.parent.Connection):
+    """Dummy non-blocking IO connection"""
+
+    pipe_size = 4096 if getattr(fcntl, "F_SETPIPE_SZ", None) else None
+    create_child = staticmethod(
+        functools.partial(own_create_child, blocking=False, pipe_size=pipe_size)
+    )
+    name_prefix = "dummy_non_blocking"
+
+
+class ConnectionTest(testlib.RouterMixin, testlib.TestCase):
+    def test_non_blocking_stdin(self):
+        """Test that first stage works with non-blocking STDIN
+
+        The boot command should read the preamble from STDIN, write all ECO
+        markers to STDOUT, and then execute the preamble.
+
+        This test writes the complete preamble to non-blocking STDIN.
+
+        1. Fork child reads from non-blocking STDIN
+        2. Fork child writes all data as expected by the protocol.
+        3. A context call works as expected.
+
+        """
+        log = testlib.LogCapturer()
+        log.start()
+        ctx = self.router._connect(DummyConnectionNonBlocking, connect_timeout=0.5)
+        self.assertEqual(3, ctx.call(operator.add, 1, 2))
+        logs = log.stop()
+
+    def test_blocking_stdin(self):
+        """Test that first stage works with blocking STDIN
+
+        The boot command should read the preamble from STDIN, write all ECO
+        markers to STDOUT, and then execute the preamble.
+
+        This test writes the complete preamble to blocking STDIN.
+
+        1. Fork child reads from blocking STDIN
+        2. Fork child writes all data as expected by the protocol.
+        3. A context call works as expected.
+
+        """
+        log = testlib.LogCapturer()
+        log.start()
+        ctx = self.router._connect(DummyConnectionBlocking, connect_timeout=0.5)
+        self.assertEqual(3, ctx.call(operator.add, 1, 2))
+        logs = log.stop()
 
 
 class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
