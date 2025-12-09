@@ -172,11 +172,11 @@ def _have_cmd(args):
 
 
 def have_python2():
-    return _have_cmd(['python2'])
+    return _have_cmd(['python2', '--version'])
 
 
 def have_python3():
-    return _have_cmd(['python3'])
+    return _have_cmd(['python3', '--version'])
 
 
 def have_sudo_nopassword():
