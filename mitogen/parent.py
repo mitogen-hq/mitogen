@@ -1417,7 +1417,7 @@ class Connection(object):
     #   w: write side of core_src FD.
     #   C: the decompressed core source.
 
-    # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
+    # Final os.close(STDERR_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
