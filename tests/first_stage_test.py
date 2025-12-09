@@ -241,14 +241,18 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         6. Python runs `''` (a valid script) and exits with success
         """
 
+        # We do not want to wait the default of 10s, change it to 0.1s
+        self.conn._first_stage_select_timeout = 0.1
+        args = self.conn.get_boot_command()
+
         proc = testlib.subprocess.Popen(
-            args=self.args,
+            args=args,
             stdout=testlib.subprocess.PIPE,
             stderr=testlib.subprocess.PIPE,
             close_fds=True,
         )
         try:
-            returncode = proc.wait(timeout=12)
+            returncode = proc.wait(timeout=3)
         except testlib.subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=3)
