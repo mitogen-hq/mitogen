@@ -1,0 +1,34 @@
+- name: regression/issue_1360_atexit_cleanup.yml
+  hosts: test-targets
+  gather_facts: false
+  become: false
+  vars:
+    cleanup_canary_path: /tmp/mitogen_test_atexit_cleanup_canary.txt
+  tasks:
+    - block:
+        - name: Remove lingering cleanup canary
+          file:
+            path: "{{ cleanup_canary_path }}"
+            state: absent
+
+        - name: Run module with atexit cleanup
+          atexit_cleanup:
+
+        - name: Trigger exit of remote process
+          meta: reset_connection
+
+        - name: Check presence of cleanup canary
+          stat:
+            path:  "{{ cleanup_canary_path }}"
+          register:  cleanup_canary_stat
+
+        - assert:
+            that:
+              - not cleanup_canary_stat.stat.exists
+      always:
+        - name: Cleanup
+          file:
+            path: "{{ cleanup_canary_path }}"
+            state: absent
+  tags:
+    - issue_1360
