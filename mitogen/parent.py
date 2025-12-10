@@ -1415,7 +1415,6 @@ class Connection(object):
     #   W: write side of interpreter stdin.
     #   r: read side of core_src FD.
     #   w: write side of core_src FD.
-    #   C: the decompressed core source.
 
     # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
@@ -1437,8 +1436,12 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
+        # Read `len(compressed preamble)` bytes sent by our Mitogen parent.
+        # `select()` handles non-blocking stdin (e.g. sudo + log_output).
+        # `C` accumulates compressed bytes.
         C=''.encode()
         while int(sys.argv[3])-len(C)and select.select([0],[],[]):C+=os.read(0,int(sys.argv[3])-len(C))
+        # Raises `zlib.error` if compressed preamble is truncated or invalid
         C=zlib.decompress(C)
         f=os.fdopen(W,'wb',0)
         f.write(C)
@@ -1463,8 +1466,9 @@ class Connection(object):
         return [self.options.python_path]
 
     def get_boot_command(self):
-        source = inspect.getsource(self._first_stage)
-        source = textwrap.dedent('\n'.join(source.strip().split('\n')[2:]))
+        lines = inspect.getsourcelines(self._first_stage)[0][2:]
+        # Remove line comments, leading indentation, trailing newline
+        source = textwrap.dedent(''.join(s for s in lines if '#' not in s))[:-1]
         source = source.replace('    ', ' ')
         compressor = zlib.compressobj(
             zlib.Z_BEST_COMPRESSION, zlib.DEFLATED, -zlib.MAX_WBITS,
