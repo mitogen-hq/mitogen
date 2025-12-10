@@ -1378,6 +1378,9 @@ class Connection(object):
     #: user.
     exception = None
 
+    #: First stage select timeout in seconds.
+    _first_stage_select_timeout = 10
+
     #: Extra text appended to :class:`EofError` if that exception is raised on
     #: a failed connection attempt. May be used in subclasses to hint at common
     #: problems with a particular connection method.
@@ -1416,11 +1419,18 @@ class Connection(object):
     #   r: read side of core_src FD.
     #   w: write side of core_src FD.
     #   C: the decompressed core source.
+    #   n: size of the compressed core source to be read
+    #   V: data chunk
+    #   rl: list of FDs ready for reading
+    #   t: timeout value in seconds
+    #   _: throw away variable
 
-    # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
+    # Final os.close(STDERR_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
+        os.fstat(0)
+        os.fstat(1)
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
@@ -1437,8 +1447,16 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
+        n=int(sys.argv[3])
+        t=float(sys.argv[4])
         C=''.encode()
-        while int(sys.argv[3])-len(C)and select.select([0],[],[]):C+=os.read(0,int(sys.argv[3])-len(C))
+        V='V'
+        while n>len(C) and V:
+            rl,_,_=select.select([0],[],[],t)
+            if not rl:
+                sys.exit(1)
+            V=os.read(0,n-len(C))
+            C+=V
         C=zlib.decompress(C)
         f=os.fdopen(W,'wb',0)
         f.write(C)
@@ -1447,7 +1465,10 @@ class Connection(object):
         f.write(C)
         f.close()
         os.write(1,'MITO001\n'.encode())
-        os.close(2)
+        try:
+            os.close(2)
+        except OSError:
+            pass
 
     def get_python_argv(self):
         """
@@ -1484,6 +1505,7 @@ class Connection(object):
             encoded.decode(),
             self.options.remote_name,
             str(len(self.get_preamble())),
+            str(self._first_stage_select_timeout),
         ]
 
     def get_econtext_config(self):
