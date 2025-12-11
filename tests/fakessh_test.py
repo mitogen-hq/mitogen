@@ -22,7 +22,7 @@ class RsyncTest(testlib.DockerMixin, testlib.TestCase):
 
         self.assertEqual(return_code, 0)
         self.assertTrue(context.call(os.path.exists, '/tmp/data'))
-        self.assertTrue(context.call(os.path.exists, '/tmp/data/simple_pkg/a.py'))
+        self.assertTrue(context.call(os.path.exists, '/tmp/data/importer/simple_pkg/a.py'))
 
     def test_rsync_between_direct_children(self):
         # master -> SSH -> mitogen__has_sudo_pubkey -> rsync(.ssh) -> master ->
