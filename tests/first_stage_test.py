@@ -50,3 +50,39 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             )
         finally:
             fp.close()
+
+    def test_premature_eof(self):
+        options = mitogen.parent.Options(max_message_size=123)
+        conn = mitogen.parent.Connection(options, self.router)
+        conn.context = mitogen.core.Context(None, 123)
+
+        proc = testlib.subprocess.Popen(
+            args=conn.get_boot_command(),
+            stdout=testlib.subprocess.PIPE,
+            stderr=testlib.subprocess.PIPE,
+            stdin=testlib.subprocess.PIPE,
+        )
+
+        # Do not send all of the data from the preamble
+        proc.stdin.write(conn.get_preamble()[:-128])
+        proc.stdin.flush()  # XXX Is this redundant? Does close() alwys flush()?
+        proc.stdin.close()
+        try:
+            returncode = proc.wait(timeout=10)
+        except testlib.subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            self.fail("First stage did not handle EOF on STDIN")
+        try:
+            self.assertEqual(0, returncode)
+            self.assertEqual(
+                proc.stdout.read(),
+                mitogen.parent.BootstrapProtocol.EC0_MARKER + b("\n"),
+            )
+            self.assertIn(
+                b("Error -5 while decompressing data"),
+                proc.stderr.read(),
+            )
+        finally:
+            proc.stdout.close()
+            proc.stderr.close()

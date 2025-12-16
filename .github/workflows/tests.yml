@@ -25,12 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py27-m_ans-ans2.10
-          - tox_env: py27-m_ans-ans4
-
-          - tox_env: py36-m_ans-ans2.10
-          - tox_env: py36-m_ans-ans4
-
           - tox_env: py27-m_mtg
           - tox_env: py36-m_mtg
 
@@ -86,34 +80,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py311-m_ans-ans2.10
-            python_version: '3.11'
-          - tox_env: py311-m_ans-ans3
-            python_version: '3.11'
-          - tox_env: py311-m_ans-ans4
-            python_version: '3.11'
-          - tox_env: py311-m_ans-ans5
-            python_version: '3.11'
-          - tox_env: py313-m_ans-ans6
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans7
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans8
-            python_version: '3.13'
-          - tox_env: py314-m_ans-ans9
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans10
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans11
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans12
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans13
-            python_version: '3.14'
-
-          - tox_env: py314-m_ans-ans13-s_lin
-            python_version: '3.14'
-
           - tox_env: py314-m_mtg
             python_version: '3.14'
 
@@ -161,11 +127,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-m_lcl-ans13
-            python_version: '3.14'
-          - tox_env: py314-m_lcl-ans13-s_lin
-            python_version: '3.14'
-
           - tox_env: py314-m_mtg
             python_version: '3.14'
 
