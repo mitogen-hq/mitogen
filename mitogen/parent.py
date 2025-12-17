@@ -1420,6 +1420,11 @@ class Connection(object):
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
+        # Bail out in case STDIN or STDOUT is not accessible (e.g. closed).
+        # Otherwise, os.pipe() could reuse file descriptors 0 or 1, leading to
+        # unexpected behavior that is difficult to diagnose.
+        os.fstat(0)
+        os.fstat(1)
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
