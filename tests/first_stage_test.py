@@ -34,7 +34,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         options = mitogen.parent.Options(max_message_size=123)
         conn = mitogen.parent.Connection(options, self.router)
         conn.context = mitogen.core.Context(None, 123)
-        fp = open("/dev/zero", "r")
+        fp = open("/dev/zero", "rb")
         try:
             proc = testlib.subprocess.Popen(
                 args=conn.get_boot_command(),
