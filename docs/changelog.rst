@@ -27,6 +27,7 @@ In progress (unreleased)
 * :gh:issue:`1354` docs: Document Ansible 13 (ansible-core 2.20) support
 * :gh:issue:`1354` :mod:`mitogen`: Clarify error message when a module
   request would be refused by allow or deny listing
+* :gh:issue:`1348` :mod:`mitogen`: Fix hanging process with 100% CPU usage
 
 
 v0.3.35 (2025-12-01)

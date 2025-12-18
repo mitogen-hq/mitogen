@@ -1416,7 +1416,7 @@ class Connection(object):
     #   r: read side of core_src FD.
     #   w: write side of core_src FD.
 
-    # Final os.close(STDOUT_FILENO) to avoid --py-debug build corrupting stream with
+    # Final os.close(STDERR_FILENO) to avoid --py-debug build corrupting stream with
     # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
@@ -1436,11 +1436,16 @@ class Connection(object):
             os.environ['ARGV0']=sys.executable
             os.execl(sys.executable,sys.executable+'(mitogen:%s)'%sys.argv[2])
         os.write(1,'MITO000\n'.encode())
+        # Size of the compressed core source to be read
+        n=int(sys.argv[3])
         # Read `len(compressed preamble)` bytes sent by our Mitogen parent.
         # `select()` handles non-blocking stdin (e.g. sudo + log_output).
         # `C` accumulates compressed bytes.
         C=''.encode()
-        while int(sys.argv[3])-len(C)and select.select([0],[],[]):C+=os.read(0,int(sys.argv[3])-len(C))
+        # data chunk
+        V='V'
+        # Stop looping if no more data is needed or EOF is detected (empty bytes).
+        while n-len(C) and V:select.select([0],[],[]);V=os.read(0,n-len(C));C+=V
         # Raises `zlib.error` if compressed preamble is truncated or invalid
         C=zlib.decompress(C)
         f=os.fdopen(W,'wb',0)
