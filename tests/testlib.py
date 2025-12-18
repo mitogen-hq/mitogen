@@ -86,6 +86,23 @@ if faulthandler is not None:
 mitogen.core.LOG.propagate = True
 
 
+def wait_for_child(pid, timeout=1.0):
+    deadline = mitogen.core.now() + timeout
+    while timeout < mitogen.core.now():
+        try:
+            target_pid, status = os.waitpid(pid, os.WNOHANG)
+            if target_pid == pid:
+                return
+        except OSError:
+            e = sys.exc_info()[1]
+            if e.args[0] == errno.ECHILD:
+                return
+
+        time.sleep(0.05)
+
+    assert False, "wait_for_child() timed out"
+
+
 def base_executable(executable=None):
     '''Return the path of the Python executable used to create the virtualenv.
     '''
@@ -172,11 +189,11 @@ def _have_cmd(args):
 
 
 def have_python2():
-    return _have_cmd(['python2'])
+    return _have_cmd(['python2', '--version'])
 
 
 def have_python3():
-    return _have_cmd(['python3'])
+    return _have_cmd(['python3', '--version'])
 
 
 def have_sudo_nopassword():

@@ -18,6 +18,18 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.36 (2025-12-01)
+--------------------
+
+* :gh:issue:`1237` :mod:`mitogen`: Re-declare Python 2.4 compatibility
+* :gh:issue:`1385` :mod:`ansible_mitogen`: Remove a use of
+  ``ansible.module_utils.six``
+* :gh:issue:`1354` docs: Document Ansible 13 (ansible-core 2.20) support
+* :gh:issue:`1354` :mod:`mitogen`: Clarify error message when a module
+  request would be refused by allow or deny listing
+* :gh:issue:`1348` :mod:`mitogen`: Fix hanging process with 100% CPU usage
+
+
 v0.3.35 (2025-12-01)
 --------------------
 
