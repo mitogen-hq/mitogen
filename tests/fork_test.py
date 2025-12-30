@@ -27,8 +27,12 @@ import plain_old_module
 
 
 def _find_ssl_linux():
+    ssl_object_path = getattr(_ssl, "__file__", None)
+    if ssl_object_path is None:
+        # No __file__ because it's builtin
+        ssl_object_path = sys.executable
     proc = subprocess.Popen(
-        ['ldd', _ssl.__file__],
+        ['ldd', ssl_object_path],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     b_stdout, b_stderr = proc.communicate()
