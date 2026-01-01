@@ -595,7 +595,10 @@ class Timer(object):
         self.func = func
 
     def __repr__(self):
-        return 'Timer(%r, %r)' % (self.when, self.func)
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.when, self.func,
+        )
 
     def __eq__(self, other):
         return self.when == other.when
@@ -1389,7 +1392,9 @@ class Connection(object):
         self._router = router
 
     def __repr__(self):
-        return 'Connection(%r)' % (self.stdio_stream,)
+        return '%s.%s(stdio_stream=%r)' % (
+            __name__, self.__class__.__name__, self.stdio_stream,
+        )
 
     # Minimised, gzipped, base64'd and passed to 'python -c'. It forks, dups
     # file descriptor 0 as 100, creates a pipe, then execs a new interpreter
@@ -1841,7 +1846,7 @@ class CallChain(object):
         )
 
     def __repr__(self):
-        return '%s(%s)' % (self.__class__.__name__, self.context)
+        return '%s.%s(%r)' % (__name__, self.__class__.__name__, self.context)
 
     def __enter__(self):
         return self
@@ -2121,7 +2126,10 @@ class RouteMonitor(object):
         )
 
     def __repr__(self):
-        return 'RouteMonitor()'
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.router, self.parent,
+        )
 
     def _send_one(self, stream, handle, target_id, name):
         """
@@ -2661,8 +2669,8 @@ class Process(object):
         self.stderr = stderr
 
     def __repr__(self):
-        return '%s %s pid %d' % (
-            type(self).__name__,
+        return '%s.%s(%r, %r)' % (
+            __name__, self.__class__.__name__,
             self.name,
             self.pid,
         )
@@ -2733,7 +2741,10 @@ class ModuleForwarder(object):
         )
 
     def __repr__(self):
-        return 'ModuleForwarder'
+        return '%s.%s(%r, %r, %r)' % (
+            __name__, self.__class__.__name__,
+            self.router, self.parent_context, self.importer,
+        )
 
     def _on_forward_module(self, msg):
         if msg.is_dead:

@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1318` Fully qualify class names in ``repr()``, add selected state
+
 
 v0.3.36 (2025-12-01)
 --------------------
