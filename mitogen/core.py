@@ -152,6 +152,8 @@ FORWARD_MODULE = 108
 DETACHING = 109
 CALL_SERVICE = 110
 STUB_CALL_SERVICE = 111
+GET_RESOURCE = 112
+LOAD_RESOURCE = 113
 
 #: Special value used to signal disconnection or the inability to route a
 #: message, when it appears in the `reply_to` field. Usually causes
@@ -1750,6 +1752,100 @@ class Importer(object):
             if PY3:
                 return to_text(source)
             return source
+
+    def get_resource_reader(self, fullname):
+        """
+        Optional :class:`importlib.abc.Loader` method to provide data (files)
+        bundled with a package.
+
+        Introduced in Python 3.7.
+        """
+        return ResourceReader(self._resource_requester, fullname)
+
+
+class ResourceRequester(object):
+    """
+    Requests Python package resources from upstreams & caches responses.
+    """
+    def __init__(self, router, context):
+        self._context = context
+        self._lock = threading.Lock()
+        self._callbacks = {}
+        self._cache = {}
+        router.add_handler(
+            fn=self._on_load_resource,
+            handle=LOAD_RESOURCE,
+            policy=has_parent_authority,
+        )
+
+    def _get_resource(self, fullname, resource):
+        event = threading.Event()
+        self._request_resource(fullname, resource, event.set)
+        event.wait()
+        content = self._cache[(fullname, resource)]
+        return content
+
+    def _request_resource(self, fullname, resource, callback):
+        self._lock.acquire()
+        try:
+            present = (fullname, resource) in self._cache
+            if not present:
+                callbacks = self._callbacks.get((fullname, resource))
+                if callbacks is not None:
+                    callbacks.append(callback)
+                else:
+                    self._callbacks[(fullname, resource)] = [callback]
+                    msg = Message.pickled(
+                        (b(fullname), b(resource)),
+                        handle=GET_RESOURCE,
+                    )
+                    self._context.send(msg)
+        finally:
+            self._lock.release()
+
+        if present:
+            callback()
+
+    def _on_load_resource(self, msg):
+        if msg.is_dead:
+            return
+        tup = msg.unpickle()
+        fullname, resource, content = tup
+
+        self._lock.acquire()
+        try:
+            self._cache[(fullname, resource)] = content
+            callbacks = self._callbacks.pop((fullname, resource), [])
+        finally:
+            self._lock.release()
+
+        for callback in callbacks:
+            callback()
+
+
+class ResourceReader(object):
+    """
+    Implements :class:`importlib.resource.abc.ResourceReader` (Python >= 3.7).
+    """
+    def __init__(self, requester, fullname):
+        self._requester = requester
+        self._fullname = fullname
+
+    def open_resource(self, resource):
+        content = self._requester._get_resource(self._fullname, resource)
+        if content is None:
+            raise FileNotFoundError
+        return BytesIO(content)
+
+    def resource_path(self, resource):
+        raise FileNotFoundError
+
+    def is_resource(self, name):
+        content = self._requester._get_resource(self._fullname, name)
+        return bool(content is not None)
+
+    def contents(self):
+        raise NotImplementedError
 
 
 class LogHandler(logging.Handler):
@@ -4090,6 +4186,10 @@ class ExternalContext(object):
         self.router.importer = importer
         sys.meta_path.insert(0, self.importer)
 
+    def _setup_resource_requester(self):
+        resource_getter = ResourceRequester(self.router, self.parent)
+        self.importer._resource_requester = resource_getter
+
     def _setup_package(self):
         global mitogen
         mitogen = types.ModuleType('mitogen')
@@ -4179,6 +4279,7 @@ class ExternalContext(object):
             try:
                 self._setup_logging()
                 self._setup_importer()
+                self._setup_resource_requester()
                 self._reap_first_stage()
                 if self.config.get('setup_package', True):
                     self._setup_package()

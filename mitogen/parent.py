@@ -2314,6 +2314,11 @@ class Router(mitogen.core.Router):
             parent_context=parent,
             importer=importer,
         )
+        self.resource_responder = ResourceForwarder(
+            self,
+            parent,
+            importer._resource_requester,
+        )
         self.route_monitor = RouteMonitor(self, parent)
         self.add_handler(
             fn=self._on_detaching,
@@ -2799,3 +2804,45 @@ class ModuleForwarder(object):
                     handle=mitogen.core.LOAD_MODULE,
                 )
             )
+
+
+class ResourceForwarder(object):
+    """
+    Handle :data:`mitogen.core.GET_RESOURCE` requests from children by
+    forwarding the request to our parent, or satisfying the request from
+    our local :class:`mitogen.core.ResourceRequester` cache.
+    """
+    def __init__(self, router, parent_context, requester):
+        self.router = router
+        self.parent_context = parent_context
+        self.requester = requester
+        router.add_handler(
+            fn=self._on_get_resource,
+            handle=mitogen.core.GET_RESOURCE,
+            persist=True,
+            policy=is_immediate_child,
+        )
+
+    def _on_get_resource(self, msg):
+        if msg.is_dead:
+            return
+
+        fullname_b, resource_b = msg.unpickle()
+        fullname, resource = fullname_b.decode(), resource_b.decode()
+
+        callback = lambda: self._on_cache_callback(msg, fullname, resource)
+        self.requester._request_resource(fullname, resource, callback)
+
+    def _on_cache_callback(self, msg, fullname, resource):
+        stream = self.router.stream_by_id(msg.src_id)
+        self._send_resource(stream, fullname, resource)
+
+    def _send_resource(self, stream, fullname, resource):
+        content = self.requester._cache[(fullname, resource)]
+
+        msg = mitogen.core.Message.pickled(
+            (fullname, resource, content),
+            dst_id=stream.protocol.remote_id,
+            handle=mitogen.core.LOAD_RESOURCE,
+        )
+        self.router._async_route(msg)
