@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.37 (2026-01-08)
+--------------------
+
 * :gh:issue:`1398` :mod:`mitogen`: Fix :exc:`FileNotFoundError` during
   ``import requests`` in a Mitogen child
 * :gh:issue:`1403` :mod:`mitogen`: Add initial support for
