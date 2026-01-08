@@ -47,6 +47,9 @@ import threading
 import types
 import zlib
 
+if sys.version_info >= (3, 7):
+    import importlib.resources
+
 try:
     # Python >= 3.4, PEP 451 ModuleSpec API
     import importlib.machinery
@@ -1282,6 +1285,48 @@ class ModuleResponder(object):
         self._router.broker.defer(self._forward_modules, context, fullnames)
 
 
+class ResourceResponder(object):
+    def __init__(self, router):
+        self._router = router
+        self._router.add_handler(
+            self._on_get_resource,
+            mitogen.core.GET_RESOURCE,
+        )
+
+    def _on_get_resource(self, msg):
+        if msg.is_dead:
+            return
+        stream = self._router.stream_by_id(msg.src_id)
+        if stream is None:
+            return
+        fullname_b, resource_b = msg.unpickle()
+        fullname, resource = fullname_b.decode(), resource_b.decode()
+        try:
+            content = importlib.resources.read_binary(fullname, resource)
+        except (FileNotFoundError, IsADirectoryError):
+            content = None
+        if content is not None:
+            self._send_resource(stream, fullname, resource, content)
+        else:
+            self._send_not_found(stream, fullname, resource)
+
+    def _send_resource(self, stream, fullname, resource, content):
+        msg = mitogen.core.Message.pickled(
+            (fullname, resource, content),
+            dst_id=stream.protocol.remote_id,
+            handle=mitogen.core.LOAD_RESOURCE,
+        )
+        self._router._async_route(msg)
+
+    def _send_not_found(self, stream, fullname, resource):
+        msg = mitogen.core.Message.pickled(
+            (fullname, resource, None),
+            dst_id=stream.protocol.remote_id,
+            handle=mitogen.core.LOAD_RESOURCE,
+        )
+        stream.protocol.send(msg)
+
+
 class Broker(mitogen.core.Broker):
     """
     .. note::
@@ -1372,6 +1417,7 @@ class Router(mitogen.parent.Router):
     def upgrade(self):
         self.id_allocator = IdAllocator(self)
         self.responder = ModuleResponder(self)
+        self.resource_responder = ResourceResponder(self)
         self.log_forwarder = LogForwarder(self)
         self.route_monitor = mitogen.parent.RouteMonitor(router=self)
         self.add_handler(  # TODO: cutpaste.

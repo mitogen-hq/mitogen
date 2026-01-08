@@ -22,6 +22,17 @@ In progress (unreleased)
 ------------------------
 
 
+v0.3.37 (2026-01-08)
+--------------------
+
+* :gh:issue:`1398` :mod:`mitogen`: Fix :exc:`FileNotFoundError` during
+  ``import requests`` in a Mitogen child
+* :gh:issue:`1403` :mod:`mitogen`: Add initial support for
+  :py:class:`importlib.resource.abc.ResourceReader` protocol
+* :gh:issue:`1407` :mod:`mitogen`: Fix :exc:`AttributeError` in
+  :mod:`mitogen.profiler`
+
+
 v0.3.36 (2025-12-01)
 --------------------
 
