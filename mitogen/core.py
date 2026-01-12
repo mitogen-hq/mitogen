@@ -170,7 +170,7 @@ IS_DEAD = 999
 
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
-if PY3:
+if sys.version_info >= (3, 0):
     import pickle
     import _thread as thread
     from io import BytesIO
@@ -236,6 +236,13 @@ except IOError:
 #: :data:`CHUNK_SIZE` inclusive of headers, to avoid wasting IO loop iterations
 #: writing small trailer chunks.
 CHUNK_SIZE = 131072
+
+#: Markers sent by bootstrap stages when it's ready to receive the next stage,
+#: e.g. compressed :class:`mitogen.core`.
+EC0 = b('MITO000')
+EC1 = b('MITO001')
+EC2 = b('MITO002 %d %d' % sys.version_info[0:2])
+EC2_PATTERN = b(r'MITO002 (\d) (\d\d?)')
 
 _tls = threading.local()
 
@@ -4304,7 +4311,7 @@ class ExternalContext(object):
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 if self.config.get('send_ec2', True):
-                    self.stream.transmit_side.write(b('MITO002\n'))
+                    self.stream.transmit_side.write(EC2 + b('\n'))
                 self.broker._py24_25_compat()
                 self.log_handler.uncork()
                 self.dispatcher.run()
