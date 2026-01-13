@@ -134,6 +134,7 @@ else:
     def threading__thread_name(thread): return thread.getName()
 
 if sys.version_info >= (2, 5):
+    all, any = all, any
     def _update_linecache(path, data): pass
 else:
     import linecache
@@ -145,6 +146,18 @@ else:
         if 'mitogen' not in path:
             return
         linecache.cache[path] = (len(data), 0.0, data.splitlines(True), path)
+
+    def all(it):
+        for elem in it:
+            if not elem:
+                return False
+        return True
+
+    def any(it):
+        for elem in it:
+            if elem:
+                return True
+        return False
 
 # Absolute imports for <2.5.
 select = __import__('select')
@@ -426,23 +439,6 @@ def to_text(o):
     if isinstance(o, BytesType):
         return o.decode('utf-8')
     return UnicodeType(o)
-
-
-# Python 2.4
-try:
-    all, any = all, any
-except NameError:
-    def all(it):
-        for elem in it:
-            if not elem:
-                return False
-        return True
-
-    def any(it):
-        for elem in it:
-            if elem:
-                return True
-        return False
 
 
 def _has_parent_authority(context_id):
