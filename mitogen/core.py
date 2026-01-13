@@ -126,8 +126,12 @@ else:
 
 if sys.version_info >= (2, 6):
     next = next
+    threading__current_thread = threading.current_thread
+    def threading__thread_name(thread): return thread.name
 else:
+    threading__current_thread = threading.currentThread
     def next(it): return it.next()
+    def threading__thread_name(thread): return thread.getName()
 
 if sys.version_info >= (2, 5):
     def _update_linecache(path, data): pass
@@ -439,20 +443,6 @@ except NameError:
             if elem:
                 return True
         return False
-
-
-def threading__current_thread():
-    try:
-        return threading.current_thread()  # Added in Python 2.6+
-    except AttributeError:
-        return threading.currentThread()  # Deprecated in Python 3.10+
-
-
-def threading__thread_name(thread):
-    try:
-        return thread.name  # Added in Python 2.6+
-    except AttributeError:
-        return thread.getName()  # Deprecated in Python 3.10+
 
 
 def _has_parent_authority(context_id):
