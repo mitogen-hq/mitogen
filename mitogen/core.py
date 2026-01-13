@@ -107,6 +107,23 @@ if sys.version_info >= (3, 3):
 else:
     now = time.time
 
+if sys.version_info >= (3, 0):
+    str_partition, str_rpartition = str.partition, str.rpartition
+    bytes_partition = bytes.partition
+elif sys.version_info >= (2, 5):
+    str_partition, str_rpartition = unicode.partition, unicode.rpartition
+    bytes_partition = str.partition
+else:
+    def _part(s, sep, find):
+        "(str|unicode).(partition|rpartition) polyfill for Python 2.4"
+        idx = find(sep)
+        if idx != -1:
+            left = s[0:idx]
+            return left, sep, s[len(left)+len(sep):]
+    def str_partition(s, sep): return _part(s, sep, s.find) or (s, u'', u'')
+    def str_rpartition(s, sep): return _part(s, sep, s.rfind) or (u'', u'', s)
+    def bytes_partition(s, sep): return _part(s, sep, s.find) or (s, '', '')
+
 if sys.version_info >= (2, 5):
     def _update_linecache(path, data): pass
 else:
@@ -424,16 +441,6 @@ except NameError:
         return False
 
 
-def _partition(s, sep, find):
-    """
-    (str|unicode).(partition|rpartition) for Python 2.4/2.5.
-    """
-    idx = find(sep)
-    if idx != -1:
-        left = s[0:idx]
-        return left, sep, s[len(left)+len(sep):]
-
-
 def threading__current_thread():
     try:
         return threading.current_thread()  # Added in Python 2.6+
@@ -446,19 +453,6 @@ def threading__thread_name(thread):
         return thread.name  # Added in Python 2.6+
     except AttributeError:
         return thread.getName()  # Deprecated in Python 3.10+
-
-
-if hasattr(UnicodeType, 'rpartition'):
-    str_partition = UnicodeType.partition
-    str_rpartition = UnicodeType.rpartition
-    bytes_partition = BytesType.partition
-else:
-    def str_partition(s, sep):
-        return _partition(s, sep, s.find) or (s, u'', u'')
-    def str_rpartition(s, sep):
-        return _partition(s, sep, s.rfind) or (u'', u'', s)
-    def bytes_partition(s, sep):
-        return _partition(s, sep, s.find) or (s, '', '')
 
 
 def _has_parent_authority(context_id):
