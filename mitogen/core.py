@@ -2364,10 +2364,13 @@ class MitogenProtocol(Protocol):
     #: peer.
     on_message = None
 
-    def __init__(self, router, remote_id, auth_id=None,
-                 local_id=None, parent_ids=None):
+    def __init__(
+        self, router, remote_id, auth_id=None, local_id=None, parent_ids=None,
+        remote_python_version=None,
+    ):
         self._router = router
         self.remote_id = remote_id
+        self.remote_python_version = remote_python_version
         #: If not :data:`None`, :class:`Router` stamps this into
         #: :attr:`Message.auth_id` of every message received on this stream.
         self.auth_id = auth_id
@@ -4137,7 +4140,8 @@ class ExternalContext(object):
             self.router,
             parent_id,
             local_id=self.config['context_id'],
-            parent_ids=self.config['parent_ids']
+            parent_ids=self.config['parent_ids'],
+            remote_python_version=self.config['parent_python_version'],
         )
         for f in in_fp, out_fp:
             fd = f.fileno()

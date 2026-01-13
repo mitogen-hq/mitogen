@@ -1208,7 +1208,7 @@ class BootstrapProtocol(RegexProtocol):
             '%r: new child booted successfully on Python %d.%d',
             self, py_major, py_minor,
         )
-        self.stream.conn._complete_connection()
+        self.stream.conn._complete_connection((py_major, py_minor))
         return False
 
     def on_unrecognized_line_received(self, line):
@@ -1504,6 +1504,7 @@ class Connection(object):
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
+            'parent_python_version': sys.version_info[0:2],
         }
 
     def get_preamble(self):
@@ -1540,7 +1541,7 @@ class Connection(object):
         if self.eof_error_hint:
             e.args = ('%s\n\n%s' % (e.args[0], self.eof_error_hint),)
 
-    def _complete_connection(self):
+    def _complete_connection(self, remote_python_version):
         self._timer.cancel()
         if not self.exception:
             mitogen.core.unlisten(self._router.broker, 'shutdown',
@@ -1550,6 +1551,7 @@ class Connection(object):
                 MitogenProtocol(
                     router=self._router,
                     remote_id=self.context.context_id,
+                    remote_python_version=remote_python_version,
                 )
             )
             self._router.route_monitor.notice_stream(self.stdio_stream)
