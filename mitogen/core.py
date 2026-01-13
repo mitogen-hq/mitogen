@@ -85,6 +85,11 @@ import warnings
 import weakref
 import zlib
 
+if sys.version_info >= (3, 6):
+    ModuleNotFoundError = ModuleNotFoundError
+else:
+    ModuleNotFoundError = ImportError
+
 if sys.version_info > (3,5):
     from os import get_blocking, set_blocking
 else:
@@ -135,9 +140,11 @@ else:
 
 if sys.version_info >= (2, 5):
     all, any = all, any
+    BaseException = BaseException
     def _update_linecache(path, data): pass
 else:
     import linecache
+    BaseException = Exception
     def _update_linecache(path, data):
         """
         Directly populate the linecache cache for modules loaded by Mitogen.
@@ -166,16 +173,6 @@ try:
     import cProfile
 except ImportError:
     cProfile = None
-
-try:
-    BaseException
-except NameError:
-    BaseException = Exception
-
-try:
-    ModuleNotFoundError
-except NameError:
-    ModuleNotFoundError = ImportError
 
 # TODO: usage of 'import' after setting __name__, but before fixing up
 # sys.modules generates a warning. This happens when profiling = True.
