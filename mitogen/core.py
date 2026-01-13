@@ -96,12 +96,10 @@ else:
         if blocking:    fcntl.fcntl(fd, fcntl.F_SETFL, fl & ~os.O_NONBLOCK)
         else:           fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-try:
-    # Python >= 3.4, PEP 451 ModuleSpec API
+if sys.version_info >= (3, 4):
     import importlib.machinery
     import importlib.util
-except ImportError:
-    # Python < 3.4, PEP 302 Import Hooks
+else:
     import imp
 
 if sys.version_info >= (2, 5):

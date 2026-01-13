@@ -50,9 +50,7 @@ import zlib
 if sys.version_info >= (3, 7):
     import importlib.resources
 
-try:
-    # Python >= 3.4, PEP 451 ModuleSpec API
-    import importlib.machinery
+if sys.version_info >= (3, 4):
     import importlib.util
     from _imp import is_builtin as _is_builtin
 
@@ -66,8 +64,7 @@ try:
             return maybe_spec.loader
         except AttributeError:
             return None
-except ImportError:
-    # Python < 3.4, PEP 302 Import Hooks
+else:
     import imp
     from imp import is_builtin as _is_builtin
 

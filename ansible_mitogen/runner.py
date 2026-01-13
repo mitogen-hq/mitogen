@@ -52,19 +52,16 @@ import tempfile
 import traceback
 import types
 
+if sys.version_info >= (3, 4):
+    import importlib.machinery
+else:
+    import imp
+
 from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import to_text
-
-try:
-    # Python >= 3.4, PEP 451 ModuleSpec API
-    import importlib.machinery
-    import importlib.util
-except ImportError:
-    # Python < 3.4, PEP 302 Import Hooks
-    import imp
 
 try:
     # Cannot use cStringIO as it does not support Unicode.
