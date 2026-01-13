@@ -124,6 +124,11 @@ else:
     def str_rpartition(s, sep): return _part(s, sep, s.rfind) or (u'', u'', s)
     def bytes_partition(s, sep): return _part(s, sep, s.find) or (s, '', '')
 
+if sys.version_info >= (2, 6):
+    next = next
+else:
+    def next(it): return it.next()
+
 if sys.version_info >= (2, 5):
     def _update_linecache(path, data): pass
 else:
@@ -221,11 +226,6 @@ else:
     iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
 
 AnyTextType = (BytesType, UnicodeType)
-
-try:
-    next = next
-except NameError:
-    next = lambda it: it.next()
 
 # #550: prehistoric WSL did not advertise itself in uname output.
 try:
