@@ -102,6 +102,11 @@ if sys.version_info >= (3, 4):
 else:
     import imp
 
+if sys.version_info >= (3, 3):
+    now = time.monotonic
+else:
+    now = time.time
+
 if sys.version_info >= (2, 5):
     def _update_linecache(path, data): pass
 else:
@@ -400,10 +405,6 @@ def to_text(o):
     if isinstance(o, BytesType):
         return o.decode('utf-8')
     return UnicodeType(o)
-
-
-# Documented in api.rst to work around Sphinx limitation.
-now = getattr(time, 'monotonic', time.time)
 
 
 # Python 2.4
