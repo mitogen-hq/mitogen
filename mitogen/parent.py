@@ -79,7 +79,7 @@ except IOError:
     SELINUX_ENABLED = False
 
 
-if mitogen.core.PY3:
+if sys.version_info >= (3, 0):
     xrange = range
     closure_attr = '__closure__'
     IM_SELF_ATTR = '__self__'

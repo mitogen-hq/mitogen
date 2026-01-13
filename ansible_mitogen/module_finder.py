@@ -36,12 +36,10 @@ import os
 import re
 import sys
 
-try:
-    # Python >= 3.4, PEP 451 ModuleSpec API
+if sys.version_info >= (3, 4):
     import importlib.machinery
     import importlib.util
-except ImportError:
-    # Python < 3.4, PEP 302 Import Hooks
+else:
     import imp
 
 import mitogen.imports
