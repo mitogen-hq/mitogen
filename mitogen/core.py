@@ -62,9 +62,9 @@ else:
         del i, mpf
 
 
+import _codecs
 import binascii
 import collections
-import encodings.latin_1
 import encodings.utf_8
 import errno
 import fcntl
@@ -132,10 +132,6 @@ warnings.filterwarnings('ignore',
 LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
-
-# str.encode() may take import lock. Deadlock possible if broker calls
-# .encode() on behalf of thread currently waiting for module.
-LATIN1_CODEC = encodings.latin_1.Codec()
 
 _v = False
 _vv = False
@@ -881,7 +877,7 @@ class Message(object):
         return _unpickle_sender(self.router, context_id, dst_handle)
 
     def _unpickle_bytes(self, s, encoding):
-        s, n = LATIN1_CODEC.encode(s)
+        s, n = _codecs.latin_1_encode(s)
         return s
 
     def _find_global(self, module, func):
