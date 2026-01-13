@@ -65,7 +65,6 @@ else:
 import _codecs
 import binascii
 import collections
-import encodings.utf_8
 import errno
 import fcntl
 import itertools
@@ -321,7 +320,7 @@ class Kwargs(dict):
         def __init__(self, dct):
             for k, v in dct.iteritems():
                 if type(k) is unicode:
-                    k, _ = encodings.utf_8.encode(k)
+                    k, _ = _codecs.utf_8_encode(k)
                 self[k] = v
 
     def __repr__(self):
@@ -919,7 +918,7 @@ class Message(object):
         """
         Syntax helper to construct a dead message.
         """
-        kwargs['data'], _ = encodings.utf_8.encode(reason or u'')
+        kwargs['data'], _ = _codecs.utf_8_encode(reason or u'')
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
@@ -1709,7 +1708,7 @@ class Importer(object):
 
         if mod.__package__ and not PY3:
             # 2.x requires __package__ to be exactly a string.
-            mod.__package__, _ = encodings.utf_8.encode(mod.__package__)
+            mod.__package__, _ = _codecs.utf_8_encode(mod.__package__)
 
         source = self.get_source(fullname)
         try:
