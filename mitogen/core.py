@@ -68,7 +68,6 @@ import collections
 import errno
 import fcntl
 import itertools
-import linecache
 import logging
 import os
 import pickle as py_pickle
@@ -104,6 +103,19 @@ try:
 except ImportError:
     # Python < 3.4, PEP 302 Import Hooks
     import imp
+
+if sys.version_info >= (2, 5):
+    def _update_linecache(path, data): pass
+else:
+    import linecache
+    def _update_linecache(path, data):
+        """
+        Directly populate the linecache cache for modules loaded by Mitogen.
+        In Python 2.4 the linecache module, does not support PEP-302.
+        """
+        if 'mitogen' not in path:
+            return
+        linecache.cache[path] = (len(data), 0.0, data.splitlines(True), path)
 
 # Absolute imports for <2.5.
 select = __import__('select')
@@ -1356,7 +1368,7 @@ class Importer(object):
         self._callbacks = {}
         self._cache = {}
         if core_src:
-            self._update_linecache('x/mitogen/core.py', core_src)
+            _update_linecache('x/mitogen/core.py', core_src)
             self._cache['mitogen.core'] = (
                 'mitogen.core',
                 None,
@@ -1365,21 +1377,6 @@ class Importer(object):
                 [],
             )
         self._install_handler(router)
-
-    def _update_linecache(self, path, data):
-        """
-        The Python 2.4 linecache module, used to fetch source code for
-        tracebacks and :func:`inspect.getsource`, does not support PEP-302,
-        meaning it needs extra help to for Mitogen-loaded modules. Directly
-        populate its cache if a loaded module belongs to the Mitogen package.
-        """
-        if PY24 and 'mitogen' in path:
-            linecache.cache[path] = (
-                len(data),
-                0.0,
-                [line+'\n' for line in data.splitlines()],
-                path,
-            )
 
     def _install_handler(self, router):
         router.add_handler(
@@ -1584,7 +1581,7 @@ class Importer(object):
         try:
             self._cache[fullname] = tup
             if tup[2] is not None and PY24:
-                self._update_linecache(
+                _update_linecache(
                     path='master:' + tup[2],
                     data=zlib.decompress(tup[3])
                 )
