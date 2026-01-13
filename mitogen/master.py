@@ -68,15 +68,14 @@ else:
     import imp
     from imp import is_builtin as _is_builtin
 
-    try:
+    if sys.version_info >= (2, 5):
         from pkgutil import find_loader as _find_loader
-    except ImportError:
-        # Python < 2.5
+    else:
         from mitogen.compat.pkgutil import find_loader as _find_loader
 
-try:
+if sys.version_info >= (2, 7):
     import sysconfig
-except ImportError:
+else:
     sysconfig = None
 
 import mitogen

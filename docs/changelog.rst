@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1415` :mod:`mitogen`: Put fallbacks & polyfills into
+  ``if sys.version_info`` blocks
+
 
 v0.3.37 (2026-01-08)
 --------------------
