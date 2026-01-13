@@ -96,7 +96,7 @@ def shlex_split_b(s):
     bytes.
     """
     assert isinstance(s, mitogen.core.BytesType)
-    if mitogen.core.PY3:
+    if sys.version_info >= (3, 0):
         return [
             t.encode('latin1')
             for t in shlex.split(s.decode('latin1'), comments=True)
@@ -979,7 +979,7 @@ class NewStyleRunner(ScriptRunner):
                 True,                   # dont_inherit
             ))
 
-    if mitogen.core.PY3:
+    if sys.version_info >= (3, 0):
         main_module_name = '__main__'
     else:
         main_module_name = b'__main__'
@@ -1000,7 +1000,7 @@ class NewStyleRunner(ScriptRunner):
 
     def _run_code(self, code, mod):
         try:
-            if mitogen.core.PY3:
+            if sys.version_info >= (3, 0):
                 exec(code, vars(mod))
             else:
                 exec('exec code in vars(mod)')
@@ -1017,7 +1017,7 @@ class NewStyleRunner(ScriptRunner):
         pkg, sep, _ = self.py_module_name.rpartition('.')
         if not sep:
             return None
-        if mitogen.core.PY3:
+        if sys.version_info >= (3, 0):
             return pkg
         return pkg.encode()
 

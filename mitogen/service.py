@@ -52,7 +52,7 @@ _pool_pid = None
 _pool_lock = threading.Lock()
 
 
-if mitogen.core.PY3:
+if sys.version_info >= (3, 0):
     def func_code(func):
         return func.__code__
     def func_name(func):

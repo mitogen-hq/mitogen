@@ -90,7 +90,7 @@ if sys.version_info >= (3, 6):
 else:
     ModuleNotFoundError = ImportError
 
-if sys.version_info > (3,5):
+if sys.version_info >= (3, 5):
     from os import get_blocking, set_blocking
 else:
     def get_blocking(fd):
@@ -216,7 +216,7 @@ IS_DEAD = 999
 
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
-if PY3:
+if sys.version_info >= (3, 0):
     import pickle
     import _thread as thread
     from io import BytesIO
@@ -336,7 +336,7 @@ class Secret(UnicodeType):
     def __repr__(self):
         return '[secret]'
 
-    if not PY3:
+    if sys.version_info < (3, 0):
         # TODO: what is this needed for in 2.x?
         def __str__(self):
             return UnicodeType(self)
@@ -355,7 +355,7 @@ class Kwargs(dict):
     whereas Python 3 produces keyword argument dicts whose keys are Unicode,
     requiring a helper for Python 2.4/2.5, where bytes are required.
     """
-    if PY3:
+    if sys.version_info >= (3, 0):
         def __init__(self, dct):
             for k, v in dct.items():
                 if type(k) is bytes:
@@ -769,19 +769,19 @@ class Py24Pickler(py_pickle.Pickler):
         else:
             py_pickle.Pickler.save_inst(self, obj)
 
-    if PY24:
+    if sys.version_info < (2, 5):
         dispatch = py_pickle.Pickler.dispatch.copy()
         dispatch[py_pickle.InstanceType] = save_exc_inst
 
 
-if PY3:
+if sys.version_info >= (3, 0):
     # In 3.x Unpickler is a class exposing find_class as an overridable, but it
     # cannot be overridden without subclassing.
     class _Unpickler(pickle.Unpickler):
         def find_class(self, module, func):
             return self.find_global(module, func)
     pickle__dumps = pickle.dumps
-elif PY24:
+elif sys.version_info < (2, 5):
     # On Python 2.4, we must use a pure-Python pickler.
     pickle__dumps = Py24Pickler.dumps
     _Unpickler = pickle.Unpickler
@@ -950,7 +950,7 @@ class Message(object):
             LOG.debug('dropping reply to message with no return address: %r',
                       msg)
 
-    if PY3:
+    if sys.version_info >= (3, 0):
         UNPICKLER_KWARGS = {'encoding': 'bytes'}
     else:
         UNPICKLER_KWARGS = {}
@@ -1324,7 +1324,7 @@ class Importer(object):
         'org',
     ]
 
-    if PY3:
+    if sys.version_info >= (3, 0):
         ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
@@ -1556,7 +1556,7 @@ class Importer(object):
         self._lock.acquire()
         try:
             self._cache[fullname] = tup
-            if tup[2] is not None and PY24:
+            if sys.version_info < (2, 5) and tup[2] is not None:
                 _update_linecache(
                     path='master:' + tup[2],
                     data=zlib.decompress(tup[3])
@@ -1679,7 +1679,7 @@ class Importer(object):
         else:
             mod.__package__ = str_rpartition(fullname, '.')[0] or None
 
-        if mod.__package__ and not PY3:
+        if sys.version_info < (3, 0) and mod.__package__:
             # 2.x requires __package__ to be exactly a string.
             mod.__package__, _ = _codecs.utf_8_encode(mod.__package__)
 
@@ -1690,7 +1690,7 @@ class Importer(object):
             LOG.exception('while importing %r', fullname)
             raise
 
-        if PY3:
+        if sys.version_info >= (3, 0):
             exec(code, vars(mod))
         else:
             exec('exec code in vars(mod)')
@@ -1717,7 +1717,7 @@ class Importer(object):
                 raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
             source = zlib.decompress(self._cache[fullname][3])
-            if PY3:
+            if sys.version_info >= (3, 0):
                 return to_text(source)
             return source
 
