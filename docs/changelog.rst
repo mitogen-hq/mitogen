@@ -34,6 +34,8 @@ v0.3.37 (2026-01-08)
   :py:class:`importlib.resource.abc.ResourceReader` protocol
 * :gh:issue:`1407` :mod:`mitogen`: Fix :exc:`AttributeError` in
   :mod:`mitogen.profiler`
+* :gh:issue:`1418` :mod:`mitogen`: Format :class:`mitogen.core.Message` source
+   and destination as ``<context>:<handle>``, for clarity
 
 
 v0.3.36 (2025-12-01)
