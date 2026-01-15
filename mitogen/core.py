@@ -929,7 +929,7 @@ class Message(object):
     def reply(self, msg, router=None, **kwargs):
         """
         Compose a reply to this message and send it using :attr:`router`, or
-        `router` is :attr:`router` is :data:`None`.
+        `router` if :attr:`router` is :data:`None`.
 
         :param obj:
             Either a :class:`Message`, or an object to be serialized in order
