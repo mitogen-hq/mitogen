@@ -929,7 +929,7 @@ class Message(object):
     def reply(self, msg, router=None, **kwargs):
         """
         Compose a reply to this message and send it using :attr:`router`, or
-        `router` is :attr:`router` is :data:`None`.
+        `router` if :attr:`router` is :data:`None`.
 
         :param obj:
             Either a :class:`Message`, or an object to be serialized in order
@@ -1004,9 +1004,14 @@ class Message(object):
         return obj
 
     def __repr__(self):
-        return 'Message(%r, %r, %r, %r, %r, %r..%d)' % (
-            self.dst_id, self.src_id, self.auth_id, self.handle,
-            self.reply_to, (self.data or '')[:50], len(self.data)
+        if len(self.data) > 60:
+            head, tail, size = self.data[:25], self.data[-25:], len(self.data)
+            data_summary = b('%s .. %s %d bytes') % (head, tail, size)
+        else:
+            data_summary = self.data
+        return 'Message(src=%r:%r dst=%r:%r auth_id=%r %r)' % (
+            self.src_id, self.reply_to, self.dst_id, self.handle, self.auth_id,
+            data_summary,
         )
 
 
