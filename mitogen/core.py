@@ -141,7 +141,6 @@ else:
 if sys.version_info >= (2, 5):
     all, any = all, any
     BaseException = BaseException
-    def _update_linecache(path, data): pass
 else:
     import linecache
     BaseException = Exception
@@ -152,6 +151,7 @@ else:
         """
         if 'mitogen' not in path:
             return
+        data = zlib.decompress(data, -15)
         linecache.cache[path] = (len(data), 0.0, data.splitlines(True), path)
 
     def all(it):
@@ -1348,13 +1348,14 @@ class Importer(object):
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
         self._cache = {}
-        if core_src:
+        if sys.version_info < (2, 5) and core_src:
             _update_linecache('x/mitogen/core.py', core_src)
+        if core_src:
             self._cache['mitogen.core'] = (
                 'mitogen.core',
                 None,
                 'x/mitogen/core.py',
-                zlib.compress(core_src, 9),
+                core_src,
                 [],
             )
         self._install_handler(router)
@@ -1562,10 +1563,7 @@ class Importer(object):
         try:
             self._cache[fullname] = tup
             if sys.version_info < (2, 5) and tup[2] is not None:
-                _update_linecache(
-                    path='master:' + tup[2],
-                    data=zlib.decompress(tup[3])
-                )
+                _update_linecache('master:' + tup[2], tup[3])
             callbacks = self._callbacks.pop(fullname, [])
         finally:
             self._lock.release()
@@ -1721,7 +1719,7 @@ class Importer(object):
             if compressed is None:
                 raise ModuleNotFoundError(self.absent_msg % (fullname,))
 
-            source = zlib.decompress(self._cache[fullname][3])
+            source = zlib.decompress(self._cache[fullname][3], -15)
             if sys.version_info >= (3, 0):
                 return to_text(source)
             return source
@@ -4135,16 +4133,19 @@ class ExternalContext(object):
             importer._install_handler(self.router)
             importer._context = self.parent
         else:
-            core_src_fd = self.config.get('core_src_fd', 101)
-            if core_src_fd:
-                fp = os.fdopen(core_src_fd, 'rb', 0)
+            preamble_fd = self.config.get('preamble_fd', 101)
+            if preamble_fd:
+                fp = os.fdopen(preamble_fd, 'rb', 0)
                 try:
-                    core_src = fp.read()
-                    # Strip "ExternalContext.main()" call from last line.
-                    core_src = b('\n').join(core_src.splitlines()[:-1])
+                    preamble = fp.read()
                 finally:
                     fp.close()
+                # Remove compressed "ExternalContext.main(...)" suffix.
+                stage2_prefix = preamble[:self.config['core_src_size']]
+                # Close deflate stream, append empty block with BFINAL bit set
+                core_src = stage2_prefix + b('\x03\x00')
             else:
+                stage2_prefix = None
                 core_src = None
 
             importer = Importer(
@@ -4154,6 +4155,7 @@ class ExternalContext(object):
                 self.config.get('whitelist', ()),
                 self.config.get('blacklist', ()),
             )
+            self.router._stage2_prefix = stage2_prefix
 
         self.importer = importer
         self.router.importer = importer

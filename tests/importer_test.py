@@ -10,11 +10,15 @@ except ImportError:
     import mock
 
 import mitogen.core
-import mitogen.utils
 from mitogen.core import b
 
 import testlib
 import simple_pkg.imports_replaces_self
+
+
+def compress(s):
+    compressor = zlib.compressobj(9, 8, -15)
+    return compressor.compress(s) + compressor.flush()
 
 
 class ImporterMixin(testlib.RouterMixin):
@@ -90,7 +94,7 @@ class MissingModuleTest(ImporterMixin, testlib.TestCase):
 
 @unittest.skipIf(sys.version_info >= (3, 4), 'Superceded in Python 3.4+')
 class LoadModuleTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress(b("data = 1\n\n"))
+    data = compress(b("data = 1\n\n"))
     path = 'fake_module.py'
     modname = 'fake_module'
 
@@ -121,7 +125,7 @@ class LoadModuleTest(ImporterMixin, testlib.TestCase):
 
 @unittest.skipIf(sys.version_info < (3, 4), 'Requires ModuleSpec, Python 3.4+')
 class ModuleSpecTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress(b("data = 1\n\n"))
+    data = compress(b("data = 1\n\n"))
     path = 'fake_module.py'
     modname = 'fake_module'
 
@@ -140,7 +144,7 @@ class ModuleSpecTest(ImporterMixin, testlib.TestCase):
 
 @unittest.skipIf(sys.version_info >= (3, 4), 'Superceded in Python 3.4+')
 class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress(b("data = 1\n\n"))
+    data = compress(b("data = 1\n\n"))
     path = 'fake_module.py'
     modname = 'mypkg.fake_module'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
@@ -154,7 +158,7 @@ class LoadSubmoduleTest(ImporterMixin, testlib.TestCase):
 
 @unittest.skipIf(sys.version_info < (3, 4), 'Requires ModuleSpec, Python 3.4+')
 class SubmoduleSpecTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress(b("data = 1\n\n"))
+    data = compress(b("data = 1\n\n"))
     path = 'fake_module.py'
     modname = 'mypkg.fake_module'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
@@ -172,7 +176,7 @@ class SubmoduleSpecTest(ImporterMixin, testlib.TestCase):
 
 @unittest.skipIf(sys.version_info >= (3, 4), 'Superceded in Python 3.4+')
 class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress(b("func = lambda: 1\n\n"))
+    data = compress(b("func = lambda: 1\n\n"), )
     path = 'fake_pkg/__init__.py'
     modname = 'fake_pkg'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
@@ -194,7 +198,8 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
         mod = self.importer.load_module(self.modname)
         source = mod.__loader__.get_source(self.modname)
         self.assertEqual(source,
-            mitogen.core.to_text(zlib.decompress(self.data)))
+            mitogen.core.to_text(zlib.decompress(self.data, -15)),
+        )
 
     def test_module_loader_set(self):
         self.set_get_module_response(self.response)
@@ -220,7 +225,7 @@ class LoadModulePackageTest(ImporterMixin, testlib.TestCase):
 
 @unittest.skipIf(sys.version_info < (3, 4), 'Requires ModuleSpec, Python 3.4+')
 class PackageSpecTest(ImporterMixin, testlib.TestCase):
-    data = zlib.compress(b("func = lambda: 1\n\n"))
+    data = compress(b("func = lambda: 1\n\n"))
     path = 'fake_pkg/__init__.py'
     modname = 'fake_pkg'
     # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
@@ -250,7 +255,8 @@ class PackageSpecTest(ImporterMixin, testlib.TestCase):
         _ = self.importer.create_module(spec)
         source = self.importer.get_source(self.modname)
         self.assertEqual(source,
-            mitogen.core.to_text(zlib.decompress(self.data)))
+            mitogen.core.to_text(zlib.decompress(self.data, -15)),
+        )
 
 
 class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
