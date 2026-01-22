@@ -26,4 +26,7 @@ def main(router):
         t = mitogen.core.now()
         ctx = router.fork(debug=opts.debug)
         ctx.shutdown(wait=True)
-    print('++ %d' % 1000 * ((mitogen.core.now() - t0) / (1.0+x)))
+
+    t1 = mitogen.core.now()
+    mean = (t1 - t0) / opts.iterations
+    print('++ iterations %d, mean %.03f ms' % (opts.iterations, 1e3 * mean))

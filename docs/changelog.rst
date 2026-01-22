@@ -25,6 +25,7 @@ In progress (unreleased)
   ``if sys.version_info`` blocks
 * :gh:issue:`1423` tests: Group and unify naming of connection benchmarks
 * :gh:issue:`1424` tests: Parameterize connection benchmarks
+* :gh:issue:`1424` tests: Standardise output of connection benchmarks
 
 
 v0.3.37 (2026-01-08)

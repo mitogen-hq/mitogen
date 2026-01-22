@@ -43,6 +43,8 @@ def main(router):
     while mitogen.core.now() < end:
         f.call(do_nothing)
         i += 1
-        t1 = mitogen.core.now()
 
-    print('++', float(1e3 * (t1 - t0) / (1.0+i)), 'ms')
+    t1 = mitogen.core.now()
+    iterations = i + 1
+    mean = (t1 - t0) / iterations
+    print('++ iterations %d, mean %.03f ms' % (iterations, 1e3 * mean))

@@ -32,4 +32,7 @@ def main(router):
     t0 = mitogen.core.now()
     for x in xrange(opts.iterations):
         f.call(do_nothing)
-    print('++', int(1e6 * ((mitogen.core.now() - t0) / (1.0+x))), 'usec')
+
+    t1 = mitogen.core.now()
+    mean = (t1 - t0) / opts.iterations
+    print('++ iterations %d, mean %.03f us' % (opts.iterations, 1e6 * mean))
