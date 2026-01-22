@@ -19,9 +19,17 @@ def do_nothing():
 
 @mitogen.main()
 def main(router):
-    f = router.fork()
+    import optparse
+    parser = optparse.OptionParser(description=__doc__)
+    parser.add_option(
+        '-i', '--iterations', type=int, metavar='N', default=20000,
+        help='Number of iterations (default %default)')
+    parser.add_option('--debug', action='store_true')
+    opts, args = parser.parse_args()
+
+    f = router.fork(debug=opts.debug)
     f.call(do_nothing)
     t0 = mitogen.core.now()
-    for x in xrange(20000):
+    for x in xrange(opts.iterations):
         f.call(do_nothing)
     print('++', int(1e6 * ((mitogen.core.now() - t0) / (1.0+x))), 'usec')

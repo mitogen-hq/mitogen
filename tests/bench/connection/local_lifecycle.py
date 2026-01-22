@@ -14,10 +14,18 @@ mitogen.utils.setup_gil()
 
 @mitogen.main()
 def main(router):
+    import optparse
+    parser = optparse.OptionParser(description=__doc__)
+    parser.add_option(
+        '-i', '--iterations', type=int, metavar='N', default=100,
+        help='Number of iterations (default %default)')
+    parser.add_option('--debug', action='store_true')
+    opts, args = parser.parse_args()
+
     t0 = mitogen.core.now()
-    for x in range(100):
+    for x in range(opts.iterations):
         t = mitogen.core.now()
-        f = router.local()# debug=True)
+        f = router.local(debug=opts.debug)
         tt = mitogen.core.now()
         print(x, 1000 * (tt - t))
     print('%.03f ms' % (1000 * (mitogen.core.now() - t0) / (1.0 + x)))
