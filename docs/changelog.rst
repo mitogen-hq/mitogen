@@ -27,6 +27,7 @@ In progress (unreleased)
 * :gh:issue:`1424` tests: Parameterize connection benchmarks
 * :gh:issue:`1424` tests: Standardise output of connection benchmarks
 * :gh:issue:`1424` tests: Parameterize throughput benchmark
+* :gh:issue:`1424` tests: Parameterize large message benchmark
 
 
 v0.3.37 (2026-01-08)
