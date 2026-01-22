@@ -1,5 +1,8 @@
-# Verify throughput over sudo and SSH at various compression levels.
+'''
+Measure file service throughput over local, sudo, and (un)compressed SSH.
+'''
 
+import getpass
 import os
 import tempfile
 
@@ -43,6 +46,23 @@ def run_test(router, fp, s, context):
 
 @mitogen.main()
 def main(router):
+    import optparse
+    parser = optparse.OptionParser(description=__doc__)
+
+    parser.add_option(
+        '--ssh-python', metavar='CMD', default='python3',
+        help='Remote python path (default %default)')
+    parser.add_option(
+        '--ssh-user', metavar='S', default=getpass.getuser(),
+        help='Remote username (default %default)')
+
+    parser.add_option(
+        '--sudo-user', metavar='S', default='root',
+        help='Sudo username (default %default)')
+
+    parser.add_option('--debug', action='store_true')
+    opts, args = parser.parse_args()
+
     ansible_mitogen.affinity.policy.assign_muxprocess()
 
     bigfile = tempfile.NamedTemporaryFile()
@@ -53,19 +73,29 @@ def main(router):
     file_service.register(bigfile.name)
     pool.add(file_service)
     try:
-        context = router.local()
+        context = router.local(debug=opts.debug)
         run_test(router, bigfile, 'local()', context)
         context.shutdown(wait=True)
 
-        context = router.sudo()
+        context = router.sudo(username=opts.sudo_user, debug=opts.debug)
         run_test(router, bigfile, 'sudo()', context)
         context.shutdown(wait=True)
 
-        context = router.ssh(hostname='localhost', compression=False)
+        context = router.ssh(
+            hostname=args[0],
+            python_path=opts.ssh_python,
+            username=opts.ssh_user,
+            compression=False, debug=opts.debug,
+        )
         run_test(router, bigfile, 'ssh(compression=False)', context)
         context.shutdown(wait=True)
 
-        context = router.ssh(hostname='localhost', compression=True)
+        context = router.ssh(
+            hostname=args[0],
+            python_path=opts.ssh_python,
+            username=opts.ssh_user,
+            compression=True, debug=opts.debug,
+        )
         run_test(router, bigfile, 'ssh(compression=True)', context)
         context.shutdown(wait=True)
     finally:
