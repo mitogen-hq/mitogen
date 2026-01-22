@@ -233,7 +233,7 @@ class Select(object):
         # the underlying receivers. We handle the possibility of receivers
         # marked notified yet empty inside Select.get(), so this should be
         # robust.
-        for _ in range(recv.size()):
+        for _ in mitogen.core.range(recv.size()):
             self._put(recv)
 
     not_present_msg = 'Instance is not a member of this Select'

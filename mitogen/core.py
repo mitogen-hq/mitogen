@@ -227,6 +227,7 @@ if sys.version_info >= (3, 0):
     BufferType = lambda buf, start: memoryview(buf)[start:]
     integer_types = (int,)
     iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
+    range = range
 else:
     import cPickle as pickle
     import thread
@@ -238,6 +239,7 @@ else:
     UnicodeType = unicode
     integer_types = (int, long)
     iteritems, iterkeys, itervalues = dict.iteritems, dict.iterkeys, dict.itervalues
+    range = xrange
 
 AnyTextType = (BytesType, UnicodeType)
 

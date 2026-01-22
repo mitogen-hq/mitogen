@@ -523,7 +523,7 @@ class Pool(object):
             self.add(service)
         self._py_24_25_compat()
         self._threads = []
-        for x in range(size):
+        for x in mitogen.core.range(size):
             name = 'mitogen.Pool.%04x.%d' % (id(self) & 0xffff, x,)
             thread = threading.Thread(
                 name=name,
