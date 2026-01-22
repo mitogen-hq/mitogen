@@ -36,6 +36,7 @@ import sys
 import threading
 import traceback
 
+import mitogen
 import mitogen.core
 import mitogen.parent
 from mitogen.core import b
@@ -201,6 +202,7 @@ class Connection(mitogen.parent.Connection):
         config = super(Connection, self).get_econtext_config()
         config['core_src_fd'] = None
         config['importer'] = self.options.importer
+        config['minify'] = mitogen.MINIFY
         config['send_ec2'] = False
         config['setup_package'] = False
         if self.options.on_start:
