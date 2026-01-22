@@ -23,7 +23,7 @@ def main(router):
     opts, args = parser.parse_args()
 
     t0 = mitogen.core.now()
-    for x in range(opts.iterations):
+    for x in mitogen.core.range(opts.iterations):
         t = mitogen.core.now()
         f = router.local(debug=opts.debug)
         tt = mitogen.core.now()

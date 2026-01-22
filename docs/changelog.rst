@@ -28,6 +28,8 @@ In progress (unreleased)
 * :gh:issue:`1424` tests: Standardise output of connection benchmarks
 * :gh:issue:`1424` tests: Parameterize throughput benchmark
 * :gh:issue:`1424` tests: Parameterize large message benchmark
+* :gh:issue:`1424` :mod:`mitogen`: Consolidate all ``range`` and ``xrange``
+  polyfills into :attr:`mitogen.core.range`
 
 
 v0.3.37 (2026-01-08)

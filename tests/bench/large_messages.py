@@ -20,7 +20,7 @@ def main(router):
     s = ' ' * n
 
     t0 = mitogen.core.now()
-    for x in range(opts.iterations):
+    for x in mitogen.core.range(opts.iterations):
         tt0 = mitogen.core.now()
         assert n == c.call(len, s)
 

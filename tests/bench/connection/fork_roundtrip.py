@@ -9,10 +9,6 @@ import ansible_mitogen.affinity
 mitogen.utils.setup_gil()
 ansible_mitogen.affinity.policy.assign_worker()
 
-try:
-    xrange
-except NameError:
-    xrange = range
 
 def do_nothing():
     pass
@@ -30,7 +26,7 @@ def main(router):
     f = router.fork(debug=opts.debug)
     f.call(do_nothing)
     t0 = mitogen.core.now()
-    for x in xrange(opts.iterations):
+    for x in mitogen.core.range(opts.iterations):
         f.call(do_nothing)
 
     t1 = mitogen.core.now()

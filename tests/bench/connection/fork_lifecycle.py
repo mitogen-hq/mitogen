@@ -5,11 +5,6 @@ Measure latency of .fork() setup/teardown.
 import mitogen
 import mitogen.core
 
-try:
-    xrange
-except NameError:
-    xrange = range
-
 
 @mitogen.main()
 def main(router):
@@ -22,7 +17,7 @@ def main(router):
     opts, args = parser.parse_args()
 
     t0 = mitogen.core.now()
-    for x in xrange(opts.iterations):
+    for x in mitogen.core.range(opts.iterations):
         t = mitogen.core.now()
         ctx = router.fork(debug=opts.debug)
         ctx.shutdown(wait=True)

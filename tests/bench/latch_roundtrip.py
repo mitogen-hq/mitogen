@@ -15,7 +15,7 @@ X = 20000
 
 def flip_flop(ready, inp, out):
     ready.put(None)
-    for x in xrange(X):
+    for x in mitogen.core.range(X):
         inp.get()
         out.put(None)
 

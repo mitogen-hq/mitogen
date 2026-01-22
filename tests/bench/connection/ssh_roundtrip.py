@@ -11,10 +11,6 @@ import ansible_mitogen.affinity
 mitogen.utils.setup_gil()
 ansible_mitogen.affinity.policy.assign_worker()
 
-try:
-    xrange
-except NameError:
-    xrange = range
 
 def do_nothing():
     pass
