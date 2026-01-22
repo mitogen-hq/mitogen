@@ -23,6 +23,7 @@ In progress (unreleased)
 
 * :gh:issue:`1415` :mod:`mitogen`: Put fallbacks & polyfills into
   ``if sys.version_info`` blocks
+* :gh:issue:`1423` tests: Group and unify naming of connection benchmarks
 
 
 v0.3.37 (2026-01-08)
