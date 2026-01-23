@@ -75,8 +75,6 @@ class ScanCodeImportsTest(testlib.TestCase):
         co = testmod_compile('scanning/scoped_class.py')
         self.assertEqual(list(self.func(co)), [])
 
-        pass
-
     def test_scoped_function(self):
         co = testmod_compile('scanning/scoped_function.py')
         self.assertEqual(list(self.func(co)), [])

@@ -58,6 +58,7 @@ import zlib
 select = __import__('select')
 
 import mitogen.core
+from mitogen.core import BytesIO
 from mitogen.core import b
 from mitogen.core import bytes_partition
 from mitogen.core import IOLOG
@@ -145,9 +146,6 @@ SIGNAL_BY_NUM = dict(
     if name.startswith('SIG') and not name.startswith('SIG_')
 )
 
-_core_source_lock = threading.Lock()
-_core_source_partial = None
-
 
 def get_log_level():
     return (LOG.getEffectiveLevel() or logging.INFO)
@@ -167,35 +165,6 @@ def get_sys_executable():
         _sys_executable_warning_logged = True
 
     return '/usr/bin/python'
-
-
-def _get_core_source():
-    """
-    In non-masters, simply fetch the cached mitogen.core source code via the
-    import mechanism. In masters, this function is replaced with a version that
-    performs minification directly.
-    """
-    return inspect.getsource(mitogen.core)
-
-
-def get_core_source_partial():
-    """
-    _get_core_source() is expensive, even with @lru_cache in minify.py, threads
-    can enter it simultaneously causing severe slowdowns.
-    """
-    global _core_source_partial
-
-    if _core_source_partial is None:
-        _core_source_lock.acquire()
-        try:
-            if _core_source_partial is None:
-                _core_source_partial = PartialZlib(
-                    _get_core_source().encode('utf-8')
-                )
-        finally:
-            _core_source_lock.release()
-
-    return _core_source_partial
 
 
 def get_default_remote_name():
@@ -677,43 +646,6 @@ class TimerList(object):
             if timer.active:
                 timer.active = False
                 timer.func()
-
-
-class PartialZlib(object):
-    """
-    Because the mitogen.core source has a line appended to it during bootstrap,
-    it must be recompressed for each connection. This is not a problem for a
-    small number of connections, but it amounts to 30 seconds CPU time by the
-    time 500 targets are in use.
-
-    For that reason, build a compressor containing mitogen.core and flush as
-    much of it as possible into an initial buffer. Then to append the custom
-    line, clone the compressor and compress just that line.
-
-    A full compression costs ~6ms on a modern machine, this method costs ~35
-    usec.
-    """
-    def __init__(self, s):
-        self.s = s
-        if sys.version_info > (2, 5):
-            self._compressor = zlib.compressobj(9)
-            self._out = self._compressor.compress(s)
-            self._out += self._compressor.flush(zlib.Z_SYNC_FLUSH)
-        else:
-            self._compressor = None
-
-    def append(self, s):
-        """
-        Append the bytestring `s` to the compressor state and return the
-        final compressed output.
-        """
-        if self._compressor is None:
-            return zlib.compress(self.s + s, 9)
-        else:
-            compressor = self._compressor.copy()
-            out = self._out
-            out += compressor.compress(s)
-            return out + compressor.flush()
 
 
 def _upgrade_broker(broker):
@@ -1445,10 +1377,9 @@ class Connection(object):
         V='V'
         # Stop looping if no more data is needed or EOF is detected (empty bytes).
         while n-len(C) and V:select.select([0],[],[]);V=os.read(0,n-len(C));C+=V
-        # Raises `zlib.error` if compressed preamble is truncated or invalid
-        C=zlib.decompress(C)
         f=os.fdopen(W,'wb',0)
-        f.write(C)
+        # Raises `zlib.error` if compressed preamble is truncated or invalid
+        f.write(zlib.decompress(C,-15))
         f.close()
         f=os.fdopen(w,'wb',0)
         f.write(C)
@@ -1509,15 +1440,17 @@ class Connection(object):
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
+            'core_src_size': len(self._router._stage2_prefix),
         }
 
     def get_preamble(self):
-        suffix = (
-            '\nExternalContext(%r).main()\n' %
-            (self.get_econtext_config(),)
-        )
-        partial = get_core_source_partial()
-        return partial.append(suffix.encode('utf-8'))
+        suffix = u'\nExternalContext(%r).main()\n' % self.get_econtext_config()
+        compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
+        f = BytesIO()
+        f.write(self._router._stage2_prefix)
+        f.write(compressor.compress(suffix.encode('utf-8')))
+        f.write(compressor.flush())
+        return f.getvalue()
 
     def _get_name(self):
         """
