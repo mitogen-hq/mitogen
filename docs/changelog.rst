@@ -21,6 +21,12 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.38 (2026-01-23)
+--------------------
+
+* :gh:issue:`1418` :mod:`mitogen`: Format :class:`mitogen.core.Message` source
+  and destination as ``<context>:<handle>``, for clarity
 * :gh:issue:`1415` :mod:`mitogen`: Put fallbacks & polyfills into
   ``if sys.version_info`` blocks
 * :gh:issue:`1423` tests: Group and unify naming of connection benchmarks
@@ -41,8 +47,6 @@ v0.3.37 (2026-01-08)
   :py:class:`importlib.resource.abc.ResourceReader` protocol
 * :gh:issue:`1407` :mod:`mitogen`: Fix :exc:`AttributeError` in
   :mod:`mitogen.profiler`
-* :gh:issue:`1418` :mod:`mitogen`: Format :class:`mitogen.core.Message` source
-   and destination as ``<context>:<handle>``, for clarity
 
 
 v0.3.36 (2025-12-01)
