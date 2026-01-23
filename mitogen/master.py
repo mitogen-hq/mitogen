@@ -1295,8 +1295,7 @@ class ResourceResponder(object):
         stream = self._router.stream_by_id(msg.src_id)
         if stream is None:
             return
-        fullname_b, resource_b = msg.unpickle()
-        fullname, resource = fullname_b.decode(), resource_b.decode()
+        fullname, resource = msg.unpickle()
         try:
             content = importlib.resources.read_binary(fullname, resource)
         except (FileNotFoundError, IsADirectoryError):

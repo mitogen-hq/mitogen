@@ -186,20 +186,20 @@ IOLOG.setLevel(logging.INFO)
 _v = False
 _vv = False
 
-GET_MODULE = 100
-CALL_FUNCTION = 101
-FORWARD_LOG = 102
-ADD_ROUTE = 103
-DEL_ROUTE = 104
-ALLOCATE_ID = 105
-SHUTDOWN = 106
-LOAD_MODULE = 107
-FORWARD_MODULE = 108
-DETACHING = 109
-CALL_SERVICE = 110
-STUB_CALL_SERVICE = 111
-GET_RESOURCE = 112
-LOAD_RESOURCE = 113
+GET_MODULE = 100            # ascii     fullname
+CALL_FUNCTION = 101         # pickled   (chain_id, mod_name, class_name, fn_name, args, kwargs)
+FORWARD_LOG = 102           # utf-8     rec.name NUL rec.levelno NUL msg
+ADD_ROUTE = 103             # ascii     target_id ':' target_name
+DEL_ROUTE = 104             # ascii     target_id
+ALLOCATE_ID = 105           # empty
+SHUTDOWN = 106              # empty
+LOAD_MODULE = 107           # pickled   (fullname, pkg_present, path, content, related)
+FORWARD_MODULE = 108        # ascii     context_id NUL fullname
+DETACHING = 109             # empty
+CALL_SERVICE = 110          # pickled   (service_name: unicode/bytes, method_name, kwargs)
+STUB_CALL_SERVICE = 111     # empty
+GET_RESOURCE = 112          # pickled   (fullname, resource_path)
+LOAD_RESOURCE = 113         # tuple     (fullname, resource_path, content)
 
 #: Special value used to signal disconnection or the inability to route a
 #: message, when it appears in the `reply_to` field. Usually causes
@@ -801,6 +801,11 @@ class Message(object):
     :class:`mitogen.core.Router` for ingress messages, and helper methods for
     deserialization and generating replies.
     """
+
+    # src_id,  dst_id,    src_hnd, dst_hnd,    auth_id, length
+    # 4 4 4 4 4 4 = 24
+    # 2 2 2 2 2 4 = 14
+
     #: Integer target context ID. :class:`Router` delivers messages locally
     #: when their :attr:`dst_id` matches :data:`mitogen.context_id`, otherwise
     #: they are routed up or downstream.
@@ -839,7 +844,12 @@ class Message(object):
 
     HEADER_FMT = '>hLLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
-    HEADER_MAGIC = 0x4d49  # 'MI'
+    HEADER_SIG = ENC_UNK = 0x4d49  # b'MI'
+    ENC_BIN = 0x4d4a  # b'MJ'
+    ENC_PKL = 0x4d4b  # b'MK'
+    ENC_UTF = 0x4d4c  # b'MK'
+
+    dataenc = ENC_UNK
 
     def __init__(self, **kwargs):
         """
@@ -853,7 +863,7 @@ class Message(object):
 
     def pack(self):
         return (
-            struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, self.dst_id,
+            struct.pack(self.HEADER_FMT, self.dataenc, self.dst_id,
                         self.src_id, self.auth_id, self.handle,
                         self.reply_to or 0, len(self.data))
             + self.data
@@ -927,6 +937,10 @@ class Message(object):
             e = sys.exc_info()[1]
             self.data = pickle__dumps(CallError(e), protocol=2)
         return self
+
+    @classmethod
+    def binaryed(cls, data, **kwargs):
+        return cls(data=data, dataenc=cls.ENC_BIN, **kwargs)
 
     def reply(self, msg, router=None, **kwargs):
         """
@@ -1034,12 +1048,18 @@ class Sender(object):
         self.context = context
         self.dst_handle = dst_handle
 
-    def send(self, data):
+    def send(self, data, enc=Message.ENC_UNK):
         """
         Send `data` to the remote end.
         """
-        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
-        self.context.send(Message.pickled(data, handle=self.dst_handle))
+        _vv and IOLOG.debug('%r.send(%r.., enc=%#x)', self, repr(data)[:80], enc)
+        if enc in (Message.ENC_UNK, Message.ENC_PKL):
+            msg = Message.pickled(data, handle=self.dst_handle)
+        elif enc == Message.ENC_BIN:
+            msg = Message.binaryed(data, handle=self.dst_handle)
+        else:
+            raise RuntimeError('%r unknown enc=%#x' % (repr(data)[:80], enc))
+        self.context.send(msg)
 
     explicit_close_msg = 'Sender was explicitly closed'
 
@@ -1771,7 +1791,7 @@ class ResourceRequester(object):
                 else:
                     self._callbacks[(fullname, resource)] = [callback]
                     msg = Message.pickled(
-                        (b(fullname), b(resource)),
+                        (fullname, resource),
                         handle=GET_RESOURCE,
                     )
                     self._context.send(msg)
@@ -2386,13 +2406,13 @@ class MitogenProtocol(Protocol):
 
         msg = Message()
         msg.router = self._router
-        (magic, msg.dst_id, msg.src_id, msg.auth_id,
+        (msg.dataenc, msg.dst_id, msg.src_id, msg.auth_id,
          msg.handle, msg.reply_to, msg_len) = struct.unpack(
             Message.HEADER_FMT,
             self._input_buf[0][:Message.HEADER_LEN],
         )
 
-        if magic != Message.HEADER_MAGIC:
+        if msg.dataenc not in (Message.ENC_UNK, Message.ENC_BIN, Message.ENC_PKL):
             LOG.error(self.corrupt_msg, self.stream.name, self._input_buf[0][:2048])
             self.stream.on_disconnect(broker)
             return False
@@ -2531,6 +2551,7 @@ class Context(object):
         return receiver
 
     def call_service_async(self, service_name, method_name, **kwargs):
+        # FIXME text vs byte string
         if isinstance(service_name, BytesType):
             service_name = service_name.encode('utf-8')
         elif not isinstance(service_name, UnicodeType):

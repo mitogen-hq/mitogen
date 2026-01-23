@@ -78,7 +78,7 @@ class PackTest(testlib.TestCase):
     def test_magic(self):
         s = self.klass(dst_id=123, handle=123).pack()
         magic, = struct.unpack('>h', s[:2])
-        self.assertEqual(self.klass.HEADER_MAGIC, magic)
+        self.assertEqual(self.klass.HEADER_SIG, magic)
 
     def test_dst_id(self):
         s = self.klass(dst_id=123, handle=123).pack()
