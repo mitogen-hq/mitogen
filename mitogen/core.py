@@ -922,10 +922,10 @@ class Message(object):
         """
         self = cls(**kwargs)
         try:
-            self.data = pickle__dumps(obj, protocol=2)
+            self.data = pickle__dumps(obj, protocol=mitogen.pickle_protocol)
         except pickle.PicklingError:
             e = sys.exc_info()[1]
-            self.data = pickle__dumps(CallError(e), protocol=2)
+            self.data = pickle__dumps(CallError(e), protocol=mitogen.pickle_protocol)
         return self
 
     def reply(self, msg, router=None, **kwargs):
@@ -4185,6 +4185,7 @@ class ExternalContext(object):
         mitogen.context_id = self.config['context_id']
         mitogen.parent_ids = self.config['parent_ids'][:]
         mitogen.parent_id = mitogen.parent_ids[0]
+        mitogen.pickle_protocol = self.config['pickle_protocol']
 
     def _nullify_stdio(self):
         """

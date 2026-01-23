@@ -9,7 +9,7 @@ import tempfile
 import mitogen
 import mitogen.core
 import mitogen.service
-import ansible_mitogen.affinity
+#import ansible_mitogen.affinity
 
 
 def prepare():
@@ -63,7 +63,7 @@ def main(router):
     parser.add_option('--debug', action='store_true')
     opts, args = parser.parse_args()
 
-    ansible_mitogen.affinity.policy.assign_muxprocess()
+    #ansible_mitogen.affinity.policy.assign_muxprocess()
 
     bigfile = tempfile.NamedTemporaryFile()
     fill_with_random(bigfile, 1048576*512)
@@ -77,9 +77,9 @@ def main(router):
         run_test(router, bigfile, 'local()', context)
         context.shutdown(wait=True)
 
-        context = router.sudo(username=opts.sudo_user, debug=opts.debug)
-        run_test(router, bigfile, 'sudo()', context)
-        context.shutdown(wait=True)
+        #context = router.sudo(username=opts.sudo_user, debug=opts.debug)
+        #run_test(router, bigfile, 'sudo()', context)
+        #context.shutdown(wait=True)
 
         context = router.ssh(
             hostname=args[0],

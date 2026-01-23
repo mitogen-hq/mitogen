@@ -1508,6 +1508,7 @@ class Connection(object):
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
+            'pickle_protocol': mitogen.pickle_protocol,
             'version': mitogen.__version__,
         }
 
