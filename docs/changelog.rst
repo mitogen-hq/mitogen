@@ -18,6 +18,22 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.38 (2026-01-23)
+--------------------
+
+* :gh:issue:`1418` :mod:`mitogen`: Format :class:`mitogen.core.Message` source
+  and destination as ``<context>:<handle>``, for clarity
+* :gh:issue:`1415` :mod:`mitogen`: Put fallbacks & polyfills into
+  ``if sys.version_info`` blocks
+* :gh:issue:`1423` tests: Group and unify naming of connection benchmarks
+* :gh:issue:`1424` tests: Parameterize connection benchmarks
+* :gh:issue:`1424` tests: Standardise output of connection benchmarks
+* :gh:issue:`1424` tests: Parameterize throughput benchmark
+* :gh:issue:`1424` tests: Parameterize large message benchmark
+* :gh:issue:`1424` :mod:`mitogen`: Consolidate all ``range`` and ``xrange``
+  polyfills into :attr:`mitogen.core.range`
+
+
 v0.3.37 (2026-01-08)
 --------------------
 

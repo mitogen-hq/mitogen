@@ -38,9 +38,9 @@ import socket
 import signal
 import sys
 
-try:
+if sys.version_info >= (3, 3):
     import faulthandler
-except ImportError:
+else:
     faulthandler = None
 
 try:

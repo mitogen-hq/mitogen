@@ -104,7 +104,7 @@ def strip_docstrings(tokens):
             elif typ == tokenize.NEWLINE:
                 stack.append(t)
                 start_line, end_line = stack[0][2][0], stack[-1][3][0]+1
-                for i in range(start_line, end_line):
+                for i in mitogen.core.range(start_line, end_line):
                     yield tokenize.NL, '\n', (i, 0), (i,1), '\n'
                 for t in stack:
                     if t[0] in (tokenize.DEDENT, tokenize.INDENT):
