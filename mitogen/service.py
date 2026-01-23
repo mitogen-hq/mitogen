@@ -52,7 +52,7 @@ _pool_pid = None
 _pool_lock = threading.Lock()
 
 
-if mitogen.core.PY3:
+if sys.version_info >= (3, 0):
     def func_code(func):
         return func.__code__
     def func_name(func):
@@ -523,7 +523,7 @@ class Pool(object):
             self.add(service)
         self._py_24_25_compat()
         self._threads = []
-        for x in range(size):
+        for x in mitogen.core.range(size):
             name = 'mitogen.Pool.%04x.%d' % (id(self) & 0xffff, x,)
             thread = threading.Thread(
                 name=name,
