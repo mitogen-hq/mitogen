@@ -213,7 +213,7 @@ class Connection(mitogen.parent.Connection):
             self.options.on_fork()
         mitogen.core.set_blocking(childfp.fileno(), True)
 
-        childfp.send(b('MITO002\n'))
+        childfp.send(mitogen.core.EC2 + b('\n'))
 
         # Expected by the ExternalContext.main().
         os.dup2(childfp.fileno(), 1)

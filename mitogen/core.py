@@ -280,6 +280,13 @@ except IOError:
 #: writing small trailer chunks.
 CHUNK_SIZE = 131072
 
+#: Markers sent by bootstrap stages when it's ready to receive the next stage,
+#: e.g. compressed :class:`mitogen.core`.
+EC0 = b('MITO000')
+EC1 = b('MITO001')
+EC2 = b('MITO002 %d %d' % sys.version_info[0:2])
+EC2_PATTERN = b(r'MITO002 (\d) (\d\d?)')
+
 _tls = threading.local()
 
 
@@ -2332,10 +2339,13 @@ class MitogenProtocol(Protocol):
     #: peer.
     on_message = None
 
-    def __init__(self, router, remote_id, auth_id=None,
-                 local_id=None, parent_ids=None):
+    def __init__(
+        self, router, remote_id, auth_id=None, local_id=None, parent_ids=None,
+        remote_python_version=None,
+    ):
         self._router = router
         self.remote_id = remote_id
+        self.remote_python_version = remote_python_version
         #: If not :data:`None`, :class:`Router` stamps this into
         #: :attr:`Message.auth_id` of every message received on this stream.
         self.auth_id = auth_id
@@ -4105,7 +4115,8 @@ class ExternalContext(object):
             self.router,
             parent_id,
             local_id=self.config['context_id'],
-            parent_ids=self.config['parent_ids']
+            parent_ids=self.config['parent_ids'],
+            remote_python_version=self.config['parent_python_version'],
         )
         for f in in_fp, out_fp:
             fd = f.fileno()
@@ -4279,7 +4290,7 @@ class ExternalContext(object):
                 _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 if self.config.get('send_ec2', True):
-                    self.stream.transmit_side.write(b('MITO002\n'))
+                    self.stream.transmit_side.write(EC2 + b('\n'))
                 self.broker._py24_25_compat()
                 self.log_handler.uncork()
                 self.dispatcher.run()

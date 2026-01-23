@@ -1185,18 +1185,8 @@ class RegexProtocol(LineLoggingProtocolMixin, mitogen.core.DelimitedProtocol):
 
 class BootstrapProtocol(RegexProtocol):
     """
-    Respond to stdout of a child during bootstrap. Wait for :attr:`EC0_MARKER`
-    to be written by the first stage to indicate it can receive the bootstrap,
-    then await :attr:`EC1_MARKER` to indicate success, and
-    :class:`MitogenProtocol` can be enabled.
+    Respond to readiness markers sent to parent by child doing bootstrap.
     """
-    #: Sentinel value emitted by the first stage to indicate it is ready to
-    #: receive the compressed bootstrap. For :mod:`mitogen.ssh` this must have
-    #: length of at least `max(len('password'), len('debug1:'))`
-    EC0_MARKER = b('MITO000')
-    EC1_MARKER = b('MITO001')
-    EC2_MARKER = b('MITO002')
-
     def __init__(self, broker):
         super(BootstrapProtocol, self).__init__()
         self._writer = mitogen.core.BufferedWriter(broker, self)
@@ -1212,8 +1202,12 @@ class BootstrapProtocol(RegexProtocol):
         LOG.debug('%r: first stage received mitogen.core source', self)
 
     def _on_ec2_received(self, line, match):
-        LOG.debug('%r: new child booted successfully', self)
-        self.stream.conn._complete_connection()
+        py_major, py_minor = int(match.group(1)), int(match.group(2))
+        LOG.debug(
+            '%r: new child booted successfully on Python %d.%d',
+            self, py_major, py_minor,
+        )
+        self.stream.conn._complete_connection((py_major, py_minor))
         return False
 
     def on_unrecognized_line_received(self, line):
@@ -1221,9 +1215,9 @@ class BootstrapProtocol(RegexProtocol):
             line.decode('utf-8', 'replace'))
 
     PATTERNS = [
-        (re.compile(EC0_MARKER), _on_ec0_received),
-        (re.compile(EC1_MARKER), _on_ec1_received),
-        (re.compile(EC2_MARKER), _on_ec2_received),
+        (re.compile(mitogen.core.EC0), _on_ec0_received),
+        (re.compile(mitogen.core.EC1), _on_ec1_received),
+        (re.compile(mitogen.core.EC2_PATTERN), _on_ec2_received),
     ]
 
 
@@ -1509,6 +1503,7 @@ class Connection(object):
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
+            'parent_python_version': sys.version_info[0:2],
         }
 
     def get_preamble(self):
@@ -1545,7 +1540,7 @@ class Connection(object):
         if self.eof_error_hint:
             e.args = ('%s\n\n%s' % (e.args[0], self.eof_error_hint),)
 
-    def _complete_connection(self):
+    def _complete_connection(self, remote_python_version):
         self._timer.cancel()
         if not self.exception:
             mitogen.core.unlisten(self._router.broker, 'shutdown',
@@ -1555,6 +1550,7 @@ class Connection(object):
                 MitogenProtocol(
                     router=self._router,
                     remote_id=self.context.context_id,
+                    remote_python_version=remote_python_version,
                 )
             )
             self._router.route_monitor.notice_stream(self.stdio_stream)

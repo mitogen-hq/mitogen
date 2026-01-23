@@ -312,7 +312,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             stdout, stderr = proc.communicate()
             self.assertEqual(0, proc.returncode)
             self.assertEqual(stdout,
-                mitogen.parent.BootstrapProtocol.EC0_MARKER+b('\n'))
+                mitogen.core.EC0 + b('\n'))
             self.assertIn(
                 b("Error -3 while decompressing data"),  # Unknown compression method
                 stderr,
@@ -356,7 +356,7 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
             self.assertEqual(0, returncode)
             self.assertEqual(
                 proc.stdout.read(),
-                mitogen.parent.BootstrapProtocol.EC0_MARKER + b("\n"),
+                mitogen.core.EC0 + b("\n"),
             )
             self.assertIn(
                 b("Error -5 while decompressing data"),
