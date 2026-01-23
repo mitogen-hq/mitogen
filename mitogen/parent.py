@@ -79,8 +79,7 @@ except IOError:
     SELINUX_ENABLED = False
 
 
-if mitogen.core.PY3:
-    xrange = range
+if sys.version_info >= (3, 0):
     closure_attr = '__closure__'
     IM_SELF_ATTR = '__self__'
 else:
@@ -1729,7 +1728,7 @@ class ChildIdAllocator(object):
     def __init__(self, router):
         self.router = router
         self.lock = threading.Lock()
-        self.it = iter(xrange(0))
+        self.it = iter(mitogen.core.range(0))
 
     def allocate(self):
         """
@@ -1753,7 +1752,7 @@ class ChildIdAllocator(object):
             start, end = master.send_await(
                 mitogen.core.Message(dst_id=0, handle=mitogen.core.ALLOCATE_ID)
             )
-            self.it = iter(xrange(start, end))
+            self.it = iter(mitogen.core.range(start, end))
         finally:
             self.lock.release()
 

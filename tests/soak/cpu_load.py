@@ -8,6 +8,8 @@ import ctypes
 import multiprocessing
 import os
 
+import mitogen.core
+
 LIBC = ctypes.CDLL('libc.so.6')
 sched_yield = LIBC.sched_yield
 
@@ -19,7 +21,7 @@ def burn():
                  (ord(b) << 8) |
                  (ord(c) << 0)) / 1.6)
         print(n)
-        for x in xrange(n): pass
+        for x in mitogen.core.range(n): pass
         sched_yield()
 
 mul = 1.5
