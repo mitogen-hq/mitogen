@@ -365,10 +365,15 @@ class Runner(object):
         """
         For situations like sudo to a non-privileged account, CWD could be
         $HOME of the old account, which could have mode go=, which means it is
-        impossible to restore the old directory, so don't even try.
+        impossible to restore the old directory. Fallback to a neutral temp if so.
         """
         if self.cwd:
-            os.chdir(self.cwd)
+            try:
+                os.chdir(self.cwd)
+            except OSError:
+                LOG.debug('%r: could not CHDIR to %r fallback to %r',
+                          self, self.cwd, self.good_temp_dir)
+                os.chdir(self.good_temp_dir)
 
     def _setup_environ(self):
         """
