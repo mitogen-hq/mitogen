@@ -1334,13 +1334,14 @@ class Importer(object):
     if sys.version_info >= (3, 0):
         ALWAYS_BLACKLIST += ['cStringIO']
 
-    def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
+    def __init__(self, router, context, core_src, whitelist=(), blacklist=(), compression_level=None):
         self._log = logging.getLogger('mitogen.importer')
         self._context = context
         self._present = {'mitogen': self.MITOGEN_PKG_CONTENT}
         self._lock = threading.Lock()
         self.whitelist = list(whitelist) or ['']
         self.blacklist = list(blacklist) + self.ALWAYS_BLACKLIST
+        self.compression_level = compression_level
 
         # Preserve copies of the original server-supplied whitelist/blacklist
         # for later use by children.
@@ -1356,7 +1357,7 @@ class Importer(object):
                 'mitogen.core',
                 None,
                 'x/mitogen/core.py',
-                zlib.compress(core_src, 9),
+                zlib.compress(core_src, self.compression_level),
                 [],
             )
         self._install_handler(router)
@@ -4155,6 +4156,7 @@ class ExternalContext(object):
                 core_src,
                 self.config.get('whitelist', ()),
                 self.config.get('blacklist', ()),
+                compression_level = self.config['compression_level'],
             )
 
         self.importer = importer
@@ -4185,6 +4187,7 @@ class ExternalContext(object):
         mitogen.context_id = self.config['context_id']
         mitogen.parent_ids = self.config['parent_ids'][:]
         mitogen.parent_id = mitogen.parent_ids[0]
+        mitogen._compression_level = self.config['compression_level']
 
     def _nullify_stdio(self):
         """

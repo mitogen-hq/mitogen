@@ -61,6 +61,7 @@ parent_ids = []
 
 import os
 _default_profiling = os.environ.get('MITOGEN_PROFILING') is not None
+_compression_level = int(os.environ.get('MITOGEN_COMPRESSION_LEVEL', '9'), 10)
 del os
 
 

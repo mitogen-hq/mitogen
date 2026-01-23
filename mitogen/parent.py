@@ -57,6 +57,7 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
+import mitogen
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import bytes_partition
@@ -696,7 +697,7 @@ class PartialZlib(object):
     def __init__(self, s):
         self.s = s
         if sys.version_info > (2, 5):
-            self._compressor = zlib.compressobj(9)
+            self._compressor = zlib.compressobj(mitogen._compression_level)
             self._out = self._compressor.compress(s)
             self._out += self._compressor.flush(zlib.Z_SYNC_FLUSH)
         else:
@@ -708,7 +709,7 @@ class PartialZlib(object):
         final compressed output.
         """
         if self._compressor is None:
-            return zlib.compress(self.s + s, 9)
+            return zlib.compress(self.s + s, mitogen._compression_level)
         else:
             compressor = self._compressor.copy()
             out = self._out
@@ -1508,6 +1509,7 @@ class Connection(object):
             'whitelist': self._router.get_module_whitelist(),
             'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
+            'compression_level': mitogen._compression_level,
             'version': mitogen.__version__,
         }
 
