@@ -780,8 +780,19 @@ if sys.version_info >= (3, 0):
     # In 3.x Unpickler is a class exposing find_class as an overridable, but it
     # cannot be overridden without subclassing.
     class _Unpickler(pickle.Unpickler):
+
+        def __init__(self, *args, insecure=False, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.__insecure = insecure
+
         def find_class(self, module, func):
-            return self.find_global(module, func)
+            try:
+                return self.find_global(module, func)
+            except Exception as error:
+                if not self.__insecure:
+                    raise error
+                return super().find_class(module, func)
+
     pickle__dumps = pickle.dumps
 elif sys.version_info < (2, 5):
     # On Python 2.4, we must use a pure-Python pickler.
@@ -965,13 +976,16 @@ class Message(object):
         else:
             raise ChannelError(ChannelError.remote_msg)
 
-    def unpickle(self, throw=True, throw_dead=True):
+    def unpickle(self, throw=True, throw_dead=True, *, insecure=False):
         """
         Unpickle :attr:`data`, optionally raising any exceptions present.
 
         :param bool throw_dead:
             If :data:`True`, raise exceptions, otherwise it is the caller's
             responsibility.
+
+        :param bool insecure:
+            If :data:`True`, also use possibly unsecure unpickling methods.
 
         :raises CallError:
             The serialized data contained CallError exception.
@@ -985,7 +999,7 @@ class Message(object):
         obj = self._unpickled
         if obj is Message._unpickled:
             fp = BytesIO(self.data)
-            unpickler = _Unpickler(fp, **self.UNPICKLER_KWARGS)
+            unpickler = _Unpickler(fp, insecure=insecure, **self.UNPICKLER_KWARGS)
             unpickler.find_global = self._find_global
             try:
                 # Must occur off the broker thread.
@@ -3915,7 +3929,7 @@ class Dispatcher(object):
         econtext.dispatcher._error_by_chain_id.pop(chain_id, None)
 
     def _parse_request(self, msg):
-        data = msg.unpickle(throw=False)
+        data = msg.unpickle(throw=False, insecure=True)
         _v and LOG.debug('%r: dispatching %r', self, data)
 
         chain_id, modname, klass, func, args, kwargs = data

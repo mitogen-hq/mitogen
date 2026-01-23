@@ -42,6 +42,14 @@ class TargetClass:
     def add_numbers_with_offset(cls, x, y):
         return cls.offset + x + y
 
+    @classmethod
+    def passing_crazy_type(cls, crazy_cls):
+        return crazy_cls.__name__
+
+    @classmethod
+    def passing_crazy_type_instance(cls, crazy):
+        return crazy.__class__.__name__
+
 
 class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
@@ -56,6 +64,18 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(
             self.local.call(TargetClass.add_numbers_with_offset, 1, 2),
             103,
+        )
+
+    def test_succeeds_passing_class(self):
+        self.assertEqual(
+            self.local.call(TargetClass.passing_crazy_type, CrazyType),
+            'CrazyType'
+        )
+
+    def test_succeeds_passing_class_instance(self):
+        self.assertEqual(
+            self.local.call(TargetClass.passing_crazy_type_instance, CrazyType()),
+            'CrazyType'
         )
 
     def test_crashes(self):
