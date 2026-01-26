@@ -28,6 +28,8 @@ In progress (unreleased)
   the magic field as a content encoding enumeration.
 * :gh:issue:`1430` :mod:`mitogen`: Add explicit binary Message encoding,
   marked using :data:`mitogen.core.Message.ENC_BIN`.
+* :gh:issue:`1430` :mod:`mitogen`: Send :class:`mitogen.service.FileService`
+  content raw, without pickle encoding
 
 
 v0.3.38 (2026-01-23)

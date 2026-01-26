@@ -981,6 +981,11 @@ class Message(object):
         else:
             raise ChannelError(ChannelError.remote_msg)
 
+    def decode(self, throw=True, throw_dead=True):
+        if self.enc == self.ENC_PKL: return self.unpickle(throw, throw_dead)
+        if self.enc == self.ENC_BIN: return self.data
+        raise ValueError('Invalid explicit enc: %r' % (self.enc,))
+
     def unpickle(self, throw=True, throw_dead=True):
         """
         Unpickle :attr:`data`, optionally raising any exceptions present.
@@ -1054,12 +1059,12 @@ class Sender(object):
         self.context = context
         self.dst_handle = dst_handle
 
-    def send(self, data):
+    def send(self, data, enc=Message.ENC_PKL):
         """
         Send `data` to the remote end.
         """
-        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
-        self.context.send(Message.pickled(data, handle=self.dst_handle))
+        _vv and IOLOG.debug('%r.send(%*r.., enc=%s)', self, 100, data, enc)
+        self.context.send(Message.encoded(data, enc, handle=self.dst_handle))
 
     explicit_close_msg = 'Sender was explicitly closed'
 
