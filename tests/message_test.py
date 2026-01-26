@@ -59,9 +59,14 @@ class ConstructorTest(testlib.TestCase):
         self.assertEqual(m.data, b('asdf'))
         self.assertIsInstance(m.data, mitogen.core.BytesType)
 
-    def test_data_hates_unicode(self):
+    def test_enc(self):
+        self.assertEqual(self.klass().enc, self.klass.ENC_MGC)
+        self.assertEqual(self.klass(enc=self.klass.ENC_PKL).enc, self.klass.ENC_PKL)
+
+    def test_invalid_args(self):
         self.assertRaises(Exception,
             lambda: self.klass(data=u'asdf'))
+        self.assertRaises(ValueError, lambda: self.klass(enc=42))
 
 
 class PackTest(testlib.TestCase):
@@ -75,10 +80,10 @@ class PackTest(testlib.TestCase):
         s = self.klass(dst_id=123, handle=123).pack()
         self.assertEqual(len(s), self.klass.HEADER_LEN)
 
-    def test_magic(self):
+    def test_enc(self):
         s = self.klass(dst_id=123, handle=123).pack()
-        magic, = struct.unpack('>h', s[:2])
-        self.assertEqual(self.klass.HEADER_MAGIC, magic)
+        enc, = struct.unpack('>h', s[:2])
+        self.assertEqual(self.klass.ENC_MGC, enc)
 
     def test_dst_id(self):
         s = self.klass(dst_id=123, handle=123).pack()
@@ -164,7 +169,9 @@ class PickledTest(testlib.TestCase):
 
     def roundtrip(self, v, router=None):
         msg = self.klass.pickled(v)
+        self.assertEqual(self.klass.ENC_PKL, msg.enc)
         msg2 = self.klass(data=msg.data)
+        self.assertEqual(self.klass.ENC_MGC, msg2.enc)
         msg2.router = router
         return msg2.unpickle()
 

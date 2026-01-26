@@ -23,6 +23,9 @@ In progress (unreleased)
 
 * :gh:issue:`1430` :mod:`mitogen`: Pickle :data:`mitogen.core.GET_RESOURCE`
   parameters directly as textual strings (rather than ASCII in byte strings)
+* :gh:issue:`1430` :mod:`mitogen`: Explicitly mark messages known to carry
+  pickled data, using :data:`mitogen.core.Message.ENC_PKL`. This repurposes
+  the magic field as a content encoding enumeration.
 
 
 v0.3.38 (2026-01-23)
