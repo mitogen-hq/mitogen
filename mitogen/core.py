@@ -1771,7 +1771,7 @@ class ResourceRequester(object):
                 else:
                     self._callbacks[(fullname, resource)] = [callback]
                     msg = Message.pickled(
-                        (b(fullname), b(resource)),
+                        (fullname, resource),
                         handle=GET_RESOURCE,
                     )
                     self._context.send(msg)

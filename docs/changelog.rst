@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1430` :mod:`mitogen`: Pickle :data:`mitogen.core.GET_RESOURCE`
+  parameters directly as textual strings (rather than ASCII in byte strings)
+
 
 v0.3.38 (2026-01-23)
 --------------------

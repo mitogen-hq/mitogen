@@ -2826,9 +2826,7 @@ class ResourceForwarder(object):
         if msg.is_dead:
             return
 
-        fullname_b, resource_b = msg.unpickle()
-        fullname, resource = fullname_b.decode(), resource_b.decode()
-
+        fullname, resource = msg.unpickle()
         callback = lambda: self._on_cache_callback(msg, fullname, resource)
         self.requester._request_resource(fullname, resource, callback)
 
