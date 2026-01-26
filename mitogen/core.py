@@ -801,8 +801,8 @@ class Message(object):
     :class:`mitogen.core.Router` for ingress messages, and helper methods for
     deserialization and generating replies.
     """
-    ENCS = frozenset(range(0x4d49, 0x4d49+2))
-    ENC_MGC, ENC_PKL = sorted(ENCS)
+    ENCS = frozenset(range(0x4d49, 0x4d49+3))
+    ENC_MGC, ENC_PKL, ENC_BIN = sorted(ENCS)
 
     #: Integer target context ID. :class:`Router` delivers messages locally
     #: when their :attr:`dst_id` matches :data:`mitogen.context_id`, otherwise
@@ -922,6 +922,12 @@ class Message(object):
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
+    def encoded(cls, obj, enc, **kwargs):
+        if enc == cls.ENC_PKL: return cls.pickled(obj, **kwargs)
+        if enc == cls.ENC_BIN: return cls(data=obj, enc=enc, **kwargs)
+        raise ValueError('Invalid explicit enc: %r' % (enc,))
+
+    @classmethod
     def pickled(cls, obj, **kwargs):
         """
         Construct a pickled message, setting :attr:`data` to the serialization
@@ -989,6 +995,10 @@ class Message(object):
             The `is_dead` field was set.
         """
         _vv and IOLOG.debug('%r.unpickle()', self)
+        if self.enc not in (self.ENC_MGC, self.ENC_PKL):
+            raise ValueError(
+                'Message %r is not pickled, invalid enc=%r', self, self.enc,
+            )
         if throw_dead and self.is_dead:
             self._throw_dead()
 
