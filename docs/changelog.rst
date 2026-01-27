@@ -18,6 +18,20 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.39 (2026-01-27)
+--------------------
+
+* :gh:issue:`1430` :mod:`mitogen`: Pickle :data:`mitogen.core.GET_RESOURCE`
+  parameters directly as textual strings (rather than ASCII in byte strings)
+* :gh:issue:`1430` :mod:`mitogen`: Explicitly mark messages known to carry
+  pickled data, using :data:`mitogen.core.Message.ENC_PKL`. This repurposes
+  the magic field as a content encoding enumeration.
+* :gh:issue:`1430` :mod:`mitogen`: Add explicit binary Message encoding,
+  marked using :data:`mitogen.core.Message.ENC_BIN`.
+* :gh:issue:`1430` :mod:`mitogen`: Send :class:`mitogen.service.FileService`
+  content raw, without pickle encoding
+
+
 v0.3.38 (2026-01-23)
 --------------------
 
