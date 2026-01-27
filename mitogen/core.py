@@ -801,6 +801,9 @@ class Message(object):
     :class:`mitogen.core.Router` for ingress messages, and helper methods for
     deserialization and generating replies.
     """
+    ENCS = frozenset(range(0x4d49, 0x4d49+3))
+    ENC_MGC, ENC_PKL, ENC_BIN = sorted(ENCS)
+
     #: Integer target context ID. :class:`Router` delivers messages locally
     #: when their :attr:`dst_id` matches :data:`mitogen.context_id`, otherwise
     #: they are routed up or downstream.
@@ -827,6 +830,11 @@ class Message(object):
     #: Raw message data bytes.
     data = b('')
 
+    #: Encoding of payload in :attr:`data`, one of the ``ENC_*`` constants.
+    #: :attr:`ENC_MGC` is an implicit, legacy value. New features &
+    #: :ref:`standard-handles` should explicitly declare an encoding.
+    enc = ENC_MGC
+
     _unpickled = object()
 
     #: The :class:`Router` responsible for routing the message. This is
@@ -839,7 +847,7 @@ class Message(object):
 
     HEADER_FMT = '>hLLLLLL'
     HEADER_LEN = struct.calcsize(HEADER_FMT)
-    HEADER_MAGIC = 0x4d49  # 'MI'
+    HEADER_MAGIC = ENC_MGC
 
     def __init__(self, **kwargs):
         """
@@ -850,10 +858,12 @@ class Message(object):
         self.auth_id = mitogen.context_id
         vars(self).update(kwargs)
         assert isinstance(self.data, BytesType), 'Message data is not Bytes'
+        if self.enc not in self.ENCS:
+            raise ValueError('Invalid enc: %r' % (self.enc,))
 
     def pack(self):
         return (
-            struct.pack(self.HEADER_FMT, self.HEADER_MAGIC, self.dst_id,
+            struct.pack(self.HEADER_FMT, self.enc, self.dst_id,
                         self.src_id, self.auth_id, self.handle,
                         self.reply_to or 0, len(self.data))
             + self.data
@@ -912,6 +922,12 @@ class Message(object):
         return cls(reply_to=IS_DEAD, **kwargs)
 
     @classmethod
+    def encoded(cls, obj, enc, **kwargs):
+        if enc == cls.ENC_PKL: return cls.pickled(obj, **kwargs)
+        if enc == cls.ENC_BIN: return cls(data=obj, enc=enc, **kwargs)
+        raise ValueError('Invalid explicit enc: %r' % (enc,))
+
+    @classmethod
     def pickled(cls, obj, **kwargs):
         """
         Construct a pickled message, setting :attr:`data` to the serialization
@@ -920,7 +936,7 @@ class Message(object):
         :returns:
             The new message.
         """
-        self = cls(**kwargs)
+        self = cls(enc=cls.ENC_PKL, **kwargs)
         try:
             self.data = pickle__dumps(obj, protocol=2)
         except pickle.PicklingError:
@@ -965,6 +981,11 @@ class Message(object):
         else:
             raise ChannelError(ChannelError.remote_msg)
 
+    def decode(self, throw=True, throw_dead=True):
+        if self.enc == self.ENC_PKL: return self.unpickle(throw, throw_dead)
+        if self.enc == self.ENC_BIN: return self.data
+        raise ValueError('Invalid explicit enc: %r' % (self.enc,))
+
     def unpickle(self, throw=True, throw_dead=True):
         """
         Unpickle :attr:`data`, optionally raising any exceptions present.
@@ -979,6 +1000,10 @@ class Message(object):
             The `is_dead` field was set.
         """
         _vv and IOLOG.debug('%r.unpickle()', self)
+        if self.enc not in (self.ENC_MGC, self.ENC_PKL):
+            raise ValueError(
+                'Message %r is not pickled, invalid enc=%r', self, self.enc,
+            )
         if throw_dead and self.is_dead:
             self._throw_dead()
 
@@ -1034,12 +1059,12 @@ class Sender(object):
         self.context = context
         self.dst_handle = dst_handle
 
-    def send(self, data):
+    def send(self, data, enc=Message.ENC_PKL):
         """
         Send `data` to the remote end.
         """
-        _vv and IOLOG.debug('%r.send(%r..)', self, repr(data)[:100])
-        self.context.send(Message.pickled(data, handle=self.dst_handle))
+        _vv and IOLOG.debug('%r.send(%*r.., enc=%s)', self, 100, data, enc)
+        self.context.send(Message.encoded(data, enc, handle=self.dst_handle))
 
     explicit_close_msg = 'Sender was explicitly closed'
 
@@ -2386,13 +2411,13 @@ class MitogenProtocol(Protocol):
 
         msg = Message()
         msg.router = self._router
-        (magic, msg.dst_id, msg.src_id, msg.auth_id,
+        (msg.enc, msg.dst_id, msg.src_id, msg.auth_id,
          msg.handle, msg.reply_to, msg_len) = struct.unpack(
             Message.HEADER_FMT,
             self._input_buf[0][:Message.HEADER_LEN],
         )
 
-        if magic != Message.HEADER_MAGIC:
+        if msg.enc not in Message.ENCS:
             LOG.error(self.corrupt_msg, self.stream.name, self._input_buf[0][:2048])
             self.stream.on_disconnect(broker)
             return False
