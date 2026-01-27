@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.39 (2026-01-27)
+--------------------
+
 * :gh:issue:`1430` :mod:`mitogen`: Pickle :data:`mitogen.core.GET_RESOURCE`
   parameters directly as textual strings (rather than ASCII in byte strings)
 * :gh:issue:`1430` :mod:`mitogen`: Explicitly mark messages known to carry
