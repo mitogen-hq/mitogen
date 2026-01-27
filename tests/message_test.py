@@ -59,9 +59,14 @@ class ConstructorTest(testlib.TestCase):
         self.assertEqual(m.data, b('asdf'))
         self.assertIsInstance(m.data, mitogen.core.BytesType)
 
-    def test_data_hates_unicode(self):
+    def test_enc(self):
+        self.assertEqual(self.klass().enc, self.klass.ENC_MGC)
+        self.assertEqual(self.klass(enc=self.klass.ENC_PKL).enc, self.klass.ENC_PKL)
+
+    def test_invalid_args(self):
         self.assertRaises(Exception,
             lambda: self.klass(data=u'asdf'))
+        self.assertRaises(ValueError, lambda: self.klass(enc=42))
 
 
 class PackTest(testlib.TestCase):
@@ -75,10 +80,10 @@ class PackTest(testlib.TestCase):
         s = self.klass(dst_id=123, handle=123).pack()
         self.assertEqual(len(s), self.klass.HEADER_LEN)
 
-    def test_magic(self):
+    def test_enc(self):
         s = self.klass(dst_id=123, handle=123).pack()
-        magic, = struct.unpack('>h', s[:2])
-        self.assertEqual(self.klass.HEADER_MAGIC, magic)
+        enc, = struct.unpack('>h', s[:2])
+        self.assertEqual(self.klass.ENC_MGC, enc)
 
     def test_dst_id(self):
         s = self.klass(dst_id=123, handle=123).pack()
@@ -158,13 +163,32 @@ class EvilObject(object):
     pass
 
 
+class EncodedTest(testlib.TestCase):
+    klass = mitogen.core.Message
+    def test_ctor(self):
+        msg = self.klass.encoded(42, self.klass.ENC_PKL)
+        self.assertEqual(self.klass.ENC_PKL, msg.enc)
+
+        msg = self.klass.encoded(b'abc', self.klass.ENC_BIN)
+        self.assertEqual(b'abc', msg.data)
+        self.assertEqual(self.klass.ENC_BIN, msg.enc)
+
+    def test_invalid_args(self):
+        self.assertRaises(ValueError, lambda: self.klass.encoded(42, enc=self.klass.ENC_MGC))
+        self.assertRaises(ValueError, lambda: self.klass.encoded(b('abc'), enc=self.klass.ENC_MGC))
+        self.assertRaises(Exception, lambda: self.klass.encoded(42, enc=self.klass.ENC_BIN))
+        self.assertRaises(Exception, lambda: self.klass.encoded(u'abc', enc=self.klass.ENC_BIN))
+
+
 class PickledTest(testlib.TestCase):
     # getting_started.html#rpc-serialization-rules
     klass = mitogen.core.Message
 
     def roundtrip(self, v, router=None):
         msg = self.klass.pickled(v)
+        self.assertEqual(self.klass.ENC_PKL, msg.enc)
         msg2 = self.klass(data=msg.data)
+        self.assertEqual(self.klass.ENC_MGC, msg2.enc)
         msg2.router = router
         return msg2.unpickle()
 
@@ -361,6 +385,11 @@ class UnpickleTest(testlib.TestCase):
     def test_no_throw_dead(self):
         m = self.klass.pickled('derp', reply_to=mitogen.core.IS_DEAD)
         self.assertEqual('derp', m.unpickle(throw_dead=False))
+
+    def test_invalid_enc(self):
+        msg = self.klass.pickled(42)
+        msg.enc = self.klass.ENC_BIN
+        self.assertRaises(ValueError, msg.unpickle)
 
 
 class UnpickleCompatTest(testlib.TestCase):
