@@ -57,6 +57,7 @@ import zlib
 # Absolute imports for <2.5.
 select = __import__('select')
 
+import mitogen
 import mitogen.core
 from mitogen.core import b
 from mitogen.core import bytes_partition
@@ -1502,6 +1503,7 @@ class Connection(object):
             'parent_ids': parent_ids,
             'context_id': self.context.context_id,
             'debug': self.options.debug,
+            'minify': mitogen.MINIFY,
             'profiling': self.options.profiling,
             'unidirectional': self.options.unidirectional,
             'log_level': get_log_level(),
