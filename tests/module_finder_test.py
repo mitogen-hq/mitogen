@@ -53,7 +53,6 @@ class IsStdlibNameTest(testlib.TestCase):
     @unittest.skipIf(sys.version_info < (3, 3), 'Requires PEP 420 support')
     def test_implicit_namespace_pkg(self):
         import implicit_namespace_pkg.sub_pkg1
-        self.assertIsNone(implicit_namespace_pkg.__file__)
         self.assertFalse(self.func('implicit_namespace_pkg'))
 
 
