@@ -256,6 +256,22 @@ def _connect_lxd(spec):
     }
 
 
+def _connect_incus(spec):
+    """
+    Return ContextService arguments for an Incus container connection.
+    """
+    return {
+        'method': 'incus',
+        'kwargs': {
+            'container': spec.remote_addr(),
+            'python_path': spec.python_path(),
+            'incus_path': spec.mitogen_incus_path(),
+            'connect_timeout': spec.timeout(),
+            'remote_name': get_remote_name(spec),
+        }
+    }
+
+
 def _connect_machinectl(spec):
     """
     Return ContextService arguments for a machinectl connection.
@@ -415,6 +431,7 @@ CONNECTION_METHOD = {
     'kubectl': _connect_kubectl,
     'jail': _connect_jail,
     'local': _connect_local,
+    'incus': _connect_incus,
     'lxc': _connect_lxc,
     'lxd': _connect_lxd,
     'machinectl': _connect_machinectl,
