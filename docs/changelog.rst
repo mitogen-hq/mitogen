@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.40 (2026-02-04)
+--------------------
+
 * :gh:issue:`946` :mod:`mitogen`: Fix handling of PEP 420 implicit namespace
   packages, in which ``module.__file__`` can be ``None``
 
