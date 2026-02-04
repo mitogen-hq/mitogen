@@ -50,6 +50,11 @@ class IsStdlibNameTest(testlib.TestCase):
         import mitogen.fakessh
         self.assertFalse(self.func('mitogen.fakessh'))
 
+    @unittest.skipIf(sys.version_info < (3, 3), 'Requires PEP 420 support')
+    def test_implicit_namespace_pkg(self):
+        import implicit_namespace_pkg.sub_pkg1
+        self.assertFalse(self.func('implicit_namespace_pkg'))
+
 
 class GetMainModuleDefectivePython3x(testlib.TestCase):
     klass = mitogen.master.DefectivePython3xMainMethod
