@@ -61,6 +61,7 @@ parent_ids = []
 
 import os
 _default_profiling = os.environ.get('MITOGEN_PROFILING') is not None
+pickle_protocol = int(os.environ.get('MITOGEN_PICKLE_PROTOCOL', '2'), 10)
 del os
 
 
