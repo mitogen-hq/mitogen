@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1441` :mod:`mitogen`: Consolidate :mod:`pickle` imports and
+  backward compatibility handling.
+
 
 v0.3.40 (2026-02-04)
 --------------------

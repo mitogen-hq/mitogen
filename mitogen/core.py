@@ -70,7 +70,6 @@ import fcntl
 import itertools
 import logging
 import os
-import pickle as py_pickle
 import pstats
 import pty
 import signal
@@ -113,12 +112,44 @@ else:
     now = time.time
 
 if sys.version_info >= (3, 0):
+    from pickle import PicklingError, Unpickler as _Unpickler
+    class Unpickler(_Unpickler):
+        def __init__(self, file, find_global):
+            self.find_global = find_global
+            super().__init__(file, encoding='bytes')
+
+        def find_class(self, module, func):
+            return self.find_global(module, func)
+else:
+    from cPickle import PicklingError, Unpickler as _Unpickler
+    def Unpickler(file, find_global):
+        unpickler = _Unpickler(file)
+        unpickler.find_global = find_global
+        return unpickler
+
+if sys.version_info >= (3, 0):
+    from pickle import Pickler
     str_partition, str_rpartition = str.partition, str.rpartition
     bytes_partition = bytes.partition
 elif sys.version_info >= (2, 5):
+    from cPickle import Pickler
     str_partition, str_rpartition = unicode.partition, unicode.rpartition
     bytes_partition = str.partition
 else:
+    import pickle
+    class Pickler(pickle.Pickler):
+        def save_exc_inst(self, obj):
+            if isinstance(obj, CallError):
+                func, args = obj.__reduce__()
+                self.save(func)
+                self.save(args)
+                self.write(pickle.REDUCE)
+            else:
+                pickle.Pickler.save_inst(self, obj)
+
+        dispatch = pickle.Pickler.dispatch.copy()
+        dispatch[pickle.InstanceType] = save_exc_inst
+
     def _part(s, sep, find):
         "(str|unicode).(partition|rpartition) polyfill for Python 2.4"
         idx = find(sep)
@@ -217,7 +248,6 @@ IS_DEAD = 999
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if sys.version_info >= (3, 0):
-    import pickle
     import _thread as thread
     from io import BytesIO
     b = str.encode
@@ -229,7 +259,6 @@ if sys.version_info >= (3, 0):
     iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
     range = range
 else:
-    import cPickle as pickle
     import thread
     from cStringIO import StringIO as BytesIO
     b = str
@@ -746,54 +775,6 @@ def iter_split(buf, delim, func):
     return buf[start:], cont
 
 
-class Py24Pickler(py_pickle.Pickler):
-    """
-    Exceptions were classic classes until Python 2.5. Sadly for 2.4, cPickle
-    offers little control over how a classic instance is pickled. Therefore 2.4
-    uses a pure-Python pickler, so CallError can be made to look as it does on
-    newer Pythons.
-
-    This mess will go away once proper serialization exists.
-    """
-    @classmethod
-    def dumps(cls, obj, protocol):
-        bio = BytesIO()
-        self = cls(bio, protocol=protocol)
-        self.dump(obj)
-        return bio.getvalue()
-
-    def save_exc_inst(self, obj):
-        if isinstance(obj, CallError):
-            func, args = obj.__reduce__()
-            self.save(func)
-            self.save(args)
-            self.write(py_pickle.REDUCE)
-        else:
-            py_pickle.Pickler.save_inst(self, obj)
-
-    if sys.version_info < (2, 5):
-        dispatch = py_pickle.Pickler.dispatch.copy()
-        dispatch[py_pickle.InstanceType] = save_exc_inst
-
-
-if sys.version_info >= (3, 0):
-    # In 3.x Unpickler is a class exposing find_class as an overridable, but it
-    # cannot be overridden without subclassing.
-    class _Unpickler(pickle.Unpickler):
-        def find_class(self, module, func):
-            return self.find_global(module, func)
-    pickle__dumps = pickle.dumps
-elif sys.version_info < (2, 5):
-    # On Python 2.4, we must use a pure-Python pickler.
-    pickle__dumps = Py24Pickler.dumps
-    _Unpickler = pickle.Unpickler
-else:
-    pickle__dumps = pickle.dumps
-    # In 2.x Unpickler is a function exposing a writeable find_global
-    # attribute.
-    _Unpickler = pickle.Unpickler
-
-
 class Message(object):
     """
     Messages are the fundamental unit of communication, comprising fields from
@@ -937,11 +918,14 @@ class Message(object):
             The new message.
         """
         self = cls(enc=cls.ENC_PKL, **kwargs)
+        f = BytesIO()
+        p = Pickler(f, protocol=2)
         try:
-            self.data = pickle__dumps(obj, protocol=2)
-        except pickle.PicklingError:
+            p.dump(obj)
+        except PicklingError:
             e = sys.exc_info()[1]
-            self.data = pickle__dumps(CallError(e), protocol=2)
+            p.dump(CallError(e))
+        self.data = f.getvalue()
         return self
 
     def reply(self, msg, router=None, **kwargs):
@@ -967,11 +951,6 @@ class Message(object):
         else:
             LOG.debug('dropping reply to message with no return address: %r',
                       msg)
-
-    if sys.version_info >= (3, 0):
-        UNPICKLER_KWARGS = {'encoding': 'bytes'}
-    else:
-        UNPICKLER_KWARGS = {}
 
     def _throw_dead(self):
         if len(self.data):
@@ -1009,9 +988,7 @@ class Message(object):
 
         obj = self._unpickled
         if obj is Message._unpickled:
-            fp = BytesIO(self.data)
-            unpickler = _Unpickler(fp, **self.UNPICKLER_KWARGS)
-            unpickler.find_global = self._find_global
+            unpickler = Unpickler(BytesIO(self.data), self._find_global)
             try:
                 # Must occur off the broker thread.
                 try:
