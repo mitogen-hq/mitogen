@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1441` :mod:`mitogen`: Consolidate :mod:`pickle` imports and
   backward compatibility handling.
+* :gh:issue:`126` :mod:`mitogen`: Switch :class:`mitogen.core.Unpickler`
+  to default deny policy when handling :data:`pickle.GLOBAL` opcode.
 
 
 v0.3.40 (2026-02-04)

@@ -112,19 +112,20 @@ else:
     now = time.time
 
 if sys.version_info >= (3, 0):
-    from pickle import PicklingError, Unpickler as _Unpickler
+    from pickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
+    def find_deny(module, name):
+        raise UnpicklingError('Denied: %s.%s' % (module, name))
     class Unpickler(_Unpickler):
-        def __init__(self, file, find_global):
-            self.find_global = find_global
+        def __init__(self, file, find_class=find_deny):
+            self.find_class = find_class
             super().__init__(file, encoding='bytes')
-
-        def find_class(self, module, func):
-            return self.find_global(module, func)
 else:
-    from cPickle import PicklingError, Unpickler as _Unpickler
-    def Unpickler(file, find_global):
+    from cPickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
+    def find_deny(module, name):
+        raise UnpicklingError('Denied: %s.%s' % (module, name))
+    def Unpickler(file, find_class=find_deny):
         unpickler = _Unpickler(file)
-        unpickler.find_global = find_global
+        unpickler.find_global = find_class
         return unpickler
 
 if sys.version_info >= (3, 0):
