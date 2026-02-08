@@ -1154,7 +1154,7 @@ class ModuleResponder(object):
 
         if fullname == '__main__':
             source = self.neutralize_main(path, source)
-        compressed = mitogen.core.Blob(zlib.compress(source, 9))
+        compressed = mitogen.core.Blob(zlib.compress(source, mitogen._compression_level))
         related = [
             to_text(name)
             for name in self._finder.find_related(fullname)
