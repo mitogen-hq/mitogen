@@ -25,6 +25,9 @@ In progress (unreleased)
   backward compatibility handling.
 * :gh:issue:`126` :mod:`mitogen`: Switch :class:`mitogen.core.Unpickler`
   to default deny policy when handling :data:`pickle.GLOBAL` opcode.
+* :gh:issue:`1430` :mod:`mitogen`: Pickle top-level ``bytes`` objects
+  ourself on Python 3.x, to avoid ``_codecs.encode()`` call injected by
+  :class:`pickle.Pickler`
 
 
 v0.3.40 (2026-02-04)
