@@ -236,19 +236,6 @@ def _py_filename(path):
     return None, False
 
 
-def _get_core_source():
-    """
-    Master version of parent.get_core_source().
-    """
-    source = inspect.getsource(mitogen.core)
-    return mitogen.minify.minimize_source(source)
-
-
-if mitogen.is_master:
-    # TODO: find a less surprising way of installing this.
-    mitogen.parent._get_core_source = _get_core_source
-
-
 class ThreadWatcher(object):
     """
     Manage threads that wait for another thread to shut down, before invoking
@@ -1042,7 +1029,7 @@ class ModuleResponder(object):
         self._log = logging.getLogger('mitogen.responder')
         self._router = router
         self._finder = ModuleFinder()
-        self._cache = {}  # fullname -> pickled
+        self._cache = {}
         self.blacklist = []
         self.whitelist = ['']
 
@@ -1154,7 +1141,9 @@ class ModuleResponder(object):
 
         if fullname == '__main__':
             source = self.neutralize_main(path, source)
-        compressed = mitogen.core.Blob(zlib.compress(source, 9))
+        compressor = zlib.compressobj(9, 8, -15)
+        compressed = compressor.compress(source) + compressor.flush()
+        compressed = mitogen.core.Blob(compressed)
         related = [
             to_text(name)
             for name in self._finder.find_related(fullname)
@@ -1412,6 +1401,10 @@ class Router(mitogen.parent.Router):
         self.upgrade()
 
     def upgrade(self):
+        compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
+        core_src = inspect.getsource(mitogen.core)
+        core_src = mitogen.minify.minimize_source(core_src)
+        self._stage2_prefix = compressor.compress(core_src.encode('utf-8')) + compressor.flush(zlib.Z_FULL_FLUSH)
         self.id_allocator = IdAllocator(self)
         self.responder = ModuleResponder(self)
         self.resource_responder = ResourceResponder(self)

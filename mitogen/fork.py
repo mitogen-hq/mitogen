@@ -199,7 +199,7 @@ class Connection(mitogen.parent.Connection):
 
     def get_econtext_config(self):
         config = super(Connection, self).get_econtext_config()
-        config['core_src_fd'] = None
+        config['preamble_fd'] = None
         config['importer'] = self.options.importer
         config['send_ec2'] = False
         config['setup_package'] = False
