@@ -829,8 +829,6 @@ class Message(object):
     #: :ref:`standard-handles` should explicitly declare an encoding.
     enc = ENC_MGC
 
-    _unpickled = object()
-
     #: The :class:`Router` responsible for routing the message. This is
     #: :data:`None` for locally originated messages.
     router = None
@@ -922,24 +920,23 @@ class Message(object):
         raise ValueError('Invalid explicit enc: %r' % (enc,))
 
     @classmethod
-    def pickled(cls, obj, **kwargs):
+    def pickled(cls, *args, **kwargs):
         """
         Construct a pickled message, setting :attr:`data` to the serialization
-        of `obj`, and setting remaining fields using `kwargs`.
+        of each object in `args`, and setting remaining fields using `kwargs`.
 
         :returns:
             The new message.
         """
-        self = cls(enc=cls.ENC_PKL, **kwargs)
         f = BytesIO()
         p = Pickler(f, protocol=2)
-        try:
-            p.dump(obj)
-        except PicklingError:
-            e = sys.exc_info()[1]
-            p.dump(CallError(e))
-        self.data = f.getvalue()
-        return self
+        for obj in args:
+            try:
+                p.dump(obj)
+            except PicklingError:
+                exc = sys.exc_info()[1]
+                p.dump(CallError(exc))
+        return cls(enc=cls.ENC_PKL, data=f.getvalue(), **kwargs)
 
     def reply(self, msg, router=None, **kwargs):
         """
@@ -980,7 +977,15 @@ class Message(object):
 
     def unpickle(self, throw=True, throw_dead=True):
         """
-        Unpickle :attr:`data`, optionally raising any exceptions present.
+        Return the first unpickled stream in :attr:`data`, optionally raise
+        :exc:`CallError` if the unpickled object is such.
+        """
+        return next(self.unpickle_iter(throw, throw_dead))
+
+    def unpickle_iter(self, throw=True, throw_dead=True):
+        """
+        Return an iterator of objects unpickled from :attr:`data`, optionally
+        raising any :exc:`CallError` exceptions present.
 
         :param bool throw_dead:
             If :data:`True`, raise exceptions, otherwise it is the caller's
@@ -991,7 +996,6 @@ class Message(object):
         :raises ChannelError:
             The `is_dead` field was set.
         """
-        _vv and IOLOG.debug('%r.unpickle()', self)
         if self.enc not in (self.ENC_MGC, self.ENC_PKL):
             raise ValueError(
                 'Message %r is not pickled, invalid enc=%r', self, self.enc,
@@ -999,9 +1003,9 @@ class Message(object):
         if throw_dead and self.is_dead:
             self._throw_dead()
 
-        obj = self._unpickled
-        if obj is Message._unpickled:
-            unpickler = Unpickler(BytesIO(self.data), self._find_global)
+        file = BytesIO(self.data)
+        unpickler = Unpickler(file, self._find_global)
+        while file.tell() < len(self.data):
             try:
                 # Must occur off the broker thread.
                 try:
@@ -1014,11 +1018,10 @@ class Message(object):
                 e = sys.exc_info()[1]
                 raise StreamError('invalid message: %s', e)
 
-        if throw:
-            if isinstance(obj, CallError):
+            if throw and isinstance(obj, CallError):
                 raise obj
 
-        return obj
+            yield obj
 
     def __repr__(self):
         if len(self.data) > 60:

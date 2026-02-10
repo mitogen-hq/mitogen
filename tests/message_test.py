@@ -12,6 +12,7 @@ import mitogen.master
 import testlib
 
 from mitogen.core import b
+from mitogen.core import next
 
 
 class ConstructorTest(testlib.TestCase):
@@ -315,6 +316,26 @@ class PickledTest(testlib.TestCase):
         self.assertRaises(mitogen.core.StreamError,
             lambda: self.roundtrip(EvilObject())
         )
+
+
+class UnpickleIterTest(testlib.TestCase):
+    def roundtrip(self, *args, **kwargs):
+        msg1 = mitogen.core.Message.pickled(*args, **kwargs)
+        return msg1.unpickle_iter()
+
+    def test_ints(self):
+        self.assertEqual(list(self.roundtrip(1, 2, 3)), [1, 2, 3])
+
+    def test_mixed(self):
+        msg = mitogen.core.Message.pickled((u'foo.bar', u'baz.txt'), b('abc'))
+        self.assertFalse(b('_codecs') in msg.data)
+        self.assertFalse(b('encode') in msg.data)
+        self.assertFalse(b('latin1') in msg.data)
+
+        parts = msg.unpickle_iter()
+        self.assertEqual(next(parts), (u'foo.bar', u'baz.txt'))
+        self.assertEqual(next(parts), b('abc'))
+        self.assertRaises(StopIteration, next, parts)
 
 
 class ReplyTest(testlib.TestCase):

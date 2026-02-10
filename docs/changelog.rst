@@ -28,6 +28,10 @@ In progress (unreleased)
 * :gh:issue:`1430` :mod:`mitogen`: Pickle top-level ``bytes`` objects
   ourself on Python 3.x, to avoid ``_codecs.encode()`` call injected by
   :class:`pickle.Pickler`
+* :gh:issue:`1430` :mod:`mitogen`: Remove caching of result of
+  :meth:`mitogen.core.Message.unpickle`
+* :gh:issue:`1430` :mod:`mitogen`: Allow mutiple pickle streams in a single
+  :class:`mitogen.core.Message`, add :meth:`mitogen.core.Message.unpickle_iter`
 
 
 v0.3.40 (2026-02-04)
