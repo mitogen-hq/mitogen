@@ -1013,7 +1013,6 @@ class Message(object):
                 except:
                     LOG.error('raw pickle was: %r', self.data)
                     raise
-                self._unpickled = obj
             except (TypeError, ValueError):
                 e = sys.exc_info()[1]
                 raise StreamError('invalid message: %s', e)
