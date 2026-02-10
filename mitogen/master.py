@@ -1302,26 +1302,17 @@ class ResourceResponder(object):
             content = importlib.resources.read_binary(fullname, resource)
         except (FileNotFoundError, IsADirectoryError):
             content = None
-        if content is not None:
-            self._send_resource(stream, fullname, resource, content)
-        else:
-            self._send_not_found(stream, fullname, resource)
 
-    def _send_resource(self, stream, fullname, resource, content):
         msg = mitogen.core.Message.pickled(
             (fullname, resource, content),
             dst_id=stream.protocol.remote_id,
             handle=mitogen.core.LOAD_RESOURCE,
         )
-        self._router._async_route(msg)
 
-    def _send_not_found(self, stream, fullname, resource):
-        msg = mitogen.core.Message.pickled(
-            (fullname, resource, None),
-            dst_id=stream.protocol.remote_id,
-            handle=mitogen.core.LOAD_RESOURCE,
-        )
-        stream.protocol.send(msg)
+        if content is not None:
+            self._router._async_route(msg)
+        else:
+            stream.protocol.send(msg)
 
 
 class Broker(mitogen.core.Broker):
