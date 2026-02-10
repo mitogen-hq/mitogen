@@ -70,7 +70,6 @@ import fcntl
 import itertools
 import logging
 import os
-import pickle as py_pickle
 import pstats
 import pty
 import signal
@@ -113,12 +112,57 @@ else:
     now = time.time
 
 if sys.version_info >= (3, 0):
+    from pickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
+    def find_deny(module, name):
+        raise UnpicklingError('Denied: %s.%s' % (module, name))
+    class Unpickler(_Unpickler):
+        def __init__(self, file, find_class=find_deny):
+            self.find_class = find_class
+            super().__init__(file, encoding='bytes')
+else:
+    from cPickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
+    def find_deny(module, name):
+        raise UnpicklingError('Denied: %s.%s' % (module, name))
+    def Unpickler(file, find_class=find_deny):
+        unpickler = _Unpickler(file)
+        unpickler.find_global = find_class
+        return unpickler
+
+if sys.version_info >= (3, 0):
+    from pickle import Pickler as _Pickler
+    class Pickler(_Pickler):
+        def __init__(self, file, protocol):
+            self._file = file
+            self._protocol = protocol
+            super().__init__(file, protocol)
+        def dump(self, obj):
+            if self._protocol == 2 and type(obj) == bytes:
+                self._file.write(struct.pack('<BBBL', 128, 2, 84, len(obj)))
+                self._file.write(obj)
+                self._file.write(struct.pack('<B', 46))
+            else:
+                super().dump(obj)
     str_partition, str_rpartition = str.partition, str.rpartition
     bytes_partition = bytes.partition
 elif sys.version_info >= (2, 5):
+    from cPickle import Pickler
     str_partition, str_rpartition = unicode.partition, unicode.rpartition
     bytes_partition = str.partition
 else:
+    import pickle
+    class Pickler(pickle.Pickler):
+        def save_exc_inst(self, obj):
+            if isinstance(obj, CallError):
+                func, args = obj.__reduce__()
+                self.save(func)
+                self.save(args)
+                self.write(pickle.REDUCE)
+            else:
+                pickle.Pickler.save_inst(self, obj)
+
+        dispatch = pickle.Pickler.dispatch.copy()
+        dispatch[pickle.InstanceType] = save_exc_inst
+
     def _part(s, sep, find):
         "(str|unicode).(partition|rpartition) polyfill for Python 2.4"
         idx = find(sep)
@@ -217,7 +261,6 @@ IS_DEAD = 999
 PY24 = sys.version_info < (2, 5)
 PY3 = sys.version_info > (3,)
 if sys.version_info >= (3, 0):
-    import pickle
     import _thread as thread
     from io import BytesIO
     b = str.encode
@@ -229,7 +272,6 @@ if sys.version_info >= (3, 0):
     iteritems, iterkeys, itervalues = dict.items, dict.keys, dict.values
     range = range
 else:
-    import cPickle as pickle
     import thread
     from cStringIO import StringIO as BytesIO
     b = str
@@ -746,54 +788,6 @@ def iter_split(buf, delim, func):
     return buf[start:], cont
 
 
-class Py24Pickler(py_pickle.Pickler):
-    """
-    Exceptions were classic classes until Python 2.5. Sadly for 2.4, cPickle
-    offers little control over how a classic instance is pickled. Therefore 2.4
-    uses a pure-Python pickler, so CallError can be made to look as it does on
-    newer Pythons.
-
-    This mess will go away once proper serialization exists.
-    """
-    @classmethod
-    def dumps(cls, obj, protocol):
-        bio = BytesIO()
-        self = cls(bio, protocol=protocol)
-        self.dump(obj)
-        return bio.getvalue()
-
-    def save_exc_inst(self, obj):
-        if isinstance(obj, CallError):
-            func, args = obj.__reduce__()
-            self.save(func)
-            self.save(args)
-            self.write(py_pickle.REDUCE)
-        else:
-            py_pickle.Pickler.save_inst(self, obj)
-
-    if sys.version_info < (2, 5):
-        dispatch = py_pickle.Pickler.dispatch.copy()
-        dispatch[py_pickle.InstanceType] = save_exc_inst
-
-
-if sys.version_info >= (3, 0):
-    # In 3.x Unpickler is a class exposing find_class as an overridable, but it
-    # cannot be overridden without subclassing.
-    class _Unpickler(pickle.Unpickler):
-        def find_class(self, module, func):
-            return self.find_global(module, func)
-    pickle__dumps = pickle.dumps
-elif sys.version_info < (2, 5):
-    # On Python 2.4, we must use a pure-Python pickler.
-    pickle__dumps = Py24Pickler.dumps
-    _Unpickler = pickle.Unpickler
-else:
-    pickle__dumps = pickle.dumps
-    # In 2.x Unpickler is a function exposing a writeable find_global
-    # attribute.
-    _Unpickler = pickle.Unpickler
-
-
 class Message(object):
     """
     Messages are the fundamental unit of communication, comprising fields from
@@ -834,8 +828,6 @@ class Message(object):
     #: :attr:`ENC_MGC` is an implicit, legacy value. New features &
     #: :ref:`standard-handles` should explicitly declare an encoding.
     enc = ENC_MGC
-
-    _unpickled = object()
 
     #: The :class:`Router` responsible for routing the message. This is
     #: :data:`None` for locally originated messages.
@@ -928,21 +920,23 @@ class Message(object):
         raise ValueError('Invalid explicit enc: %r' % (enc,))
 
     @classmethod
-    def pickled(cls, obj, **kwargs):
+    def pickled(cls, *args, **kwargs):
         """
         Construct a pickled message, setting :attr:`data` to the serialization
-        of `obj`, and setting remaining fields using `kwargs`.
+        of each object in `args`, and setting remaining fields using `kwargs`.
 
         :returns:
             The new message.
         """
-        self = cls(enc=cls.ENC_PKL, **kwargs)
-        try:
-            self.data = pickle__dumps(obj, protocol=2)
-        except pickle.PicklingError:
-            e = sys.exc_info()[1]
-            self.data = pickle__dumps(CallError(e), protocol=2)
-        return self
+        f = BytesIO()
+        p = Pickler(f, protocol=2)
+        for obj in args:
+            try:
+                p.dump(obj)
+            except PicklingError:
+                exc = sys.exc_info()[1]
+                p.dump(CallError(exc))
+        return cls(enc=cls.ENC_PKL, data=f.getvalue(), **kwargs)
 
     def reply(self, msg, router=None, **kwargs):
         """
@@ -968,11 +962,6 @@ class Message(object):
             LOG.debug('dropping reply to message with no return address: %r',
                       msg)
 
-    if sys.version_info >= (3, 0):
-        UNPICKLER_KWARGS = {'encoding': 'bytes'}
-    else:
-        UNPICKLER_KWARGS = {}
-
     def _throw_dead(self):
         if len(self.data):
             raise ChannelError(self.data.decode('utf-8', 'replace'))
@@ -986,20 +975,37 @@ class Message(object):
         if self.enc == self.ENC_BIN: return self.data
         raise ValueError('Invalid explicit enc: %r' % (self.enc,))
 
-    def unpickle(self, throw=True, throw_dead=True):
+    def unpickle(self, throw=True, throw_dead=True, find_class=None):
         """
-        Unpickle :attr:`data`, optionally raising any exceptions present.
+        Return the first unpickled stream in :attr:`data`, optionally raise
+        :exc:`CallError` if the unpickled object is such.
+
+        `throw` and `throw_dead` behave the same as with :meth:`unpickle_iter`.
+
+        :param find_class:
+            Callable that takes ``(module, func)`` and returns a constructor.
+            Defaults to :meth:`_find_global`.
+        """
+        if find_class is None: find_class = self._find_global
+        return next(self.unpickle_iter(throw, throw_dead, find_class))
+
+    def unpickle_iter(self, throw=True, throw_dead=True, find_class=find_deny):
+        """
+        Return an iterator of objects unpickled from :attr:`data`, optionally
+        raising any :exc:`CallError` exceptions present.
 
         :param bool throw_dead:
             If :data:`True`, raise exceptions, otherwise it is the caller's
             responsibility.
+        :param find_class:
+            Callable that takes ``(module, func)`` and returns a constructor.
+            Default: :func:`find_deny`.
 
         :raises CallError:
             The serialized data contained CallError exception.
         :raises ChannelError:
             The `is_dead` field was set.
         """
-        _vv and IOLOG.debug('%r.unpickle()', self)
         if self.enc not in (self.ENC_MGC, self.ENC_PKL):
             raise ValueError(
                 'Message %r is not pickled, invalid enc=%r', self, self.enc,
@@ -1007,11 +1013,9 @@ class Message(object):
         if throw_dead and self.is_dead:
             self._throw_dead()
 
-        obj = self._unpickled
-        if obj is Message._unpickled:
-            fp = BytesIO(self.data)
-            unpickler = _Unpickler(fp, **self.UNPICKLER_KWARGS)
-            unpickler.find_global = self._find_global
+        file = BytesIO(self.data)
+        unpickler = Unpickler(file, find_class)
+        while file.tell() < len(self.data):
             try:
                 # Must occur off the broker thread.
                 try:
@@ -1019,16 +1023,14 @@ class Message(object):
                 except:
                     LOG.error('raw pickle was: %r', self.data)
                     raise
-                self._unpickled = obj
             except (TypeError, ValueError):
                 e = sys.exc_info()[1]
                 raise StreamError('invalid message: %s', e)
 
-        if throw:
-            if isinstance(obj, CallError):
+            if throw and isinstance(obj, CallError):
                 raise obj
 
-        return obj
+            yield obj
 
     def __repr__(self):
         if len(self.data) > 60:
@@ -1809,8 +1811,7 @@ class ResourceRequester(object):
     def _on_load_resource(self, msg):
         if msg.is_dead:
             return
-        tup = msg.unpickle()
-        fullname, resource, content = tup
+        (fullname, resource), content = msg.unpickle_iter()
 
         self._lock.acquire()
         try:
