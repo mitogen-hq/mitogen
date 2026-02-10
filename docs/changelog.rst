@@ -34,6 +34,8 @@ In progress (unreleased)
   :class:`mitogen.core.Message`, add :meth:`mitogen.core.Message.unpickle_iter`
 * :gh:issue:`1430` :mod:`mitogen`: Speed up :class:`mitogen.core.ResourceReader`
   using 2 pickle streams in :data:`mitogen.core.LOAD_RESOURCE` messages
+* :gh:issue:`1430` :mod:`mitogen`: Default to :func:`mitogen.core.find_deny`
+  in :meth:`mitogen.core.Message.unpickle_iter`
 
 
 v0.3.40 (2026-02-04)

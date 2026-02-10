@@ -975,14 +975,21 @@ class Message(object):
         if self.enc == self.ENC_BIN: return self.data
         raise ValueError('Invalid explicit enc: %r' % (self.enc,))
 
-    def unpickle(self, throw=True, throw_dead=True):
+    def unpickle(self, throw=True, throw_dead=True, find_class=None):
         """
         Return the first unpickled stream in :attr:`data`, optionally raise
         :exc:`CallError` if the unpickled object is such.
-        """
-        return next(self.unpickle_iter(throw, throw_dead))
 
-    def unpickle_iter(self, throw=True, throw_dead=True):
+        `throw` and `throw_dead` behave the same as with :meth:`unpickle_iter`.
+
+        :param find_class:
+            Callable that takes ``(module, func)`` and returns a constructor.
+            Defaults to :meth:`_find_global`.
+        """
+        if find_class is None: find_class = self._find_global
+        return next(self.unpickle_iter(throw, throw_dead, find_class))
+
+    def unpickle_iter(self, throw=True, throw_dead=True, find_class=find_deny):
         """
         Return an iterator of objects unpickled from :attr:`data`, optionally
         raising any :exc:`CallError` exceptions present.
@@ -990,6 +997,9 @@ class Message(object):
         :param bool throw_dead:
             If :data:`True`, raise exceptions, otherwise it is the caller's
             responsibility.
+        :param find_class:
+            Callable that takes ``(module, func)`` and returns a constructor.
+            Default: :func:`find_deny`.
 
         :raises CallError:
             The serialized data contained CallError exception.
@@ -1004,7 +1014,7 @@ class Message(object):
             self._throw_dead()
 
         file = BytesIO(self.data)
-        unpickler = Unpickler(file, self._find_global)
+        unpickler = Unpickler(file, find_class)
         while file.tell() < len(self.data):
             try:
                 # Must occur off the broker thread.
