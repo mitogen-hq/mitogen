@@ -1013,7 +1013,6 @@ class Message(object):
                 except:
                     LOG.error('raw pickle was: %r', self.data)
                     raise
-                self._unpickled = obj
             except (TypeError, ValueError):
                 e = sys.exc_info()[1]
                 raise StreamError('invalid message: %s', e)
@@ -1802,8 +1801,7 @@ class ResourceRequester(object):
     def _on_load_resource(self, msg):
         if msg.is_dead:
             return
-        tup = msg.unpickle()
-        fullname, resource, content = tup
+        (fullname, resource), content = msg.unpickle_iter()
 
         self._lock.acquire()
         try:
