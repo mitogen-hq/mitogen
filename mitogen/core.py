@@ -930,7 +930,6 @@ class Message(object):
         :returns:
             The new message.
         """
-        self = cls(enc=cls.ENC_PKL, **kwargs)
         f = BytesIO()
         p = Pickler(f, protocol=2)
         try:
@@ -938,8 +937,7 @@ class Message(object):
         except PicklingError:
             e = sys.exc_info()[1]
             p.dump(CallError(e))
-        self.data = f.getvalue()
-        return self
+        return cls(enc=cls.ENC_PKL, data=f.getvalue(), **kwargs)
 
     def reply(self, msg, router=None, **kwargs):
         """
