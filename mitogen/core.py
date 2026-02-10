@@ -829,8 +829,6 @@ class Message(object):
     #: :ref:`standard-handles` should explicitly declare an encoding.
     enc = ENC_MGC
 
-    _unpickled = object()
-
     #: The :class:`Router` responsible for routing the message. This is
     #: :data:`None` for locally originated messages.
     router = None
@@ -997,8 +995,7 @@ class Message(object):
         if throw_dead and self.is_dead:
             self._throw_dead()
 
-        obj = self._unpickled
-        if obj is Message._unpickled:
+        if True:
             unpickler = Unpickler(BytesIO(self.data), self._find_global)
             try:
                 # Must occur off the broker thread.
