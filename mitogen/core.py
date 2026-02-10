@@ -129,7 +129,19 @@ else:
         return unpickler
 
 if sys.version_info >= (3, 0):
-    from pickle import Pickler
+    from pickle import Pickler as _Pickler
+    class Pickler(_Pickler):
+        def __init__(self, file, protocol):
+            self._file = file
+            self._protocol = protocol
+            super().__init__(file, protocol)
+        def dump(self, obj):
+            if self._protocol == 2 and type(obj) == bytes:
+                self._file.write(struct.pack('<BBBL', 128, 2, 84, len(obj)))
+                self._file.write(obj)
+                self._file.write(struct.pack('<B', 46))
+            else:
+                super().dump(obj)
     str_partition, str_rpartition = str.partition, str.rpartition
     bytes_partition = bytes.partition
 elif sys.version_info >= (2, 5):
