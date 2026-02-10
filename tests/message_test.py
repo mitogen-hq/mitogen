@@ -337,6 +337,10 @@ class UnpickleIterTest(testlib.TestCase):
         self.assertEqual(next(parts), b('abc'))
         self.assertRaises(StopIteration, next, parts)
 
+    def test_default_find_class_denies(self):
+        msg = mitogen.core.Message.pickled(1j)
+        self.assertRaises(mitogen.core.UnpicklingError, next, msg.unpickle_iter())
+
 
 class ReplyTest(testlib.TestCase):
     # getting_started.html#rpc-serialization-rules
