@@ -1802,8 +1802,7 @@ class ResourceRequester(object):
     def _on_load_resource(self, msg):
         if msg.is_dead:
             return
-        tup = msg.unpickle()
-        fullname, resource, content = tup
+        (fullname, resource), content = msg.unpickle_iter()
 
         self._lock.acquire()
         try:

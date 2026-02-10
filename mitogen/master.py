@@ -1304,7 +1304,7 @@ class ResourceResponder(object):
             content = None
 
         msg = mitogen.core.Message.pickled(
-            (fullname, resource, content),
+            (fullname, resource), content,
             dst_id=stream.protocol.remote_id,
             handle=mitogen.core.LOAD_RESOURCE,
         )
