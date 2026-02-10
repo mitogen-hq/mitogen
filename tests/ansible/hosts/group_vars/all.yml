@@ -38,6 +38,7 @@ pkg_mgr_python_interpreter: python
 
 virtualenv_create_argv:
   - virtualenv
+  - --no-download
   - -p
   - "{{ virtualenv_python }}"
   - "{{ virtualenv_path }}"
