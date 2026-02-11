@@ -37,6 +37,8 @@ be expected. On the slave, it is built dynamically during startup.
 #: Library version as a tuple.
 __version__ = (0, 3, 42, 'dev')
 
+import os
+MINIFY = os.environ.get('MITOGEN_MINIFY', '1').lower() in ('1', 'true', 'yes')
 
 #: This is :data:`False` in slave contexts. Previously it was used to prevent
 #: re-execution of :mod:`__main__` in single file programs, however that now
@@ -58,8 +60,6 @@ parent_id = None
 #: IDs ordered from most direct to least direct.
 parent_ids = []
 
-
-import os
 _default_profiling = os.environ.get('MITOGEN_PROFILING') is not None
 del os
 

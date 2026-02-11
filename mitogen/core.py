@@ -4206,6 +4206,7 @@ class ExternalContext(object):
         del sys.modules['__main__']
 
     def _setup_globals(self):
+        mitogen.MINIFY = self.config['minify']
         mitogen.is_master = False
         mitogen.__version__ = self.config['version']
         mitogen.context_id = self.config['context_id']

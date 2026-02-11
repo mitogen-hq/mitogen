@@ -241,7 +241,9 @@ def _get_core_source():
     Master version of parent.get_core_source().
     """
     source = inspect.getsource(mitogen.core)
-    return mitogen.minify.minimize_source(source)
+    if mitogen.MINIFY:
+        source = mitogen.minify.minimize_source(source)
+    return source
 
 
 if mitogen.is_master:
@@ -1139,7 +1141,7 @@ class ModuleResponder(object):
             self._cache[fullname] = tup
             return tup
 
-        if self.minify_safe_re.search(source):
+        if mitogen.MINIFY and self.minify_safe_re.search(source):
             # If the module contains a magic marker, it's safe to minify.
             t0 = mitogen.core.now()
             source = mitogen.minify.minimize_source(source).encode('utf-8')
