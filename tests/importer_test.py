@@ -1,3 +1,5 @@
+import pkgutil
+import os
 import sys
 import threading
 import types
@@ -9,6 +11,7 @@ try:
 except ImportError:
     import mock
 
+import mitogen
 import mitogen.core
 import mitogen.utils
 from mitogen.core import b
@@ -44,6 +47,15 @@ class ImporterMixin(testlib.RouterMixin):
     def tearDown(self):
         sys.modules.pop(self.modname, None)
         super(ImporterMixin, self).tearDown()
+
+
+class MitogenPkgContentTest(testlib.TestCase):
+    def test_matches_filesystem(self):
+        mitogen_pkg_dir = os.path.dirname(mitogen.__file__)
+        self.assertEqual(
+            mitogen.core.Importer.MITOGEN_PKG_CONTENT,
+            sorted(mod.name for mod in pkgutil.iter_modules([mitogen_pkg_dir])),
+        )
 
 
 class InvalidNameTest(ImporterMixin, testlib.TestCase):
