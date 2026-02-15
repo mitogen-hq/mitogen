@@ -1320,17 +1320,25 @@ class ImportPolicy(object):
         Prefixes always denied by the responder, only local versions can be
         used.
     """
+    unsuitables = set([
+        '__builtin__',  # Python 2.x built-in Imported as __builtins__.
+        'builtins',     # Python 3.x built-in. Imported as __builtins__.
+        'msvcrt',       # Windows only. Imported by subprocess in some versions.
+        'org',          # Jython only. Imported by copy, pickle, & xml.sax.
+        'thread',       # Python 2.x built-in. Renamed to _thread in 3.x
+    ])
+    if sys.version_info >= (3, 0): unsuitables.add('cStringIO')
+
     def __init__(self, overrides=(), blocks=()):
         self.overrides = set(overrides)
         self.blocks = set(blocks)
-        self._always = set(Importer.ALWAYS_BLACKLIST)
 
     def denied(self, fullname):
         fullnames = frozenset(module_lineage(fullname))
         if self.overrides and not self.overrides.intersection(fullnames):
             return ModuleDeniedByOverridesError
-        if self.blocks.intersection(fullnames): return ModuleDeniedByBlocksError
-        if self._always.intersection(fullnames): return ModuleUnsuitableError
+        if self.blocks & fullnames: return ModuleDeniedByBlocksError
+        if self.unsuitables & fullnames: return ModuleUnsuitableError
         return False
 
     def denied_raise(self, fullname):
@@ -1380,29 +1388,6 @@ class Importer(object):
         'sudo',
         'utils',
     ]
-
-    ALWAYS_BLACKLIST = [
-        # 2.x generates needless imports for 'builtins', while 3.x does the
-        # same for '__builtin__'. The correct one is built-in, the other always
-        # a negative round-trip.
-        'builtins',
-        '__builtin__',
-
-        # On some Python releases (e.g. 3.8, 3.9) the subprocess module tries
-        # to import of this Windows-only builtin module.
-        'msvcrt',
-
-        # Python 2.x module that was renamed to _thread in 3.x.
-        # This entry avoids a roundtrip on 2.x -> 3.x.
-        'thread',
-
-        # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
-        # very unlikely to trigger a bug report.
-        'org',
-    ]
-
-    if sys.version_info >= (3, 0):
-        ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, policy):
         self._log = logging.getLogger('mitogen.importer')
