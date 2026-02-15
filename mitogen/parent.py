@@ -1498,15 +1498,17 @@ class Connection(object):
         assert self.options.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
+        if mitogen.is_master: import_policy = self._router.responder.policy
+        else: import_policy = self._router.importer.policy
         return {
             'parent_ids': parent_ids,
             'context_id': self.context.context_id,
             'debug': self.options.debug,
+            'import_blocks': list(import_policy.blocks),
+            'import_overrides': list(import_policy.overrides),
             'profiling': self.options.profiling,
             'unidirectional': self.options.unidirectional,
             'log_level': get_log_level(),
-            'whitelist': self._router.get_module_whitelist(),
-            'blacklist': self._router.get_module_blacklist(),
             'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
         }
@@ -2415,16 +2417,6 @@ class Router(mitogen.core.Router):
             self._stream_by_id.pop(target_id, None)
         finally:
             self._write_lock.release()
-
-    def get_module_blacklist(self):
-        if mitogen.context_id == 0:
-            return self.responder.blacklist
-        return self.importer.master_blacklist
-
-    def get_module_whitelist(self):
-        if mitogen.context_id == 0:
-            return self.responder.whitelist
-        return self.importer.master_whitelist
 
     def allocate_id(self):
         return self.id_allocator.allocate()

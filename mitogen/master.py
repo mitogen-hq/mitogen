@@ -1038,13 +1038,12 @@ class ModuleFinder(object):
 
 
 class ModuleResponder(object):
-    def __init__(self, router):
+    def __init__(self, router, policy):
         self._log = logging.getLogger('mitogen.responder')
         self._router = router
         self._finder = ModuleFinder()
         self._cache = {}  # fullname -> pickled
-        self.blacklist = []
-        self.whitelist = ['']
+        self.policy = policy
 
         #: Context -> set([fullname, ..])
         self._forwarded_by_context = {}
@@ -1087,12 +1086,12 @@ class ModuleResponder(object):
     )
 
     def whitelist_prefix(self, fullname):
-        if self.whitelist == ['']:
-            self.whitelist = ['mitogen']
-        self.whitelist.append(fullname)
+        if not self.policy.overrides:
+            self.policy.overrides.add('mitogen')
+        self.policy.overrides.add(fullname)
 
     def blacklist_prefix(self, fullname):
-        self.blacklist.append(fullname)
+        self.policy.blocks.add(fullname)
 
     def neutralize_main(self, path, src):
         """
@@ -1119,8 +1118,7 @@ class ModuleResponder(object):
         if fullname in self._cache:
             return self._cache[fullname]
 
-        if mitogen.core.is_blacklisted_import(self, fullname):
-            raise ImportError('blacklisted')
+        self.policy.denied_raise(fullname)
 
         path, source, is_pkg = self._finder.get_module_source(fullname)
         if path and is_stdlib_path(path):
@@ -1158,7 +1156,7 @@ class ModuleResponder(object):
         related = [
             to_text(name)
             for name in self._finder.find_related(fullname)
-            if not mitogen.core.is_blacklisted_import(self, name)
+            if not self.policy.denied(name)
         ]
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
         tup = (
@@ -1404,7 +1402,7 @@ class Router(mitogen.parent.Router):
 
     def upgrade(self):
         self.id_allocator = IdAllocator(self)
-        self.responder = ModuleResponder(self)
+        self.responder = ModuleResponder(self, mitogen.core.ImportPolicy())
         self.resource_responder = ResourceResponder(self)
         self.log_forwarder = LogForwarder(self)
         self.route_monitor = mitogen.parent.RouteMonitor(router=self)

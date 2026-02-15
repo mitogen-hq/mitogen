@@ -20,7 +20,8 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
 
     def call(self, *args, **kwargs):
         router = mock.Mock()
-        return self.klass(router).neutralize_main(*args, **kwargs)
+        policy = mock.Mock()
+        return self.klass(router, policy).neutralize_main(*args, **kwargs)
 
     def test_missing_exec_guard(self):
         path = testlib.data_path('main_with_no_exec_guard.py')
@@ -119,7 +120,8 @@ class BrokenModulesTest(testlib.TestCase):
         )
         msg.router = router
 
-        responder = mitogen.master.ModuleResponder(router)
+        policy = mock.Mock()
+        responder = mitogen.master.ModuleResponder(router, policy)
         responder._on_get_module(msg)
         self.assertEqual(1, len(router._async_route.mock_calls))
 
@@ -157,7 +159,8 @@ class BrokenModulesTest(testlib.TestCase):
         )
         msg.router = router
 
-        responder = mitogen.master.ModuleResponder(router)
+        policy = mock.Mock()
+        responder = mitogen.master.ModuleResponder(router, policy)
         responder._on_get_module(msg)
         self.assertEqual(1, len(router._async_route.mock_calls))
 
