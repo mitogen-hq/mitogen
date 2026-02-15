@@ -1323,11 +1323,11 @@ class ImportPolicy(object):
     unsuitables = set([
         '__builtin__',  # Python 2.x built-in Imported as __builtins__.
         'builtins',     # Python 3.x built-in. Imported as __builtins__.
+        'cStringIO',    # Python 2.x extension
         'msvcrt',       # Windows only. Imported by subprocess in some versions.
         'org',          # Jython only. Imported by copy, pickle, & xml.sax.
         'thread',       # Python 2.x built-in. Renamed to _thread in 3.x
     ])
-    if sys.version_info >= (3, 0): unsuitables.add('cStringIO')
 
     def __init__(self, overrides=(), blocks=()):
         self.overrides = set(overrides)
@@ -1347,6 +1347,9 @@ class ImportPolicy(object):
 
     def overriden(self, fullname):
         return bool(self.overrides.intersection(module_lineage(fullname)))
+
+    def unsuited(self, fullname):
+        return bool(self.unsuitables.intersection(module_lineage(fullname)))
 
     def __repr__(self):
         args = (type(self).__name__, self.overrides, self.blocks)
@@ -1472,6 +1475,9 @@ class Importer(object):
         if hasattr(_tls, 'running'):
             return None
 
+        if self.policy.unsuited(fullname):
+            return None
+
         _tls.running = True
         try:
             #_v and self._log.debug('Python requested %r', fullname)
@@ -1519,6 +1525,10 @@ class Importer(object):
         log = self._log.getChild('find_spec')
 
         if fullname.endswith('.'):
+            return None
+
+        if self.policy.unsuited(fullname):
+            log.debug('Skipping %s. It is unsuited.')
             return None
 
         pkgname, _, modname = fullname.rpartition('.')

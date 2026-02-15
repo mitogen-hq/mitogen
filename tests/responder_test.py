@@ -8,6 +8,7 @@ try:
 except ImportError:
     import mock
 
+import mitogen.core
 import mitogen.master
 import testlib
 
@@ -20,7 +21,7 @@ class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
 
     def call(self, *args, **kwargs):
         router = mock.Mock()
-        policy = mock.Mock()
+        policy = mitogen.core.ImportPolicy()
         return self.klass(router, policy).neutralize_main(*args, **kwargs)
 
     def test_missing_exec_guard(self):
@@ -120,7 +121,7 @@ class BrokenModulesTest(testlib.TestCase):
         )
         msg.router = router
 
-        policy = mock.Mock()
+        policy = mitogen.core.ImportPolicy()
         responder = mitogen.master.ModuleResponder(router, policy)
         responder._on_get_module(msg)
         self.assertEqual(1, len(router._async_route.mock_calls))
@@ -159,7 +160,7 @@ class BrokenModulesTest(testlib.TestCase):
         )
         msg.router = router
 
-        policy = mock.Mock()
+        policy = mitogen.core.ImportPolicy()
         responder = mitogen.master.ModuleResponder(router, policy)
         responder._on_get_module(msg)
         self.assertEqual(1, len(router._async_route.mock_calls))

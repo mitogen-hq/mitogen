@@ -25,6 +25,8 @@ In progress (unreleased)
   module overrides and blocks. Improve error messages for denied modules.
 * :gh:issue:`1451` :mod:`mitogen`: Move ``Importer.ALWAYS_BLACKLIST``
   to :attr:`mitogen.core.ImportPolicy.unsuitables`
+* :gh:issue:`1451` :mod:`mitogen`: Always delegate modules in
+  :attr:`mitogen.core.ImportPolicy.unsuitables` to Python's own importers
 
 
 v0.3.41 (2026-02-10)
