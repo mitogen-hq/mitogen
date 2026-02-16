@@ -1498,14 +1498,17 @@ class Connection(object):
         assert self.options.max_message_size is not None
         parent_ids = mitogen.parent_ids[:]
         parent_ids.insert(0, mitogen.context_id)
-        if mitogen.is_master: import_policy = self._router.responder.policy
-        else: import_policy = self._router.importer.policy
+        if mitogen.is_master: policy = self._router.responder.policy
+        else: policy = self._router.importer.policy
         return {
             'parent_ids': parent_ids,
             'context_id': self.context.context_id,
             'debug': self.options.debug,
-            'import_blocks': list(import_policy.blocks),
-            'import_overrides': list(import_policy.overrides),
+            'policy': (
+                list(policy.overrides),
+                list(policy.blocks),
+                list(policy.unsuitables),
+            ),
             'profiling': self.options.profiling,
             'unidirectional': self.options.unidirectional,
             'log_level': get_log_level(),

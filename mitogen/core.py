@@ -113,6 +113,7 @@ else:
     now = time.time
 
 if sys.version_info >= (3, 0):
+    from _compat_pickle import IMPORT_MAPPING
     from pickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
     def find_deny(module, name):
         raise UnpicklingError('Denied: %s.%s' % (module, name))
@@ -122,6 +123,7 @@ if sys.version_info >= (3, 0):
             super().__init__(file, encoding='bytes')
 else:
     from cPickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
+    IMPORT_MAPPING = {}
     def find_deny(module, name):
         raise UnpicklingError('Denied: %s.%s' % (module, name))
     def Unpickler(file, find_class=find_deny):
@@ -1319,18 +1321,32 @@ class ImportPolicy(object):
     :param blocks:
         Prefixes always denied by the responder, only local versions can be
         used.
+
+    :param unsuitables:
+        Prefixes unsuitable to be served, e.g. because they're Python stdlib,
+        platform specific. An optimisation to reduce futile round trips.
     """
-    def __init__(self, overrides=(), blocks=()):
+    UNSUITABLES = set([
+        '__builtin__',  # Python 2.x built-in Imported as __builtins__.
+        'builtins',     # Python 3.x built-in. Imported as __builtins__.
+        'cStringIO',    # Python 2.x extension
+        'msvcrt',       # Windows only. Imported by subprocess in some versions.
+        'org',          # Jython only. Imported by copy, pickle, & xml.sax.
+        'thread',       # Python 2.x built-in. Renamed to _thread in 3.x
+    ])
+
+    def __init__(self, overrides=(), blocks=(), unsuitables=()):
         self.overrides = set(overrides)
         self.blocks = set(blocks)
-        self._always = set(Importer.ALWAYS_BLACKLIST)
+        self.unsuitables = self.UNSUITABLES | self.unsuitables_discovered()
+        self.unsuitables |= set(unsuitables)
 
     def denied(self, fullname):
         fullnames = frozenset(module_lineage(fullname))
         if self.overrides and not self.overrides.intersection(fullnames):
             return ModuleDeniedByOverridesError
-        if self.blocks.intersection(fullnames): return ModuleDeniedByBlocksError
-        if self._always.intersection(fullnames): return ModuleUnsuitableError
+        if self.blocks & fullnames: return ModuleDeniedByBlocksError
+        if self.unsuitables & fullnames: return ModuleUnsuitableError
         return False
 
     def denied_raise(self, fullname):
@@ -1340,9 +1356,20 @@ class ImportPolicy(object):
     def overriden(self, fullname):
         return bool(self.overrides.intersection(module_lineage(fullname)))
 
+    @classmethod
+    def unsuitables_discovered(cls):
+        names = set(sys.builtin_module_names) | set(IMPORT_MAPPING)
+        if sys.version_info >= (3, 10): names |= sys.stdlib_module_names
+        names -= set(['__main__'])
+        return names
+
+    def unsuited(self, fullname):
+        return bool(self.unsuitables.intersection(module_lineage(fullname)))
+
     def __repr__(self):
-        args = (type(self).__name__, self.overrides, self.blocks)
-        return '%s(overrides=%r, blocks=%r)' % args
+        name = type(self).__name__
+        args = (name, self.overrides, self.blocks, self.unsuitables)
+        return '%s(overrides=%r, blocks=%r, unsuitables=%r)' % (args)
 
 
 class Importer(object):
@@ -1380,29 +1407,6 @@ class Importer(object):
         'sudo',
         'utils',
     ]
-
-    ALWAYS_BLACKLIST = [
-        # 2.x generates needless imports for 'builtins', while 3.x does the
-        # same for '__builtin__'. The correct one is built-in, the other always
-        # a negative round-trip.
-        'builtins',
-        '__builtin__',
-
-        # On some Python releases (e.g. 3.8, 3.9) the subprocess module tries
-        # to import of this Windows-only builtin module.
-        'msvcrt',
-
-        # Python 2.x module that was renamed to _thread in 3.x.
-        # This entry avoids a roundtrip on 2.x -> 3.x.
-        'thread',
-
-        # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
-        # very unlikely to trigger a bug report.
-        'org',
-    ]
-
-    if sys.version_info >= (3, 0):
-        ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, policy):
         self._log = logging.getLogger('mitogen.importer')
@@ -1487,6 +1491,9 @@ class Importer(object):
         if hasattr(_tls, 'running'):
             return None
 
+        if self.policy.unsuited(fullname):
+            return None
+
         _tls.running = True
         try:
             #_v and self._log.debug('Python requested %r', fullname)
@@ -1534,6 +1541,10 @@ class Importer(object):
         log = self._log.getChild('find_spec')
 
         if fullname.endswith('.'):
+            return None
+
+        if self.policy.unsuited(fullname):
+            log.debug('Skipping %s. It is unsuited.')
             return None
 
         pkgname, _, modname = fullname.rpartition('.')
@@ -4202,15 +4213,11 @@ class ExternalContext(object):
             else:
                 core_src = None
 
-            policy = ImportPolicy(
-                self.config['import_overrides'],
-                self.config['import_blocks'],
-            )
             importer = Importer(
                 self.router,
                 self.parent,
                 core_src,
-                policy,
+                ImportPolicy(*self.config['policy']),
             )
 
         self.importer = importer
