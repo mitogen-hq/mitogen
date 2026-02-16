@@ -113,6 +113,7 @@ else:
     now = time.time
 
 if sys.version_info >= (3, 0):
+    from _compat_pickle import IMPORT_MAPPING
     from pickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
     def find_deny(module, name):
         raise UnpicklingError('Denied: %s.%s' % (module, name))
@@ -122,6 +123,7 @@ if sys.version_info >= (3, 0):
             super().__init__(file, encoding='bytes')
 else:
     from cPickle import PicklingError, Unpickler as _Unpickler, UnpicklingError
+    IMPORT_MAPPING = {}
     def find_deny(module, name):
         raise UnpicklingError('Denied: %s.%s' % (module, name))
     def Unpickler(file, find_class=find_deny):
@@ -1320,7 +1322,7 @@ class ImportPolicy(object):
         Prefixes always denied by the responder, only local versions can be
         used.
     """
-    unsuitables = set([
+    UNSUITABLES = set([
         '__builtin__',  # Python 2.x built-in Imported as __builtins__.
         'builtins',     # Python 3.x built-in. Imported as __builtins__.
         'cStringIO',    # Python 2.x extension
@@ -1332,6 +1334,7 @@ class ImportPolicy(object):
     def __init__(self, overrides=(), blocks=()):
         self.overrides = set(overrides)
         self.blocks = set(blocks)
+        self.unsuitables = self.UNSUITABLES | self.unsuitables_discovered()
 
     def denied(self, fullname):
         fullnames = frozenset(module_lineage(fullname))
@@ -1347,6 +1350,13 @@ class ImportPolicy(object):
 
     def overriden(self, fullname):
         return bool(self.overrides.intersection(module_lineage(fullname)))
+
+    @classmethod
+    def unsuitables_discovered(cls):
+        names = set(sys.builtin_module_names) | set(IMPORT_MAPPING)
+        if sys.version_info >= (3, 10): names |= sys.stdlib_module_names
+        names -= set(['__main__'])
+        return names
 
     def unsuited(self, fullname):
         return bool(self.unsuitables.intersection(module_lineage(fullname)))
