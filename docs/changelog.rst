@@ -29,6 +29,8 @@ In progress (unreleased)
   :attr:`mitogen.core.ImportPolicy.unsuitables` to Python's own importers
 * :gh:issue:`1451` :mod:`mitogen`: Add discovered stdlib module names to
   :attr:`mitogen.core.ImportPolicy.unsuitables`
+* :gh:issue:`1451` :mod:`mitogen`: Add modules discovered on the controller
+  :attr:`mitogen.core.ImportPolicy.unsuitables`
 
 
 v0.3.41 (2026-02-10)

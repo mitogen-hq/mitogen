@@ -1321,6 +1321,10 @@ class ImportPolicy(object):
     :param blocks:
         Prefixes always denied by the responder, only local versions can be
         used.
+
+    :param unsuitables:
+        Prefixes unsuitable to be served, e.g. because they're Python stdlib,
+        platform specific. An optimisation to reduce futile round trips.
     """
     UNSUITABLES = set([
         '__builtin__',  # Python 2.x built-in Imported as __builtins__.
@@ -1331,10 +1335,11 @@ class ImportPolicy(object):
         'thread',       # Python 2.x built-in. Renamed to _thread in 3.x
     ])
 
-    def __init__(self, overrides=(), blocks=()):
+    def __init__(self, overrides=(), blocks=(), unsuitables=()):
         self.overrides = set(overrides)
         self.blocks = set(blocks)
         self.unsuitables = self.UNSUITABLES | self.unsuitables_discovered()
+        self.unsuitables |= set(unsuitables)
 
     def denied(self, fullname):
         fullnames = frozenset(module_lineage(fullname))
@@ -1362,8 +1367,9 @@ class ImportPolicy(object):
         return bool(self.unsuitables.intersection(module_lineage(fullname)))
 
     def __repr__(self):
-        args = (type(self).__name__, self.overrides, self.blocks)
-        return '%s(overrides=%r, blocks=%r)' % args
+        name = type(self).__name__
+        args = (name, self.overrides, self.blocks, self.unsuitables)
+        return '%s(overrides=%r, blocks=%r, unsuitables=%r)' % (args)
 
 
 class Importer(object):
@@ -4207,15 +4213,11 @@ class ExternalContext(object):
             else:
                 core_src = None
 
-            policy = ImportPolicy(
-                self.config['import_overrides'],
-                self.config['import_blocks'],
-            )
             importer = Importer(
                 self.router,
                 self.parent,
                 core_src,
-                policy,
+                ImportPolicy(*self.config['policy']),
             )
 
         self.importer = importer
