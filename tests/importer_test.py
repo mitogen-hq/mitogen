@@ -23,7 +23,7 @@ class ImporterMixin(testlib.RouterMixin):
     def setUp(self):
         super(ImporterMixin, self).setUp()
         self.context = mock.Mock()
-        self.policy = mock.Mock()
+        self.policy = mitogen.core.ImportPolicy()
         self.importer = mitogen.core.Importer(self.router, self.context, '', self.policy)
 
         # TODO: this is a horrendous hack. Without it, we can't deliver a
@@ -308,6 +308,16 @@ class ImportPolicyTest(testlib.TestCase):
         self.assertTrue(policy.denied('otherpkg.mod'))
         self.assertTrue(policy.denied('__builtin__'))
         self.assertTrue(policy.denied('builtins'))
+
+    def test_unsuited(self):
+        policy = mitogen.core.ImportPolicy(
+            overrides=['pkg'],
+            blocks=['pkg'],
+        )
+        self.assertTrue(policy.unsuited('__builtin__'))
+        self.assertTrue(policy.unsuited('builtins'))
+        self.assertFalse(policy.unsuited('pkg'))
+        self.assertFalse(policy.unsuited('otherpkg'))
 
 
 class Python24LineCacheTest(testlib.TestCase):
