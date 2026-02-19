@@ -2500,6 +2500,9 @@ class Router(mitogen.core.Router):
     def lxd(self, **kwargs):
         return self.connect(u'lxd', **kwargs)
 
+    def incus(self, **kwargs):
+        return self.connect(u'incus', **kwargs)
+
     def setns(self, **kwargs):
         return self.connect(u'setns', **kwargs)
 
