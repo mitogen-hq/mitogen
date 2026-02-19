@@ -185,6 +185,7 @@ def _setup_responder(responder):
     certain packages, and to generate custom responses for certain modules.
     """
     responder.whitelist_prefix('ansible')
+    responder.whitelist_prefix('ansible_collections')
     responder.whitelist_prefix('ansible_mitogen')
 
     # Ansible 2.3 is compatible with Python 2.4 targets, however

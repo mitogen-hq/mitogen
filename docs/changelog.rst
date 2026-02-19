@@ -25,6 +25,8 @@ In progress (unreleased)
   module overrides and blocks. Improve error messages for denied modules.
 * :gh:issue:`1394` :mod:`ansible_mitogen`, :mod:`mitogen`: Add Incus connection
   support, allowing users who migrated from LXD to Incus to use ansible-mitogen
+* :gh:issue:`1456` :mod:`ansible_mitogen`: Fix Ansible collections
+  :exc:`!mitogen.core.ModuleDeniedByOverridesError`
 
 
 v0.3.41 (2026-02-10)
