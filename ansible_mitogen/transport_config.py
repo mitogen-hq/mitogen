@@ -350,6 +350,12 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_incus_path(self):
+        """
+        The path to the "incus" program for the 'incus' transport.
+        """
+
+    @abc.abstractmethod
     def mitogen_lxc_path(self):
         """
         The path to the "lxc" program for the 'lxd' transport.
@@ -583,6 +589,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_kubectl_path(self):
         return self._connection.get_task_var('mitogen_kubectl_path')
+
+    def mitogen_incus_path(self):
+        return self._connection.get_task_var('mitogen_incus_path')
 
     def mitogen_lxc_path(self):
         return self._connection.get_task_var('mitogen_lxc_path')
@@ -831,6 +840,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_kubectl_path(self):
         return self._host_vars.get('mitogen_kubectl_path')
+
+    def mitogen_incus_path(self):
+        return self._host_vars.get('mitogen_incus_path')
 
     def mitogen_lxc_path(self):
         return self._host_vars.get('mitogen_lxc_path')
