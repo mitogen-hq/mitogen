@@ -23,7 +23,8 @@ class ImporterMixin(testlib.RouterMixin):
     def setUp(self):
         super(ImporterMixin, self).setUp()
         self.context = mock.Mock()
-        self.importer = mitogen.core.Importer(self.router, self.context, '')
+        self.policy = mock.Mock()
+        self.importer = mitogen.core.Importer(self.router, self.context, '', self.policy)
 
         # TODO: this is a horrendous hack. Without it, we can't deliver a
         # response to find_module() via _on_load_module() since find_module()
@@ -44,6 +45,13 @@ class ImporterMixin(testlib.RouterMixin):
     def tearDown(self):
         sys.modules.pop(self.modname, None)
         super(ImporterMixin, self).tearDown()
+
+
+class LineageTest(testlib.TestCase):
+    def test_lineage(self):
+        from mitogen.core import module_lineage
+        self.assertEqual(list(module_lineage('foo')), ['foo'])
+        self.assertEqual(list(module_lineage('foo.bar')), ['foo', 'foo.bar'])
 
 
 class InvalidNameTest(ImporterMixin, testlib.TestCase):
@@ -264,61 +272,42 @@ class EmailParseAddrSysTest(testlib.RouterMixin, testlib.TestCase):
         pass
 
 
-class ImporterBlacklistTest(testlib.TestCase):
-    def test_is_blacklisted_import_default(self):
-        importer = mitogen.core.Importer(
-            router=mock.Mock(), context=None, core_src='',
-        )
-        self.assertIsInstance(importer.whitelist, list)
-        self.assertIsInstance(importer.blacklist, list)
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+class ImportPolicyTest(testlib.TestCase):
+    def test_default(self):
+        policy = mitogen.core.ImportPolicy()
+        self.assertFalse(policy.denied('pkg'))
+        self.assertFalse(policy.denied('pkg.mod'))
+        self.assertFalse(policy.denied('otherpkg'))
+        self.assertFalse(policy.denied('otherpkg.mod'))
+        self.assertTrue(policy.denied('__builtin__'))
+        self.assertTrue(policy.denied('builtins'))
 
-    def test_is_blacklisted_import_just_whitelist(self):
-        importer = mitogen.core.Importer(
-            router=mock.Mock(), context=None, core_src='',
-            whitelist=('mypkg',),
-        )
-        self.assertIsInstance(importer.whitelist, list)
-        self.assertIsInstance(importer.blacklist, list)
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+    def test_overrides(self):
+        policy = mitogen.core.ImportPolicy(overrides=['pkg'])
+        self.assertFalse(policy.denied('pkg'))
+        self.assertFalse(policy.denied('pkg.mod'))
+        self.assertTrue(policy.denied('otherpkg'))
+        self.assertTrue(policy.denied('otherpkg.mod'))
+        self.assertTrue(policy.denied('__builtin__'))
+        self.assertTrue(policy.denied('builtins'))
 
-    def test_is_blacklisted_import_just_blacklist(self):
-        importer = mitogen.core.Importer(
-            router=mock.Mock(), context=None, core_src='',
-            blacklist=('mypkg',),
-        )
-        self.assertIsInstance(importer.whitelist, list)
-        self.assertIsInstance(importer.blacklist, list)
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
-        self.assertFalse(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+    def test_blocks(self):
+        policy = mitogen.core.ImportPolicy(blocks=['pkg'])
+        self.assertTrue(policy.denied('pkg'))
+        self.assertTrue(policy.denied('pkg.mod'))
+        self.assertFalse(policy.denied('otherpkg'))
+        self.assertFalse(policy.denied('otherpkg.mod'))
+        self.assertTrue(policy.denied('__builtin__'))
+        self.assertTrue(policy.denied('builtins'))
 
-    def test_is_blacklisted_import_whitelist_and_blacklist(self):
-        importer = mitogen.core.Importer(
-            router=mock.Mock(), context=None, core_src='',
-            whitelist=('mypkg',), blacklist=('mypkg',),
-        )
-        self.assertIsInstance(importer.whitelist, list)
-        self.assertIsInstance(importer.blacklist, list)
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'mypkg.mod'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'otherpkg.mod'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, '__builtin__'))
-        self.assertTrue(mitogen.core.is_blacklisted_import(importer, 'builtins'))
+    def test_overrides_and_blocks(self):
+        policy = mitogen.core.ImportPolicy(overrides=['pkg'], blocks=['pkg'])
+        self.assertTrue(policy.denied('pkg'))
+        self.assertTrue(policy.denied('pkg.mod'))
+        self.assertTrue(policy.denied('otherpkg'))
+        self.assertTrue(policy.denied('otherpkg.mod'))
+        self.assertTrue(policy.denied('__builtin__'))
+        self.assertTrue(policy.denied('builtins'))
 
 
 class Python24LineCacheTest(testlib.TestCase):

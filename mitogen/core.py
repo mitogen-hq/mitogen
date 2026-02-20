@@ -72,6 +72,7 @@ import logging
 import os
 import pstats
 import pty
+import re
 import signal
 import socket
 import struct
@@ -360,6 +361,18 @@ class LatchError(Error):
     pass
 
 
+class ModuleDeniedByOverridesError(ModuleNotFoundError):
+    fmt = "Mitogen won't serve %s, it's not in the overrides list"
+
+
+class ModuleDeniedByBlocksError(ModuleNotFoundError):
+    fmt = "Mitogen won't serve %s, it's in the blocks list"
+
+
+class ModuleUnsuitableError(ModuleNotFoundError):
+    fmt = "Mitogen won't serve %s, it's e.g. binary, legacy, part of stdlib"
+
+
 class Blob(BytesType):
     """
     A serializable bytes subclass whose content is summarized in repr() output,
@@ -499,6 +512,11 @@ def has_parent_authority(msg, _stream=None):
     return _has_parent_authority(msg.auth_id)
 
 
+def module_lineage(fullname):
+    "Return an iterator of a module's parent fullnames and its own"
+    return (fullname[:m.start()] for m in re.finditer(r'\.|\Z', fullname))
+
+
 def _signals(obj, signal):
     return (
         obj.__dict__
@@ -562,21 +580,6 @@ def takes_router(func):
     """
     func.mitogen_takes_router = True
     return func
-
-
-def is_blacklisted_import(importer, fullname):
-    """
-    Return :data:`True` if `fullname` is part of a blacklisted package, or if
-    any packages have been whitelisted and `fullname` is not part of one.
-
-    NB:
-      - The default whitelist is `['']` which matches any module name.
-      - If a package is on both lists, then it is treated as blacklisted.
-      - If any package is whitelisted, then all non-whitelisted packages are
-        treated as blacklisted.
-    """
-    return ((not any(fullname.startswith(s) for s in importer.whitelist)) or
-                (any(fullname.startswith(s) for s in importer.blacklist)))
 
 
 def set_cloexec(fd):
@@ -1302,6 +1305,46 @@ class Channel(Sender, Receiver):
         )
 
 
+class ImportPolicy(object):
+    """
+    Policy deciding which module prefixes :class:`Importer` will request from
+    :class:`mitogen.master.ModuleResponder` and which requests will be served
+    or denied.
+
+    :param overrides:
+        Prefixes always requested, ignoring local versions. If ``overrides``
+        has entries, then it's also used as an allow list by the responder -
+        any request for a prefix that's not overriden will be denied.
+
+    :param blocks:
+        Prefixes always denied by the responder, only local versions can be
+        used.
+    """
+    def __init__(self, overrides=(), blocks=()):
+        self.overrides = set(overrides)
+        self.blocks = set(blocks)
+        self._always = set(Importer.ALWAYS_BLACKLIST)
+
+    def denied(self, fullname):
+        fullnames = frozenset(module_lineage(fullname))
+        if self.overrides and not self.overrides.intersection(fullnames):
+            return ModuleDeniedByOverridesError
+        if self.blocks.intersection(fullnames): return ModuleDeniedByBlocksError
+        if self._always.intersection(fullnames): return ModuleUnsuitableError
+        return False
+
+    def denied_raise(self, fullname):
+        denial = self.denied(fullname)
+        if denial: raise denial(denial.fmt % (fullname,))
+
+    def overriden(self, fullname):
+        return bool(self.overrides.intersection(module_lineage(fullname)))
+
+    def __repr__(self):
+        args = (type(self).__name__, self.overrides, self.blocks)
+        return '%s(overrides=%r, blocks=%r)' % args
+
+
 class Importer(object):
     """
     Import protocol implementation that fetches modules from the parent
@@ -1361,18 +1404,12 @@ class Importer(object):
     if sys.version_info >= (3, 0):
         ALWAYS_BLACKLIST += ['cStringIO']
 
-    def __init__(self, router, context, core_src, whitelist=(), blacklist=()):
+    def __init__(self, router, context, core_src, policy):
         self._log = logging.getLogger('mitogen.importer')
         self._context = context
         self._present = {'mitogen': self.MITOGEN_PKG_CONTENT}
         self._lock = threading.Lock()
-        self.whitelist = list(whitelist) or ['']
-        self.blacklist = list(blacklist) + self.ALWAYS_BLACKLIST
-
-        # Preserve copies of the original server-supplied whitelist/blacklist
-        # for later use by children.
-        self.master_whitelist = self.whitelist[:]
-        self.master_blacklist = self.blacklist[:]
+        self.policy = policy
 
         # Presence of an entry in this map indicates in-flight GET_MODULE.
         self._callbacks = {}
@@ -1465,11 +1502,8 @@ class Importer(object):
                 self._log.debug('%s has no submodule %s', pkgname, suffix)
                 return None
 
-            # #114: explicitly whitelisted prefixes override any
-            # system-installed package.
-            if self.whitelist != ['']:
-                if any(fullname.startswith(s) for s in self.whitelist):
-                    return self
+            if self.policy.overriden(fullname):
+                return self
 
             try:
                 self.builtin_find_module(fullname)
@@ -1515,11 +1549,9 @@ class Importer(object):
                       fullname, pkgname, pkg_loader)
             return None
 
-        # #114: whitelisted prefixes override any system-installed package.
-        if self.whitelist != ['']:
-            if any(s and fullname.startswith(s) for s in self.whitelist):
-                log.debug('Handling %s. It is whitelisted', fullname)
-                return importlib.machinery.ModuleSpec(fullname, loader=self)
+        if self.policy.overriden(fullname):
+            log.debug('Handling %s. It is overriden', fullname)
+            return importlib.machinery.ModuleSpec(fullname, loader=self)
 
         if fullname == '__main__':
             log.debug('Handling %s. A special case', fullname)
@@ -1540,10 +1572,6 @@ class Importer(object):
         log.debug('Handling %s. Unavailable locally', fullname)
         return importlib.machinery.ModuleSpec(fullname, loader=self)
 
-    blacklisted_msg = (
-        'A %r request would be refused by the Mitogen master. The module is '
-        'on the deny list (blacklist) or not on the allow list (whitelist).'
-    )
     pkg_resources_msg = (
         'pkg_resources is prohibited from importing __main__, as it causes '
         'problems in applications whose main module is not designed to be '
@@ -1556,8 +1584,7 @@ class Importer(object):
     )
 
     def _refuse_imports(self, fullname):
-        if is_blacklisted_import(self, fullname):
-            raise ModuleNotFoundError(self.blacklisted_msg % (fullname,))
+        self.policy.denied_raise(fullname)
 
         f = sys._getframe(2)
         requestee = f.f_globals['__name__']
@@ -4175,12 +4202,15 @@ class ExternalContext(object):
             else:
                 core_src = None
 
+            policy = ImportPolicy(
+                self.config['import_overrides'],
+                self.config['import_blocks'],
+            )
             importer = Importer(
                 self.router,
                 self.parent,
                 core_src,
-                self.config.get('whitelist', ()),
-                self.config.get('blacklist', ()),
+                policy,
             )
 
         self.importer = importer
