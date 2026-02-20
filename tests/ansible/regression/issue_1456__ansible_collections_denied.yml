@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+- name: regression/issue_1456__ansible_collections_denied.yml
+  # Check Ansible modules can import Python modules from Ansible collections.
+  hosts: test-targets
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Trigger import from ansible_collections.*
+      import_from_ansible_collections:
+  tags:
+    - issue_1456
