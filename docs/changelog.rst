@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.42 (2026-02-20)
+--------------------
+
 * :gh:issue:`1451` :mod:`mitogen`: Refactor module whitelist & blacklist with
   module overrides and blocks. Improve error messages for denied modules.
 * :gh:issue:`1394` :mod:`ansible_mitogen`, :mod:`mitogen`: Add Incus connection
