@@ -1414,11 +1414,15 @@ class Connection(object):
     #   W: write side of interpreter stdin.
     #   r: read side of core_src FD.
     #   w: write side of core_src FD.
-
-    # Final os.close(STDERR_FILENO) to avoid --py-debug build corrupting stream with
-    # "[1234 refs]" during exit.
     @staticmethod
     def _first_stage():
+        # Bail out in case STDIN or STDOUT is not accessible (e.g. closed).
+        # Otherwise, os.pipe() could reuse file descriptors 0 or 1, leading to
+        # unexpected behavior that is difficult to diagnose.
+        os.fstat(0)
+        os.fstat(1)
+        # If STDERR (2) is already closed, it might be possible that one of the
+        # returned pipe FDs is 2.
         R,W=os.pipe()
         r,w=os.pipe()
         if os.fork():
@@ -1454,6 +1458,10 @@ class Connection(object):
         f.write(C)
         f.close()
         os.write(1,'MITO001\n'.encode())
+        # Final os.close(STDERR_FILENO) to avoid `--py-debug` build corrupting
+        # stream with "[1234 refs]" during exit.
+        # If STDERR is already closed an OSError is raised, but no one cares
+        # as STDERR is closed and the exit status is not forwarded.
         os.close(2)
 
     def get_python_argv(self):
