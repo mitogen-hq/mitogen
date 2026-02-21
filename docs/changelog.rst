@@ -540,6 +540,7 @@ This release separates itself from the v0.2.X releases. Ansible's API changed to
 
 * :gh:issue:`827` NewStylePlanner: detect `ansible_collections` imports
 * :gh:issue:`770` better check for supported Ansible version
+* :gh:issue:`636` os.chdir fails if the sudo/become user lacks adequate permissions to chdir prior to task
 * :gh:issue:`731` ansible 2.10 support
 * :gh:issue:`652` support for ansible collections import hook
 * :gh:issue:`847` Removed historic Continuous Integration reverse shell
@@ -548,6 +549,7 @@ This release separates itself from the v0.2.X releases. Ansible's API changed to
 v0.2.10 (2021-11-24)
 --------------------
 
+* :gh:issue:`636` os.chdir fails if the sudo/become user lacks adequate permissions to chdir prior to task
 * :gh:issue:`597` mitogen does not support Ansible 2.8 Python interpreter detection
 * :gh:issue:`655` wait_for_connection gives errors
 * :gh:issue:`672` cannot perform relative import error
