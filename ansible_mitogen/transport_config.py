@@ -69,11 +69,11 @@ import ansible.utils.shlex
 import ansible.constants as C
 import ansible.executor.interpreter_discovery
 import ansible.utils.unsafe_proxy
-
-from ansible.module_utils.six import with_metaclass
 from ansible.module_utils.parsing.convert_bool import boolean
 
 import ansible_mitogen.utils
+from ansible_mitogen.compat.six import with_metaclass
+
 import mitogen.core
 
 
