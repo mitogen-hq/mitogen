@@ -451,6 +451,7 @@ v0.3.9 (2024-08-13)
 v0.3.8 (2024-07-30)
 -------------------
 
+* :gh:issue:`636` os.chdir fails if the sudo/become user lacks adequate permissions to chdir prior to task
 * :gh:issue:`952` Fix Ansible `--ask-become-pass`, add test coverage
 * :gh:issue:`957` Fix Ansible exception when executing against 10s of hosts
   "ValueError: filedescriptor out of range in select()"
