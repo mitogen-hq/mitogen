@@ -134,5 +134,3 @@
         validate: '/usr/sbin/visudo -cf %s'
       when:
         - ansible_connection == "local"
-  roles:
-    - role: user_policies
