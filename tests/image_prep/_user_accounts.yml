@@ -42,27 +42,6 @@
         hidden: true  # Only has effect on macOS
       with_items: "{{ mitogen_test_users }}"
 
-    - name: Check if AccountsService is used
-      stat:
-        path: /var/lib/AccountsService/users
-      register: out
-
-    - name: Hide users from login window (Linux).
-      when: ansible_system == 'Linux' and out.stat.exists
-      copy:
-        dest: /var/lib/AccountsService/users/{{ item.name }}
-        mode: u=rw,go=
-        content: |
-          [User]
-          SystemAccount=true
-      with_items: "{{ mitogen_test_users }}"
-
-    - name: Restart AccountsService (Linux).
-      when: ansible_system == 'Linux' and out.stat.exists
-      service:
-        name: accounts-daemon
-        state: restarted
-
     - name: Readonly homedir for one account
       file:
         path: ~mitogen__readonly_homedir
