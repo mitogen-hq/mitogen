@@ -10,9 +10,6 @@
   strategy: mitogen_free
   # Can't gather facts before here.
   gather_facts: true
-  vars:
-    distro: "{{ansible_distribution}}"
-
   roles:
     - role: package_manager
     - role: packages
@@ -66,47 +63,12 @@
       args:
         creates: /etc/ssh/ssh_host_rsa_key
 
-    - name: Ensure correct sudo group exists
-      group:
-        name: "{{sudo_group[distro]}}"
-
     - name: Ensure /etc/sentinel exists
       copy:
         dest: /etc/sentinel
         content: |
           i-am-mitogen-test-docker-image
         mode: u=rw,go=r
-
-    - name: Ensure /etc/sudoers.d exists
-      file:
-        state: directory
-        path: /etc/sudoers.d
-        mode: 'u=rwx,go='
-
-    - name: Install test-related sudo rules
-      blockinfile:
-        path: /etc/sudoers
-        block: |
-          # https://www.toofishes.net/blog/trouble-sudoers-or-last-entry-wins/
-          %mitogen__sudo_nopw ALL=(ALL:ALL) NOPASSWD:ALL
-          mitogen__has_sudo_nopw ALL = (mitogen__pw_required) ALL
-          mitogen__has_sudo_nopw ALL = (mitogen__require_tty_pw_required) ALL
-
-          Defaults>mitogen__pw_required targetpw
-          Defaults>mitogen__require_tty requiretty
-          Defaults>mitogen__require_tty_pw_required requiretty,targetpw
-
-    - name: Prevent permission denied errors.
-      file:
-        path: /etc/sudoers.d/README
-        state: absent
-
-    - name: Install CentOS wheel sudo rule
-      lineinfile:
-        path: /etc/sudoers
-        regexp: '#* *%wheel +ALL=(ALL) +ALL'
-        line: "%wheel  ALL=(ALL)       ALL"
-      when: ansible_os_family == 'RedHat'
 
     - name: Allow remote SSH root login
       lineinfile:

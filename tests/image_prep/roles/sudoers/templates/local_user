@@ -1,0 +1,10 @@
+# User    Host(s) = (runas user:runas group) Command(s)
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__pw_required:ALL) ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__require_tty_pw_required:ALL) ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__require_tty:ALL) NOPASSWD:ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__readonly_homedir:ALL) NOPASSWD:ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__user1:ALL) NOPASSWD:ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__user2:ALL) NOPASSWD:ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__user3:ALL) NOPASSWD:ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__user4:ALL) NOPASSWD:ALL
+{{ lookup('pipe', 'whoami') }} ALL = (mitogen__user5:ALL) NOPASSWD:ALL
