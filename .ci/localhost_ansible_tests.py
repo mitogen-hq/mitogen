@@ -35,11 +35,12 @@ with ci_lib.Fold('machine_prep'):
         subprocess.check_call('sudo chmod 600 ~root/.ssh/authorized_keys', shell=True)
 
     os.chdir(ci_lib.IMAGE_PREP_DIR)
-    ci_lib.run("ansible-playbook -c local -i localhost, macos_localhost.yml")
 
     if os.path.expanduser('~mitogen__user1') == '~mitogen__user1':
         os.chdir(ci_lib.IMAGE_PREP_DIR)
         ci_lib.run("ansible-playbook -c local -i localhost, _user_accounts.yml")
+
+    ci_lib.run("ansible-playbook -c local -i localhost, macos_localhost.yml")
 
     cmd = ';'.join([
         'from __future__ import print_function',
