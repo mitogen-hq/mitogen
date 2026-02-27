@@ -1,0 +1,42 @@
+- name: Ensure correct sudo group exists
+  group:
+    name: "{{ sudo_group[ansible_distribution] }}"
+
+- name: Sanitize /etc/sudoers.d
+  file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode | default(omit) }}"
+    state: "{{ item.state }}"
+  with_items:
+    - {path: /etc/sudoers.d, state: directory, mode: u=rwx,go=}
+    - {path: /etc/sudoers.d/README, state: absent}
+
+- name: Allow wheel members to sudo
+  lineinfile:
+    path: /etc/sudoers
+    regexp: '#* *%wheel +ALL=\((?:ALL:ALL|ALL)\) +ALL'
+    line: "%wheel ALL=(ALL) ALL"
+    validate: '/usr/sbin/visudo -cf %s'
+  when:
+    - ansible_os_family in ['RedHat']
+
+- name: Configure sudoers
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: ug=r,o=
+    validate: '/usr/sbin/visudo -cf %s'
+  with_items:
+    - {src: defaults, dest: /etc/sudoers.d/mitogen_test_defaults}
+    - {src: users, dest: /etc/sudoers.d/mitogen_test_users}
+
+- name: Configure local sudoers
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: ug=r,o=
+    validate: '/usr/sbin/visudo -cf %s'
+  with_items:
+    - {src: local_user, dest: /etc/sudoers.d/mitogen_test_local_user}
+  when:
+    - ansible_connection == "local"

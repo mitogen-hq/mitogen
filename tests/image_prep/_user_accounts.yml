@@ -86,30 +86,5 @@
             owner: mitogen__has_sudo_pubkey
             group: mitogen__group
 
-    - name: Configure sudoers
-      copy:
-        src: "{{ item.src }}"
-        dest: "{{ item.dest }}"
-        mode: ug=r,o=
-        validate: '/usr/sbin/visudo -cf %s'
-      with_items:
-        - {src: sudoers_defaults, dest: /etc/sudoers.d/mitogen_test_defaults}
-
-    - name: Configure sudoers users
-      blockinfile:
-        path: /etc/sudoers
-        marker: "# {mark} Mitogen test users"
-        block: |
-          # User    Host(s) = (runas user:runas group) Command(s)
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__pw_required:ALL) ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__require_tty_pw_required:ALL) ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__require_tty:ALL) NOPASSWD:ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__readonly_homedir:ALL) NOPASSWD:ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__user1:ALL) NOPASSWD:ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__user2:ALL) NOPASSWD:ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__user3:ALL) NOPASSWD:ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__user4:ALL) NOPASSWD:ALL
-          {{ lookup('pipe', 'whoami') }} ALL = (mitogen__user5:ALL) NOPASSWD:ALL
-        validate: '/usr/sbin/visudo -cf %s'
-      when:
-        - ansible_connection == "local"
+  roles:
+    - role: sudoers
