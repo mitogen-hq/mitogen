@@ -42,6 +42,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: .ci/show_python_versions
+      - run: .ci/setup_sudoers_defaults
+        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
       - name: Install deps
         id: install-deps
         run: |
@@ -129,6 +131,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: .ci/show_python_versions
+      - run: .ci/setup_sudoers_defaults
+        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
       - name: Install deps
         id: install-deps
         run: |
@@ -178,6 +182,8 @@ jobs:
       - run: .ci/show_python_versions
       - run: .ci/install_sshpass ${{ matrix.sshpass_version }}
         if: ${{ matrix.sshpass_version }}
+      - run: .ci/setup_sudoers_defaults
+        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
       - name: Install deps
         id: install-deps
         run: |
