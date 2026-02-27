@@ -22,6 +22,7 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1462` tests: Consolidate sudoers config into a role
+* :gh:issue:`1463` CI: Replace runtests with .ci/unit_tests
 
 
 v0.3.42 (2026-02-20)

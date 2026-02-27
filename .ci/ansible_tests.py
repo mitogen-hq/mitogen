@@ -24,15 +24,6 @@ def pause_if_interactive():
 
 interesting = ci_lib.get_interesting_procs()
 
-
-with ci_lib.Fold('unit_tests'):
-    os.environ['SKIP_MITOGEN'] = '1'
-    ci_lib.run('./run_tests -v')
-
-
-ci_lib.check_stray_processes(interesting)
-
-
 with ci_lib.Fold('docker_setup'):
     containers = ci_lib.container_specs(ci_lib.DISTRO_SPECS.split())
     ci_lib.start_containers(containers)

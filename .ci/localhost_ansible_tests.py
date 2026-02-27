@@ -10,11 +10,6 @@ import sys
 import ci_lib
 
 
-with ci_lib.Fold('unit_tests'):
-    os.environ['SKIP_MITOGEN'] = '1'
-    ci_lib.run('./run_tests -v')
-
-
 with ci_lib.Fold('job_setup'):
     os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
 

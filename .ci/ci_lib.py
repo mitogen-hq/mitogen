@@ -41,6 +41,7 @@ IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
 )
+TESTS_DIR = os.path.join(GIT_ROOT, 'tests')
 TESTS_SSH_PRIVATE_KEY_FILE = os.path.join(GIT_ROOT, 'tests/data/docker/mitogen__has_sudo_pubkey.key')
 
 
