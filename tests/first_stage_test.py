@@ -1,6 +1,7 @@
 import errno
 import operator
 import os
+import pty
 
 import mitogen.core
 import mitogen.parent
@@ -142,6 +143,28 @@ class DummyConnectionEOFRead(mitogen.parent.Connection):
         return proc
 
 
+class DummyConnectionClosedStdout(mitogen.parent.Connection):
+    """Dummy closed stdout connection"""
+
+    create_child = staticmethod(create_child_using_pipes)
+    name_prefix = "dummy_closed_stdout"
+
+    #: Dictionary of extra kwargs passed to :attr:`create_child`.
+    create_child_args = {"blocking": True,
+                         "preexec_fn": lambda: os.close(pty.STDOUT_FILENO)}
+
+
+class DummyConnectionClosedStdin(mitogen.parent.Connection):
+    """Dummy closed stdin connection"""
+
+    create_child = staticmethod(create_child_using_pipes)
+    name_prefix = "dummy_closed_stdin"
+
+    #: Dictionary of extra kwargs passed to :attr:`create_child`.
+    create_child_args = {"blocking": True,
+                         "preexec_fn": lambda: os.close(pty.STDIN_FILENO)}
+
+
 class DummyConnectionEndlessBlockingRead(mitogen.parent.Connection):
     """Dummy connection that triggers a non-returning read(STDIN) call in the
     first_stage.
@@ -199,6 +222,24 @@ class ConnectionTest(testlib.RouterMixin, testlib.TestCase):
         with testlib.LogCapturer() as _:
             ctx = self.router._connect(DummyConnectionBlocking, connect_timeout=0.5)
             self.assertEqual(3, ctx.call(operator.add, 1, 2))
+
+    def test_closed_communication_channel(self):
+        """Test that first stage does not work with a closed STDIN or STDOUT
+
+        The first stage of the boot command should bail out as soon as it
+        detects that STDIN or STDOUT is closed/unavailable and this results in
+        disconnected streams and that is mapped by the broker to an
+        :class:`mitogen.parent.EofError`.
+
+        """
+        with testlib.LogCapturer() as _:
+            e = self.assertRaises(mitogen.parent.EofError,
+                                  self.router._connect, DummyConnectionClosedStdout, connect_timeout=0.5)
+            self.assertIn("Bad file descriptor", str(e))
+
+            e = self.assertRaises(mitogen.parent.EofError,
+                                  self.router._connect, DummyConnectionClosedStdin, connect_timeout=0.5)
+            self.assertIn("Bad file descriptor", str(e))
 
     def test_broker_connect_eof_error(self):
         """Test that broker takes care about EOF errors in the first stage
@@ -365,3 +406,87 @@ class CommandLineTest(testlib.RouterMixin, testlib.TestCase):
         finally:
             proc.stdout.close()
             proc.stderr.close()
+
+    def test_closed_stdin(self):
+        """This test closes STDIN of the child process.
+
+        1. The child process detects that STDIN is unavailable
+        2. The child process terminates early with an OSError exception, and
+           reports the issue via exception printed on STDERR.
+        3. The parent process correctly identifies this condition.
+
+        """
+
+        options = mitogen.parent.Options(max_message_size=123)
+        conn = mitogen.parent.Connection(options, self.router)
+        conn.context = mitogen.core.Context(None, 123)
+        proc = testlib.subprocess.Popen(
+            args=conn.get_boot_command(),
+            stdout=testlib.subprocess.PIPE,
+            stderr=testlib.subprocess.PIPE,
+            preexec_fn=lambda: os.close(pty.STDIN_FILENO),
+            close_fds=True,
+        )
+        try:
+            stdout, stderr = proc.communicate(timeout=1)
+        except testlib.subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            self.fail("Closed STDIN situation was not recognized")
+        self.assertEqual(1, proc.returncode)
+        self.assertEqual(stdout, b"")
+        self.assertIn(
+            b("Bad file descriptor"),
+            stderr,
+        )
+
+    def test_closed_stdout(self):
+        """Test that first stage bails out if STDOUT is closed
+
+        This test closes STDOUT of the child process.
+
+        1. The child process detects that STDOUT is unavailable
+        2. The child process terminates early with an OSError exception, and
+           reports the issue via exception printed on STDERR.
+        3. The parent process correctly identifies this condition.
+
+        """
+        options = mitogen.parent.Options(max_message_size=123)
+        conn = mitogen.parent.Connection(options, self.router)
+        conn.context = mitogen.core.Context(None, 123)
+
+        stdout_r, stdout_w = mitogen.core.pipe()
+        mitogen.core.set_cloexec(stdout_r.fileno())
+        stderr_r, stderr_w = mitogen.core.pipe()
+        mitogen.core.set_cloexec(stderr_r.fileno())
+        try:
+            proc = testlib.subprocess.Popen(
+                args=conn.get_boot_command(),
+                stdout=stdout_w,
+                stderr=stderr_w,
+                preexec_fn=lambda: os.close(pty.STDOUT_FILENO),
+            )
+        except Exception:
+            stdout_r.close()
+            stdout_w.close()
+            stderr_w.close()
+            stderr_r.close()
+            raise
+        stdout_w.close()
+        stderr_w.close()
+        try:
+            returncode = proc.wait(timeout=1)
+        except testlib.subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=3)
+            self.fail("Closed STDOUT situation was not detected")
+        else:
+            stderr = stderr_r.read()
+        finally:
+            stderr_r.close()
+            stdout_r.close()
+        self.assertEqual(1, returncode)
+        self.assertIn(
+            b("Bad file descriptor"),
+            stderr,
+        )
