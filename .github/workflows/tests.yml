@@ -184,6 +184,8 @@ jobs:
       - run: .ci/show_python_versions
       - run: .ci/install_sshpass ${{ matrix.sshpass_version }}
         if: ${{ matrix.sshpass_version }}
+      - run: .ci/setup_ssh_key_localhost
+        if: ${{ contains(matrix.tox_env, 'm_lcl') }}
       - run: .ci/setup_ssh_key_mitogen__has_sudo_pubkey
       - run: .ci/setup_sudoers_defaults
         if: ${{ contains(matrix.tox_env, 'm_mtg') }}
