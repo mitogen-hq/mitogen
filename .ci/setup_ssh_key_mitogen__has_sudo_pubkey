@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -o errexit -o nounset -o pipefail
+
+TESTS_SSH_PRIVATE_KEY_FILE='tests/data/docker/mitogen__has_sudo_pubkey.key'
+
+chmod u=r,go= "$TESTS_SSH_PRIVATE_KEY_FILE"

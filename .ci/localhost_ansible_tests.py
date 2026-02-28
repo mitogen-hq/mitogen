@@ -10,10 +10,6 @@ import sys
 import ci_lib
 
 
-with ci_lib.Fold('job_setup'):
-    os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
-
-
 with ci_lib.Fold('machine_prep'):
     # generate a new ssh key for localhost ssh
     if not os.path.exists(os.path.expanduser("~/.ssh/id_rsa")):
