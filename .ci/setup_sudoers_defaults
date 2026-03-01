@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+set -o errexit -o nounset -o pipefail
+
+SUDOERS_DEFAULTS_SRC='tests/image_prep/roles/sudoers/files/defaults'
+SUDOERS_DEFAULTS_DEST='/etc/sudoers.d/mitogen_test_defaults'
+
+umask 0022
+sudo cp "$SUDOERS_DEFAULTS_SRC" "$SUDOERS_DEFAULTS_DEST"
+sudo visudo -cf "$SUDOERS_DEFAULTS_DEST"
+sudo -l

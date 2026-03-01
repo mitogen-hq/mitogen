@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+from __future__ import absolute_import, division, print_function
+
+import os
+import sys
+
+import ci_lib
+from ci_lib import subprocess
+
+env = os.environ.copy()
+env.update({
+    'PYTHONPATH': '%s%s%s' % (ci_lib.TESTS_DIR, os.sep, env['PYTHONPATH']),
+})
+
+interesting = ci_lib.get_interesting_procs()
+
+with ci_lib.Fold('unit_tests'):
+    subprocess.run(
+        [
+            sys.executable, '-m', 'unittest', 'discover',
+            '--start-directory', sys.argv[1],
+            '--pattern', '*_test.py',
+            '--verbose',
+        ],
+        check=True,
+        env=env,
+    )
+
+ci_lib.check_stray_processes(interesting)

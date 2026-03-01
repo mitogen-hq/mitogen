@@ -22,6 +22,19 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1462` tests: Consolidate sudoers config into a role
+* :gh:issue:`1464` tests: Profile Ansible plays
+* :gh:issue:`1464` tests: Remove last traces of MODE environment variable
+* :gh:issue:`1464` CI: Remove unused pause_if_interactive()
+* :gh:issue:`1464` CI: Factor out sudoers defaults setup
+* :gh:issue:`1464` CI: Factor out chmod of tests/data/docker/mitogen__has_sudo_pubkey.key
+* :gh:issue:`1464` CI: Unify skipping of container tests
+* :gh:issue:`1464` CI: Factor out setup of localhost ssh keys
+* :gh:issue:`1464` CI: Remove macOS Python 2.x PYTHON_LAUNCHED_FROM_WRAPPER debug
+* :gh:issue:`1464` CI: Factor out setup of localhost ssh and users
+* :gh:issue:`1464` CI: Explicitly pull container images for Ansible tests
+* :gh:issue:`1464` CI: Explicitly create Tox environments
+* :gh:issue:`1464` ci: Replace run_tests with .ci/unit_tests, remove coverage
+  as test requirement
 
 
 v0.3.42 (2026-02-20)
