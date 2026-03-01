@@ -2,7 +2,6 @@ import os
 import tempfile
 
 import mitogen.ssh
-import mitogen.utils
 
 import testlib
 import plain_old_module

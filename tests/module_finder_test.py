@@ -4,8 +4,8 @@ import os
 import sys
 import unittest
 
+import mitogen.core
 import mitogen.master
-from mitogen.core import b
 
 import testlib
 
@@ -127,8 +127,8 @@ class SysModulesMethodTest(testlib.TestCase):
         # linecache adds a line ending to the final line if one is missing.
         with open(path, 'rb') as f:
             actual_src = f.read()
-        if actual_src[-1:] != b('\n'):
-            actual_src += b('\n')
+        if actual_src[-1:] != mitogen.core.b('\n'):
+            actual_src += mitogen.core.b('\n')
 
         self.assertEqual(src, actual_src)
         self.assertFalse(is_pkg)

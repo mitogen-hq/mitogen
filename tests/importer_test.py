@@ -10,7 +10,6 @@ except ImportError:
     import mock
 
 import mitogen.core
-import mitogen.utils
 from mitogen.core import b
 
 import testlib

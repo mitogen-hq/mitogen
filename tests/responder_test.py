@@ -8,7 +8,9 @@ try:
 except ImportError:
     import mock
 
+import mitogen.core
 import mitogen.master
+
 import testlib
 
 import plain_old_module

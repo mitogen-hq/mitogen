@@ -20,7 +20,8 @@ except ImportError:
     # Python 2.4
     ctypes = None
 
-import mitogen
+import mitogen.core
+import mitogen.fork
 
 import testlib
 import plain_old_module
