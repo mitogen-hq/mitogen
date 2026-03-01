@@ -8,12 +8,6 @@ import sys
 
 import ci_lib
 
-
-with ci_lib.Fold('unit_tests'):
-    os.environ['SKIP_MITOGEN'] = '1'
-    ci_lib.run('./run_tests -v')
-
-
 with ci_lib.Fold('ansible'):
     os.chdir(ci_lib.ANSIBLE_TESTS_DIR)
     playbook = os.environ.get('PLAYBOOK', 'all.yml')

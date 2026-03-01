@@ -33,6 +33,8 @@ In progress (unreleased)
 * :gh:issue:`1464` CI: Factor out setup of localhost ssh and users
 * :gh:issue:`1464` CI: Explicitly pull container images for Ansible tests
 * :gh:issue:`1464` CI: Explicitly create Tox environments
+* :gh:issue:`1464` ci: Replace run_tests with .ci/unit_tests, remove coverage
+  as test requirement
 
 
 v0.3.42 (2026-02-20)
