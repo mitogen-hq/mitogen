@@ -315,6 +315,14 @@ def get_interesting_procs(container_name=None):
     return sorted(out)
 
 
+def pull_container_images(containers):
+    run_batches([
+        ['docker pull %(image)s' % container]
+        for container in containers
+    ])
+    return containers
+
+
 def start_containers(containers):
     """Run docker containers in the background, with sshd on specified ports.
 
