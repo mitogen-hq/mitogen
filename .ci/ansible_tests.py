@@ -31,7 +31,6 @@ with ci_lib.Fold('docker_setup'):
 
 
 with ci_lib.Fold('job_setup'):
-    os.chmod(ci_lib.TESTS_SSH_PRIVATE_KEY_FILE, int('0600', 8))
     os.chdir(ci_lib.ANSIBLE_TESTS_DIR)
 
     os.mkdir(TMP_HOSTS_DIR)

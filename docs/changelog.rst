@@ -26,6 +26,7 @@ In progress (unreleased)
 * :gh:issue:`1464` tests: Remove last traces of MODE environment variable
 * :gh:issue:`1464` CI: Remove unused pause_if_interactive()
 * :gh:issue:`1464` CI: Factor out sudoers defaults setup
+* :gh:issue:`1464` CI: Factor out chmod of tests/data/docker/mitogen__has_sudo_pubkey.key
 
 
 v0.3.42 (2026-02-20)
