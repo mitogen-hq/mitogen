@@ -25,6 +25,7 @@ In progress (unreleased)
 * :gh:issue:`1464` tests: Profile Ansible plays
 * :gh:issue:`1464` tests: Remove last traces of MODE environment variable
 * :gh:issue:`1464` CI: Remove unused pause_if_interactive()
+* :gh:issue:`1464` CI: Factor out sudoers defaults setup
 
 
 v0.3.42 (2026-02-20)
