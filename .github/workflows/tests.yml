@@ -162,6 +162,8 @@ jobs:
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
     runs-on: macos-15
     timeout-minutes: 15
+    env:
+      MITOGEN_TEST_SKIP_CONTAINER_TESTS: 1
 
     strategy:
       fail-fast: false

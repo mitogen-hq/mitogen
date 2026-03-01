@@ -59,6 +59,7 @@ IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
 )
+SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
 ANSIBLE_LIB_DIR =               os.path.join(TESTS_DIR, 'ansible', 'lib')
@@ -173,7 +174,6 @@ def data_path(suffix):
 
 
 def _have_cmd(args):
-    # Code duplicated in ci_lib.py
     try:
         subprocess.run(
             args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -595,11 +595,6 @@ class DockerizedSshDaemon(object):
         return int(m.group('port'))
 
     def start_container(self):
-        try:
-            subprocess.check_output(['docker', '--version'])
-        except Exception:
-            raise unittest.SkipTest('Docker binary is unavailable')
-
         self.container_name = 'mitogen-test-%08x' % (random.getrandbits(64),)
         args = [
             'docker',
@@ -702,9 +697,9 @@ class RouterMixin(BrokerMixin):
 class DockerMixin(RouterMixin):
     @classmethod
     def setUpClass(cls):
+        if SKIP_CONTAINER_TESTS:
+            raise unittest.SkipTest('SKIP_CONTAINER_TESTS is set')
         super(DockerMixin, cls).setUpClass()
-        if os.environ.get('SKIP_DOCKER_TESTS'):
-            raise unittest.SkipTest('SKIP_DOCKER_TESTS is set')
 
         # cls.dockerized_ssh is injected by dynamically generating TestCase
         # subclasses.
