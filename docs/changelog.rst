@@ -29,6 +29,7 @@ In progress (unreleased)
 * :gh:issue:`1464` CI: Factor out chmod of tests/data/docker/mitogen__has_sudo_pubkey.key
 * :gh:issue:`1464` CI: Unify skipping of container tests
 * :gh:issue:`1464` CI: Factor out setup of localhost ssh keys
+* :gh:issue:`1464` CI: Remove macOS Python 2.x PYTHON_LAUNCHED_FROM_WRAPPER debug
 
 
 v0.3.42 (2026-02-20)
