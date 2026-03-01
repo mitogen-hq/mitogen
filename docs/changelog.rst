@@ -22,6 +22,7 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1462` tests: Consolidate sudoers config into a role
+* :gh:issue:`1464` tests: Profile Ansible plays
 
 
 v0.3.42 (2026-02-20)
