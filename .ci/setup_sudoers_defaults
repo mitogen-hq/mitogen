@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-FileCopyrightText: 2025 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
 # SPDX-License-Identifier: BSD-3-Clause
 
 set -o errexit -o nounset -o pipefail

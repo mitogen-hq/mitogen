@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import atexit
-import errno
 import os
 import re
 import shlex
@@ -41,6 +40,7 @@ IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
 )
+SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 TESTS_DIR = os.path.join(GIT_ROOT, 'tests')
 TESTS_SSH_PRIVATE_KEY_FILE = os.path.join(GIT_ROOT, 'tests/data/docker/mitogen__has_sudo_pubkey.key')
 
@@ -52,26 +52,6 @@ def print(*args, **kwargs):
     _print(*args, **kwargs)
     if flush:
         file.flush()
-
-
-def _have_cmd(args):
-    # Code duplicated in testlib.py
-    try:
-        subprocess.run(
-            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            check=True,
-        )
-    except OSError as exc:
-        if exc.errno == errno.ENOENT:
-            return False
-        raise
-    except subprocess.CalledProcessError:
-        return False
-    return True
-
-
-def have_docker():
-    return _have_cmd(['docker', 'info'])
 
 
 def _argv(s, *args):

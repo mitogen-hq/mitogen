@@ -49,7 +49,7 @@ class CallbackModule(ansible.plugins.callback.CallbackBase):
                 'duration': start - prev['start'],
             })
 
-        data = self._data.copy()
+        data = self._data[:]
         data.sort(key=lambda d: d['duration'], reverse=True)
 
         display.display(u'{:=<79}'.format(u'Play durations '))
