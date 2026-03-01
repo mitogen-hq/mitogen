@@ -4,7 +4,6 @@
 import collections
 import glob
 import os
-import signal
 import sys
 
 import jinja2
@@ -14,13 +13,6 @@ import ci_lib
 
 TMP = ci_lib.TempDir(prefix='mitogen_ci_ansible')
 TMP_HOSTS_DIR = os.path.join(TMP.path, 'hosts')
-
-
-def pause_if_interactive():
-    if os.path.exists('/tmp/interactive'):
-        while True:
-            signal.pause()
-
 
 interesting = ci_lib.get_interesting_procs()
 
@@ -74,15 +66,9 @@ with ci_lib.Fold('job_setup'):
 
 with ci_lib.Fold('ansible'):
     playbook = os.environ.get('PLAYBOOK', 'all.yml')
-    try:
-        ci_lib.run('./run_ansible_playbook.py %s -i "%s" %s',
-            playbook, TMP_HOSTS_DIR, ' '.join(sys.argv[1:]),
-        )
-    except:
-        pause_if_interactive()
-        raise
-
+    ci_lib.run(
+        './run_ansible_playbook.py %s -i "%s" %s',
+        playbook, TMP_HOSTS_DIR, ' '.join(sys.argv[1:]),
+    )
 
 ci_lib.check_stray_processes(interesting, containers)
-
-pause_if_interactive()
