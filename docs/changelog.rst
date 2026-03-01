@@ -28,6 +28,7 @@ In progress (unreleased)
 * :gh:issue:`1464` CI: Factor out sudoers defaults setup
 * :gh:issue:`1464` CI: Factor out chmod of tests/data/docker/mitogen__has_sudo_pubkey.key
 * :gh:issue:`1464` CI: Unify skipping of container tests
+* :gh:issue:`1464` CI: Factor out setup of localhost ssh keys
 
 
 v0.3.42 (2026-02-20)
