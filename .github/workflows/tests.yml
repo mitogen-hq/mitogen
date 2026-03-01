@@ -69,6 +69,11 @@ jobs:
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
+      - name: Create environments
+        run: |
+          set -o errexit -o nounset -o pipefail
+          PYTHON="${{ steps.install-deps.outputs.python }}"
+          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -147,6 +152,11 @@ jobs:
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
+      - name: Create environments
+        run: |
+          set -o errexit -o nounset -o pipefail
+          PYTHON="${{ steps.install-deps.outputs.python }}"
+          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -200,6 +210,11 @@ jobs:
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
+      - name: Create environments
+        run: |
+          set -o errexit -o nounset -o pipefail
+          PYTHON="${{ steps.install-deps.outputs.python }}"
+          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}

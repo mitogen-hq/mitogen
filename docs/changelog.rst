@@ -32,6 +32,7 @@ In progress (unreleased)
 * :gh:issue:`1464` CI: Remove macOS Python 2.x PYTHON_LAUNCHED_FROM_WRAPPER debug
 * :gh:issue:`1464` CI: Factor out setup of localhost ssh and users
 * :gh:issue:`1464` CI: Explicitly pull container images for Ansible tests
+* :gh:issue:`1464` CI: Explicitly create Tox environments
 
 
 v0.3.42 (2026-02-20)
