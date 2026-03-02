@@ -19,14 +19,6 @@ try:
 except ImportError:
     import urllib.parse as urlparse
 
-os.chdir(
-    os.path.join(
-        os.path.dirname(__file__),
-        '..'
-    )
-)
-
-
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ANSIBLE_TESTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible')
 ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
@@ -189,10 +181,6 @@ class Fold(object):
 
 
 os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
-os.environ['PYTHONPATH'] = '%s:%s' % (
-    os.environ.get('PYTHONPATH', ''),
-    GIT_ROOT
-)
 
 def get_docker_hostname():
     """Return the hostname where the docker daemon is running.
