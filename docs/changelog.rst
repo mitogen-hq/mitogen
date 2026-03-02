@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.43 (2026-03-02)
+--------------------
+
 * :gh:issue:`1462` tests: Consolidate sudoers config into a role
 * :gh:issue:`1464` tests: Profile Ansible plays
 * :gh:issue:`1464` tests: Remove last traces of MODE environment variable
