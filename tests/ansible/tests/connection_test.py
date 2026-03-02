@@ -1,10 +1,16 @@
 from __future__ import absolute_import
+import io
 import os
+import stat
+import sys
 import tempfile
+import unittest
 
-try:
+if sys.version_info >= (3,):
+    import configparser
     from unittest import mock
-except ImportError:
+else:
+    import ConfigParser as configparser
     import mock
 
 import ansible.errors
@@ -16,7 +22,66 @@ import ansible_mitogen.connection
 import ansible_mitogen.plugins.connection.mitogen_local
 import ansible_mitogen.process
 
-import testlib
+
+def base_executable(executable=None):
+    '''Return the path of the Python executable used to create the virtualenv.
+    '''
+    # https://docs.python.org/3/library/venv.html
+    # https://github.com/pypa/virtualenv/blob/main/src/virtualenv/discovery/py_info.py
+    # https://virtualenv.pypa.io/en/16.7.9/reference.html#compatibility-with-the-stdlib-venv-module
+    if executable is None:
+        executable = sys.executable
+
+    if not executable:
+        raise ValueError
+
+    try:
+        base_executable = sys._base_executable
+    except AttributeError:
+        base_executable = None
+
+    if base_executable and base_executable != executable:
+        return base_executable
+
+    # Python 2.x only has sys.base_prefix if running outside a virtualenv.
+    try:
+        sys.base_prefix
+    except AttributeError:
+        # Python 2.x outside a virtualenv
+        return executable
+
+    # Python 3.3+ has sys.base_prefix. In a virtualenv it differs to sys.prefix.
+    if sys.base_prefix == sys.prefix:
+        return executable
+
+    while executable.startswith(sys.prefix) and stat.S_ISLNK(os.lstat(executable).st_mode):
+        dirname = os.path.dirname(executable)
+        target = os.path.join(dirname, os.readlink(executable))
+        executable = os.path.abspath(os.path.normpath(target))
+        print(executable)
+
+    if executable.startswith(sys.base_prefix):
+        return executable
+
+    # Virtualenvs record details in pyvenv.cfg
+    parser = configparser.RawConfigParser()
+    with io.open(os.path.join(sys.prefix, 'pyvenv.cfg'), encoding='utf-8') as f:
+        content = u'[virtualenv]\n' + f.read()
+    try:
+        parser.read_string(content)
+    except AttributeError:
+        parser.readfp(io.StringIO(content))
+
+    # virtualenv style pyvenv.cfg includes the base executable.
+    # venv style pyvenv.cfg doesn't.
+    try:
+        return parser.get(u'virtualenv', u'base-executable')
+    except configparser.NoOptionError:
+        pass
+
+    basename = os.path.basename(executable)
+    home = parser.get(u'virtualenv', u'home')
+    return os.path.join(home, basename)
 
 
 class MuxProcessMixin(object):
@@ -46,7 +111,7 @@ class ConnectionMixin(MuxProcessMixin):
         # conn functions don't fetch ActionModuleMixin objs from _get_task_vars()
         # through the usual walk-the-stack approach so we'll not run interpreter discovery here
         conn._action = mock.MagicMock(
-            _mitogen_interpreter_candidate=testlib.base_executable(),
+            _mitogen_interpreter_candidate=base_executable(),
         )
         conn.on_action_run(
             task_vars={},
@@ -71,7 +136,7 @@ class ConnectionMixin(MuxProcessMixin):
         super(ConnectionMixin, self).tearDown()
 
 
-class MuxShutdownTest(ConnectionMixin, testlib.TestCase):
+class MuxShutdownTest(ConnectionMixin, unittest.TestCase):
     def test_connection_failure_raised(self):
         # ensure if a WorkerProcess tries to connect to a MuxProcess that has
         # already shut down, it fails with a graceful error.
@@ -87,7 +152,7 @@ class MuxShutdownTest(ConnectionMixin, testlib.TestCase):
             os.rename(path + '.tmp', path)
 
 
-class OptionalIntTest(testlib.TestCase):
+class OptionalIntTest(unittest.TestCase):
     func = staticmethod(ansible_mitogen.connection.optional_int)
 
     def test_already_int(self):
@@ -107,7 +172,7 @@ class OptionalIntTest(testlib.TestCase):
         self.assertEqual(None, self.func({1:2}))
 
 
-class FetchFileTest(ConnectionMixin, testlib.TestCase):
+class FetchFileTest(ConnectionMixin, unittest.TestCase):
     def test_success(self):
         with tempfile.NamedTemporaryFile(prefix='mitotest') as ifp:
             with tempfile.NamedTemporaryFile(prefix='mitotest') as ofp:
@@ -122,7 +187,7 @@ class FetchFileTest(ConnectionMixin, testlib.TestCase):
                     self.assertEqual(ifp.read(), fp.read())
 
 
-class PutDataTest(ConnectionMixin, testlib.TestCase):
+class PutDataTest(ConnectionMixin, unittest.TestCase):
     def test_out_path(self):
         path = tempfile.mktemp(prefix='mitotest')
         contents = mitogen.core.b('contents')
@@ -144,7 +209,7 @@ class PutDataTest(ConnectionMixin, testlib.TestCase):
         os.unlink(path)
 
 
-class PutFileTest(ConnectionMixin, testlib.TestCase):
+class PutFileTest(ConnectionMixin, unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         super(PutFileTest, cls).setUpClass()

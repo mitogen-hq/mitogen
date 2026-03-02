@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import atexit
-import errno
 import os
 import re
 import shlex
@@ -20,14 +19,6 @@ try:
 except ImportError:
     import urllib.parse as urlparse
 
-os.chdir(
-    os.path.join(
-        os.path.dirname(__file__),
-        '..'
-    )
-)
-
-
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ANSIBLE_TESTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible')
 ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
@@ -41,8 +32,8 @@ IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
     'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
 )
-SUDOERS_DEFAULTS_SRC = './tests/image_prep/files/sudoers_defaults'
-SUDOERS_DEFAULTS_DEST = '/etc/sudoers.d/mitogen_test_defaults'
+SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
+TESTS_DIR = os.path.join(GIT_ROOT, 'tests')
 TESTS_SSH_PRIVATE_KEY_FILE = os.path.join(GIT_ROOT, 'tests/data/docker/mitogen__has_sudo_pubkey.key')
 
 
@@ -53,26 +44,6 @@ def print(*args, **kwargs):
     _print(*args, **kwargs)
     if flush:
         file.flush()
-
-
-def _have_cmd(args):
-    # Code duplicated in testlib.py
-    try:
-        subprocess.run(
-            args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            check=True,
-        )
-    except OSError as exc:
-        if exc.errno == errno.ENOENT:
-            return False
-        raise
-    except subprocess.CalledProcessError:
-        return False
-    return True
-
-
-def have_docker():
-    return _have_cmd(['docker', 'info'])
 
 
 def _argv(s, *args):
@@ -209,12 +180,6 @@ class Fold(object):
     def __exit__(self, _1, _2, _3): pass
 
 
-os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
-os.environ['PYTHONPATH'] = '%s:%s' % (
-    os.environ.get('PYTHONPATH', ''),
-    GIT_ROOT
-)
-
 def get_docker_hostname():
     """Return the hostname where the docker daemon is running.
     """
@@ -335,6 +300,14 @@ def get_interesting_procs(container_name=None):
             out.append((int(pid), line))
 
     return sorted(out)
+
+
+def pull_container_images(containers):
+    run_batches([
+        ['docker pull %(image)s' % container]
+        for container in containers
+    ])
+    return containers
 
 
 def start_containers(containers):

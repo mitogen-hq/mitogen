@@ -1,5 +1,6 @@
 import sys
 
+import mitogen.core
 import mitogen.service
 
 import testlib

@@ -31,5 +31,5 @@
 - name: Clean up package directories
   shell:
     rm -rf {{ item }}/*
-  with_items: "{{ packages_cleanup_directories }}"
+  with_items: "{{ packages_cleanup_directories[ansible_pkg_mgr] }}"
   changed_when: true

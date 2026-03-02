@@ -7,7 +7,6 @@ import testlib
 import mitogen.core
 import mitogen.master
 import mitogen.parent
-import mitogen.utils
 from mitogen.core import b
 
 try:

@@ -10,11 +10,10 @@ except ImportError:
     import mock
 
 import mitogen.core
-import mitogen.utils
 from mitogen.core import b
 
 import testlib
-import simple_pkg.imports_replaces_self
+import testmods.simple_pkg.imports_replaces_self
 
 
 class ImporterMixin(testlib.RouterMixin):
@@ -320,4 +319,4 @@ class SelfReplacingModuleTest(testlib.RouterMixin, testlib.TestCase):
     def test_importer_handles_self_replacement(self):
         c = self.router.local()
         self.assertEqual(0,
-            c.call(simple_pkg.imports_replaces_self.subtract_one, 1))
+            c.call(testmods.simple_pkg.imports_replaces_self.subtract_one, 1))
