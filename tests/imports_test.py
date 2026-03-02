@@ -8,7 +8,7 @@ import testlib
 
 
 def testmod_compile(path):
-    path = os.path.join(testlib.MODS_DIR, path)
+    path = os.path.join(testlib.TESTMODS_DIR, path)
     f = open(path, 'rb')
     co = compile(f.read(), path, 'exec')
     f.close()

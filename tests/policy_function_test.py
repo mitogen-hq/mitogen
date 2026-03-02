@@ -4,7 +4,6 @@ except ImportError:
     import mock
 
 import mitogen.core
-import mitogen.parent
 
 import testlib
 
