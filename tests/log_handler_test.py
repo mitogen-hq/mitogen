@@ -9,9 +9,6 @@ except ImportError:
 
 import testlib
 import mitogen.core
-import mitogen.master
-import mitogen.parent
-import mitogen.utils
 from mitogen.core import b
 
 PY2 = sys.version_info[0] == 2

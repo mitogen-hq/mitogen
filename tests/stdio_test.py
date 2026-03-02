@@ -1,8 +1,7 @@
 import unittest
 
 import testlib
-
-import stdio_checks
+import testmods.stdio_checks
 
 
 class StdIOMixin(testlib.RouterMixin):
@@ -16,12 +15,12 @@ class StdIOMixin(testlib.RouterMixin):
         https://github.com/mitogen-hq/mitogen/issues/712.
         """
         size = 1 * 2**20
-        nwritten = context.call(stdio_checks.shout_stdout, size)
+        nwritten = context.call(testmods.stdio_checks.shout_stdout, size)
         self.assertEqual(nwritten, size)
 
     def check_stdio_is_blocking(self, context):
         stdin_blocking, stdout_blocking, stderr_blocking = context.call(
-            stdio_checks.stdio_is_blocking,
+            testmods.stdio_checks.stdio_is_blocking,
         )
         self.assertTrue(stdin_blocking)
         self.assertTrue(stdout_blocking)

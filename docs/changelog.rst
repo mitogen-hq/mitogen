@@ -35,6 +35,9 @@ In progress (unreleased)
 * :gh:issue:`1464` CI: Explicitly create Tox environments
 * :gh:issue:`1464` ci: Replace run_tests with .ci/unit_tests, remove coverage
   as test requirement
+* :gh:issue:`1455` tests: Fix missing and unused imports of Mitogen
+* :gh:issue:`1455` CI: Remove sys.path manipulation in .ci/unit_tests.py
+* :gh:issue:`1455` tests: Consolidate modules used by tests in tests/testmods
 
 
 v0.3.42 (2026-02-20)
