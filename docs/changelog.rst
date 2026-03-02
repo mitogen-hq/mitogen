@@ -40,6 +40,7 @@ In progress (unreleased)
 * :gh:issue:`1455` tests: Consolidate modules used by tests in tests/testmods
 * :gh:issue:`1466` CI: Remove PYTHONPATH & CWD manipulations from ci_lib
 * :gh:issue:`1466` CI: Allow writing bytecode (.pyc) when running tests
+* :gh:issue:`1310` tests: Add missing ``super()`` calls
 
 
 v0.3.42 (2026-02-20)

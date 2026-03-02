@@ -14,8 +14,10 @@ class WatcherTest(unittest.TestCase):
     def setUp(self):
         self.original_env = environb.copy()
         self.tf = tempfile.NamedTemporaryFile()
+        super(WatcherTest, self).setUp()
 
     def tearDown(self):
+        super(WatcherTest, self).tearDown()
         self.tf.close()
         environb.clear()
         environb.update(self.original_env)
