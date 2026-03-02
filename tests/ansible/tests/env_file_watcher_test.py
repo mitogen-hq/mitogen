@@ -1,7 +1,6 @@
 import os
 import tempfile
-
-import testlib
+import unittest
 
 from mitogen.core import b
 import ansible_mitogen.runner
@@ -11,7 +10,7 @@ klass = ansible_mitogen.runner.EnvironmentFileWatcher
 environb = getattr(os, 'environb', os.environ)
 
 
-class WatcherTest(testlib.TestCase):
+class WatcherTest(unittest.TestCase):
     def setUp(self):
         self.original_env = environb.copy()
         self.tf = tempfile.NamedTemporaryFile()

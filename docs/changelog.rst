@@ -36,6 +36,7 @@ In progress (unreleased)
 * :gh:issue:`1464` ci: Replace run_tests with .ci/unit_tests, remove coverage
   as test requirement
 * :gh:issue:`1455` tests: Fix missing and unused imports of Mitogen
+* :gh:issue:`1455` CI: Remove sys.path manipulation in .ci/unit_tests.py
 
 
 v0.3.42 (2026-02-20)

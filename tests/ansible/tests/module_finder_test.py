@@ -5,10 +5,12 @@ import unittest
 
 import ansible_mitogen.module_finder
 
-import testlib
+ANSIBLE_BASE_DIR = os.path.abspath(os.path.join(__file__, '..', '..'))
+ANSIBLE_MODULES_DIR = os.path.join(ANSIBLE_BASE_DIR, 'lib', 'modules')
+ANSIBLE_MODULE_UTILS_DIR = os.path.join(ANSIBLE_BASE_DIR, 'lib', 'module_utils')
 
 
-class ScanFromListTest(testlib.TestCase):
+class ScanFromListTest(unittest.TestCase):
     def test_absolute_imports(self):
         source = textwrap.dedent('''\
             from __future__ import absolute_import
@@ -21,7 +23,7 @@ class ScanFromListTest(testlib.TestCase):
         )
 
 
-class WalkImportsTest(testlib.TestCase):
+class WalkImportsTest(unittest.TestCase):
     def test_absolute_imports(self):
         source = textwrap.dedent('''\
             from __future__ import absolute_import
@@ -39,17 +41,17 @@ class WalkImportsTest(testlib.TestCase):
         )
 
 
-class ScanTest(testlib.TestCase):
+class ScanTest(unittest.TestCase):
     module_name = 'ansible_module_module_finder_test__this_should_not_matter'
-    module_path = os.path.join(testlib.ANSIBLE_MODULES_DIR, 'module_finder_test.py')
+    module_path = os.path.join(ANSIBLE_MODULES_DIR, 'module_finder_test.py')
     search_path = (
         'does_not_exist/module_utils',
-        testlib.ANSIBLE_MODULE_UTILS_DIR,
+        ANSIBLE_MODULE_UTILS_DIR,
     )
 
     @staticmethod
     def relpath(path):
-        return os.path.relpath(path, testlib.ANSIBLE_MODULE_UTILS_DIR)
+        return os.path.relpath(path, ANSIBLE_MODULE_UTILS_DIR)
 
     @unittest.skipIf(sys.version_info < (3, 4), 'find spec() unavailable')
     def test_importlib_find_spec(self):

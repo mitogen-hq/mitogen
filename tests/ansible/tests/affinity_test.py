@@ -4,8 +4,6 @@ import sys
 import tempfile
 import unittest
 
-import testlib
-
 import mitogen.parent
 import ansible_mitogen.affinity
 
@@ -20,7 +18,7 @@ class NullFixedPolicy(ansible_mitogen.affinity.FixedPolicy):
     reason='Linux only',
     condition=(not os.uname()[0] == 'Linux')
 )
-class FixedPolicyTest(testlib.TestCase):
+class FixedPolicyTest(unittest.TestCase):
     klass = NullFixedPolicy
 
     def test_assign_controller_1core(self):
@@ -166,7 +164,7 @@ class FixedPolicyTest(testlib.TestCase):
         multiprocessing.cpu_count() > 2
     ))
 )
-class LinuxPolicyTest(testlib.TestCase):
+class LinuxPolicyTest(unittest.TestCase):
     klass = ansible_mitogen.affinity.LinuxPolicy
 
     def setUp(self):
@@ -211,7 +209,7 @@ class LinuxPolicyTest(testlib.TestCase):
             tf.close()
 
 
-class MockLinuxPolicyTest(testlib.TestCase):
+class MockLinuxPolicyTest(unittest.TestCase):
     klass = ansible_mitogen.affinity.LinuxPolicy
 
     # Test struct.pack() in _set_cpu_mask().
