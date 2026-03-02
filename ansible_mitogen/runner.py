@@ -43,6 +43,7 @@ import atexit
 import ctypes
 import json
 import logging
+import io
 import os
 import re
 import shlex
@@ -57,7 +58,10 @@ if sys.version_info >= (3, 4):
 else:
     import imp
 
-from ansible.module_utils.six.moves import shlex_quote
+if sys.version_info >= (3, 3):
+    from shlex import quote as shlex_quote
+else:
+    from pipes import quote as shlex_quote
 
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
