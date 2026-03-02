@@ -5,7 +5,7 @@ import mitogen.parent
 from mitogen.core import str_partition
 
 import testlib
-import plain_old_module
+import testmod_toplevel
 
 
 class CrazyType(object):
@@ -17,7 +17,7 @@ def function_that_adds_numbers(x, y):
 
 
 def function_that_fails(s=''):
-    raise plain_old_module.MyError('exception text'+s)
+    raise testmod_toplevel.MyError('exception text'+s)
 
 
 def func_with_bad_return_value():
@@ -64,7 +64,7 @@ class CallFunctionTest(testlib.RouterMixin, testlib.TestCase):
 
         s = mitogen.core.to_text(exc)
         etype, _, s = str_partition(s, u': ')
-        self.assertEqual(etype, u'plain_old_module.MyError')
+        self.assertEqual(etype, u'testmod_toplevel.MyError')
 
         msg, _, s = str_partition(s, u'\n')
         self.assertEqual(msg, 'exception text')

@@ -52,8 +52,8 @@ class IsStdlibNameTest(testlib.TestCase):
 
     @unittest.skipIf(sys.version_info < (3, 3), 'Requires PEP 420 support')
     def test_implicit_namespace_pkg(self):
-        import implicit_namespace_pkg.sub_pkg1
-        self.assertFalse(self.func('implicit_namespace_pkg'))
+        import testmods.implicit_namespace_pkg.sub_pkg1
+        self.assertFalse(self.func('testmods.implicit_namespace_pkg'))
 
 
 class GetMainModuleDefectivePython3x(testlib.TestCase):
@@ -90,24 +90,24 @@ class PkgutilMethodTest(testlib.TestCase):
         return self.klass().find(fullname)
 
     def test_empty_source_pkg(self):
-        path, src, is_pkg = self.call('module_finder_testmod')
+        path, src, is_pkg = self.call('testmods.module_finder_testmod')
         self.assertEqual(path,
-            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/__init__.py'))
+            os.path.join(testlib.TESTMODS_DIR, 'module_finder_testmod/__init__.py'))
         self.assertEqual(mitogen.core.b(''), src)
         self.assertTrue(is_pkg)
 
     def test_empty_source_module(self):
-        path, src, is_pkg = self.call('module_finder_testmod.empty_mod')
+        path, src, is_pkg = self.call('testmods.module_finder_testmod.empty_mod')
         self.assertEqual(path,
-            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/empty_mod.py'))
+            os.path.join(testlib.TESTMODS_DIR, 'module_finder_testmod/empty_mod.py'))
         self.assertEqual(mitogen.core.b(''), src)
         self.assertFalse(is_pkg)
 
     def test_regular_mod(self):
-        from module_finder_testmod import regular_mod
-        path, src, is_pkg = self.call('module_finder_testmod.regular_mod')
+        from testmods.module_finder_testmod import regular_mod
+        path, src, is_pkg = self.call('testmods.module_finder_testmod.regular_mod')
         self.assertEqual(path,
-            os.path.join(testlib.MODS_DIR, 'module_finder_testmod/regular_mod.py'))
+            os.path.join(testlib.TESTMODS_DIR, 'module_finder_testmod/regular_mod.py'))
         self.assertEqual(mitogen.core.to_text(src),
                           inspect.getsource(regular_mod))
         self.assertFalse(is_pkg)
@@ -166,9 +166,9 @@ class ParentEnumerationMixin(object):
 
     def test_plumbum_colors_like_pkg_succeeds(self):
         # plumbum has been eating too many rainbow-colored pills
-        import pkg_like_plumbum.colors
-        path, src, is_pkg = self.call('pkg_like_plumbum.colors')
-        modpath = os.path.join(testlib.MODS_DIR, 'pkg_like_plumbum/colors.py')
+        import testmods.pkg_like_plumbum.colors
+        path, src, is_pkg = self.call('testmods.pkg_like_plumbum.colors')
+        modpath = os.path.join(testlib.TESTMODS_DIR, 'pkg_like_plumbum/colors.py')
         self.assertEqual(path, modpath)
 
         with open(modpath, 'rb') as f:
@@ -177,16 +177,16 @@ class ParentEnumerationMixin(object):
 
     def test_ansible_module_utils_distro_succeeds(self):
         # #590: a package that turns itself into a module.
-        import pkg_like_ansible.module_utils.distro as d
+        import testmods.pkg_like_ansible.module_utils.distro as d
         self.assertEqual(d.I_AM, "the module that replaced the package")
         self.assertEqual(
-            sys.modules['pkg_like_ansible.module_utils.distro'].__name__,
-            'pkg_like_ansible.module_utils.distro._distro'
+            sys.modules['testmods.pkg_like_ansible.module_utils.distro'].__name__,
+            'testmods.pkg_like_ansible.module_utils.distro._distro'
         )
 
         # ensure we can resolve the subpackage.
-        path, src, is_pkg = self.call('pkg_like_ansible.module_utils.distro')
-        modpath = os.path.join(testlib.MODS_DIR,
+        path, src, is_pkg = self.call('testmods.pkg_like_ansible.module_utils.distro')
+        modpath = os.path.join(testlib.TESTMODS_DIR,
             'pkg_like_ansible/module_utils/distro/__init__.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -195,9 +195,9 @@ class ParentEnumerationMixin(object):
 
         # ensure we can resolve a child of the subpackage.
         path, src, is_pkg = self.call(
-            'pkg_like_ansible.module_utils.distro._distro'
+            'testmods.pkg_like_ansible.module_utils.distro._distro'
         )
-        modpath = os.path.join(testlib.MODS_DIR,
+        modpath = os.path.join(testlib.TESTMODS_DIR,
             'pkg_like_ansible/module_utils/distro/_distro.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -207,16 +207,16 @@ class ParentEnumerationMixin(object):
     def test_ansible_module_utils_system_distro_succeeds(self):
         # #590: a package that turns itself into a module.
         # #590: a package that turns itself into a module.
-        import pkg_like_ansible.module_utils.sys_distro as d
+        import testmods.pkg_like_ansible.module_utils.sys_distro as d
         self.assertEqual(d.I_AM, "the system module that replaced the subpackage")
         self.assertEqual(
-            sys.modules['pkg_like_ansible.module_utils.sys_distro'].__name__,
-            'system_distro'
+            sys.modules['testmods.pkg_like_ansible.module_utils.sys_distro'].__name__,
+            'testmod_system_distro',
         )
 
         # ensure we can resolve the subpackage.
-        path, src, is_pkg = self.call('pkg_like_ansible.module_utils.sys_distro')
-        modpath = os.path.join(testlib.MODS_DIR,
+        path, src, is_pkg = self.call('testmods.pkg_like_ansible.module_utils.sys_distro')
+        modpath = os.path.join(testlib.TESTMODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/__init__.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -225,9 +225,9 @@ class ParentEnumerationMixin(object):
 
         # ensure we can resolve a child of the subpackage.
         path, src, is_pkg = self.call(
-            'pkg_like_ansible.module_utils.sys_distro._distro'
+            'testmods.pkg_like_ansible.module_utils.sys_distro._distro'
         )
-        modpath = os.path.join(testlib.MODS_DIR,
+        modpath = os.path.join(testlib.TESTMODS_DIR,
             'pkg_like_ansible/module_utils/sys_distro/_distro.py')
         self.assertEqual(path, modpath)
         with open(modpath, 'rb') as f:
@@ -311,7 +311,7 @@ class FindRelatedTest(testlib.TestCase):
 
 
 class DjangoMixin(object):
-    WEBPROJECT_PATH = os.path.join(testlib.MODS_DIR, 'webproject')
+    WEBPROJECT_PATH = os.path.join(testlib.TESTMODS_DIR, 'webproject')
 
     @classmethod
     def modules_expected_path(cls):

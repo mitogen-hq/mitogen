@@ -12,9 +12,8 @@ import mitogen.core
 import mitogen.master
 
 import testlib
-
-import plain_old_module
-import simple_pkg.a
+import testmod_toplevel
+import testmods.simple_pkg.a
 
 
 class NeutralizeMainTest(testlib.RouterMixin, testlib.TestCase):
@@ -78,7 +77,7 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # package machinery damage.
         context = self.router.local()
 
-        self.assertEqual(256, context.call(plain_old_module.pow, 2, 8))
+        self.assertEqual(256, context.call(testmod_toplevel.pow, 2, 8))
         os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
         self.assertEqual(1+os_fork, self.router.responder.get_module_count)
         self.assertEqual(1+os_fork, self.router.responder.good_load_module_count)
@@ -89,10 +88,10 @@ class GoodModulesTest(testlib.RouterMixin, testlib.TestCase):
         # which imports the other.
         context = self.router.local()
         self.assertEqual(3,
-            context.call(simple_pkg.a.subtract_one_add_two, 2))
+            context.call(testmods.simple_pkg.a.subtract_one_add_two, 2))
         os_fork = int(sys.version_info < (2, 6))  # mitogen.os_fork
-        self.assertEqual(2+os_fork, self.router.responder.get_module_count)
-        self.assertEqual(3+os_fork, self.router.responder.good_load_module_count)
+        self.assertEqual(3+os_fork, self.router.responder.get_module_count)
+        self.assertEqual(4+os_fork, self.router.responder.good_load_module_count)
         self.assertEqual(0, self.router.responder.bad_load_module_count)
         self.assertLess(450, self.router.responder.good_load_module_size)
 
@@ -148,7 +147,7 @@ class BrokenModulesTest(testlib.TestCase):
         # finding its submodules. After ansible.compat.six is initialized in
         # the parent, attempts to execute six/__init__.py on the slave will
         # cause an attempt to request ansible.compat.six._six from the master.
-        import six_brokenpkg
+        import testmods.six_brokenpkg
 
         stream = mock.Mock()
         stream.protocol.sent_modules = set()
@@ -156,7 +155,7 @@ class BrokenModulesTest(testlib.TestCase):
         router.stream_by_id = lambda n: stream
 
         msg = mitogen.core.Message(
-            data=mitogen.core.b('six_brokenpkg._six'),
+            data=mitogen.core.b('testmods.six_brokenpkg._six'),
             reply_to=50,
         )
         msg.router = router
@@ -198,7 +197,7 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         c2 = self.router.local(via=c1)
 
         os_fork = int(sys.version_info < (2, 6))
-        self.assertEqual(256, c2.call(plain_old_module.pow, 2, 8))
+        self.assertEqual(256, c2.call(testmod_toplevel.pow, 2, 8))
         self.assertEqual(2+os_fork, self.router.responder.get_module_count)
         self.assertEqual(2+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(10000, self.router.responder.good_load_module_size)

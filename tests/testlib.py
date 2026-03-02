@@ -56,11 +56,7 @@ SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 
 TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
 DATA_DIR =                      os.path.join(TESTS_DIR, 'data')
-MODS_DIR =                      os.path.join(TESTS_DIR, 'data', 'importer')
-
-sys.path.append(DATA_DIR)
-sys.path.append(MODS_DIR)
-
+TESTMODS_DIR =                  os.path.join(TESTS_DIR, 'testmods')
 
 if mitogen.is_master:
     mitogen.utils.log_to_file()
