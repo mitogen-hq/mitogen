@@ -39,6 +39,7 @@ In progress (unreleased)
 * :gh:issue:`1455` CI: Remove sys.path manipulation in .ci/unit_tests.py
 * :gh:issue:`1455` tests: Consolidate modules used by tests in tests/testmods
 * :gh:issue:`1466` CI: Remove PYTHONPATH & CWD manipulations from ci_lib
+* :gh:issue:`1466` CI: Allow writing bytecode (.pyc) when running tests
 
 
 v0.3.42 (2026-02-20)

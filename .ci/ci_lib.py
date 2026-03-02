@@ -180,8 +180,6 @@ class Fold(object):
     def __exit__(self, _1, _2, _3): pass
 
 
-os.environ['PYTHONDONTWRITEBYTECODE'] = 'x'
-
 def get_docker_hostname():
     """Return the hostname where the docker daemon is running.
     """
