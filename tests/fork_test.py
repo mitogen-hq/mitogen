@@ -20,10 +20,10 @@ except ImportError:
     # Python 2.4
     ctypes = None
 
-import mitogen
+import mitogen.core
+import mitogen.fork
 
 import testlib
-import plain_old_module
 
 
 def _find_ssl_linux():
@@ -89,9 +89,8 @@ def exercise_importer(n):
     """
     Ensure the forked child has a sensible importer.
     """
-    sys.path.remove(testlib.DATA_DIR)
-    import simple_pkg.a
-    return simple_pkg.a.subtract_one_add_two(n)
+    import testmods.simple_pkg.a
+    return testmods.simple_pkg.a.subtract_one_add_two(n)
 
 
 skipIfUnsupported = unittest.skipIf(

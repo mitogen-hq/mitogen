@@ -1,0 +1,23 @@
+- meta: end_role
+  when:
+    - ansible_system != 'Linux'
+
+- name: Check if AccountsService is used
+  stat:
+    path: /var/lib/AccountsService/users
+  register: accountsservice_stat
+
+- meta: end_role
+  when:
+    - not accountsservice_stat.stat.exists
+
+- name: Hide users from login window
+  copy:
+    dest: /var/lib/AccountsService/users/{{ item.name }}
+    mode: u=rw,go=
+    content: |
+      [User]
+      SystemAccount=true
+  with_items: "{{ user_accountsservice_users }}"
+  notify:
+    - Restart AccountsService

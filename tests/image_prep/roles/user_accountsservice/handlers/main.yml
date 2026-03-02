@@ -1,0 +1,4 @@
+- name: Restart AccountsService
+  service:
+    name: accounts-daemon
+    state: restarted

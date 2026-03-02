@@ -1,0 +1,4 @@
+# User    Host(s) = (runas user[:runas group]) Command(s)
+%mitogen__sudo_nopw ALL=(ALL:ALL) NOPASSWD:ALL
+mitogen__has_sudo_nopw ALL = (mitogen__pw_required) ALL
+mitogen__has_sudo_nopw ALL = (mitogen__require_tty_pw_required) ALL

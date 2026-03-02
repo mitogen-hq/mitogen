@@ -42,6 +42,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: .ci/show_python_versions
+      - run: .ci/setup_ssh_key_mitogen__has_sudo_pubkey
+      - run: .ci/setup_sudoers_defaults
+        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
       - name: Install deps
         id: install-deps
         run: |
@@ -66,6 +69,11 @@ jobs:
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
+      - name: Create environments
+        run: |
+          set -o errexit -o nounset -o pipefail
+          PYTHON="${{ steps.install-deps.outputs.python }}"
+          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -129,6 +137,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: .ci/show_python_versions
+      - run: .ci/setup_ssh_key_mitogen__has_sudo_pubkey
+      - run: .ci/setup_sudoers_defaults
+        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
       - name: Install deps
         id: install-deps
         run: |
@@ -141,6 +152,11 @@ jobs:
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
+      - name: Create environments
+        run: |
+          set -o errexit -o nounset -o pipefail
+          PYTHON="${{ steps.install-deps.outputs.python }}"
+          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -156,6 +172,8 @@ jobs:
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
     runs-on: macos-15
     timeout-minutes: 15
+    env:
+      MITOGEN_TEST_SKIP_CONTAINER_TESTS: 1
 
     strategy:
       fail-fast: false
@@ -178,6 +196,11 @@ jobs:
       - run: .ci/show_python_versions
       - run: .ci/install_sshpass ${{ matrix.sshpass_version }}
         if: ${{ matrix.sshpass_version }}
+      - run: .ci/setup_ssh_key_localhost
+        if: ${{ contains(matrix.tox_env, 'm_lcl') }}
+      - run: .ci/setup_ssh_key_mitogen__has_sudo_pubkey
+      - run: .ci/setup_sudoers_defaults
+        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
       - name: Install deps
         id: install-deps
         run: |
@@ -187,6 +210,11 @@ jobs:
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
+      - name: Create environments
+        run: |
+          set -o errexit -o nounset -o pipefail
+          PYTHON="${{ steps.install-deps.outputs.python }}"
+          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
       - name: Run tests
         env:
           GITHUB_ACTOR: ${{ github.actor }}

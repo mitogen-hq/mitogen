@@ -4,7 +4,7 @@ import sys
 import mitogen.core
 
 import testlib
-import plain_old_module
+import testmod_toplevel
 
 
 class ConstructorTest(testlib.TestCase):
@@ -21,9 +21,9 @@ class ConstructorTest(testlib.TestCase):
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
 
     def test_from_exc(self):
-        ve = plain_old_module.MyError('eek')
+        ve = testmod_toplevel.MyError('eek')
         e = self.klass(ve)
-        self.assertEqual(e.args[0], 'plain_old_module.MyError: eek')
+        self.assertEqual(e.args[0], 'testmod_toplevel.MyError: eek')
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
 
     def test_form_base_exc(self):
@@ -37,12 +37,12 @@ class ConstructorTest(testlib.TestCase):
 
     def test_from_exc_tb(self):
         try:
-            raise plain_old_module.MyError('eek')
-        except plain_old_module.MyError:
+            raise testmod_toplevel.MyError('eek')
+        except testmod_toplevel.MyError:
             ve = sys.exc_info()[1]
             e = self.klass(ve)
 
-        self.assertTrue(e.args[0].startswith('plain_old_module.MyError: eek'))
+        self.assertTrue(e.args[0].startswith('testmod_toplevel.MyError: eek'))
         self.assertIsInstance(e.args[0], mitogen.core.UnicodeType)
         self.assertIn('test_from_exc_tb', e.args[0])
 
@@ -91,18 +91,18 @@ class PickleTest(testlib.TestCase):
         self.assertEqual(e2.args[0], '11')
 
     def test_from_exc(self):
-        ve = plain_old_module.MyError('eek')
+        ve = testmod_toplevel.MyError('eek')
         e = self.klass(ve)
         e2 = pickle.loads(pickle.dumps(e))
-        self.assertEqual(e2.args[0], 'plain_old_module.MyError: eek')
+        self.assertEqual(e2.args[0], 'testmod_toplevel.MyError: eek')
 
     def test_from_exc_tb(self):
         try:
-            raise plain_old_module.MyError('eek')
-        except plain_old_module.MyError:
+            raise testmod_toplevel.MyError('eek')
+        except testmod_toplevel.MyError:
             ve = sys.exc_info()[1]
             e = self.klass(ve)
 
         e2 = pickle.loads(pickle.dumps(e))
-        self.assertTrue(e2.args[0].startswith('plain_old_module.MyError: eek'))
+        self.assertTrue(e2.args[0].startswith('testmod_toplevel.MyError: eek'))
         self.assertIn('test_from_exc_tb', e2.args[0])

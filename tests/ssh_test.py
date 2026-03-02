@@ -2,10 +2,9 @@ import os
 import tempfile
 
 import mitogen.ssh
-import mitogen.utils
 
 import testlib
-import plain_old_module
+import testmod_toplevel
 
 
 class StubSshMixin(testlib.RouterMixin):
@@ -34,7 +33,7 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         )
         #context.call(mitogen.utils.log_to_file, '/tmp/log')
         #context.call(mitogen.utils.disable_site_packages)
-        self.assertEqual(3, context.call(plain_old_module.add, 1, 2))
+        self.assertEqual(3, context.call(testmod_toplevel.add, 1, 2))
 
 
 class SshMixin(testlib.DockerMixin):
@@ -111,7 +110,7 @@ class SshMixin(testlib.DockerMixin):
 
         self.assertEqual(
             'i-am-mitogen-test-docker-image\n',
-            context.call(plain_old_module.get_sentinel_value),
+            context.call(testmod_toplevel.get_sentinel_value),
         )
 
     def test_pubkey_required(self):
@@ -129,7 +128,7 @@ class SshMixin(testlib.DockerMixin):
         )
         self.assertEqual(
             'i-am-mitogen-test-docker-image\n',
-            context.call(plain_old_module.get_sentinel_value),
+            context.call(testmod_toplevel.get_sentinel_value),
         )
 
     def test_enforce_unknown_host_key(self):
