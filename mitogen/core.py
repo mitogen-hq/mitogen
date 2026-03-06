@@ -739,7 +739,7 @@ def enable_profiling(econtext=None):
 
 def import_module(modname):
     """
-    Import `module` and return the attribute named `attr`.
+    Return the module with absolute name `modname`, importing it as necessary.
     """
     return __import__(modname, None, None, [''])
 
@@ -1319,18 +1319,22 @@ class ImportPolicy(object):
     :param blocks:
         Prefixes always denied by the responder, only local versions can be
         used.
+
+    :param unsuitables:
+        Prefixes unsuitable to be served, e.g. because they're Python stdlib,
+        platform specific. An optimisation to reduce futile round trips.
     """
-    def __init__(self, overrides=(), blocks=()):
+    def __init__(self, overrides=(), blocks=(), unsuitables=()):
         self.overrides = set(overrides)
         self.blocks = set(blocks)
-        self._always = set(Importer.ALWAYS_BLACKLIST)
+        self.unsuitables = set(unsuitables)
 
     def denied(self, fullname):
         fullnames = frozenset(module_lineage(fullname))
         if self.overrides and not self.overrides.intersection(fullnames):
             return ModuleDeniedByOverridesError
         if self.blocks.intersection(fullnames): return ModuleDeniedByBlocksError
-        if self._always.intersection(fullnames): return ModuleUnsuitableError
+        if self.unsuitables.intersection(fullnames): return ModuleUnsuitableError
         return False
 
     def denied_raise(self, fullname):
@@ -1340,9 +1344,13 @@ class ImportPolicy(object):
     def overriden(self, fullname):
         return bool(self.overrides.intersection(module_lineage(fullname)))
 
+    def unsuited(self, fullname):
+        return bool(self.unsuitables.intersection(module_lineage(fullname)))
+
     def __repr__(self):
-        args = (type(self).__name__, self.overrides, self.blocks)
-        return '%s(overrides=%r, blocks=%r)' % args
+        name = type(self).__name__
+        args = (name, self.overrides, self.blocks, self.unsuitables)
+        return '%s(overrides=%r, blocks=%r, unsuitables=%r)' % args
 
 
 class Importer(object):
@@ -1380,29 +1388,6 @@ class Importer(object):
         'sudo',
         'utils',
     ]
-
-    ALWAYS_BLACKLIST = [
-        # 2.x generates needless imports for 'builtins', while 3.x does the
-        # same for '__builtin__'. The correct one is built-in, the other always
-        # a negative round-trip.
-        'builtins',
-        '__builtin__',
-
-        # On some Python releases (e.g. 3.8, 3.9) the subprocess module tries
-        # to import of this Windows-only builtin module.
-        'msvcrt',
-
-        # Python 2.x module that was renamed to _thread in 3.x.
-        # This entry avoids a roundtrip on 2.x -> 3.x.
-        'thread',
-
-        # org.python.core imported by copy, pickle, xml.sax; breaks Jython, but
-        # very unlikely to trigger a bug report.
-        'org',
-    ]
-
-    if sys.version_info >= (3, 0):
-        ALWAYS_BLACKLIST += ['cStringIO']
 
     def __init__(self, router, context, core_src, policy):
         self._log = logging.getLogger('mitogen.importer')
@@ -1487,6 +1472,9 @@ class Importer(object):
         if hasattr(_tls, 'running'):
             return None
 
+        if self.policy.unsuited(fullname):
+            return None
+
         _tls.running = True
         try:
             #_v and self._log.debug('Python requested %r', fullname)
@@ -1534,6 +1522,10 @@ class Importer(object):
         log = self._log.getChild('find_spec')
 
         if fullname.endswith('.'):
+            return None
+
+        if self.policy.unsuited(fullname):
+            log.debug('Skipping %s. It is unsuited.')
             return None
 
         pkgname, _, modname = fullname.rpartition('.')
@@ -4205,6 +4197,7 @@ class ExternalContext(object):
             policy = ImportPolicy(
                 self.config['import_overrides'],
                 self.config['import_blocks'],
+                self.config['import_unsuitables'],
             )
             importer = Importer(
                 self.router,

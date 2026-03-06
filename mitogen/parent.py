@@ -1506,6 +1506,7 @@ class Connection(object):
             'debug': self.options.debug,
             'import_blocks': list(import_policy.blocks),
             'import_overrides': list(import_policy.overrides),
+            'import_unsuitables': list(import_policy.unsuitables),
             'profiling': self.options.profiling,
             'unidirectional': self.options.unidirectional,
             'log_level': get_log_level(),

@@ -36,3 +36,33 @@ def codeobj_imports(co):
         * `names`: tuple of names in `from mod import ..`.
     """
     return _code_imports(co.co_code, co.co_consts, co.co_names)
+
+
+def stdlib_module_names(version_info=None):
+    """
+    Return a set of known module names for a Python version.
+    """
+    if version_info is None:
+        version_info = sys.version_info
+    if version_info >= (3, 10):
+        return sys.stdlib_module_names
+
+    modname = "%s.stdlibs.py%d%d" % (__name__, version_info[0], version_info[1])
+    return __import__(modname, None, None, ['']).module_names
+
+
+def unsuitable_module_names(version_info=None):
+    """
+    Return a set of module names known to be unsuitable for serving by Mitogen.
+    """
+    if version_info is None:
+        version_info = sys.version_info
+    names = set([
+        'org',           # Jython, Imported by copy, pickle, & xml.sax.
+    ])
+    names.update(stdlib_module_names(version_info))
+    if version_info >= (3, 0):
+        names.update(stdlib_module_names((2, 7)))
+    else:
+        names.update(stdlib_module_names((3, 6)))
+    return names
