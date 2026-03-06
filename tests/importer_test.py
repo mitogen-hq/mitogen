@@ -22,7 +22,7 @@ class ImporterMixin(testlib.RouterMixin):
     def setUp(self):
         super(ImporterMixin, self).setUp()
         self.context = mock.Mock()
-        self.policy = mock.Mock()
+        self.policy = mitogen.core.ImportPolicy()
         self.importer = mitogen.core.Importer(self.router, self.context, '', self.policy)
 
         # TODO: this is a horrendous hack. Without it, we can't deliver a
@@ -278,8 +278,6 @@ class ImportPolicyTest(testlib.TestCase):
         self.assertFalse(policy.denied('pkg.mod'))
         self.assertFalse(policy.denied('otherpkg'))
         self.assertFalse(policy.denied('otherpkg.mod'))
-        self.assertTrue(policy.denied('__builtin__'))
-        self.assertTrue(policy.denied('builtins'))
 
     def test_overrides(self):
         policy = mitogen.core.ImportPolicy(overrides=['pkg'])
@@ -287,8 +285,6 @@ class ImportPolicyTest(testlib.TestCase):
         self.assertFalse(policy.denied('pkg.mod'))
         self.assertTrue(policy.denied('otherpkg'))
         self.assertTrue(policy.denied('otherpkg.mod'))
-        self.assertTrue(policy.denied('__builtin__'))
-        self.assertTrue(policy.denied('builtins'))
 
     def test_blocks(self):
         policy = mitogen.core.ImportPolicy(blocks=['pkg'])
@@ -296,8 +292,6 @@ class ImportPolicyTest(testlib.TestCase):
         self.assertTrue(policy.denied('pkg.mod'))
         self.assertFalse(policy.denied('otherpkg'))
         self.assertFalse(policy.denied('otherpkg.mod'))
-        self.assertTrue(policy.denied('__builtin__'))
-        self.assertTrue(policy.denied('builtins'))
 
     def test_overrides_and_blocks(self):
         policy = mitogen.core.ImportPolicy(overrides=['pkg'], blocks=['pkg'])
@@ -305,8 +299,16 @@ class ImportPolicyTest(testlib.TestCase):
         self.assertTrue(policy.denied('pkg.mod'))
         self.assertTrue(policy.denied('otherpkg'))
         self.assertTrue(policy.denied('otherpkg.mod'))
+
+    def test_unsuitables(self):
+        policy = mitogen.core.ImportPolicy(
+            unsuitables=('__builtin__', 'builtins', 'org'),
+        )
         self.assertTrue(policy.denied('__builtin__'))
         self.assertTrue(policy.denied('builtins'))
+        self.assertTrue(policy.denied('org.python.core'))
+        self.assertFalse(policy.denied('__main__'))
+        self.assertFalse(policy.denied('organisation'))
 
 
 class Python24LineCacheTest(testlib.TestCase):

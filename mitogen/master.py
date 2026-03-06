@@ -1402,7 +1402,10 @@ class Router(mitogen.parent.Router):
 
     def upgrade(self):
         self.id_allocator = IdAllocator(self)
-        self.responder = ModuleResponder(self, mitogen.core.ImportPolicy())
+        policy = mitogen.core.ImportPolicy(
+            unsuitables=mitogen.imports.unsuitable_module_names(),
+        )
+        self.responder = ModuleResponder(self, policy)
         self.resource_responder = ResourceResponder(self)
         self.log_forwarder = LogForwarder(self)
         self.route_monitor = mitogen.parent.RouteMonitor(router=self)
