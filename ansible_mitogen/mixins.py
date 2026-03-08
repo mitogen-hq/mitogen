@@ -34,7 +34,13 @@ import logging
 import os
 import pwd
 import random
+import sys
 import traceback
+
+if sys.version_info >= (3, 3):
+    from shlex import quote as shlex_quote
+else:
+    from pipes import quote as shlex_quote
 
 import ansible
 import ansible.plugins.action
@@ -42,7 +48,6 @@ import ansible.utils.unsafe_proxy
 import ansible.vars.clean
 
 from ansible.module_utils.common.text.converters import to_bytes, to_text
-from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
 import mitogen.select
