@@ -410,6 +410,13 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_container_name(self):
+        """
+        Highest precedence variable for specifying the name of a container to
+        connect to.
+        """
+
+    @abc.abstractmethod
     def extra_args(self):
         """
         Connection-specific arguments.
@@ -619,6 +626,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_ssh_compression(self):
         return self._connection.get_task_var('mitogen_ssh_compression')
+
+    def mitogen_container_name(self):
+        return self._connection.get_task_var('mitogen_container_name')
 
     def extra_args(self):
         return self._connection.get_extra_args()
@@ -870,6 +880,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_ssh_compression(self):
         return self._host_vars.get('mitogen_ssh_compression')
+
+    def mitogen_container_name(self):
+        return self._host_vars.get('mitogen_container_name')
 
     def extra_args(self):
         return []  # TODO
