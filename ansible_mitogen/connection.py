@@ -110,7 +110,7 @@ def _connect_local(spec):
     return {
         'method': 'local',
         'kwargs': {
-            'python_path': spec.python_path(),
+            'python_path': spec.python_path(rediscover_python=True),
         }
     }
 
