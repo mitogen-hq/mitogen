@@ -7,22 +7,21 @@
   gather_facts: false
   become: false
   tasks:
-    - name: Search non-existent directory, triggering a warning
-      find:
-        path: /does-not-exist
-      register: find_non_existing
+    - name: Emit a warning
+      test_warnings:
+        warning: We're doomed!
+      register: warning_emitted
 
-    - name: Search known directory
-      find:
-        path: /bin
-      register: find_existing
+    - name: Don't emit a warning
+      test_warnings:
+      register: warning_not_emitted
 
     - assert:
         that:
-          - find_non_existing.warnings | length == 1
-          - find_existing.warnings is not defined
+          - warning_emitted.warnings | length == 1
+          - warning_not_emitted.warnings is not defined
         fail_msg:
-          find_non_existing={{ find_non_existing }}
-          find_existing={{ find_existing }}
+          warning_emitted={{ warning_emitted }}
+          warning_not_emitted={{ warning_not_emitted }}
   tags:
     - issue_1477
