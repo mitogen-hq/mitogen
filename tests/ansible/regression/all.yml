@@ -20,3 +20,4 @@
 - import_playbook: issue_1079__wait_for_connection_timeout.yml
 - import_playbook: issue_1087__template_streamerror.yml
 - import_playbook: issue_1456__ansible_collections_denied.yml
+- import_playbook: issue_1477__task_warnings_persist.yml
