@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+- name: regression/issue_1477__task_warnings_persist.yml
+  # Check warnings emitted by one task don't persist into another
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Search non-existent directory, triggering a warning
+      find:
+        path: /does-not-exist
+      register: find_non_existing
+
+    - name: Search known directory
+      find:
+        path: /bin
+      register: find_existing
+
+    - assert:
+        that:
+          - find_non_existing.warnings | length == 1
+          - find_existing.warnings is not defined
+        fail_msg:
+          find_non_existing={{ find_non_existing }}
+          find_existing={{ find_existing }}
+  tags:
+    - issue_1477
