@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1477` :mod:`ansible_mitogen`: Fix cross-task warnings pollution
+
 
 v0.3.43 (2026-03-02)
 --------------------
