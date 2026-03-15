@@ -1,0 +1,27 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+- name: regression/issue_1477__task_warnings_persist.yml
+  # Check warnings emitted by one task don't persist into another
+  hosts: localhost
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Emit a warning
+      test_warnings:
+        warning: We're doomed!
+      register: warning_emitted
+
+    - name: Don't emit a warning
+      test_warnings:
+      register: warning_not_emitted
+
+    - assert:
+        that:
+          - warning_emitted.warnings | length == 1
+          - warning_not_emitted.warnings is not defined
+        fail_msg:
+          warning_emitted={{ warning_emitted }}
+          warning_not_emitted={{ warning_not_emitted }}
+  tags:
+    - issue_1477

@@ -57,6 +57,7 @@ if sys.version_info >= (3, 4):
 else:
     import imp
 
+import ansible.module_utils.common.warnings
 from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
@@ -905,6 +906,17 @@ class NewStyleRunner(ScriptRunner):
 
                 raise
 
+    def _setup_module_utils_globals(self):
+        "Remove lingering global state from previous task."
+        _global_warnings = ansible.module_utils.common.warnings._global_warnings
+        _global_deprecations = ansible.module_utils.common.warnings._global_deprecations
+        if isinstance(_global_warnings, list):
+            del _global_warnings[:]
+            del _global_deprecations[:]
+        else:
+            _global_warnings.clear()
+            _global_deprecations.clear()
+
     def _setup_excepthook(self):
         """
         Starting with Ansible 2.6, some modules (file.py) install a
@@ -927,6 +939,7 @@ class NewStyleRunner(ScriptRunner):
             module_utils=self.module_map['custom'],
         )
         self._setup_imports()
+        self._setup_module_utils_globals()
         self._setup_excepthook()
         self.atexit_wrapper = AtExitWrapper()
         if libc__res_init:
