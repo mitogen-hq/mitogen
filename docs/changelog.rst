@@ -24,6 +24,7 @@ In progress (unreleased)
 * :gh:issue:`1485` :mod:`mitogen`: Remove testlib log propagtion manipulation
   and lingering Operon references
 * :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._v`` logging shortcut
+* :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._vv`` logging shortcut
 
 
 v0.3.44 (2026-03-15)

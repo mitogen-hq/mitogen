@@ -228,8 +228,6 @@ LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
-_vv = False
-
 GET_MODULE = 100
 CALL_FUNCTION = 101
 FORWARD_LOG = 102
@@ -628,7 +626,7 @@ def io_op(func, *args):
             return func(*args), None
         except (select.error, OSError, IOError):
             e = sys.exc_info()[1]
-            _vv and IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
+            IOLOG.debug('io_op(%r) -> OSError: %s', func, e)
             if e.args[0] == errno.EINTR:
                 continue
             if e.args[0] in (errno.EIO, errno.ECONNRESET, errno.EPIPE):
@@ -677,8 +675,6 @@ class PidfulStreamHandler(logging.StreamHandler):
 
 
 def enable_debug_logging():
-    global _vv
-    _vv = True
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
     IOLOG.setLevel(logging.DEBUG)
@@ -1066,7 +1062,7 @@ class Sender(object):
         """
         Send `data` to the remote end.
         """
-        _vv and IOLOG.debug('%r.send(%*r.., enc=%s)', self, 100, data, enc)
+        IOLOG.debug('%r.send(%*r.., enc=%s)', self, 100, data, enc)
         self.context.send(Message.encoded(data, enc, handle=self.dst_handle))
 
     explicit_close_msg = 'Sender was explicitly closed'
@@ -1076,7 +1072,7 @@ class Sender(object):
         Send a dead message to the remote, causing :meth:`ChannelError` to be
         raised in any waiting thread.
         """
-        _vv and IOLOG.debug('%r.close()', self)
+        IOLOG.debug('%r.close()', self)
         self.context.send(
             Message.dead(
                 reason=self.explicit_close_msg,
@@ -1181,7 +1177,7 @@ class Receiver(object):
         Callback registered for the handle with :class:`Router`; appends data
         to the internal queue.
         """
-        _vv and IOLOG.debug('%r._on_receive(%r)', self, msg)
+        IOLOG.debug('%r._on_receive(%r)', self, msg)
         self._latch.put(msg)
         if self.notify:
             self.notify(self)
@@ -1246,7 +1242,7 @@ class Receiver(object):
         :returns:
             :class:`Message` that was received.
         """
-        _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
+        IOLOG.debug('%r.get(timeout=%r, block=%r)', self, timeout, block)
         try:
             msg = self._latch.get(timeout=timeout, block=block)
         except LatchError:
@@ -1504,9 +1500,9 @@ class Importer(object):
 
             try:
                 self.builtin_find_module(fullname)
-                _vv and self._log.debug('%r is available locally', fullname)
+                self._log.debug('%r is available locally', fullname)
             except ImportError:
-                _vv and self._log.debug('we will try to load %r', fullname)
+                self._log.debug('we will try to load %r', fullname)
                 return self
         finally:
             del _tls.running
@@ -2158,7 +2154,7 @@ class DelimitedProtocol(Protocol):
     _trailer = b('')
 
     def on_receive(self, broker, buf):
-        _vv and IOLOG.debug('%r.on_receive()', self)
+        IOLOG.debug('%r.on_receive()', self)
         stream = self.stream
         self._trailer, cont = mitogen.core.iter_split(
             buf=self._trailer + buf,
@@ -2248,7 +2244,7 @@ class BufferedWriter(object):
             elif written != len(buf):
                 self._buf.appendleft(BufferType(buf, written))
 
-            _vv and IOLOG.debug('transmitted %d bytes to %r', written, self)
+            IOLOG.debug('transmitted %d bytes to %r', written, self)
             self._len -= written
 
         if not self._buf:
@@ -2310,7 +2306,7 @@ class Side(object):
     def _on_fork(cls):
         while cls._fork_refs:
             _, side = cls._fork_refs.popitem()
-            _vv and IOLOG.debug('Side._on_fork() closing %r', side)
+            IOLOG.debug('Side._on_fork() closing %r', side)
             side.close()
 
     def close(self):
@@ -2318,7 +2314,7 @@ class Side(object):
         Call :meth:`file.close` on :attr:`fp` if it is not :data:`None`,
         then set it to :data:`None`.
         """
-        _vv and IOLOG.debug('%r.close()', self)
+        IOLOG.debug('%r.close()', self)
         if not self.closed:
             self.closed = True
             self.fp.close()
@@ -2413,7 +2409,7 @@ class MitogenProtocol(Protocol):
         Handle the next complete message on the stream. Raise
         :class:`StreamError` on failure.
         """
-        _vv and IOLOG.debug('%r.on_receive()', self)
+        IOLOG.debug('%r.on_receive()', self)
         if self._input_buf and self._input_buf_len < 128:
             self._input_buf[0] += buf
         else:
@@ -2455,7 +2451,7 @@ class MitogenProtocol(Protocol):
 
         total_len = msg_len + Message.HEADER_LEN
         if self._input_buf_len < total_len:
-            _vv and IOLOG.debug(
+            IOLOG.debug(
                 '%r: Input too short (want %d, got %d)',
                 self, msg_len, self._input_buf_len - Message.HEADER_LEN
             )
@@ -2494,11 +2490,11 @@ class MitogenProtocol(Protocol):
         """
         Transmit buffered messages.
         """
-        _vv and IOLOG.debug('%r.on_transmit()', self)
+        IOLOG.debug('%r.on_transmit()', self)
         self._writer.on_transmit(broker)
 
     def _send(self, msg):
-        _vv and IOLOG.debug('%r._send(%r)', self, msg)
+        IOLOG.debug('%r._send(%r)', self, msg)
         self._writer.write(msg.pack())
 
     def send(self, msg):
@@ -2623,7 +2619,7 @@ class Context(object):
         receiver = self.send_async(msg)
         response = receiver.get(deadline)
         data = response.unpickle()
-        _vv and IOLOG.debug('%r._send_await() -> %r', self, data)
+        IOLOG.debug('%r._send_await() -> %r', self, data)
         return data
 
     def __repr__(self):
@@ -2755,13 +2751,13 @@ class Poller(object):
         )
 
         for fd in rfds:
-            _vv and IOLOG.debug('%r: POLLIN for %r', self, fd)
+            IOLOG.debug('%r: POLLIN for %r', self, fd)
             data, gen = self._rfds.get(fd, (None, None))
             if gen and gen < self._generation:
                 yield data
 
         for fd in wfds:
-            _vv and IOLOG.debug('%r: POLLOUT for %r', self, fd)
+            IOLOG.debug('%r: POLLOUT for %r', self, fd)
             data, gen = self._wfds.get(fd, (None, None))
             if gen and gen < self._generation:
                 yield data
@@ -2776,7 +2772,7 @@ class Poller(object):
         :returns:
             Iterable of `data` elements associated with ready FDs.
         """
-        _vv and IOLOG.debug('%r.poll(%r)', self, timeout)
+        IOLOG.debug('%r.poll(%r)', self, timeout)
         self._generation += 1
         return self._poll(timeout)
 
@@ -2942,7 +2938,7 @@ class Latch(object):
         :returns:
             The de-queued object.
         """
-        _vv and IOLOG.debug('%r.get(timeout=%r, block=%r)',
+        IOLOG.debug('%r.get(timeout=%r, block=%r)',
                             self, timeout, block)
         self._lock.acquire()
         try:
@@ -2950,7 +2946,7 @@ class Latch(object):
                 raise LatchError()
             i = len(self._sleeping)
             if len(self._queue) > i:
-                _vv and IOLOG.debug('%r.get() -> %r', self, self._queue[i])
+                IOLOG.debug('%r.get() -> %r', self, self._queue[i])
                 return self._queue.pop(i)
             if not block:
                 raise TimeoutError()
@@ -2972,7 +2968,7 @@ class Latch(object):
         When a result is not immediately available, sleep waiting for
         :meth:`put` to write a byte to our socket pair.
         """
-        _vv and IOLOG.debug(
+        IOLOG.debug(
             '%r._get_sleep(timeout=%r, block=%r, fd=%d/%d)',
             self, timeout, block, rsock.fileno(), wsock.fileno()
         )
@@ -3012,7 +3008,7 @@ class Latch(object):
             self._waking -= 1
             if self.closed:
                 raise LatchError()
-            _vv and IOLOG.debug('%r.get() wake -> %r', self, self._queue[i])
+            IOLOG.debug('%r.get() wake -> %r', self, self._queue[i])
             return self._queue.pop(i)
         finally:
             self._lock.release()
@@ -3028,7 +3024,7 @@ class Latch(object):
         :raises mitogen.core.LatchError:
             :meth:`close` has been called, and the object is no longer valid.
         """
-        _vv and IOLOG.debug('%r.put(%r)', self, obj)
+        IOLOG.debug('%r.put(%r)', self, obj)
         self._lock.acquire()
         try:
             if self.closed:
@@ -3039,7 +3035,7 @@ class Latch(object):
             if self._waking < len(self._sleeping):
                 wsock, cookie = self._sleeping[self._waking]
                 self._waking += 1
-                _vv and IOLOG.debug('%r.put() -> waking wfd=%r',
+                IOLOG.debug('%r.put() -> waking wfd=%r',
                                     self, wsock.fileno())
             elif self.notify:
                 self.notify(self)
@@ -3102,7 +3098,7 @@ class Waker(Protocol):
         synchronized, :meth:`defer` and :meth:`on_receive` can conspire to
         ensure only one byte needs to be pending regardless of queue length.
         """
-        _vv and IOLOG.debug('%r.on_receive()', self)
+        IOLOG.debug('%r.on_receive()', self)
         while True:
             try:
                 func, args, kwargs = self._deferred.popleft()
@@ -3144,12 +3140,12 @@ class Waker(Protocol):
             :meth:`defer` was called after :class:`Broker` has begun shutdown.
         """
         if thread.get_ident() == self.broker_ident:
-            _vv and IOLOG.debug('%r.defer() [immediate]', self)
+            IOLOG.debug('%r.defer() [immediate]', self)
             return func(*args, **kwargs)
         if self._broker._exitted:
             raise Error(self.broker_shutdown_msg)
 
-        _vv and IOLOG.debug('%r.defer() [fd=%r]', self,
+        IOLOG.debug('%r.defer() [fd=%r]', self,
                             self.stream.transmit_side.fd)
         self._deferred.append((func, args, kwargs))
         self._wake()
@@ -3262,7 +3258,6 @@ class Router(object):
     def __init__(self, broker):
         self.broker = broker
         listen(broker, 'exit', self._on_broker_exit)
-        self._setup_logging()
 
         self._write_lock = threading.Lock()
         #: context ID -> Stream; must hold _write_lock to edit or iterate
@@ -3278,17 +3273,6 @@ class Router(object):
 
     def __repr__(self):
         return 'Router(%r)' % (self.broker,)
-
-    def _setup_logging(self):
-        """
-        This is done in the :class:`Router` constructor for historical reasons.
-        It must be called before ExternalContext logs its first messages, but
-        after logging has been setup. It must also be called when any router is
-        constructed for a consumer app.
-        """
-        # Here seems as good a place as any.
-        global _vv
-        _vv = IOLOG.level <= logging.DEBUG
 
     def _on_del_route(self, msg):
         """
@@ -3494,7 +3478,7 @@ class Router(object):
             Attemp to register handle that was already registered.
         """
         handle = handle or next(self._last_handle)
-        _vv and IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
+        IOLOG.debug('%r.add_handler(%r, %r, %r)', self, fn, handle, persist)
         if handle in self._handle_map and not overwrite:
             raise Error(self.duplicate_handle_msg)
 
@@ -3587,7 +3571,7 @@ class Router(object):
             performing source route verification, to ensure sensitive messages
             such as ``CALL_FUNCTION`` arrive only from trusted contexts.
         """
-        _vv and IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
+        IOLOG.debug('%r._async_route(%r, %r)', self, msg, in_stream)
 
         if len(msg.data) > self.max_message_size:
             self._maybe_send_dead(False, msg, self.too_large_msg % (
@@ -3732,7 +3716,7 @@ class Broker(object):
         file descriptor becomes ready for reading,
         :meth:`BasicStream.on_receive` will be called.
         """
-        _vv and IOLOG.debug('%r.start_receive(%r)', self, stream)
+        IOLOG.debug('%r.start_receive(%r)', self, stream)
         side = stream.receive_side
         assert side and not side.closed
         self.defer(self.poller.start_receive,
@@ -3743,7 +3727,7 @@ class Broker(object):
         Mark the :attr:`receive_side <Stream.receive_side>` on `stream` as not
         ready for reading. Safe to call from any thread.
         """
-        _vv and IOLOG.debug('%r.stop_receive(%r)', self, stream)
+        IOLOG.debug('%r.stop_receive(%r)', self, stream)
         self.defer(self.poller.stop_receive, stream.receive_side.fd)
 
     def _start_transmit(self, stream):
@@ -3753,7 +3737,7 @@ class Broker(object):
         associated file descriptor becomes ready for writing,
         :meth:`BasicStream.on_transmit` will be called.
         """
-        _vv and IOLOG.debug('%r._start_transmit(%r)', self, stream)
+        IOLOG.debug('%r._start_transmit(%r)', self, stream)
         side = stream.transmit_side
         assert side and not side.closed
         self.poller.start_transmit(side.fd, (side, stream.on_transmit))
@@ -3763,7 +3747,7 @@ class Broker(object):
         Mark the :attr:`transmit_side <Stream.receive_side>` on `stream` as not
         ready for writing.
         """
-        _vv and IOLOG.debug('%r._stop_transmit(%r)', self, stream)
+        IOLOG.debug('%r._stop_transmit(%r)', self, stream)
         self.poller.stop_transmit(stream.transmit_side.fd)
 
     def keep_alive(self):
@@ -3815,7 +3799,7 @@ class Broker(object):
         :param float timeout:
             If not :data:`None`, maximum time in seconds to wait for events.
         """
-        _vv and IOLOG.debug('%r._loop_once(%r, %r)',
+        IOLOG.debug('%r._loop_once(%r, %r)',
                             self, timeout, self.poller)
 
         timer_to = self.timers.get_timeout()
@@ -4316,7 +4300,6 @@ class ExternalContext(object):
 
                 self.dispatcher = Dispatcher(self)
                 self.router.register(self.parent, self.stream)
-                self.router._setup_logging()
 
                 if LOG.isEnabledFor(logging.DEBUG):
                     LOG.debug('Python version is %s', sys.version)

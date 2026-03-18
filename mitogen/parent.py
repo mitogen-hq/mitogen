@@ -960,8 +960,7 @@ class KqueuePoller(mitogen.core.Poller):
         self._kqueue.close()
 
     def _control(self, fd, filters, flags):
-        mitogen.core._vv and IOLOG.debug(
-            '%r._control(%r, %r, %r)', self, fd, filters, flags)
+        IOLOG.debug('%r._control(%r, %r, %r)', self, fd, filters, flags)
         # TODO: at shutdown it is currently possible for KQ_EV_ADD/KQ_EV_DEL
         # pairs to be pending after the associated file descriptor has already
         # been closed. Fixing this requires maintaining extra state, or perhaps
@@ -973,27 +972,25 @@ class KqueuePoller(mitogen.core.Poller):
         assert not events
 
     def start_receive(self, fd, data=None):
-        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
-            self, fd, data)
+        IOLOG.debug('%r.start_receive(%r, %r)', self, fd, data)
         if fd not in self._rfds:
             self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_ADD)
         self._rfds[fd] = (data or fd, self._generation)
 
     def stop_receive(self, fd):
-        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd)
+        IOLOG.debug('%r.stop_receive(%r)', self, fd)
         if fd in self._rfds:
             self._control(fd, select.KQ_FILTER_READ, select.KQ_EV_DELETE)
             del self._rfds[fd]
 
     def start_transmit(self, fd, data=None):
-        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
-            self, fd, data)
+        IOLOG.debug('%r.start_transmit(%r, %r)', self, fd, data)
         if fd not in self._wfds:
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_ADD)
         self._wfds[fd] = (data or fd, self._generation)
 
     def stop_transmit(self, fd):
-        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
+        IOLOG.debug('%r.stop_transmit(%r)', self, fd)
         if fd in self._wfds:
             self._control(fd, select.KQ_FILTER_WRITE, select.KQ_EV_DELETE)
             del self._wfds[fd]
@@ -1012,12 +1009,12 @@ class KqueuePoller(mitogen.core.Poller):
                 data, gen = self._rfds.get(fd, (None, None))
                 # Events can still be read for an already-discarded fd.
                 if gen and gen < self._generation:
-                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                    IOLOG.debug('%r: POLLIN: %r', self, fd)
                     yield data
             elif event.filter == select.KQ_FILTER_WRITE and fd in self._wfds:
                 data, gen = self._wfds.get(fd, (None, None))
                 if gen and gen < self._generation:
-                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                    IOLOG.debug('%r: POLLOUT: %r', self, fd)
                     yield data
 
 
@@ -1038,7 +1035,7 @@ class EpollPoller(mitogen.core.Poller):
         self._epoll.close()
 
     def _control(self, fd):
-        mitogen.core._vv and IOLOG.debug('%r._control(%r)', self, fd)
+        IOLOG.debug('%r._control(%r)', self, fd)
         mask = (((fd in self._rfds) and select.EPOLLIN) |
                 ((fd in self._wfds) and select.EPOLLOUT))
         if mask:
@@ -1052,24 +1049,23 @@ class EpollPoller(mitogen.core.Poller):
             self._registered_fds.remove(fd)
 
     def start_receive(self, fd, data=None):
-        mitogen.core._vv and IOLOG.debug('%r.start_receive(%r, %r)',
-            self, fd, data)
+        IOLOG.debug('%r.start_receive(%r, %r)', self, fd, data)
         self._rfds[fd] = (data or fd, self._generation)
         self._control(fd)
 
     def stop_receive(self, fd):
-        mitogen.core._vv and IOLOG.debug('%r.stop_receive(%r)', self, fd)
+        IOLOG.debug('%r.stop_receive(%r)', self, fd)
         self._rfds.pop(fd, None)
         self._control(fd)
 
     def start_transmit(self, fd, data=None):
-        mitogen.core._vv and IOLOG.debug('%r.start_transmit(%r, %r)',
+        IOLOG.debug('%r.start_transmit(%r, %r)',
             self, fd, data)
         self._wfds[fd] = (data or fd, self._generation)
         self._control(fd)
 
     def stop_transmit(self, fd):
-        mitogen.core._vv and IOLOG.debug('%r.stop_transmit(%r)', self, fd)
+        IOLOG.debug('%r.stop_transmit(%r)', self, fd)
         self._wfds.pop(fd, None)
         self._control(fd)
 
@@ -1084,12 +1080,12 @@ class EpollPoller(mitogen.core.Poller):
                 data, gen = self._rfds.get(fd, (None, None))
                 if gen and gen < self._generation:
                     # Events can still be read for an already-discarded fd.
-                    mitogen.core._vv and IOLOG.debug('%r: POLLIN: %r', self, fd)
+                    IOLOG.debug('%r: POLLIN: %r', self, fd)
                     yield data
             if event & select.EPOLLOUT:
                 data, gen = self._wfds.get(fd, (None, None))
                 if gen and gen < self._generation:
-                    mitogen.core._vv and IOLOG.debug('%r: POLLOUT: %r', self, fd)
+                    IOLOG.debug('%r: POLLOUT: %r', self, fd)
                     yield data
 
 

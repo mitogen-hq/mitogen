@@ -13,8 +13,6 @@ import mitogen.utils
 
 mitogen.utils.log_to_file()
 mitogen.core.IOLOG.setLevel(logging.DEBUG)
-mitogen.core._v = True
-mitogen.core._vv = True
 
 l = mitogen.core.Latch()
 consumed = 0
