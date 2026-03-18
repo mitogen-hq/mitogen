@@ -163,7 +163,7 @@ def get_sys_executable():
 
     global _sys_executable_warning_logged
     if not _sys_executable_warning_logged:
-        LOG.warn(SYS_EXECUTABLE_MSG)
+        LOG.warning(SYS_EXECUTABLE_MSG)
         _sys_executable_warning_logged = True
 
     return '/usr/bin/python'

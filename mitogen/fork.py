@@ -133,7 +133,7 @@ class Process(mitogen.parent.Process):
         except OSError:
             e = sys.exc_info()[1]
             if e.args[0] == errno.ECHILD:
-                LOG.warn('%r: waitpid(%r) produced ECHILD', self, self.pid)
+                LOG.warning('%r: waitpid(%r) produced ECHILD', self, self.pid)
                 return
             raise
 
