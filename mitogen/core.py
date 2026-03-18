@@ -228,7 +228,6 @@ LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
 IOLOG.setLevel(logging.INFO)
 
-_v = False
 _vv = False
 
 GET_MODULE = 100
@@ -678,8 +677,7 @@ class PidfulStreamHandler(logging.StreamHandler):
 
 
 def enable_debug_logging():
-    global _v, _vv
-    _v = True
+    global _vv
     _vv = True
     root = logging.getLogger()
     root.setLevel(logging.DEBUG)
@@ -1489,7 +1487,6 @@ class Importer(object):
 
         _tls.running = True
         try:
-            #_v and self._log.debug('Python requested %r', fullname)
             fullname = to_text(fullname)
             pkgname, _, suffix = str_rpartition(fullname, '.')
             pkg = sys.modules.get(pkgname)
@@ -1612,7 +1609,7 @@ class Importer(object):
 
         tup = msg.unpickle()
         fullname = tup[0]
-        _v and self._log.debug('received %s', fullname)
+        self._log.debug('received %s', fullname)
 
         self._lock.acquire()
         try:
@@ -1636,11 +1633,11 @@ class Importer(object):
             if not present:
                 funcs = self._callbacks.get(fullname)
                 if funcs is not None:
-                    _v and self._log.debug('existing request for %s in flight',
+                    self._log.debug('existing request for %s in flight',
                                            fullname)
                     funcs.append(callback)
                 else:
-                    _v and self._log.debug('sending new %s request to parent',
+                    self._log.debug('sending new %s request to parent',
                                            fullname)
                     self._callbacks[fullname] = [callback]
                     self._context.send(
@@ -1718,7 +1715,7 @@ class Importer(object):
         Deprecated in Python 3.4+, replaced by create_module() & exec_module().
         """
         fullname = to_text(fullname)
-        _v and self._log.debug('requesting %s', fullname)
+        self._log.debug('requesting %s', fullname)
         self._refuse_imports(fullname)
 
         event = threading.Event()
@@ -2119,7 +2116,7 @@ class Protocol(object):
         )
 
     def on_shutdown(self, broker):
-        _v and LOG.debug('%r: shutting down', self)
+        LOG.debug('%r: shutting down', self)
         self.stream.on_disconnect(broker)
 
     def on_disconnect(self, broker):
@@ -2245,7 +2242,7 @@ class BufferedWriter(object):
             buf = self._buf.popleft()
             written = self._protocol.stream.transmit_side.write(buf)
             if not written:
-                _v and LOG.debug('disconnected during write to %r', self)
+                LOG.debug('disconnected during write to %r', self)
                 self._protocol.stream.on_disconnect(broker)
                 return
             elif written != len(buf):
@@ -2515,7 +2512,7 @@ class MitogenProtocol(Protocol):
         """
         Disable :class:`Protocol` immediate disconnect behaviour.
         """
-        _v and LOG.debug('%r: shutting down', self)
+        LOG.debug('%r: shutting down', self)
 
 
 class Context(object):
@@ -2554,7 +2551,7 @@ class Context(object):
         return _unpickle_context, (self.context_id, self.name)
 
     def on_disconnect(self):
-        _v and LOG.debug('%r: disconnecting', self)
+        LOG.debug('%r: disconnecting', self)
         fire(self, 'disconnect')
 
     def send_async(self, msg, persist=False):
@@ -2579,7 +2576,7 @@ class Context(object):
         msg.dst_id = self.context_id
         msg.reply_to = receiver.handle
 
-        _v and LOG.debug('sending message to %r: %r', self, msg)
+        LOG.debug('sending message to %r: %r', self, msg)
         self.send(msg)
         return receiver
 
@@ -2588,7 +2585,7 @@ class Context(object):
             service_name = service_name.encode('utf-8')
         elif not isinstance(service_name, UnicodeType):
             service_name = service_name.name()  # Service.name()
-        _v and LOG.debug('calling service %s.%s of %r, args: %r',
+        LOG.debug('calling service %s.%s of %r, args: %r',
                          service_name, method_name, self, kwargs)
         tup = (service_name, to_text(method_name), Kwargs(kwargs))
         msg = Message.pickled(tup, handle=CALL_SERVICE)
@@ -3200,7 +3197,7 @@ class IoLoggerProtocol(DelimitedProtocol):
         without the buffer continuously refilling due to some out of control
         child process.
         """
-        _v and LOG.debug('%r: shutting down', self)
+        LOG.debug('%r: shutting down', self)
         if not IS_WSL:
             # #333: WSL generates invalid readiness indication on shutdown().
             # This modifies the *kernel object* inherited by children, causing
@@ -3290,8 +3287,7 @@ class Router(object):
         constructed for a consumer app.
         """
         # Here seems as good a place as any.
-        global _v, _vv
-        _v = logging.getLogger().level <= logging.DEBUG
+        global _vv
         _vv = IOLOG.level <= logging.DEBUG
 
     def _on_del_route(self, msg):
@@ -3334,7 +3330,7 @@ class Router(object):
         Called prior to broker exit, informs callbacks registered with
         :meth:`add_handler` the connection is dead.
         """
-        _v and LOG.debug('%r: broker has exitted', self)
+        LOG.debug('%r: broker has exitted', self)
         while self._handle_map:
             _, (_, func, _, _) = self._handle_map.popitem()
             func(Message.dead(self.broker_exit_msg))
@@ -3400,7 +3396,7 @@ class Router(object):
         the stream's receive side to the I/O multiplexer. This method remains
         public while the design has not yet settled.
         """
-        _v and LOG.debug('%s: registering %r to stream %r',
+        LOG.debug('%s: registering %r to stream %r',
                          self, context, stream)
         self._write_lock.acquire()
         try:
@@ -3902,7 +3898,7 @@ class Broker(object):
         Request broker gracefully disconnect streams and stop. Safe to call
         from any thread.
         """
-        _v and LOG.debug('%r: shutting down', self)
+        LOG.debug('%r: shutting down', self)
         def _shutdown():
             self._alive = False
         if self._alive and not self._exitted:
@@ -3969,7 +3965,7 @@ class Dispatcher(object):
 
     def _parse_request(self, msg):
         data = msg.unpickle(throw=False)
-        _v and LOG.debug('%r: dispatching %r', self, data)
+        LOG.debug('%r: dispatching %r', self, data)
 
         chain_id, modname, klass, func, args, kwargs = data
         obj = import_module(modname)
@@ -4040,7 +4036,7 @@ class Dispatcher(object):
                 continue
 
             chain_id, ret = self._dispatch_one(msg)
-            _v and LOG.debug('%r: %r -> %r', self, msg, ret)
+            LOG.debug('%r: %r -> %r', self, msg, ret)
             if msg.reply_to:
                 msg.reply(ret)
             elif isinstance(ret, CallError) and chain_id is None:
@@ -4099,7 +4095,7 @@ class ExternalContext(object):
 
     def _on_shutdown_msg(self, msg):
         if not msg.is_dead:
-            _v and LOG.debug('shutdown request from context %d', msg.src_id)
+            LOG.debug('shutdown request from context %d', msg.src_id)
             self.broker.shutdown()
 
     def _on_parent_disconnect(self):
@@ -4108,7 +4104,7 @@ class ExternalContext(object):
             mitogen.parent_id = None
             LOG.info('Detachment complete')
         else:
-            _v and LOG.debug('parent stream is gone, dying.')
+            LOG.debug('parent stream is gone, dying.')
             self.broker.shutdown()
 
     def detach(self):
@@ -4322,24 +4318,25 @@ class ExternalContext(object):
                 self.router.register(self.parent, self.stream)
                 self.router._setup_logging()
 
-                _v and LOG.debug('Python version is %s', sys.version)
-                _v and LOG.debug('Parent is context %r (%s); my ID is %r',
+                if LOG.isEnabledFor(logging.DEBUG):
+                    LOG.debug('Python version is %s', sys.version)
+                    LOG.debug('Parent is context %r (%s); my ID is %r',
                                  self.parent.context_id, self.parent.name,
                                  mitogen.context_id)
-                _v and LOG.debug('pid:%r ppid:%r uid:%r/%r, gid:%r/%r host:%r',
+                    LOG.debug('pid:%r ppid:%r uid:%r/%r, gid:%r/%r host:%r',
                                  os.getpid(), os.getppid(), os.geteuid(),
                                  os.getuid(), os.getegid(), os.getgid(),
                                  socket.gethostname())
 
                 sys.executable = os.environ.pop('ARGV0', sys.executable)
-                _v and LOG.debug('Recovered sys.executable: %r', sys.executable)
+                LOG.debug('Recovered sys.executable: %r', sys.executable)
 
                 if self.config.get('send_ec2', True):
                     self.stream.transmit_side.write(b('MITO002\n'))
                 self.broker._py24_25_compat()
                 self.log_handler.uncork()
                 self.dispatcher.run()
-                _v and LOG.debug('ExternalContext.main() normal exit')
+                LOG.debug('ExternalContext.main() normal exit')
             except KeyboardInterrupt:
                 LOG.debug('KeyboardInterrupt received, exiting gracefully.')
             except BaseException:
