@@ -65,14 +65,6 @@ if faulthandler is not None:
     faulthandler.enable()
 
 
-#
-# Temporary hack: Operon changed logging somewhat, and this broke LogCapturer /
-# log_handler_test.
-#
-
-mitogen.core.LOG.propagate = True
-
-
 def wait_for_child(pid, timeout=1.0):
     deadline = mitogen.core.now() + timeout
     while timeout < mitogen.core.now():

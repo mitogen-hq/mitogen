@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1485` :mod:`mitogen`: Remove testlib log propagtion manipulation
+  and lingering Operon references
+
 
 v0.3.44 (2026-03-15)
 --------------------
