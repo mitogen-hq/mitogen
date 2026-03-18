@@ -116,8 +116,7 @@ def log_to_file(path=None, io=False, level='INFO'):
         fp = sys.stderr
 
     level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
-    io = level == 'IO'
-    if io:
+    if level == 'IO':
         level = 'DEBUG'
         logging.getLogger('mitogen.io').setLevel(level)
 
