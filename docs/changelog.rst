@@ -25,6 +25,8 @@ In progress (unreleased)
   and lingering Operon references
 * :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._v`` logging shortcut
 * :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._vv`` logging shortcut
+* :gh:issue:`1482` :mod:`mitogen`: Fix :meth:`mitogen.core.LogHandler.emit`
+  signature
 
 
 v0.3.44 (2026-03-15)

@@ -1921,18 +1921,18 @@ class LogHandler(logging.Handler):
         finally:
             self._buffer_lock.release()
 
-    def emit(self, rec):
+    def emit(self, record):
         """
         Send a :data:`FORWARD_LOG` message towards the target context.
         """
-        if rec.name == 'mitogen.io' or \
+        if record.name == 'mitogen.io' or \
            getattr(self.local, 'in_emit', False):
             return
 
         self.local.in_emit = True
         try:
-            msg = self.format(rec)
-            encoded = '%s\x00%s\x00%s' % (rec.name, rec.levelno, msg)
+            msg = self.format(record)
+            encoded = '%s\x00%s\x00%s' % (record.name, record.levelno, msg)
             if isinstance(encoded, UnicodeType):
                 # Logging package emits both :(
                 encoded = encoded.encode('utf-8')
