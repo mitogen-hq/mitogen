@@ -194,8 +194,6 @@ nested.py:
 
     @mitogen.main()
     def main(router):
-        mitogen.utils.log_to_file()
-
         context = None
         for x in range(1, 11):
             print('Connect local%d via %s' % (x, context))

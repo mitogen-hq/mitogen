@@ -87,7 +87,17 @@ def log_get_formatter():
     return formatter
 
 
-def log_to_file(path=None, io=False, level='INFO'):
+def log_levels_configure(default='INFO'):
+    name = os.environ.get('MITOGEN_LOG_LEVEL', default).upper()
+    if name == 'IO':
+        levels = (logging.DEBUG, logging.DEBUG, logging.DEBUG)
+    else:
+        levels = (getattr(logging, name), getattr(logging, name), logging.INFO)
+    for name, level in zip(mitogen.core.LOGGERS, levels):
+        logging.getLogger(name).setLevel(level)
+
+
+def log_to_file(path=None, level='INFO'):
     """
     Install a new :class:`logging.Handler` writing applications logs to the
     filesystem. Useful when debugging slave IO problems.
@@ -99,30 +109,17 @@ def log_to_file(path=None, io=False, level='INFO'):
         If not :data:`None`, a filesystem path to write logs to. Otherwise,
         logs are written to :data:`sys.stderr`.
 
-    :param bool io:
-        If :data:`True`, include extremely verbose IO logs in the output.
-        Useful for debugging hangs, less useful for debugging application code.
-
     :param str level:
-        Name of the :mod:`logging` package constant that is the minimum level
-        to log at. Useful levels are ``DEBUG``, ``INFO``, ``WARNING``, and
-        ``ERROR``.
+        Name of the :mod:`logging` level to configure, or ``IO``. ``IO`` sets
+        the level to ``DEBUG`` and additionally logs Mitogen IO.
     """
+    log_levels_configure(level)
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
         mitogen.core.set_cloexec(fp.fileno())
     else:
         fp = sys.stderr
-
-    level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
-    io = level == 'IO'
-    if io:
-        level = 'DEBUG'
-        logging.getLogger('mitogen.io').setLevel(level)
-
-    level = getattr(logging, level, logging.INFO)
-    log.setLevel(level)
 
     # Prevent accidental duplicate log_to_file() calls from generating
     # duplicate output.

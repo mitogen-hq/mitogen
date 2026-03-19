@@ -21,6 +21,16 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1485` :mod:`mitogen`: Remove testlib log propagtion manipulation
+  and lingering Operon references
+* :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._v`` logging shortcut
+* :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._vv`` logging shortcut
+* :gh:issue:`1482` :mod:`mitogen`: Fix :meth:`mitogen.core.LogHandler.emit`
+  signature
+* :gh:issue:`1490` :mod:`mitogen`: Remove unused ``io`` argument from
+  :func:`mitogen.utils.log_to_file`
+* :gh:issue:`1482` :mod:`mitogen`: Consolidate log levels configuration
+
 
 v0.3.44 (2026-03-15)
 --------------------
