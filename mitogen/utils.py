@@ -87,7 +87,7 @@ def log_get_formatter():
     return formatter
 
 
-def log_to_file(path=None, io=False, level='INFO'):
+def log_to_file(path=None, level='INFO'):
     """
     Install a new :class:`logging.Handler` writing applications logs to the
     filesystem. Useful when debugging slave IO problems.
@@ -99,14 +99,9 @@ def log_to_file(path=None, io=False, level='INFO'):
         If not :data:`None`, a filesystem path to write logs to. Otherwise,
         logs are written to :data:`sys.stderr`.
 
-    :param bool io:
-        If :data:`True`, include extremely verbose IO logs in the output.
-        Useful for debugging hangs, less useful for debugging application code.
-
     :param str level:
-        Name of the :mod:`logging` package constant that is the minimum level
-        to log at. Useful levels are ``DEBUG``, ``INFO``, ``WARNING``, and
-        ``ERROR``.
+        Name of the :mod:`logging` level to configure, or ``IO``. ``IO`` sets
+        the level to ``DEBUG`` and additionally logs Mitogen IO.
     """
     log = logging.getLogger('')
     if path:

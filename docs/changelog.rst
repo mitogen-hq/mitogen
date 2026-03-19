@@ -27,6 +27,8 @@ In progress (unreleased)
 * :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._vv`` logging shortcut
 * :gh:issue:`1482` :mod:`mitogen`: Fix :meth:`mitogen.core.LogHandler.emit`
   signature
+* :gh:issue:`1490` :mod:`mitogen`: Remove unused ``io`` argument from
+  :func:`mitogen.utils.log_to_file`
 
 
 v0.3.44 (2026-03-15)
