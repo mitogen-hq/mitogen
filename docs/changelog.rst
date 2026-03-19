@@ -29,6 +29,7 @@ In progress (unreleased)
   signature
 * :gh:issue:`1490` :mod:`mitogen`: Remove unused ``io`` argument from
   :func:`mitogen.utils.log_to_file`
+* :gh:issue:`1482` :mod:`mitogen`: Consolidate log levels configuration
 
 
 v0.3.44 (2026-03-15)

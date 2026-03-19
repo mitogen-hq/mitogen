@@ -224,9 +224,9 @@ except ImportError:
 warnings.filterwarnings('ignore',
     "Parent module 'mitogen' not found while handling absolute import")
 
+LOGGERS = ('', 'mitogen', 'mitogen.io')
 LOG = logging.getLogger('mitogen')
 IOLOG = logging.getLogger('mitogen.io')
-IOLOG.setLevel(logging.INFO)
 
 GET_MODULE = 100
 CALL_FUNCTION = 101
@@ -675,9 +675,8 @@ class PidfulStreamHandler(logging.StreamHandler):
 
 
 def enable_debug_logging():
+    for name in LOGGERS: logging.getLogger(name).setLevel(logging.DEBUG)
     root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-    IOLOG.setLevel(logging.DEBUG)
     handler = PidfulStreamHandler()
     handler.formatter = logging.Formatter(
         '%(asctime)s %(levelname).1s %(name)s: %(message)s',
@@ -4157,9 +4156,10 @@ class ExternalContext(object):
             pass  # No first stage exists (e.g. fakessh)
 
     def _setup_logging(self):
+        for name, level in zip(LOGGERS, self.config['log_levels']):
+            logging.getLogger(name).setLevel(level)
         self.log_handler = LogHandler(self.master)
         root = logging.getLogger()
-        root.setLevel(self.config['log_level'])
         root.handlers = [self.log_handler]
         if self.config['debug']:
             enable_debug_logging()

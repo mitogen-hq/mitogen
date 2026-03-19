@@ -237,8 +237,6 @@ class Connection(mitogen.parent.Connection):
         if childfp.fileno() not in (0, 1, 100):
             childfp.close()
 
-        mitogen.core.IOLOG.setLevel(logging.INFO)
-
         try:
             try:
                 mitogen.core.ExternalContext(self.get_econtext_config()).main()

@@ -149,8 +149,8 @@ _core_source_lock = threading.Lock()
 _core_source_partial = None
 
 
-def get_log_level():
-    return (LOG.getEffectiveLevel() or logging.INFO)
+def get_log_levels(loggers=mitogen.core.LOGGERS):
+    return [logging.getLogger(name).getEffectiveLevel() for name in loggers]
 
 
 def get_sys_executable():
@@ -1502,9 +1502,9 @@ class Connection(object):
             'debug': self.options.debug,
             'import_blocks': list(import_policy.blocks),
             'import_overrides': list(import_policy.overrides),
+            'log_levels': get_log_levels(),
             'profiling': self.options.profiling,
             'unidirectional': self.options.unidirectional,
-            'log_level': get_log_level(),
             'max_message_size': self.options.max_message_size,
             'version': mitogen.__version__,
         }

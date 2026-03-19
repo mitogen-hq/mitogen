@@ -87,6 +87,16 @@ def log_get_formatter():
     return formatter
 
 
+def log_levels_configure(default='INFO'):
+    name = os.environ.get('MITOGEN_LOG_LEVEL', default).upper()
+    if name == 'IO':
+        levels = (logging.DEBUG, logging.DEBUG, logging.DEBUG)
+    else:
+        levels = (getattr(logging, name), getattr(logging, name), logging.INFO)
+    for name, level in zip(mitogen.core.LOGGERS, levels):
+        logging.getLogger(name).setLevel(level)
+
+
 def log_to_file(path=None, level='INFO'):
     """
     Install a new :class:`logging.Handler` writing applications logs to the
@@ -103,20 +113,13 @@ def log_to_file(path=None, level='INFO'):
         Name of the :mod:`logging` level to configure, or ``IO``. ``IO`` sets
         the level to ``DEBUG`` and additionally logs Mitogen IO.
     """
+    log_levels_configure(level)
     log = logging.getLogger('')
     if path:
         fp = open(path, 'w', 1)
         mitogen.core.set_cloexec(fp.fileno())
     else:
         fp = sys.stderr
-
-    level = os.environ.get('MITOGEN_LOG_LEVEL', level).upper()
-    if level == 'IO':
-        level = 'DEBUG'
-        logging.getLogger('mitogen.io').setLevel(level)
-
-    level = getattr(logging, level, logging.INFO)
-    log.setLevel(level)
 
     # Prevent accidental duplicate log_to_file() calls from generating
     # duplicate output.
