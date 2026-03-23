@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`963` :mod:`ansible_mitogen`: Hide Mitogen debugging by default at
+  high Ansible verbosity
 * :gh:issue:`1485` :mod:`mitogen`: Remove testlib log propagtion manipulation
   and lingering Operon references
 * :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._v`` logging shortcut

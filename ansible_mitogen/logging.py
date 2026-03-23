@@ -36,6 +36,9 @@ import ansible.utils.display
 
 import mitogen.utils
 
+#: Loggers to configure, this intentionally differes from mitogen.core.LOGGERS
+#: so that Ansible retains control of the root logger.
+LOGGERS = ('ansible_mitogen', 'mitogen', 'mitogen.io')
 
 display = ansible.utils.display.Display()
 
@@ -45,6 +48,15 @@ _process_name = None
 #: The PID of the process that last called :func:`set_process_name`, so its
 #: value can be ignored in unknown fork children.
 _process_pid = None
+
+
+def _verbosity_to_levels(verbosity):
+    "Return :data:`LOGGERS` levels for a given Ansible verbosity."
+    if verbosity >= 4:
+        return (logging.DEBUG, logging.DEBUG, logging.DEBUG)
+    if verbosity == 3:
+        return (logging.DEBUG, logging.DEBUG, logging.WARNING)
+    return (logging.WARNING, logging.WARNING, logging.WARNING)
 
 
 def set_process_name(name):
@@ -103,25 +115,15 @@ def setup():
     display framework. Ansible installs its own logging framework handlers when
     C.DEFAULT_LOG_PATH is set, therefore disable propagation for our handlers.
     """
-    l_mitogen = logging.getLogger('mitogen')
-    l_mitogen_io = logging.getLogger('mitogen.io')
-    l_ansible_mitogen = logging.getLogger('ansible_mitogen')
-    loggers = l_mitogen, l_mitogen_io, l_ansible_mitogen
+    ansible_levels = _verbosity_to_levels(display.verbosity)
+    mitogen_levelname = os.environ.get('MITOGEN_LOG_LEVEL', 'WARNING').upper()
+    mitogen_levels = mitogen.utils._levelname_to_levels(
+        mitogen_levelname, default=logging.WARNING,
+    )
+    levels = tuple(max(a, m) for a, m in zip(ansible_levels, mitogen_levels))
 
-    for logger in loggers:
+    for name, level in zip(LOGGERS, levels):
+        logger = logging.getLogger(name)
         logger.handlers = [Handler(display.vvv)]
         logger.propagate = False
-
-    if display.verbosity > 2:
-        l_ansible_mitogen.setLevel(logging.DEBUG)
-        l_mitogen.setLevel(logging.DEBUG)
-    else:
-        # Mitogen copies the active log level into new children, allowing them
-        # to filter tiny messages before they hit the network, and therefore
-        # before they wake the IO loop. Explicitly setting INFO saves ~4%
-        # running against just the local machine.
-        l_mitogen.setLevel(logging.ERROR)
-        l_ansible_mitogen.setLevel(logging.ERROR)
-
-    if display.verbosity > 3:
-        l_mitogen_io.setLevel(logging.DEBUG)
+        logger.setLevel(level)
