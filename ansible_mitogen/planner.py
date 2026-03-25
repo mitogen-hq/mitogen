@@ -317,7 +317,7 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
-    MARKER = re.compile(br'from ansible(?:_collections|\.module_utils)\.')
+    MARKER = re.compile(br'from ansible(?:_collections|\.module_utils)\.|from \.\.?(?:\w|\s)')
 
     @classmethod
     def detect(cls, path, source):
@@ -653,6 +653,40 @@ def _fix_dnf(invocation, module_source):
         invocation._overridden_sources[invocation.module_path] = module_source
 
 
+def _fix_collection_relative_imports(invocation, module_source):
+    """
+    Collection modules using relative imports (from ..module_utils import ...)
+    fail because the ansible_collections namespace isn't set up.
+    Replace relative imports with absolute ansible_collections imports.
+    """
+    if 'ansible_collections' not in invocation.module_path:
+        return
+
+    # Derive the collection's base package from the module path
+    # e.g. .../ansible_collections/hetzner/hcloud/plugins/modules/foo.py
+    # -> ansible_collections.hetzner.hcloud.plugins
+    parts = invocation.module_path.split(os.sep)
+    try:
+        ac_idx = parts.index('ansible_collections')
+    except ValueError:
+        return
+
+    # namespace.collection.plugins
+    if len(parts) < ac_idx + 4:
+        return
+
+    ns, coll, _, plugins_dir = parts[ac_idx + 1], parts[ac_idx + 2], parts[ac_idx + 3], parts[ac_idx + 3]
+    abs_prefix = 'ansible_collections.%s.%s.plugins.module_utils' % (ns, coll)
+
+    # Replace `from ..module_utils` with the absolute collection path
+    fixed = module_source.replace(
+        b'from ..module_utils',
+        ('from %s' % abs_prefix).encode()
+    )
+    if fixed != module_source:
+        invocation._overridden_sources[invocation.module_path] = fixed
+
+
 def _load_collections(invocation):
     """
     Special loader that ensures that `ansible_collections` exist as a module path for import
@@ -691,6 +725,7 @@ def invoke(invocation):
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _fix_dnf(invocation, module_source)
+        _fix_collection_relative_imports(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation,
             module_source
