@@ -671,18 +671,31 @@ def _fix_collection_relative_imports(invocation, module_source):
     except ValueError:
         return
 
-    # namespace.collection.plugins
-    if len(parts) < ac_idx + 4:
+    # Need at least ansible_collections/{namespace}/{collection}
+    if len(parts) < ac_idx + 3:
         return
 
-    ns, coll, _, plugins_dir = parts[ac_idx + 1], parts[ac_idx + 2], parts[ac_idx + 3], parts[ac_idx + 3]
-    abs_prefix = 'ansible_collections.%s.%s.plugins.module_utils' % (ns, coll)
+    module_package_parts = parts[ac_idx:parts.index(parts[-1])]
+    module_package = '.'.join(module_package_parts)
 
-    # Replace `from ..module_utils` with the absolute collection path
-    fixed = module_source.replace(
-        b'from ..module_utils',
-        ('from %s' % abs_prefix).encode()
-    )
+    def resolve_relative_import(match):
+        dots = match.group(1)
+        package_name = match.group(2)
+        level = len(dots)
+
+        base_parts = module_package.split('.')
+        base_parts = base_parts[:len(base_parts) - level + 1]
+
+        if package_name:
+            absolute_package_name = ('from %s.%s' % ('.'.join(base_parts), package_name.decode())).encode()
+        else:
+            absolute_package_name = ('from %s' % '.'.join(base_parts)).encode()
+
+        return absolute_package_name
+
+    pattern = re.compile(rb'from (\.\.?)\s?(\w+)')
+    fixed = pattern.sub(resolve_relative_import, module_source)
+
     if fixed != module_source:
         invocation._overridden_sources[invocation.module_path] = fixed
 
