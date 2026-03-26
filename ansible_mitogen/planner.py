@@ -693,7 +693,7 @@ def _fix_collection_relative_imports(invocation, module_source):
 
         return absolute_package_name
 
-    pattern = re.compile(rb'from (\.\.?)\s?(\w+)')
+    pattern = re.compile(b'from (\.\.?)\s?(\w+)')
     fixed = pattern.sub(resolve_relative_import, module_source)
 
     if fixed != module_source:
