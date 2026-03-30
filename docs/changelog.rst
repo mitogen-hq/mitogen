@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.45 (2026-03-30)
+--------------------
+
 * :gh:issue:`963` :mod:`ansible_mitogen`: Hide Mitogen debugging by default at
   high Ansible verbosity
 * :gh:issue:`1485` :mod:`mitogen`: Remove testlib log propagtion manipulation
