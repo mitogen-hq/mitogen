@@ -376,7 +376,7 @@ def _get_econtext_config(context, sock2):
         'core_src_fd': None,
         'debug': getattr(context.router, 'debug', False),
         'in_fd': sock2.fileno(),
-        'log_level': mitogen.parent.get_log_level(),
+        'log_levels': mitogen.parent.get_log_levels(),
         'max_message_size': context.router.max_message_size,
         'out_fd': sock2.fileno(),
         'parent_ids': parent_ids,

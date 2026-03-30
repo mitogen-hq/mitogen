@@ -78,7 +78,7 @@ MAX_MESSAGE_SIZE = 4096 * 1048576
 
 worker_model_msg = (
     'Mitogen connection types may only be instantiated when one of the '
-    '"mitogen_*" or "operon_*" strategies are active.'
+    '"mitogen_*" strategies are active.'
 )
 
 shutting_down_msg = (
