@@ -77,6 +77,13 @@ def _formatTime(record, datefmt=None):
     return dt.strftime(datefmt)
 
 
+def _levelname_to_levels(name, default=logging.INFO):
+    if name == 'IO':
+        return (logging.DEBUG, logging.DEBUG, logging.DEBUG)
+    level = getattr(logging, name, default)
+    return (level, level, max(level, logging.INFO))
+
+
 def log_get_formatter():
     datefmt = '%H:%M:%S'
     if sys.version_info > (2, 6):
@@ -89,10 +96,7 @@ def log_get_formatter():
 
 def log_levels_configure(default='INFO'):
     name = os.environ.get('MITOGEN_LOG_LEVEL', default).upper()
-    if name == 'IO':
-        levels = (logging.DEBUG, logging.DEBUG, logging.DEBUG)
-    else:
-        levels = (getattr(logging, name), getattr(logging, name), logging.INFO)
+    levels = _levelname_to_levels(name)
     for name, level in zip(mitogen.core.LOGGERS, levels):
         logging.getLogger(name).setLevel(level)
 

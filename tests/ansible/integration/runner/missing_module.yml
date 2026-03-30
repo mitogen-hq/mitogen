@@ -9,6 +9,7 @@
         ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
         ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+        MITOGEN_LOG_LEVEL: "{{ lookup('env', 'MITOGEN_LOG_LEVEL') }}"
       vars:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
       command: |
