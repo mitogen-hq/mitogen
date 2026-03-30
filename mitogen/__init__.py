@@ -35,7 +35,7 @@ be expected. On the slave, it is built dynamically during startup.
 
 
 #: Library version as a tuple.
-__version__ = (0, 3, 44)
+__version__ = (0, 3, 45)
 
 
 #: This is :data:`False` in slave contexts. Previously it was used to prevent
@@ -59,12 +59,7 @@ parent_id = None
 parent_ids = []
 
 
-import os
-_default_profiling = os.environ.get('MITOGEN_PROFILING') is not None
-del os
-
-
-def main(log_level='INFO', profiling=_default_profiling):
+def main(log_level='INFO', profiling=None):
     """
     Convenience decorator primarily useful for writing discardable test
     scripts.
@@ -102,6 +97,10 @@ def main(log_level='INFO', profiling=_default_profiling):
             print(z.call(get_url, 'https://example.org/')))))
 
     """
+    import os
+
+    if profiling is None:
+        profiling = os.environ.get('MITOGEN_PROFILING') is not None
 
     def wrapper(func):
         if func.__module__ != '__main__':

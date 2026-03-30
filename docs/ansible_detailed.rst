@@ -1045,9 +1045,27 @@ Debugging
 ---------
 
 Diagnostics and :py:mod:`logging` package output on targets are usually
-discarded. With Mitogen, these are captured and forwarded to the controller
-where they can be viewed with ``-vvv``. Basic high level logs are produced with
-``-vvv``, with logging of all IO on the controller with ``-vvvv`` or higher.
+discarded. Mitogen can capture and forward them to the controller.
+
+Mitogen >= 0.3.45 uses `Ansible verbosity`_ (e.g. ``ansible -vvv ...``) and an
+environment variable ``MITOGEN_LOG_LEVEL`` (e.g. ``MITOGEN_LOG_LEVEL=debug``)
+to configure this. Both are required for more verbose Mitogen logging output.
+
+Ansible verbosity is mapped to Mitogen logging as follows
+
+=================  ===========================================================
+Ansible verbosity  Mitogen output
+=================  ===========================================================
+        0-2        ``ERROR``, ``WARNING``
+         3         ``ERROR``, ``WARNING``, ``INFO``, ``DEBUG`` except IO
+        4-5        ``ERROR``, ``WARNING``, ``INFO``, ``DEBUG`` including IO
+=================  ===========================================================
+
+``MITOGEN_LOG_LEVEL`` accepts a Python `logging level`_ name, or ``IO`` for
+extra ``DEBUG`` output of Mitogen's network traffic.
+
+Mitogen <= 0.3.44 only uses Ansible verbosity to configure the output.
+``MITOGEN_LOG_LEVEL`` is ignored.
 
 While uncaptured standard IO and the logging package on targets is forwarded,
 it is not possible to receive IO activity logs, as the forwarding process would
@@ -1058,6 +1076,9 @@ logging is necessary. File-based logging can be enabled by setting
 ``MITOGEN_ROUTER_DEBUG=1`` in your environment. When file-based logging is
 enabled, one file per context will be created on the local machine and every
 target machine, as ``/tmp/mitogen.<pid>.log``.
+
+.. _ansible verbosity: https://docs.ansible.com/projects/ansible/latest/reference_appendices/config.html#default-verbosity
+.. _logging level: https://docs.python.org/3/library/logging.html#logging-levels
 
 
 Common Problems
