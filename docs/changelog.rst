@@ -27,6 +27,8 @@ In progress (unreleased)
 * :gh:issue:`1499` tests: Run Mitogen unittests without
   ``MITOGEN_LOG_LEVEL=debug``
 * :gh:issue:`1505` CI: Upgrade to GitHub Actions runners that use Node 24
+* :gh:issue:`1498` :mod:`ansible_mitogen`: Allow using temporary directories on
+  filesystems mounted noexec
 
 
 v0.3.45 (2026-03-30)
