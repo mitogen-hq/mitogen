@@ -133,16 +133,17 @@ class Options(mitogen.parent.Options):
     sudo_path = 'sudo'
     username = 'root'
     password = None
+    password_prompt = None
     preserve_env = False
     set_home = False
     login = False
-
     selinux_role = None
     selinux_type = None
 
     def __init__(self, username=None, sudo_path=None, password=None,
-                 preserve_env=None, set_home=None, sudo_args=None,
-                 login=None, selinux_role=None, selinux_type=None, **kwargs):
+                 password_prompt=None, preserve_env=None, set_home=None,
+                 sudo_args=None, login=None, selinux_role=None,
+                 selinux_type=None, **kwargs):
         super(Options, self).__init__(**kwargs)
         opts = parse_sudo_flags(sudo_args or [])
 
@@ -150,6 +151,8 @@ class Options(mitogen.parent.Options):
         self.sudo_path = option(self.sudo_path, sudo_path)
         if password:
             self.password = mitogen.core.to_text(password)
+        if password_prompt:
+            self.password_prompt = password_prompt
         self.preserve_env = option(self.preserve_env,
             preserve_env, opts.preserve_env)
         self.set_home = option(self.set_home, set_home, opts.set_home)
@@ -195,6 +198,24 @@ class Connection(mitogen.parent.Connection):
         'escalates_privilege': True,
     }
     child_is_immediate_subprocess = False
+
+    def stderr_stream_factory(self):
+        """
+        If password_prompt is configured, build a stream using a subclass of
+        SetupProtocol with the custom pattern prepended to PARTIAL_PATTERNS.
+        """
+        prompt = self.options.password_prompt
+        if not prompt:
+            return self.diag_protocol_class.build_stream()
+
+        custom_re = re.compile(prompt.encode('utf-8'), re.I)
+
+        class CustomSetupProtocol(SetupProtocol):
+            PARTIAL_PATTERNS = [
+                (custom_re, SetupProtocol._on_password_prompt),
+            ] + SetupProtocol.PARTIAL_PATTERNS
+
+        return CustomSetupProtocol.build_stream()
 
     def _get_name(self):
         return u'sudo.' + mitogen.core.to_text(self.options.username)

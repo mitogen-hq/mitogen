@@ -31,6 +31,9 @@ In progress
   source modifier feature
 * :gh:issue:`1540` tests: Test :class:`mitogen.master.ModuleFinder` source
   override
+* :gh:issue:`1503` :mod:`ansible_mitogen`: Add ``mitogen_sudo_password_prompt``
+  variable to allow matching custom sudo password prompts that omit the word
+  "password"
 
 
 v0.3.51 (2026-07-18)
