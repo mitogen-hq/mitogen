@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1503` :mod:`ansible_mitogen`: Add ``mitogen_sudo_password_prompt``
+  variable to allow matching custom sudo password prompts that omit the word
+  "password"
 
 v0.3.47 (2026-04-19)
 --------------------

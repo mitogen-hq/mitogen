@@ -410,6 +410,13 @@ class Spec(with_metaclass(abc.ABCMeta, object)):
         """
 
     @abc.abstractmethod
+    def mitogen_sudo_password_prompt(self):
+        """
+        Optional regex pattern to match the sudo password prompt.
+        Overrides the built-in PASSWORD_PROMPT_RE in mitogen.sudo.
+        """
+
+    @abc.abstractmethod
     def extra_args(self):
         """
         Connection-specific arguments.
@@ -619,6 +626,9 @@ class PlayContextSpec(Spec):
 
     def mitogen_ssh_compression(self):
         return self._connection.get_task_var('mitogen_ssh_compression')
+
+    def mitogen_sudo_password_prompt(self):
+        return self._connection.get_task_var('mitogen_sudo_password_prompt')
 
     def extra_args(self):
         return self._connection.get_extra_args()
@@ -870,6 +880,9 @@ class MitogenViaSpec(Spec):
 
     def mitogen_ssh_compression(self):
         return self._host_vars.get('mitogen_ssh_compression')
+
+    def mitogen_sudo_password_prompt(self):
+        return self._host_vars.get('mitogen_sudo_password_prompt')
 
     def extra_args(self):
         return []  # TODO

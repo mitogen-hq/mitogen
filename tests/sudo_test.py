@@ -1,4 +1,7 @@
 import os
+import re
+
+import mitogen.sudo
 
 import testlib
 
@@ -56,6 +59,43 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             self.assertEqual('1', context.call(os.getenv, 'PREHISTORIC_SUDO'))
         finally:
             del os.environ['PREHISTORIC_SUDO']
+
+
+class PasswordPromptPatternTest(testlib.TestCase):
+    def _make_options(self, **kwargs):
+        return mitogen.sudo.Options(
+            max_message_size=mitogen.core.CHUNK_SIZE,
+            **kwargs
+        )
+
+    def test_default_has_no_custom_prompt(self):
+        options = self._make_options()
+        self.assertIsNone(options.password_prompt)
+
+    def test_custom_prompt_stored(self):
+        options = self._make_options(
+            password_prompt=r'\[sudo\] \w+@[\w.]+:',
+        )
+        self.assertEqual(options.password_prompt, r'\[sudo\] \w+@[\w.]+:')
+
+    def test_custom_protocol_prepends_pattern(self):
+        options = self._make_options(
+            password_prompt=r'\[sudo\] \w+@[\w.]+:',
+        )
+        conn = mitogen.sudo.Connection(options, router=None)
+        stream = conn.stderr_stream_factory()
+        patterns = stream.protocol.PARTIAL_PATTERNS
+        # custom pattern first, built-in second
+        self.assertEqual(len(patterns), 2)
+        self.assertEqual(patterns[0][0].pattern, b'\\[sudo\\] \\w+@[\\w.]+:')
+        self.assertIs(patterns[1][0], mitogen.sudo.PASSWORD_PROMPT_RE)
+
+    def test_no_custom_uses_default_protocol(self):
+        options = self._make_options()
+        conn = mitogen.sudo.Connection(options, router=None)
+        stream = conn.stderr_stream_factory()
+        self.assertIsInstance(stream.protocol, mitogen.sudo.SetupProtocol)
+        self.assertEqual(len(stream.protocol.PARTIAL_PATTERNS), 1)
 
 
 # TODO: https://github.com/dw/mitogen/issues/694
