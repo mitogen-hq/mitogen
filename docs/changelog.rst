@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1502` :mod:`mitogen`: Preserve :py:mod:`logging` config in forked
+  children
+
 
 v0.3.45 (2026-03-30)
 --------------------
