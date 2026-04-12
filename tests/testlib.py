@@ -316,21 +316,11 @@ def log_fd_calls():
     os.dup = dup
 
 
-class CaptureStreamHandler(logging.StreamHandler):
-    def __init__(self, *args, **kwargs):
-        logging.StreamHandler.__init__(self, *args, **kwargs)
-        self.msgs = []
-
-    def emit(self, msg):
-        self.msgs.append(msg)
-        logging.StreamHandler.emit(self, msg)
-
-
 class LogCapturer(object):
     def __init__(self, name=None, formatter=None):
         self.sio = StringIO()
         self.logger = logging.getLogger(name)
-        handler = CaptureStreamHandler(self.sio)
+        handler = logging.StreamHandler(self.sio)
         if formatter is not None:
             handler.setFormatter(formatter)
         self.handler = handler
@@ -349,9 +339,6 @@ class LogCapturer(object):
         if isinstance(s, mitogen.core.BytesType):
             s = s.decode('utf-8')
         return s
-
-    def msgs(self):
-        return self.handler.msgs
 
     def __enter__(self):
         self.start()
