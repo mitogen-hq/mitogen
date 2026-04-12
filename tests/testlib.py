@@ -324,14 +324,11 @@ class LogCapturer(object):
         if formatter is not None:
             handler.setFormatter(formatter)
         self.handler = handler
-        self.old_propagate = self.logger.propagate
-        self.old_handlers = self.logger.handlers
         self.old_level = self.logger.level
 
     def start(self):
-        self.logger.handlers = [self.handler]
-        self.logger.propagate = False
-        self.logger.level = logging.DEBUG
+        self.logger.addHandler(self.handler)
+        self.logger.setLevel(logging.DEBUG)
 
     def raw(self):
         s = self.sio.getvalue()
@@ -348,9 +345,8 @@ class LogCapturer(object):
         self.stop()
 
     def stop(self):
-        self.logger.level = self.old_level
-        self.logger.handlers = self.old_handlers
-        self.logger.propagate = self.old_propagate
+        self.logger.setLevel(self.old_level)
+        self.logger.removeHandler(self.handler)
         return self.raw()
 
 
