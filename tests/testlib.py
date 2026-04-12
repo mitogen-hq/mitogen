@@ -58,7 +58,7 @@ TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
 DATA_DIR =                      os.path.join(TESTS_DIR, 'data')
 TESTMODS_DIR =                  os.path.join(TESTS_DIR, 'testmods')
 
-if mitogen.is_master:
+if mitogen.is_master and 'MITOGEN_LOG_LEVEL' in os.environ:
     mitogen.utils.log_to_file()
 
 if faulthandler is not None:
