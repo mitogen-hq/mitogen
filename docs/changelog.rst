@@ -26,6 +26,7 @@ In progress (unreleased)
 * :gh:issue:`1499` tests: Fix uses of ``testlib.LogCapturer``
 * :gh:issue:`1499` tests: Run Mitogen unittests without
   ``MITOGEN_LOG_LEVEL=debug``
+* :gh:issue:`1505` CI: Upgrade to GitHub Actions runners that use Node 24
 
 
 v0.3.45 (2026-03-30)
