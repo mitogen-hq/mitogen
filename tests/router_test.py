@@ -253,10 +253,9 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
     klass = mitogen.master.Router
 
     def test_local_exceeded(self):
-        router = self.klass(broker=self.broker, max_message_size=4096)
-
         logs = testlib.LogCapturer()
         logs.start()
+        router = self.klass(broker=self.broker, max_message_size=4096)
 
         # Send message and block for one IO loop, so _async_route can run.
         router.route(mitogen.core.Message.pickled(' '*8192))
@@ -266,12 +265,10 @@ class MessageSizeTest(testlib.BrokerMixin, testlib.TestCase):
         self.assertIn(expect, logs.stop())
 
     def test_local_dead_message(self):
-        # Local router should generate dead message when reply_to is set.
-        router = self.klass(broker=self.broker, max_message_size=4096)
-
         logs = testlib.LogCapturer()
         logs.start()
-
+        # Local router should generate dead message when reply_to is set.
+        router = self.klass(broker=self.broker, max_message_size=4096)
         expect = router.too_large_msg % (4096,)
 
         # Try function call. Receiver should be woken by a dead message sent by
@@ -397,9 +394,6 @@ class NoRouteTest(testlib.RouterMixin, testlib.TestCase):
 def test_siblings_cant_talk(router):
     l1 = router.local()
     l2 = router.local()
-    logs = testlib.LogCapturer()
-    logs.start()
-
     try:
         l2.call(ping_context, l1)
     except mitogen.core.CallError:
@@ -410,27 +404,36 @@ def test_siblings_cant_talk(router):
         l1.context_id,
         mitogen.context_id,
     )
-    assert msg in str(e)
-    assert 'routing mode prevents forward of ' in logs.stop()
+    return (msg, e)
 
 
 @mitogen.core.takes_econtext
 def test_siblings_cant_talk_remote(econtext):
     mitogen.parent.upgrade_router(econtext)
-    test_siblings_cant_talk(econtext.router)
+    return test_siblings_cant_talk(econtext.router)
 
 
 class UnidirectionalTest(testlib.RouterMixin, testlib.TestCase):
     def test_siblings_cant_talk_master(self):
+        capture = testlib.LogCapturer()
+        capture.start()
         self.router.unidirectional = True
-        test_siblings_cant_talk(self.router)
+        expected_msg, exc = test_siblings_cant_talk(self.router)
+        logs = capture.stop()
+        self.assertIn(expected_msg, str(exc))
+        self.assertIn('routing mode prevents forward of ', logs)
 
     def test_siblings_cant_talk_parent(self):
         # ensure 'unidirectional' attribute is respected for contexts started
         # by children.
+        capture = testlib.LogCapturer()
+        capture.start()
         self.router.unidirectional = True
         parent = self.router.local()
-        parent.call(test_siblings_cant_talk_remote)
+        expected_msg, exc = parent.call(test_siblings_cant_talk_remote)
+        logs = capture.stop()
+        self.assertIn(expected_msg, str(exc))
+        self.assertIn('routing mode prevents forward of ', logs)
 
     def test_auth_id_can_talk(self):
         self.router.unidirectional = True
