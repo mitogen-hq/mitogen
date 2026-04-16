@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.46 (2026-04-16)
+--------------------
+
 * :gh:issue:`1502` :mod:`mitogen`: Preserve :py:mod:`logging` config in forked
   children
 * :gh:issue:`1499` tests: Fix uses of ``testlib.LogCapturer``
