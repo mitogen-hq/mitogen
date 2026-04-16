@@ -541,8 +541,7 @@ interpreter, its location is consistent for each account, and it is always
 privately owned by that account.
 
 During startup, the persistent remote interpreter tries the paths below until
-one is found that is writeable and lives on a filesystem with ``noexec``
-disabled:
+one is found that is writeable:
 
 1. ``$variable`` and tilde-expanded ``remote_tmp`` setting from
    ``ansible.cfg``

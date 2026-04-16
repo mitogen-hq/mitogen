@@ -1,6 +1,5 @@
 import os
 import random
-import subprocess
 import sys
 import unittest
 
@@ -24,6 +23,7 @@ import mitogen.core
 import mitogen.fork
 
 import testlib
+from testlib import subprocess
 
 
 def _find_ssl_linux():
@@ -31,28 +31,32 @@ def _find_ssl_linux():
     if ssl_object_path is None:
         # No __file__ because it's builtin
         ssl_object_path = sys.executable
-    proc = subprocess.Popen(
+    proc = subprocess.run(
         ['ldd', ssl_object_path],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        check=True,
     )
-    b_stdout, b_stderr = proc.communicate()
-    assert proc.returncode == 0
-    assert b_stderr.decode() == ''
-    for line in b_stdout.decode().splitlines():
+    if proc.stderr:
+        raise subprocess.CalledProcessError(
+            proc.returncode, proc.args, proc.stdout, proc.stderr,
+        )
+    for line in proc.stdout.decode().splitlines():
         bits = line.split()
         if bits[0].startswith('libssl'):
             return bits[2]
 
 
 def _find_ssl_darwin():
-    proc = subprocess.Popen(
+    proc = subprocess.run(
         ['otool', '-l', _ssl.__file__],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        check=True,
     )
-    b_stdout, b_stderr = proc.communicate()
-    assert proc.returncode == 0
-    assert b_stderr.decode() == ''
-    for line in b_stdout.decode().splitlines():
+    if proc.stderr:
+        raise subprocess.CalledProcessError(
+            proc.returncode, proc.args, proc.stdout, proc.stderr,
+        )
+    for line in proc.stdout.decode().splitlines():
         bits = line.split()
         if bits[0] == 'name' and 'libssl' in bits[1]:
             return bits[1]
@@ -81,7 +85,8 @@ def random_random():
 
 def RAND_pseudo_bytes(n=32):
     buf = ctypes.create_string_buffer(n)
-    assert 1 == c_ssl.RAND_pseudo_bytes(buf, n)
+    if c_ssl.RAND_pseudo_bytes(buf, n) != 1:
+        raise ValueError
     return buf[:]
 
 

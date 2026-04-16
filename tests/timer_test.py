@@ -157,7 +157,7 @@ class CancelTest(TimerListMixin, testlib.TestCase):
 
 @mitogen.core.takes_econtext
 def do_timer_test_econtext(econtext):
-    do_timer_test(econtext.broker)
+    return do_timer_test(econtext.broker)
 
 
 def do_timer_test(broker):
@@ -169,9 +169,7 @@ def do_timer_test(broker):
             lambda: latch.put('hi'),
         )
     )
-
-    assert 'hi' == latch.get()
-    assert mitogen.core.now() > (now + 0.250)
+    return (latch.get(), now, mitogen.core.now())
 
 
 class BrokerTimerTest(testlib.TestCase):
@@ -180,17 +178,21 @@ class BrokerTimerTest(testlib.TestCase):
     def test_call_later(self):
         broker = self.klass()
         try:
-            do_timer_test(broker)
+            response, t0, t1 = do_timer_test(broker)
         finally:
             broker.shutdown()
             broker.join()
+        self.assertEqual(response, 'hi')
+        self.assertTrue(t1-t0 >= 0.25)
 
     def test_child_upgrade(self):
         router = mitogen.master.Router()
         try:
             c = router.local()
             c.call(mitogen.parent.upgrade_router)
-            c.call(do_timer_test_econtext)
+            response, t0, t1 = c.call(do_timer_test_econtext)
         finally:
             router.broker.shutdown()
             router.broker.join()
+        self.assertEqual(response, 'hi')
+        self.assertTrue(t1-t0 >= 0.25)
