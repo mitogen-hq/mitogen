@@ -100,9 +100,3 @@ class IsGoodTempDirTest(unittest.TestCase):
         os_chmod.side_effect = OSError('nope')
         with NamedTemporaryDirectory() as temp_path:
             self.assertFalse(self.func(temp_path))
-
-    @mock.patch('os.access')
-    def test_noexec(self, os_access):
-        os_access.return_value = False
-        with NamedTemporaryDirectory() as temp_path:
-            self.assertFalse(self.func(temp_path))

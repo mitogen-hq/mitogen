@@ -18,6 +18,19 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.46 (2026-04-16)
+--------------------
+
+* :gh:issue:`1502` :mod:`mitogen`: Preserve :py:mod:`logging` config in forked
+  children
+* :gh:issue:`1499` tests: Fix uses of ``testlib.LogCapturer``
+* :gh:issue:`1499` tests: Run Mitogen unittests without
+  ``MITOGEN_LOG_LEVEL=debug``
+* :gh:issue:`1505` CI: Upgrade to GitHub Actions runners that use Node 24
+* :gh:issue:`1498` :mod:`ansible_mitogen`: Allow using temporary directories on
+  filesystems mounted noexec
+
+
 v0.3.45 (2026-03-30)
 --------------------
 

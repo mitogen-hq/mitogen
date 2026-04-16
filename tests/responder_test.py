@@ -179,9 +179,9 @@ class BrokenModulesTest(testlib.TestCase):
 
 class ForwardTest(testlib.RouterMixin, testlib.TestCase):
     def test_forward_to_nonexistent_context(self):
-        nonexistent = mitogen.core.Context(self.router, 123)
         capture = testlib.LogCapturer()
         capture.start()
+        nonexistent = mitogen.core.Context(self.router, 123)
         self.broker.defer_sync(lambda:
             self.router.responder.forward_modules(
                 nonexistent,
