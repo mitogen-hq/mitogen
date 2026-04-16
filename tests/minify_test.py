@@ -79,17 +79,18 @@ class MitogenCoreTest(testlib.TestCase):
         mlines = minified.splitlines()
         for i, (orig, mini) in enumerate(zip(olines, mlines)):
             if i < 2:
-                assert orig == mini
+                self.assertEqual(orig, mini)
                 continue
 
             owords = orig.split()
             mwords = mini.split()
-            assert len(mwords) == 0 or (mwords[0] == owords[0]), pprint.pformat({
-                'line': i+1,
-                'filename': name,
-                'owords': owords,
-                'mwords': mwords,
-            })
+            self.assertTrue(
+                len(mwords) == 0 or (mwords[0] == owords[0]),
+                pprint.pformat({
+                    'line': i+1, 'name': name,
+                    'owords': owords, 'mwords': mwords,
+                }),
+            )
 
     PY_24_25_SKIP = [
         # cProfile unsupported on 2.4, 2.6+ syntax is fine here.

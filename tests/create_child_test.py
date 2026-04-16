@@ -85,7 +85,7 @@ def wait_read(fp, n):
         poller.start_receive(fp.fileno())
         for _ in poller.poll():
             return os.read(fp.fileno(), n)
-        assert False
+        raise EnvironmentError('Nothing was ready to read on %r' % (fp,))
     finally:
         poller.close()
 

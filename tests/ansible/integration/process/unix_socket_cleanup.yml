@@ -16,6 +16,7 @@
       ANSIBLE_STRATEGY=mitogen_linear
       ANSIBLE_SSH_ARGS="-o HostKeyAlgorithms=+ssh-rsa -o KexAlgorithms=+diffie-hellman-group1-sha1 -o PubkeyAcceptedKeyTypes=+ssh-rsa"
       ANSIBLE_VERBOSITY="{{ ansible_verbosity }}"
+      MITOGEN_LOG_LEVEL="{{ lookup('env', 'MITOGEN_LOG_LEVEL') }}"
       ansible -m shell -c local -a whoami
       {% for inv in ansible_inventory_sources %}
       -i "{{ inv }}"

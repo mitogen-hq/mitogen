@@ -22,6 +22,35 @@ In progress (unreleased)
 ------------------------
 
 
+v0.3.46 (2026-04-16)
+--------------------
+
+* :gh:issue:`1502` :mod:`mitogen`: Preserve :py:mod:`logging` config in forked
+  children
+* :gh:issue:`1499` tests: Fix uses of ``testlib.LogCapturer``
+* :gh:issue:`1499` tests: Run Mitogen unittests without
+  ``MITOGEN_LOG_LEVEL=debug``
+* :gh:issue:`1505` CI: Upgrade to GitHub Actions runners that use Node 24
+* :gh:issue:`1498` :mod:`ansible_mitogen`: Allow using temporary directories on
+  filesystems mounted noexec
+
+
+v0.3.45 (2026-03-30)
+--------------------
+
+* :gh:issue:`963` :mod:`ansible_mitogen`: Hide Mitogen debugging by default at
+  high Ansible verbosity
+* :gh:issue:`1485` :mod:`mitogen`: Remove testlib log propagtion manipulation
+  and lingering Operon references
+* :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._v`` logging shortcut
+* :gh:issue:`1482` :mod:`mitogen`: Remove ``mitogen.core._vv`` logging shortcut
+* :gh:issue:`1482` :mod:`mitogen`: Fix :meth:`mitogen.core.LogHandler.emit`
+  signature
+* :gh:issue:`1490` :mod:`mitogen`: Remove unused ``io`` argument from
+  :func:`mitogen.utils.log_to_file`
+* :gh:issue:`1482` :mod:`mitogen`: Consolidate log levels configuration
+
+
 v0.3.44 (2026-03-15)
 --------------------
 

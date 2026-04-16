@@ -11,6 +11,7 @@
       environment:
         ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+        MITOGEN_LOG_LEVEL: "{{ lookup('env', 'MITOGEN_LOG_LEVEL') }}"
       expect:
         command: >
           ansible-playbook

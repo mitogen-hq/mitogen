@@ -8,6 +8,7 @@
       environment:
         ANSIBLE_PYTHON_INTERPRETER: "{{ ansible_playbook_python }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+        MITOGEN_LOG_LEVEL: "{{ lookup('env', 'MITOGEN_LOG_LEVEL') }}"
       vars:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
       command: |
@@ -23,6 +24,7 @@
     - connection: local
       environment:
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+        MITOGEN_LOG_LEVEL: "{{ lookup('env', 'MITOGEN_LOG_LEVEL') }}"
       vars:
         ansible_python_interpreter: "{{ ansible_playbook_python }}"
       command: |

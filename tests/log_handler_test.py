@@ -123,11 +123,11 @@ class LogRecordFactoryTest(testlib.RouterMixin, testlib.TestCase):
             return record
 
         logging_setLogRecordFactory(record_factory)
-        c1 = self.router.local(name="c1")
         log = testlib.LogCapturer(
-            __name__, formatter=logging.Formatter("%(custom_attribute)x - %(message)s")
+            formatter=logging.Formatter("%(custom_attribute)x - %(message)s"),
         )
         log.start()
+        c1 = self.router.local(name="c1")
         c1.call(log_test)
         logs = log.stop()
         self.assertIn("deadbeef - This is a test", logs)

@@ -58,19 +58,11 @@ TESTS_DIR =                     os.path.join(os.path.dirname(__file__))
 DATA_DIR =                      os.path.join(TESTS_DIR, 'data')
 TESTMODS_DIR =                  os.path.join(TESTS_DIR, 'testmods')
 
-if mitogen.is_master:
+if mitogen.is_master and 'MITOGEN_LOG_LEVEL' in os.environ:
     mitogen.utils.log_to_file()
 
 if faulthandler is not None:
     faulthandler.enable()
-
-
-#
-# Temporary hack: Operon changed logging somewhat, and this broke LogCapturer /
-# log_handler_test.
-#
-
-mitogen.core.LOG.propagate = True
 
 
 def wait_for_child(pid, timeout=1.0):
@@ -324,32 +316,19 @@ def log_fd_calls():
     os.dup = dup
 
 
-class CaptureStreamHandler(logging.StreamHandler):
-    def __init__(self, *args, **kwargs):
-        logging.StreamHandler.__init__(self, *args, **kwargs)
-        self.msgs = []
-
-    def emit(self, msg):
-        self.msgs.append(msg)
-        logging.StreamHandler.emit(self, msg)
-
-
 class LogCapturer(object):
     def __init__(self, name=None, formatter=None):
         self.sio = StringIO()
         self.logger = logging.getLogger(name)
-        handler = CaptureStreamHandler(self.sio)
+        handler = logging.StreamHandler(self.sio)
         if formatter is not None:
             handler.setFormatter(formatter)
         self.handler = handler
-        self.old_propagate = self.logger.propagate
-        self.old_handlers = self.logger.handlers
         self.old_level = self.logger.level
 
     def start(self):
-        self.logger.handlers = [self.handler]
-        self.logger.propagate = False
-        self.logger.level = logging.DEBUG
+        self.logger.addHandler(self.handler)
+        self.logger.setLevel(logging.DEBUG)
 
     def raw(self):
         s = self.sio.getvalue()
@@ -357,9 +336,6 @@ class LogCapturer(object):
         if isinstance(s, mitogen.core.BytesType):
             s = s.decode('utf-8')
         return s
-
-    def msgs(self):
-        return self.handler.msgs
 
     def __enter__(self):
         self.start()
@@ -369,9 +345,8 @@ class LogCapturer(object):
         self.stop()
 
     def stop(self):
-        self.logger.level = self.old_level
-        self.logger.handlers = self.old_handlers
-        self.logger.propagate = self.old_propagate
+        self.logger.setLevel(self.old_level)
+        self.logger.removeHandler(self.handler)
         return self.raw()
 
 

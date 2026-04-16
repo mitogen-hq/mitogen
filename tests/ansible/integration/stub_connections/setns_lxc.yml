@@ -19,6 +19,7 @@
         ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
         ANSIBLE_STRATEGY:  "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
         ANSIBLE_VERBOSITY: "{{ ansible_verbosity }}"
+        MITOGEN_LOG_LEVEL: "{{ lookup('env', 'MITOGEN_LOG_LEVEL') }}"
       command: |
         sudo -nE "{{lookup('env', 'VIRTUAL_ENV')}}/bin/ansible"
         -i localhost,

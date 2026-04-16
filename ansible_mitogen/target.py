@@ -72,8 +72,7 @@ LOG = logging.getLogger(__name__)
 
 MAKE_TEMP_FAILED_MSG = (
     u"Unable to find a useable temporary directory. This likely means no\n"
-    u"system-supplied TMP directory can be written to, or all directories\n"
-    u"were mounted on 'noexec' filesystems.\n"
+    u"system-supplied TMP directory can be written to.\n"
     u"\n"
     u"The following paths were tried:\n"
     u"    %(paths)s\n"
@@ -269,21 +268,11 @@ def is_good_temp_dir(path):
         return False
 
     try:
-        try:
-            os.chmod(tmp.name, int('0700', 8))
-        except OSError:
-            e = sys.exc_info()[1]
-            LOG.debug('temp dir %r unusable: chmod failed: %s', path, e)
-            return False
-
-        try:
-            # access(.., X_OK) is sufficient to detect noexec.
-            if not os.access(tmp.name, os.X_OK):
-                raise OSError('filesystem appears to be mounted noexec')
-        except OSError:
-            e = sys.exc_info()[1]
-            LOG.debug('temp dir %r unusable: %s', path, e)
-            return False
+        os.chmod(tmp.name, int('0700', 8))
+    except OSError:
+        e = sys.exc_info()[1]
+        LOG.debug('temp dir %r unusable: chmod failed: %s', path, e)
+        return False
     finally:
         tmp.close()
 
@@ -294,8 +283,8 @@ def find_good_temp_dir(candidate_temp_dirs):
     """
     Given a list of candidate temp directories extracted from ``ansible.cfg``,
     combine it with the Python-builtin list of candidate directories used by
-    :mod:`tempfile`, then iteratively try each until one is found that is both
-    writeable and executable.
+    :mod:`tempfile`, then iteratively try each until one is found that is
+    writeable.
 
     :param list candidate_temp_dirs:
         List of candidate $variable-expanded and tilde-expanded directory paths
