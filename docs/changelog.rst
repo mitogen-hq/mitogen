@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.47 (2026-04-19)
+--------------------
+
 * :gh:issue:`1506` :mod:`mitogen`: Support sudo-rs, used by Ubuntu 26.04
 * :gh:issue:`1509` :mod:`mitogen`: Support sudo and sudo-rs pwfeedback
 * :gh:issue:`1506` tests: Add Ubuntu 26.04 test image
