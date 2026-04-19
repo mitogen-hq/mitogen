@@ -9,8 +9,8 @@
         image: "{{ docker_base }}"
         command: /bin/bash
         hostname: "mitogen-{{ inventory_hostname }}"
-        etc_hosts:
-          centos-vault-proxy: host-gateway
+        networks:
+          - name: centos_proxy
         detach: true
         interactive: true
         tty: true

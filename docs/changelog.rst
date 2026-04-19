@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1118` image_prep: Containerize the HTTPS proxy for old repos
+
 
 v0.3.46 (2026-04-16)
 --------------------

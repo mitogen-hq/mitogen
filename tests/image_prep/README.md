@@ -20,6 +20,13 @@ run multiple versions of Ansible, in Python virtualenvs.
 
 ``tox``
 
+Older distro releases lack support for modern SSL or TLS. It's necessary to
+run an HTTP -> HTTPS proxy for them.
+
+```
+ansible-playbook centos-vault-proxy.yml
+```
+
 ## Preparing an OS X box
 
 WARNING: this creates a ton of accounts with preconfigured passwords. It is
