@@ -9,6 +9,8 @@
       docker_image:
         name: "{{ docker_base }}"
         source: pull  # Added in Ansible 2.8, required circa 2.12
+        pull:
+          platform: linux/amd64
       delegate_to: localhost
   roles:
     - role: container_start
