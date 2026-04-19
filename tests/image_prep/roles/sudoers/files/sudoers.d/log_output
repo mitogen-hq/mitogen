@@ -1,0 +1,4 @@
+# Testing non-blocking stdio during bootstrap
+# Feature not (yet) implemented in sudo-rs
+# https://github.com/mitogen-hq/mitogen/issues/1306
+Defaults log_output

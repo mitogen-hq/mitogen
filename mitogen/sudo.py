@@ -101,11 +101,19 @@ PASSWORD_PROMPTS = [
 
 
 PASSWORD_PROMPT_RE = re.compile(
-    mitogen.core.b('|').join(
+    mitogen.core.b(
+        r'''
+        (?:%s)  # Localised "Password", e.g. "Password", "Mot de passe"
+        [^:]*?  # Optional localised text, e.g. "", " for alice", " de alice"
+        :\ ?
+        \Z  # End of string, prevents repeat matches when pwfeedback echoes '*'
+        ''',
+    )
+    % mitogen.core.b('|').join(
         base64.b64decode(s)
         for s in PASSWORD_PROMPTS
     ),
-    re.I
+    re.IGNORECASE | re.VERBOSE,
 )
 
 SUDO_OPTIONS = [

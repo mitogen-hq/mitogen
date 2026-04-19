@@ -46,11 +46,11 @@ LOG = logging.getLogger(__name__)
 
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'alma9-py3 centos5 centos8-py3 debian9 debian12-py3 ubuntu1604 ubuntu2404-py3',
+    'alma9-py3 centos5 centos8-py3 debian9 debian12-py3 ubuntu1604 ubuntu2604-py3',
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2026.04',
 )
 SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 

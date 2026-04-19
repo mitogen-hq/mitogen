@@ -13,6 +13,7 @@
   roles:
     - role: package_manager
     - role: packages
+    - role: shadow
     - role: sshd
     - role: sshd_container
 

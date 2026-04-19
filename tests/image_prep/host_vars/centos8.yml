@@ -6,6 +6,7 @@ packages:
   - perl-JSON
   - python2-virtualenv
   - python3-virtualenv
+  - sudo
 
 package_manager_repos:
   - dest: /etc/yum.repos.d/CentOS-Linux-AppStream.repo

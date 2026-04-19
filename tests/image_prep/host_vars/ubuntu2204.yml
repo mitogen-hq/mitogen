@@ -7,4 +7,5 @@ packages:
   - locales
   - python2
   - python3-virtualenv
+  - sudo
   - virtualenv

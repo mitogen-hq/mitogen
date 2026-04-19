@@ -4,6 +4,8 @@ docker_base: centos:5
 
 packages:
   - perl
+  - sudo
+
 package_manager_repos:
   - dest: /etc/yum.repos.d/CentOS-Base.repo
     content: |
@@ -34,3 +36,11 @@ package_manager_repos:
       enabled=1
       gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-5
       includepkgs=libselinux*
+
+sudoers_d_configs:
+  - src: sudoers.d/requiretty_users
+    dest: /etc/sudoers.d/mitogen_test_requiretty_users
+  - src: sudoers.d/targetpw_users
+    dest: /etc/sudoers.d/mitogen_test_targetpw_users
+  - src: sudoers.d/users
+    dest: /etc/sudoers.d/mitogen_test_users

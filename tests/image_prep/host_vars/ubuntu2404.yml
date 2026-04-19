@@ -6,4 +6,5 @@ packages:
   - locales
   - opendoas
   - python3-virtualenv
+  - sudo
   - virtualenv

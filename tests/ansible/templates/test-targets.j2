@@ -21,6 +21,13 @@ ansible_password=has_sudo_nopw_password
 {% endfor %}
 {% endfor %}
 
+[has_sudo_rs]
+{% for c in containers %}
+{% if c.name.startswith('target-ubuntu2604') %}
+{{ c.name }} ansible_host={{ c.hostname }} ansible_port={{ c.port }} ansible_python_interpreter={{ c.python_path }}
+{% endif %}
+{% endfor %}
+
 [linux:children]
 test-targets
 
