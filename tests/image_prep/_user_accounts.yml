@@ -44,6 +44,7 @@
     - name: Readonly homedir for one account
       file:
         path: ~mitogen__readonly_homedir
+        mode: u=rwX,go=
         owner: root
         recurse: true
         state: directory
