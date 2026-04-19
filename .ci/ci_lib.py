@@ -30,7 +30,7 @@ DISTRO_SPECS = os.environ.get(
 IMAGE_PREP_DIR = os.path.join(GIT_ROOT, 'tests/image_prep')
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2026.04',
 )
 SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 TESTS_DIR = os.path.join(GIT_ROOT, 'tests')
@@ -204,7 +204,7 @@ def container_specs(
     [{'distro': 'debian11',
       'family': 'debian',
       'hostname': 'localhost',
-      'image': 'ghcr.io/mitogen-hq/debian11-test:2025.02',
+      'image': 'ghcr.io/mitogen-hq/debian11-test:2026.04',
       'index': 1,
       'name': 'target-debian11-1',
       'port': 2201,
@@ -212,7 +212,7 @@ def container_specs(
      {'distro': 'centos6',
       'family': 'centos',
       'hostname': 'localhost',
-      'image': 'ghcr.io/mitogen-hq/centos6-test:2025.02',
+      'image': 'ghcr.io/mitogen-hq/centos6-test:2026.04',
       'index': 2,
       'name': 'target-centos6-2',
       'port': 2202,

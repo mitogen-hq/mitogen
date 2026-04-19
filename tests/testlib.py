@@ -50,7 +50,7 @@ DISTRO_SPECS = os.environ.get(
 )
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2026.04',
 )
 SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 

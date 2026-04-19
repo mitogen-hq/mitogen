@@ -1,0 +1,6 @@
+- name: Push image
+  docker_image:
+    name: "{{ container_image_name }}"
+    tag: "{{ container_image_tag }}"
+    push: true
+  delegate_to: localhost
