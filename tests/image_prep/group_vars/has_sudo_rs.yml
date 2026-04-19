@@ -1,0 +1,5 @@
+sudoers_d_configs:
+  - src: sudoers.d/targetpw_users
+    dest: /etc/sudoers.d/mitogen_test_targetpw_users
+  - src: sudoers.d/users
+    dest: /etc/sudoers.d/mitogen_test_users

@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1506` tests: Add Ubuntu 26.04 test image
 * :gh:issue:`1118` tests: sshd ``AllowEnv`` for ``ANSIBLE_*`` and ``MITOGEN_*``
 * :gh:issue:`1317` tests: Send sshd debug output to stderr for container logger
 * :gh:issue:`1118` tests: Give up hiding Mitogen test users from graphical login
