@@ -18,7 +18,14 @@
     line: "%wheel ALL=(ALL) ALL"
     validate: '/usr/sbin/visudo -cf %s'
   when:
-    - ansible_os_family in ['RedHat']
+    - ansible_os_family in ['Alpine', 'RedHat']
+
+- name: Include sudoers.d
+  lineinfile:
+    path: /etc/sudoers
+    regexp: '#+includedir +/etc/sudoers\.d'
+    line: '#includedir /etc/sudoers.d'
+    validate: '/usr/sbin/visudo -cf %s'
 
 - name: Configure sudoers
   copy:
@@ -26,9 +33,7 @@
     dest: "{{ item.dest }}"
     mode: ug=r,o=
     validate: '/usr/sbin/visudo -cf %s'
-  with_items:
-    - {src: defaults, dest: /etc/sudoers.d/mitogen_test_defaults}
-    - {src: users, dest: /etc/sudoers.d/mitogen_test_users}
+  with_items: "{{ sudoers_d_configs }}"
 
 - name: Configure local sudoers
   template:

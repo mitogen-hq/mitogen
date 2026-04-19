@@ -28,6 +28,7 @@ In progress (unreleased)
 * :gh:issue:`1118` image_prep: Workaround password authentication failures in
   Alama 9 containers due to /etc/shadow and AppArmor interaction
 * :gh:issue:`1118` image_prep: Explicitly specify AMD64 base images
+* :gh:issue:`1118` image_prep: Parameterise sudoers configs
 
 
 v0.3.46 (2026-04-16)

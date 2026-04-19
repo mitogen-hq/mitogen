@@ -3,10 +3,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 set -o errexit -o nounset -o pipefail
 
-SUDOERS_DEFAULTS_SRC='tests/image_prep/roles/sudoers/files/defaults'
-SUDOERS_DEFAULTS_DEST='/etc/sudoers.d/mitogen_test_defaults'
+SUDOERS_DEFAULTS_SRC_FILES=(
+    tests/image_prep/roles/sudoers/files/sudoers.d/*
+)
+SUDOERS_DEFAULTS_DEST_DIR='/etc/sudoers.d/'
 
 umask 0022
-sudo cp "$SUDOERS_DEFAULTS_SRC" "$SUDOERS_DEFAULTS_DEST"
-sudo visudo -cf "$SUDOERS_DEFAULTS_DEST"
-sudo -l
+for src_file in "${SUDOERS_DEFAULTS_SRC_FILES[@]}"; do
+    dest_file="$SUDOERS_DEFAULTS_DEST_DIR/mitogen_test_${src_file##*/}"
+    sudo cp "$src_file" "$dest_file"
+    sudo visudo -cf "$dest_file"
+    sudo -l
+done
