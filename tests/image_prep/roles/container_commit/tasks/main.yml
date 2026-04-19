@@ -2,7 +2,7 @@
   command: >
     docker commit
     --change 'EXPOSE 22'
-    --change 'CMD ["/usr/sbin/sshd", "-D"]'
+    --change 'CMD ["/usr/sbin/sshd", "-D", "-e"]'
     {{ inventory_hostname }}
     {{ container_image_name }}:{{ container_image_tag }}
   changed_when: true
