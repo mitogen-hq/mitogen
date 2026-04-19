@@ -35,6 +35,7 @@ In progress (unreleased)
 * :gh:issue:`1506` image_prep: Specify installtion of sudo package per-host
 * :gh:issue:`1118` image_prep: Update repos of archived Debian versions
 * :gh:issue:`849` image_prep: Workaround Python respawn using Ansible apt
+* :gh:issue:`1118` image_prep: Fixup Tox config for the march of time
 
 
 v0.3.46 (2026-04-16)
