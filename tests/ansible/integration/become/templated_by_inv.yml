@@ -29,3 +29,4 @@
       when:
         - ansible_become_user in ['root']
           or become_unpriv_available
+        - become_sudo_password_available

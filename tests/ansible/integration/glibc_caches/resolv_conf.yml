@@ -8,6 +8,10 @@
   vars:
     ansible_become_pass: has_sudo_pubkey_password
   tasks:
+    - meta: end_play
+      when:
+        - not become_sudo_password_available
+
     - mitogen_test_gethostbyname:
         name: www.google.com
       register: out

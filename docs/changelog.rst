@@ -21,7 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1506` :mod:`mitogen`: Support sudo-rs, used by Ubuntu 26.04
+* :gh:issue:`1509` :mod:`mitogen`: Support sudo and sudo-rs pwfeedback
 * :gh:issue:`1506` tests: Add Ubuntu 26.04 test image
+* :gh:issue:`1506` tests: Test Ubuntu 26.04 targets
 * :gh:issue:`1118` tests: Switch from 2025.02 test images to 2026.04 test images
 * :gh:issue:`1118` tests: sshd ``AllowEnv`` for ``ANSIBLE_*`` and ``MITOGEN_*``
 * :gh:issue:`1317` tests: Send sshd debug output to stderr for container logger
