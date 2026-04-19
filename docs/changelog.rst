@@ -23,6 +23,8 @@ In progress (unreleased)
 
 * :gh:issue:`1118` tests: sshd ``AllowEnv`` for ``ANSIBLE_*`` and ``MITOGEN_*``
 * :gh:issue:`1317` tests: Send sshd debug output to stderr for container logger
+* :gh:issue:`1118` tests: Give up hiding Mitogen test users from graphical login
+  screens
 * :gh:issue:`1118` image_prep: Containerize the HTTPS proxy for old repos
 * :gh:issue:`1118` image_prep: Fix Ansible 2.3 <-> Docker container tasks
 * :gh:issue:`1118` image_prep: Workaround password authentication failures in

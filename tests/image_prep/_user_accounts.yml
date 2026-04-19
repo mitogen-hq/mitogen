@@ -39,7 +39,6 @@
           {%- else -%}
           {{ password | password_hash('sha256') }}
           {%- endif -%}
-        hidden: true  # Only has effect on macOS
       with_items: "{{ mitogen_test_users }}"
 
     - name: Readonly homedir for one account
