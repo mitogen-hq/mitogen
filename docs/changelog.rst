@@ -25,6 +25,8 @@ In progress (unreleased)
 * :gh:issue:`1317` tests: Send sshd debug output to stderr for container logger
 * :gh:issue:`1118` image_prep: Containerize the HTTPS proxy for old repos
 * :gh:issue:`1118` image_prep: Fix Ansible 2.3 <-> Docker container tasks
+* :gh:issue:`1118` image_prep: Workaround password authentication failures in
+  Alama 9 containers due to /etc/shadow and AppArmor interaction
 
 
 v0.3.46 (2026-04-16)
