@@ -11,15 +11,19 @@
         ansible_become_flags: --derps
 
     - name: Verify raw module output.
+      vars:
+        sudo_option_invalid_regex: |-
+          (?x)
+          sudo:\ invalid\ option\ --\ '-'
+          | sudo:\ unrecognized\ option\ [`']--derps'
+          | invalid\ option\ provided  # sudo-rs
       assert:
         that:
           - out.failed
           - >-
             'sudo: no such option: --derps' in out.msg
-            or out.module_stdout is match("sudo: invalid option -- '-'")
-            or out.module_stderr is match("sudo: invalid option -- '-'")
-            or out.module_stdout is match("sudo: unrecognized option [`']--derps'")
-            or out.module_stderr is match("sudo: unrecognized option [`']--derps'")
+            or out.module_stderr is match(sudo_option_invalid_regex)
+            or out.module_stdout is match(sudo_option_invalid_regex)
         fail_msg: |
           out={{ out }}
   tags:

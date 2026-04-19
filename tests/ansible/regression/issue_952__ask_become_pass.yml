@@ -25,3 +25,5 @@
           'BECOME password:': pw_required_password
       changed_when: false
       check_mode: false
+      when:
+        - become_sudo_password_available

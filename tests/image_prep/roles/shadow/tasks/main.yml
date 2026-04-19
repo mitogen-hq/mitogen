@@ -1,0 +1,14 @@
+# Workaround for Alma 9 container running on Ubuntu 24.04 host.
+# All password authentications fail in a container if the container image has
+# mode 000 on /etc/shdow and the container is runing on a host with a
+# particular AppArmor profile.
+# See
+#  - https://github.com/geerlingguy/docker-rockylinux9-ansible/issues/6
+#  - https://github.com/moby/moby/issues/48734
+#  - https://www.tunbury.org/2025/05/13/ubuntu-apparmor/
+- name: Set permissions
+  file:
+    path: /etc/shadow
+    mode: u=rw,go=
+  when:
+    - (ansible_os_family == 'RedHat' and ansible_distribution_major_version == '9')

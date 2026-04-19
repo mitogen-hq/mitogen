@@ -78,3 +78,4 @@
           or become_templated_by_task_with_delegate_to_password_whoami.stdout != 'mitogen__pw_required'
       when:
         - become_unpriv_available
+        - become_sudo_password_available

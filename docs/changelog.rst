@@ -22,6 +22,31 @@ In progress (unreleased)
 ------------------------
 
 
+v0.3.47 (2026-04-19)
+--------------------
+
+* :gh:issue:`1506` :mod:`mitogen`: Support sudo-rs, used by Ubuntu 26.04
+* :gh:issue:`1509` :mod:`mitogen`: Support sudo and sudo-rs pwfeedback
+* :gh:issue:`1506` tests: Add Ubuntu 26.04 test image
+* :gh:issue:`1506` tests: Test Ubuntu 26.04 targets
+* :gh:issue:`1118` tests: Switch from 2025.02 test images to 2026.04 test images
+* :gh:issue:`1118` tests: sshd ``AllowEnv`` for ``ANSIBLE_*`` and ``MITOGEN_*``
+* :gh:issue:`1317` tests: Send sshd debug output to stderr for container logger
+* :gh:issue:`1118` tests: Give up hiding Mitogen test users from graphical login
+  screens
+* :gh:issue:`1118` tests: Explicitly set mode of ~mitogen__readonly_homedir
+* :gh:issue:`1118` image_prep: Containerize the HTTPS proxy for old repos
+* :gh:issue:`1118` image_prep: Fix Ansible 2.3 <-> Docker container tasks
+* :gh:issue:`1118` image_prep: Workaround password authentication failures in
+  Alama 9 containers due to /etc/shadow and AppArmor interaction
+* :gh:issue:`1118` image_prep: Explicitly specify AMD64 base images
+* :gh:issue:`1118` image_prep: Parameterise sudoers configs
+* :gh:issue:`1506` image_prep: Specify installtion of sudo package per-host
+* :gh:issue:`1118` image_prep: Update repos of archived Debian versions
+* :gh:issue:`849` image_prep: Workaround Python respawn using Ansible apt
+* :gh:issue:`1118` image_prep: Fixup Tox config for the march of time
+
+
 v0.3.46 (2026-04-16)
 --------------------
 

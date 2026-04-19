@@ -1,0 +1,12 @@
+- name: Start containers
+  docker_container:
+    name: "{{ inventory_hostname }}"
+    image: "{{ docker_base }}"
+    command: /bin/bash
+    hostname: "mitogen-{{ inventory_hostname }}"
+    networks:
+      - name: centos_proxy
+    detach: true
+    interactive: true
+    tty: true
+  delegate_to: localhost

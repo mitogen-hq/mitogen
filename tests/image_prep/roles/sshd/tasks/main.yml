@@ -8,8 +8,11 @@
   lineinfile:
     path: "{{ sshd_config_file }}"
     line: "{{ item.line }}"
-    regexp: "{{ item.regexp }}"
+    regexp: "{{ item.regexp | default(omit) }}"
+    insertafter: "{{ item.insertafter | default(omit) }}"
   with_items:
+    - line:     AcceptEnv ANSIBLE_* MITOGEN_*
+      insertafter: 'AcceptEnv.+'
     - line:     Banner /etc/ssh/banner.txt
       regexp:   '^#? *Banner.*'
     - line:     MaxAuthTries {{ sshd_config__max_auth_tries }}
