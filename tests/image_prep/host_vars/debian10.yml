@@ -15,6 +15,5 @@ package_manager_repos:
   - dest: /etc/apt/sources.list
     content: |
       deb http://archive.debian.org/debian/ buster main non-free contrib
-      deb http://archive.debian.org/debian/ buster-updates main non-free contrib
       deb http://archive.debian.org/debian/ buster-proposed-updates main non-free contrib
-      deb http://security.debian.org/ buster/updates main non-free contrib
+      deb http://archive.debian.org/debian-security buster/updates main non-free contrib
