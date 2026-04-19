@@ -9,6 +9,7 @@ packages:
   - python-is-python3
   - python2
   - python3-virtualenv
+  - sudo
   - virtualenv
 
 package_manager_keys:

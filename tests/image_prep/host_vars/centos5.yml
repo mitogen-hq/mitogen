@@ -4,6 +4,8 @@ docker_base: centos:5
 
 packages:
   - perl
+  - sudo
+
 package_manager_repos:
   - dest: /etc/yum.repos.d/CentOS-Base.repo
     content: |

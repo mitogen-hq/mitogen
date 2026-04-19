@@ -5,4 +5,5 @@ packages:
   - libjson-perl
   - locales
   - opendoas
+  - sudo
   - virtualenv

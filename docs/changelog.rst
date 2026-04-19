@@ -32,6 +32,7 @@ In progress (unreleased)
   Alama 9 containers due to /etc/shadow and AppArmor interaction
 * :gh:issue:`1118` image_prep: Explicitly specify AMD64 base images
 * :gh:issue:`1118` image_prep: Parameterise sudoers configs
+* :gh:issue:`1506` image_prep: Specify installtion of sudo package per-host
 
 
 v0.3.46 (2026-04-16)
