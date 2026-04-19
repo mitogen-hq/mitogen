@@ -1,0 +1,14 @@
+- name: Start containers
+  shell: >-
+    docker rm -f "{{ inventory_hostname }}" 2>/dev/null;
+    docker run
+    --detach
+    --hostname "mitogen-{{ inventory_hostname }}"
+    --interactive
+    --name "{{ inventory_hostname }}"
+    --network centos_proxy
+    --tty
+    "{{ docker_base }}"
+    /bin/bash
+  delegate_to: localhost
+  changed_when: true

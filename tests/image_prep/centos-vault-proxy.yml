@@ -1,0 +1,32 @@
+- name: Start containers
+  hosts: localhost
+  gather_facts: false
+  vars:
+    container_image: httpd:2.4
+    container_hostname: centos-vault-proxy
+    container_network_name: centos_proxy
+  tasks:
+    - name: Fetch container image
+      docker_image:
+        name: "{{ container_image }}"
+        source: pull
+
+    - name: Create network
+      docker_network:
+        name: "{{ container_network_name }}"
+
+    - name: Start container
+      docker_container:
+        name: "{{ container_hostname }}"
+        image: "{{ container_image }}"
+        hostname: "{{ container_hostname }}"
+        detach: true
+        recreate: true
+        mounts:
+          - source: "{{ playbook_dir}}/apache_proxy.conf"
+            target: /usr/local/apache2/conf/httpd.conf
+            type: bind
+        networks:
+          - name: "{{ container_network_name }}"
+        published_ports:
+          - "8090:8090"

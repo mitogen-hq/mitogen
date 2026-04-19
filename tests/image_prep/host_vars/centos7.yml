@@ -6,6 +6,7 @@ packages:
   - perl-JSON
   - python-virtualenv
   - python3
+  - sudo
 
 package_manager_repos:
   - dest: /etc/yum.repos.d/CentOS-Base.repo

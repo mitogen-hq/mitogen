@@ -10,6 +10,8 @@ target ansible_host=localhost ansible_user="{{ lookup('pipe', 'whoami') }}"
 [test-targets]
 target
 
+[has_sudo_rs]
+
 [linux_containers]
 
 [issue905]

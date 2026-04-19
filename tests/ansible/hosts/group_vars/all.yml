@@ -7,6 +7,18 @@ ansible_version_major_minor: "{{ ansible_version.major }}.{{ ansible_version.min
 ansible_version_major_minor_patch: "{{ ansible_version.major }}.{{ ansible_version.minor }}.{{ ansible_version.revision | regex_search('^[0-9]+') }}"
 
 become_doas_available: false
+become_sudo_password_available: >-
+  {#
+    Currently (April 2026) vanilla Ansible cannot supply a password to sudo-rs,
+    as used by Ubuntu 26.04. Skip such tests for the time being.
+    https://github.com/ansible/ansible/issues/85837
+  #}
+  {{-
+      is_mitogen
+      or ansible_version_major_minor is version("2.12", "<=", strict=True)
+      or ansible_version_major_minor is version("2.21", ">=", strict=True)
+  -}}
+
 become_unpriv_available: >-
   {#
     Vanilla Ansible >= 4 (ansible-core >= 2.11) can use `setfacl` for
