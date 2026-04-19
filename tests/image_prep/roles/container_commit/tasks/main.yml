@@ -1,0 +1,9 @@
+- name: Commit container
+  command: >
+    docker commit
+    --change 'EXPOSE 22'
+    --change 'CMD ["/usr/sbin/sshd", "-D"]'
+    {{ inventory_hostname }}
+    {{ container_image_name }}:{{ container_image_tag }}
+  changed_when: true
+  delegate_to: localhost

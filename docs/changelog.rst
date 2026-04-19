@@ -22,6 +22,7 @@ In progress (unreleased)
 ------------------------
 
 * :gh:issue:`1118` image_prep: Containerize the HTTPS proxy for old repos
+* :gh:issue:`1118` image_prep: Fix Ansible 2.3 <-> Docker container tasks
 
 
 v0.3.46 (2026-04-16)
