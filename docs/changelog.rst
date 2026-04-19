@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1118` tests: sshd ``AllowEnv`` for ``ANSIBLE_*`` and ``MITOGEN_*``
 * :gh:issue:`1317` tests: Send sshd debug output to stderr for container logger
 * :gh:issue:`1118` image_prep: Containerize the HTTPS proxy for old repos
 * :gh:issue:`1118` image_prep: Fix Ansible 2.3 <-> Docker container tasks
