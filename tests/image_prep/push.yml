@@ -1,0 +1,5 @@
+- name: Push container images
+  hosts: all
+  gather_facts: false
+  roles:
+    - role: container_push

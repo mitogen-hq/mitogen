@@ -1,0 +1,6 @@
+- name: stop container
+  command: >
+    docker stop
+    {{ inventory_hostname }}
+  changed_when: true
+  delegate_to: localhost

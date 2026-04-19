@@ -25,12 +25,12 @@ ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
 ANSIBLE_TESTS_TEMPLATES_DIR = os.path.join(GIT_ROOT, 'tests/ansible/templates')
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',
-    'alma9-py3 centos5 centos8-py3 debian9 debian12-py3 ubuntu1604 ubuntu2404-py3',
+    'alma9-py3 centos5 centos8-py3 debian9 debian12-py3 ubuntu1604 ubuntu2604-py3',
 )
 IMAGE_PREP_DIR = os.path.join(GIT_ROOT, 'tests/image_prep')
 IMAGE_TEMPLATE = os.environ.get(
     'MITOGEN_TEST_IMAGE_TEMPLATE',
-    'ghcr.io/mitogen-hq/%(distro)s-test:2025.02',
+    'ghcr.io/mitogen-hq/%(distro)s-test:2026.04',
 )
 SKIP_CONTAINER_TESTS = os.environ.get('MITOGEN_TEST_SKIP_CONTAINER_TESTS')
 TESTS_DIR = os.path.join(GIT_ROOT, 'tests')
@@ -204,7 +204,7 @@ def container_specs(
     [{'distro': 'debian11',
       'family': 'debian',
       'hostname': 'localhost',
-      'image': 'ghcr.io/mitogen-hq/debian11-test:2025.02',
+      'image': 'ghcr.io/mitogen-hq/debian11-test:2026.04',
       'index': 1,
       'name': 'target-debian11-1',
       'port': 2201,
@@ -212,7 +212,7 @@ def container_specs(
      {'distro': 'centos6',
       'family': 'centos',
       'hostname': 'localhost',
-      'image': 'ghcr.io/mitogen-hq/centos6-test:2025.02',
+      'image': 'ghcr.io/mitogen-hq/centos6-test:2026.04',
       'index': 2,
       'name': 'target-centos6-2',
       'port': 2202,

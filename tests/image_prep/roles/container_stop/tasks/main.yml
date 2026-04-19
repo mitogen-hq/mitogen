@@ -1,0 +1,5 @@
+- name: Stop container
+  docker_container:
+    name: "{{ inventory_hostname }}"
+    state: stopped
+  delegate_to: localhost

@@ -4,6 +4,7 @@ docker_base: centos:6
 
 packages:
   - perl-JSON
+  - sudo
 
 package_manager_repos:
   - dest: /etc/yum.repos.d/CentOS-Base.repo

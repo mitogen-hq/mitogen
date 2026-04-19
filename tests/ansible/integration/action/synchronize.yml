@@ -11,6 +11,10 @@
     ansible_ssh_pass: ''
     ansible_password: ''
   tasks:
+    - meta: end_play
+      when:
+        - not become_sudo_password_available
+
     # must copy git file to set proper file mode.
     - name: Copy synchronize-action-key
       copy:

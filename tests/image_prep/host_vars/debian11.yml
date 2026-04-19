@@ -9,6 +9,7 @@ packages:
   - python-is-python3
   - python2
   - python3-virtualenv
+  - sudo
   - virtualenv
 
 package_manager_keys:
@@ -16,3 +17,11 @@ package_manager_keys:
     dest: /etc/apt/trusted.gpg.d/
   - src: debian-archive-bookworm-automatic.gpg  # Debian 12
     dest: /etc/apt/trusted.gpg.d/
+
+package_manager_repos:
+  - dest: /etc/apt/sources.list
+    content: |
+      deb http://archive.debian.org/debian bullseye main contrib non-free
+      deb http://archive.debian.org/debian bullseye-backports main contrib non-free
+      deb http://archive.debian.org/debian bullseye-updates main contrib non-free
+      deb http://security.debian.org/debian-security bullseye-security main contrib non-free

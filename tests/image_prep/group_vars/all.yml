@@ -5,9 +5,9 @@ common_packages:
   - openssh-server
   - rsync
   - strace
-  - sudo
 
 container_image_name: "{{ container_registry }}/{{ inventory_hostname }}-test"
+container_image_tag: "2026.04"
 container_registry: ghcr.io/mitogen-hq
 
 mitogen_test_groups:
