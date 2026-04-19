@@ -34,6 +34,7 @@ In progress (unreleased)
 * :gh:issue:`1118` image_prep: Parameterise sudoers configs
 * :gh:issue:`1506` image_prep: Specify installtion of sudo package per-host
 * :gh:issue:`1118` image_prep: Update repos of archived Debian versions
+* :gh:issue:`849` image_prep: Workaround Python respawn using Ansible apt
 
 
 v0.3.46 (2026-04-16)

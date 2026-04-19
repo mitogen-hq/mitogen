@@ -1,3 +1,7 @@
+# Avoid ansible_mitogen selecting Python 3.5, which is not supported by
+# Ansible 11 on targets
+ansible_python_interpreter: python2
+
 bootstrap_packages: [python, python-apt]
 
 docker_base: debian:9

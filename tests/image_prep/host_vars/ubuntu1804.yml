@@ -1,3 +1,8 @@
+# Avoid "AttributeError: module '__main__' has no attribute '_module_fqn'"
+# in task "package_manager : Configure package repositories"
+# https://github.com/mitogen-hq/mitogen/issues/849
+ansible_python_interpreter: python2
+
 bootstrap_packages: [python, python-apt]
 
 docker_base: ubuntu:18.04
