@@ -317,7 +317,7 @@ class NewStylePlanner(ScriptPlanner):
     preprocessing the module.
     """
     runner_name = 'NewStyleRunner'
-    MARKER = re.compile(br'from ansible(?:_collections|\.module_utils)\.')
+    MARKER = re.compile(br'from ansible(?:_collections|\.module_utils)\.|from \.\.?(?:\w|\s)')
 
     @classmethod
     def detect(cls, path, source):
@@ -653,6 +653,53 @@ def _fix_dnf(invocation, module_source):
         invocation._overridden_sources[invocation.module_path] = module_source
 
 
+def _fix_collection_relative_imports(invocation, module_source):
+    """
+    Collection modules using relative imports (from ..module_utils import ...)
+    fail because the ansible_collections namespace isn't set up.
+    Replace relative imports with absolute ansible_collections imports.
+    """
+    if 'ansible_collections' not in invocation.module_path:
+        return
+
+    # Derive the collection's base package from the module path
+    # e.g. .../ansible_collections/hetzner/hcloud/plugins/modules/foo.py
+    # -> ansible_collections.hetzner.hcloud.plugins
+    parts = invocation.module_path.split(os.sep)
+    try:
+        ac_idx = parts.index('ansible_collections')
+    except ValueError:
+        return
+
+    # Need at least ansible_collections/{namespace}/{collection}
+    if len(parts) < ac_idx + 3:
+        return
+
+    module_package_parts = parts[ac_idx:parts.index(parts[-1])]
+    module_package = '.'.join(module_package_parts)
+
+    def resolve_relative_import(match):
+        dots = match.group(1)
+        package_name = match.group(2)
+        level = len(dots)
+
+        base_parts = module_package.split('.')
+        base_parts = base_parts[:len(base_parts) - level + 1]
+
+        if package_name:
+            absolute_package_name = ('from %s.%s' % ('.'.join(base_parts), package_name.decode())).encode()
+        else:
+            absolute_package_name = ('from %s' % '.'.join(base_parts)).encode()
+
+        return absolute_package_name
+
+    pattern = re.compile(b'from (\.\.?)\s?(\w+)')
+    fixed = pattern.sub(resolve_relative_import, module_source)
+
+    if fixed != module_source:
+        invocation._overridden_sources[invocation.module_path] = fixed
+
+
 def _load_collections(invocation):
     """
     Special loader that ensures that `ansible_collections` exist as a module path for import
@@ -691,6 +738,7 @@ def invoke(invocation):
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
         _fix_dnf(invocation, module_source)
+        _fix_collection_relative_imports(invocation, module_source)
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation,
             module_source
