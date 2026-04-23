@@ -995,6 +995,11 @@ When used as a become method:
   Mitogen produces remote processes named like
   `"mitogen:user@controller.name:1234"`, however this may be a privacy issue in
   some circumstances.
+* ``mitogen_sudo_password_prompt``: optional regular expression pattern to
+  match a custom sudo password prompt. Mitogen's built-in pattern matches
+  "password" in dozens of locales, but custom sudoers ``passprompt`` settings
+  that omit that word will cause the connection to hang. Set this to a pattern
+  matching your prompt, e.g. ``'\[sudo\] \w+@[\w.]+:'``.
 * ansible.cfg: ``timeout``
 
 When used as the ``mitogen_sudo`` connection method:
@@ -1003,6 +1008,7 @@ When used as the ``mitogen_sudo`` connection method:
 * ``ansible_user``: username to sudo as.
 * ``ansible_password``: password to sudo as.
 * ``sudo_flags``, ``become_flags``
+* ``mitogen_sudo_password_prompt``
 * ``ansible_python_interpreter``
 
 

@@ -336,18 +336,24 @@ def _connect_sudo(spec):
     """
     Return ContextService arguments for sudo as a become method.
     """
+    kwargs = {
+        'username': spec.become_user(),
+        'password': spec.become_pass(),
+        'python_path': spec.python_path(),
+        'sudo_path': spec.become_exe(),
+        'connect_timeout': spec.timeout(),
+        'sudo_args': spec.sudo_args(),
+        'remote_name': get_remote_name(spec),
+    }
+
+    password_prompt = spec.mitogen_sudo_password_prompt()
+    if password_prompt is not None:
+        kwargs['password_prompt'] = password_prompt
+
     return {
         'method': 'sudo',
         'enable_lru': True,
-        'kwargs': {
-            'username': spec.become_user(),
-            'password': spec.become_pass(),
-            'python_path': spec.python_path(),
-            'sudo_path': spec.become_exe(),
-            'connect_timeout': spec.timeout(),
-            'sudo_args': spec.sudo_args(),
-            'remote_name': get_remote_name(spec),
-        }
+        'kwargs': kwargs,
     }
 
 
@@ -390,17 +396,23 @@ def _connect_mitogen_sudo(spec):
     """
     Return ContextService arguments for sudo as a first class connection.
     """
+    kwargs = {
+        'username': spec.remote_user(),
+        'password': spec.password(),
+        'python_path': spec.python_path(),
+        'sudo_path': spec.become_exe(),
+        'connect_timeout': spec.timeout(),
+        'sudo_args': spec.sudo_args(),
+        'remote_name': get_remote_name(spec),
+    }
+
+    password_prompt = spec.mitogen_sudo_password_prompt()
+    if password_prompt is not None:
+        kwargs['password_prompt'] = password_prompt
+
     return {
         'method': 'sudo',
-        'kwargs': {
-            'username': spec.remote_user(),
-            'password': spec.password(),
-            'python_path': spec.python_path(),
-            'sudo_path': spec.become_exe(),
-            'connect_timeout': spec.timeout(),
-            'sudo_args': spec.sudo_args(),
-            'remote_name': get_remote_name(spec),
-        }
+        'kwargs': kwargs,
     }
 
 
