@@ -110,7 +110,7 @@ PASSWORD_PROMPT_RE = re.compile(
         ''',
     )
     % mitogen.core.b('|').join(
-        base64.b64decode(s)
+        re.escape(base64.b64decode(s))
         for s in PASSWORD_PROMPTS
     ),
     re.IGNORECASE | re.VERBOSE,

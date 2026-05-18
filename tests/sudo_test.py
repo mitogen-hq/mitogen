@@ -1,6 +1,45 @@
 import os
+import re
 
 import testlib
+
+import mitogen.core
+import mitogen.sudo
+
+class PasswordPromptTest(testlib.TestCase):
+    def test_matches(self):
+        # macOS 26.4.1, en_GB
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:'))
+        # Ubuntu 24.04, sudo-ws, en_GB
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo] password for alex: '))
+        # Ubuntu 26.04, sudo-rs, en_GB
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: '))
+
+    def test_translated_matches(self):
+        # Using French translation(s) as a stand-in for all translations.
+        # RHEL 8, sudo-ws
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Mot de passe de US3RN4ME:'))
+        # Ubuntu 24.04, sudo-ws, fr_FR.UTF-8
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo] Mot de passe de alex : '))
+        # Ubuntu 26.04, sudo-rs, fr_FR.UTF-8
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Mot de passe : '))
+
+
+class PasswordPromptInProgressTest(testlib.TestCase):
+    def test_empty_password_no_match(self):
+        "A zero length password should not match the prompt again."
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: \n'))
+
+    def test_pwfeedback_no_match(self):
+        """
+        Enabling pwfeedback (default in Ubuntu 26.04) shouldn't cause repeated
+        matches of the prompt when '*' is echoed.
+        """
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:*'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:*\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: *'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: *\n'))
 
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
