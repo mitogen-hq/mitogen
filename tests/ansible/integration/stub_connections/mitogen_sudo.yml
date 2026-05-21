@@ -20,8 +20,15 @@
         out={{ out }}
 
   - assert_equal:
-      left: (out.env.ORIGINAL_ARGV|from_json)[1:9]
-      right: ['-u', 'root', '-H', '-r', 'somerole', '-t', 'sometype', '--']
+      left: (out.env.ORIGINAL_ARGV | from_json)[1:11]
+      right: [
+        -p, 'mitogen-sudo-prompt:',
+        -u, 'root',
+        -H,
+        -r, 'somerole',
+        -t, 'sometype',
+        --,
+      ]
   tags:
     - mitogen_only
     - mitogen_sudo

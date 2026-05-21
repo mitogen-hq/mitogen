@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1518` :mod:`mitogen`: Fix sudo authentication when the translated
+  password prompt doesn't contain U+003A COLON
+
 
 v0.3.48 (2026-05-22)
 --------------------
