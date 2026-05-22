@@ -105,12 +105,13 @@ PASSWORD_PROMPT_RE = re.compile(
         r'''
         (?:%s)  # Localised "Password", e.g. "Password", "Mot de passe"
         [^:]*?  # Optional localised text, e.g. "", " for alice", " de alice"
-        :\ ?
+        :
+        (?:\ |\xc2\xa0)?  # Optional SPACE or UTF-8 encoded NO-BREAK SPACE
         \Z  # End of string, prevents repeat matches when pwfeedback echoes '*'
         ''',
     )
     % mitogen.core.b('|').join(
-        base64.b64decode(s)
+        re.escape(base64.b64decode(s))
         for s in PASSWORD_PROMPTS
     ),
     re.IGNORECASE | re.VERBOSE,
