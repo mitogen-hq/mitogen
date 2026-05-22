@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.48 (2026-05-22)
+--------------------
+
 * :gh:issue:`1514` :mod:`mitogen`: Fix sudo authentication with translated
   password prompt
 * :gh:issue:`1514` :mod:`mitogen`: Handle U+00A0 NO-BREAK SPACE characters seen
