@@ -1,6 +1,50 @@
 import os
+import re
 
 import testlib
+
+import mitogen.core
+import mitogen.sudo
+
+class PasswordPromptTest(testlib.TestCase):
+    def test_matches(self):
+        # macOS 26.4.1, en_GB
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:'))
+        # Ubuntu 24.04, sudo-ws, en_GB
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo] password for alex: '))
+        # Ubuntu 26.04, sudo-rs, en_GB
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: '))
+
+    def test_translated_matches(self):
+        # Using French translation(s) as a stand-in for all translations.
+        # Debian 9, sudo-ws, LC_ALL=fr_FR.UTF-8 LANG=fr_FR.UTF-8 LANGUAGE=fr_FR.UTF-8
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}'.encode('utf-8')))
+        # RHEL 8, sudo-ws
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Mot de passe de US3RN4ME:'))
+        # Ubuntu 24.04, sudo-ws, fr_FR.UTF-8
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo] Mot de passe de alex : '))
+        # Ubuntu 26.04, sudo-rs, fr_FR.UTF-8
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Mot de passe : '))
+
+
+class PasswordPromptInProgressTest(testlib.TestCase):
+    def test_empty_password_no_match(self):
+        "A zero length password should not match the prompt again."
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: \n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}\n'.encode('utf-8')))
+
+    def test_pwfeedback_no_match(self):
+        """
+        Enabling pwfeedback (default in Ubuntu 26.04) shouldn't cause repeated
+        matches of the prompt when '*' is echoed.
+        """
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:*'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:*\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: *'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: *\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}*'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}*\n'.encode('utf-8')))
 
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
@@ -58,43 +102,54 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
             del os.environ['PREHISTORIC_SUDO']
 
 
-# TODO: https://github.com/dw/mitogen/issues/694
-# class NonEnglishPromptTest(testlib.DockerMixin, testlib.TestCase):
-#     # Only mitogen/debian-test has a properly configured sudo.
-#     mitogen_test_distro = 'debian'
+class SudoMixin(testlib.DockerMixin):
+    def test_password_required(self):
+        ssh = self.docker_ssh(
+            username='mitogen__has_sudo',
+            password='has_sudo_password',
+        )
+        ssh.call(os.putenv, 'LANGUAGE', 'fr')
+        ssh.call(os.putenv, 'LC_ALL', 'fr_FR.UTF-8')
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.sudo(via=ssh)
+        )
+        self.assertIn(mitogen.sudo.password_required_msg, str(e))
 
-#     def test_password_required(self):
-#         ssh = self.docker_ssh(
-#             username='mitogen__has_sudo',
-#             password='has_sudo_password',
-#         )
-#         ssh.call(os.putenv, 'LANGUAGE', 'fr')
-#         ssh.call(os.putenv, 'LC_ALL', 'fr_FR.UTF-8')
-#         e = self.assertRaises(mitogen.core.StreamError,
-#             lambda: self.router.sudo(via=ssh)
-#         )
-#         self.assertIn(mitogen.sudo.password_required_msg, str(e))
+    def test_password_incorrect(self):
+        ssh = self.docker_ssh(
+            username='mitogen__has_sudo',
+            password='has_sudo_password',
+        )
+        ssh.call(os.putenv, 'LANGUAGE', 'fr')
+        ssh.call(os.putenv, 'LC_ALL', 'fr_FR.UTF-8')
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.sudo(via=ssh, password='x')
+        )
+        self.assertIn(mitogen.sudo.password_incorrect_msg, str(e))
 
-#     def test_password_incorrect(self):
-#         ssh = self.docker_ssh(
-#             username='mitogen__has_sudo',
-#             password='has_sudo_password',
-#         )
-#         ssh.call(os.putenv, 'LANGUAGE', 'fr')
-#         ssh.call(os.putenv, 'LC_ALL', 'fr_FR.UTF-8')
-#         e = self.assertRaises(mitogen.core.StreamError,
-#             lambda: self.router.sudo(via=ssh, password='x')
-#         )
-#         self.assertIn(mitogen.sudo.password_incorrect_msg, str(e))
+    def test_password_okay(self):
+        ssh = self.docker_ssh(
+            username='mitogen__has_sudo',
+            password='has_sudo_password',
+        )
+        ssh.call(os.putenv, 'LANGUAGE', 'fr')
+        ssh.call(os.putenv, 'LC_ALL', 'fr_FR.UTF-8')
+        e = self.assertRaises(mitogen.core.StreamError,
+            lambda: self.router.sudo(via=ssh, password='rootpassword')
+        )
+        self.assertIn(mitogen.sudo.password_incorrect_msg, str(e))
 
-#     def test_password_okay(self):
-#         ssh = self.docker_ssh(
-#             username='mitogen__has_sudo',
-#             password='has_sudo_password',
-#         )
-#         ssh.call(os.putenv, 'LANGUAGE', 'fr')
-#         ssh.call(os.putenv, 'LC_ALL', 'fr_FR.UTF-8')
-#         e = self.assertRaises(mitogen.core.StreamError,
-#             lambda: self.router.sudo(via=ssh, password='rootpassword')
-#         )
-#         self.assertIn(mitogen.sudo.password_incorrect_msg, str(e))
+
+for distro_spec in testlib.DISTRO_SPECS.split():
+    # Only debian<version>-test images have translations installed/configured
+    if not re.match('debian', distro_spec, re.IGNORECASE):
+        continue
+
+    dockerized_ssh = testlib.DockerizedSshDaemon(distro_spec)
+    klass_name = 'SudoTest%s' % (dockerized_ssh.distro.capitalize(),)
+    klass = type(
+        klass_name,
+        (SudoMixin, testlib.TestCase),
+        {'dockerized_ssh': dockerized_ssh},
+    )
+    globals()[klass_name] = klass
