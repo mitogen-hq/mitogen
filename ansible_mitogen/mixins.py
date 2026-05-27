@@ -393,32 +393,43 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
             self._remove_tmp_path(tmp)
 
         # prevents things like discovered_interpreter_* or ansible_discovered_interpreter_* from being set
-        ansible.vars.clean.remove_internal_keys(result)
+        try:
+            result.remove_internal_keys()
+        except AttributeError:
+            ansible.vars.clean.remove_internal_keys(result)
 
         # taken from _execute_module of ansible 2.8.6
         # propagate interpreter discovery results back to the controller
         if self._discovered_interpreter_key:
-            if result.get('ansible_facts') is None:
-                result['ansible_facts'] = {}
-
             # only cache discovered_interpreter if we're not running a rediscovery
             # rediscovery happens in places like docker connections that could have different
             # python interpreters than the main host
             if not self._mitogen_rediscovered_interpreter:
-                result['ansible_facts'][self._discovered_interpreter_key] = self._discovered_interpreter
+                key = self._discovered_interpreter_key
+                val = self._discovered_interpreter
+                try:
+                    result.set_fact(key, val)
+                except AttributeError:
+                    result.setdefault('ansible_facts', {})[key] = val
 
         discovery_warnings = getattr(self, '_discovery_warnings', [])
         if discovery_warnings:
-            if result.get('warnings') is None:
-                result['warnings'] = []
-            result['warnings'].extend(discovery_warnings)
+            try:
+                result._extend_warnings(discovery_warnings)
+            except AttributeError:
+                result.setdefault('warnings', []).extend(discovery_warnings)
 
         discovery_deprecation_warnings = getattr(self, '_discovery_deprecation_warnings', [])
         if discovery_deprecation_warnings:
-            if result.get('deprecations') is None:
-                result['deprecations'] = []
-            result['deprecations'].extend(discovery_deprecation_warnings)
+            try:
+                result._extend_deprecations(discovery_deprecation_warnings)
+            except AttributeError:
+                result.setdefault('deprecations', []).extend(discovery_deprecation_warnings)
 
+        if ansible_mitogen.utils.ansible_version[:2] >= (2, 21):
+            result = result.as_result_dict(for_round_trip=True)
+        #import traceback
+        #with open('/tmp/foo', 'w') as f: traceback.print_stack(file=f)
         return ansible.utils.unsafe_proxy.wrap_var(result)
 
     def _postprocess_response(self, result):
@@ -441,11 +452,12 @@ class ActionModuleMixin(ansible.plugins.action.ActionBase):
         else:
             data = self._parse_returned_data(result)
 
-        # Cutpasted from the base implementation.
-        if 'stdout' in data and 'stdout_lines' not in data:
-            data['stdout_lines'] = (data['stdout'] or u'').splitlines()
-        if 'stderr' in data and 'stderr_lines' not in data:
-            data['stderr_lines'] = (data['stderr'] or u'').splitlines()
+        if isinstance(data, dict):
+            # Cutpasted from the base implementation.
+            if 'stdout' in data and 'stdout_lines' not in data:
+                data['stdout_lines'] = (data['stdout'] or u'').splitlines()
+            if 'stderr' in data and 'stderr_lines' not in data:
+                data['stderr_lines'] = (data['stderr'] or u'').splitlines()
 
         return data
 

@@ -1,2 +1,4 @@
 - import_playbook: complex_args.yml
-- import_playbook: ansible_2_8_tests.yml
+- import_playbook: auto.yml
+- import_playbook: auto_legacy.yml
+- import_playbook: auto_legacy_silent.yml

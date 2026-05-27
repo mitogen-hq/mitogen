@@ -17,10 +17,12 @@
       that:
         - job1.changed == False
         - job1.failed == True
-        - |
-          job1.msg == "async task did not complete within the requested time" or
-          job1.msg == "async task did not complete within the requested time - 1s" or
-          job1.msg == "Job reached maximum time limit of 1 seconds."
+        - job1.msg == "async task did not complete within the requested time - 1s"
+          or job1.msg == "Job reached maximum time limit of 1 seconds."
+          or (
+            ansible_version_major_minor is version('2.21', '>=', strict=True)
+            and job1.msg == "async task produced unparsable results"
+          )
       fail_msg: |
         job1={{ job1 }}
   tags:

@@ -5,6 +5,10 @@
   tasks:
 
   - name: Async shell
+    vars:
+      # Ansible >= 14 (ansible-core >= 2.21) omits the "invocation" key by
+      # default, https://github.com/ansible/ansible/pull/86771
+      ansible_inject_invocation: true
     shell: echo hi; echo there >&2
     async: 100
     poll: 0
@@ -18,7 +22,9 @@
       src: "{{ansible_user_dir}}/.ansible_async/{{job.ansible_job_id}}"
     register: result
 
-  #- debug: msg="{{result.content|b64decode|from_json}}"
+  - debug: {var: job}
+  - debug: {var: result}
+  - debug: {msg: "{{ result.content | b64decode | from_json }}"}
 
   - assert:
       that:
@@ -26,6 +32,7 @@
         - async_out.cmd == "echo hi; echo there >&2"
         - 'async_out.delta.startswith("0:00:")'
         - async_out.end.startswith("20")
+        - async_out.invocation is defined
         - async_out.invocation.module_args._raw_params == "echo hi; echo there >&2"
         - async_out.invocation.module_args._uses_shell == True
         - async_out.invocation.module_args.chdir == None

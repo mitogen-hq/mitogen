@@ -5,7 +5,10 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.community.general.plugins.module_utils.source_control import bitbucket
+try:
+    from ansible_collections.community.general.plugins.module_utils import _bitbucket as bitbucket
+except ImportError:
+    from ansible_collections.community.general.plugins.module_utils.source_control import bitbucket
 
 
 def main():
