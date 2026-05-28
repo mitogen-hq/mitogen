@@ -209,6 +209,8 @@ class Options(mitogen.parent.Options):
         if ssh_path:
             self.ssh_path = ssh_path
         if ssh_args:
+            if not isinstance(ssh_args, list):
+                raise ValueError('ssh_args expected to be a list')
             self.ssh_args = ssh_args
         if ssh_debug_level:
             self.ssh_debug_level = ssh_debug_level
