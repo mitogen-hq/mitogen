@@ -6,7 +6,6 @@
 - name: Mitogen test users and groups
   hosts: all
   gather_facts: true
-  strategy: mitogen_free
   become: true
   pre_tasks:
     - name: Disable non-localhost SSH for Mitogen users
