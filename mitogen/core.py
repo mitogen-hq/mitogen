@@ -1307,7 +1307,7 @@ class ImportPolicy(object):
     :param overrides:
         Prefixes always requested, ignoring local versions. If ``overrides``
         has entries, then it's also used as an allow list by the responder -
-        any request for a prefix that's not overriden will be denied.
+        any request for a prefix that's not overridden will be denied.
 
     :param blocks:
         Prefixes always denied by the responder, only local versions can be
@@ -1330,7 +1330,7 @@ class ImportPolicy(object):
         denial = self.denied(fullname)
         if denial: raise denial(denial.fmt % (fullname,))
 
-    def overriden(self, fullname):
+    def overridden(self, fullname):
         return bool(self.overrides.intersection(module_lineage(fullname)))
 
     def __repr__(self):
@@ -1494,7 +1494,7 @@ class Importer(object):
                 self._log.debug('%s has no submodule %s', pkgname, suffix)
                 return None
 
-            if self.policy.overriden(fullname):
+if self.policy.overridden(fullname):
                 return self
 
             try:
@@ -1541,8 +1541,8 @@ class Importer(object):
                       fullname, pkgname, pkg_loader)
             return None
 
-        if self.policy.overriden(fullname):
-            log.debug('Handling %s. It is overriden', fullname)
+        if self.policy.overridden(fullname):
+            log.debug('Handling %s. It is overridden', fullname)
             return importlib.machinery.ModuleSpec(fullname, loader=self)
 
         if fullname == '__main__':
