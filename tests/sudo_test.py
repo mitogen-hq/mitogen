@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import re
 
@@ -7,44 +8,44 @@ import mitogen.core
 import mitogen.sudo
 
 class PasswordPromptTest(testlib.TestCase):
-    def test_matches(self):
-        # macOS 26.4.1, en_GB
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:'))
-        # Ubuntu 24.04, sudo-ws, en_GB
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo] password for alex: '))
-        # Ubuntu 26.04, sudo-rs, en_GB
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: '))
+    def test_sudo_ws(self):
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'mitogen-sudo-prompt:'))
 
-    def test_translated_matches(self):
-        # Using French translation(s) as a stand-in for all translations.
-        # Debian 9, sudo-ws, LC_ALL=fr_FR.UTF-8 LANG=fr_FR.UTF-8 LANGUAGE=fr_FR.UTF-8
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}'.encode('utf-8')))
-        # RHEL 8, sudo-ws
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Mot de passe de US3RN4ME:'))
-        # Ubuntu 24.04, sudo-ws, fr_FR.UTF-8
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo] Mot de passe de alex : '))
-        # Ubuntu 26.04, sudo-rs, fr_FR.UTF-8
-        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Mot de passe : '))
+    def test_sudo_rs_en(self):
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: mitogen-sudo-prompt:] Password: '))
+
+    def test_sudo_rs_fr(self):
+        # macOS+Ghostty 1.3.1-> ssh -> Ubuntu 26.04+sudo-rs -> LANGUAGE=fr sudo -k -p mitogen-sudo-prompt: true
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] Mot de passe\N{NO-BREAK SPACE}: '.encode('utf-8')))
+        # Possible future variation of translation
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: mitogen-sudo-prompt:] Mot de passe : '))
+
+    def test_sudo_rs_zh_CN(self):
+        # macOS+Ghostty 1.3.1-> ssh -> Ubuntu 26.04+sudo-rs -> LANGUAGE=zh_CN sudo -k -p mitogen-sudo-prompt: true
+        self.assertTrue(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] 密码： '.encode('utf-8')))
 
 
 class PasswordPromptInProgressTest(testlib.TestCase):
     def test_empty_password_no_match(self):
         "A zero length password should not match the prompt again."
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:\n'))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: \n'))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}\n'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'mitogen-sudo-prompt:\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] Mot de passe\N{NO-BREAK SPACE}: \n'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: mitogen-sudo-prompt:] Mot de passe : \n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] 密码： \n'.encode('utf-8')))
 
     def test_pwfeedback_no_match(self):
         """
         Enabling pwfeedback (default in Ubuntu 26.04) shouldn't cause repeated
         matches of the prompt when '*' is echoed.
         """
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:*'))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'Password:*\n'))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: *'))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: authenticate] Password: *\n'))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}*'.encode('utf-8')))
-        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo] Mot de passe de alex\N{NO-BREAK SPACE}:\N{NO-BREAK SPACE}*\n'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'mitogen-sudo-prompt:*'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'mitogen-sudo-prompt:*\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] Mot de passe\N{NO-BREAK SPACE}: *'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] Mot de passe\N{NO-BREAK SPACE}: *\n'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: mitogen-sudo-prompt:] Mot de passe : *'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(b'[sudo: mitogen-sudo-prompt:] Mot de passe : *\n'))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] 密码： *'.encode('utf-8')))
+        self.assertIsNone(mitogen.sudo.PASSWORD_PROMPT_RE.search(u'[sudo: mitogen-sudo-prompt:] 密码： *\n'.encode('utf-8')))
 
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
@@ -58,39 +59,44 @@ class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
         argv = eval(context.call(os.getenv, 'ORIGINAL_ARGV'))
         return context, argv
 
-
     def test_basic(self):
         context, argv = self.run_sudo()
-        self.assertEqual(argv[:4], [
+        expected_argv_tail = [
             self.sudo_path,
+            '-p', 'mitogen-sudo-prompt:',
             '-u', 'root',
             '--'
-        ])
+        ]
+        self.assertEqual(argv[:len(expected_argv_tail)], expected_argv_tail)
 
     def test_selinux_type_role(self):
         context, argv = self.run_sudo(
             selinux_type='setype',
             selinux_role='serole',
         )
-        self.assertEqual(argv[:8], [
+        expected_argv_tail = [
             self.sudo_path,
+            '-p', 'mitogen-sudo-prompt:',
             '-u', 'root',
             '-r', 'serole',
             '-t', 'setype',
             '--'
-        ])
+        ]
+        self.assertEqual(argv[:len(expected_argv_tail)], expected_argv_tail)
 
     def test_reparse_args(self):
         context, argv = self.run_sudo(
             sudo_args=['--type', 'setype', '--role', 'serole', '--user', 'user']
         )
-        self.assertEqual(argv[:8], [
+        expected_argv_tail = [
             self.sudo_path,
+            '-p', 'mitogen-sudo-prompt:',
             '-u', 'user',
             '-r', 'serole',
             '-t', 'setype',
             '--'
-        ])
+        ]
+        self.assertEqual(argv[:len(expected_argv_tail)], expected_argv_tail)
 
     def test_tty_preserved(self):
         # issue #481

@@ -7,6 +7,12 @@
 - name: integration/transport_config/transport__smart.yml
   hosts: tc-transport-smart
   tasks:
+  - meta: end_play
+    when:
+      # Ansible 14 (ansible-core 2.21) removed paramiko connections, 'smart'
+      # is now redirected to ansible.legacy.ssh in ansible_builtin_runtime.yml
+      # before Mitogen can, https://github.com/ansible/ansible/pull/86757
+      - ansible_version_major_minor is version('2.21', '>=', strict=True)
   - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
@@ -19,6 +25,12 @@
   hosts: tc-transport-local
   vars: {mitogen_via: tc-transport-smart}
   tasks:
+  - meta: end_play
+    when:
+      # Ansible 14 (ansible-core 2.21) removed paramiko connections, 'smart'
+      # is now redirected to ansible.legacy.ssh in ansible_builtin_runtime.yml
+      # before Mitogen can, https://github.com/ansible/ansible/pull/86757
+      - ansible_version_major_minor is version('2.21', '>=', strict=True)
   - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
@@ -47,6 +59,12 @@
   hosts: tc-transport-smart
   vars: {mitogen_via: tc-transport-local}
   tasks:
+  - meta: end_play
+    when:
+      # Ansible 14 (ansible-core 2.21) removed paramiko connections, 'smart'
+      # is now redirected to ansible.legacy.ssh in ansible_builtin_runtime.yml
+      # before Mitogen can, https://github.com/ansible/ansible/pull/86757
+      - ansible_version_major_minor is version('2.21', '>=', strict=True)
   - include_tasks: ../_mitogen_only.yml
   - {mitogen_get_stack: {}, register: out}
   - assert_equal:
