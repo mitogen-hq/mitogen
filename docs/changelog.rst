@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.49 (2026-06-03)
+--------------------
+
 * :gh:issue:`1523` :mod:`ansible_mitogen`: First Ansible 14 support
 * :gh:issue:`1518` :mod:`mitogen`: Fix sudo authentication when the translated
   password prompt doesn't contain U+003A COLON
