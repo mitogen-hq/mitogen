@@ -4,7 +4,9 @@
   tasks:
     - meta: end_play
       when:
+        # Ansible 14 (ansible-core 2.21) removed auto_legacy & auto_legacy_silent
         - ansible_version_major_minor is version('2.7', '<=', strict=True)
+          or ansible_version_major_minor is version('2.21', '>=', strict=True)
 
     - meta: clear_facts
     - name: Discover with auto

@@ -145,7 +145,9 @@ Noteworthy Differences
   +-----------------+ 3.11 - 3.14     |
   | 12              |                 |
   +-----------------+-----------------+
-  | 13              | 3.12 - 3.14     |
+  | 13              |                 |
+  +-----------------+ 3.12 - 3.14     |
+  | 14              |                 |
   +-----------------+-----------------+
 
   Verify your installation is running one of these versions by checking
