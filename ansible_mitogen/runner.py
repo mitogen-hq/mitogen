@@ -58,11 +58,12 @@ else:
     import imp
 
 import ansible.module_utils.common.warnings
-from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import to_text
+
+from ansible_mitogen.compat.six import shlex_quote
 
 try:
     # Cannot use cStringIO as it does not support Unicode.
