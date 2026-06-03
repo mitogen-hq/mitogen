@@ -69,15 +69,20 @@ import ansible.utils.shlex
 import ansible.constants as C
 import ansible.executor.interpreter_discovery
 import ansible.utils.unsafe_proxy
-
-from ansible.module_utils.six import with_metaclass
 from ansible.module_utils.parsing.convert_bool import boolean
 
 import ansible_mitogen.utils
+from ansible_mitogen.compat.six import with_metaclass
+
 import mitogen.core
 
 
 LOG = logging.getLogger(__name__)
+
+if ansible_mitogen.utils.ansible_version[:2] >= (2, 21):
+    _INTERPRETER_DISCOVERY_MODES = frozenset(['auto', 'auto_silent'])
+else:
+    _INTERPRETER_DISCOVERY_MODES = frozenset(['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent'])
 
 if ansible_mitogen.utils.ansible_version[:2] >= (2, 19):
     _FALLBACK_INTERPRETER = ansible.executor.interpreter_discovery._FALLBACK_INTERPRETER
@@ -98,7 +103,7 @@ def run_interpreter_discovery_if_necessary(s, candidates, task_vars, action, red
     if action._mitogen_discovering_interpreter:
         return action._mitogen_interpreter_candidate
 
-    if s in ['auto', 'auto_legacy', 'auto_silent', 'auto_legacy_silent']:
+    if s in _INTERPRETER_DISCOVERY_MODES:
         # python is the only supported interpreter_name as of Ansible 2.8.8
         interpreter_name = 'python'
         discovered_interpreter_config = u'discovered_interpreter_%s' % interpreter_name

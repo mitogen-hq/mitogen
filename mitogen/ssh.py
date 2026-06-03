@@ -34,10 +34,11 @@ Construct new children via the OpenSSH client.
 
 import logging
 import re
+import sys
 
-try:
+if sys.version_info >= (3, 3):
     from shlex import quote as shlex_quote
-except ImportError:
+else:
     from pipes import quote as shlex_quote
 
 import mitogen.core

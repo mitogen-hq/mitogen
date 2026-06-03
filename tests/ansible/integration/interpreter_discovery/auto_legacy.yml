@@ -1,0 +1,53 @@
+- name: integration/interpreter_discovery/auto_legacy.yml
+  hosts: test-targets
+  gather_facts: true
+  tasks:
+    - meta: end_play
+      when:
+        # Ansible 14 (ansible-core 2.21) removed auto_legacy & auto_legacy_silent
+        - ansible_version_major_minor is version('2.7', '<=', strict=True)
+          or ansible_version_major_minor is version('2.21', '>=', strict=True)
+
+    - meta: clear_facts
+    - name: Discover with auto
+      vars:
+        ansible_python_interpreter: auto
+      ping:
+      register: auto_result
+
+    - meta: clear_facts
+    - name: Discover with auto_legacy
+      vars:
+        ansible_python_interpreter: auto_legacy
+      ping:
+      register: auto_legacy_result
+
+    - name: check for dep warning (only on platforms where auto result is not /usr/bin/python and legacy is) for ansible 2.8-2.11
+      # from ansible 2.12 on this changed
+      #  - https://docs.ansible.com/ansible/devel/porting_guides/porting_guide_5.html#python-interpreter-discovery
+      #  - https://docs.ansible.com/ansible/latest/reference_appendices/interpreter_discovery.html
+      # default discovery method is now auto and will default to python3
+      # and the message changed from a deprecation warning to a real warning that can not be suppressed by
+      # using deprecation_warnings=False
+      assert:
+        that:
+        - auto_legacy_result.deprecations | default([]) | length > 0
+        fail_msg: |
+          auto_legacy_result={{ auto_legacy_result }}
+      # only check for a dep warning if auto_legacy returned /usr/bin/python and auto didn't
+      when:
+        - ansible_version_major_minor is version('2.12', '<', strict=True)
+        - auto_legacy_result.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
+        - auto_result.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
+
+    - name: check for warning (only on platforms where auto result is not /usr/bin/python and legacy is) from ansible 2.12 on
+      assert:
+        that:
+        - auto_legacy_result.warnings | default([]) | length > 0
+        fail_msg: |
+          auto_legacy_result={{ auto_legacy_result }}
+      # only check for a warning if auto_legacy returned /usr/bin/python and auto didn't
+      when:
+        - ansible_version_major_minor is version('2.12', '>=', strict=True)
+        - auto_legacy_result.ansible_facts.discovered_interpreter_python == '/usr/bin/python'
+        - auto_result.ansible_facts.discovered_interpreter_python != '/usr/bin/python'
