@@ -1,0 +1,22 @@
+- name: integration/interpreter_discovery/auto_legacy_slient.yml
+  hosts: test-targets
+  gather_facts: true
+  tasks:
+    - meta: end_play
+      when:
+        - ansible_version_major_minor is version('2.7', '<=', strict=True)
+
+    - meta: clear_facts
+    - name: Discover with auto_legacy_silent
+      vars:
+        ansible_python_interpreter: auto_legacy_silent
+      ping:
+      register: auto_legacy_silent_result
+
+    - assert:
+        that:
+          - auto_legacy_silent_result.warnings is not defined
+          - auto_legacy_silent_result.ansible_facts.discovered_interpreter_python == auto_legacy_result.ansible_facts.discovered_interpreter_python
+        fail_msg: |
+          auto_legacy_silent_result={{ auto_legacy_silent_result }}
+          auto_legacy_result={{ auto_legacy_result }}
