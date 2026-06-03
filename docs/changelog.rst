@@ -26,6 +26,8 @@ In progress (unreleased)
   password prompt doesn't contain U+003A COLON
 * :gh:issue:`1523` tests: Split auto, auto_legacy, auto_legacy_silent
   interpreter discovery tests
+* :gh:issue:`1385` :mod:`ansible_mitogen`: Replace imports of deprecated
+  ``ansible.module_utils.six``
 
 
 v0.3.48 (2026-05-22)

@@ -50,8 +50,6 @@ import threading
 
 import ansible.constants
 
-from ansible.module_utils.six import reraise
-
 import mitogen.core
 import mitogen.service
 import ansible_mitogen.loaders
@@ -59,6 +57,7 @@ import ansible_mitogen.module_finder
 import ansible_mitogen.target
 import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
+from ansible_mitogen.compat.six import reraise
 
 
 LOG = logging.getLogger(__name__)
