@@ -21,8 +21,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1523` :mod:`ansible_mitogen`: First Ansible 14 support
 * :gh:issue:`1518` :mod:`mitogen`: Fix sudo authentication when the translated
   password prompt doesn't contain U+003A COLON
+* :gh:issue:`1523` tests: Split auto, auto_legacy, auto_legacy_silent
+  interpreter discovery tests
 
 
 v0.3.48 (2026-05-22)
