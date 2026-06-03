@@ -19,14 +19,16 @@ __metaclass__ = type
 
 import os
 import base64
+
 from ansible.errors import AnsibleError, AnsibleActionFail, AnsibleActionSkip
 from ansible.module_utils.common.text.converters import to_bytes, to_text
-from ansible.module_utils.six import string_types
 from ansible.module_utils.parsing.convert_bool import boolean
 from ansible.plugins.action import ActionBase
 from ansible.utils.display import Display
 from ansible.utils.hashing import checksum, checksum_s, md5, secure_hash
 from ansible.utils.path import makedirs_safe, is_subpath
+
+from ansible_mitogen.compat.six import string_types
 
 display = Display()
 

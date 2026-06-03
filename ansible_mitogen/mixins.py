@@ -40,9 +40,7 @@ import ansible
 import ansible.plugins.action
 import ansible.utils.unsafe_proxy
 import ansible.vars.clean
-
 from ansible.module_utils.common.text.converters import to_bytes, to_text
-from ansible.module_utils.six.moves import shlex_quote
 
 import mitogen.core
 import mitogen.select
@@ -52,7 +50,7 @@ import ansible_mitogen.planner
 import ansible_mitogen.target
 import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
-
+from ansible_mitogen.compat.six import shlex_quote
 
 LOG = logging.getLogger(__name__)
 
