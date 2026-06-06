@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1523` tests: Bump Ansible 14 tests to 14.x
+
 
 v0.3.49 (2026-06-03)
 --------------------
