@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1529` :mod:`ansible_mitogen`: Make injected ``__main__`` on target
+  more identifiable/greppable
 * :gh:issue:`1523` tests: Bump Ansible 14 tests to 14.x
 
 

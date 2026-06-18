@@ -71,6 +71,17 @@ try:
 except ImportError:
     from io import StringIO
 
+# Ansible >= 2.7 ansible.module_utils.basic uses `import __main__` (PR #41749).
+# Under vanilla Ansible it is benign:
+#  - controller: __main__ is a CLI module (e.g. ansible.cli.playbook)
+#  - target: __main__ is the executing Ansible module (e.g. command, dnf)
+# Mitogen + Ansible refuses `import __main__` by mitogen.core.Importer policy.
+# So inject a (temporary) placeholder.
+if '__main__' not in sys.modules:
+    sys.modules['__main__'] = types.ModuleType(
+        'ansible_mitogen.injected.i_cant_believe_its_not__main__',
+    )
+
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 # FIXME Should probably be b'{}' or None. Ansible 2.19 has bytes | None = None.
 import ansible.module_utils.basic
