@@ -1,31 +1,36 @@
 # https://github.com/mitogen-hq/mitogen/issues/776
 ---
-- name: regression/issue_776__load_plugins_called_twice.yml
+- name: regression/issue_776__load_plugins_called_twice.yml, config
   hosts: test-targets
   become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
   # Delayed until after the end_play, due to Python version requirements
   gather_facts: false
+  roles:
+    - role: package_manager
+  tags:
+    - issue_776
+
+- name: regression/issue_776__load_plugins_called_twice.yml, setup
+  hosts: test-targets
+  become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
+  strategy: linear  # Required for running raw module
+  # Delayed until after the end_play, due to Python version requirements
+  gather_facts: false
+  roles:
+    - package_manager_module
+  tags:
+    - issue_776
+
+- name: regression/issue_776__load_plugins_called_twice.yml, tests
+  hosts: test-targets
+  become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
+  gather_facts: true
   tags:
     - issue_776
   vars:
     ansible_python_interpreter: "{{ pkg_mgr_python_interpreter }}"
     package: rsync  # Chosen to exist in all tested distros/package managers
-  pre_tasks:
-    # The package management modules require using the same Python version
-    # as the target's package manager libraries. This is sometimes in conflict
-    # with Ansible requirements, e.g. Ansible 10 (ansible-core 2.17) does not
-    # support Python 2.x on targets.
-    - meta: end_play
-      when:
-        - ansible_version_major_minor is version('2.17', '>=', strict=True)
-
-  roles:
-    - role: package_manager
-
   tasks:
-    - name: Gather facts manually
-      setup:
-
     - name: Update package index
       apt:
         update_cache: true

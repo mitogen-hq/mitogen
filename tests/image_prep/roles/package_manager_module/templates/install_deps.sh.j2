@@ -1,0 +1,15 @@
+set -o errexit
+set -o nounset
+
+{% if (package_manager_module_packages | length) > 0 %}
+if command -v apt-get; then
+  apt-get -y update
+  apt-get -y --no-install-recommends install {{ package_manager_module_packages | join(' ') }}
+elif command -v dnf; then
+  dnf -y install {{ package_manager_module_packages | join(' ') }}
+elif command -v yum; then
+  yum -y install {{ package_manager_module_packages | join(' ') }}
+else
+  exit 43
+fi
+{% endif %}

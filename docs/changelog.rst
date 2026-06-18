@@ -27,6 +27,7 @@ In progress (unreleased)
   :attr:`ansible_mitogen.runner.NewStyleRunner.main_module_name`
 * :gh:issue:`1523` tests: Bump Ansible 14 tests to 14.x
 * :gh:issue:`1529` tests: Cleanup after issue 109 regression test
+* :gh:issue:`1529` tests: Enable issue 776 regression test for recent Ansibles
 
 
 v0.3.49 (2026-06-03)
