@@ -368,7 +368,8 @@ def spawn_isolated_child(econtext):
     return context
 
 
-def run_module(kwargs):
+@mitogen.core.takes_econtext
+def run_module(kwargs, econtext):
     """
     Set up the process environment in preparation for running an Ansible
     module. This monkey-patches the Ansible libraries in various places to
@@ -377,7 +378,7 @@ def run_module(kwargs):
     """
     runner_name = kwargs.pop('runner_name')
     klass = getattr(ansible_mitogen.runner, runner_name)
-    impl = klass(**mitogen.core.Kwargs(kwargs))
+    impl = klass(econtext=econtext, **mitogen.core.Kwargs(kwargs))
     return impl.run()
 
 
@@ -441,10 +442,9 @@ class AsyncRunner(object):
     def _run_module(self):
         kwargs = dict(self.kwargs, **{
             'detach': True,
-            'econtext': self.econtext,
             'emulate_tty': False,
         })
-        return run_module(kwargs)
+        return run_module(kwargs, self.econtext)
 
     def _parse_result(self, dct):
         filtered, warnings = (

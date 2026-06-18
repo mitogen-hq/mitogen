@@ -60,6 +60,7 @@ else:
 import ansible.module_utils.common.warnings
 
 import mitogen.core
+import mitogen.parent
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import to_text
 
@@ -1053,6 +1054,15 @@ class NewStyleRunner(ScriptRunner):
             'ansible_module_' + os.path.basename(self.path),
         )
 
+        if sys.version_info >= (3, 4):
+            mod.__spec__ = importlib.machinery.ModuleSpec(
+                self.py_module_name,
+                self, # FIXME Not an importlib Finder/Loader
+            )
+
+        mitogen.parent.upgrade_router(self.econtext)
+        mod.ansible_mitogen_injected_router = self.econtext.router
+        sys.modules['__main__'] = mod
         code = self._get_code()
         rc = 2
         try:
