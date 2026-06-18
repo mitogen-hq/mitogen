@@ -1004,11 +1004,6 @@ class NewStyleRunner(ScriptRunner):
                 True,                   # dont_inherit
             ))
 
-    if sys.version_info >= (3, 0):
-        main_module_name = '__main__'
-    else:
-        main_module_name = b'__main__'
-
     def _handle_magic_exception(self, mod, exc):
         """
         Beginning with Ansible >2.6, some modules (file.py) install a
@@ -1047,7 +1042,7 @@ class NewStyleRunner(ScriptRunner):
         return pkg.encode()
 
     def _run(self):
-        mod = types.ModuleType(self.main_module_name)
+        mod = types.ModuleType('__main__')
         mod.__package__ = self._get_module_package()
         # Some Ansible modules use __file__ to find the Ansiballz temporary
         # directory. We must provide some temporary path in __file__, but we
