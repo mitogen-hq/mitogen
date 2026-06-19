@@ -18,6 +18,20 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+v0.3.50 (2026-06-19)
+--------------------
+
+* :gh:issue:`1529` :mod:`ansible_mitogen`: Use Mitogen context for embedded DNF
+  script with Ansible 14 (ansible-core 2.21)
+* :gh:issue:`1529` :mod:`ansible_mitogen`: Make injected ``__main__`` on target
+  more identifiable/greppable
+* :gh:issue:`1529` :mod:`ansible_mitogen`: Remove
+  :attr:`ansible_mitogen.runner.NewStyleRunner.main_module_name`
+* :gh:issue:`1523` tests: Bump Ansible 14 tests to 14.x
+* :gh:issue:`1529` tests: Cleanup after issue 109 regression test
+* :gh:issue:`1529` tests: Enable issue 776 regression test for recent Ansibles
+
+
 v0.3.49 (2026-06-03)
 --------------------
 

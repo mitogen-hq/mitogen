@@ -1,4 +1,4 @@
-pkg_mgr_python_interpreter: python3
+pkg_mgr_python_interpreter: /usr/libexec/platform-python
 
 # Alma Linux 9, RHEL 9, etc. lack a virtualenv package
 virtualenv_create_argv:
