@@ -60,6 +60,7 @@ else:
 import ansible.module_utils.common.warnings
 
 import mitogen.core
+import mitogen.parent
 import ansible_mitogen.target  # TODO: circular import
 from mitogen.core import to_text
 
@@ -70,6 +71,17 @@ try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
+
+# Ansible >= 2.7 ansible.module_utils.basic uses `import __main__` (PR #41749).
+# Under vanilla Ansible it is benign:
+#  - controller: __main__ is a CLI module (e.g. ansible.cli.playbook)
+#  - target: __main__ is the executing Ansible module (e.g. command, dnf)
+# Mitogen + Ansible refuses `import __main__` by mitogen.core.Importer policy.
+# So inject a (temporary) placeholder.
+if '__main__' not in sys.modules:
+    sys.modules['__main__'] = types.ModuleType(
+        'ansible_mitogen.injected.i_cant_believe_its_not__main__',
+    )
 
 # Prevent accidental import of an Ansible module from hanging on stdin read.
 # FIXME Should probably be b'{}' or None. Ansible 2.19 has bytes | None = None.
@@ -993,11 +1005,6 @@ class NewStyleRunner(ScriptRunner):
                 True,                   # dont_inherit
             ))
 
-    if sys.version_info >= (3, 0):
-        main_module_name = '__main__'
-    else:
-        main_module_name = b'__main__'
-
     def _handle_magic_exception(self, mod, exc):
         """
         Beginning with Ansible >2.6, some modules (file.py) install a
@@ -1036,7 +1043,7 @@ class NewStyleRunner(ScriptRunner):
         return pkg.encode()
 
     def _run(self):
-        mod = types.ModuleType(self.main_module_name)
+        mod = types.ModuleType('__main__')
         mod.__package__ = self._get_module_package()
         # Some Ansible modules use __file__ to find the Ansiballz temporary
         # directory. We must provide some temporary path in __file__, but we
@@ -1047,6 +1054,15 @@ class NewStyleRunner(ScriptRunner):
             'ansible_module_' + os.path.basename(self.path),
         )
 
+        if sys.version_info >= (3, 4):
+            mod.__spec__ = importlib.machinery.ModuleSpec(
+                self.py_module_name,
+                self, # FIXME Not an importlib Finder/Loader
+            )
+
+        mitogen.parent.upgrade_router(self.econtext)
+        mod.ansible_mitogen_injected_router = self.econtext.router
+        sys.modules['__main__'] = mod
         code = self._get_code()
         rc = 2
         try:

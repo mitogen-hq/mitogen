@@ -16,6 +16,10 @@ packages:
   - sudo
   - virtualenv
 
+package_manager_module_packages:
+  - python-apt
+  - python3-apt
+
 package_manager_repos:
   - dest: /etc/apt/sources.list
     content: |
