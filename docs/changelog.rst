@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+
+v0.3.50 (2026-06-19)
+--------------------
+
 * :gh:issue:`1529` :mod:`ansible_mitogen`: Use Mitogen context for embedded DNF
   script with Ansible 14 (ansible-core 2.21)
 * :gh:issue:`1529` :mod:`ansible_mitogen`: Make injected ``__main__`` on target
