@@ -341,13 +341,13 @@ The following built-in types may be used as parameters or return values in
 remote procedure calls:
 
 * :class:`bool`
-* :func:`bytes` (:class:`str` on Python 2.x)
+* :class:`bytes` (:class:`str` on Python 2.x)
 * :class:`dict`
 * :class:`int`
-* :func:`list`
+* :class:`list`
 * :class:`long`
-* :func:`tuple`
-* :func:`unicode` (:class:`str` on Python 3.x)
+* :class:`str` (:class:`unicode` on Python 2.x)
+* :class:`tuple`
 
 User-defined types may not be used, except for:
 

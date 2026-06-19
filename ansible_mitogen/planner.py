@@ -38,6 +38,7 @@ from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
 __metaclass__ = type
 
+import inspect
 import json
 import logging
 import os
@@ -55,6 +56,7 @@ import mitogen.service
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
 import ansible_mitogen.target
+import ansible_mitogen.utils
 import ansible_mitogen.utils.unsafe
 
 
@@ -507,6 +509,39 @@ _planners = [
 ]
 
 
+class _DummyDnfModule:
+    """
+    Placeholder containing methods to be into Ansible's DNF module.
+    """
+    def _execute_dnf_script(self, command, config, params=None):
+        """
+        Run ansible.module_utils._embed.dnf.* using a Mitogen context,
+        instead of ansible.module_utils.embed.EmbedManager.
+        """
+        params = params or {}
+        python_executable = self._interpreter or sys.executable
+
+        router = sys.modules['__main__'].ansible_mitogen_injected_router
+        context = router.local(python_path=python_executable)
+
+        if command == 'list':
+            list_command = params.get('list_command')
+            if not list_command:
+                return {
+                    'failed': True,
+                    'msg': 'No list_command specified for list operation',
+                }
+            return context.call(_embed_dnf.list_items, list_command)
+
+        if command == 'ensure':
+            return context.call(_embed_dnf.ensure, config, params)
+
+        if command == 'update-cache':
+            return context.call(_embed_dnf.update_cache_only, config)
+
+        return {'failed': True, 'msg': 'Unknown command: %s' % (command,)}
+
+
 def py_modname_from_path(name, path):
     """
     Fetch the logical name of a new-style module as it might appear in
@@ -636,7 +671,7 @@ def _fix_py35(invocation, module_source):
         invocation._overridden_sources[invocation.module_path] = module_source
 
 
-def _fix_dnf(invocation, module_source):
+def _fix_dnf_import(invocation, module_source):
     """
     Handles edge case where dnf ansible module showed failure due to a missing import in the dnf module.
     Specifically addresses errors like "Failed loading plugin 'debuginfo-install': module 'dnf' has no attribute 'cli'".
@@ -651,6 +686,40 @@ def _fix_dnf(invocation, module_source):
             b"import dnf, dnf.cli\n"
         )
         invocation._overridden_sources[invocation.module_path] = module_source
+
+
+def _fix_dnf_ansible_core_2_21_embed(invocation):
+    """
+    Ansible 14 (ansible-core 2.21) adds ansible.module_utils.embed.EmbedManager,
+    as atech preview to embed files in ansiballz. The DNF module uses it to
+    embed ansible.module_utils._embed.dnf and runs `{python} -m ..._embed.dnf`
+    on the target. See https://github.com/ansible/ansible/pull/86432.
+
+    Mitogen has no ansiballz, so we replace Ansible's implementation of
+    ansible.modules.dnf.DnfModule._execute_dnf_script() with one that calls
+    ansible.module_utils._embed.dnf.ensure() et al through a Mitogen context.
+    """
+    if (
+        ansible_mitogen.utils.ansible_version[:2] !=(2, 21)
+        or invocation.module_name not in {'ansible.builtin.dnf', 'ansible.legacy.dnf', 'dnf'}
+    ):
+        return
+
+    module_source = invocation._overridden_sources[invocation.module_path]
+    module_source = module_source.replace(
+        b'from ansible.module_utils.embed import EmbedManager\n',
+        b'',
+        1,
+    ).replace(
+        b"dnfscript = EmbedManager.embed('..module_utils._embed', 'dnf.py')\n",
+        b'from ansible.module_utils._embed import dnf as _embed_dnf\n',
+        1,
+    ).replace(
+        b'    def _execute_dnf_script(self, command, config, params=None):\n',
+        inspect.getsource(_DummyDnfModule._execute_dnf_script).encode('ascii'),
+        1,
+    )
+    invocation._overridden_sources[invocation.module_path] = module_source
 
 
 def _load_collections(invocation):
@@ -690,7 +759,8 @@ def invoke(invocation):
 
         module_source = invocation.get_module_source()
         _fix_py35(invocation, module_source)
-        _fix_dnf(invocation, module_source)
+        _fix_dnf_import(invocation, module_source)
+        _fix_dnf_ansible_core_2_21_embed(invocation)
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation,
             module_source

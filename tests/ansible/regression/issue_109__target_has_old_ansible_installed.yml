@@ -4,6 +4,8 @@
 - name: regression/issue_109__target_has_old_ansible_installed.yml
   hosts: test-targets
   gather_facts: true
+  vars:
+    naughty_ansible_dest: "{{ ansible_user_dir }}/ansible.py"
   tasks:
     - meta: end_play
       when:
@@ -11,8 +13,8 @@
 
     - name: Copy the naughty ansible into place
       copy:
-        dest: "{{ansible_user_dir}}/ansible.py"
         src: ansible.py
+        dest: "{{ naughty_ansible_dest }}"
 
     # Restart the connection.
     - meta: reset_connection
@@ -33,5 +35,10 @@
     - name: Run some new-style from ansible.module_utils... modules
       stat:
         path: /
+
+    - name: Clean up the naughty ansible
+      file:
+        path: "{{ naughty_ansible_dest }}"
+        state: absent
   tags:
     - issue_109
