@@ -1,0 +1,5 @@
+- name: Install package manager module dependencies
+  raw: "{{ lookup('template', 'install_deps.sh.j2') }}"
+  when:
+    - (package_manager_module_packages | length) > 0
+  changed_when: true
