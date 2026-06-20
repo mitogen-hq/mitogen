@@ -1667,7 +1667,7 @@ class Importer(object):
         _, pkg_present, path, _, _ = self._cache[spec.name]
 
         if path is None:
-            raise ImportError(self.absent_msg % (spec.name))
+            raise ImportError(self.absent_msg % (spec.name+'1'))
 
         spec.origin = self.get_filename(spec.name)
         if pkg_present is not None:
@@ -1720,7 +1720,7 @@ class Importer(object):
         # 0:fullname 1:pkg_present 2:path 3:compressed 4:related
         _, pkg_present, path, _, _ = self._cache[fullname]
         if path is None:
-            raise ModuleNotFoundError(self.absent_msg % (fullname,))
+            raise ModuleNotFoundError(self.absent_msg % (fullname+'2',))
 
         mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
         mod.__file__ = self.get_filename(fullname)
@@ -1760,14 +1760,14 @@ class Importer(object):
                 # reveals the module can't be loaded, and so load_module()
                 # throws ImportError, on Python 3.x it is still possible for
                 # the loader to be called to fetch metadata.
-                raise ModuleNotFoundError(self.absent_msg % (fullname,))
+                raise ModuleNotFoundError(self.absent_msg % (fullname+'3',))
             return u'master:' + self._cache[fullname][2]
 
     def get_source(self, fullname):
         if fullname in self._cache:
             compressed = self._cache[fullname][3]
             if compressed is None:
-                raise ModuleNotFoundError(self.absent_msg % (fullname,))
+                raise ModuleNotFoundError(self.absent_msg % (fullname+'4',))
 
             source = zlib.decompress(self._cache[fullname][3])
             if sys.version_info >= (3, 0):

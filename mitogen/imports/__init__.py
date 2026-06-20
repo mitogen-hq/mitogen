@@ -4,7 +4,9 @@
 
 import sys
 
-if sys.version_info >= (3, 14):
+if sys.version_info >= (3, 15):
+    from mitogen.imports._py315 import _code_imports, _codeobj_imports
+elif sys.version_info >= (3, 14):
     from mitogen.imports._py314 import _code_imports
 elif sys.version_info >= (3, 6):
     from mitogen.imports._py36 import _code_imports
@@ -35,4 +37,6 @@ def codeobj_imports(co):
         * `modname`: Name of module to import, or to import `names` from.
         * `names`: tuple of names in `from mod import ..`.
     """
+    #if sys.version_info >= (3, 15):
+    #    return _codeobj_imports(co)
     return _code_imports(co.co_code, co.co_consts, co.co_names)
