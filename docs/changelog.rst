@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+Mitogen 0.3.51 (this version) will be the last made via the "stable" Git branch.
+Mitogen 0.3.52 and onward will be released directly from the "master" branch.
+For further details and discussion please see :gh:issue:`1475`.
+
 
 v0.3.50 (2026-06-19)
 --------------------
