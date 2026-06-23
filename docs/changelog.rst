@@ -18,6 +18,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+In progress
+-----------
+
+* :gh:issue:`1540` :mod:`ansible_mitogen`: Remove override of
+  ``ansible/__init__.py``
+
+
 v0.3.51 (2026-07-18)
 --------------------
 
