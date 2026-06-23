@@ -650,27 +650,6 @@ def _get_planner(invocation, source):
     raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
 
-def _fix_py35(invocation, module_source):
-    """
-    super edge case with a relative import error in Python 3.5.1-3.5.3
-    in Ansible's setup module when using Mitogen
-    https://github.com/dw/mitogen/issues/672#issuecomment-636408833
-    We replace a relative import in the setup module with the actual full file path
-    This works in vanilla Ansible but not in Mitogen otherwise
-    """
-    if invocation.module_name in {'ansible.builtin.setup', 'ansible.legacy.setup', 'setup'} and \
-            invocation.module_path not in invocation._overridden_sources:
-        # in-memory replacement of setup module's relative import
-        # would check for just python3.5 and run this then but we don't know the
-        # target python at this time yet
-        # NOTE: another ansible 2.10-specific fix: `from ..module_utils` used to be `from ...module_utils`
-        module_source = module_source.replace(
-            b"from ..module_utils.basic import AnsibleModule",
-            b"from ansible.module_utils.basic import AnsibleModule"
-        )
-        invocation._overridden_sources[invocation.module_path] = module_source
-
-
 def _fix_dnf_import(invocation, module_source):
     """
     Handles edge case where dnf ansible module showed failure due to a missing import in the dnf module.
@@ -758,7 +737,6 @@ def invoke(invocation):
             _load_collections(invocation)
 
         module_source = invocation.get_module_source()
-        _fix_py35(invocation, module_source)
         _fix_dnf_import(invocation, module_source)
         _fix_dnf_ansible_core_2_21_embed(invocation)
         _planner_by_path[invocation.module_path] = _get_planner(
