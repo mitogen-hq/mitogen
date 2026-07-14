@@ -345,6 +345,9 @@ class NewStylePlanner(ScriptPlanner):
         'firewalld',  # issue #570: ansible module_utils caches dbus conn
         'ansible.legacy.dnf',  # issue #776
         'ansible.builtin.dnf', # issue #832
+        'dnf5',  # issue #1077; libdnf5 GlobalLogger is a process-global singleton
+        'ansible.legacy.dnf5',
+        'ansible.builtin.dnf5',
         'freeipa.ansible_freeipa.ipaautomember', # issue #1216
         'freeipa.ansible_freeipa.ipaautomountkey',
         'freeipa.ansible_freeipa.ipaautomountlocation',

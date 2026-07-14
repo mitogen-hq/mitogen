@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress (unreleased)
 ------------------------
 
+* :gh:issue:`1077` :mod:`ansible_mitogen`: Force-fork the ``dnf5`` module so the
+  ``libdnf5`` ``GlobalLogger`` process-global singleton is not constructed twice in
+  the persistent interpreter
+
 
 v0.3.50 (2026-06-19)
 --------------------
