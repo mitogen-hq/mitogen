@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.51 (2026-07-18)
+--------------------
 
 * :gh:issue:`1077` :mod:`ansible_mitogen`: Force-fork the ``dnf5`` module so the
   ``libdnf5`` ``GlobalLogger`` process-global singleton is not constructed twice in
