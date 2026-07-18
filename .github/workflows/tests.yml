@@ -173,7 +173,7 @@ jobs:
     name: macos ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       MITOGEN_TEST_SKIP_CONTAINER_TESTS: 1
 
