@@ -18,8 +18,17 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress (unreleased)
-------------------------
+v0.3.51 (2026-07-18)
+--------------------
+
+* :gh:issue:`1077` :mod:`ansible_mitogen`: Force-fork the ``dnf5`` module so the
+  ``libdnf5`` ``GlobalLogger`` process-global singleton is not constructed twice in
+  the persistent interpreter
+* :gh:issue:`1545` CI: Increase macOS job timeout from 20 to 30 minutes
+
+Mitogen 0.3.51 (this version) will be the last made via the "stable" Git branch.
+Mitogen 0.3.52 and onward will be released directly from the "master" branch.
+For further details and discussion please see :gh:issue:`1475`.
 
 
 v0.3.50 (2026-06-19)
