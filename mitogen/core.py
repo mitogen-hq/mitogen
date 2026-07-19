@@ -179,7 +179,7 @@ if sys.version_info >= (2, 6):
     threading__current_thread = threading.current_thread
     def threading__thread_name(thread): return thread.name
 else:
-    threading__current_thread = threading.currentThread
+    threading__current_thread = threading.current_thread
     def next(it): return it.next()
     def threading__thread_name(thread): return thread.getName()
 
