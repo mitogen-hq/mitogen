@@ -2,9 +2,9 @@
 
 name: Tests
 
-# env:
+env:
 #  ANSIBLE_VERBOSITY: 3
-#  MITOGEN_LOG_LEVEL: DEBUG
+  MITOGEN_LOG_LEVEL: DEBUG
 
 on:
   pull_request:
@@ -15,75 +15,6 @@ on:
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
 # https://github.com/actions/runner-images/blob/main/README.md#software-and-image-support
 jobs:
-  u2204:
-    name: u2204 ${{ matrix.tox_env }}
-    # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2204-Readme.md
-    runs-on: ubuntu-22.04
-    timeout-minutes: 25
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - tox_env: py27-m_ans-ans2.10
-          - tox_env: py27-m_ans-ans4
-
-          - tox_env: py36-m_ans-ans2.10
-          - tox_env: py36-m_ans-ans4
-
-          - tox_env: py27-m_mtg
-          - tox_env: py36-m_mtg
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - run: .ci/show_python_versions
-      - run: .ci/setup_ssh_key_mitogen__has_sudo_pubkey
-      - run: .ci/setup_sudoers_defaults
-        if: ${{ contains(matrix.tox_env, 'm_mtg') }}
-      - name: Install deps
-        id: install-deps
-        run: |
-          set -o errexit -o nounset -o pipefail
-          source .ci/bash_functions
-          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
-
-          sudo apt-get update
-
-          if [[ $PYTHON == "python2.7" ]]; then
-              sudo apt install -y python2-dev sshpass virtualenv
-              curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
-              "$PYTHON" get-pip.py --user --no-python-version-warning
-              # Avoid Python 2.x pip masking system pip
-              rm -f ~/.local/bin/{easy_install,pip,wheel}
-          elif [[ $PYTHON == "python3.6" ]]; then
-              sudo apt install -y gcc-10 make libbz2-dev liblzma-dev libreadline-dev libsqlite3-dev libssl-dev sshpass virtualenv zlib1g-dev
-              curl --fail --silent --show-error --location https://pyenv.run | bash
-              CC=gcc-10 ~/.pyenv/bin/pyenv install --force 3.6
-              PYTHON="$HOME/.pyenv/versions/3.6.15/bin/python3.6"
-          fi
-
-          "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
-          echo "python=$PYTHON" >> $GITHUB_OUTPUT
-      - name: Create environments
-        run: |
-          set -o errexit -o nounset -o pipefail
-          PYTHON="${{ steps.install-deps.outputs.python }}"
-          "$PYTHON" -m tox --notest -e "${{ matrix.tox_env }}"
-      - name: Run tests
-        env:
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -o errexit -o nounset -o pipefail
-          PYTHON="${{ steps.install-deps.outputs.python }}"
-
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
-
   u2404:
     name: u2404 ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
@@ -94,38 +25,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py311-m_ans-ans2.10
-            python_version: '3.11'
-          - tox_env: py311-m_ans-ans3
-            python_version: '3.11'
-          - tox_env: py311-m_ans-ans4
-            python_version: '3.11'
-          - tox_env: py311-m_ans-ans5
-            python_version: '3.11'
-          - tox_env: py313-m_ans-ans6
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans7
-            python_version: '3.13'
-          - tox_env: py313-m_ans-ans8
-            python_version: '3.13'
-          - tox_env: py314-m_ans-ans9
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans10
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans11
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans12
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans13
-            python_version: '3.14'
-          - tox_env: py314-m_ans-ans14
-            python_version: '3.14'
+          # - tox_env: py315-m_ans-ans14
+          #   python_version: '3.15.0-beta.2'
 
-          - tox_env: py314-m_ans-ans14-s_lin
-            python_version: '3.14'
+          # - tox_env: py315-m_ans-ans14-s_lin
+          #   python_version: '3.15.0-beta.2'
 
-          - tox_env: py314-m_mtg
-            python_version: '3.14'
+          - tox_env: py315-m_mtg
+            python_version: '3.15.0-beta.2'
 
     steps:
       - uses: actions/checkout@v6
@@ -150,7 +57,7 @@ jobs:
           PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
 
           sudo apt-get update
-          sudo apt-get install -y sshpass virtualenv
+          sudo apt-get install --no-install-recommends -y libxml2-dev libxslt1-dev sshpass virtualenv
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
@@ -181,13 +88,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-m_lcl-ans14
-            python_version: '3.14'
-          - tox_env: py314-m_lcl-ans14-s_lin
-            python_version: '3.14'
+          # - tox_env: py315-m_lcl-ans14
+          #   python_version: '3.15.0-beta.2'
+          # - tox_env: py315-m_lcl-ans14-s_lin
+          #   python_version: '3.15.0-beta.2'
 
-          - tox_env: py314-m_mtg
-            python_version: '3.14'
+          - tox_env: py315-m_mtg
+            python_version: '3.15.0-beta.2'
 
     steps:
       - uses: actions/checkout@v6
@@ -231,7 +138,6 @@ jobs:
   check:
     if: always()
     needs:
-      - u2204
       - u2404
       - macos
     runs-on: ubuntu-latest
