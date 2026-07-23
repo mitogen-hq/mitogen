@@ -24,6 +24,7 @@ In progress
 * :gh:issue:`1540` :mod:`ansible_mitogen`: Remove override of
   ``ansible/__init__.py``
 * :gh:issue:`1540` :mod:`ansible_mitogen`: Remove ``reload(sys)`` workaround
+* :gh:issue:`1540` :mod:`ansible_mitogen`: Refactor Ansible module fixups
 
 
 v0.3.51 (2026-07-18)
