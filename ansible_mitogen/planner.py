@@ -38,7 +38,6 @@ from __future__ import absolute_import, division, print_function
 from __future__ import unicode_literals
 __metaclass__ = type
 
-import inspect
 import json
 import logging
 import os
@@ -53,6 +52,7 @@ import mitogen.core
 import mitogen.select
 import mitogen.service
 
+import ansible_mitogen.fixups
 import ansible_mitogen.loaders
 import ansible_mitogen.parsing
 import ansible_mitogen.target
@@ -512,39 +512,6 @@ _planners = [
 ]
 
 
-class _DummyDnfModule:
-    """
-    Placeholder containing methods to be into Ansible's DNF module.
-    """
-    def _execute_dnf_script(self, command, config, params=None):
-        """
-        Run ansible.module_utils._embed.dnf.* using a Mitogen context,
-        instead of ansible.module_utils.embed.EmbedManager.
-        """
-        params = params or {}
-        python_executable = self._interpreter or sys.executable
-
-        router = sys.modules['__main__'].ansible_mitogen_injected_router
-        context = router.local(python_path=python_executable)
-
-        if command == 'list':
-            list_command = params.get('list_command')
-            if not list_command:
-                return {
-                    'failed': True,
-                    'msg': 'No list_command specified for list operation',
-                }
-            return context.call(_embed_dnf.list_items, list_command)
-
-        if command == 'ensure':
-            return context.call(_embed_dnf.ensure, config, params)
-
-        if command == 'update-cache':
-            return context.call(_embed_dnf.update_cache_only, config)
-
-        return {'failed': True, 'msg': 'Unknown command: %s' % (command,)}
-
-
 def py_modname_from_path(name, path):
     """
     Fetch the logical name of a new-style module as it might appear in
@@ -653,78 +620,6 @@ def _get_planner(invocation, source):
     raise ansible.errors.AnsibleError(NO_METHOD_MSG + repr(invocation))
 
 
-def _fix_py35(invocation, module_source):
-    """
-    super edge case with a relative import error in Python 3.5.1-3.5.3
-    in Ansible's setup module when using Mitogen
-    https://github.com/dw/mitogen/issues/672#issuecomment-636408833
-    We replace a relative import in the setup module with the actual full file path
-    This works in vanilla Ansible but not in Mitogen otherwise
-    """
-    if invocation.module_name in {'ansible.builtin.setup', 'ansible.legacy.setup', 'setup'} and \
-            invocation.module_path not in invocation._overridden_sources:
-        # in-memory replacement of setup module's relative import
-        # would check for just python3.5 and run this then but we don't know the
-        # target python at this time yet
-        # NOTE: another ansible 2.10-specific fix: `from ..module_utils` used to be `from ...module_utils`
-        module_source = module_source.replace(
-            b"from ..module_utils.basic import AnsibleModule",
-            b"from ansible.module_utils.basic import AnsibleModule"
-        )
-        invocation._overridden_sources[invocation.module_path] = module_source
-
-
-def _fix_dnf_import(invocation, module_source):
-    """
-    Handles edge case where dnf ansible module showed failure due to a missing import in the dnf module.
-    Specifically addresses errors like "Failed loading plugin 'debuginfo-install': module 'dnf' has no attribute 'cli'".
-    https://github.com/mitogen-hq/mitogen/issues/1143
-    This issue is resolved by adding 'dnf.cli' to the import statement in the module source.
-    This works in vanilla Ansible but not in Mitogen otherwise.
-    """
-    if invocation.module_name in {'ansible.builtin.dnf', 'ansible.legacy.dnf', 'dnf'} and \
-            invocation.module_path not in invocation._overridden_sources:
-        module_source = module_source.replace(
-            b"import dnf\n",
-            b"import dnf, dnf.cli\n"
-        )
-        invocation._overridden_sources[invocation.module_path] = module_source
-
-
-def _fix_dnf_ansible_core_2_21_embed(invocation):
-    """
-    Ansible 14 (ansible-core 2.21) adds ansible.module_utils.embed.EmbedManager,
-    as atech preview to embed files in ansiballz. The DNF module uses it to
-    embed ansible.module_utils._embed.dnf and runs `{python} -m ..._embed.dnf`
-    on the target. See https://github.com/ansible/ansible/pull/86432.
-
-    Mitogen has no ansiballz, so we replace Ansible's implementation of
-    ansible.modules.dnf.DnfModule._execute_dnf_script() with one that calls
-    ansible.module_utils._embed.dnf.ensure() et al through a Mitogen context.
-    """
-    if (
-        ansible_mitogen.utils.ansible_version[:2] !=(2, 21)
-        or invocation.module_name not in {'ansible.builtin.dnf', 'ansible.legacy.dnf', 'dnf'}
-    ):
-        return
-
-    module_source = invocation._overridden_sources[invocation.module_path]
-    module_source = module_source.replace(
-        b'from ansible.module_utils.embed import EmbedManager\n',
-        b'',
-        1,
-    ).replace(
-        b"dnfscript = EmbedManager.embed('..module_utils._embed', 'dnf.py')\n",
-        b'from ansible.module_utils._embed import dnf as _embed_dnf\n',
-        1,
-    ).replace(
-        b'    def _execute_dnf_script(self, command, config, params=None):\n',
-        inspect.getsource(_DummyDnfModule._execute_dnf_script).encode('ascii'),
-        1,
-    )
-    invocation._overridden_sources[invocation.module_path] = module_source
-
-
 def _load_collections(invocation):
     """
     Special loader that ensures that `ansible_collections` exist as a module path for import
@@ -760,10 +655,16 @@ def invoke(invocation):
         if 'ansible_collections' in invocation.module_path:
             _load_collections(invocation)
 
-        module_source = invocation.get_module_source()
-        _fix_py35(invocation, module_source)
-        _fix_dnf_import(invocation, module_source)
-        _fix_dnf_ansible_core_2_21_embed(invocation)
+        original = invocation.get_module_source()
+        overridden = ansible_mitogen.fixups._apply(
+            'modules', invocation.module_name, original,
+        )
+        if original == overridden:
+            module_source = original
+        else:
+            module_source = overridden
+            invocation._overridden_sources[invocation.module_path] = overridden
+
         _planner_by_path[invocation.module_path] = _get_planner(
             invocation,
             module_source
