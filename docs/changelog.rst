@@ -24,6 +24,7 @@ In progress
 * :gh:issue:`1540` :mod:`ansible_mitogen`: Remove override of
   ``ansible/__init__.py``
 * :gh:issue:`1540` :mod:`ansible_mitogen`: Remove ``reload(sys)`` workaround
+* :gh:issue:`1540` :mod:`ansible_mitogen`: Refactor "fixups" as source modifiers
 * :gh:issue:`1540` :mod:`mitogen`: Add :class:`mitogen.master.ModuleFinder`
   source modifier feature
 * :gh:issue:`1540` tests: Test :class:`mitogen.master.ModuleFinder` source
