@@ -202,3 +202,15 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(2+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(10000, self.router.responder.good_load_module_size)
         self.assertGreater(40000, self.router.responder.good_load_module_size)
+
+
+class SourceOverrideTest(testlib.RouterMixin, testlib.TestCase):
+    def test_toplevel_module(self):
+        self.router.responder.add_source_override(
+            'testmod_toplevel',
+            '/land/of/make_believe',
+            mitogen.core.b('def pow(x, y): return 42\n'),
+            False,
+        )
+        ctx = self.router.local()
+        self.assertEqual(42, ctx.call(testmod_toplevel.pow, 1, 1))
