@@ -858,13 +858,29 @@ class ModuleFinder(object):
         #: Avoid repeated dependency scanning, which is expensive.
         self._related_cache = {}
 
+        # Registered source code modifier functions
+        self._modifier_callables = {}
+
     def __repr__(self):
         return 'ModuleFinder()'
+
+    def add_source_modifier(self, fullname, callable):
+        """
+        Register a modifier function, it will be called if/when that module is
+        found.
+
+        :param str fullname:
+            Fully qualified name of the module to be modified.
+        :param Callable callable:
+            Callable that returns the modified get_module_source result.
+        """
+        self._modifier_callables.setdefault(fullname, []).append(callable)
+        LOG.debug('Modifier %s registered for %s', callable, fullname)
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
         Explicitly install a source cache entry, preventing usual lookup
-        methods from being used.
+        methods and modifiers from being used.
 
         Beware the value of `path` is critical when `is_pkg` is specified,
         since it directs where submodules are searched for.
@@ -904,7 +920,7 @@ class ModuleFinder(object):
         for method in self.get_module_methods:
             tup = method.find(fullname)
             if tup:
-                #LOG.debug('%r returned %r', method, tup)
+                tup = self._apply_modifiers(fullname, *tup)
                 break
         else:
             tup = None, None, None
@@ -1036,6 +1052,13 @@ class ModuleFinder(object):
         found.discard(fullname)
         return sorted(found)
 
+    def _apply_modifiers(self, fullname, path, source, is_pkg):
+        for callable in self._modifier_callables.get(fullname, []):
+            path, source, is_pkg = callable(fullname, path, source, is_pkg)
+            LOG.debug('Modifier %s applied to %s', callable, fullname)
+
+        return (path, source, is_pkg)
+
 
 class ModuleResponder(object):
     def __init__(self, router, policy):
@@ -1068,6 +1091,9 @@ class ModuleResponder(object):
 
     def __repr__(self):
         return 'ModuleResponder'
+
+    def add_source_modifier(self, fullname, callable):
+        self._finder.add_source_modifier(fullname, callable)
 
     def add_source_override(self, fullname, path, source, is_pkg):
         """
