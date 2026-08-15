@@ -62,17 +62,13 @@ import ansible
 import ansible.constants as C
 import ansible.errors
 
+import ansible_mitogen._modifiers
 import ansible_mitogen.logging
 import ansible_mitogen.services
 import ansible_mitogen.affinity
 
 
 LOG = logging.getLogger(__name__)
-
-ANSIBLE_PKG_OVERRIDE = (
-    u"__version__ = %r\n"
-    u"__author__ = %r\n"
-)
 
 MAX_MESSAGE_SIZE = 4096 * 1048576
 
@@ -188,19 +184,7 @@ def _setup_responder(responder):
     responder.whitelist_prefix('ansible_collections')
     responder.whitelist_prefix('ansible_mitogen')
 
-    # Ansible 2.3 is compatible with Python 2.4 targets, however
-    # ansible/__init__.py is not. Instead, executor/module_common.py writes
-    # out a 2.4-compatible namespace package for unknown reasons. So we
-    # copy it here.
-    responder.add_source_override(
-        fullname='ansible',
-        path=ansible.__file__,
-        source=(ANSIBLE_PKG_OVERRIDE % (
-            ansible.__version__,
-            ansible.__author__,
-        )).encode(),
-        is_pkg=True,
-    )
+    ansible_mitogen._modifiers.register_moduleresponder_modifiers(responder)
 
 
 def increase_open_file_limit():

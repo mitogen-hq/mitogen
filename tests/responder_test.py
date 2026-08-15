@@ -202,3 +202,34 @@ class ForwardTest(testlib.RouterMixin, testlib.TestCase):
         self.assertEqual(2+os_fork, self.router.responder.good_load_module_count)
         self.assertLess(10000, self.router.responder.good_load_module_size)
         self.assertGreater(40000, self.router.responder.good_load_module_size)
+
+
+class SourceModifierTest(testlib.RouterMixin, testlib.TestCase):
+    def modify_testmod_toplevel(self, fullname, path, source, is_pkg):
+        return (path, mitogen.core.b('def add(x, y): return 42\n'), is_pkg)
+
+    def test_toplevel_module(self):
+        self.router.responder.add_source_modifier(
+            'testmod_toplevel',
+            self.modify_testmod_toplevel,
+        )
+
+        ctx = self.router.local()
+        self.assertEqual(42, ctx.call(testmod_toplevel.add, 1, 1))
+
+        cached = self.router.responder._finder._found_cache['testmod_toplevel']
+        path, _, is_pkg = cached
+        self.assertEqual(path, testmod_toplevel.__file__.rstrip('co'))
+        self.assertEqual(is_pkg, False)
+
+
+class SourceOverrideTest(testlib.RouterMixin, testlib.TestCase):
+    def test_toplevel_module(self):
+        self.router.responder.add_source_override(
+            'testmod_toplevel',
+            '/land/of/make_believe',
+            mitogen.core.b('def pow(x, y): return 42\n'),
+            False,
+        )
+        ctx = self.router.local()
+        self.assertEqual(42, ctx.call(testmod_toplevel.pow, 1, 1))
