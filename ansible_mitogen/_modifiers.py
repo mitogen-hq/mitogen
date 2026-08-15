@@ -141,11 +141,18 @@ _ANSIBLE_MODULE_MODIFIERS = {
     'setup': [ansiblemodule_abs_import],
 }
 
+_PYTHON_MODULE_MODIFIERS = {
+    'ansible.modules.setup': [ansiblemodule_abs_import],
+}
+
 if ansible_mitogen.utils.ansible_version[:2] <= (2, 20):
     _ANSIBLE_MODULE_MODIFIERS.update({
         'ansible.builtin.dnf': [dnf_cli_import],
         'ansible.legacy.dnf': [dnf_cli_import],
         'dnf': [dnf_cli_import],
+    })
+    _PYTHON_MODULE_MODIFIERS.update({
+        'ansible.modules.dnf': [dnf_cli_import],
     })
 else:
     _ANSIBLE_MODULE_MODIFIERS.update({
@@ -153,9 +160,19 @@ else:
         'ansible.legacy.dnf': [dnfmodule_no_embedmanager],
         'dnf': [dnfmodule_no_embedmanager],
     })
+    _PYTHON_MODULE_MODIFIERS.update({
+        'ansible.module_utils._embed.dnf': [dnf_cli_import],
+        'ansible.modules.dnf': [dnfmodule_no_embedmanager],
+    })
 
 
 def apply_ansible_module_modifiers(name, source):
     for callable in _ANSIBLE_MODULE_MODIFIERS.get(name, []):
         _, source, _ = callable('IGNORED', 'IGNORED', source, False)
     return source
+
+
+def register_moduleresponder_modifiers(responder):
+    for fullname, callables in _PYTHON_MODULE_MODIFIERS.items():
+        for callable in callables:
+            responder.add_source_modifier(fullname, callable)

@@ -62,6 +62,7 @@ import ansible
 import ansible.constants as C
 import ansible.errors
 
+import ansible_mitogen._modifiers
 import ansible_mitogen.logging
 import ansible_mitogen.services
 import ansible_mitogen.affinity
@@ -182,6 +183,8 @@ def _setup_responder(responder):
     responder.whitelist_prefix('ansible')
     responder.whitelist_prefix('ansible_collections')
     responder.whitelist_prefix('ansible_mitogen')
+
+    ansible_mitogen._modifiers.register_moduleresponder_modifiers(responder)
 
 
 def increase_open_file_limit():

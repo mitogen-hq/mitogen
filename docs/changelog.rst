@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 In progress
 -----------
 
+* :gh:issue:`1539` :mod:`ansible_mitogen`: Fix "module 'dnf' has no attribute
+  'cli'" on Ansible 14
 * :gh:issue:`1540` :mod:`ansible_mitogen`: Remove override of
   ``ansible/__init__.py``
 * :gh:issue:`1540` :mod:`ansible_mitogen`: Remove ``reload(sys)`` workaround
