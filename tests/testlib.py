@@ -455,6 +455,10 @@ class TestCase(unittest.TestCase):
         self._teardown_check_fds()
         super(TestCase, self).tearDown()
 
+    def assertIsType(self, a, expected_type):
+        if type(a) is not expected_type:
+            self.fail("Expected type %s, got %s" % (expected_type, type(a)))
+
     def assertRaises(self, exc, func, *args, **kwargs):
         """Like regular assertRaises, except return the exception that was
         raised. Can't use context manager because tests must run on Python2.4"""
