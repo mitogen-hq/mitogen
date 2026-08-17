@@ -31,6 +31,8 @@ In progress
   source modifier feature
 * :gh:issue:`1547` :mod:`mitogen`: Improve validation of ``Context`` attributes
   attributes during creation and unpickling
+* :gh:issue:`689` :mod:`mitogen`: Bump :attr:`mitogen.core.Context.NAME_MAX_LEN`
+  to 500
 * :gh:issue:`1540` tests: Test :class:`mitogen.master.ModuleFinder` source
   override
 

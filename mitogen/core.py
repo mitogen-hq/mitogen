@@ -2565,7 +2565,7 @@ class Context(object):
     """
     ID_MIN = 0
     ID_MAX = 2**32 - 1
-    NAME_MAX_LEN = 99
+    NAME_MAX_LEN = 500
 
     def __init__(self, router, context_id, name=None):
         _require_bounds(context_id, Context.ID_MIN, Context.ID_MAX)
