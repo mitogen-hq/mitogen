@@ -477,11 +477,13 @@ class UnpickleCompatTest(testlib.TestCase):
            ('\x80\x02cmitogen.core\n_unpickle_call_error\nq\x00X\t\x00\x00\x00big errorq\x01\x85q\x02R.'), throw=False)
 
     def test_py24_context(self):
-        self.check(mitogen.core.Context(1234, None),
+        self.check(
+            mitogen.core.Context(object(), 1234, None),
            ('\x80\x02cmitogen.core\n_unpickle_context\nq\x00M\xd2\x04N\x86q\x01Rq\x02.'))
 
     def test_py24_sender(self):
-        self.check(mitogen.core.Sender(mitogen.core.Context(55555, None), 4444),
+        self.check(
+            mitogen.core.Sender(mitogen.core.Context(object(), 55555, None), 4444),
            ('\x80\x02cmitogen.core\n_unpickle_sender\nq\x00M\x03\xd9M\\\x11\x86q\x01Rq\x02.'))
 
     def test_py27_bytes(self):
@@ -529,11 +531,13 @@ class UnpickleCompatTest(testlib.TestCase):
            ('\x80\x02cmitogen.core\n_unpickle_call_error\nq\x01X\t\x00\x00\x00big errorq\x02\x85Rq\x03.'), throw=False)
 
     def test_py27_context(self):
-        self.check(mitogen.core.Context(1234, None),
+        self.check(
+            mitogen.core.Context(object(), 1234, None),
            ('\x80\x02cmitogen.core\n_unpickle_context\nq\x01M\xd2\x04N\x86Rq\x02.'))
 
     def test_py27_sender(self):
-        self.check(mitogen.core.Sender(mitogen.core.Context(55555, None), 4444),
+        self.check(
+            mitogen.core.Sender(mitogen.core.Context(object(), 55555, None), 4444),
            ('\x80\x02cmitogen.core\n_unpickle_sender\nq\x01M\x03\xd9M\\\x11\x86Rq\x02.'))
 
     def test_py36_bytes(self):
@@ -581,11 +585,13 @@ class UnpickleCompatTest(testlib.TestCase):
            ('\x80\x02cmitogen.core\n_unpickle_call_error\nq\x00X\t\x00\x00\x00big errorq\x01\x85q\x02Rq\x03.'), throw=False)
 
     def test_py36_context(self):
-        self.check(mitogen.core.Context(1234, None),
+        self.check(
+            mitogen.core.Context(object(), 1234, None),
            ('\x80\x02cmitogen.core\n_unpickle_context\nq\x00M\xd2\x04N\x86q\x01Rq\x02.'))
 
     def test_py36_sender(self):
-        self.check(mitogen.core.Sender(mitogen.core.Context(55555, None), 4444),
+        self.check(
+            mitogen.core.Sender(mitogen.core.Context(object(), 55555, None), 4444),
            ('\x80\x02cmitogen.core\n_unpickle_sender\nq\x00M\x03\xd9M\\\x11\x86q\x01Rq\x02.'))
 
 

@@ -1999,8 +1999,8 @@ class Context(mitogen.core.Context):
 
     via = None
 
-    def __init__(self, *args, **kwargs):
-        super(Context, self).__init__(*args, **kwargs)
+    def __init__(self, router, context_id, name=None):
+        super(Context, self).__init__(router, context_id, name)
         self.default_call_chain = self.call_chain_class(self)
 
     def __ne__(self, other):
@@ -2421,8 +2421,7 @@ class Router(mitogen.core.Router):
 
     def _connect(self, klass, **kwargs):
         context_id = self.allocate_id()
-        context = self.context_class(self, context_id)
-        context.name = kwargs.get('name')
+        context = self.context_class(self, context_id, kwargs.get('name'))
 
         kwargs['old_router'] = self
         kwargs['max_message_size'] = self.max_message_size
