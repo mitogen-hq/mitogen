@@ -33,6 +33,7 @@ In progress
   override
 * :gh:issue:`970` tests: Remove Django import tests and dependencies
 * :gh:issue:`970` tests: Remove pytest dependencies
+* :gh:issue:`970` tests: Bump test dependencies
 
 
 v0.3.51 (2026-07-18)
