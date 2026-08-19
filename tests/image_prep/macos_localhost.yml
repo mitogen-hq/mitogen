@@ -4,6 +4,4 @@
   strategy: mitogen_free
   become: true
   roles:
-    - role: sshd
-    - role: sshd_macos
     - role: user_policies
