@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Timestamps ssh's stderr (where -vvv debug lines go) without touching stdout
+exec ssh "$@" 2> >(ts '%Y-%m-%dT%H:%M:%.S' >&2)
