@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+- name: integration/collections/smoke.yml
+  hosts: test-targets
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Check basic import and execution
+      moreati.test_artifacts.warn:

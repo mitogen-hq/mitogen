@@ -1,0 +1,4 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+- import_playbook: smoke.yml

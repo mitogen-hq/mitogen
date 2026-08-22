@@ -3,7 +3,7 @@
 
 - name: regression/issue_1477__task_warnings_persist.yml
   # Check warnings emitted by one task don't persist into another
-  hosts: localhost
+  hosts: test-targets
   gather_facts: false
   become: false
   tasks:
