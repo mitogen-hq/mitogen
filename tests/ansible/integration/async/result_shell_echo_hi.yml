@@ -1,6 +1,7 @@
 
 - name: integration/async/result_shell_echo_hi.yml
   gather_facts: true
+  gather_subset: ["!all", "!min", "user"]
   hosts: test-targets
   tasks:
 

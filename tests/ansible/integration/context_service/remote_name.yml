@@ -2,12 +2,15 @@
 
 - name: integration/context_service/remote_name.yml
   hosts: test-targets[0]
+  gather_facts: false
   tasks:
   - include_tasks: ../_mitogen_only.yml
+  - platform_facts:
 
   # Too much hassle to make this work for OSX
   - meta: end_play
-    when: ansible_system != 'Linux'
+    when:
+      - ansible_facts.system != 'Linux'
 
   - name: Get cmdline
     shell: 'cat /proc/$PPID/cmdline | tr \\0 \\n'

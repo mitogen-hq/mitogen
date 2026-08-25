@@ -1,7 +1,9 @@
 - name: Report target facts
   hosts: localhost:test-targets
   gather_facts: true
+  gather_subset: ["!all", "!min", "distribution", "hardware", "python"]
   tasks:
+    - platform_facts:
     - debug: {var: ansible_facts.distribution}
     - debug: {var: ansible_facts.distribution_major_version}
     - debug: {var: ansible_facts.distribution_release}
@@ -9,8 +11,6 @@
     - debug: {var: ansible_facts.kernel}
     - debug: {var: ansible_facts.kernel_version}
     - debug: {var: ansible_facts.os_family}
-    - debug: {var: ansible_facts.osrevision}
-    - debug: {var: ansible_facts.osversion}
     - debug: {var: ansible_facts.python}
     - debug: {var: ansible_facts.system}
 

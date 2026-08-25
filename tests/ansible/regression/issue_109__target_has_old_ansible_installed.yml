@@ -4,6 +4,7 @@
 - name: regression/issue_109__target_has_old_ansible_installed.yml
   hosts: test-targets
   gather_facts: true
+  gather_subset: ["!all", "!min", "user"]
   vars:
     naughty_ansible_dest: "{{ ansible_user_dir }}/ansible.py"
   tasks:

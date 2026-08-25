@@ -3,7 +3,7 @@
 
 - name: integration/playbook_semantics/with_items.yml
   hosts: test-targets
-  gather_facts: true
+  gather_facts: false
   tasks:
     - block:
         - name: Spin up a few interpreters

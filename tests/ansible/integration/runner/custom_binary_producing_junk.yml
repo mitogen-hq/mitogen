@@ -1,7 +1,8 @@
 - name: integration/runner/custom_binary_producing_junk.yml
   hosts: test-targets
-  gather_facts: true
+  gather_facts: false
   tasks:
+    - platform_facts:
     - block:
       - custom_binary_producing_junk_Darwin:
           foo: true
@@ -9,7 +10,8 @@
         ignore_errors: true
         register: out_darwin
       - set_fact: out={{out_darwin}}
-      when: ansible_system == "Darwin"
+      when:
+        - ansible_facts.system == "Darwin"
 
     - block:
       - custom_binary_producing_junk_Linux:
@@ -18,13 +20,9 @@
         ignore_errors: true
         register: out_linux
       - set_fact: out={{out_linux}}
-      when: ansible_system == "Linux"
-  tags:
-    - custom_binary_producing_junk
+      when:
+        - ansible_facts.system == "Linux"
 
-
-- hosts: test-targets
-  tasks:
     - assert:
         that:
         - out.failed

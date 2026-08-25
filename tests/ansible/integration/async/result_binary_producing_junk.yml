@@ -1,8 +1,10 @@
 
 - name: integration/async/result_binary_producing_junk.yml
   gather_facts: true
+  gather_subset: ["!all", "!min", "user"]
   hosts: test-targets
   tasks:
+  - platform_facts:
 
   - block:
     - custom_binary_producing_junk_Darwin:
@@ -10,7 +12,8 @@
       poll: 0
       register: job_darwin
     - set_fact: job={{job_darwin}}
-    when: ansible_system == "Darwin"
+    when:
+      - ansible_facts.system == "Darwin"
 
   - block:
     - custom_binary_producing_junk_Linux:
@@ -18,7 +21,8 @@
       poll: 0
       register: job_linux
     - set_fact: job={{job_linux}}
-    when: ansible_system == "Linux"
+    when:
+      - ansible_facts.system == "Linux"
 
   - shell: sleep 1
 

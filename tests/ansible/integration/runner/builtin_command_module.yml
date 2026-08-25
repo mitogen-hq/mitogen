@@ -1,8 +1,9 @@
 
 - name: integration/runner/builtin_command_module.yml
   hosts: test-targets
-  gather_facts: true
+  gather_facts: false
   tasks:
+    - platform_facts:
     - name: Run hostname
       command: hostname
       with_sequence: start=1 end={{end|default(1)}}
@@ -15,7 +16,7 @@
           out.results[0].cmd == ['hostname'] and
           out.results[0].item == '1' and
           out.results[0].rc == 0 and
-          (out.results[0].stdout == ansible_nodename)
+          out.results[0].stdout == ansible_facts.nodename
         fail_msg: |
           out={{ out }}
   tags:
