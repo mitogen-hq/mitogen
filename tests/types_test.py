@@ -119,6 +119,28 @@ class AdornedUnicode(mitogen.core.UnicodeType):
     pass
 
 
+class EnsureTextTest(testlib.TestCase):
+    func = staticmethod(mitogen.core._ensure_text)
+
+    def test_bytes(self):
+        s = self.func(mitogen.core.b('bytes'))
+        self.assertIsType(s, mitogen.core.UnicodeType)
+        self.assertEqual(s, u'bytes')
+
+    def test_unicode(self):
+        s = self.func(u'text')
+        self.assertIsType(s, mitogen.core.UnicodeType)
+        self.assertEqual(s, u'text')
+
+    def test_adorned_unicode(self):
+        s = self.func(AdornedUnicode(u'text'))
+        self.assertIsType(s, mitogen.core.UnicodeType)
+        self.assertEqual(s, u'text')
+
+    def test_integer(self):
+        self.assertRaises(TypeError, self.func, 123)
+
+
 class ToTextTest(testlib.TestCase):
     func = staticmethod(mitogen.core.to_text)
 
