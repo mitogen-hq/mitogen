@@ -3,7 +3,9 @@
 
 - name: regression/issue_558_unarchive_failed.yml
   hosts: test-targets
+  gather_facts: false
   tasks:
+  - platform_facts:
   - name: Cleanup /tmp/foo
     file:
       path: /tmp/foo
@@ -17,6 +19,7 @@
       src: "{{git_basedir}}/tests/data/unarchive_test.tar"
       dest: /tmp/foo
     # garbage doesn't work with BSD tar
-    when: ansible_system != 'Darwin'
+    when:
+      - ansible_facts.system != 'Darwin'
   tags:
     - issue_558

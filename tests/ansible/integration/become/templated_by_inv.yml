@@ -6,6 +6,7 @@
       vars:
         ansible_become: false
       setup:
+        gather_subset: ["!all", "!min"]
 
     - meta: reset_connection
 

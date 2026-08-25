@@ -436,6 +436,8 @@ class CallError(Error):
     <mitogen.parent.Context.call>` fails. A copy of the traceback from the
     external context is appended to the exception message.
     """
+    MSG_MAX_LEN = 9999
+
     def __init__(self, fmt=None, *args):
         if not isinstance(fmt, BaseException):
             Error.__init__(self, fmt, *args)
@@ -454,8 +456,8 @@ class CallError(Error):
 
 
 def _unpickle_call_error(s):
-    if not (type(s) is UnicodeType and len(s) < 10000):
-        raise TypeError('cannot unpickle CallError: bad input')
+    _require_types(s, (UnicodeType,))
+    _require_length(s, 0, CallError.MSG_MAX_LEN)
     return CallError(s)
 
 
@@ -479,6 +481,32 @@ class TimeoutError(Error):
     Raised when a timeout occurs on a stream.
     """
     pass
+
+
+def _require_bounds(v, min, max):
+    if not (min <= v <= max):
+        raise ValueError("Required bounds %d..%d, got %d" % (min, max, v))
+
+
+def _require_length(v, min, max):
+    if not min <= len(v) <= max:
+        raise ValueError("Required length %d..%d, got %d" % (min, max, len(v)))
+
+
+def _require_types(v, types):
+    if type(v) not in types:
+        raise TypeError("Required one of %r, got %s" % (types, type(v),))
+
+
+def _ensure_text(s, encoding='utf-8', errors='strict'):
+    """
+    Coerce a text or bytes string to UnicodeType, otherwise raise TypeError.
+
+    Unlike :func:`mitogen.core.to_text` don't stringify arbitrary objects.
+    """
+    if isinstance(s, UnicodeType): return UnicodeType(s)
+    if isinstance(s, BytesType): return s.decode(encoding, errors)
+    raise TypeError("Expected one of %r, got %s" % (AnyTextType, type(s)))
 
 
 def to_text(o):
@@ -1087,10 +1115,12 @@ class Sender(object):
 
 
 def _unpickle_sender(router, context_id, dst_handle):
-    if not (isinstance(router, Router) and
-            isinstance(context_id, integer_types) and context_id >= 0 and
-            isinstance(dst_handle, integer_types) and dst_handle > 0):
-        raise TypeError('cannot unpickle Sender: bad input or missing router')
+    _require_types(context_id, integer_types)
+    _require_bounds(context_id, Context.ID_MIN, Context.ID_MAX)
+    _require_types(dst_handle, integer_types)
+    _require_bounds(dst_handle, 1, 2**32-1)
+    if not isinstance(router, Router):
+        raise TypeError('Cannot unpickle Sender: missing router')
     return Sender(Context(router, context_id), dst_handle)
 
 
@@ -2533,14 +2563,18 @@ class Context(object):
     :param str name:
         Context name.
     """
-    name = None
-    remote_name = None
+    ID_MIN = 0
+    ID_MAX = 2**32 - 1
+    NAME_MAX_LEN = 500
 
     def __init__(self, router, context_id, name=None):
+        _require_bounds(context_id, Context.ID_MIN, Context.ID_MAX)
+        if name is not None:
+            name = _ensure_text(name)
+            _require_length(name, 0, Context.NAME_MAX_LEN)
         self.router = router
         self.context_id = context_id
-        if name:
-            self.name = to_text(name)
+        self.name = name
 
     def __reduce__(self):
         return _unpickle_context, (self.context_id, self.name)
@@ -2626,11 +2660,11 @@ class Context(object):
 
 
 def _unpickle_context(context_id, name, router=None):
-    if not (isinstance(context_id, integer_types) and context_id >= 0 and (
-        (name is None) or
-        (isinstance(name, UnicodeType) and len(name) < 100))
-    ):
-        raise TypeError('cannot unpickle Context: bad input')
+    _require_types(context_id, integer_types)
+    _require_bounds(context_id, Context.ID_MIN, Context.ID_MAX)
+    if name is not None:
+        _require_types(name, (UnicodeType,))
+        _require_length(name, 0, Context.NAME_MAX_LEN)
 
     if isinstance(router, Router):
         return router.context_by_id(context_id, name=name)

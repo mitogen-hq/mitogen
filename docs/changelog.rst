@@ -18,6 +18,31 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+Unreleased
+----------
+
+
+v0.3.52 (2026-07-25)
+--------------------
+
+* :gh:issue:`1539` :mod:`ansible_mitogen`: Fix "module 'dnf' has no attribute
+  'cli'" on Ansible 14
+* :gh:issue:`1540` :mod:`ansible_mitogen`: Remove override of
+  ``ansible/__init__.py``
+* :gh:issue:`1540` :mod:`ansible_mitogen`: Remove ``reload(sys)`` workaround
+* :gh:issue:`1540` :mod:`ansible_mitogen`: Refactor "fixups" as source modifiers
+* :gh:issue:`1540` :mod:`mitogen`: Add :class:`mitogen.master.ModuleFinder`
+  source modifier feature
+* :gh:issue:`1547` :mod:`mitogen`: Improve validation of ``Context`` attributes
+  attributes during creation and unpickling
+* :gh:issue:`689` :mod:`mitogen`: Bump :attr:`mitogen.core.Context.NAME_MAX_LEN`
+  to 500
+* :gh:issue:`1540` tests: Test :class:`mitogen.master.ModuleFinder` source
+  override
+* :gh:issue:`1545` CI: Avoid creating/installing to Tox environments twice
+* :gh:issue:`1545` CI: Speedup macOS Ansible tests by skipping ``fqdn`` fact
+
+
 v0.3.51 (2026-07-18)
 --------------------
 

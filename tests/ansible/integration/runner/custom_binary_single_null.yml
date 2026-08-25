@@ -1,5 +1,7 @@
 - name: integration/runner/custom_binary_single_null.yml
   hosts: test-targets
+  gather_facts: true
+  gather_subset: ["!all", "!min", "distribution"]
   tasks:
     - custom_binary_single_null:
         foo: true

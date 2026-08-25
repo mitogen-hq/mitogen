@@ -2,7 +2,7 @@
 
 - name: integration/runner/environment_isolation.yml
   hosts: test-targets
-  gather_facts: true
+  gather_facts: false
   tasks:
     - name: Verify custom env setting is cleared, control
       custom_python_detect_environment:
