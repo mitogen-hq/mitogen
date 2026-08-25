@@ -35,6 +35,8 @@ In progress
   to 500
 * :gh:issue:`1540` tests: Test :class:`mitogen.master.ModuleFinder` source
   override
+* :gh:issue:`1545` CI: Avoid creating/installing to Tox environments twice
+* :gh:issue:`1545` CI: Speedup macOS Ansible tests by skipping ``fqdn`` fact
 
 
 v0.3.51 (2026-07-18)

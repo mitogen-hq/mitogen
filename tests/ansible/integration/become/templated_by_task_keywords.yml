@@ -58,6 +58,7 @@
       vars:
         ansible_become: false
       setup:
+        gather_subset: ["!all", "!min"]
 
     - name: Templated become by task keywords, with delegate_to
       become: "{{ 'true' | trim }}"

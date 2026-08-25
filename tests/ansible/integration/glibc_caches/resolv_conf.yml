@@ -3,6 +3,7 @@
 
 - name: integration/glibc_caches/resolv_conf.yml
   gather_facts: true
+  gather_subset: ["!all", "!min", "python", "virtual"]
   become: true
   hosts: test-targets
   vars:

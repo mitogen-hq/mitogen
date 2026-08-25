@@ -7,8 +7,10 @@
 - name: regression/issue_655__wait_for_connection_error.yml
   hosts: localhost
   gather_facts: yes
+  gather_subset: ["!all", "!min", "distribution", "pkg_mgr"]
   become: no
   tasks:
+    - platform_facts:
     - meta: end_play
       when:
         # Podman versions available in Homebrew require macOS 13+ (Ventura).

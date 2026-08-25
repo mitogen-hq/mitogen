@@ -1,5 +1,6 @@
 - name: regression/issue_152__virtualenv_python_fails.yml
   gather_facts: true
+  gather_subset: ["!all", "!min", "python"]
   hosts: test-targets
   vars:
     virtualenv_path: /tmp/issue_152_virtualenv

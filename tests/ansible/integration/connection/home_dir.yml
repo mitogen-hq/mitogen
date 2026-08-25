@@ -9,11 +9,13 @@
       # Runs first because it blats regular Ansible facts with junk, so
       # non-become run fixes that up.
       setup:
+        gather_subset: ["!all", "!min", "user"]
       become: true
       register: root_facts
 
     - name: "Find regular homedir"
       setup:
+        gather_subset: ["!all", "!min", "user"]
       register: user_facts
 
     - name: "Verify Connection.homedir correct when become:false"

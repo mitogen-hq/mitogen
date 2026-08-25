@@ -82,7 +82,7 @@ jobs:
           set -o errexit -o nounset -o pipefail
           PYTHON="${{ steps.install-deps.outputs.python }}"
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -m tox --skip-pkg-install -e "${{ matrix.tox_env }}"
 
   u2404:
     name: u2404 ${{ matrix.tox_env }}
@@ -167,13 +167,13 @@ jobs:
           set -o errexit -o nounset -o pipefail
           PYTHON="${{ steps.install-deps.outputs.python }}"
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -m tox --skip-pkg-install -e "${{ matrix.tox_env }}"
 
   macos:
     name: macos ${{ matrix.tox_env }}
     # https://github.com/actions/runner-images/blob/main/images/macos/macos-15-Readme.md
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 10
     env:
       MITOGEN_TEST_SKIP_CONTAINER_TESTS: 1
 
@@ -225,7 +225,7 @@ jobs:
           set -o errexit -o nounset -o pipefail
           PYTHON="${{ steps.install-deps.outputs.python }}"
 
-          "$PYTHON" -m tox -e "${{ matrix.tox_env }}"
+          "$PYTHON" -m tox --skip-pkg-install -e "${{ matrix.tox_env }}"
 
   # https://github.com/marketplace/actions/alls-green
   check:
