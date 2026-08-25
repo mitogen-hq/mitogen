@@ -18,6 +18,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
+Unreleased
+----------
+
+
 v0.3.52 (2026-07-25)
 --------------------
 
