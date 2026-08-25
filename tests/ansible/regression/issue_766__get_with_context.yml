@@ -5,6 +5,7 @@
   # Gather facts to use *and* to trigger any "could not recover task_vars" error
   # https://github.com/mitogen-hq/mitogen/pull/1215#issuecomment-2596421111
   gather_facts: true
+  gather_subset: ["!all", "!min"]
   vars:
     netconf_container_image: ghcr.io/mitogen-hq/sysrepo-netopeer2:latest
     netconf_container_name: sysrepo
@@ -13,6 +14,7 @@
     ansible_network_import_modules: "{{ (ansible_version_major_minor is version('2.19', '==', strict=True))  | bool }}"
 
   tasks:
+    - platform_facts:
     - meta: end_play
       when:
         # Podman can be installed on macOS, but authenticating to gchr.io isn't

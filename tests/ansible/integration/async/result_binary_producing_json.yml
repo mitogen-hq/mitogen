@@ -1,16 +1,17 @@
 
 - name: integration/async/result_binary_producing_json.yml
-  gather_facts: true
   hosts: test-targets
+  gather_facts: false
   tasks:
-
+  - platform_facts:
   - block:
     - custom_binary_producing_json_Darwin:
       async: 100
       poll: 0
       register: job_darwin
     - set_fact: job={{job_darwin}}
-    when: ansible_system == "Darwin"
+    when:
+      - ansible_facts.system == "Darwin"
 
   - block:
     - custom_binary_producing_json_Linux:
@@ -18,7 +19,8 @@
       poll: 0
       register: job_linux
     - set_fact: job={{job_linux}}
-    when: ansible_system == "Linux"
+    when:
+      - ansible_facts.system == "Linux"
 
   - assert:
       that: |

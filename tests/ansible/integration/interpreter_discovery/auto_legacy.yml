@@ -1,6 +1,6 @@
 - name: integration/interpreter_discovery/auto_legacy.yml
   hosts: test-targets
-  gather_facts: true
+  gather_facts: false
   tasks:
     - meta: end_play
       when:
