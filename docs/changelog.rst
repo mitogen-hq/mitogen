@@ -18,8 +18,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 `directly from GitHub <https://github.com/mitogen-hq/mitogen/>`_.
 
 
-In progress
------------
+v0.3.52 (2026-07-25)
+--------------------
 
 * :gh:issue:`1539` :mod:`ansible_mitogen`: Fix "module 'dnf' has no attribute
   'cli'" on Ansible 14
