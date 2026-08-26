@@ -23,6 +23,7 @@ Unreleased
 
 * :gh:issue:`970` tests: Remove Django import tests and dependencies
 * :gh:issue:`970` tests: Remove pytest dependencies
+* :gh:issue:`970` tests: Bump test dependencies
 
 
 v0.3.52 (2026-07-25)
