@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`970` tests: Remove Django import tests and dependencies
+
 
 v0.3.52 (2026-07-25)
 --------------------
