@@ -25,6 +25,9 @@ Unreleased
 * :gh:issue:`970` tests: Remove Django import tests and dependencies
 * :gh:issue:`970` tests: Remove pytest dependencies
 * :gh:issue:`970` tests: Bump test dependencies
+* :gh:issue:`1554` CI: Use GHA ubuntu-24.04 runner & pyenv for Python 2.7 &
+  3.6 tests
+* :gh:issue:`1554` CI: Cache pyenv and pip
 
 
 v0.3.52 (2026-07-25)
