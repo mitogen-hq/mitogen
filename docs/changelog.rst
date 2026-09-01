@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+
+v0.3.53 (2026-09-02)
+--------------------
+
 * :gh:issue:`1531` :mod:`mitogen`: Python 3.15 support (excluding Ansible)
 * :gh:issue:`970` tests: Remove Django import tests and dependencies
 * :gh:issue:`970` tests: Remove pytest dependencies
@@ -30,7 +34,7 @@ Unreleased
 * :gh:issue:`1554` CI: Cache pyenv and pip
 
 
-v0.3.52 (2026-07-25)
+v0.3.52 (2026-08-25)
 --------------------
 
 * :gh:issue:`1539` :mod:`ansible_mitogen`: Fix "module 'dnf' has no attribute
