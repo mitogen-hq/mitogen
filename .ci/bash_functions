@@ -1,10 +1,25 @@
 # shellcheck shell=bash
 
-# Tox environment name -> Python executable name (e.g. py312-m_mtg -> python3.12)
-toxenv-python() {
+OS_DEPS=(
+    sshpass
+    virtualenv
+)
+
+PY_BUILD_DEPS=(
+    build-essential
+    libbz2-dev
+    liblzma-dev  # Technically only required for 3.x
+    libreadline-dev
+    libsqlite3-dev
+    libssl-dev
+    zlib1g-dev
+)
+
+# Tox environment name -> Python major+minor version (e.g. py312-m_mtg -> 3.12)
+toxenv-pyver() {
     local pattern='^py([23])([0-9]{1,2}).*'
     if [[ $1 =~ $pattern ]]; then
-        echo "python${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+        echo "${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
         return
     else
         echo "${FUNCNAME[0]}: $1: environment name not recognised" >&2
