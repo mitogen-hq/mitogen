@@ -15,10 +15,10 @@ on:
 # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
 # https://github.com/actions/runner-images/blob/main/README.md#software-and-image-support
 jobs:
-  u2204:
-    name: u2204 ${{ matrix.tox_env }}
-    # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2204-Readme.md
-    runs-on: ubuntu-22.04
+  olde:
+    name: olde ${{ matrix.tox_env }}
+    # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
 
     strategy:
@@ -35,7 +35,13 @@ jobs:
           - tox_env: py36-m_mtg
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+      - uses: actions/cache@v6
+        with:
+          key: ${{ matrix.tox_env }}-${{ hashFiles('tests/ansible/requirements.txt', 'tests/requirements-tox.txt', 'tests/requirements.txt') }}
+          path: |
+            ~/.cache/pip
+            ~/.pyenv/versions
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -50,24 +56,24 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
           source .ci/bash_functions
-          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
+          PY_VER="$(toxenv-pyver '${{ matrix.tox_env }}')"
 
           sudo apt-get update
+          sudo apt install --no-install-recommends --yes "${OS_DEPS[@]}"
 
-          if [[ $PYTHON == "python2.7" ]]; then
-              sudo apt install -y python2-dev sshpass virtualenv
-              curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" --output "get-pip.py"
-              "$PYTHON" get-pip.py --user --no-python-version-warning
-              # Avoid Python 2.x pip masking system pip
-              rm -f ~/.local/bin/{easy_install,pip,wheel}
-          elif [[ $PYTHON == "python3.6" ]]; then
-              sudo apt install -y gcc-10 make libbz2-dev liblzma-dev libreadline-dev libsqlite3-dev libssl-dev sshpass virtualenv zlib1g-dev
-              curl --fail --silent --show-error --location https://pyenv.run | bash
-              CC=gcc-10 ~/.pyenv/bin/pyenv install --force 3.6
+          if [[ $PY_VER == "2.7" ]]; then
+              PYTHON="$HOME/.pyenv/versions/2.7.18/bin/python2.7"
+          elif [[ $PY_VER == "3.6" ]]; then
               PYTHON="$HOME/.pyenv/versions/3.6.15/bin/python3.6"
           fi
 
-          "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          if [[ ! -x $PYTHON ]]; then
+            sudo apt install --no-install-recommends --yes "${PY_BUILD_DEPS[@]}"
+            curl --fail --silent --show-error --location https://pyenv.run | bash
+            ~/.pyenv/bin/pyenv install "$PY_VER"
+            "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
+          fi
+
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
       - name: Create environments
         run: |
@@ -124,13 +130,18 @@ jobs:
           - tox_env: py314-m_ans-ans14-s_lin
             python_version: '3.14'
 
-          - tox_env: py314-m_mtg
-            python_version: '3.14'
+          - tox_env: py315-m_mtg
+            python_version: '3.15.0-rc.1'
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
+          cache: pip
+          cache-dependency-path: |
+            tests/ansible/requirements.txt
+            tests/requirements-tox.txt
+            tests/requirements.txt
           python-version: ${{ matrix.python_version }}
         if: ${{ matrix.python_version }}
       - uses: docker/login-action@v4
@@ -147,10 +158,10 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
           source .ci/bash_functions
-          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
+          PYTHON="python$(toxenv-pyver '${{ matrix.tox_env }}')"
 
           sudo apt-get update
-          sudo apt-get install -y sshpass virtualenv
+          sudo apt install --no-install-recommends --yes "${OS_DEPS[@]}"
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
@@ -186,13 +197,18 @@ jobs:
           - tox_env: py314-m_lcl-ans14-s_lin
             python_version: '3.14'
 
-          - tox_env: py314-m_mtg
-            python_version: '3.14'
+          - tox_env: py315-m_mtg
+            python_version: 3.15.0-rc.1
 
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
+          cache: pip
+          cache-dependency-path: |
+            tests/ansible/requirements.txt
+            tests/requirements-tox.txt
+            tests/requirements.txt
           python-version: ${{ matrix.python_version }}
         if: ${{ matrix.python_version }}
       - run: .ci/show_python_versions
@@ -208,7 +224,7 @@ jobs:
         run: |
           set -o errexit -o nounset -o pipefail
           source .ci/bash_functions
-          PYTHON="$(toxenv-python '${{ matrix.tox_env }}')"
+          PYTHON="python$(toxenv-pyver '${{ matrix.tox_env }}')"
 
           "$PYTHON" -m pip install -r "tests/requirements-tox.txt"
           echo "python=$PYTHON" >> $GITHUB_OUTPUT
@@ -231,7 +247,7 @@ jobs:
   check:
     if: always()
     needs:
-      - u2204
+      - olde
       - u2404
       - macos
     runs-on: ubuntu-latest

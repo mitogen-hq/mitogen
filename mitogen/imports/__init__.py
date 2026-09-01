@@ -4,7 +4,9 @@
 
 import sys
 
-if sys.version_info >= (3, 14):
+if sys.version_info >= (3, 15):
+    from mitogen.imports._py315 import _code_imports
+elif sys.version_info >= (3, 14):
     from mitogen.imports._py314 import _code_imports
 elif sys.version_info >= (3, 6):
     from mitogen.imports._py36 import _code_imports
@@ -16,10 +18,10 @@ else:
 
 def codeobj_imports(co):
     """
-    Yield (level, modname, names) tuples by scanning the code object `co`.
+    Yield (level, modname, fromnames) tuples for imports in code object `co`.
 
-    Top level `import mod` & `from mod import foo` statements are matched.
-    Those inside a `class ...` or `def ...` block are currently skipped.
+    Imports at module (global) scope are included. Imports at local scope are
+    currently ignored, this may change in a future version.
 
     >>> co = compile('import a, b; from c import d, e as f', '<str>', 'exec')
     >>> list(codeobj_imports(co))  # doctest: +ELLIPSIS
@@ -32,7 +34,7 @@ def codeobj_imports(co):
             -1 implicit relative (Python 2.x default)
             0  absolute (Python 3.x, `from __future__ import absolute_import`)
             >0 explicit relative (`from . import a`, `from ..b, import c`)
-        * `modname`: Name of module to import, or to import `names` from.
-        * `names`: tuple of names in `from mod import ..`.
+        * `modname`: Name of module to import.
+        * `fromnames`: tuple of names in `from mod import name1, name2, ...`.
     """
     return _code_imports(co.co_code, co.co_consts, co.co_names)
