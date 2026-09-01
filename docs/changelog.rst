@@ -30,7 +30,7 @@ Unreleased
 * :gh:issue:`1554` CI: Cache pyenv and pip
 
 
-v0.3.52 (2026-07-25)
+v0.3.52 (2026-08-25)
 --------------------
 
 * :gh:issue:`1539` :mod:`ansible_mitogen`: Fix "module 'dnf' has no attribute
