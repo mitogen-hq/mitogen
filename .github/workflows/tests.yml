@@ -35,7 +35,7 @@ jobs:
           - tox_env: py36-m_mtg
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: docker/login-action@v4
         with:
           registry: ghcr.io
@@ -128,7 +128,7 @@ jobs:
             python_version: '3.15.0-rc.1'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python_version }}
@@ -190,7 +190,7 @@ jobs:
             python_version: 3.15.0-rc.1
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python_version }}
