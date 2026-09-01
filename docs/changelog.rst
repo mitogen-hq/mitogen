@@ -21,6 +21,11 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1531` :mod:`mitogen`: Python 3.15 support (excluding Ansible)
+* :gh:issue:`970` tests: Remove Django import tests and dependencies
+* :gh:issue:`970` tests: Remove pytest dependencies
+* :gh:issue:`970` tests: Bump test dependencies
+
 
 v0.3.52 (2026-07-25)
 --------------------
