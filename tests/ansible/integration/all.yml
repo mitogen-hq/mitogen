@@ -9,6 +9,8 @@
   tags: async
 - import_playbook: become/all.yml
   tags: become
+- import_playbook: collections/all.yml
+  tags: collections
 - import_playbook: connection/all.yml
   tags: connection
 - import_playbook: connection_delegation/all.yml
