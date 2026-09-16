@@ -68,17 +68,6 @@ def get_fullname(module):
     return '.'.join(reversed(bits))
 
 
-def get_code(module):
-    """
-    Compile and return a Module's code object.
-    """
-    fp = open(module.path, 'rb')
-    try:
-        return compile(fp.read(), str(module.name), 'exec')
-    finally:
-        fp.close()
-
-
 def is_pkg(module):
     """
     Return :data:`True` if a Module represents a package.
@@ -130,25 +119,6 @@ def find_relative(parent, name, path=()):
     if parent.kind == imp.PKG_DIRECTORY:
         path = (os.path.dirname(parent.path),) + path
     return find(name, path, parent=parent)
-
-
-def scan_fromlist(code):
-    """Return an iterator of (level, name) for explicit imports in a code
-    object.
-
-    Not all names identify a module. `from os import name, path` generates
-    `(0, 'os.name'), (0, 'os.path')`, but `os.name` is usually a string.
-
-    >>> src = 'import a; import b.c; from d.e import f; from g import h, i\\n'
-    >>> code = compile(src, '<str>', 'exec')
-    >>> list(scan_fromlist(code))
-    [(0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i')]
-    """
-    for level, modname_s, fromlist in mitogen.imports.codeobj_imports(code):
-        for name in fromlist:
-            yield level, str('%s.%s' % (modname_s, name))
-        if not fromlist:
-            yield level, modname_s
 
 
 def walk_imports(code, prefix=None):
@@ -254,7 +224,10 @@ def _scan_imp_find_module(module_name, module_path, search_path):
 
     while stack:
         module = stack.pop(0)
-        for level, fromname in scan_fromlist(get_code(module)):
+        with open(module.path, 'rb') as f:
+            codeobj = compile(f.read(), str(module.name), 'exec')
+        imports = mitogen.imports.codeobj_imports(codeobj)
+        for _, fromname in mitogen.imports.flatten_imports(imports):
             if not fromname.startswith(PREFIX):
                 continue
 

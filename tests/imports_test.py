@@ -1,5 +1,6 @@
 import os
 import sys
+import textwrap
 import unittest
 
 import mitogen.imports
@@ -15,7 +16,7 @@ def testmod_compile(path):
     return co
 
 
-class ScanCodeImportsTest(testlib.TestCase):
+class CodeObjImportsTest(testlib.TestCase):
     func = staticmethod(mitogen.imports.codeobj_imports)
 
     @unittest.skipIf(sys.version_info < (3, 0), "Py is 2.x, would be relative")
@@ -128,3 +129,20 @@ class ScanCodeImportsTest(testlib.TestCase):
             (level, 'in_except_exception', ('x', 'z')),
         ]
         self.assertEqual(list(self.func(co)), expected)
+
+
+class FlattenImportsTest(unittest.TestCase):
+    def test_absolute_imports(self):
+        source = textwrap.dedent('''\
+            from __future__ import absolute_import
+            import a; import b.c; from d.e import f; from g import h, i
+        ''')
+        code = compile(source, '<str>', 'exec')
+        imports = mitogen.imports.codeobj_imports(code)
+        self.assertEqual(
+            list(mitogen.imports.flatten_imports(imports)),
+            [
+                (0, '__future__.absolute_import'),
+                (0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i'),
+            ],
+        )
