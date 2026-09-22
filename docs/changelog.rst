@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1558` :mod:`ansible_mitogen`: Fix "No start of json char found"
+  using dnf list
+
 
 v0.3.53 (2026-09-02)
 --------------------

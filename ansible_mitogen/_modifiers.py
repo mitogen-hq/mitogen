@@ -31,22 +31,40 @@ class _DummyDnfModule:
         router = sys.modules['__main__'].ansible_mitogen_injected_router
         context = router.local(python_path=python_executable)
 
-        if command == 'list':
-            list_command = params.get('list_command')
-            if not list_command:
-                return {
-                    'failed': True,
-                    'msg': 'No list_command specified for list operation',
-                }
-            return context.call(_embed_dnf.list_items, list_command)
+        return context.call(
+            _embed_dnf._embed_dnf_mitogen_entrypoint, command, config, params,
+        )
 
-        if command == 'ensure':
-            return context.call(_embed_dnf.ensure, config, params)
 
-        if command == 'update-cache':
-            return context.call(_embed_dnf.update_cache_only, config)
+def _embed_dnf_mitogen_entrypoint(command, config, params):
+    """
+    Replacement for ansible.module_utils._embed.dnf.main()
+    """
+    def _cast(obj):
+        if isinstance(obj, dnf.package.Package):
+            return _DnfJSONEncoder._package_to_dict(obj)
+        return obj
 
-        return {'failed': True, 'msg': 'Unknown command: %s' % (command,)}
+    def _result(result):
+        result['results'] = [_cast(obj) for obj in result['results']]
+        return result
+
+    if command == 'list':
+        list_command = params.get('list_command')
+        if not list_command:
+            return {
+                'failed': True,
+                'msg': 'No list_command specified for list operation',
+            }
+        return _result(list_items(config, list_command))
+
+    if command == 'ensure':
+        return _result(ensure(config, params))
+
+    if command == 'update-cache':
+        return _result(update_cache_only(config))
+
+    return {'failed': True, 'msg': 'Unknown command: %s' % (command,)}
 
 
 def _replace_exactly_n(string, old, new, count):
@@ -135,6 +153,22 @@ def dnfmodule_no_embedmanager(fullname, path, source, is_pkg):
     return (path, source, is_pkg)
 
 
+def embed_dnf_entrypoint(fullname, path, source, is_pkg):
+    """
+    Ansible 14 (ansible-core 2.21) calls `ansible.module_utils._embed.dnf` as
+    __main__ to read parameters from stdin and write results to stdout.
+    Mitogen prefers an entrypoint that directly accepts arguments and returns
+    pickleable results without JSON serialisation.
+    """
+    source = _replace_exactly_n(
+        source,
+        b"def main():\n",
+        inspect.getsource(_embed_dnf_mitogen_entrypoint).encode('ascii'),
+        1,
+    )
+    return (path, source, is_pkg)
+
+
 _ANSIBLE_MODULE_MODIFIERS = {
     'ansible.builtin.setup': [ansiblemodule_abs_import],
     'ansible.legacy.setup': [ansiblemodule_abs_import],
@@ -161,7 +195,10 @@ else:
         'dnf': [dnfmodule_no_embedmanager],
     })
     _PYTHON_MODULE_MODIFIERS.update({
-        'ansible.module_utils._embed.dnf': [dnf_cli_import],
+        'ansible.module_utils._embed.dnf': [
+            dnf_cli_import,
+            embed_dnf_entrypoint,
+        ],
         'ansible.modules.dnf': [dnfmodule_no_embedmanager],
     })
 
