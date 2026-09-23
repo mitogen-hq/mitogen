@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1555` :mod:`ansible_mitogen`: Support Ansible 15
+* :gh:issue:`1555` tests: Bump to Python 3.15.0-rc2
+
 
 v0.3.53 (2026-09-02)
 --------------------
