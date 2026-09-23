@@ -126,9 +126,11 @@ jobs:
             python_version: '3.14'
           - tox_env: py314-m_ans-ans14
             python_version: '3.14'
+          - tox_env: py315-m_ans-ans15
+            python_version: '3.15.0-rc.2'
 
-          - tox_env: py314-m_ans-ans14-s_lin
-            python_version: '3.14'
+          - tox_env: py315-m_ans-ans15-s_lin
+            python_version: '3.15.0-rc.2'
 
           - tox_env: py315-m_mtg
             python_version: '3.15.0-rc.2'
@@ -192,10 +194,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tox_env: py314-m_lcl-ans14
-            python_version: '3.14'
-          - tox_env: py314-m_lcl-ans14-s_lin
-            python_version: '3.14'
+          - tox_env: py315-m_lcl-ans15
+            python_version: '3.15.0-rc.2'
+          - tox_env: py315-m_lcl-ans15-s_lin
+            python_version: '3.15.0-rc.2'
 
           - tox_env: py315-m_mtg
             python_version: 3.15.0-rc.2
