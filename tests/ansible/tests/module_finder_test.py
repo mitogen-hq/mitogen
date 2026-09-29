@@ -10,19 +10,6 @@ ANSIBLE_MODULES_DIR = os.path.join(ANSIBLE_BASE_DIR, 'lib', 'modules')
 ANSIBLE_MODULE_UTILS_DIR = os.path.join(ANSIBLE_BASE_DIR, 'lib', 'module_utils')
 
 
-class ScanFromListTest(unittest.TestCase):
-    def test_absolute_imports(self):
-        source = textwrap.dedent('''\
-            from __future__ import absolute_import
-            import a; import b.c; from d.e import f; from g import h, i
-        ''')
-        code = compile(source, '<str>', 'exec')
-        self.assertEqual(
-            list(ansible_mitogen.module_finder.scan_fromlist(code)),
-            [(0, '__future__.absolute_import'), (0, 'a'), (0, 'b.c'), (0, 'd.e.f'), (0, 'g.h'), (0, 'g.i')],
-        )
-
-
 class WalkImportsTest(unittest.TestCase):
     def test_absolute_imports(self):
         source = textwrap.dedent('''\

@@ -396,9 +396,8 @@ class LogForwarder(object):
 
 class FinderMethod(object):
     """
-    Interface to a method for locating a Python module or package given its
-    name according to the running Python interpreter. You'd think this was a
-    simple task, right? Naive young fellow, welcome to the real world.
+    Protocol for classes that locate and return source code of a module.
+    Techniques and corner cases will depend on details of the running Python.
     """
     def __init__(self):
         self.log = LOG.getChild(self.__class__.__name__)
@@ -982,6 +981,113 @@ class ModuleFinder(object):
 
         return False
 
+    def _resolve_modname(self, level, modname, fullname, is_pkg):
+        if level == 0:
+            return modname
+        if level >= 1:
+            return mitogen.imports._resolve_explicit_relative(level, modname, fullname)
+        if level == -1:
+            #mitogen.imports._resolve_explicit_relative(level, modname, fullname)
+            return self._resolve_implicit_relative(modname, fullname, is_pkg)
+
+        raise ValueError(
+            "Invalid import level=%d, modname=%r, fullname=%r, is_pkg=%r"
+            % (level, modname, fullname, is_pkg),
+        )
+
+    def _resolve_implicit_relative(self, modname, pkgname, is_pkg):
+        # If pkgname doesn't refer to a package, then it must be a regular module.
+        # A relative import is impossible, so treat modname as an absolute import.
+        if not is_pkg:
+            return modname
+
+        # Search for top level of modname in submodule search locations of pkg.
+        # If <pkgname>.<modhead> isn't found, then <pkgname>.<modname> won't be.
+        # A relative import is impossible, so treat modname as an absolute import.
+        submodule_search_locations = sys.modules[pkgname].__path__
+        modhead = modname.split('.', 1)[0]
+        try:
+            tup = imp.find_module(modhead, submodule_search_locations)
+        except ImportError:
+            return modname
+
+        # TODO Avoid throwing away this information?
+        file, origin, description = tup
+        if file:
+            file.close()
+
+        return '%s.%s' % (pkgname, modname)
+
+    def _parent_imports(self, fullname, resolved_imports):
+        for modname, fromnames in resolved_imports:
+            for parent in mitogen.imports.parent_modnames(modname):
+                if self._reject_related_module(fullname, parent):
+                    break
+                yield (parent, ())
+            else:
+                yield (modname, fromnames)
+
+    def _flatten_fromnames(self, fullname, resolved_imports):
+        for modname, fromnames in resolved_imports:
+            yield modname
+            for fromname in fromnames:
+                yield '%s.%s' % (modname, fromname)
+
+    def _iter_related_imports(self, fullname):
+        """
+        Yield full names of modules (and objects) directly referenced in import
+        statements of the module `fullname, plus their parents.
+
+        Output is in order required to import `fullname`. Names may be repeated.
+        Names may be rejected as unsuitable ((e.g. stdlib modules, __main__).
+        If any parent of `fullname` is rejected, then an exception is raised.
+        If any direct import (or it's parent) is rejected, then it is skipped.
+        """
+        modpath, src, is_pkg = self.get_module_source(fullname)
+        if modpath is None or src is None:
+            return
+
+        # A module foo.bar.baz always requires its parents foo & foo.bar.
+        # If a parent is rejected, then foo.bar.baz can't be served/imported.
+        for parent in mitogen.imports.parent_modnames(fullname):
+            reason = self._reject_related_module(fullname, parent)
+            if reason:
+                raise ValueError(reason)
+            yield parent
+
+        co = compile(src, modpath, 'exec')
+
+        # Handle modules directly imported by fullname and parents of those.
+        # They aren't necessarily required to import fullname. If one is
+        # rejected, then skip that direct import and continue to the next.
+        for level, modname, fromnames in mitogen.imports.codeobj_imports(co):
+            # Resolve possibly relative modname to a fully qualified name.
+            modname = self._resolve_modname(level, modname, fullname, is_pkg)
+            del level
+
+            modname_parent_rejected = False
+            for parent in mitogen.imports.parent_modnames(modname):
+                if self._reject_related_module(fullname, parent):
+                    modname_parent_rejected = True
+                    break
+                yield parent
+
+            if modname_parent_rejected:
+                continue
+
+            if self._reject_related_module(fullname, modname):
+                continue
+
+            yield modname
+
+            # Handle the right hand elements of `from foo import bar, ...`.
+            # Unlike modname, each fromname might refer to an arbitrary object.
+            for fromname in fromnames:
+                fromname = '%s.%s' % (modname, fromname)
+                if self._reject_related_module(fullname, fromname):
+                    continue
+                yield fromname
+
     def find_related_imports(self, fullname):
         """
         Return a list of non-stdlib modules that are directly imported by
@@ -998,6 +1104,11 @@ class ModuleFinder(object):
         if related is not None:
             return related
 
+        related = sorted(set(self._iter_related_imports(fullname)))
+        self._related_cache[fullname] = related
+        return related
+
+        return 
         modpath, src, _ = self.get_module_source(fullname)
         if src is None:
             return []
