@@ -23,6 +23,8 @@ Unreleased
 
 * :gh:issue:`1558` :mod:`ansible_mitogen`: Fix "No start of json char found"
   using dnf list
+* :mod:`mitogen`: Fix ``su`` authentication with localized password prompts
+  using the labels recognized by Ansible's ``su`` plugin
 * :gh:issue:`1558` tests: Exercise ``ansible.builtin.dnf`` list command
 
 
