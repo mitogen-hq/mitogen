@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+- name: regression/issue_672__relative_imports.yml
+  # Check Ansible modules containing relative imports - direct or indirect
+  hosts: test-targets
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Trigger relative imports
+      moreati.test_artifacts.relative_imports:
+  tags:
+    - issue_672

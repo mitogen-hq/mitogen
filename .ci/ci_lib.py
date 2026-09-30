@@ -22,6 +22,7 @@ except ImportError:
 GIT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ANSIBLE_TESTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible')
 ANSIBLE_TESTS_HOSTS_DIR = os.path.join(GIT_ROOT, 'tests/ansible/hosts')
+ANSIBLE_TESTS_REQUIREMENTS = os.path.join(GIT_ROOT, 'tests/ansible/requirements.yml')
 ANSIBLE_TESTS_TEMPLATES_DIR = os.path.join(GIT_ROOT, 'tests/ansible/templates')
 DISTRO_SPECS = os.environ.get(
     'MITOGEN_TEST_DISTRO_SPECS',

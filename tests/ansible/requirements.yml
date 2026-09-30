@@ -1,0 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+collections:
+  - name: moreati.test_artifacts
+    version: ">=0.2.1"
