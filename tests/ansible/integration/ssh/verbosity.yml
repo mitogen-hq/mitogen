@@ -1,3 +1,4 @@
+# Ansible >= 15 (ansible-core >= 2.22) requires ANSIBLE_DEBUG to show ssh output.
 # Ansible >= 12 (ansible-core >= 2.19) adds SSH connection `verbosity` property.
 # Ansible <= 11 (ansible-core <= 2.18) applies ANSIBLE_VERBOSITY -> ssh.
 
@@ -13,6 +14,7 @@
       connection: local
       environment:
         ANSIBLE_CALLBACK_RESULT_FORMAT: json
+        ANSIBLE_DEBUG: "{{ ansible_version_major_minor is version('2.22', '>=', strict=True) }}"
         ANSIBLE_LOAD_CALLBACK_PLUGINS: "false"
         ANSIBLE_SSH_VERBOSITY: 3
         ANSIBLE_STRATEGY: "{{ lookup('env', 'ANSIBLE_STRATEGY') | mandatory }}"
