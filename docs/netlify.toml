@@ -1,2 +1,3 @@
 [build.environment]
-PYTHON_VERSION = "3.8"
+# See also [testenv:docs] in tox.ini
+PYTHON_VERSION = "3.14"

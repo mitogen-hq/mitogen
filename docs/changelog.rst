@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1568` docs: Fix build of website on Netlify
+
 
 v0.3.54 (2026-10-07)
 --------------------
