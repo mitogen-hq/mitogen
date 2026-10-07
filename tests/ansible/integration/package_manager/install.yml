@@ -1,6 +1,4 @@
-# https://github.com/mitogen-hq/mitogen/issues/776
----
-- name: regression/issue_776__load_plugins_called_twice.yml, config
+- name: integration/package_manager/install.yml, config
   hosts: test-targets
   become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
   # Delayed until after the end_play, due to Python version requirements
@@ -10,7 +8,7 @@
   tags:
     - issue_776
 
-- name: regression/issue_776__load_plugins_called_twice.yml, setup
+- name: integration/package_manager/install.yml, setup
   hosts: test-targets
   become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
   strategy: linear  # Required for running raw module
@@ -21,12 +19,10 @@
   tags:
     - issue_776
 
-- name: regression/issue_776__load_plugins_called_twice.yml, tests
+- name: integration/package_manager/install.yml, tests
   hosts: test-targets
   become: "{{ groups.linux is defined and inventory_hostname in groups.linux }}"
   gather_facts: true
-  tags:
-    - issue_776
   vars:
     ansible_python_interpreter: "{{ pkg_mgr_python_interpreter }}"
     package: rsync  # Chosen to exist in all tested distros/package managers
@@ -60,3 +56,5 @@
         state: present
       when:
         - ansible_facts.pkg_mgr == 'dnf'
+  tags:
+    - issue_776

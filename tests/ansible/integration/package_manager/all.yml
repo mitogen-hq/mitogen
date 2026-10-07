@@ -1,0 +1,2 @@
+- import_playbook: install.yml
+- import_playbook: list.yml

@@ -1,8 +1,3 @@
-
-#
-# This playbook imports all tests that are known to work at present.
-#
-
 - import_playbook: action/all.yml
   tags: action
 - import_playbook: async/all.yml
@@ -25,6 +20,8 @@
   tags: local
 - import_playbook: module_utils/all.yml
   tags: module_utils
+- import_playbook: package_manager/all.yml
+  tags: package_manager
 - import_playbook: playbook_semantics/all.yml
   tags: playbook_semantics
 - import_playbook: process/all.yml
