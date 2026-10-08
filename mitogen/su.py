@@ -40,6 +40,55 @@ LOG = logging.getLogger(__name__)
 password_incorrect_msg = 'su password is incorrect'
 password_required_msg = 'su password is required'
 
+# Password labels recognized by Ansible's su become plugin:
+# https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/become/su.py
+# Unicode escapes keep minified source compilable on Python 2 without an
+# encoding declaration.
+SU_PROMPT_LOCALIZATIONS = (
+    u'Password',
+    u'\uc554\ud638',
+    u'\u30d1\u30b9\u30ef\u30fc\u30c9',
+    u'Adgangskode',
+    u'Contrase\xf1a',
+    u'Contrasenya',
+    u'Has\u0142o',
+    u'Heslo',
+    u'Jelsz\xf3',
+    u'L\xf6senord',
+    u'M\u1eadt kh\u1ea9u',
+    u'Mot de passe',
+    u'Parola',
+    u'Parool',
+    u'Pasahitza',
+    u'Passord',
+    u'Passwort',
+    u'Salasana',
+    u'Sandi',
+    u'Senha',
+    u'Wachtwoord',
+    u'\u05e1\u05e1\u05de\u05d4',
+    u'\u041b\u043e\u0437\u0438\u043d\u043a\u0430',
+    u'\u041f\u0430\u0440\u043e\u043b\u0430',
+    u'\u041f\u0430\u0440\u043e\u043b\u044c',
+    u'\u0917\u0941\u092a\u094d\u0924\u0936\u092c\u094d\u0926',
+    u'\u0936\u092c\u094d\u0926\u0915\u0942\u091f',
+    u'\u0c38\u0c02\u0c15\u0c47\u0c24\u0c2a\u0c26\u0c2e\u0c41',
+    u'\u0dc4\u0dc3\u0dca\u0db4\u0daf\u0dba',
+    u'\u5bc6\u7801',
+    u'\u5bc6\u78bc',
+    u'\u53e3\u4ee4',
+)
+
+# Match localized labels, optional whitespace, and an ASCII or fullwidth colon,
+# using Unicode text and case-insensitive matching as in Ansible's su plugin.
+PASSWORD_PROMPT_RE = re.compile(
+    u'(?:%s)\\s*[:\uff1a]' % u'|'.join(
+        re.escape(mitogen.core.to_text(prompt))
+        for prompt in SU_PROMPT_LOCALIZATIONS
+    ),
+    re.I | re.U,
+)
+
 
 class PasswordError(mitogen.core.StreamError):
     pass
@@ -50,8 +99,7 @@ class SetupBootstrapProtocol(mitogen.parent.BootstrapProtocol):
 
     def setup_patterns(self, conn):
         """
-        su options cause the regexes used to vary. This is a mess, requires
-        reworking.
+        Compile connection-specific prompt and authentication failure patterns.
         """
         incorrect_pattern = re.compile(
             mitogen.core.b('|').join(
@@ -60,19 +108,24 @@ class SetupBootstrapProtocol(mitogen.parent.BootstrapProtocol):
             ),
             re.I
         )
-        prompt_pattern = re.compile(
-            re.escape(
-                conn.options.password_prompt.encode('utf-8')
-            ),
-            re.I
-        )
+        self._password_prompt_pattern = PASSWORD_PROMPT_RE
+        if conn.options.password_prompt is not None:
+            self._password_prompt_pattern = re.compile(
+                re.escape(mitogen.core.to_text(conn.options.password_prompt)),
+                re.I | re.U
+            )
 
         self.PATTERNS = mitogen.parent.BootstrapProtocol.PATTERNS + [
             (incorrect_pattern, type(self)._on_password_incorrect),
         ]
-        self.PARTIAL_PATTERNS = mitogen.parent.BootstrapProtocol.PARTIAL_PATTERNS + [
-            (prompt_pattern, type(self)._on_password_prompt),
-        ]
+
+    def on_unrecognized_partial_line_received(self, line):
+        match = self._password_prompt_pattern.search(
+            line.decode('utf-8', 'replace'))
+        if match is not None:
+            return self._on_password_prompt(line, match)
+        return super(SetupBootstrapProtocol, self).on_unrecognized_partial_line_received(
+            line)
 
     def _on_password_prompt(self, line, match):
         LOG.debug('%r: (password prompt): %r',
@@ -105,7 +158,7 @@ class Options(mitogen.parent.Options):
     username = u'root'
     password = None
     su_path = 'su'
-    password_prompt = u'password:'
+    password_prompt = None
     incorrect_prompts = (
         u'su: sorry',                   # BSD
         u'su: authentication failure',  # Linux

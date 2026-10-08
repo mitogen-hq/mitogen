@@ -1,9 +1,22 @@
+# -*- coding: utf-8 -*-
 import os
+
+import testlib
 
 import mitogen.core
 import mitogen.su
 
-import testlib
+
+class PasswordPromptTest(testlib.TestCase):
+    def test_su_en(self):
+        self.assertTrue(mitogen.su.PASSWORD_PROMPT_RE.search(u'Password: '))
+
+    def test_su_fr(self):
+        self.assertTrue(mitogen.su.PASSWORD_PROMPT_RE.search(u'Mot de passe\N{NO-BREAK SPACE}: '))
+        self.assertTrue(mitogen.su.PASSWORD_PROMPT_RE.search(u'Mot de passe : '))
+
+    def test_su_zh_CN(self):
+        self.assertTrue(mitogen.su.PASSWORD_PROMPT_RE.search(u'密码： '))
 
 
 class ConstructorTest(testlib.RouterMixin, testlib.TestCase):
