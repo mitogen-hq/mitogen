@@ -21,6 +21,12 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1568` docs: Fix build of website on Netlify
+
+
+v0.3.54 (2026-10-07)
+--------------------
+
 * :gh:issue:`1558` :mod:`ansible_mitogen`: Fix "No start of json char found"
   using dnf list
 * :mod:`mitogen`: Fix ``su`` authentication with localized password prompts
