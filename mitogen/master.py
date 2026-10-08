@@ -236,17 +236,15 @@ def _py_filename(path):
     return None, False
 
 
-def _get_core_source():
-    """
-    Master version of parent.get_core_source().
-    """
-    source = inspect.getsource(mitogen.core)
-    return mitogen.minify.minimize_source(source)
+def _get_source_bytes(module=mitogen.core):
+    f = open(module.__file__.rstrip('co'), 'rb')
+    try: return mitogen.minify.minimize_source(f.read())
+    finally: f.close()
 
 
 if mitogen.is_master:
     # TODO: find a less surprising way of installing this.
-    mitogen.parent._get_core_source = _get_core_source
+    mitogen.parent._get_core_source_bytes = _get_source_bytes
 
 
 class ThreadWatcher(object):
@@ -1166,7 +1164,7 @@ class ModuleResponder(object):
         if self.minify_safe_re.search(source):
             # If the module contains a magic marker, it's safe to minify.
             t0 = mitogen.core.now()
-            source = mitogen.minify.minimize_source(source).encode('utf-8')
+            source = mitogen.minify.minimize_source(source)
             self.minify_secs += mitogen.core.now() - t0
 
         if is_pkg:
