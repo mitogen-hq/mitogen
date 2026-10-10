@@ -2939,7 +2939,7 @@ class Latch(object):
             return rsock, wsock
 
     COOKIE_MAGIC, = struct.unpack('L', b('LTCH') * (struct.calcsize('L')//4))
-    COOKIE_FMT = '>Qqqq'  # #545: id() and get_ident() may exceed long on armhfp.
+    COOKIE_FMT = '>QQQQ'  # #545: id() and get_ident() may exceed long on armhfp.
     COOKIE_SIZE = struct.calcsize(COOKIE_FMT)
 
     def _make_cookie(self):
