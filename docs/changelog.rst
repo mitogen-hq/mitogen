@@ -22,6 +22,8 @@ Unreleased
 ----------
 
 * :gh:issue:`1568` docs: Fix build of website on Netlify
+* :gh:issue:`1205` :mod:`mitogen`: Fix ``struct.error`` in ``Latch._make_cookie``
+  when ``thread.get_ident()`` exceeds 2\\ :sup:`63`
 
 
 v0.3.54 (2026-10-07)

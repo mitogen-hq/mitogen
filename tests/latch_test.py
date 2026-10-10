@@ -59,6 +59,21 @@ class GetTest(testlib.TestCase):
         self.assertEqual(obj, latch.get(timeout=0))
 
 
+class HugeThreadIdentTest(testlib.TestCase):
+    klass = mitogen.core.Latch
+
+    def test_get_huge_thread_ident(self):
+        ident = 18446744072484806452
+        orig = mitogen.core.thread.get_ident
+        mitogen.core.thread.get_ident = lambda: ident
+        try:
+            latch = self.klass()
+            self.assertRaises(mitogen.core.TimeoutError,
+                lambda: latch.get(timeout=0.1))
+        finally:
+            mitogen.core.thread.get_ident = orig
+
+
 class ThreadedGetTest(testlib.TestCase):
     klass = mitogen.core.Latch
 
