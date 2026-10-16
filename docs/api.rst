@@ -434,8 +434,10 @@ Connection Methods
         Filename or complete path to the ``su`` binary. ``PATH`` will be
         searched if given as a filename. Defaults to ``su``.
     :param bytes password_prompt:
-        The string that indicates ``su`` is requesting a password. Defaults
-        to ``Password:``.
+        The string that indicates ``su`` is requesting a password. By default,
+        recognizes the localized password labels supported by Ansible's ``su``
+        plugin, with optional whitespace and an ASCII or fullwidth colon.
+        Setting this option overrides the default prompt matching.
     :param str incorrect_prompts:
         Strings that signal the password is incorrect. Defaults to `("su:
         sorry", "su: authentication failure")`.
