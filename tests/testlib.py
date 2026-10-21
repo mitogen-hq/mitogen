@@ -122,6 +122,14 @@ def have_sudo_nopassword():
     return _have_cmd(['sudo', '-kn', 'true'])
 
 
+def read_bytes(path):
+    f = open(path, 'rb')
+    try:
+        return f.read()
+    finally:
+        f.close()
+
+
 def retry(fn, on, max_attempts, delay):
     for i in range(max_attempts):
         try:

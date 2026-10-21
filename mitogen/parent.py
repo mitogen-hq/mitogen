@@ -169,19 +169,20 @@ def get_sys_executable():
     return '/usr/bin/python'
 
 
-def _get_core_source():
+def _get_core_source_bytes():
     """
     In non-masters, simply fetch the cached mitogen.core source code via the
     import mechanism. In masters, this function is replaced with a version that
     performs minification directly.
     """
-    return inspect.getsource(mitogen.core)
+    return inspect.getsource(mitogen.core).encode('utf-8')
 
 
 def get_core_source_partial():
     """
-    _get_core_source() is expensive, even with @lru_cache in minify.py, threads
-    can enter it simultaneously causing severe slowdowns.
+    Return a compressed prefix of the preamble.
+
+    The result is cached to avoid repeated expensive minification & compression.
     """
     global _core_source_partial
 
@@ -189,9 +190,7 @@ def get_core_source_partial():
         _core_source_lock.acquire()
         try:
             if _core_source_partial is None:
-                _core_source_partial = PartialZlib(
-                    _get_core_source().encode('utf-8')
-                )
+                _core_source_partial = PartialZlib(_get_core_source_bytes())
         finally:
             _core_source_lock.release()
 
