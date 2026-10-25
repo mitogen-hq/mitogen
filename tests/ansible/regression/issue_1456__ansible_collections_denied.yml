@@ -9,5 +9,11 @@
   tasks:
     - name: Trigger import from ansible_collections.*
       import_from_ansible_collections:
+
+    - name: Import collection module_utils after the async runner detaches
+      import_from_ansible_collections:
+      async: 30
+      poll: 1
+
   tags:
     - issue_1456

@@ -21,6 +21,8 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1574` :mod:`ansible_mitogen`: Preload collection module-utils dependencies before
+  asynchronous execution to avoid import hangs after detaching.
 * :gh:issue:`1568` docs: Fix build of website on Netlify
 * :gh:issue:`1572` docs: Delete redundent netlify.toml
 
