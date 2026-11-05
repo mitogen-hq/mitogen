@@ -589,8 +589,8 @@ def _invoke_async_task(invocation, planner):
             'stdout': json.dumps({
                 # modules/utilities/logic/async_wrapper.py::_run_module().
                 'changed': True,
-                'started': 1,
-                'finished': 0,
+                'started': True,
+                'finished': False,
                 'ansible_job_id': job_id,
             })
         }

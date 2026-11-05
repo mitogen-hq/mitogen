@@ -23,6 +23,8 @@ Unreleased
 
 * :gh:issue:`1568` docs: Fix build of website on Netlify
 * :gh:issue:`1572` docs: Delete redundent netlify.toml
+* :gh:issue:`1575` :mod:`ansible_mitogen`: Return booleans for async
+  ``started``, ``finished`` and ``failed``, fixing a warning with ansible-core 2.21
 
 
 v0.3.54 (2026-10-07)
