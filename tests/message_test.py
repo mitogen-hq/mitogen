@@ -417,23 +417,40 @@ class UnpickleTest(testlib.TestCase):
         self.assertRaises(ValueError, msg.unpickle)
 
 
-class UnpickleCompatTest(testlib.TestCase):
+class UnpickleCompatTest(testlib.RouterMixin, testlib.TestCase):
     # try weird variations of pickles from different Python versions.
     klass = mitogen.core.Message
+
+    def assertUnpickledEqual(self, expected, actual):
+        # Context, Sender & CallError don't define __eq__, compare attributes.
+        # Builtins are only compared by value, Python 2.x unpickles LONG1 as
+        # long and X (BINUNICODE) as unicode regardless of the literal used.
+        if isinstance(expected, mitogen.core.Context):
+            self.assertIsInstance(actual, mitogen.core.Context)
+            self.assertIs(actual.router, expected.router)
+            self.assertEqual(actual.context_id, expected.context_id)
+            self.assertEqual(actual.name, expected.name)
+        elif isinstance(expected, mitogen.core.Sender):
+            self.assertIsInstance(actual, mitogen.core.Sender)
+            self.assertUnpickledEqual(expected.context, actual.context)
+            self.assertEqual(actual.dst_handle, expected.dst_handle)
+        elif isinstance(expected, mitogen.core.CallError):
+            self.assertIsInstance(actual, mitogen.core.CallError)
+            self.assertEqual(actual.args, expected.args)
+        else:
+            self.assertEqual(actual, expected)
+            if isinstance(expected, (mitogen.core.Blob, mitogen.core.Secret)):
+                self.assertIsInstance(actual, type(expected))
 
     def check(self, value, encoded, **kwargs):
         if isinstance(encoded, mitogen.core.UnicodeType):
             encoded = encoded.encode('latin1')
         m = self.klass(data=encoded)
-        m.router = mitogen.master.Router()
-        try:
-            return m.unpickle(**kwargs)
-        finally:
-            m.router.broker.shutdown()
-            m.router.broker.join()
+        m.router = self.router
+        self.assertUnpickledEqual(value, m.unpickle(**kwargs))
 
     def test_py24_bytes(self):
-        self.check('test',
+        self.check(b('test'),
            ('\x80\x02U\x04testq\x00.'))
 
     def test_py24_unicode(self):
@@ -478,12 +495,12 @@ class UnpickleCompatTest(testlib.TestCase):
 
     def test_py24_context(self):
         self.check(
-            mitogen.core.Context(object(), 1234, None),
+            mitogen.core.Context(self.router, 1234, None),
            ('\x80\x02cmitogen.core\n_unpickle_context\nq\x00M\xd2\x04N\x86q\x01Rq\x02.'))
 
     def test_py24_sender(self):
         self.check(
-            mitogen.core.Sender(mitogen.core.Context(object(), 55555, None), 4444),
+            mitogen.core.Sender(mitogen.core.Context(self.router, 55555, None), 4444),
            ('\x80\x02cmitogen.core\n_unpickle_sender\nq\x00M\x03\xd9M\\\x11\x86q\x01Rq\x02.'))
 
     def test_py27_bytes(self):
@@ -532,12 +549,12 @@ class UnpickleCompatTest(testlib.TestCase):
 
     def test_py27_context(self):
         self.check(
-            mitogen.core.Context(object(), 1234, None),
+            mitogen.core.Context(self.router, 1234, None),
            ('\x80\x02cmitogen.core\n_unpickle_context\nq\x01M\xd2\x04N\x86Rq\x02.'))
 
     def test_py27_sender(self):
         self.check(
-            mitogen.core.Sender(mitogen.core.Context(object(), 55555, None), 4444),
+            mitogen.core.Sender(mitogen.core.Context(self.router, 55555, None), 4444),
            ('\x80\x02cmitogen.core\n_unpickle_sender\nq\x01M\x03\xd9M\\\x11\x86Rq\x02.'))
 
     def test_py36_bytes(self):
@@ -586,12 +603,12 @@ class UnpickleCompatTest(testlib.TestCase):
 
     def test_py36_context(self):
         self.check(
-            mitogen.core.Context(object(), 1234, None),
+            mitogen.core.Context(self.router, 1234, None),
            ('\x80\x02cmitogen.core\n_unpickle_context\nq\x00M\xd2\x04N\x86q\x01Rq\x02.'))
 
     def test_py36_sender(self):
         self.check(
-            mitogen.core.Sender(mitogen.core.Context(object(), 55555, None), 4444),
+            mitogen.core.Sender(mitogen.core.Context(self.router, 55555, None), 4444),
            ('\x80\x02cmitogen.core\n_unpickle_sender\nq\x00M\x03\xd9M\\\x11\x86q\x01Rq\x02.'))
 
 

@@ -25,6 +25,8 @@ Unreleased
 * :gh:issue:`1572` docs: Delete redundent netlify.toml
 * :gh:issue:`1575` :mod:`ansible_mitogen`: Return booleans for async
   ``started``, ``finished`` and ``failed``, fixing a warning with ansible-core 2.21
+* :gh:issue:`1549` tests: Make ``UnpickleCompatTest`` compare unpickled
+  values to the expected values, and construct expected contexts with a router
 
 
 v0.3.54 (2026-10-07)
