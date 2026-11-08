@@ -21,6 +21,9 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1549` tests: Make ``UnpickleCompatTest`` compare unpickled
+  values to the expected values, and construct expected contexts with a router
+
 
 v0.3.55 (2026-11-17)
 --------------------
