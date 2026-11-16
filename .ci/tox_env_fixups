@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+# SPDX-FileCopyrightText: 2026 Mitogen authors <https://github.com/mitogen-hq>
+# SPDX-License-Identifier: BSD-3-Clause
+
+import os
+
+
+def main():
+    # Tox >= 4.67.8 creates `.tox/` with mode `u=rwx,go=`, breaking some
+    # Mitogen tests that execute Tox environment Pythons as a different user.
+    # This re-applies the mode used by previous Tox versions.
+    # See https://github.com/tox-dev/tox/pull/4360/
+    os.chmod(os.environ['TOX_WORK_DIR'], int('755', 8))
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
