@@ -21,6 +21,7 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1555` :mod:`ansible_mitogen`: Support Ansible 15
 * :gh:issue:`1568` docs: Fix build of website on Netlify
 * :gh:issue:`1572` docs: Delete redundent netlify.toml
 * :gh:issue:`1575` :mod:`ansible_mitogen`: Return booleans for async
