@@ -21,10 +21,13 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+* :gh:issue:`1555` :mod:`ansible_mitogen`: Support Ansible 15
 * :gh:issue:`1568` docs: Fix build of website on Netlify
 * :gh:issue:`1572` docs: Delete redundent netlify.toml
 * :gh:issue:`1575` :mod:`ansible_mitogen`: Return booleans for async
   ``started``, ``finished`` and ``failed``, fixing a warning with ansible-core 2.21
+* :gh:issue:`1555` tests: Bump to Python 3.15
+* :gh:issue:`1555` tests: Fix Tox >= 4.67.8 work dir mode
 
 
 v0.3.54 (2026-10-07)
