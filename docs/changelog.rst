@@ -21,6 +21,10 @@ To avail of fixes in an unreleased version, please download a ZIP file
 Unreleased
 ----------
 
+
+v0.3.55 (2026-11-17)
+--------------------
+
 * :gh:issue:`1555` :mod:`ansible_mitogen`: Support Ansible 15
 * :gh:issue:`1568` docs: Fix build of website on Netlify
 * :gh:issue:`1572` docs: Delete redundent netlify.toml
