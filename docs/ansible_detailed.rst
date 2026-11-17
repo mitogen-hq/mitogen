@@ -148,6 +148,8 @@ Noteworthy Differences
   | 13              |                 |
   +-----------------+ 3.12 - 3.14     |
   | 14              |                 |
+  +-----------------+-----------------|
+  | 15              | 3.12 - 3.15     |
   +-----------------+-----------------+
 
   Verify your installation is running one of these versions by checking

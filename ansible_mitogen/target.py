@@ -428,8 +428,8 @@ class AsyncRunner(object):
             self.timeout_secs,
         )
         self._update({
-            "failed": 1,
-            "finished": 1,
+            "failed": True,
+            "finished": True,
             "msg": msg,
         })
         self._timed_out = True
@@ -470,8 +470,8 @@ class AsyncRunner(object):
             If >0, limit the task's maximum run time.
         """
         self._update({
-            'started': 1,
-            'finished': 0,
+            'started': True,
+            'finished': False,
             'pid': os.getpid()
         })
         self.started_sender.send(True)
@@ -490,7 +490,7 @@ class AsyncRunner(object):
                 self._parse_result(dct)
             except Exception:
                 self._update({
-                    "failed": 1,
+                    "failed": True,
                     "msg": traceback.format_exc(),
                     "data": dct['stdout'],  # temporary notice only
                     "stderr": dct['stderr']
@@ -502,7 +502,7 @@ class AsyncRunner(object):
                 self._run()
             except Exception:
                 self._update({
-                    "failed": 1,
+                    "failed": True,
                     "msg": traceback.format_exc(),
                 })
         finally:
