@@ -895,6 +895,13 @@ class NewStyleRunner(ScriptRunner):
             try:
                 mitogen.core.import_module(fullname)
             except ImportError as exc:
+                # Collection utilities can guard optional imports. Fetch their
+                # source before detaching, leaving those guards to decide
+                # whether an unavailable dependency is an error at execution.
+                if (fullname == 'ansible_collections' or
+                    fullname.startswith('ansible_collections.')):
+                    continue
+
                 # #590: Ansible 2.8 module_utils.distro is a package that
                 # replaces itself in sys.modules with a non-package during
                 # import. Prior to replacement, it is a real package containing

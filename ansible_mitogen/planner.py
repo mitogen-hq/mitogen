@@ -45,9 +45,9 @@ import os
 import random
 import re
 
-import ansible.collections.list
 import ansible.errors
 import ansible.executor.module_common
+from ansible.utils.collection_loader import AnsibleCollectionConfig
 
 import mitogen.core
 import mitogen.select
@@ -438,17 +438,21 @@ class NewStylePlanner(ScriptPlanner):
 
     def get_module_map(self):
         if self._module_map is None:
+            collection_search_path = _load_collections(self._inv)
             binding = self._inv.connection.get_binding()
             self._module_map = mitogen.service.call(
                 call_context=binding.get_service_context(),
                 service_name='ansible_mitogen.services.ModuleDepService',
                 method_name='scan',
 
-                module_name='ansible_module_%s' % (self._inv.module_name,),
+                module_name=py_modname_from_path(
+                    self._inv.module_name, self._inv.module_path,
+                ),
                 module_path=self._inv.module_path,
                 search_path=self.get_search_path(),
                 builtin_path=ansible.executor.module_common._MODULE_UTILS_PATH,
                 context=self._inv.connection.context,
+                collection_search_path=collection_search_path,
             )
         return self._module_map
 
@@ -622,12 +626,13 @@ def _get_planner(invocation, source):
 
 def _load_collections(invocation):
     """
-    Special loader that ensures that `ansible_collections` exist as a module path for import
-    Goes through all collection path possibilities and stores paths to installed collections
-    Stores them on the current invocation to later be passed to the master service
+    Preserve configured collection root order for scanning and source lookup,
+    including for role-local modules that import collection module_utils.
     """
-    for collection_path in ansible.collections.list.list_collection_dirs():
-        invocation._extra_sys_paths.add(collection_path.decode('utf-8'))
+    paths = tuple(mitogen.core.to_text(path)
+                  for path in AnsibleCollectionConfig.collection_paths)
+    invocation._extra_sys_paths.update(paths)
+    return paths
 
 
 def invoke(invocation):
@@ -652,9 +657,6 @@ def invoke(invocation):
 
     invocation.module_path = mitogen.core.to_text(path)
     if invocation.module_path not in _planner_by_path:
-        if 'ansible_collections' in invocation.module_path:
-            _load_collections(invocation)
-
         pristine = invocation.get_module_source()
         modified = ansible_mitogen._modifiers.apply_ansible_module_modifiers(
             invocation.module_name,

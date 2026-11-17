@@ -520,7 +520,9 @@ class ModuleDepService(mitogen.service.Service):
         return [
             mitogen.core.to_text(fullname)
             for fullname, path, is_pkg in resolved
-            if os.path.abspath(path).startswith(builtin_path)
+            if (fullname == 'ansible_collections' or
+                fullname.startswith('ansible_collections.') or
+                os.path.abspath(path).startswith(builtin_path))
         ]
 
     def _get_custom_tups(self, builtin_path, resolved):
@@ -529,7 +531,9 @@ class ModuleDepService(mitogen.service.Service):
              mitogen.core.to_text(path),
              is_pkg)
             for fullname, path, is_pkg in resolved
-            if not os.path.abspath(path).startswith(builtin_path)
+            if not (fullname == 'ansible_collections' or
+                    fullname.startswith('ansible_collections.') or
+                    os.path.abspath(path).startswith(builtin_path))
         ]
 
     @mitogen.service.expose(policy=mitogen.service.AllowParents())
@@ -539,14 +543,18 @@ class ModuleDepService(mitogen.service.Service):
         'search_path': tuple,
         'builtin_path': mitogen.core.FsPathTypes,
         'context': mitogen.core.Context,
+        'collection_search_path': tuple,
     })
-    def scan(self, module_name, module_path, search_path, builtin_path, context):
-        key = (module_name, search_path)
+    def scan(self, module_name, module_path, search_path, builtin_path, context,
+             collection_search_path=()):
+        key = (module_name, module_path, search_path, builtin_path,
+               collection_search_path)
         if key not in self._cache:
             resolved = ansible_mitogen.module_finder.scan(
                 module_name=module_name,
                 module_path=module_path,
                 search_path=tuple(search_path) + (builtin_path,),
+                collection_search_path=collection_search_path,
             )
             builtin_path = os.path.abspath(builtin_path)
             builtin = self._get_builtin_names(builtin_path, resolved)
