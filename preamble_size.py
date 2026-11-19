@@ -4,7 +4,6 @@ Print the size of a typical SSH command line and the bootstrap code sent to new
 contexts.
 """
 
-import inspect
 import sys
 import zlib
 
@@ -64,11 +63,11 @@ for mod in (
         mitogen.fakessh,
         mitogen.master,
     ):
-    original = inspect.getsource(mod)
+    original = mitogen.master._get_source_bytes(mod)
     original_size = len(original)
     minimized = mitogen.minify.minimize_source(original)
     minimized_size = len(minimized)
-    compressed = zlib.compress(minimized.encode(), 9)
+    compressed = zlib.compress(minimized, 9)
     compressed_size = len(compressed)
     print(
         table.ROW_FMT
